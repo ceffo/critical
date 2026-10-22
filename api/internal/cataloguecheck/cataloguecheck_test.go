@@ -197,25 +197,90 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 	}
 }
 
-// TestSchema_Step17_OnlyFormat10IsValid (ADR 0021 steps 16.5 and 17.3): the schema accepts format 10
+// TestSchema_Step18_OnlyFormat11IsValid (ADR 0021 steps 16.5, 17.3 and 18.3): the schema accepts format 11
 // only; every earlier format, retired, is refused whatever it carries (the API refuses it as an
-// unknown format), and so is a wisdom row without the magical defence adjustment.
-func TestSchema_Step17_OnlyFormat10IsValid(t *testing.T) {
+// unknown format), and so is an artifact without a part format 11 requires.
+func TestSchema_Step18_OnlyFormat11IsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 10")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 11} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 11")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
 	}
-	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables"} {
+	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 10 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 11 requires %s", part)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 10 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 11 requires the magical defence adjustment")
+}
+
+// classDef is the i-th class of a fixture document, for a test to edit.
+func classDef(a map[string]any, i int) map[string]any {
+	return a["classes"].([]any)[i].(map[string]any)
+}
+
+// feature is the class's feature of that kind.
+func feature(t *testing.T, c map[string]any, kind string) map[string]any {
+	t.Helper()
+	for _, f := range c["features"].([]any) {
+		if m := f.(map[string]any); m["kind"] == kind {
+			return m
+		}
+	}
+	require.FailNow(t, "no feature "+kind)
+	return nil
+}
+
+// perLanguage is the forbidden kind of key (ADR 0023), built so that the source holds no such identifier.
+var perLanguage = "name_" + "f" + "r"
+
+// TestSchema_Step18_ClassGroupAndRaceDefinitions (ADR 0021 step 18.1, ADR 0040 steps 1 to 4 and 7): the
+// definitions are language-neutral codes, language maps, numbers and the closed lists of feature and
+// trait kinds with their parameters; a name in one language, an unknown kind, a missing or an extra
+// parameter and a missing field are refused.
+func TestSchema_Step18_ClassGroupAndRaceDefinitions(t *testing.T) {
+	assert.NoError(t, compile(t).Validate(fixtureDoc(t)))
+	refuseEach(t, map[string]func(map[string]any){
+		"a per-language name field":        func(a map[string]any) { classDef(a, 0)[perLanguage] = "Guerrier" },
+		"a name with no English":           func(a map[string]any) { classDef(a, 0)["name"] = map[string]any{"fr": "Guerrier"} },
+		"a class without a group":          func(a map[string]any) { delete(classDef(a, 0), "group") },
+		"a class without prime requisites": func(a map[string]any) { classDef(a, 0)["prime_requisites"] = []any{} },
+		"an unknown ability":               func(a map[string]any) { classDef(a, 0)["prime_requisites"] = []any{"luck"} },
+		"an experience table of 19 levels": func(a map[string]any) {
+			c := classDef(a, 0)
+			c["experience"] = c["experience"].([]any)[:19]
+		},
+		"hit dice without the Constitution column": func(a map[string]any) { delete(classDef(a, 0)["hit_dice"].(map[string]any), "constitution") },
+		"an unknown feature kind":                  func(a map[string]any) { feature(t, classDef(a, 0), "exceptional_strength")["kind"] = "dragon_breath" },
+		"a param on a kind without any": func(a map[string]any) {
+			feature(t, classDef(a, 0), "exceptional_strength")["params"] = map[string]any{"x": 1}
+		},
+		"a feature without its params": func(a map[string]any) { delete(feature(t, classDef(a, 1), "spellbook"), "params") },
+		"a missing param": func(a map[string]any) {
+			delete(feature(t, classDef(a, 1), "spellbook")["params"].(map[string]any), "max_spell_level")
+		},
+		"an unknown param": func(a map[string]any) {
+			feature(t, classDef(a, 2), "turn_undead")["params"].(map[string]any)["extra"] = 1
+		},
+		"a skill set that is neither": func(a map[string]any) {
+			feature(t, classDef(a, 3), "rogue_skills")["params"].(map[string]any)["set"] = "ranger"
+		},
+		"a group without its THAC0 rows": func(a map[string]any) { a["groups"].([]any)[0].(map[string]any)["thac0"] = []any{} },
+		"a race without its identity":    func(a map[string]any) { delete(a["races"].([]any)[0].(map[string]any), "identity") },
+		"a race name in one language":    func(a map[string]any) { a["races"].([]any)[0].(map[string]any)[perLanguage] = "Nain" },
+		"an unknown trait kind": func(a map[string]any) {
+			r := a["races"].([]any)[0].(map[string]any)
+			r["traits"] = append(r["traits"].([]any), map[string]any{"kind": "darkvision"})
+		},
+		"a trait param missing": func(a map[string]any) {
+			r := a["races"].([]any)[0].(map[string]any)
+			delete(r["traits"].([]any)[0].(map[string]any)["params"].(map[string]any), "poison")
+		},
+	})
 }
 
 // TestSchema_Step9_RuleTables (ADR 0021 steps 9.1 to 9.3): the four PHB rule tables are numbers
@@ -410,7 +475,7 @@ func TestSchema_Step14_Languages(t *testing.T) {
 
 // TestSchema_Step16_Format9ProficiencyDescriptions (ADR 0021 steps 16.1 and 16.4): the 65 rows, each
 // {id, description} with both languages in step 1's subset, and nothing else; an earlier format may
-// not carry the list (TestSchema_Step17_OnlyFormat10IsValid).
+// not carry the list (TestSchema_Step18_OnlyFormat11IsValid).
 func TestSchema_Step16_Format9ProficiencyDescriptions(t *testing.T) {
 	descs := func(a map[string]any) []any { return a["proficiency_descriptions"].([]any) }
 	desc := func(a map[string]any, i int) map[string]any {

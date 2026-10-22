@@ -555,7 +555,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestSetPoints_Step17_WritesAndLogsTheSpend`, `TestSetPoints_Step17_RefusalsAndNoChange`,
     `TestSetPoints_Step17_RestorerWritesThePointsBack`, `TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie`
     (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition).
-    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `rogue_skills` feature (set `thief`, its budget, armours and `min_to_use` 1 as params) replaces `thiefSkillClasses`, the budget constants and `ThiefArmors`)_
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `rogue_skills` feature (set `thief`, its budget and armours as params, no `min_to_use`: the book gives none and Go's floor stays 0) replaces `thiefSkillClasses`, the budget constants and `ThiefArmors`)_
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
     28: Pick Pockets only) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
@@ -589,7 +589,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck`, `TestSetPoints_Step18_ABardSpendsItsPoints`
     (skillsvc), `TestBard_Step18_CreateRollSpendAndUndo`,
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
-    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the same `rogue_skills` kind with set `bard`, budget 20/15 and no per-skill limit, `metal` on the elven chain column with an extra -5 and `min_to_use` 0, replacing `bardSkillClasses`, `BardArmors` and the bard constants; the check kind follows the set)_
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the same `rogue_skills` kind with set `bard`, budget 20/15 and no per-skill limit, `metal` on the elven chain column with an extra -5 (no `min_to_use`), replacing `bardSkillClasses`, `BardArmors` and the bard constants; the check kind follows the set)_
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
     at 5-8, ×4 at 9-12, ×5 from 13): the weapon's standard damage, before Strength and magic, as

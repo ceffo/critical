@@ -747,10 +747,12 @@ or format-4 artifact) and validated by `ruletablesvc.NewLevelLimits` (each race 
 (the book's dash: the race cannot belong to the class); a human has no row. Shown on the race card, never
 enforced (ADR 0030 step 21).
 
-A format-10 artifact (the only format the API reads, ADR 0021 step 17) adds `magic_defence` to every `wisdom`
+A format-10 or later artifact (ADR 0021 step 17) adds `magic_defence` to every `wisdom`
 row: PHB Table 5's magical defence adjustment, read by `Tables.MagicDefenceFor` and derived for every character
 as `charactersvc.Derived.MagicDefence` (ADR 0006 step 9: a `wisdom` modifier on a save flagged
-`mindAffecting`). An older artifact is refused at start with the `just catalogue` advice.
+`mindAffecting`). A format-11 artifact (the only format the API reads, ADR 0021 step 18) adds the `classes`, `groups` and
+`races` lists ([ADR 0040](adr/0040-classes-are-data.md)); the API checks their shape with the schema and does not read them yet. An
+older artifact is refused at start with the `just catalogue` advice.
 
 ## In-memory storage (e2e mode)
 

@@ -5,7 +5,8 @@ Context). The shape of the definitions, the closed list of feature kinds and the
 (steps 1 to 4), and the choices beyond the triage (group ids under the rule of step 10, one
 `rogue_skills` kind with a `set` parameter, the weapon proficiency types derived from the
 `equipment` list, the package `domain/classes`) were accepted in review, 2026-10-21.
-Not implemented: each step names the test its implementing item writes. Amends
+Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). The rest is
+not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
 [ADR 0036](0036-vocabulary.md) (`GLOSSARY.md`, `docs/domain-model.md`). The house rules live in the
@@ -109,8 +110,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
       from it with the catalogue (a type is allowed when the list names it or a weapon of it; for
       `blunt_only`, when a catalogue weapon of the type deals bludgeoning damage, a launcher by its
       ammunition), which is what seedcheck proves today: the second Go list goes.
-   7. `experience`: the class's XP thresholds, rows `{class, level, xp}` (PHB Tables 14, 20, 23,
-      25), replacing the column per class.
+   _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list keeps it until step 11.2 moves that reader.)_
+   7. `experience`: the class's XP thresholds, rows `{level, xp}` inside the class entry (the class is the
+      entry's; PHB Tables 14, 20, 23, 25), replacing the column per class.
    8. `hit_dice`: `{die, dice_levels, after}` and the Constitution column (`warrior` or
       `standard`, PHB Table 3): warrior d10 to level 9 then +3, wizard d4 to 10 then +1, priest d8
       to 9 then +2, rogue d6 to 10 then +2 (PHB Tables 14, 20, 23 and 25, Hit Dice column;
@@ -159,7 +161,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    | `spell_failure` | `ability` (`wis`) | ADR 0030 step 14 (Table 5) | cleric |
    | `sphere_access` | `major`, `minor` (sphere codes), `minor_max_level` (3) | ADR 0030 step 15 (format 6's access rows, moved here) | cleric |
    | `turn_undead` | `table` (Table 61) | ADR 0030 step 16 | cleric |
-   | `rogue_skills` | `set` (`thief` or `bard`: the skill list and base rows, Table 26 or 33), `budget` `{first, per_level, per_skill_first, per_skill_per_level}`, `armour` `[{code, column, extra}]`, `min_to_use` | ADR 0030 steps 17 and 18, ADR 0037 steps 10, 11 and 15 | thief (set `thief`, budget 60/30/30/15, the four Table 29 armours, `min_to_use` 1); bard (set `bard`, budget 20/15/0/0, the four plus `metal` on the elven chain column with an extra -5, `min_to_use` 0) |
+   | `rogue_skills` | `set` (`thief` or `bard`: the skill list and base rows, Table 26 or 33), `budget` `{first, per_level, per_skill_first, per_skill_per_level}`, `armour` `[{code, column, extra}]` | ADR 0030 steps 17 and 18, ADR 0037 steps 10, 11 and 15 | thief (set `thief`, budget 60/30/30/15, one entry per armour `skill_column`); bard (set `bard`, budget 20/15/0/0, the same entries, `metal` on the elven chain column with an extra -5) |
    | `backstab` | `table` (Table 30) | ADR 0030 step 19 | thief |
    | `spellbook` | `max_spell_level`, `free_spell_per_new_spell_level` (bool) | ADR 0030 step 20 (20.1, 20.7, 20.8) | mage (9, true), bard (6, false) |
 
@@ -193,6 +195,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `03-gnomes.md`, Gnomes and Halflings), Table 9 (`tables/phb-009-constitution-saving-throw-bonuses.md`).
    The gnome's poison save gets no Table 9 bonus in the book. The poison flag on the save request
    still waits for the user's OK (ADR 0030 step 22.1), so `poison` is carried but not read yet.
+   _(As built in format 11: the `weapon_to_hit` kind is accepted by the schema, but no race carries it; it lands with ADR 0030 step 22.3's code.)_
+   _(As built in format 11, the armour entries of `rogue_skills`: one per `skill_column` value of the equipment's armour rows (`leather`, `padded_studded`, `elven_chain`, `metal`, `none_allowed`) plus `none`; `code` is that value, `column` the `thief_skill_armor` row it reads (absent for leather, the baseline), `extra` the bard's penalty from `bard_armor_penalty` (bard set only; a hand-set value that differs is refused). `none_allowed` (an armour the class may not wear) and a thief's `metal` are entered with the worst column, `padded_studded_leather`, which is what `SkillArmorFor` does today, so the reader needs no fallback rule. `min_to_use` is not in the data: the book gives no such figure (Go's floor `MinSkillPercent` is 0 for both sets and stays a constant until a reader needs a per-class value).)_
    Tests: `RaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc: a race listing the trait
    gets Table 9's bonus on its categories, a race without it none, whatever its id),
    `RaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc).
@@ -231,6 +235,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    becomes rows with a `class`, `group` or `race` key (XP thresholds, Table 53, Table 60, the
    slot tables, Table 34), so a new class or group is new rows, never a new field in a Go struct
    or a DTO. A **group** id is data like a class id: no `switch` on `warrior` or `rogue`.
+   _(As built in format 11, [ADR 0021](0021-spell-catalogue.md) step 18.2 and 18.4: the XP rows are in the class entries and Table 53 is the `groups` list, `{id, thac0}`;
+   the class-keyed tables of formats 3 to 10 stay beside them until their readers move, step 11.3.)_
    Tests: `RuleTables_Step7_RowsKeyedByClassAndGroup` (ruletablesadpt: the thresholds, THAC0 and
    saves of the fixture's rows equal today's per-column reads for each class and group).
 

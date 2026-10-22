@@ -1,7 +1,7 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry the one format this API knows (9, step 16.5; the
-// formats 1 to 8 are retired and refused like any unknown format), match the
+// file must exist, carry the one format this API knows (11, step 18.3; the
+// formats 1 to 10 are retired and refused like any unknown format), match the
 // committed JSON Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
 // and hands the artifact's rule tables (the PHB rule tables, from format 4
 // the class and race tables, from format 5 the racial level limits, in format 6 the sphere access) on as the

@@ -13,6 +13,8 @@ web/src/components/actions/LookupPanel.tsx:wizard      spell list toggle and spe
 web/src/components/actions/LookupPanel.tsx:priest      spell list toggle and spell class
 web/src/stores/lookup.ts:wizard                        spell list toggle default
 web/src/stores/lookup.ts:priest                        spell list toggle
+web/src/components/actions/lookupClasses.ts:wizard    spell list toggle and its default
+web/src/components/actions/lookupClasses.ts:priest    spell list toggle
 
 # The migration of the free-text languages stored before they were codes (ADR 0032 step 8.1): spellings of
 # a language ("dwarf", "elf", "gnome", "halfling" for dwarvish...), not races.

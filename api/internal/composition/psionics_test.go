@@ -285,3 +285,21 @@ func TestKnownPowers_Step9_SaveUndoRedoAndRefusal(t *testing.T) {
 	_, err = other.Psionics.SetKnownPowers(ctx, fid, nil)
 	assert.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
 }
+
+// Step 9: undoing a save takes the picks it made away, and nothing else.
+func TestPicks_Step9_UndoRemovesThePick(t *testing.T) {
+	ctx := context.Background()
+	first := []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}}
+	bs, id := thiefPsionicistKnowing(t, first)
+	_, err := bs.Psionics.SetKnownPowers(ctx, id, append(first, psionics.Pick{Kind: psionics.PickPower, ID: "contact"}))
+	require.NoError(t, err)
+
+	log, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, log, 1)
+	_, err = bs.Log.Undo(ctx, id, log[0].ID)
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, first, c.Derived.Powers.Picks)
+}

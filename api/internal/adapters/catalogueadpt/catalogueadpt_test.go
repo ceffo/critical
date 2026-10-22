@@ -142,8 +142,8 @@ func TestParse_Step16_ReadsTheProficiencyDescriptions(t *testing.T) {
 
 // ADR 0021 step 17.1: every wisdom row carries the magical defence
 // adjustment, an integer from -6 to +4 (the schema refuses a row without it or
-// outside the range); format 11 keeps the column.
-func TestParse_Step17_ReadsFormat11WithTheMagicDefence(t *testing.T) {
+// outside the range); later formats keep the column.
+func TestParse_Step17_ReadsTheMagicDefence(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatSpellImmunities, a.Catalogue.Format)
@@ -181,11 +181,11 @@ func TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice(t *testing.T) {
 	}
 }
 
-// ADR 0021 step 18.1 and 18.3: format 11 is read with its class, group and race
-// definitions (the schema's own checks are cataloguecheck's); format 10, the step 17
-// shape without the definitions, is refused as an unknown format that names
-// format 11 and `just catalogue`.
-func TestParse_Step18_ReadsFormat11AndRefusesFormat10(t *testing.T) {
+// ADR 0021 step 18.1 and 18.3: the class, group and race definitions are read
+// (the schema's own checks are cataloguecheck's); format 10, the step 17 shape
+// without the definitions, is refused as an unknown format that names the
+// format read and `just catalogue`.
+func TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
 	assert.Equal(t, catalogue.FormatSpellImmunities, a.Catalogue.Format)
@@ -200,6 +200,27 @@ func TestParse_Step18_ReadsFormat11AndRefusesFormat10(t *testing.T) {
 		}
 	}))
 	require.ErrorContains(t, err, "unknown format 10: this API reads format 12; run `just catalogue` to fetch a current artifact")
+}
+
+// ADR 0021 steps 19.1 and 19.3: format 12 is read; a wisdom row without its
+// spell immunities is refused by the schema, and format 11, the step 18 shape
+// without the column, is refused as an unknown format that names format 12 and
+// `just catalogue`.
+func TestParse_Step19_ReadsFormat12AndRefusesFormat11(t *testing.T) {
+	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	assert.Equal(t, 12, a.Catalogue.Format)
+	wisdom := func(d map[string]any, i int) map[string]any { return tables(d)["wisdom"].([]any)[i].(map[string]any) }
+	refuses(t, []refusal{
+		{"a wisdom row without them", func(d map[string]any) { delete(wisdom(d, 3), "spell_immunities") }, []string{"format 12 schema", "wisdom/3", "spell_immunities"}},
+	})
+	_, err = Parse(artifact(t, func(d map[string]any) {
+		d["format"] = 11
+		for _, r := range tables(d)["wisdom"].([]any) {
+			delete(r.(map[string]any), "spell_immunities")
+		}
+	}))
+	require.ErrorContains(t, err, "unknown format 11: this API reads format 12; run `just catalogue` to fetch a current artifact")
 }
 
 // ADR 0021 step 16.1: the rows are exactly the schema's (65, both languages,

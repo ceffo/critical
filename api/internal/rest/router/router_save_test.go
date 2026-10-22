@@ -185,3 +185,29 @@ func TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	assertShape("redo", decodeEntry(t, rec.Body.Bytes()))
 }
+
+// ADR 0006 step 10.2 on the wire: POST /api/roll/save passes the optional
+// spellId (trimmed) to the service and serves the immunity; adjusting an
+// immune save answers 409 save_immune.
+func TestRollSave_Step10_SpellIDAndImmunity(t *testing.T) {
+	h, m := newRouter(t)
+	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveSpell, combatsvc.SaveOptions{MindAffecting: true, SpellID: "charm_person"}).
+		Return(&combatsvc.SaveBreakdown{
+			Category: "spell", Modifiers: []combatsvc.BreakdownModifier{}, MindAffecting: true, SpellID: "charm_person",
+			Immunity: &combatsvc.Immunity{Source: combatsvc.ImmunitySourceWisdom, Score: 19},
+			Target: 14, Passed: true, RolledPassed: true, LogEntryID: 11,
+		}, nil).Once()
+	rec := do(h, "POST", "/api/roll/save", `{"category":"spell","mindAffecting":true,"spellId":" charm_person "}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, "charm_person", got["spellId"])
+	assert.Equal(t, map[string]any{"source": "wisdom", "score": 19.0}, got["immunity"])
+	assert.Equal(t, true, got["passed"])
+
+	m.cmb.EXPECT().AdjustSave(mock.Anything, int64(1), int64(11), combatsvc.SaveAdjustment{Value: 2}).
+		Return(nil, combatsvc.ErrSaveImmune).Once()
+	rec = do(h, "POST", "/api/roll/save/11/adjust", `{"adjustment":2}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"save_immune"`)
+}

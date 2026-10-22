@@ -371,7 +371,8 @@ func TestDraft_Step4_4_TheComputedAndStoredPSPMaximum(t *testing.T) {
 		tb, _ := serverOn(t, memory.New())
 		bob, _ := tb.login("bob@example.com")
 		var got struct {
-			ComputedPSPMax *int `json:"computedPspMax"`
+			PsionicsClass  string `json:"psionicsClass"`
+			ComputedPSPMax *int   `json:"computedPspMax"`
 			Derived        *struct {
 				PSP *pool `json:"psp"`
 			} `json:"derived"`
@@ -380,6 +381,11 @@ func TestDraft_Step4_4_TheComputedAndStoredPSPMaximum(t *testing.T) {
 		require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/draft", body, &got))
 		if got.Derived != nil {
 			psp = got.Derived.PSP
+		}
+		if got.ComputedPSPMax != nil {
+			assert.Equal(t, "psionicist", got.PsionicsClass, "the class that carries the psionics")
+		} else {
+			assert.Empty(t, got.PsionicsClass)
 		}
 		return got.ComputedPSPMax, psp, got.Refusals
 	}

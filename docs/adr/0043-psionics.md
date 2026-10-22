@@ -531,8 +531,9 @@ Step 9's backend: the rules, the store, the save with its undo and the route. Th
   the game, so no `psionic_pick` entry is logged and there is nothing to undo. A list over the rules refuses the creation with the editor's
   409, its code and figures; a malformed list, or picks for a character with no psionics entry (`not_allowed`), is a field error on
   `psionicPicks`. The draft lists either refusal on `psionicPicks`, a list over the rules with the editor's figures (`power`, `discipline`,
-  `slot`, `count`, `limit`), and serves `knownPowers` with the picks as entered. The creation form's powers step is the
-  dashboard's editor, fed by the draft instead of the saves. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
+  `slot`, `count`, `limit`), and serves `knownPowers` with the picks as entered. The draft names the class that lists psionics
+  (`psionicsClass`, "" for none), and the creation form adds a psionics step for it: the PSP maximum and the dashboard's
+  known-powers editor, fed by the draft instead of the saves. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
 
 ## Consequences
 

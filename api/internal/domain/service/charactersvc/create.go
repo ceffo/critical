@@ -828,7 +828,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	// of its own.
 	out.ExceptionalStrength = k.exceptional
 	out.Alignments = k.alignments
-	out.SkillsClass, out.SpellbookClass = carriers(k.active)
+	out.SkillsClass, out.SpellbookClass, out.PsionicsClass = carriers(k.active)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -906,9 +906,10 @@ func draftPSP(out *Draft, c *Character, entered int, rules Rules) error {
 }
 
 // carriers are the classes that carry the character's skill points (ADR 0030 steps 17 and 18) and
-// its starting spellbook (step 20.7): the first active class listing rogue skills, the first
-// listing a spellbook, "" for none. The form reads them here instead of choosing.
-func carriers(active []classes.Class) (skills, book string) {
+// its starting spellbook (step 20.7), and its psionics (ADR 0043 step 9: the known powers and the
+// PSP maximum): the first active class listing rogue skills, the first listing a spellbook, the
+// first listing psionics, "" for none. The form reads them here instead of choosing.
+func carriers(active []classes.Class) (skills, book, psi string) {
 	for _, def := range active {
 		if _, ok := def.Lists(classes.KindRogueSkills); ok && skills == "" {
 			skills = def.ID
@@ -916,8 +917,11 @@ func carriers(active []classes.Class) (skills, book string) {
 		if _, ok := def.Lists(classes.KindSpellbook); ok && book == "" {
 			book = def.ID
 		}
+		if _, ok := def.Lists(classes.KindPsionics); ok && psi == "" {
+			psi = def.ID
+		}
 	}
-	return skills, book
+	return skills, book, psi
 }
 
 // skillsLevel is the level the skill point budget reads before a character derives: the skills
@@ -1371,6 +1375,9 @@ type Draft struct {
 	// SkillsClass is the active class that carries the skill points (the first listing rogue
 	// skills), SpellbookClass the one that carries the starting spellbook; "" for none.
 	SkillsClass, SpellbookClass string
+	// PsionicsClass is the active class that lists psionics (ADR 0043: its known powers and PSP
+	// maximum are entered at creation); "" for none.
+	PsionicsClass string
 	// ComputedPSPMax is ADR 0043 step 4's PSP maximum at the psionics entry's starting level, the
 	// one Create stores when none is entered (step 4.4); nil for a character with no psionics
 	// entry or while Character is nil. The pool Create would store is Character's Derived.PSP.

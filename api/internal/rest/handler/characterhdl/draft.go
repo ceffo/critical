@@ -65,6 +65,8 @@ type DraftDTO struct {
 	// "" for none.
 	SkillsClass    string `json:"skillsClass"`
 	SpellbookClass string `json:"spellbookClass"`
+	// PsionicsClass lists psionics (ADR 0043): the form asks its known powers and PSP maximum.
+	PsionicsClass string `json:"psionicsClass"`
 	// ComputedPSPMax is ADR 0043 step 4's PSP maximum at the psionics entry's starting level (the
 	// one stored when no `pspMax` is entered); null for a character with no psionics entry or
 	// while `derived` is. `derived.psp` is the pool the creation would store, full.
@@ -132,7 +134,7 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
 		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
 		ExceptionalStrength: d.ExceptionalStrength, Alignments: append([]string{}, d.Alignments...),
-		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass, ComputedPSPMax: d.ComputedPSPMax,
+		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass, PsionicsClass: d.PsionicsClass, ComputedPSPMax: d.ComputedPSPMax,
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

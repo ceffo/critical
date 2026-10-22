@@ -98,6 +98,12 @@ func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]
 	if err != nil {
 		return nil, false, err
 	}
+	open, ok := s.openOf(c, entry)
+	return open, ok, nil
+}
+
+// openOf is open on the character c read.
+func (s *Spheres) openOf(c *charactersvc.Character, entry string) ([]catalogue.Spell, bool) {
 	// ADR 0042 steps 12 and 14: the entry granting the sphere access, with
 	// its own level and slots; a named entry is that one (a cleric/mage's mage
 	// entry has no sphere access: its stored spellbook).
@@ -111,11 +117,11 @@ func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]
 	}
 	def, found := s.defs.Class(class)
 	if !found {
-		return nil, false, nil
+		return nil, false
 	}
 	f, ok := def.Feature(classes.KindSphereAccess, level)
 	if !ok {
-		return nil, false, nil
+		return nil, false
 	}
 	out := []catalogue.Spell{}
 	for _, sp := range s.priest {
@@ -123,7 +129,7 @@ func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]
 			out = append(out, sp)
 		}
 	}
-	return out, true, nil
+	return out, true
 }
 
 // All implements prepsvc.Spellbook.
@@ -148,18 +154,54 @@ func (s *Spheres) Of(ctx context.Context, characterID int64, class string) ([]pr
 	return out, nil
 }
 
-// SpellKeys implements spellsvc.Spellbook (the lookup's "Mine" filter).
+// SpellKeys implements spellsvc.Spellbook (the lookup's "Mine" filter): the
+// spells every active spellcasting entry prepares from (ADR 0042 step 14, as
+// Of gives them per entry), each once, entry by entry: a cleric/mage's are
+// the cleric's sphere spells and the mage's stored spellbook. One caster (or
+// none derived) is the first entry's source.
 func (s *Spheres) SpellKeys(ctx context.Context, characterID int64) ([]string, error) {
-	open, ok, err := s.open(ctx, characterID, "")
+	c, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
-	if !ok {
-		return s.book.SpellKeys(ctx, characterID)
+	entries := []string{""}
+	if c.Derived.Casters() > 1 {
+		entries = entries[:0]
+		for _, e := range c.Derived.Classes {
+			if e.State == classes.EntryActive && e.Casts {
+				entries = append(entries, e.Class)
+			}
+		}
 	}
-	out := make([]string, len(open))
-	for i, sp := range open {
-		out[i] = sp.ID
+	var out []string
+	add := func(keys ...string) {
+		for _, k := range keys {
+			if !slices.Contains(out, k) {
+				out = append(out, k)
+			}
+		}
+	}
+	book := false
+	for _, entry := range entries {
+		open, ok := s.openOf(c, entry)
+		if ok {
+			for _, sp := range open {
+				add(sp.ID)
+			}
+			continue
+		}
+		if book { // the stored spellbook is the character's, read once
+			continue
+		}
+		book = true
+		keys, err := s.book.SpellKeys(ctx, characterID)
+		if err != nil {
+			return nil, err
+		}
+		add(keys...)
+	}
+	if out == nil {
+		out = []string{}
 	}
 	return out, nil
 }

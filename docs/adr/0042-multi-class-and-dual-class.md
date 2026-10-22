@@ -365,7 +365,10 @@ bard 15 never).)_
     (`EntryDerived.SpellFailure`; the sheet's one figure is the first granting entry's), and a cast
     rolls the d100 against the casting entry's chance only, so a cleric/mage's wizard spells roll
     none. Tests: `Derive_Step14_SpellFailurePerEntry` (charactersvc),
-    `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The web does not yet send a class:
+    `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The spell lookup's "Mine" filter
+    (`spheresvc.SpellKeys`) holds the spells of every active spellcasting entry's source, each once
+    (a cleric/mage: the cleric's sphere spells within its slots and the stored spellbook). Test:
+    `Spheres_Step14_MineHoldsEveryCastingEntrysSpells` (spheresvc). The web does not yet send a class:
     a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB

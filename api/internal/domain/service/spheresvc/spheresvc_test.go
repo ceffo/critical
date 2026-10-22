@@ -171,3 +171,24 @@ func TestSpheres_Step14_EachEntryPreparesFromItsOwnSource(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"bless", "chant", "produce_flame"}, ids(priest))
 }
+
+// ADR 0042 step 14 on the lookup's "Mine" filter: a character with two
+// spellcasting entries finds the spells of both sources, each once: a
+// cleric/mage the cleric's sphere spells within the cleric's slots and the
+// mage's stored spellbook (the code before gave the sphere spells only).
+func TestSpheres_Step14_MineHoldsEveryCastingEntrysSpells(t *testing.T) {
+	ctx := context.Background()
+	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
+		SpellSlots: map[int]int{1: 3, 2: 3, 3: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
+			{Class: "mage", State: classes.EntryActive, RealizedLevel: 6, Casts: true, SpellSlots: map[int]int{1: 4, 2: 2, 3: 2}},
+			{Class: "fighter", State: classes.EntryActive, RealizedLevel: 6},
+		},
+	}}
+	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
+	require.NoError(t, err)
+	keys, err := s.SpellKeys(ctx, 1)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"bless", "chant", "produce_flame", "sleep"}, keys)
+}

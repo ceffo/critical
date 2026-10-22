@@ -200,7 +200,7 @@ The psionic class of the Complete Psionics Handbook, whose powers cost PSP. [ADR
 
 **PSP** (fr: PFP, points de force psionique) _(planned)_:
 Psionic strength points, the pool a psionicist spends on powers: a maximum, and a ledger of deltas on the action log. [ADR 0043](docs/adr/0043-psionics.md) steps 4 to 7.
-_Code_: Psionics, PSPRule, PSPPerLevel, PSPMax, PSPBreakdown, InherentPotentialRow, PSPPool
+_Code_: Psionics, PSPRule, PSPPerLevel, PSPMax, PSPBreakdown, PSPState, InherentPotentialRow, PSPPool
 
 **Discipline** (fr: discipline):
 One of the six fields a psionic power belongs to (telepathy, say); catalogue data. [ADR 0043](docs/adr/0043-psionics.md) steps 8 and 9. _Avoid_: for the magic school (that is a **school**).

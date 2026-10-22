@@ -435,7 +435,18 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		}
 		return res, snaps, nil
 	case spelleffectsvc.KindBuff:
-		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.class)
+		// A spell someone casts on the Bard, or one added as an effect, is on
+		// him by definition.
+		onSelf := true
+		if r.source == SourceCast && entry.AddsBuff() {
+			if onSelf, err = appliesToSelf(entry, r.onSelf, r.casterLevel); err != nil {
+				return CastResult{}, nil, err
+			}
+		}
+		// ADR 0030 step 2: a by-group gain follows the class group of whoever
+		// receives the spell, which the caster's side does not know when the
+		// spell goes on someone else: it rolls none there.
+		buff, untracked, err := s.rollBuff(entry, r.casterLevel, r.class, !onSelf)
 		if err != nil {
 			return CastResult{}, nil, fmt.Errorf("%s: %w", entry.ID, err)
 		}
@@ -446,17 +457,9 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 			res.TextOnly = TextOnlyByHand
 			return res, snaps, nil
 		}
-		// A spell someone casts on the Bard, or one added as an effect, is on
-		// him by definition.
-		if r.source == SourceCast {
-			onSelf, err := appliesToSelf(entry, r.onSelf, r.casterLevel)
-			if err != nil {
-				return CastResult{}, nil, err
-			}
-			if !onSelf {
-				res.TextOnly = TextOnlyNotOnSelf
-				return res, snaps, nil
-			}
+		if !onSelf {
+			res.TextOnly = TextOnlyNotOnSelf
+			return res, snaps, nil
 		}
 		added, snap, err := s.Buffs.Add(ctx, characterID, buff.Buff)
 		if err != nil {

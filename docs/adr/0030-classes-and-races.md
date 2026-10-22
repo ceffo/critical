@@ -159,8 +159,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    effect's by-group entry (an ability gain's `by_group` die and `max_by_group` cap, the
    spell-effects schema; Strength: warrior 1d8, priest and rogue 1d6, wizard 1d4): the group of the
    character the spell is on, whether he cast it, received it or added it from the lookup. A spell
-   cast on someone else rolls with the caster's group (the app knows no other character's class
-   yet). A by-group effect on a class with no group is refused before anything is rolled. _(Added
+   cast on someone else rolls the shown gain with the caster's group (the app knows no other
+   character's class yet); it is not applied, and the receiver's own Receive uses his group. A
+   by-group effect on a class with no group is refused before anything is rolled. _(Added
    2026-10-21 with the fix of the cast service, which used the rogue's entry for every class.)_
 
 ### Level and experience
@@ -168,7 +169,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    Tests: `TestClassGroup_Step2` (ruletablesadpt), `TestDerive_Step2_TheClassGroupPicksTheRows`
    (charactersvc); `TestCast_Step2_StrengthRollsTheCastersGroupDie`,
    `TestEffects_Step2_ByGroupFollowsTheCharactersClass`,
-   `TestEffects_Step2_UnknownClassRefusesAByGroupEffect` (castsvc).
+   `TestEffects_Step2_UnknownClassRefusesAByGroupEffect`,
+   `TestCast_Step2_StrengthOnAnotherShowsTheCastersRollAppliesNothing` (castsvc).
 3. **Level from XP.** The target level (step 7) is the highest level `L` from 1 to 20 whose
    threshold `T(L)` in the
    class's experience table is at or under the XP total ([ADR 0015](0015-experience.md) step 1):

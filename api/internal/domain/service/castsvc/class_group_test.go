@@ -135,3 +135,27 @@ func TestEffects_Step2_UnknownClassRefusesAByGroupEffect(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 7, res.Buff.Buff.Charges)
 }
+
+// ADR 0030 step 2: a fighter's Strength cast on someone else shows the roll
+// of the caster's group (1d8, the app knows no other class) and applies
+// nothing: the one row added is the duration-only row on the other (ADR
+// 0004 step 20.5), with no Strength bonus.
+func TestCast_Step2_StrengthOnAnotherShowsTheCastersRollAppliesNothing(t *testing.T) {
+	f := newFixtureOf(t, catalog(t), casterOf("fighter"), 7)
+	f.prepared(slot("strength", "Strength", 2))
+
+	res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{OnSelf: boolPtr(false)})
+	require.NoError(t, err)
+	assert.Empty(t, f.dice.vals, "every queued die is rolled")
+	assert.Equal(t, []int{8}, f.dice.sides, "one d8: the fighter's group")
+	require.NotNil(t, res.Buff)
+	require.NotNil(t, res.Buff.StrGain)
+	assert.Equal(t, 7, res.Buff.StrGain.Total)
+	assert.True(t, res.Buff.OnOther)
+	assert.False(t, res.Buff.Applied)
+	require.Len(t, f.added, 1, "only the row on the other")
+	assert.True(t, f.added[0].OnOther)
+	assert.Nil(t, f.added[0].Effects.StrBonus)
+	assert.Nil(t, f.added[0].Effects.StrMax)
+	assert.Equal(t, 900, f.added[0].Duration, "60 rounds per level at 15")
+}

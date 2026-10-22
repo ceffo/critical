@@ -387,6 +387,10 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 	if err != nil {
 		return 0, err
 	}
+	psionicPicks, err := EncodePsionicPicks(c.PsionicPicks)
+	if err != nil {
+		return 0, err
+	}
 	entries := c.Entries()
 	if err := classes.ValidateEntries(entries); err != nil {
 		return 0, err
@@ -401,7 +405,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: first.Class, RaceCode: c.Race,
 		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: int64(first.RealizedLevel), Valid: true},
-		SkillSets:     points, ProficiencyPicks: picks,
+		SkillSets:     points, ProficiencyPicks: picks, PsionicPicks: psionicPicks,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)

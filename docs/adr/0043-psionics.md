@@ -140,7 +140,7 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    ([ADR 0006](0006-saving-throws.md) step 9). It is a labelled modifier of the save's breakdown,
    given when the save request carries the tag; the tag is the mind-affecting tag of ADR 0006
    step 9 _(Q12)_.
-   Test: `Save_Step3_ThePsionicistsTwoAgainstCharm` (savesvc: a psionicist's mind-affecting save
+   Test: `ResolveSavingThrow_Step3_ThePsionicistsTwoAgainstCharm` (combatsvc: a psionicist's mind-affecting save
    carries +2 and the Wisdom adjustment, two labelled lines; a fighter's carries no +2).
 
 ### PSPs
@@ -168,8 +168,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    another class carries neither and leaves the maximum). A dual-class's psionicist level before
    the crossover gains it too (step 18.2). Creation takes an optional `pspMax` (1 to 999; refused
    `out_of_range` for a character with no psionics entry); without one the maximum is computed
-   at the psionicist entry's starting level. The psionicist stays not creatable until every kind
-   it lists is computed (ADR 0040 step 8), so the creation test reads the started character.
+   at the psionicist entry's starting level. `Create_Step4_4_PSPMaxEnteredIsKept` reads the
+   started character (charactersvc); now that the psionicist is creatable,
+   `Create_Step9_ThePartyThiefPsionicistWithHisPowers` (composition) creates him through the API
+   with the maximum computed (25 at Wis 17, Int 15, Con 16, psionicist 1) and with one entered
+   (kept). The draft serves `computedPspMax` (step 4's maximum at the starting level, null with no psionics entry) and, in
+   `derived.psp`, the pool the creation would store, full (no ledger exists yet); a maximum entered for a character with no
+   psionics entry is its refusal on `pspMax`. The creation form shows the computed figure and takes an entered one in its
+   place. Test: `Draft_Step4_4_TheComputedAndStoredPSPMaximum` (composition).
 
 5. **The PSP ledger.** Like HP (ADR 0007 step 2, ADR 0018 step 4): **any** action-log entry may
    carry a signed `psp_delta`; current PSPs are `psp_max` plus the sum of every entry's effective
@@ -484,11 +490,19 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
   by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
   row and crossover (`seeds/proficiencies.json`).
-- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but one of its two kinds is not computed yet, so the
-  class is **not offered at creation and refused** (`not_creatable`) until `save_bonus` has a reader. As built: `psionics` left
-  `classes.notImplemented` with its reader (the PSP pool, steps 4 to 7: `TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`), `save_bonus`
-  stays; each kind leaves `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
-  (`KindPsionics`, `KindSaveBonus`: parsed with no params, which the schema checks; nothing reads them).
+- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist; it was not offered at creation and refused
+  (`not_creatable`) while one of its kinds had no reader. As built: `psionics` left `classes.notImplemented` with its reader (the PSP pool,
+  steps 4 to 7), and `save_bonus` with its own (step 3, 2026-10-22), which empties the list: the psionicist is creatable, single-class
+  and in a multi-class (`TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`, a test on kinds, never an id;
+  `TestCreate_Step8_ThePartyThiefPsionicistIsCreatable` in composition). The list and `Class.Implemented` stay for the next kind
+  listed before its reader.
+- **`save_bonus` as built (step 3, 2026-10-22)**: the params `against` (one tag, `mind_affecting`, `classes.SaveAgainst`) and `bonus`
+  (1 to 5) are checked at start like every kind's. The derived character carries `ClassSaveBonuses` (domain only, not in the character
+  DTO): one per tag, the best among the entries whose saves count (ADR 0042 step 9: a dual-class's old class only past the crossover),
+  so two classes' bonuses against one tag do not add up. A save the request flags `mindAffecting` gets each as a modifier of kind
+  `class` (detail: the class code) after the Wisdom line; the web words it "Psionicist (class)". Tests:
+  `TestResolveSavingThrow_Step3_ThePsionicistsTwoAgainstCharm` (combatsvc), `TestDerive_Step3_ThePsionicistsSaveBonus`
+  (charactersvc: single, thief/psionicist, fighter, dual-class on both sides of the crossover).
 - **French is optional on a power's text** (the localized schema type: English required, an absent language omitted). 21 of the 152
   descriptions have no French body in the artifact (OCR); a reader serves the English one for a language a text lacks, as every localized
   text does (ADR 0023 step 3): `TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish`.
@@ -540,6 +554,15 @@ Step 9's backend: the rules, the store, the save with its undo and the route. Th
   `Validate`, where the rules live) not in `psionicsvc`, whose `SetKnownPowers_*` tests cover the save, the no-op and the refusals with
   mocks; `Picks_Step9_UndoRemovesThePick` and `KnownPowers_Step9_SaveUndoRedoAndRefusal` are in composition;
   `Picks_Step9_PutWireShape` and `_PutRefusals` in the router.
+- **At creation** (the step's "an existing character's picks are entered under the same rules"): the create body and the draft take
+  `psionicPicks`, in the editor's pick shape and order. They are checked by the same `psionics.Validate`, against Table 4 at the psionics
+  entry's starting level, and stored in the creation's insert (`characters.psionic_picks`), in its one transaction. Creating is no move of
+  the game, so no `psionic_pick` entry is logged and there is nothing to undo. A list over the rules refuses the creation with the editor's
+  409, its code and figures; a malformed list, or picks for a character with no psionics entry (`not_allowed`), is a field error on
+  `psionicPicks`. The draft lists either refusal on `psionicPicks`, a list over the rules with the editor's figures (`power`, `discipline`,
+  `slot`, `count`, `limit`), and serves `knownPowers` with the picks as entered. The draft names the class that lists psionics
+  (`psionicsClass`, "" for none), and the creation form adds a psionics step for it: the PSP maximum and the dashboard's
+  known-powers editor, fed by the draft instead of the saves. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
 
 ## Consequences
 

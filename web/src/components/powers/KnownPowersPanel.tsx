@@ -9,7 +9,7 @@ import { localized } from "@/i18n/localized";
 import { cn } from "@/lib/utils";
 import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
-import type { PowerPick } from "@/types/character";
+import type { KnownPowers, PowerPick } from "@/types/character";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
 import { PowerActions } from "./PowerActions";
 
@@ -57,25 +57,56 @@ function usePowerCache(
 }
 
 /**
- * A psionicist's known powers (ADR 0043 step 9): what Table 4 allows at the level beside what the
- * picks take, the picks with their costs and scores, and a picker over the powers catalogue. One
- * list, saved whole by every change (an add, a remove, a relearn): the server checks the rules and
- * a refusal names the power, the discipline and the slot, the list staying as it was. The journal's
- * Undo restores the previous list. Nothing for a character with no known powers block.
+ * A psionicist's known powers on the dashboard (ADR 0043 step 9): the editor on the character's
+ * known powers, every change saved whole (`PUT /api/psionics/picks`); a refusal is the save's 409
+ * and the list stays as it was. The journal's Undo restores the previous list. Nothing for a
+ * character with no known powers block.
  */
 export function KnownPowersPanel() {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language;
   const known = useCharacterStore((s) => s.character?.derived?.knownPowers);
   const save = useCharacterStore((s) => s.saveKnownPicks);
   const busy = useTableStore((s) => s.busy);
+  const [refusal, setRefusal] = useState<ApiError | null>(null);
+  if (!known) return null;
+  return (
+    <KnownPowersEditor
+      known={known}
+      busy={busy}
+      refusal={refusal}
+      onChange={async (next) => {
+        if (busy) return;
+        setRefusal(null);
+        setRefusal(await save(next));
+      }}
+    />
+  );
+}
+
+/**
+ * The known-powers editor (ADR 0043 step 9): what Table 4 allows at the level beside what the
+ * picks take, the picks with their costs and scores, and a picker over the powers catalogue. One
+ * list, changed whole by every add, remove or relearn (`onChange`): the server checks the rules,
+ * and `refusal` names the power, the discipline and the slot it refused. The dashboard saves each
+ * change; the creation sends it with the draft (the same rules at the starting level).
+ */
+export function KnownPowersEditor({
+  known,
+  busy,
+  refusal,
+  onChange,
+}: {
+  known: KnownPowers;
+  busy: boolean;
+  refusal: ApiError | null;
+  onChange: (next: PowerPick[]) => void | Promise<void>;
+}) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
   const [query, setQuery] = useState("");
   const [found, setFound] = useState<Power[]>([]);
   const [options, setOptions] = useState<PowerFilterOptions | null>(null);
-  const [refusal, setRefusal] = useState<ApiError | null>(null);
 
   useEffect(() => {
-    if (!known) return;
     let live = true;
     getPowerFilterOptions().then(
       (o) => live && setOptions(o),
@@ -84,11 +115,9 @@ export function KnownPowersPanel() {
     return () => {
       live = false;
     };
-  }, [known]);
+  }, []);
 
-  const picking = known !== undefined && known !== null;
   useEffect(() => {
-    if (!picking) return;
     let live = true;
     const timer = setTimeout(() => {
       searchPowers({ q: query, discipline: "", kind: "" }).then(
@@ -100,15 +129,13 @@ export function KnownPowersPanel() {
       live = false;
       clearTimeout(timer);
     };
-  }, [picking, query]);
+  }, [query]);
 
-  const picks = known?.picks ?? [];
+  const picks = known.picks;
   const powers = usePowerCache(
     picks.filter((p) => p.kind !== "discipline").map((p) => p.id),
     found,
   );
-  if (!known) return null;
-
   const disciplineName = (id: string) => {
     const d = options?.disciplines.find((x) => x.id === id);
     return d ? localized(lang, d.name) : id;
@@ -118,14 +145,12 @@ export function KnownPowersPanel() {
     return p ? localized(lang, p.name) : id;
   };
 
-  async function change(next: PowerPick[]) {
-    if (busy) return;
-    setRefusal(null);
-    setRefusal(await save(next));
+  function change(next: PowerPick[]) {
+    if (!busy) void onChange(next);
   }
   const isPicked = (kind: PowerPick["kind"], id: string) =>
     picks.some((p) => p.kind === kind && p.id === id);
-  const add = (pick: PowerPick) => void change([...picks, pick]);
+  const add = (pick: PowerPick) => change([...picks, pick]);
   // Removing a power takes its relearns with it (a relearn of a power not known is malformed);
   // removing a relearn takes that one only, the first of its power.
   const remove = (pick: PowerPick) => {
@@ -133,10 +158,10 @@ export function KnownPowersPanel() {
       const at = picks.findIndex(
         (p) => p.kind === "relearn" && p.id === pick.id,
       );
-      void change(picks.filter((_, i) => i !== at));
+      change(picks.filter((_, i) => i !== at));
       return;
     }
-    void change(
+    change(
       picks.filter(
         (p) =>
           !(p.id === pick.id && (p.kind === pick.kind || p.kind === "relearn")),

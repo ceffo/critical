@@ -154,8 +154,8 @@ func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
 }
 
 // ADR 0043 step 4.4 through Create: a fighter is stored with no PSP maximum; a maximum entered for
-// a character with no psionics entry, or out of range, is refused. (The psionicist itself is not
-// creatable yet, ADR 0040 step 8: TestCreate_Step4_4_PSPMaxEnteredIsKept proves its maximum.)
+// a character with no psionics entry, or out of range, is refused. (TestCreate_Step4_4_PSPMaxEnteredIsKept
+// proves a psionicist's maximum.)
 func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	fighter := entered("human")
 	fighter.Class, fighter.Classes = "fighter", nil
@@ -173,7 +173,7 @@ func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	t.Run("entered, refused", func(t *testing.T) {
 		e := classesEnv(t, ruleset.RacialLift{})
 		n := fighter
-		n.PSPMax = 30
+		n.PSPMax = new(30)
 		_, err := e.svc.Create(context.Background(), ownerID, n)
 		var fe *domain.FieldError
 		require.ErrorAs(t, err, &fe)
@@ -182,7 +182,14 @@ func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	t.Run("out of range, refused", func(t *testing.T) {
 		e := classesEnv(t, ruleset.RacialLift{})
 		n := fighter
-		n.PSPMax = charactersvc.MaxPSPMax + 1
+		n.PSPMax = new(charactersvc.MaxPSPMax + 1)
+		assert.Equal(t, []string{charactersvc.FieldPSPMax + ": " + charactersvc.CodeOutOfRange}, refused(t, e, n))
+	})
+	// An entered 0 is no "none": the maximum runs 1 to MaxPSPMax (ADR 0043 step 4.4).
+	t.Run("zero, refused", func(t *testing.T) {
+		e := classesEnv(t, ruleset.RacialLift{})
+		n := fighter
+		n.PSPMax = new(0)
 		assert.Equal(t, []string{charactersvc.FieldPSPMax + ": " + charactersvc.CodeOutOfRange}, refused(t, e, n))
 	})
 }

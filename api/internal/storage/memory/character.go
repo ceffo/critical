@@ -48,6 +48,7 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 		if ch.RealizedLevel == 0 {
 			ch.RealizedLevel = ch.Sheet.Level
 		}
+		ch.SetClasses(ch.Entries())
 		out = &ch
 		return nil
 	})
@@ -62,7 +63,8 @@ func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLeve
 		if !ok {
 			return domain.ErrCharacterNotFound
 		}
-		ch.RealizedLevel, ch.HPMax = realizedLevel, hpMax
+		ch.SetPrimaryLevel(realizedLevel)
+		ch.HPMax = hpMax
 		t.characters[id] = ch
 		return nil
 	})
@@ -153,7 +155,7 @@ func (c Characters) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charac
 				continue
 			}
 			ch := t.characters[id]
-			out = append(out, charactersvc.Summary{ID: id, Name: ch.Name, Class: ch.Class})
+			out = append(out, charactersvc.Summary{ID: id, Name: ch.Name})
 		}
 		return nil
 	})

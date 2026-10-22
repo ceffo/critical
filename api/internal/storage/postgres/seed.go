@@ -253,6 +253,14 @@ func seedCharacter(ctx context.Context, q storeq.Querier, seedPath string) error
 	if err != nil {
 		return fmt.Errorf("insert character: %w", err)
 	}
+	// ADR 0042 step 1: the seed's class, realized at its sheet level (step 7.5), its XP as the
+	// entry's starting XP.
+	if err := q.InsertClassEntry(ctx, storeq.InsertClassEntryParams{
+		CharacterID: charID, Position: 0, Class: c.Class, RealizedLevel: int64(c.Level),
+		StartingXp: int64(c.XPTotal), State: string(classes.EntryActive),
+	}); err != nil {
+		return fmt.Errorf("insert class entry: %w", err)
+	}
 	slotsJSON, err := c.SlotsJSON()
 	if err != nil {
 		return err

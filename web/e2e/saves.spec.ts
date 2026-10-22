@@ -309,3 +309,75 @@ test("a save against the mind carries the Wisdom modifier on its card (en and fr
   await expect(page.getByText("Contre l’esprit")).toBeVisible();
   await snap(page, "save-mind-fr");
 });
+
+/** Makes a fresh Wisdom-19 fighter the active character (Table 5: immune to command). */
+async function wiseFighter(page: Page) {
+  expect(
+    await apiCall(page, "POST", "/api/characters", {
+      name: "Sage",
+      class: "fighter",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "female" },
+      str: 12,
+      dex: 12,
+      con: 12,
+      int: 10,
+      wis: 19,
+      cha: 10,
+      hpMax: 10,
+      xp: 0,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+}
+
+// ADR 0006 step 10.2 in the browser: the saves' Spell picker (shown once "Against the mind" is
+// ticked) reaches the save request, the card
+// and the last-roll column word the server's immunity (en and fr), and the tag clears for the next
+// save. The rule (which scores, which spells, the refused adjustment) is Go tests (ruletablesadpt,
+// combatsvc, router).
+test("a save against a spell the Wisdom makes the character immune to rolls nothing (en and fr)", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await wiseFighter(page);
+  await page.getByTestId("save-mind-affecting").check();
+  await page.getByTestId("save-spell").click();
+  await page.getByTestId("save-spell-search").fill("comma");
+  await page.getByRole("button", { name: "Save against Command" }).click();
+  await expect(page.getByTestId("save-spell-tag")).toHaveText("vs Command");
+  const rolled = page.waitForResponse(
+    (r) =>
+      r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+  );
+  await page.getByRole("button", { name: "Roll save vs Spells" }).click();
+  const res = await rolled;
+  expect(res.request().postDataJSON()).toEqual({
+    category: "spell",
+    mindAffecting: true,
+    spellId: "command",
+  });
+  expect((await res.json()).immunity).toEqual({ source: "wisdom", score: 19 });
+  const card = saveCard(page);
+  await expect(card.getByTestId("save-immune")).toHaveText("Immune");
+  await expect(card.getByTestId("save-immunity")).toHaveText(
+    "Wisdom 19: immune to Command, nothing to roll",
+  );
+  await expect(card.getByText("Adjust after the roll")).toHaveCount(0);
+  await expect(page.getByTestId("save-spell-tag")).toHaveCount(0);
+  await expect(page.getByTestId("save-mind-affecting")).not.toBeChecked();
+  await expect(
+    page.locator('[data-save="spell"]').getByTestId("save-last-immune"),
+  ).toBeVisible();
+  await expect(logEntry(page, "Save vs Spells").first()).toContainText(
+    "Save vs Spells against Command: immune (Wisdom 19), PASSED",
+  );
+
+  await chooseLanguage(page, "fr");
+  await expect(
+    page
+      .getByRole("region", { name: "Détail", exact: true })
+      .getByTestId("save-immunity"),
+  ).toHaveText(/^Sagesse 19 : immunité contre .+, aucun jet$/);
+  await snap(page, "save-immune-fr");
+});

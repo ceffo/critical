@@ -220,6 +220,11 @@ async function expectCharacterCardLines(page: Page, where: string) {
     (await heading.boundingBox())!.height,
     `saves heading on one line, ${where}`,
   ).toBeLessThanOrEqual(25);
+  // The label line with its rare controls (mind box, spell button) is one line too (ADR 0027 step 1).
+  expect(
+    (await character.getByTestId("saves-head").boundingBox())!.height,
+    `saves label line on one line, ${where}`,
+  ).toBeLessThanOrEqual(25);
   for (const row of await character.getByTestId("save-row").all())
     expect(
       (await row.boundingBox())!.height,
@@ -663,6 +668,42 @@ test.describe("with the sheet's STR 12", () => {
       await snap(page, `power-row-${size}`);
     }
   });
+});
+
+// ADR 0006 step 10.2 / ADR 0027 step 1: the saves' Spell line (shown once "Against the mind" is
+// ticked) and the tag of a spell set, in French first: the label line stays one line, the tag and the
+// rows are uncut, 1440 to 2560.
+test("saves label line with a spell set: heading one line, tag uncut, 1440 to 2560", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const character = page.getByTestId("character");
+  await page.getByTestId("save-mind-affecting").check();
+  await expect(page.getByTestId("save-spell")).toBeVisible();
+  await snap(page, "saves-spell-button-fr-1440x900");
+  await page.getByTestId("save-spell").click();
+  await page.getByTestId("save-spell-search").fill("comma");
+  await page.getByTestId("save-spell-option").first().click();
+  for (const vp of [
+    { width: 1440, height: 900 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    const size = `${vp.width}x${vp.height}`;
+    await expect(page.getByTestId("save-spell-tag")).toBeVisible();
+    await expectCharacterCardLines(page, `a save spell set, ${size}`);
+    await expectNoClippedText(
+      character,
+      `character card with a save spell, ${size}`,
+    );
+    await expectWholeWords(
+      character,
+      `character card with a save spell, ${size}`,
+    );
+    await snap(page, `saves-spell-tag-fr-${size}`);
+  }
 });
 
 // ADR 0016 step 13: magic armour worn has no row on the effects timeline (it is always on); French

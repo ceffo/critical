@@ -1,6 +1,11 @@
 package ruletablesvc
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
+)
 
 // The racial level limits of DMG Table 7 (ADR 0030 step 21), carried by
 // catalogue format 5 (ADR 0021 step 11). The levels are shown on the race
@@ -26,10 +31,14 @@ type LevelLimits struct {
 
 // NewLevelLimits validates the DMG Table 7 rows (the rules the catalogue
 // schema cannot express, ADR 0021 step 11.3): every race x class
-// combination exactly once, and a level within 1..MaxLevel unless the cell
+// combination at most once, a race with a row having one per defined class
+// (a race with none, a human, has no limit), and a level within 1..MaxLevel unless the cell
 // is unlimited or a dash. A violation names the combination.
-func NewLevelLimits(rows []LevelLimitRow) (*LevelLimits, error) {
-	if err := once(rows, func(r LevelLimitRow) string { return r.Race + " " + r.Class }, pairs(Races, Classes)); err != nil {
+func NewLevelLimits(rows []LevelLimitRow, defs *classes.Registry) (*LevelLimits, error) {
+	if defs == nil {
+		return nil, errors.New("no class definitions")
+	}
+	if err := perRace(rows, func(r LevelLimitRow) (string, string) { return r.Race, r.Class }, defs.RaceIDs(), defs.ClassIDs()); err != nil {
 		return nil, err
 	}
 	out := &LevelLimits{rows: make(map[string]LevelLimitRow, len(rows))}

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The cleric's rules (ADR 0030 steps 13 to 16): the Wisdom bonus spells, the
@@ -174,10 +176,13 @@ type SphereAccess struct {
 
 // NewSphereAccess validates rows: known class and access codes, each class
 // and sphere once, and returns them.
-func NewSphereAccess(rows []SphereAccessRow) (*SphereAccess, error) {
+func NewSphereAccess(rows []SphereAccessRow, defs *classes.Registry) (*SphereAccess, error) {
+	if defs == nil {
+		return nil, errors.New("no class definitions")
+	}
 	out := &SphereAccess{byClass: map[string]map[string]string{}}
 	for _, r := range rows {
-		if !slices.Contains(Classes, r.Class) {
+		if _, ok := defs.Class(r.Class); !ok {
 			return nil, fmt.Errorf("unknown class %q", r.Class)
 		}
 		if !slices.Contains(SphereAccesses, r.Access) {

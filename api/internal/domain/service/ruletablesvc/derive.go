@@ -3,6 +3,8 @@ package ruletablesvc
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The lookups the character's derived values read (ADR 0030 steps 2, 3, 5, 6
@@ -14,24 +16,40 @@ import (
 // (format 3): the server refuses to start on one (the composition root).
 var ErrNoClassTables = errors.New("the spell catalogue carries no class tables (format 3): run `just catalogue`")
 
-// classGroups is ADR 0030 step 2: fighter is a warrior, mage a wizard, cleric
-// a priest, thief and bard rogues.
-var classGroups = map[string]string{
-	"fighter": "warrior",
-	"mage":    "wizard",
-	"cleric":  "priest",
-	"thief":   "rogue",
-	"bard":    "rogue",
+// ErrNoDefinitions is a lookup on tables built without the class
+// definitions (format 11, ADR 0040 step 11.2): the server refuses to start on
+// one (the composition root).
+var ErrNoDefinitions = errors.New("the catalogue carries no class definitions (format 11): run `just catalogue`")
+
+// Definitions are the class, group and race definitions (ADR 0040 step 5).
+func (t *Tables) Definitions() (*classes.Registry, error) {
+	if t.defs == nil {
+		return nil, ErrNoDefinitions
+	}
+	return t.defs, nil
 }
 
-// ClassGroup is the class group of class (ADR 0030 step 2), an error for a
-// code that is not one of Classes.
-func ClassGroup(class string) (string, error) {
-	g, ok := classGroups[class]
-	if !ok {
-		return "", fmt.Errorf("unknown class %q", class)
+// Class is the definition of class (ADR 0040 step 1), an error for a class
+// the catalogue does not define.
+func (t *Tables) Class(class string) (classes.Class, error) {
+	d, err := t.Definitions()
+	if err != nil {
+		return classes.Class{}, err
 	}
-	return g, nil
+	return d.Get(class)
+}
+
+// ClassGroup is the class group of class (ADR 0040 step 1.2, read from its
+// definition), an error for a class the catalogue does not define.
+func (t *Tables) ClassGroup(class string) (string, error) {
+	c, err := t.Class(class)
+	return c.Group, err
+}
+
+// PrimeRequisites are class's prime requisites (ADR 0040 step 6).
+func (t *Tables) PrimeRequisites(class string) ([]string, error) {
+	c, err := t.Class(class)
+	return c.PrimeRequisites, err
 }
 
 func (t *Tables) classTables() (*ClassTables, error) {
@@ -42,41 +60,25 @@ func (t *Tables) classTables() (*ClassTables, error) {
 }
 
 // XPThreshold is the XP that reaches level in class's experience table (PHB
-// Tables 14, 20, 23 and 25), an error outside 1..MaxLevel.
+// Tables 14, 20, 23 and 25, the class definition's rows, ADR 0040 step 1.7), an
+// error outside 1..MaxLevel.
 func (t *Tables) XPThreshold(class string, level int) (int, error) {
-	c, err := t.classTables()
+	c, err := t.Class(class)
 	if err != nil {
 		return 0, err
 	}
-	col, ok := experienceColumns[class]
-	if !ok {
-		return 0, fmt.Errorf("unknown class %q", class)
-	}
-	if level < 1 || level > len(c.Experience) {
-		return 0, fmt.Errorf("%s level %d out of range 1..%d", class, level, len(c.Experience))
-	}
-	return col(c.Experience[level-1]), nil
+	return c.XPThreshold(level)
 }
 
 // LevelFor is ADR 0030 step 3: the highest level whose threshold in class's
 // experience table is at or under xp, from 1 to MaxLevel (the table stops at
 // 20, so does the level). Negative XP is level 1, as 0 is.
 func (t *Tables) LevelFor(class string, xp int) (int, error) {
-	c, err := t.classTables()
+	c, err := t.Class(class)
 	if err != nil {
 		return 0, err
 	}
-	col, ok := experienceColumns[class]
-	if !ok {
-		return 0, fmt.Errorf("unknown class %q", class)
-	}
-	level := 1
-	for _, r := range c.Experience {
-		if col(r) <= xp {
-			level = r.Level
-		}
-	}
-	return level, nil
+	return c.LevelFor(xp), nil
 }
 
 // THAC0For is ADR 0030 step 5: PHB Table 53's THAC0 for group at level.

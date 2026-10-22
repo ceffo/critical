@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -27,7 +28,7 @@ type raceLanguageDTO struct {
 
 // withLanguages adds the language catalogue (the rules are
 // ruletablesvc.NewLanguages'); the list and the table are required.
-func withLanguages(t *ruletablesvc.Tables, f fileDTO, raw []byte) (*ruletablesvc.Tables, error) {
+func withLanguages(t *ruletablesvc.Tables, f fileDTO, raw []byte, defs *classes.Registry) (*ruletablesvc.Tables, error) {
 	if len(raw) == 0 {
 		return nil, errors.New("the artifact needs the languages list")
 	}
@@ -48,7 +49,7 @@ func withLanguages(t *ruletablesvc.Tables, f fileDTO, raw []byte) (*ruletablesvc
 	for i, r := range f.RaceLanguages {
 		rows[i] = ruletablesvc.RaceLanguageRow(r)
 	}
-	l, err := ruletablesvc.NewLanguages(langs, rows)
+	l, err := ruletablesvc.NewLanguages(langs, rows, defs)
 	if err != nil {
 		return nil, err
 	}

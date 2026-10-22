@@ -1,56 +1,29 @@
 package ruletablesvc
 
-import "slices"
+import (
+	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
+)
 
 // Alignments are the nine alignment codes of the PHB (chapter 4), in the
 // order the book lists them (ADR 0032 step 2).
-var Alignments = []string{
-	"lawful_good", "neutral_good", "chaotic_good",
-	"lawful_neutral", "true_neutral", "chaotic_neutral",
-	"lawful_evil", "neutral_evil", "chaotic_evil",
-}
+var Alignments = classes.Alignments
 
-// alignmentLimits are the classes whose alignment the book limits (PHB
-// chapter 3) and the alignments each admits, in Alignments order. The
-// fighter (any), the mage (no limit stated) and the cleric (the book ties the
-// alignment to the deity's, which the app does not model) are unlimited. A
-// class not listed admits all nine too, but undecided (HasAlignmentRule).
-var alignmentLimits = map[string][]string{
-	// Decided as unlimited, listed so that HasAlignmentRule tells a decision
-	// from a class nobody looked at.
-	"fighter": Alignments,
-	"mage":    Alignments,
-	"cleric":  Alignments,
-	// Bard: "always partially neutral", so the five alignments with a
-	// neutral part.
-	"bard": {"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
-	// Thief: any but lawful good.
-	"thief": {
-		"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral",
-		"lawful_evil", "neutral_evil", "chaotic_evil",
-	},
-}
-
-// HasAlignmentRule reports whether the alignments of class were decided (a
-// class absent admits all nine, silently).
-func HasAlignmentRule(class string) bool {
-	_, ok := alignmentLimits[class]
-	return ok
-}
-
-// AlignmentsOf are the alignments class admits, in Alignments order.
-func AlignmentsOf(class string) []string {
-	if admitted, ok := alignmentLimits[class]; ok {
-		return slices.Clone(admitted)
+// AlignmentsOf are the alignments class admits (its definition's, ADR 0040
+// step 1.5), in Alignments order; none for a class the catalogue does not
+// define.
+func (t *Tables) AlignmentsOf(class string) []string {
+	c, err := t.Class(class)
+	if err != nil {
+		return []string{}
 	}
-	return slices.Clone(Alignments)
+	return slices.Clone(c.Alignments)
 }
 
-// AlignmentAllowed reports whether class admits alignment (a code of
-// Alignments).
-func AlignmentAllowed(class, alignment string) bool {
-	if admitted, ok := alignmentLimits[class]; ok {
-		return slices.Contains(admitted, alignment)
-	}
-	return slices.Contains(Alignments, alignment)
+// AlignmentAllowed reports whether class admits alignment (ADR 0040 step
+// 1.5); false for a class the catalogue does not define.
+func (t *Tables) AlignmentAllowed(class, alignment string) bool {
+	c, err := t.Class(class)
+	return err == nil && c.AlignmentAllowed(alignment)
 }

@@ -654,7 +654,7 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by steps 18 to 20: `TestSchema_Step22_OnlyFormat15IsValid`) and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by steps 18 to 20: `TestSchema_Step23_OnlyFormat16IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
     `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
@@ -674,7 +674,7 @@ is only ever appended to by play.
     4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
        `charactersvc.Derived.MagicDefence`.
     Tests: `TestParse_Step17_ReadsTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
-    `TestSchema_Step22_OnlyFormat15IsValid` (cataloguecheck, step 17.3 renamed by steps 18 to 21), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    `TestSchema_Step23_OnlyFormat16IsValid` (cataloguecheck, step 17.3 renamed by steps 18 to 21), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
     the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
 
 18. **The class, group and race definitions, format 11** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) steps 1, 2, 4 and 7
@@ -779,8 +779,8 @@ is only ever appended to by play.
     2. **Rollout, as step 18.6.** The API reads **format 14 only** (a format-13 artifact is refused at start, naming `just catalogue`). Merge order:
        the builder publishing format 14 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
        `testdata/catalogue.json`) immediately.
-    Tests: `TestSchema_Step22_OnlyFormat15IsValid` (cataloguecheck: format 14 only, a `sphere_access` table refused),
-    `TestParse_Step22_ReadsFormat15AndRefusesFormat14` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s format-14 schema rules and the
+    Tests: `TestSchema_Step23_OnlyFormat16IsValid` (cataloguecheck: format 14 only, a `sphere_access` table refused),
+    `TestParse_Step23_ReadsFormat16AndRefusesFormat15` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s format-14 schema rules and the
     cleric's feature against the sphere vocabulary.
 
 22. **Format 15: a class's Constitution column is a boolean** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) step 1.8). The
@@ -791,7 +791,7 @@ is only ever appended to by play.
     1. **`hit_dice.constitution` is gone** from the schema; `bracketed_constitution` is required. Nothing else changes.
     2. **Rollout, as step 18.6.** The API reads **format 15 only** (a format-14 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 15 first, then the API change immediately.
-    Tests: `TestSchema_Step22_OnlyFormat15IsValid` (cataloguecheck), `TestParse_Step22_ReadsFormat15AndRefusesFormat14` (catalogueadpt),
+    Tests: `TestSchema_Step23_OnlyFormat16IsValid` (cataloguecheck) and `TestParse_Step23_ReadsFormat16AndRefusesFormat15` (catalogueadpt) took over the format checks of step 22 and step 23 (format 16 replaced 15),
     `TestHitDieGain_Step7_1_RaisedDieWarriorBonusAndFloor` (ruletablesvc), the level-up and creation roll tests; in `critical-rulebooks`:
     `scripts/check`'s hit dice cases.
 

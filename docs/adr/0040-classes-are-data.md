@@ -18,7 +18,7 @@ The user, 2026-10-21: "We need to make sure we build our rule engine so that it'
 logical. We've been doing a lot of hardcoding and shortcuts and plain stupid things that we need to
 undo as we go (like when you gave bard talents to all classes)." Decided in the triage:
 
-- The catalogue carries classes and races as data in a new format 10. Each class has an id, a
+- The catalogue carries classes and races as data in a new format 11. Each class has an id, a
   group, prime requisites, ability minimums, allowed alignments, weapon and armour limits, an XP
   table, hit dice, a spell progression (by reference) and a **list of features with
   parameters**. The app switches on the **feature kind**, never on a class id. Tables keyed by
@@ -58,7 +58,7 @@ the code implements each kind once.
 
 ```mermaid
 flowchart LR
-  subgraph Cat["Catalogue format 10 (book data)"]
+  subgraph Cat["Catalogue format 11 (book data)"]
     CD["Class definitions"]
     RD["Race definitions"]
     RT["Rule tables, rows keyed by class, group or race"]
@@ -84,7 +84,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
 
 ### The data
 
-1. **A class definition** (catalogue format 10, one entry per class) carries:
+1. **A class definition** (catalogue format 11, one entry per class) carries:
    1. `id`: a language-neutral code (`fighter`, `mage`, `cleric`, `thief`, `bard`), the value
       `characters.class` already stores; `name`: a language map ([ADR 0023](0023-localized-text.md),
       never a per-language field).
@@ -128,7 +128,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    `ClassWeaponTypes_Step1_6_DerivedFromTheEquipmentList` (domain: the lists of ADR 0037 step 7
    come out of `equipment` and the catalogue, equal to today's).
 
-2. **A race definition** (format 10, one entry per race, `human` included) carries `id`, `name` (a
+2. **A race definition** (format 11, one entry per race, `human` included) carries `id`, `name` (a
    language map), the ability adjustments (PHB Table 8) and requirements (Table 7), the identity
    rows (PHB Tables 10 and 11: height, weight, age, today a Go literal), and a list of typed
    **traits** `{kind, params}` (step 4). The thief skill adjustments (Table 27), the racial level
@@ -267,11 +267,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
 ### Migration
 
 11. **The five classes move first, behaviour unchanged.** In this order, each a separate item:
-    1. The catalogue publishes format 10 (the class and race definitions of steps 1, 2 and 4 and
+    1. The catalogue publishes format 11 (the class and race definitions of steps 1, 2 and 4 and
        the rows of step 7) for the five classes and six races, cross-checked against formats 3 to
        9 (same thresholds, THAC0, saves, slots); an [ADR 0021](0021-spell-catalogue.md) step for
-       format 10 comes with it.
-    2. The API imports format 10 into `domain/classes` (steps 5 and 8). While the Go lists still
+       format 11 comes with it.
+    2. The API imports format 11 into `domain/classes` (steps 5 and 8). While the Go lists still
        exist, a test proves the data equals each of them.
     3. Each reader moves to the lookup, one feature kind (or field) at a time, and its Go list is
        deleted in the same PR: the existing step tests of ADR 0030, 0033 and 0037 stay green

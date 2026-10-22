@@ -67,7 +67,7 @@ Invariants:
 A class belongs to one **class group** (warrior, wizard, priest, rogue); the THAC0, saves,
 proficiency slots and by-group spell effects are read by group
 ([ADR 0030](adr/0030-classes-and-races.md) step 2). Today the five classes are code and tables;
-[ADR 0040](adr/0040-classes-are-data.md) makes each a **class definition** in the catalogue (format 10): group, prime requisites,
+[ADR 0040](adr/0040-classes-are-data.md) makes each a **class definition** in the catalogue (format 11): group, prime requisites,
 ability minimums, alignments, equipment limits, XP rows, hit dice, a spell progression by
 reference, and a list of **class features**. A feature is `{kind, from_level, params}`: its
 **feature kind** is one of a closed list the code implements once, so a new class of known kinds

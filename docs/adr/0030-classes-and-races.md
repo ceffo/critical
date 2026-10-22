@@ -20,7 +20,7 @@ _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on i
 
 _Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), on implementation: step 12 (specialization becomes a fighter's weapon pick at the PHB cost, the weapon's flag derived from it, ADR 0037 step 9), steps 17 and 18 (the skill-point budget refuses a save that leaves the points over budget and spends more, the thief's per-skill cap included; otherwise a warning, and leftovers a reminder, ADR 0037 steps 10 and 11) and the Consequences' "proficiency slots" (covered by ADR 0037)._
 
-_Amended by [ADR 0040](0040-classes-are-data.md) (classes and races are data, accepted 2026-10-21), on implementation: the classes, groups and races, their features and traits are catalogue data (format 10) read through the class entries; no class, group or race id in the code. Steps 1, 2, 3, 4, 8 to 20, 22 and 23 are amended in place; the rules they compute do not change for the five classes._
+_Amended by [ADR 0040](0040-classes-are-data.md) (classes and races are data, accepted 2026-10-21), on implementation: the classes, groups and races, their features and traits are catalogue data (format 11) read through the class entries; no class, group or race id in the code. Steps 1, 2, 3, 4, 8 to 20, 22 and 23 are amended in place; the rules they compute do not change for the five classes._
 
 ## Context
 
@@ -919,7 +919,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       from a fixed list, at least long bow, short bow (composite ones included), light crossbow,
       heavy crossbow, hand crossbow, dagger, dart, sling, short sword, long sword, other melee,
       other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a weapon name.
-    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 2 and 7, on implementation: format 10 adds the class and race definitions; every table with a column per class or group becomes rows keyed by class, group or race; Tables 10 and 11 move from a Go literal into the race definitions)_
+    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 2 and 7, on implementation: format 11 adds the class and race definitions; every table with a column per class or group becomes rows keyed by class, group or race; Tables 10 and 11 move from a Go literal into the race definitions)_
 24. **The sheet comparison (retired).** _Retired by the user's ruling, 2026-10-19: "retire"
     (Kelsen's import is reconciled; the comparison was a one-off)._ It compared the figures of a
     character imported from a sheet (Kelsen's seed: level, THAC0, five save targets, bard skill

@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets check-api check-web
+validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -102,6 +102,12 @@ test-fly-open:
 check-no-language-fields:
     scripts/test-check-no-language-fields.sh
     scripts/check-no-language-fields.sh
+
+# Fail on a class, class group or race id literal in production code (ADR 0040 step 10); ids live in catalogue
+# data, seeds and tests. The test runs the check on planted literals; scripts/class-ids-allowlist.txt holds the exceptions.
+check-no-class-ids:
+    scripts/test-check-no-class-ids.sh
+    scripts/check-no-class-ids.sh
 
 # Every exported domain type has a GLOSSARY.md term or alias, or a reason in scripts/glossary-allowlist.txt (ADR 0036).
 check-glossary:

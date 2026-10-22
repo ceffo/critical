@@ -114,7 +114,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
       from it with the catalogue (a type is allowed when the list names it or a weapon of it; for
       `blunt_only`, when a catalogue weapon of the type deals bludgeoning damage, a launcher by its
       ammunition), which is what seedcheck proves today: the second Go list goes.
-   _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list keeps it until step 11.2 moves that reader.)_
+   _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list kept it until the equipment limits moved onto the data (step 11, as built), which loses it.)_
    7. `experience`: the class's XP thresholds, rows `{level, xp}` inside the class entry (the class is the
       entry's; PHB Tables 14, 20, 23, 25), replacing the column per class.
    8. `hit_dice`: `{die, dice_levels, after}` and the Constitution column (`warrior` or
@@ -376,6 +376,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
        code.
     4. The races (steps 2 and 4), then the tables' rows (step 7).
     5. `just check-no-class-ids` joins `just validate` once no literal is left.
+       _(Built 2026-10-22: the check reads the ids from the catalogue fixture plus the psionicist,
+       skips tests, `testdata/`, comments and Go struct tags, and lets through the literals of
+       `scripts/class-ids-allowlist.txt`: the spell lists `wizard` and `priest`, the language
+       spellings of a migration, and TEMPORARY entries for the literals the other items of this step
+       still remove.)_
     6. Only then the cleric's remaining work, multi-class and dual-class (ADR 0042) and the
        psionicist (ADR 0043), each a catalogue class of known or new kinds.
 
@@ -393,9 +398,34 @@ writes `Test<name>` and adds the prefix here in the same PR.
     failure, turning, skills with their armour and budget, backstab, specialization, the spellbook's maximum
     level and the attacks per round, for the five classes at levels 1, 7 and 13, unarmoured and in chain mail).
     The derived block's new `exceptionalStrength` is the one addition. Left for the next items of step 11: the
-    equipment limits (`itemsvc.classRules`, `classWeaponTypes`), the hit dice, the race traits (Table 9's
-    races, `noExceptionalStrengthRaces`, Tables 10 and 11), then step 11.5's
-    `just check-no-class-ids`.)_
+    hit dice, then step 11.5's `just check-no-class-ids`.)_
+
+    _(As built for the equipment limits and the race traits, steps 11.3 and 11.4, 2026-10-22: `itemsvc.classRules`,
+    `ruletablesvc.classWeaponTypes`, `charactersvc.conSaveRaces`, `noExceptionalStrengthRaces` and the Tables 10 and 11
+    literal are deleted. `classes.Class.Equipment` is the class's limits (`AllowsArmour`, `AllowsWeapon`): `armour`
+    `["none"]` alone means no body armour at all (a piece of the none column is warned too), the class warnings of
+    ADR 0033 step 20 are `itemsvc.ClassWarnings(equipment, ...)`, and the weapon types of ADR 0037 step 7 are
+    `Equipment.PickTypes`, derived once at import by `ruletablesvc.WeaponPickTypes` from the list and the weapon
+    catalogue (a launcher judged by the damage types of the ammunition kind it fires) and set with
+    `Registry.WithPickTypes`; absent for a class with no weapon limit. `classes.Race.Traits` and `Race.Identity` carry
+    the traits (`con_save_bonus` adds Table 9's bonus to the saves of its `categories`; `no_exceptional_strength`
+    bars the 18/xx) and Tables 10 and 11; `ruletablesvc.IdentityFor(defs, race)` builds the row the creation rolls
+    and the ranges read. The existing step tests are unchanged but for their call shapes. The regression proof is
+    `TestRacesAndEquipment_Golden_DeriveWhatTheGoTablesDid` (composition): its golden file was written by the same
+    test on the code before the move (the class warnings of three sets of pieces for the five classes, the saves and
+    race save bonus of every class and race, the creation options with every weapon type list and identity range)
+    and passes with one change: **the thief's weapon types lose `other_thrown`**, which only the lasso gave it (PHB
+    p.39), and the lasso is in no catalogue weapon (step 1.6). A thief's proficiency in the lasso, and a homebrew
+    thrown weapon without a catalogue code judged by that type, need the lasso as a catalogue weapon (a
+    catalogue change, not a code one). `weapon_to_hit` is parsed and checked, and no race carries it. Tests:
+    `TestEquipment_Step1_6_TheListsAnswerTheLimits` (domain/classes),
+    `TestClassWarnings_Step20_ALimitComesFromTheDataOfAnyClass` (itemsvc),
+    `TestWeaponPick_Step7_ClassLimitsRefuseThePick` and
+    `TestWeaponPickTypes_Step7_AnyClassFromItsEquipment` (skills, ruletablesvc),
+    `TestRaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc),
+    `TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc),
+    `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt),
+    `TestIdentity_Step2_TablesTenAndElevenFromTheCatalogue` (ruletablesvc).)_
 
 ## Consequences
 

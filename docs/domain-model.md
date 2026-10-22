@@ -94,8 +94,12 @@ the Strength entered is 18, the race rolls it). The `sphere_access` feature give
 major and minor spheres and the minor cap: spell preparation and the lookup's "Mine" filter read it.
 A race's **racial ability requirements** (its ability ranges) make it **restricted**: a restricted
 race has rows in every per-race table (level limits, requirements, thief skill adjustments); an
-unrestricted one (the human) may have none, and is then any class with no limit. The equipment, hit dice
-and race traits are still read from the rule tables and Go until their readers move (step 11.3).
+unrestricted one (the human) may have none, and is then any class with no limit. A class's
+**class limits** (`Class.Equipment`: armour columns, shields, weapon types and codes, blunt only) give
+the class warnings of worn and wielded pieces and, with the weapon catalogue, the weapon types a
+proficiency may be picked in (derived once at import). A race's **traits** (`Race.Trait(kind)`:
+`con_save_bonus`, `no_exceptional_strength`) and its Tables 10 and 11 **identity** rows are read from
+its definition; the hit dice are still read from the rule tables (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).
 
 ```mermaid

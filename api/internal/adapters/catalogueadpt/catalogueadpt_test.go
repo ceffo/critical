@@ -265,6 +265,49 @@ func TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish(t *testing.T) {
 	assert.Equal(t, "Seen from afar.", missing.Any(), "the English body stands in for the language the text lacks")
 }
 
+// ADR 0043 step 8: every power of the fixture parses with every field (a
+// number, `variable` or `contact` cost, an optional score and maintenance,
+// prerequisites, the language maps), the six disciplines come in book order,
+// and an unknown discipline or prerequisite is refused at start.
+func TestPowerCatalogue_Step8_EveryPowerParses(t *testing.T) {
+	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	require.Len(t, a.Disciplines, 6)
+	assert.Equal(t, "Psychometabolism", a.Disciplines[2].Name["en"])
+	require.Len(t, a.Powers, 9)
+	byID := map[string]catalogue.Power{}
+	for _, p := range a.Powers {
+		byID[p.ID] = p
+	}
+
+	aura := byID["aura_sight"]
+	assert.Equal(t, catalogue.Cost{Amount: 9}, aura.InitialCost)
+	assert.Equal(t, &catalogue.PowerScore{Ability: "wis", Modifier: -5}, aura.Score)
+	assert.Equal(t, &catalogue.Maintenance{Cost: catalogue.Cost{Amount: 9}, Period: 1}, aura.Maintenance)
+	assert.Equal(t, "Vision de l'Aura", aura.Name["fr"])
+	assert.NotEmpty(t, aura.Range["fr"])
+	assert.Equal(t, "science", aura.Kind)
+
+	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostVariable}, byID["telekinesis"].InitialCost)
+	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostContact}, byID["mindlink"].InitialCost)
+	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostVariable}, byID["telekinesis"].Maintenance.Cost)
+	assert.Nil(t, byID["psionic_blast"].Maintenance, "a power that cannot be maintained has none")
+	assert.Equal(t, []string{"mindlink", "contact"}, byID["mind_thrust"].Prerequisites)
+	assert.Empty(t, byID["telekinesis"].Prerequisites)
+
+	refuses(t, []refusal{
+		{"a power of an unknown discipline", func(d map[string]any) {
+			d["powers"].([]any)[0].(map[string]any)["discipline"] = "pyromancy"
+		}, []string{"power aura_sight", `unknown discipline "pyromancy"`}},
+		{"a prerequisite that is no power", func(d map[string]any) {
+			d["powers"].([]any)[0].(map[string]any)["prerequisites"] = []any{"levitation"}
+		}, []string{"power aura_sight", `unknown prerequisite "levitation"`}},
+		{"a power id twice", func(d map[string]any) {
+			d["powers"].([]any)[1].(map[string]any)["id"] = "aura_sight"
+		}, []string{"power aura_sight: repeated"}},
+	})
+}
+
 // ADR 0021 step 16.1: the rows are exactly the schema's (65, both languages,
 // step 1's subset) and an id appears once.
 func TestParse_Step16_RefusesBadProficiencyDescriptions(t *testing.T) {

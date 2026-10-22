@@ -197,8 +197,10 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   new feature kind (an amendment of [ADR 0040](adr/0040-classes-are-data.md) step 3), never a
   branch on an id; ids live only in catalogue data, seeds, tests and fixtures. House rules are
   Ruleset settings, not edits of book data. (User rule, 2026-10-21.) Enforced by
-  `just check-no-class-ids` (part of `just validate` once the five classes are data, ADR 0040
-  step 11).
+  `just check-no-class-ids` (part of `just validate`; `scripts/test-check-no-class-ids.sh` plants
+  literals in throwaway trees; the ids come from the catalogue fixture, plus the psionicist; the few
+  allowed literals, each with a reason, are in `scripts/class-ids-allowlist.txt`: a spell list named
+  `wizard` or `priest` is not a class, and a TEMPORARY entry names what removes it).
 - **No per-language columns or fields.** A text in a human language is a key into the generic
   `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
   or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); enforced by
@@ -291,7 +293,7 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, job timeout 6; Playwright Chromium cached, 2 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, the run step times out at 6; Playwright Chromium and the apt .debs it needs cached, 3 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
 **Main runs:** a push to `main` runs CI, and Release follows. A Dependabot PR merged by auto-merge starts no push run (GitHub: events caused by `GITHUB_TOKEN` start no workflow), so `dependabot-auto-merge.yml` waits for the merge and runs `gh workflow run ci.yml --ref main`; that dispatched run has no base commit, so `changes` runs every slow job.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
 `scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every

@@ -232,7 +232,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 			return out, nil
 		}
 	}
-	if err := validExceptional(n, class); err != nil {
+	if err := validExceptional(n, class, raceOf(defs, n.Race)); err != nil {
 		refuse(err)
 	}
 	if stop() {
@@ -313,13 +313,13 @@ func validSkills(n NewCharacter, def classes.Class) (skills.SetPoints, error) {
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
 // 1 to 100, and only with Strength 18 for a class with exceptional_strength
 // (ADR 0040 step 3) of a race that rolls it.
-func validExceptional(n NewCharacter, def classes.Class) error {
+func validExceptional(n NewCharacter, def classes.Class, race classes.Race) error {
 	switch {
 	case n.StrExceptional == 0:
 		return nil
 	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
 		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
-	case !ruletablesvc.ExceptionalStrengthAllowed(def, n.Race, n.Str):
+	case !ruletablesvc.ExceptionalStrengthAllowed(def, race, n.Str):
 		return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
 	}
 	return nil
@@ -427,7 +427,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	// ADR 0030 step 9 through the class's features (ADR 0040 step 3): the
 	// form offers the 18/xx field when the server says so, never by a rule
 	// of its own.
-	out.ExceptionalStrength = k.strOK && ruletablesvc.ExceptionalStrengthAllowed(k.def, n.Race, n.Str)
+	out.ExceptionalStrength = k.strOK && ruletablesvc.ExceptionalStrengthAllowed(k.def, raceOf(k.defs, n.Race), n.Str)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -455,7 +455,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	if c.Derived, err = Derive(&c, 0, "", s.rules); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
-	s.readWarnings(&c, AlignmentsOf(k.defs, c.Class))
+	s.readWarnings(&c, k.defs)
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
 	out.Spellbook = book
@@ -626,7 +626,7 @@ type WeaponTypeOption struct {
 func ClassWeaponTypeOptions(def classes.Class) []WeaponTypeOption {
 	out := make([]WeaponTypeOption, 0, len(ruletablesvc.WeaponTypes))
 	for _, t := range ruletablesvc.WeaponTypes {
-		if !ruletablesvc.WeaponTypeAllowed(def.ID, t) {
+		if !def.Equipment.WeaponTypeAllowed(t) {
 			continue
 		}
 		o := WeaponTypeOption{Type: t}
@@ -720,21 +720,20 @@ type RaceIdentityOption struct {
 
 // raceIdentity is the race's RaceIdentityOption, false for a race with no
 // Table 10 row.
-func raceIdentity(race string) (RaceIdentityOption, bool) {
-	row, ok := ruletablesvc.IdentityFor(race)
+func raceIdentity(defs *classes.Registry, race string) (RaceIdentityOption, bool) {
+	row, ok := ruletablesvc.IdentityFor(defs, race)
 	if !ok {
 		return RaceIdentityOption{}, false
 	}
 	out := RaceIdentityOption{Race: race}
 	for _, sex := range Sexes {
-		h, _ := ruletablesvc.HeightRange(race, sex)
-		w, _ := ruletablesvc.WeightRange(race, sex)
+		h, w := row.HeightRange(sex), row.WeightRange(sex)
 		out.Height = append(out.Height, FigureOption{Sex: sex, Count: row.HeightDice.Count, Sides: row.HeightDice.Sides, Range: h})
 		out.Weight = append(out.Weight, FigureOption{Sex: sex, Count: row.WeightDice.Count, Sides: row.WeightDice.Sides, Range: w})
 	}
-	age, _ := ruletablesvc.AgeRange(race)
+	age := row.AgeRange()
 	out.Age = FigureOption{Count: row.StartAgeDice.Count, Sides: row.StartAgeDice.Sides, Range: age}
-	out.StartAge, _ = ruletablesvc.StartAgeRange(race)
+	out.StartAge = row.StartAgeRange()
 	return out, true
 }
 
@@ -765,7 +764,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		out.RaceAdjustments = append(out.RaceAdjustments, RaceAdjustmentOption{Race: race, Adjustments: adj})
-		if id, ok := raceIdentity(race); ok {
+		if id, ok := raceIdentity(defs, race); ok {
 			out.RaceIdentity = append(out.RaceIdentity, id)
 		}
 	}
@@ -878,4 +877,11 @@ type Draft struct {
 type ClassUnmet struct {
 	Class     string
 	Abilities []string
+}
+
+// raceOf is the race definition of id, the zero Race (no trait) for an id the
+// catalogue does not define: a race refusal is another check's.
+func raceOf(defs *classes.Registry, id string) classes.Race {
+	r, _ := defs.Race(id)
+	return r
 }

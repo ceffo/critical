@@ -82,7 +82,7 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 	}
 	for _, tc := range refused {
 		t.Run("refused: "+tc.name, func(t *testing.T) {
-			_, err := classes.New([]classes.Class{withFeatures(tc.fs...)}, groups("warrior"), []classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+			_, err := classes.New([]classes.Class{withFeatures(tc.fs...)}, groups("warrior"), []classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "test_class", "names the class")
 		})

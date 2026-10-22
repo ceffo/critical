@@ -47,7 +47,7 @@ type pointsRecord struct {
 	After  map[string]int `json:"after"`
 }
 
-// soleSet is the skill set a spend or a read addresses (ADR 0040 step 3.4): set when named,
+// soleSet is the skill set a spend or a read addresses (ADR 0040 step 3.5): set when named,
 // else the class's only set; a class with several needs the set named (a *domain.FieldError
 // field set, code empty). "" for a class without a set: its points are refused as not allowed.
 func soleSet(def classes.Class, set string) (string, error) {
@@ -82,7 +82,7 @@ func orEmpty(m map[string]int) map[string]int {
 
 // SetPoints is ADR 0030 steps 17 and 18 after creation: the player of a
 // character with skill sets sets, for the skill set set ("": its only set,
-// ADR 0040 step 3.4), the total points of each skill (those it leaves out are 0), checked as at
+// ADR 0040 step 3.5), the total points of each skill (those it leaves out are 0), checked as at
 // creation by skills.ValidSkillPoints; at the realized level, a spend
 // that leaves the budget over and spends more is refused (ADR 0037 step 10,
 // skills.SkillPointsWithinBudget), an existing overspend that does

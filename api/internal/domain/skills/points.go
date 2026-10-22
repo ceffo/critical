@@ -19,7 +19,7 @@ import (
 const MaxSkillPoints = ruletablesvc.MaxSkillPercent
 
 // SetPoints are a character's entered skill points per skill set: the set code (the
-// rogue_skills `set` param of the feature that grants it, ADR 0040 step 3.4) to the points of
+// rogue_skills `set` param of the feature that grants it, ADR 0040 step 3.5) to the points of
 // each of its skills. Each set has its own budget, so the points of two sets that share a skill
 // (a thief's and a bard's pick pockets) never mix.
 type SetPoints map[string]map[string]int
@@ -70,7 +70,7 @@ func RogueSkillsAt(def classes.Class, level int) *classes.RogueSkills {
 	return nil
 }
 
-// RogueSetsAt is ADR 0040 steps 3.4 and 5 for rogue_skills: the params of every skill set the
+// RogueSetsAt is ADR 0040 steps 3.5 and 5 for rogue_skills: the params of every skill set the
 // class grants at level, in the class's order (one per rogue_skills feature); nil for none.
 func RogueSetsAt(def classes.Class, level int) []classes.RogueSkills {
 	var out []classes.RogueSkills
@@ -208,7 +208,7 @@ type PointsSheet struct {
 	Points      SetPoints
 }
 
-// SkillSet is one skill set of a character (ADR 0040 step 3.4: one per rogue_skills feature
+// SkillSet is one skill set of a character (ADR 0040 step 3.5: one per rogue_skills feature
 // its classes grant, ADR 0030 steps 17 and 18): the set code, each skill's percentage with its
 // terms, the skill armour the set reads, the budget's warnings and the budget as figures at the
 // realized level. Each set has its own budget.
@@ -221,7 +221,7 @@ type SkillSet struct {
 }
 
 // SkillSetsOf is ADR 0030 steps 17 and 18 on s: for each skill set the class grants at s.Level
-// (ADR 0040 step 3.4), the percentages from the tables, the budget and its warnings, through
+// (ADR 0040 step 3.5), the percentages from the tables, the budget and its warnings, through
 // that set's rogue_skills params. nil for a class without rogue_skills.
 func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 	var out []SkillSet

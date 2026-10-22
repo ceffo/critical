@@ -1,4 +1,4 @@
--- A character's skill points per skill set (ADR 0040 step 3.4): characters.skill_sets is a JSON
+-- A character's skill points per skill set (ADR 0040 step 3.5): characters.skill_sets is a JSON
 -- object from a skill set code to its points, an object from skill code to points, e.g.
 -- {"thief": {"open_locks": 30}}. A class may grant several skill sets (a thief/bard), each with its
 -- own budget, and two sets can share a skill, so the flat characters.skill_points cannot hold them.

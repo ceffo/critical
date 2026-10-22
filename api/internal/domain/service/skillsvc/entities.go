@@ -69,7 +69,7 @@ type SetSkill struct {
 	Last *LastCheck
 }
 
-// SkillSet is one skill set of the Skills tab (ADR 0040 step 3.4): its code, the check kind it
+// SkillSet is one skill set of the Skills tab (ADR 0040 step 3.5): its code, the check kind it
 // logs (ADR 0040 step 3.2), the skill armour it reads (ADR 0033 step 14), its budget with the
 // terms of its formula (nil below the feature's level of first points, ADR 0030 steps 17 and 18)
 // and its skills.

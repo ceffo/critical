@@ -21,7 +21,7 @@ import (
 )
 
 // swashbuckler is a test class granting the thief's and the bard's skill sets, which share
-// pick_pockets, climb_walls, detect_noise and read_languages (ADR 0040 step 3.4).
+// pick_pockets, climb_walls, detect_noise and read_languages (ADR 0040 step 3.5).
 const swashbuckler = "test_swashbuckler"
 
 // dualFixture is a swashbuckler at level 5 whose character service derived both skill sets, the
@@ -72,7 +72,7 @@ func dualFixture(t *testing.T) *fixture {
 	return f
 }
 
-// ADR 0040 step 3.4: a character with two skill sets reads each set with its own percentages
+// ADR 0040 step 3.5: a character with two skill sets reads each set with its own percentages
 // and its own last check, even for a skill the sets share: the last check of a thief's pick
 // pockets is not the bard's.
 func TestList_Step3_4_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
@@ -93,7 +93,7 @@ func TestList_Step3_4_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
 	assert.Equal(t, int64(7), got.SkillSets[1].Skills[0].Last.EntryID)
 }
 
-// ADR 0040 steps 3.2 and 3.4: a roll names the skill set when two share the skill, and is judged
+// ADR 0040 steps 3.2 and 3.5: a roll names the skill set when two share the skill, and is judged
 // against that set's percentage and logged as that set's kind; without one it is the first set
 // that holds the skill.
 func TestRoll_Step3_4_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
@@ -121,7 +121,7 @@ func TestRoll_Step3_4_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrNotFound, "a set the character has not; the dice mock fails any roll")
 }
 
-// ADR 0040 step 3.4 on ADR 0037 step 10: a spend addresses one skill set and is checked against
+// ADR 0040 step 3.5 on ADR 0037 step 10: a spend addresses one skill set and is checked against
 // that set's budget, the other set's points kept as they are; with two sets the set is required.
 func TestSetPoints_Step3_4_ASpendAddressesOneSkillSet(t *testing.T) {
 	f := dualFixture(t)
@@ -150,7 +150,7 @@ func TestSetPoints_Step3_4_ASpendAddressesOneSkillSet(t *testing.T) {
 	assert.Equal(t, skills.CodeNotAllowed, fe.Message)
 }
 
-// ADR 0019 on ADR 0040 step 3.4: undo writes back the points of the snapshot's skill set only,
+// ADR 0019 on ADR 0040 step 3.5: undo writes back the points of the snapshot's skill set only,
 // the other set keeps what it has stored.
 func TestSetPoints_Step3_4_UndoRestoresOneSkillSet(t *testing.T) {
 	f := dualFixture(t)

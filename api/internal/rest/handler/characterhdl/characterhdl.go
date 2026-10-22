@@ -250,7 +250,7 @@ type DerivedDTO struct {
 	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
 	// book's rows in order; null for a class that does not turn undead.
 	Turning []TurningTargetDTO `json:"turning"`
-	// SkillSets is ADR 0030 steps 17 and 18 (ADR 0040 step 3.4): one set
+	// SkillSets is ADR 0030 steps 17 and 18 (ADR 0040 step 3.5): one set
 	// per rogue_skills feature the class grants at the realized level, each
 	// with its own budget; empty for a class without skill sets.
 	SkillSets []SkillSetDTO `json:"skillSets"`
@@ -263,7 +263,7 @@ type DerivedDTO struct {
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }
 
-// SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.4): set the rogue_skills set code,
+// SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.5): set the rogue_skills set code,
 // skillArmor the skill armour it reads (ADR 0033 step 14: from the worn body armour's Table 29
 // column; none, leather, padded_studded_leather, elven_chain or metal), skills each of its skills
 // with its terms and percentage, warnings the entered points' breach of its budget (never null) and

@@ -125,7 +125,7 @@ type RogueSkillDTO struct {
 type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
 	// SkillSets is one set per rogue_skills feature the class grants (ADR 0040
-	// step 3.4), empty for a class without skill sets.
+	// step 3.5), empty for a class without skill sets.
 	SkillSets []SkillSetDTO `json:"skillSets"`
 }
 

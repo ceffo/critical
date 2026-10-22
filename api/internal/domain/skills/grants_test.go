@@ -56,7 +56,7 @@ func TestToSpend_Step15_LeftCountsNeverNegative(t *testing.T) {
 	assert.Equal(t, skills.LevelGrants{}, skills.ToSpend(nil, nil), "no pool, no points")
 }
 
-// ADR 0040 step 3.4: each skill set has its own budget, so what is left to spend adds the sets'
+// ADR 0040 step 3.5: each skill set has its own budget, so what is left to spend adds the sets'
 // left points, and a set over budget leaves 0 without eating into the other's.
 func TestToSpend_Step3_4_SkillSetsKeepSeparateBudgets(t *testing.T) {
 	sets := []skills.SkillSet{

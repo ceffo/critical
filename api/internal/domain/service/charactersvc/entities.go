@@ -40,7 +40,7 @@ type Character struct {
 	// Race is the race code (one of Races), "" when none is set.
 	Race string
 	// SkillPoints are the entered skill points (ADR 0030 steps 1, 17 and
-	// 18) of each skill set the class lists (ADR 0040 step 3.4), by skill
+	// 18) of each skill set the class lists (ADR 0040 step 3.5), by skill
 	// code (ruletablesvc.SkillsOf the set); nil or absent skills have 0.
 	SkillPoints skills.SetPoints
 	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
@@ -141,7 +141,7 @@ type Derived struct {
 	// 14: "none" when it wears none), the one every skill set reads through
 	// its own armour entries; "" for a class without skill sets.
 	SkillColumn string
-	// SkillSets is steps 17 and 18 (ADR 0040 step 3.4): one set per
+	// SkillSets is steps 17 and 18 (ADR 0040 step 3.5): one set per
 	// rogue_skills feature the class grants at the realized level, each with
 	// its skills' percentages and terms, the skill armour it reads (ADR 0033
 	// step 14), its budget's warnings and its budget as figures; nil for a

@@ -63,7 +63,7 @@ type Character struct {
 	SaveSpell        int      `json:"save_spell"`
 	Slots            []any    `json:"slots"`
 	Languages        []string `json:"languages"`
-	// SkillPoints are the imported character's skill points per skill set (ADR 0030 steps 17 and 18, ADR 0040 step 3.4),
+	// SkillPoints are the imported character's skill points per skill set (ADR 0030 steps 17 and 18, ADR 0040 step 3.5),
 	// by skill code: the points that give the sheet's percentages (step
 	// 24), checked as a bard's entered points are.
 	SkillPoints skills.SetPoints `json:"skill_points"`

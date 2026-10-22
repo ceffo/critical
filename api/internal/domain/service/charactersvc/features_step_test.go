@@ -351,7 +351,7 @@ func TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode(t *testing.T) {
 	})
 }
 
-// ADR 0040 step 3.4: a class lists rogue_skills once per skill set, and the character has one
+// ADR 0040 step 3.5: a class lists rogue_skills once per skill set, and the character has one
 // skill set for each, with its own budget and its own points, even for a skill the two sets
 // share (pick_pockets). test_swashbuckler, a warrior granting the thief's and the bard's sets
 // (the bard's from level 3), derives two sets at level 3 and the thief's alone at level 1.

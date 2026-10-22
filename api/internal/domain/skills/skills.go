@@ -72,7 +72,7 @@ const (
 	// FieldSkillPoints + "." + skill.
 	FieldSkillPoints = "skillPoints"
 	// FieldSet is the skill set a spend of skill points addresses, refused as empty when the
-	// class has several (ADR 0040 step 3.4).
+	// class has several (ADR 0040 step 3.5).
 	FieldSet = "set"
 )
 

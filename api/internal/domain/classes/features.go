@@ -157,7 +157,7 @@ func (c Class) ListsAll(kind string) []Feature {
 
 // Key tells two features of a class apart: a kind is listed once, except
 // rogue_skills, listed once per skill set (a class may grant two skill sets,
-// ADR 0040 step 3.4).
+// ADR 0040 step 3.5).
 func (f Feature) Key() string {
 	if f.Kind == KindRogueSkills && f.RogueSkills != nil {
 		return f.Kind + ":" + f.RogueSkills.Set

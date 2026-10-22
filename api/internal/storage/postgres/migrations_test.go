@@ -375,7 +375,7 @@ func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t
 	assert.Equal(t, "{}", store.t.SkillPoints[kelsen], "an applied migration runs no step")
 }
 
-// Existing data (ADR 0040 step 3.4, the skill sets): the flat skill points stored before a
+// Existing data (ADR 0040 step 3.5, the skill sets): the flat skill points stored before a
 // character could have several skill sets are copied under the first set its class lists right
 // after migration 034; a character with no points, a class without a skill set and a character that
 // already has skill sets are left as they are, and a rerun (the migration applied) runs no step.

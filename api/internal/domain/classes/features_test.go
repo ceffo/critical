@@ -119,7 +119,7 @@ func TestLookup_Step5_AFeatureThroughTheClassEntry(t *testing.T) {
 	assert.Equal(t, rogueSkills(), got.RogueSkills, "the registry's params are untouched")
 }
 
-// ADR 0040 step 3.4: rogue_skills is listed once per skill set, so a class may grant two sets;
+// ADR 0040 step 3.5: rogue_skills is listed once per skill set, so a class may grant two sets;
 // the same set twice is refused. FeaturesAt answers every set granted at a level, in the class's
 // order, ListsAll every set listed.
 func TestFeatures_Step3_4_ARogueSkillsPerSkillSet(t *testing.T) {

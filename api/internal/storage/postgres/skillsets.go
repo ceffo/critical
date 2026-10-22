@@ -10,7 +10,7 @@ import (
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
-// skillSetsMigration adds characters.skill_sets (ADR 0040 step 3.4). Right after it the run copies
+// skillSetsMigration adds characters.skill_sets (ADR 0040 step 3.5). Right after it the run copies
 // every character's skill points under the skill set its class grants (carrySkillSets).
 const skillSetsMigration = "034_skill_sets.sql"
 

@@ -136,7 +136,7 @@ func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Ad
 	return s.RollInSet(ctx, characterID, "", id, adj)
 }
 
-// RollInSet is Roll for the skill id of the skill set set (ADR 0040 step 3.4: two sets can share
+// RollInSet is Roll for the skill id of the skill set set (ADR 0040 step 3.5: two sets can share
 // a skill, each with its own percentage and kind); "" is the first set that holds the skill. A
 // set the character has not, or a skill the set has not, wraps domain.ErrNotFound.
 func (s *service) RollInSet(ctx context.Context, characterID int64, set, id string, adj Adjustment) (*CheckResult, error) {

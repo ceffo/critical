@@ -105,11 +105,15 @@ the roll. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 ### Rules and the table
 
 **Ruleset** (fr: ensemble de règles) _(planned)_:
-The set of rules a game plays by: the book rules plus its house rules.
+The set of rules a game plays by: the book rules plus its house rules. [ADR 0041](docs/adr/0041-ruleset.md).
 
 **House rule** (fr: règle maison):
 A rule the table decided that differs from the books (the crit table, multi-class for every race).
 _Avoid_: homebrew.
+
+**House rule setting** (fr: réglage de règle maison) _(planned)_:
+One typed field of a ruleset's house rules (crit table, racial lift, level limits, success effects).
+[ADR 0041](docs/adr/0041-ruleset.md) step 2.
 
 **Game** / **Campaign** (fr: partie / campagne) _(future)_:
 One running game of the table, with a ruleset, a party and sessions. The two words are not

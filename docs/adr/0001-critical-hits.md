@@ -28,7 +28,8 @@ number of calls (d20 once, d100 twice per attack).
    damage dice. The d20 and both d100s are stored in the attack's log entry.
 4. **Multiplier.** On a crit the multiplier is the one of the house crit-table row
    (`crit_table_rows`, edited in the app) that holds the multiplier d100, in the table as it is at
-   the roll. Until the table is edited it is the default 1–100 → ×2, flagged `CritPlaceholder`.
+   the roll. _(Amended 2026-10-21: the table is the resolved ruleset's crit table, [ADR
+   0041](0041-ruleset.md) steps 2.1 and 4; the row is still stored at the roll.)_ Until the table is edited it is the default 1–100 → ×2, flagged `CritPlaceholder`.
    Table multipliers may be decimals (×1.5). An attack that is not a crit has ×1.
 5. **Damage.** The crit multiplier multiplies the dice part and the weapon bonus together, after
    the buff multipliers, which apply to the raw dice only (user, 2026-10-14: "x2 multiplier on raw

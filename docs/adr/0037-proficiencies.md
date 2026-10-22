@@ -630,7 +630,9 @@ descriptions and the effects of other proficiencies are separate, deferred items
     20.5 **Rolled once.** The buff adds no die: the check's d20 is the only roll, the effect and the
          rounds are fixed.
     20.6 **Generic.** The engine's rule is "a proficiency may list a buff to put on a success", keyed
-         by proficiency id in committed rules data (`ruletablesvc`), and Tumbling is its one row;
+         by proficiency id in the ruleset's success effects (amended 2026-10-21, [ADR
+         0041](0041-ruleset.md) steps 2.4 and 6; it was committed rules data in `ruletablesvc`),
+         and Tumbling is its one row;
          no code names Tumbling. Other proficiencies' effects are a separate deferred audit item.
     20.7 **A house rule that differs from the PHB.** In the PHB (Tumbling's description) the AC bonus
          needs no check and the check is for falls; here the check is what grants the AC. The house

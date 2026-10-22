@@ -90,14 +90,14 @@ func (t *Tables) RaceAdjustmentsFor(race string) (map[string]int, error) {
 }
 
 // HitDieGain is ADR 0030 step 7.1's arithmetic for one hit die rolled by a
-// character of group with the Constitution row con: the die counted (Table
+// character with the Constitution row con: the die counted (Table
 // 3's footnotes from Constitution 20 raise a low die to con.LowDieMin), the
-// Constitution adjustment (warriors take the bracketed value, every other
-// group the plain one) and the gain, at least 1.
-func HitDieGain(group string, rolled int, con ConstitutionRow) (counted, conAdjustment, gain int) {
+// Constitution adjustment (the bracketed value for a class whose definition
+// says so, the plain one for every other) and the gain, at least 1.
+func HitDieGain(bracketed bool, rolled int, con ConstitutionRow) (counted, conAdjustment, gain int) {
 	counted = max(rolled, con.LowDieMin)
 	conAdjustment = con.HP
-	if group == "warrior" {
+	if bracketed {
 		conAdjustment = con.HPWarrior
 	}
 	return counted, conAdjustment, max(1, counted+conAdjustment)

@@ -399,7 +399,7 @@ func (s *service) HP(_ context.Context, in HPInput) (*HPResult, error) {
 		row := HPLevel{Level: n}
 		if n <= hd.NameLevel {
 			rolled := s.dice.RollDie(hd.Die)
-			counted, adj, gain := ruletablesvc.HitDieGain(group, rolled, con)
+			counted, adj, gain := ruletablesvc.HitDieGain(class.BracketedConstitution, rolled, con)
 			row.HitDie, row.Rolled, row.Counted, row.ConAdjustment, row.Gain = hd.Die, &rolled, &counted, adj, gain
 		} else {
 			row.Gain, row.Fixed = hd.GainAfter, true

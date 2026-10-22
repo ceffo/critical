@@ -31,6 +31,13 @@ type classDefDTO struct {
 	SpellProgression string            `json:"spell_progression"`
 	Features         []featureDTO      `json:"features"`
 	Equipment        classEquipmentDTO `json:"equipment"`
+	HitDice          classHitDiceDTO   `json:"hit_dice"`
+}
+
+// classHitDiceDTO is the part of a class's hit dice read here: whether it takes
+// Table 3's bracketed Constitution adjustment (the die itself is the group's row).
+type classHitDiceDTO struct {
+	BracketedConstitution bool `json:"bracketed_constitution"`
 }
 
 type classEquipmentDTO struct {
@@ -211,6 +218,7 @@ func definitions(raw []byte) (*classes.Registry, error) {
 			ID: c.ID, Name: c.Name, Group: c.Group, PrimeRequisites: c.PrimeRequisites,
 			AbilityMinimums: mins, Alignments: c.Alignments, Experience: xp,
 			SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.equipment(),
+			BracketedConstitution: c.HitDice.BracketedConstitution,
 		}
 	}
 	groups := make([]classes.Group, len(d.Groups))

@@ -62,6 +62,9 @@ type Class struct {
 	Features []Feature
 	// Equipment is what the class may wear and wield (step 1.6).
 	Equipment Equipment
+	// BracketedConstitution is whether the class takes the parenthesised hit
+	// point adjustment of PHB Table 3's Constitution column (step 1.8).
+	BracketedConstitution bool
 }
 
 // Group is one class group definition (ADR 0040 steps 1.2 and 7).
@@ -250,6 +253,7 @@ func checkClass(c Class, groups []string) (Class, error) {
 		PrimeRequisites: slices.Clone(c.PrimeRequisites), AbilityMinimums: mins,
 		Alignments: aligns, Experience: slices.Clone(c.Experience),
 		SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.clone(),
+		BracketedConstitution: c.BracketedConstitution,
 	}, nil
 }
 

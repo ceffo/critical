@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
@@ -58,6 +59,9 @@ func newFixture(t *testing.T) fixture {
 		dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), rules: mocks.NewMockRules(t),
 		dice: mocks.NewMockDice(t), log: mocks.NewMockLog(t), tx: &recordingTx{},
 	}
+	// The class definitions are the catalogue fixture's: a class's Constitution
+	// column is its data (ADR 0040 step 1.8).
+	f.rules.EXPECT().Definitions().Return(cataloguetest.Definitions(t), nil).Maybe()
 	svc, err := levelupsvc.New(levelupsvc.Deps{
 		DAL: f.dal, Characters: f.chars, Rules: f.rules, Dice: f.dice, Log: f.log, Tx: f.tx,
 	})

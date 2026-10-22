@@ -709,7 +709,7 @@ is only ever appended to by play.
        neither imports nor reads the definitions yet (ADR 0040 step 11.2 does). Merge order: the builder publishing format 11 first (its own PR in
        `critical-rulebooks`), then the API change immediately, with no other main merge between (Release pairs main's API with the rulebooks
        catalogue); a dev checkout runs `just catalogue` once after both are merged.
-    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (was `TestSchema_Step18_OnlyFormat11IsValid`), `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
+    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (was `Schema_Step18_OnlyFormat11IsValid`), `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
     `TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s `check_class_defs` (the definitions equal
     the tables of formats 3 to 10 they repeat, spot values from the PHB, fault injection for each refusal of step 18.5).
 

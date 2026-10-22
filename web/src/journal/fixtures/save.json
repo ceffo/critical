@@ -84,10 +84,11 @@
       "rolledPassed": true,
       "adjustment": 0,
       "rollTotal": 0,
-      "adjustedTarget": 0,
+      "adjustedTarget": 14,
+      "total": 0,
       "passed": true,
       "margin": 0
     },
-    "roll": false
+    "roll": true
   }
 }

@@ -76,6 +76,8 @@ type tables struct {
 	Snapshots   []snapshotRow
 	Log         []logRow
 	Corrections []correctionRow
+	// Rulesets are the ruleset tables and the legacy crit_table_rows (ADR 0041 step 10).
+	Rulesets rulesetTables
 }
 
 // weaponRow is a weapons row (the table no query writes since migration 016).

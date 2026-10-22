@@ -1,7 +1,9 @@
 # ADR 0041: The ruleset: which book data and which house rules a game is played with
 
 **Status**: accepted 2026-10-21 (the user's triage of 2026-10-21; the details beyond the triage
-accepted 2026-10-21 by the supervisor and the user). Not implemented. Amends
+accepted 2026-10-21 by the supervisor and the user). The backend is built (steps 1 to 4, 6, 7, the
+API of step 8 and the migration of step 10); the Ruleset screen (step 8) and the level-limit
+warning of step 5 are later items, see "As built". Amends
 [ADR 0001](0001-critical-hits.md) step 4, [ADR 0030](0030-classes-and-races.md) step 21 and
 [ADR 0037](0037-proficiencies.md) step 20.6, each in place and dated 2026-10-21. Builds on
 [ADR 0036](0036-vocabulary.md) (the terms) and `docs/domain-model.md` ("Ruleset and house rules").
@@ -125,3 +127,26 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
   is reviewed; this ADR is docs only.
 - Out of scope: the Game, Campaign, Session and Party entities; the multi-class and dual-class
   rules themselves; a second ruleset in the UI (there is one row, so no selector).
+
+## As built (backend, 2026-10-21)
+
+- Storage: migration `033_rulesets.sql` (`rulesets`, `ruleset_crit_rows`,
+  `ruleset_success_effects`, `ruleset_changes`). Migrations hold no data
+  ([ADR 0025](0025-postgresql-storage.md) step 2.1), so the default row, the copy of the stored
+  `crit_table_rows` and the Tumbling row are the Go data step run right after it
+  (`postgres.defaultRuleset`, fed by `ruleset.Default()`). `crit_table_rows` stays as the legacy
+  table that copy reads; nothing reads or writes it afterwards (sqlc reads every migration, so a
+  later drop must also remove the copy query).
+- Domain: `internal/domain/ruleset` (entity, validation, `Resolver`); `rulesetsvc` serves, edits and
+  audits, and is the one resolver implementation (it returns the default). `combatsvc` and
+  `skillsvc` take a `ruleset.Resolver`; the crit table and the success effects are no longer in
+  their packages. The catalogue version is recorded on the default at every start
+  (`RecordCatalogueVersion`), not an edit and not audited.
+- API: `GET /api/ruleset`, `GET /api/ruleset/changes` (audit, newest first; both for any logged-in
+  user), `PUT /api/ruleset/crit-table`, `/racial-lift`, `/success-effects` (admin only,
+  `mw.AdminOnly`). A refusal is the existing `invalid_input` 400; no new code. `/api/crit-table`
+  is gone, and the web client's crit table editor reads `GET /api/ruleset` and saves with the
+  new PUT until the Ruleset screen replaces it.
+- Tests: the migration's data step runs over the storage fake (no database,
+  [ADR 0025](0025-postgresql-storage.md) step 6), so the SQL itself is proven by running the
+  server on a database (the PR's acceptance run).

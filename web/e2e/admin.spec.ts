@@ -119,7 +119,7 @@ test("admin API: player refused, invite edge cases, root admin protected", async
       data: { email: "x@example.com" },
     }),
     await player.delete(`/api/admin/invites/${rootUser.id}`),
-    await player.put("/api/crit-table", { data: [] }),
+    await player.put("/api/ruleset/crit-table", { data: [] }),
   ];
   for (const r of refused) {
     expect(r.status(), r.url()).toBe(403);

@@ -119,16 +119,31 @@ the roll. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 
 ### Rules and the table
 
-**Ruleset** (fr: ensemble de règles) _(planned)_:
+**Ruleset** (fr: ensemble de règles):
 The set of rules a game plays by: the book rules plus its house rules. [ADR 0041](docs/adr/0041-ruleset.md).
 
 **House rule** (fr: règle maison):
 A rule the table decided that differs from the books (the crit table, multi-class for every race).
 _Avoid_: homebrew.
 
-**House rule setting** (fr: réglage de règle maison) _(planned)_:
+**House rule setting** (fr: réglage de règle maison):
 One typed field of a ruleset's house rules (crit table, racial lift, level limits, success effects).
 [ADR 0041](docs/adr/0041-ruleset.md) step 2.
+
+**Racial lift** (fr: levée des restrictions raciales):
+The house rule setting that waives the race's class restriction for a multi-class or dual-class
+character (two switches, both on by default). [ADR 0041](docs/adr/0041-ruleset.md) step 2.2.
+_Code_: RacialLift
+
+**Level limits mode** (fr: mode des limites de niveau):
+How the racial level limits apply; `warn` (a warning on the character, never a refusal or a cap)
+is the only value. [ADR 0041](docs/adr/0041-ruleset.md) step 2.3.
+_Code_: LevelLimitsMode
+
+**Success effect** (fr: effet de réussite):
+The house rule setting that says which buff a successful check of a proficiency puts on the
+character (Tumbling: AC -4 for the round). [ADR 0041](docs/adr/0041-ruleset.md) step 2.4.
+_Code_: SuccessEffect
 
 **Game** / **Campaign** (fr: partie / campagne) _(future)_:
 One running game of the table, with a ruleset, a party and sessions. The two words are not

@@ -34,6 +34,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/profdescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/rulesetsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -60,11 +61,14 @@ type BackingServices struct {
 	Prep      prepsvc.SVC
 	Cast      castsvc.SVC
 	Combat    combatsvc.SVC
-	Items     itemsvc.SVC
-	Rest      restsvc.SVC
-	XP        xpsvc.SVC
-	LevelUp   levelupsvc.SVC
-	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
+	// Rulesets serves and edits the default ruleset, and resolves a character's
+	// ruleset for the rules services (ADR 0041).
+	Rulesets rulesetsvc.SVC
+	Items    itemsvc.SVC
+	Rest     restsvc.SVC
+	XP       xpsvc.SVC
+	LevelUp  levelupsvc.SVC
+	Rolls    creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
 	ProficiencyDescriptions profdescsvc.SVC
 	Learn                   learnsvc.SVC
@@ -178,7 +182,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if cfg.Dice != nil {
 		dice = cfg.Dice
 	}
-	critDAL, itemDAL := st.Crit, st.Items
+	itemDAL := st.Items
 
 	// The spell effects casting applies; a malformed formula is a startup
 	// error.
@@ -329,8 +333,18 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Prep, err); err != nil {
 		return nil, err
 	}
+	// The ruleset (ADR 0041): the default one, read by the rules services
+	// through its resolver. The catalogue version this server loaded is
+	// recorded on it.
+	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
+	if err := bs.add(bs.Rulesets, err); err != nil {
+		return nil, err
+	}
+	if err := bs.Rulesets.RecordCatalogueVersion(ctx, cat.Version); err != nil {
+		return nil, fmt.Errorf("record the catalogue version on the ruleset: %w", err)
+	}
 	bs.Combat, err = combatsvc.New(combatsvc.Deps{
-		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Crit: critDAL,
+		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Rulesets: bs.Rulesets,
 		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.Combat, err); err != nil {
@@ -392,7 +406,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// 0028 step 2).
 	bs.Skills, err = skillsvc.New(skillsvc.Deps{
 		Characters: charSvc, Abilities: bs.Buffs, Dice: dice, Log: logSvc, Points: characterDAL, Picks: characterDAL,
-		Book: proficiencies, Languages: languages, Tables: ruleTables, Buffs: bs.Buffs, Tx: tx,
+		Book: proficiencies, Languages: languages, Tables: ruleTables, Buffs: bs.Buffs, Rulesets: bs.Rulesets, Tx: tx,
 	})
 	if err := bs.add(bs.Skills, err); err != nil {
 		return nil, err
@@ -611,4 +625,12 @@ func seedSpellRefs(spellbook []string, effects *spelleffectsadpt.Catalog) []cata
 		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spell effects seed"})
 	}
 	return refs
+}
+
+// proficiencyIDs tells rulesetsvc which proficiency ids the book knows.
+type proficiencyIDs struct{ book *ruletablesvc.Proficiencies }
+
+func (p proficiencyIDs) Has(id string) bool {
+	_, ok := p.book.Get(id)
+	return ok
 }

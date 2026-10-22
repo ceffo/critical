@@ -19,6 +19,8 @@ TxRunner  # Technical: port, service or wiring type (clean architecture plumbing
 Codec  # Technical: port, service or wiring type (clean architecture plumbing)
 Reader  # Technical: port, service or wiring type (clean architecture plumbing)
 Recorder  # Technical: port, service or wiring type (clean architecture plumbing)
+SaveOptions  # Technical: the options of a save roll request
+Resolver  # Technical: port, service or wiring type (clean architecture plumbing)
 Replayer  # Technical: port, service or wiring type (clean architecture plumbing)
 Restorer  # Technical: port, service or wiring type (clean architecture plumbing)
 Snapshotter  # Technical: port, service or wiring type (clean architecture plumbing)
@@ -26,7 +28,6 @@ Notifier  # Technical: port, service or wiring type (clean architecture plumbing
 Lookup  # Technical: port, service or wiring type (clean architecture plumbing)
 ItemLister  # Technical: port, service or wiring type (clean architecture plumbing)
 FormStore  # Technical: port, service or wiring type (clean architecture plumbing)
-CritStore  # Technical: port, service or wiring type (clean architecture plumbing)
 IdentityProvider  # Technical: port, service or wiring type (clean architecture plumbing)
 AmendFunc  # Technical: port, service or wiring type (clean architecture plumbing)
 RemoveFunc  # Technical: port, service or wiring type (clean architecture plumbing)
@@ -171,7 +172,6 @@ Modifier  # Needs a term: damage and effect duration concepts
 ModifierKind  # Needs a term: damage and effect duration concepts
 Contribution  # Needs a term: damage and effect duration concepts
 Situational  # Needs a term: damage and effect duration concepts
-SuccessBuff  # Needs a term: damage and effect duration concepts
 AbilityGain  # Needs a term: level, limits and grant concepts
 LevelCell  # Needs a term: level, limits and grant concepts
 LevelDice  # Needs a term: level, limits and grant concepts

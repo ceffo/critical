@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -61,9 +62,11 @@ type tables struct {
 	// rowid does.
 	rowSeq int64
 
-	// crit holds the house crit table by ascending range start.
-	crit  []combatsvc.CritRow
-	forms map[int64]combatsvc.AttackForm
+	// ruleset is the default ruleset (the database's first row of rulesets);
+	// rulesetChanges is its audit, oldest first.
+	ruleset        ruleset.Ruleset
+	rulesetChanges []ruleset.Change
+	forms          map[int64]combatsvc.AttackForm
 
 	xp    map[int64]xpEntry
 	xpSeq int64
@@ -95,7 +98,10 @@ type tables struct {
 }
 
 func newTables() *tables {
+	def := ruleset.Default()
+	def.ID = 1
 	return &tables{
+		ruleset:       def,
 		characters:    map[int64]charactersvc.Character{},
 		owners:        map[int64]uuid.UUID{},
 		retired:       map[int64]bool{},

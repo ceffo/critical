@@ -12,41 +12,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
-// Crit is the house crit table (combatsvc.CritStore).
-type Crit struct{ s *Store }
-
-var _ combatsvc.CritStore = Crit{}
-
-// Crit returns the crit table port.
-func (s *Store) Crit() Crit { return Crit{s} }
-
-// List returns the stored rows by ascending range start; none means the
-// table was never edited.
-func (p Crit) List(ctx context.Context) ([]combatsvc.CritRow, error) {
-	out := []combatsvc.CritRow{}
-	err := p.s.read(ctx, func(t *tables) error {
-		out = append(out, t.crit...)
-		return nil
-	})
-	return out, err
-}
-
-// Replace swaps the whole table; two rows starting at the same roll are
-// refused (the range start is the table's key).
-func (p Crit) Replace(ctx context.Context, rows []combatsvc.CritRow) error {
-	return p.s.write(ctx, func(t *tables) error {
-		next := slices.Clone(rows)
-		slices.SortStableFunc(next, func(a, b combatsvc.CritRow) int { return cmp.Compare(a.From, b.From) })
-		for i := 1; i < len(next); i++ {
-			if next[i].From == next[i-1].From {
-				return errDuplicate("crit_table_rows", next[i].From)
-			}
-		}
-		t.crit = next
-		return nil
-	})
-}
-
 // Forms is the attack form's last choices (combatsvc.FormStore).
 type Forms struct{ s *Store }
 

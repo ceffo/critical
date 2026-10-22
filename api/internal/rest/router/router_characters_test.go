@@ -62,7 +62,8 @@ func as(h http.Handler, token, method, path, body string) *httptest.ResponseReco
 // user's characters, the creation's rolls and the admin section (adminPrefix).
 var characterFree = map[string]bool{
 	"GET /api/health": true, "GET /api/changelog": true, "GET /api/spells/filters": true, "GET /api/spells/names": true,
-	"GET /api/crit-table": true, "PUT /api/crit-table": true, "GET /api/xp/preview": true,
+	"GET /api/ruleset": true, "GET /api/ruleset/changes": true, "PUT /api/ruleset/crit-table": true,
+	"PUT /api/ruleset/racial-lift": true, "PUT /api/ruleset/success-effects": true, "GET /api/xp/preview": true,
 	"GET /api/characters": true, "PUT /api/characters/current": true,
 	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/draft": true, "PATCH /api/characters/{id}": true,
 	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,

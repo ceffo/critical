@@ -43,7 +43,7 @@ func withRealBuffs(t *testing.T, buffs []buffsvc.BuffEffect, powers []buffsvc.It
 
 	f := newFixture(t)
 	svc, err := combatsvc.New(combatsvc.Deps{
-		Chars: f.chars, Buffs: real, Dice: f.dice, Weapons: f.weapons, Crit: f.crit,
+		Chars: f.chars, Buffs: real, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
 		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 	})
 	require.NoError(t, err)

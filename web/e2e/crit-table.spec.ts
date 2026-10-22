@@ -155,7 +155,7 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   page,
   stack,
 }) => {
-  const res = await fetch(`${stack.apiUrl}/api/crit-table`, {
+  const res = await fetch(`${stack.apiUrl}/api/ruleset/crit-table`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rows: [{ from: 1, to: 100, multiplier: 1.5 }] }),

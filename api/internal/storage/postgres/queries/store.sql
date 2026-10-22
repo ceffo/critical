@@ -365,3 +365,26 @@ DELETE FROM proficiency_descriptions WHERE proficiency_id = $1;
 SELECT d.proficiency_id, t.lang, t.body
 FROM proficiency_descriptions d JOIN localized_texts t ON t.text_id = d.description
 ORDER BY d.proficiency_id, t.lang;
+
+-- The default ruleset's data step (ADR 0041 step 10, defaultRuleset).
+
+-- name: CountLegacyCritRows :one
+SELECT count(*) FROM crit_table_rows;
+
+-- name: InsertRuleset :one
+INSERT INTO rulesets (name, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (name) DO NOTHING
+RETURNING id;
+
+-- name: CopyLegacyCritRows :exec
+INSERT INTO ruleset_crit_rows (ruleset_id, roll_from, roll_to, multiplier)
+SELECT $1, roll_from, roll_to, multiplier FROM crit_table_rows;
+
+-- name: InsertRulesetCritRow :exec
+INSERT INTO ruleset_crit_rows (ruleset_id, roll_from, roll_to, multiplier)
+VALUES ($1, $2, $3, $4);
+
+-- name: InsertRulesetSuccessEffect :exec
+INSERT INTO ruleset_success_effects (ruleset_id, proficiency_id, ac, rounds)
+VALUES ($1, $2, $3, $4);

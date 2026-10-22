@@ -36,6 +36,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/leveluphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/profdeschdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/rulesethdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
@@ -142,7 +143,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// The build's own changelog (ADR 0039): it needs a session, no current character.
 	changeloghdl.RegisterRoutes(r, opts.Changelog)
 	spellhdl.RegisterSharedRoutes(r, bs.Spells)
-	combathdl.RegisterSharedRoutes(r, bs.Combat)
+	rulesethdl.RegisterSharedRoutes(r, bs.Rulesets)
 	xphdl.RegisterSharedRoutes(r, bs.XP)
 	// A proficiency's description (ADR 0037 step 19.4) is a catalogue read, no character's.
 	if bs.ProficiencyDescriptions != nil {
@@ -160,7 +161,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		if bs.Auth != nil {
 			adminhdl.RegisterRoutes(r, bs.Auth)
 		}
-		combathdl.RegisterAdminRoutes(r, bs.Combat)
+		rulesethdl.RegisterAdminRoutes(r, bs.Rulesets)
 	})
 
 	// Every other route acts on the current character of the request's user

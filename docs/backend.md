@@ -301,7 +301,7 @@ gate `middleware.Gate`.
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
 - **Admin section** (steps 1.3, 2, 5.2; `adminhdl`, mounted behind `middleware.AdminOnly`, which
-  answers 403 `admin_only` to a player before any service runs; `PUT /api/crit-table` sits behind it
+  answers 403 `admin_only` to a player before any service runs; the ruleset's `PUT /api/ruleset/*` edits sit behind it
   too): `GET /api/admin/users` (`{"users": [{id, email, role, root, disabled, lastLogin|null,
   createdAt, characters: [names]}]}`), `PATCH /api/admin/users/{id}` (`{disabled?, role?}`, one
   transaction; disabling deletes the user's sessions; the user as changed), `GET /api/admin/invites`

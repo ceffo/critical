@@ -8,9 +8,11 @@
 #
 #   scripts/staging-deploy.sh <full commit sha> [version X.Y.Z]
 #
-# With a version (every release since versions are computed, and a redeploy of a version), the image is
-# registry.fly.io/<app>:v<version>, the build of that version, and the smoke check also wants /api/health to
-# report that version; without one, registry.fly.io/<app>:<sha>.
+# The image is always registry.fly.io/<app>:<sha>, the build of that commit, never the version tag: runs of
+# different commits can compute the same version (the tag step of an earlier one failed, so no tag moved the
+# next number on), and the version tag then names whichever build pushed last. With a version (every
+# release, and a redeploy of a version), the smoke check also wants /api/health to report it, so a build that
+# does not carry that version fails the run instead of staying up.
 #
 # The digest, not the tag, is the image's identity (a rerun for a new catalogue pushes a new digest under
 # the same tag): it is printed and written as `digest=sha256:...` to $GITHUB_OUTPUT. When the deploy or
@@ -33,14 +35,23 @@ smoke="${FLY_SMOKE:-$here/fly-smoke.sh}"
 out="${GITHUB_OUTPUT:-/dev/stdout}"
 app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$config")"
 [ -n "$app" ] || { echo "staging-deploy: no app in $config" >&2; exit 1; }
-if [ -n "$version" ]; then image="registry.fly.io/$app:v$version"; else image="registry.fly.io/$app:$sha"; fi
+image="registry.fly.io/$app:$sha"
 
 # Before: a public IP is allowed only while the login gate is live (no bypass).
 FLY="$fly" "$here/fly-access-check.sh" "$app"
 
-# From here a failure leaves a release to roll back to.
+# The image the machines run now, to put back when the new one fails (a release that crash-loops must not
+# leave staging down). Empty when staging has no machine yet.
+previous="$("$fly" machine list -a "$app" --json 2>/dev/null | jq -r '[.[].config.image // empty] | unique | if length == 1 then .[0] else empty end' 2>/dev/null || true)"
+
+# From here a failure puts the previous image back and leaves a release to roll back to.
 rollback_hint() {
     [ $? -eq 0 ] && return
+    if [ -n "$previous" ] && [ "$previous" != "$image" ]; then
+        echo "staging-deploy: FAILED. Putting back the previous image $previous" >&2
+        "$fly" deploy -c "$config" -a "$app" --image "$previous" --no-public-ips --ha=false --yes >&2 \
+            || echo "staging-deploy: the previous image could not be put back; redeploy it by hand" >&2
+    fi
     echo "staging-deploy: FAILED. Releases of $app, newest first; redeploy the previous one's image with" >&2
     echo "  fly deploy -c deploy/fly.staging.toml --image <its image> (docs/deploy.md, \"Rollback\"):" >&2
     "$fly" releases --image -a "$app" 2>&1 | head -n 6 >&2 || true

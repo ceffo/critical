@@ -87,15 +87,16 @@ ips_line="$(grep -n '^fly ips' "$calls" | head -n1 | cut -d: -f1)"
 deploy_line="$(grep -n '^fly deploy' "$calls" | head -n1 | cut -d: -f1)"
 [ "${ips_line:-99}" -lt "${deploy_line:-0}" ] || fail "private app: the IP check did not come before the deploy"
 
-# --- with a version: the version's image, and the smoke check wants that version ---
+# --- with a version: the commit's own image (never the version tag), and the smoke check wants that version ---
 run_version() {
     : > "$calls"; : > "$tmp/gh_out"; status=0
     out="$(FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha" "$@" 2>&1)" || status=$?
 }
 run_version 1.4.0
 [ "$status" = 0 ] || fail "version: exit $status: $out"
-grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:v1.4.0 --no-public-ips --ha=false --yes" "$calls" \
-    || fail "version: not the version's image: $(cat "$calls")"
+grep -qx "fly deploy -c $root/deploy/fly.staging.toml -a critical-hit-staging --image registry.fly.io/critical-hit-staging:$sha --no-public-ips --ha=false --yes" "$calls" \
+    || fail "version: not the commit's image: $(cat "$calls")"
+grep -q ":v1.4.0" "$calls" && fail "version: deployed the shared version tag, which another commit's run may have pushed: $(cat "$calls")"
 grep -qx "smoke critical-hit-staging $sha 1.4.0" "$calls" || fail "version: smoke check not called with the version"
 run_version ""
 grep -qx "smoke critical-hit-staging $sha" "$calls" && grep -q "critical-hit-staging:$sha --no-public-ips --ha=false --yes" "$calls" || fail "empty version: not the sha's image: $(cat "$calls")"
@@ -103,6 +104,28 @@ for v in v1.4.0 1.4 'x'; do
     run_version "$v"
     [ "$status" != 0 ] && [ ! -s "$calls" ] || fail "version '$v': accepted, or called fly"
 done
+
+# --- two commits, no tag between them, compute the same version (the earlier tag step failed): each run
+# deploys its own commit's image, never the other's through the shared version tag ---
+sha2="$(printf 'd%.0s' {1..40})"
+: > "$calls"; FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha" 0.101.0 >/dev/null 2>&1
+FLY="$stubs/fly" FLY_SMOKE="$stubs/smoke" GATE_CHECK="$stubs/gate" GITHUB_OUTPUT="$tmp/gh_out" "$root/scripts/staging-deploy.sh" "$sha2" 0.101.0 >/dev/null 2>&1
+[ "$(grep '^fly deploy' "$calls" | sed -n 's/.*--image \(\S*\) .*/\1/p' | tr '\n' ' ')" = "registry.fly.io/critical-hit-staging:$sha registry.fly.io/critical-hit-staging:$sha2 " ] \
+    || fail "collision: the runs did not each deploy their own commit's image: $(grep '^fly deploy' "$calls")"
+grep -qx "smoke critical-hit-staging $sha2 0.101.0" "$calls" || fail "collision: the second run's smoke check lost its commit or version"
+
+# --- a failed deploy puts the previous image back, so staging is not left crash-looping ---
+prev_machines="[{\"id\":\"m1\",\"config\":{\"image\":\"registry.fly.io/critical-hit-staging:previous\"},\"image_ref\":{\"digest\":\"$digest\"}}]"
+echo "$prev_machines" > "$tmp/machines"
+touch "$tmp/smoke-fails"
+run_deploy A=1
+[ "$status" != 0 ] || fail "rollback: the failed deploy exited 0"
+[ "$(grep -c '^fly deploy' "$calls")" = 2 ] && grep '^fly deploy' "$calls" | tail -n1 | grep -q -- '--image registry.fly.io/critical-hit-staging:previous ' \
+    || fail "rollback: the previous image was not put back: $(grep '^fly deploy' "$calls")"
+rm -f "$tmp/smoke-fails"
+run_deploy A=1
+[ "$(grep -c '^fly deploy' "$calls")" = 1 ] || fail "rollback: a passed deploy was rolled back"
+echo "$one" > "$tmp/machines"
 
 # --- a failed smoke check fails the run and prints the releases to roll back to ---
 touch "$tmp/smoke-fails"

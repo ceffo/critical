@@ -13,8 +13,8 @@ inputs:
     required: true
   version:
     description: >-
-      Release version X.Y.Z of the image: deploys registry.fly.io/<app>:v<version> and the smoke check wants
-      /api/health to report it. Empty: registry.fly.io/<app>:<sha>, commit checked only.
+      Release version X.Y.Z of the image (the image deployed is always registry.fly.io/<app>:<sha>); the smoke check wants
+      /api/health to report it. Empty: commit checked only.
     required: false
     default: ""
   fly-api-token:

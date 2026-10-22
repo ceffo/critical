@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -83,4 +84,101 @@ func TestRoll_Step11_TheZeroLevelUpIsUndoable(t *testing.T) {
 	require.NoError(t, err)
 	lu, _, _ = levelUpOf(t, bs, id)
 	assert.Empty(t, lu.Pending)
+}
+
+// fixedDice answers each die in order from values, sides checked; any other
+// roll fails the test.
+type fixedDice struct {
+	t      *testing.T
+	values [][2]int // sides, value
+}
+
+func (d *fixedDice) next(sides int) int {
+	d.t.Helper()
+	require.NotEmpty(d.t, d.values, "an unexpected d%d", sides)
+	v := d.values[0]
+	d.values = d.values[1:]
+	require.Equal(d.t, v[0], sides, "the die rolled")
+	return v[1]
+}
+
+func (d *fixedDice) RollDie(sides int) int { return d.next(sides) }
+func (d *fixedDice) RollD20() int          { return d.next(20) }
+func (d *fixedDice) RollD100() int         { return d.next(100) }
+
+// ADR 0042 step 11 over the elf's next levels: from mage 7 with the XP of
+// mage 10, levels 8 and 9 (not above the fighter's 9) gain no hit points and
+// roll no die; level 10 rolls the mage's d4 plus Constitution 15's +1.
+func TestRoll_Step11_TheElfGainsHitPointsOnlyPastTheFighter(t *testing.T) {
+	ctx := context.Background()
+	m := memory.New()
+	cfg := fixtureConfig()
+	cfg.Dice = &fixedDice{t: t, values: [][2]int{{4, 3}}}
+	bs, err := composition.Build(ctx, composition.MemoryStorage(m), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	id, err := m.AddCharacter(ctx, charactersvc.Character{
+		Name: "Elf", Race: "elf", Class: "mage", RealizedLevel: 7, XPTotal: 250_000,
+		Str: 17, Dex: 16, Con: 15, Int: 17, Wis: 10, Cha: 10, HPMax: 40,
+		Classes: []classes.Entry{
+			{Class: "fighter", RealizedLevel: 9, StartingXP: 250_000, State: classes.EntryFrozen, LeftAtLevel: 9},
+			classes.SingleEntry("mage", 7, 250_000),
+		},
+	})
+	require.NoError(t, err)
+
+	for _, want := range []struct{ level, gain, maxHP int }{{8, 0, 40}, {9, 0, 40}, {10, 4, 44}} {
+		got, err := bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Class: "mage", Level: want.level})
+		require.NoError(t, err, "level %d", want.level)
+		assert.Equal(t, want.gain, got.Gain, "level %d", want.level)
+		_, maxHP, _ := levelUpOf(t, bs, id)
+		assert.Equal(t, want.maxHP, maxHP, "level %d", want.level)
+	}
+}
+
+// ADR 0042 step 13 with step 14 end to end: a mage left at 9, now a cleric
+// 5, learns, prepares and casts sleep from the mage's own slot, at the mage's
+// 9; the cast answers warnings ["dual_class_old_ability"] and class "mage",
+// and its journal entry carries both.
+func TestCast_Step13_AnOldClassCastIsWarnedAndLogged(t *testing.T) {
+	ctx := context.Background()
+	m := memory.New()
+	cfg := fixtureConfig()
+	cfg.Dice = &fixedDice{t: t, values: [][2]int{{100, 1}}} // the chance to learn
+	bs, err := composition.Build(ctx, composition.MemoryStorage(m), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	id, err := m.AddCharacter(ctx, charactersvc.Character{
+		Name: "Dual", Race: "human", Class: "cleric", RealizedLevel: 5, XPTotal: 15_000,
+		Str: 12, Dex: 12, Con: 12, Int: 17, Wis: 15, Cha: 10, HPMax: 40,
+		Classes: []classes.Entry{
+			{Class: "mage", RealizedLevel: 9, StartingXP: 135_000, State: classes.EntryFrozen, LeftAtLevel: 9},
+			classes.SingleEntry("cleric", 5, 15_000),
+		},
+	})
+	require.NoError(t, err)
+
+	learned, err := bs.Learn.Learn(ctx, id, "sleep")
+	require.NoError(t, err)
+	require.True(t, learned.Learned)
+	slots, err := bs.Prep.PrepareFor(ctx, id, "mage", []string{"sleep"})
+	require.NoError(t, err)
+	idx := -1
+	for i, s := range slots {
+		if s.SpellID == "sleep" {
+			idx = i
+		}
+	}
+	require.GreaterOrEqual(t, idx, 0, "sleep prepared in a slot: %+v", slots)
+
+	res, err := bs.Cast.Cast(ctx, id, idx, castsvc.CastRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, []string{classes.WarnOldAbility}, res.Warnings)
+	assert.Equal(t, "mage", res.Class)
+	assert.Equal(t, 9, res.CasterLevel, "the mage's left-at level")
+	entries, err := bs.Log.List(ctx, id, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Contains(t, string(entries[0].Payload), `"warnings":["dual_class_old_ability"]`)
+	assert.Contains(t, string(entries[0].Payload), `"class":"mage"`)
 }

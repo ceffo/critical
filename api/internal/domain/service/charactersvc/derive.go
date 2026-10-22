@@ -195,7 +195,7 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 		if d.SkillColumn == "" {
 			d.SkillColumn = ruletablesvc.ColumnNone
 		}
-		if err := d.SetSkillFigures(rules, g.Class, c, c.SkillPoints.Resolve(g.Class)); err != nil {
+		if err := d.SetSkillFigures(rules, def, c, c.SkillPoints.Resolve(g.Class)); err != nil {
 			return err
 		}
 	}
@@ -458,17 +458,27 @@ func saveField(s *Saves, cat string) *int {
 }
 
 // SetSkillFigures sets d's skill sets (percentages, armour, budget and points of each) from
-// points entered on c, at the level of the entry granting the skills (ADR 0042 step 12; d's
-// Features must be set, else d's realized level) and worn body armour's Table 29 column
-// (SkillColumn must be set): the one place they are filled, for the derivation and for a draft of
-// the points (ADR 0030 steps 17 and 18; the figures are the skills module's, ADR 0037 step 17).
-func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Character, points skills.SetPoints) error {
-	sets, err := skills.SkillSetsOf(t, skills.PointsSheet{
-		Class: def, Race: c.Race, Dex: c.Dex, Level: d.FeatureLevel(classes.KindRogueSkills), ArmorColumn: d.SkillColumn, Points: points,
-		MultiClass: len(c.Entries()) > 1, // ADR 0042 step 16.3: a dual-class's frozen entry counts
-	})
-	if err != nil {
-		return fmt.Errorf("skill figures: %w", err)
+// points entered on c: the sets of every rogue_skills grant (ADR 0042 step 12: two entries
+// granting it, a thief/bard's, each keep their own sets), each at the level of its granting
+// entry (d's Features must be set, else c's class at d's realized level), read through worn body
+// armour's Table 29 column (SkillColumn must be set). def is a class's definition. The one place
+// they are filled, for the derivation and for a draft of the points (ADR 0030 steps 17 and 18;
+// the figures are the skills module's, ADR 0037 step 17).
+func (d *Derived) SetSkillFigures(t skills.SkillTables, def func(string) (classes.Class, error), c *Character, points skills.SetPoints) error {
+	var sets []skills.SkillSet
+	for _, g := range d.SkillGrants(c.Class) {
+		class, err := def(g.Class)
+		if err != nil {
+			return fmt.Errorf("skill figures: %w", err)
+		}
+		got, err := skills.SkillSetsOf(t, skills.PointsSheet{
+			Class: class, Race: c.Race, Dex: c.Dex, Level: g.Level, ArmorColumn: d.SkillColumn, Points: points,
+			MultiClass: len(c.Entries()) > 1, // ADR 0042 step 16.3: a dual-class's frozen entry counts
+		})
+		if err != nil {
+			return fmt.Errorf("skill figures: %w", err)
+		}
+		sets = append(sets, got...)
 	}
 	d.SkillSets = sets
 	return nil

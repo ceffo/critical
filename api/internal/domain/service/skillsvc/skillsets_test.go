@@ -188,3 +188,32 @@ func TestSetPoints_Step3_5_ALegacyEntryResolvesPointsFiledUnderNoSet(t *testing.
 		skills.SetPoints{"thief": {"open_locks": 7}}).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":7}}`)))
 }
+
+// ADR 0042 step 12 on ADR 0040 step 3.5: a thief 9/bard 4 holds both skill sets, each spent
+// against its own class's budget at its own entry's level. The bard's set takes 65 points
+// (20 + 15 x 3 at the bard's 4, not the thief's 9) and refuses 70; no set named is refused, the
+// character having two.
+func TestSetPoints_Step12_EachGrantSpendsItsOwnSet(t *testing.T) {
+	f := pointsFixture(t, "thief", nil)
+	f.chars.ExpectedCalls = nil
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
+		ID: charID, Class: "thief", RealizedLevel: 9,
+		Derived: charactersvc.Derived{RealizedLevel: 9, Features: []charactersvc.FeatureGrant{
+			{Kind: classes.KindRogueSkills, Class: "thief", Level: 9},
+			{Kind: classes.KindRogueSkills, Class: "bard", Level: 4},
+		}},
+	}, nil)
+	f.records()
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"bard": {"climb_walls": 65}}).Return(nil).Once()
+
+	got, err := f.svc.SetPoints(context.Background(), charID, "bard", map[string]int{"climb_walls": 65})
+	require.NoError(t, err)
+	assert.Equal(t, map[string]int{"climb_walls": 65}, got)
+
+	_, err = f.svc.SetPoints(context.Background(), charID, "bard", map[string]int{"climb_walls": 70})
+	require.Error(t, err, "over the bard's 65 at level 4")
+	_, err = f.svc.SetPoints(context.Background(), charID, "", map[string]int{"climb_walls": 5})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, skills.FieldSet, fe.Field)
+}

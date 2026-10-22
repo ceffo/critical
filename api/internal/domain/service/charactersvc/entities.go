@@ -249,7 +249,8 @@ type Derived struct {
 	// its own armour entries; "" for a class without skill sets.
 	SkillColumn string
 	// SkillSets is steps 17 and 18 (ADR 0040 step 3.5): one set per
-	// rogue_skills feature the class grants at the realized level, each with
+	// rogue_skills feature each entry's class grants at the entry's level
+	// (ADR 0042 step 12: a thief/bard has both classes' sets), each with
 	// its skills' percentages and terms, the skill armour it reads (ADR 0033
 	// step 14), its budget's warnings and its budget as figures; nil for a
 	// class without skill sets.
@@ -329,6 +330,23 @@ func (d *Derived) Grant(kind string) (FeatureGrant, bool) {
 		}
 	}
 	return FeatureGrant{}, false
+}
+
+// SkillGrants are the rogue_skills grants in entry order (ADR 0042 step 12),
+// each granting class with its own skill sets read at its own level; with
+// none, the one of class at the realized level (a character derived
+// without entries).
+func (d *Derived) SkillGrants(class string) []FeatureGrant {
+	var out []FeatureGrant
+	for _, g := range d.Features {
+		if g.Kind == classes.KindRogueSkills {
+			out = append(out, g)
+		}
+	}
+	if len(out) == 0 {
+		out = []FeatureGrant{{Kind: classes.KindRogueSkills, Class: class, Level: d.RealizedLevel}}
+	}
+	return out
 }
 
 // FeatureLevel is the level the rule of kind reads (ADR 0042 step 12): the

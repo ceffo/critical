@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	domainskills "github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ADR 0042's multi-class steps on the derived sheet, derived on the fixture
@@ -290,4 +291,24 @@ func TestDerive_Step14_SpellFailurePerEntry(t *testing.T) {
 	assert.Equal(t, 20, entryOf(t, d, "cleric").SpellFailure)
 	assert.Zero(t, entryOf(t, d, "mage").SpellFailure)
 	assert.Equal(t, 20, d.SpellFailure)
+}
+
+// ADR 0042 step 12: "Two entries granting the same kind each keep their own
+// grant, read at their own level." A thief 9/bard 4 (any combination under
+// the human's lift, ADR 0041 step 2.2) has both skill sets on the sheet, each
+// with its own points and its own budget at its entry's level: the thief's
+// 60 + 30 x 8 = 300, the bard's 20 + 15 x 3 = 65. The code before gave the
+// first grant's set only.
+func TestDerive_Step12_TwoSkillGrantsKeepTheirOwnSets(t *testing.T) {
+	c := multi("human", entry("thief", 9, 110_000), entry("bard", 4, 5_000))
+	c.SkillPoints = domainskills.SetPoints{"thief": {"open_locks": 30}, "bard": {"climb_walls": 20}}
+	d := derived(t, c)
+	require.Len(t, d.SkillSets, 2)
+	thief, bard := d.SkillSets[0], d.SkillSets[1]
+	assert.Equal(t, "thief", thief.Set)
+	assert.Equal(t, "bard", bard.Set)
+	require.NotNil(t, thief.Points)
+	require.NotNil(t, bard.Points)
+	assert.Equal(t, [3]int{9, 300, 30}, [3]int{thief.Points.Level, thief.Points.Total, thief.Points.Spent})
+	assert.Equal(t, [3]int{4, 65, 20}, [3]int{bard.Points.Level, bard.Points.Total, bard.Points.Spent})
 }

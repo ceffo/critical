@@ -9,7 +9,6 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -359,24 +358,21 @@ type draft struct {
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
 func (s *service) withPoints(char *charactersvc.Character, d draft) error {
-	def, err := s.classDef(char.Derived.FeatureClass(classes.KindRogueSkills, char.Class)) // ADR 0042 step 12
+	own, err := s.ownerOf(char, d.set) // ADR 0042 step 12
 	if err != nil {
 		return err
 	}
-	set, err := soleSet(def, d.set)
+	set := own.set
+	char.SkillPoints = char.SkillPoints.Resolve(own.first)
+	next, err := skills.ValidSkillPoints(own.def, set, d.points)
 	if err != nil {
 		return err
 	}
-	char.SkillPoints = char.SkillPoints.Resolve(def)
-	next, err := skills.ValidSkillPoints(def, set, d.points)
-	if err != nil {
-		return err
-	}
-	if err := skills.SkillPointsWithinBudget(def, set, char.Derived.FeatureLevel(classes.KindRogueSkills), char.SkillPoints.Of(set), next); err != nil {
+	if err := skills.SkillPointsWithinBudget(own.def, set, own.level, char.SkillPoints.Of(set), next); err != nil {
 		return err
 	}
 	all := char.SkillPoints.With(set, next)
-	if err := char.Derived.SetSkillFigures(s.tables, def, char, all); err != nil {
+	if err := char.Derived.SetSkillFigures(s.tables, s.classDef, char, all); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
 	char.SkillPoints = all

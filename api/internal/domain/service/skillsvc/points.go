@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -47,21 +48,58 @@ type pointsRecord struct {
 	After  map[string]int `json:"after"`
 }
 
-// soleSet is the skill set a spend or a read addresses (ADR 0040 step 3.5): set when named,
-// else the class's only set; a class with several needs the set named (a *domain.FieldError
-// field set, code empty). "" for a class without a set: its points are refused as not allowed.
-func soleSet(def classes.Class, set string) (string, error) {
-	if set != "" {
-		return set, nil
+// skillOwner is the skill set a spend or a read addresses and the grant holding it (ADR 0040
+// step 3.5, ADR 0042 step 12).
+type skillOwner struct {
+	// set is the addressed set ("" for a character without one: its points are refused as not
+	// allowed); def the class whose rogue_skills lists it and level that entry's level, its
+	// budget's; first is the first granting class, the one legacy points resolve to.
+	set        string
+	def, first classes.Class
+	level      int
+}
+
+// ownerOf is the skill set addressed by set and its grant: set when named, else the character's
+// only set across every rogue_skills grant (a thief/bard has two: a *domain.FieldError field set,
+// code empty). A set no grant lists stays with the first grant's class, which refuses it.
+func (s *service) ownerOf(c *charactersvc.Character, set string) (skillOwner, error) {
+	type listed struct {
+		set   string
+		def   classes.Class
+		level int
 	}
-	listed := def.ListsAll(classes.KindRogueSkills)
-	switch len(listed) {
-	case 0:
-		return "", nil
-	case 1:
-		return listed[0].RogueSkills.Set, nil
+	var out skillOwner
+	var sets []listed
+	for i, g := range c.Derived.SkillGrants(c.Class) {
+		def, err := s.classDef(g.Class)
+		if err != nil {
+			return skillOwner{}, err
+		}
+		if i == 0 {
+			out.def, out.first, out.level = def, def, g.Level
+		}
+		for _, f := range def.ListsAll(classes.KindRogueSkills) {
+			sets = append(sets, listed{f.RogueSkills.Set, def, g.Level})
+		}
 	}
-	return "", &domain.FieldError{Field: skills.FieldSet, Message: skills.CodeEmpty}
+	if set == "" {
+		switch len(sets) {
+		case 0:
+			return out, nil
+		case 1:
+			set = sets[0].set
+		default:
+			return skillOwner{}, &domain.FieldError{Field: skills.FieldSet, Message: skills.CodeEmpty}
+		}
+	}
+	out.set = set
+	for _, l := range sets {
+		if l.set == set {
+			out.def, out.level = l.def, l.level
+			break
+		}
+	}
+	return out, nil
 }
 
 // classDef is class's definition (ADR 0040 step 5: the features the points read).
@@ -96,21 +134,19 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, set string, 
 		if err != nil {
 			return err
 		}
-		def, err := s.classDef(c.Derived.FeatureClass(classes.KindRogueSkills, c.Class)) // ADR 0042 step 12
+		own, err := s.ownerOf(c, set) // ADR 0042 step 12
 		if err != nil {
 			return err
 		}
-		if set, err = soleSet(def, set); err != nil {
-			return err
-		}
-		c.SkillPoints = c.SkillPoints.Resolve(def)
-		next, err := skills.ValidSkillPoints(def, set, points)
+		set = own.set
+		c.SkillPoints = c.SkillPoints.Resolve(own.first)
+		next, err := skills.ValidSkillPoints(own.def, set, points)
 		if err != nil {
 			return err
 		}
-		// ADR 0037 step 10: over the budget at the realized level and
-		// spending more is refused before any write or log entry.
-		if err := skills.SkillPointsWithinBudget(def, set, c.Derived.FeatureLevel(classes.KindRogueSkills), c.SkillPoints.Of(set), next); err != nil {
+		// ADR 0037 step 10: over the budget at the granting entry's level
+		// and spending more is refused before any write or log entry.
+		if err := skills.SkillPointsWithinBudget(own.def, set, own.level, c.SkillPoints.Of(set), next); err != nil {
 			return err
 		}
 		out = orEmpty(next)

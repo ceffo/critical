@@ -11,13 +11,14 @@
 export const STATE_KEYS_HEADER = "X-State-Keys";
 
 /**
- * Every state-key family the server names: the log's own two ("log": the journal changed, "hp": an
- * entry moved current HP) and the families the services snapshot. The composition test
+ * Every state-key family the server names: the log's own three ("log": the journal changed, "hp": an
+ * entry moved current HP, "psp": an entry moved current PSPs) and the families the services snapshot. The composition test
  * `TestStateKeys_TheWebMapsEveryFamily` keeps this list equal to the server's.
  */
 export const STATE_FAMILIES = [
   "log",
   "hp",
+  "psp",
   "ac_override",
   "buffs",
   "initiative",
@@ -84,6 +85,8 @@ const LEVEL_SLICES = [
 export const INVALIDATES = {
   log: ["log"],
   hp: ["hp"],
+  // The PSP pool is served in the character's derived block (ADR 0043 step 5).
+  psp: ["character"],
   ac_override: ["ac"],
   // STR, the AC and the abilities a skill uses follow the effects in play.
   buffs: ["buffs", "strength", "ac", "skills"],

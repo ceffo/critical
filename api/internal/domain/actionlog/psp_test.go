@@ -45,3 +45,16 @@ func TestCapPSP_Step5_GainCappedAtTheMaxNeverUnderZero(t *testing.T) {
 	assert.Equal(t, 50, actionlog.CurrentPSP(50, 4), "never above the max")
 	assert.Equal(t, 0, actionlog.CurrentPSP(20, -25), "never under 0")
 }
+
+// An entry that moves PSPs names the psp family (ADR 0043 step 5), when it is
+// recorded and when it is popped or replayed, so the web reads the pool again;
+// one that moves none doesn't.
+func TestStateKeys_Step5_APSPDeltaNamesThePool(t *testing.T) {
+	assert.Equal(t, []string{actionlog.FamilyLog, actionlog.FamilyPSP},
+		actionlog.NewEntryKeys(actionlog.NewEntry{Kind: actionlog.KindPSPChange, PSPDelta: -7}))
+	assert.Equal(t, []string{actionlog.FamilyLog, actionlog.FamilyPSP},
+		actionlog.TouchedKeys(actionlog.Entry{Kind: actionlog.KindPSPRecovery, PSPDelta: 18}))
+	assert.Equal(t, []string{actionlog.FamilyLog},
+		actionlog.TouchedKeys(actionlog.Entry{Kind: actionlog.KindPSPRecovery}))
+	assert.True(t, actionlog.IsLogFamily(actionlog.FamilyPSP))
+}

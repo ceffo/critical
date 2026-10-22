@@ -9,16 +9,18 @@ import (
 // State-key families that no service snapshots, named by the log itself for
 // the changes a request reports (ADR 0018 step 11): FamilyLog when an entry
 // was recorded, popped, replayed or amended (the journal changed), FamilyHP
-// when one of them moves current HP (the ledger is the log's HP deltas). No
-// module may claim them.
+// when one of them moves current HP (the ledger is the log's HP deltas),
+// FamilyPSP when one moves current PSPs (ADR 0043 step 5, the same ledger's
+// PSP deltas). No module may claim them.
 const (
 	FamilyLog = "log"
 	FamilyHP  = "hp"
+	FamilyPSP = "psp"
 )
 
 // IsLogFamily reports whether family is one the log names itself.
 func IsLogFamily(family string) bool {
-	return family == FamilyLog || family == FamilyHP
+	return family == FamilyLog || family == FamilyHP || family == FamilyPSP
 }
 
 // Changes collects the state keys of every action-log transaction a request
@@ -75,11 +77,15 @@ func (c *Changes) Keys() []string {
 
 // TouchedKeys are the state keys a write of e changes, by e's recording, its
 // pop or its replay: FamilyLog, FamilyHP when e moves current HP (its delta,
-// or an amend's), and the key of each of its snapshots.
+// or an amend's), FamilyPSP when it moves current PSPs, and the key of each
+// of its snapshots.
 func TouchedKeys(e Entry) []string {
 	keys := []string{FamilyLog}
 	if movesHP(e.HPDelta, e.Corrections) {
 		keys = append(keys, FamilyHP)
+	}
+	if e.PSPDelta != 0 {
+		keys = append(keys, FamilyPSP)
 	}
 	for _, s := range e.Snapshots {
 		keys = append(keys, s.Key)
@@ -92,6 +98,9 @@ func NewEntryKeys(e NewEntry) []string {
 	keys := []string{FamilyLog}
 	if e.HPDelta != 0 {
 		keys = append(keys, FamilyHP)
+	}
+	if e.PSPDelta != 0 {
+		keys = append(keys, FamilyPSP)
 	}
 	for _, s := range e.Snapshots {
 		keys = append(keys, s.Key)

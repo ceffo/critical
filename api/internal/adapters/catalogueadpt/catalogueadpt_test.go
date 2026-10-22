@@ -227,6 +227,26 @@ func TestParse_Step20_ReadsFormat13AndRefusesFormat12(t *testing.T) {
 	require.ErrorContains(t, err, "unknown format 12: this API reads format 13; run `just catalogue` to fetch a current artifact")
 }
 
+// ADR 0021 step 20.3 and ADR 0023 step 3: French is optional on a power's text
+// (the book has powers whose OCR text could not be matched) and the artifact is
+// accepted without it, so a reader serves the English body for a missing
+// language; English is required.
+func TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish(t *testing.T) {
+	a, err := ParseArtifact(artifact(t, func(d map[string]any) {
+		delete(d["powers"].([]any)[0].(map[string]any)["description"].(map[string]any), "fr")
+	}))
+	require.NoError(t, err, "no French description is not a refusal")
+	assert.Equal(t, 13, a.Catalogue.Format)
+
+	refuses(t, []refusal{
+		{"a power description without English", func(d map[string]any) {
+			delete(d["powers"].([]any)[0].(map[string]any)["description"].(map[string]any), "en")
+		}, []string{"format 13 schema", "powers/0/description", "en"}},
+	})
+	missing := localized.Text{"en": "Seen from afar."}
+	assert.Equal(t, "Seen from afar.", missing.Any(), "the English body stands in for the language the text lacks")
+}
+
 // ADR 0021 step 16.1: the rows are exactly the schema's (65, both languages,
 // step 1's subset) and an id appears once.
 func TestParse_Step16_RefusesBadProficiencyDescriptions(t *testing.T) {

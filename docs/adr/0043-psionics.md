@@ -45,7 +45,7 @@ What exists to build on (code and ADRs, 2026-10-21):
 flowchart LR
   subgraph Cat["Catalogue (book data)"]
     CD["Psionicist class definition, feature kind psionics"]
-    PW["Psionic powers (format 12)"]
+    PW["Psionic powers (format 13)"]
     RT["Tables 2, 4, 5, 6, 7, 8, 10, 1 as rows"]
   end
   subgraph Char["Character"]
@@ -85,7 +85,7 @@ Every warning and refusal is structured data (a code and its numbers), worded by
 
 ### The class
 
-1. **The psionicist is a class definition** (ADR 0040 step 1, catalogue format 12's class data):
+1. **The psionicist is a class definition** (ADR 0040 step 1, catalogue format 13's class data):
    1. `id` `psionicist`; `name` en *Psionicist*, fr *Psioniste* (`cpsh-fr/ch01-le-psioniste/05-le-psioniste.md`).
    2. `group` `psionicist`, a **new group** (ADR 0040 step 7: a group is data). The book gives the
       psionicist its own saving throws (Table 8) and proficiency slots (Table 10) and the rogue's
@@ -194,7 +194,7 @@ Every warning and refusal is structured data (a code and its numbers), worded by
 
 ### Powers
 
-8. **A psionic power is catalogue data** (catalogue format 12, en and fr; power descriptions,
+8. **A psionic power is catalogue data** (catalogue format 13, en and fr; power descriptions,
    Statistics). Each power has: `id`; `name` (a language map); `discipline` (one of the six:
    clairsentience, psychokinesis, psychometabolism, psychoportation, telepathy, metapsionics; fr
    clairsentience, psychokinésie, psychométabolisme, psychotranslation, télépathie,
@@ -206,7 +206,7 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    text; the description and the optional power-score and natural-20 results as localized text;
    and an optional `effect` (step 17). A power's rules are its data: no special case per power
    (the "no special case per spell" rule).
-   Tests: `PowerCatalogue_Step8_EveryPowerParses` (the format 12 adapter: a fixture power with
+   Tests: `PowerCatalogue_Step8_EveryPowerParses` (the format 13 adapter: a fixture power with
    every field; an unknown discipline, kind or prerequisite refused at start).
 
 9. **Powers known, within the allowance** (ch. 1, `07-advancement.md`, Gaining Disciplines,
@@ -437,12 +437,19 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
   by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
   row and crossover (`seeds/proficiencies.json`).
+- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but its two kinds are not computed yet, so the
+  class is **not offered at creation and refused** (`not_creatable`) until the implementing items land; each kind leaves
+  `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
+  (`KindPsionics`, `KindSaveBonus`: parsed with no params, which the schema checks; nothing reads them).
+- **French is optional on a power's text** (the localized schema type: English required, an absent language omitted). 21 of the 152
+  descriptions have no French body in the artifact (OCR); a reader serves the English one for a language a text lacks, as every localized
+  text does (ADR 0023 step 3): `TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish`.
 - **Q13** is fixed by one dated line (`catalogue-inputs/PSIONICIST_FIXES`): Spell 11 at levels 13 to 16.
 
 ## Consequences
 
 - A new class of data (the psionicist and its group rows), two new feature kinds (`psionics`,
-  `save_bonus`), a new catalogue format for powers (format 12, en and fr), a PSP pool that is a
+  `save_bonus`), a new catalogue format for powers (format 13, en and fr), a PSP pool that is a
   ledger like HP, a new service (`psionicsvc`: picks, checks, recovery) and buff rows that charge
   maintenance. No psionicist id, group id or power id in production code (ADR 0040 step 10).
 - New entries and payload fields: `psp_delta` on any entry, `power_check`, `psionic_pick`,

@@ -126,3 +126,40 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 		})
 	}
 }
+
+// psionicistGrids reads the psionicist's column of the experience and THAC0
+// grids (ADR 0021 step 20.1), by level.
+func psionicistGrids(t *testing.T, ruleTables []byte) (xp, thac0 []int) {
+	t.Helper()
+	var tables struct {
+		Experience []struct{ Level, Psionicist int } `json:"experience"`
+		THAC0      []struct{ Level, Psionicist int } `json:"thac0"`
+	}
+	require.NoError(t, json.Unmarshal(ruleTables, &tables))
+	for _, r := range tables.Experience {
+		xp = append(xp, r.Psionicist)
+	}
+	for _, r := range tables.THAC0 {
+		thac0 = append(thac0, r.Psionicist)
+	}
+	return xp, thac0
+}
+
+// ADR 0021 step 20.1: the psionicist's column of the experience and THAC0 grids
+// is the same figures as its class entry and its group entry, which are what the
+// app reads (ADR 0040 steps 1 and 7); the grid copy has no reader of its own, so
+// this test is what keeps it from drifting.
+func TestClassCatalogue_Step20_PsionicistGridsEqualItsClassAndGroupEntries(t *testing.T) {
+	defs, err := phb(t).Definitions()
+	require.NoError(t, err)
+	class, ok := defs.Class("psionicist")
+	require.True(t, ok)
+	xp, thac0 := psionicistGrids(t, fixtureRuleTables(t))
+	assert.Equal(t, class.Experience, xp, "the experience column equals the class's rows")
+	require.Len(t, thac0, classes.MaxLevel)
+	for level, want := range thac0 {
+		got, err := defs.THAC0(class.Group, level+1)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, "THAC0 at level %d: the grid column equals the group's row", level+1)
+	}
+}

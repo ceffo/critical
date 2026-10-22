@@ -461,7 +461,7 @@ Step 8's catalogue is served; knowing and using powers are later items.
   playable, since its `psionics` and `save_bonus` kinds have no reader (the gate of the section above). It leaves `classes.notImplemented`
   with the PSP items, not with this one: a psionicist character today would have neither PSPs nor the +2 save.
 - Tests: `PowerCatalogue_Step8_EveryPowerParses` (catalogueadpt), `Search_Step8_*`, `Get_Step8_*`, `New_Step8_*` (powersvc),
-  `Powers_Step8_ServedFromTheCatalogueInEnAndFr` (router).
+  `Powers_Step8_ServedFromTheCatalogueAsLanguageMaps` (router).
 
 ## Consequences
 

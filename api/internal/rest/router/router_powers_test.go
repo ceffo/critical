@@ -40,7 +40,7 @@ func powersRouter(t *testing.T) (http.Handler, catalogueadpt.Artifact) {
 // artifact), searchable by the English or the French name, filtered by
 // discipline and kind, with every text a language map and a cost that is a
 // number or a word; an unknown id is a 404 and a bad filter a 400.
-func TestPowers_Step8_ServedFromTheCatalogueInEnAndFr(t *testing.T) {
+func TestPowers_Step8_ServedFromTheCatalogueAsLanguageMaps(t *testing.T) {
 	h, art := powersRouter(t)
 
 	rec := do(h, "GET", "/api/powers", "")

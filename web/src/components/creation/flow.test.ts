@@ -438,6 +438,9 @@ describe("stepOfField", () => {
     // ADR 0030 step 20.7: a starting spell's refusal, and a spellbook for a class without one.
     expect(stepOfField("spellbook.sleep")).toBe("spellbook");
     expect(stepOfField("spellbook")).toBe("spellbook");
+    // ADR 0043: the PSP maximum and the known powers are the psionics step's.
+    expect(stepOfField("pspMax")).toBe("psionics");
+    expect(stepOfField("psionicPicks")).toBe("psionics");
     expect(stepOfField("name")).toBe("identity");
     expect(stepOfField("details.alignment")).toBe("identity");
     expect(stepOfField("details.height")).toBe("identity");
@@ -875,5 +878,67 @@ describe("several classes", () => {
   it("opens the class step on a refusal of an entry", () => {
     expect(stepOfField("classes.1.leftAtLevel")).toBe("class");
     expect(stepOfField("classes")).toBe("class");
+  });
+});
+
+describe("the psionics step (ADR 0043)", () => {
+  const options = {
+    classes: [
+      {
+        class: "psionicist",
+        races: ["human"],
+        skills: [],
+        alignments: ["neutral_good"],
+      },
+    ],
+  } as unknown as CreationOptions;
+  const picks = [
+    { power: "contact", discipline: "telepathy" },
+  ] as unknown as FlowDraft["psionicPicks"];
+  it("is a step only when the draft's answer names a class that lists psionics", () => {
+    const withPsionics = stepsFor({
+      psionicsClass: "psionicist",
+    } as CreationDraft);
+    expect(withPsionics).toContain("psionics");
+    expect(withPsionics.indexOf("psionics")).toBeGreaterThan(
+      withPsionics.indexOf("proficiencies"),
+    );
+    expect(withPsionics.indexOf("psionics")).toBeLessThan(
+      withPsionics.indexOf("identity"),
+    );
+    for (const answer of [{ psionicsClass: "" } as CreationDraft, null])
+      expect(stepsFor(answer)).not.toContain("psionics");
+  });
+  it("sends the PSP maximum and the known powers, and only when entered", () => {
+    const base: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "psionicist",
+      race: "human",
+    };
+    const none = buildBody(options, base, "2500", "en").body;
+    expect(none.pspMax).toBeUndefined();
+    expect(none.psionicPicks).toBeUndefined();
+    const out = buildBody(
+      options,
+      { ...base, pspMax: "40", psionicPicks: picks },
+      "2500",
+      "en",
+    ).body;
+    expect(out.pspMax).toBe(40);
+    expect(out.psionicPicks).toEqual(picks);
+  });
+  it("a class change clears the maximum and the powers, a new pick keeps them", () => {
+    const d: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "psionicist",
+      pspMax: "40",
+      psionicPicks: picks,
+    };
+    const moved = mergeDraft(d, { cls: "fighter" });
+    expect(moved.pspMax).toBe("");
+    expect(moved.psionicPicks).toEqual([]);
+    const kept = mergeDraft(d, { name: "Aria" });
+    expect(kept.pspMax).toBe("40");
+    expect(kept.psionicPicks).toEqual(picks);
   });
 });

@@ -122,14 +122,14 @@ type Totals struct{ DAL DAL }
 // Awards are the character's entries' amounts, each with its bonus (ADR 0015
 // step 1), newest first: a multi-class character's entries share each award
 // on its own (ADR 0042 step 5).
-func (t Totals) Awards(ctx context.Context, characterID int64) ([]int, error) {
+func (t Totals) Awards(ctx context.Context, characterID int64) ([]charactersvc.Award, error) {
 	entries, err := t.DAL.List(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]int, len(entries))
+	out := make([]charactersvc.Award, len(entries))
 	for i, e := range entries {
-		out[i] = EntryAmount(e.Base, e.Bonus).Total
+		out[i] = charactersvc.Award{ID: e.ID, Amount: EntryAmount(e.Base, e.Bonus).Total}
 	}
 	return out, nil
 }

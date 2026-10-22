@@ -4,6 +4,7 @@
 // the preparation (ADR 0008) and the long rest (steps 11 and 12).
 import {
   ArrowFatLinesUp,
+  ArrowsLeftRight,
   BookOpen,
   ListNumbers,
   Moon,
@@ -137,6 +138,32 @@ export const levelUpKind: KindView<LevelUpRecord> = {
   icon: ArrowFatLinesUp,
   text: (p, { t }) => levelUpText(p, t),
   value: (p) => ({ text: formatSigned(p.gain), tone: "heal" }),
+};
+
+/** Payload of a class_switch entry (dualclasssvc record, ADR 0042 step 3). */
+interface ClassSwitchPayload {
+  from: string;
+  to: string;
+  leftAtLevel: number;
+  xp: number;
+}
+
+export const classSwitchKind: KindView<ClassSwitchPayload> = {
+  decode(e) {
+    const p = e.payload as Partial<ClassSwitchPayload> | null;
+    return p && typeof p.from === "string" && typeof p.to === "string"
+      ? (p as ClassSwitchPayload)
+      : null;
+  },
+  icon: ArrowsLeftRight,
+  // "Took a new class: Mage (left Fighter at level 6, 21,000 XP)".
+  text: (p, { t }) =>
+    t("log.classSwitch.text", {
+      from: t(`details.classes.${p.from}`, { defaultValue: p.from }),
+      to: t(`details.classes.${p.to}`, { defaultValue: p.to }),
+      level: p.leftAtLevel,
+      xp: p.xp,
+    }),
 };
 
 /** The payload of a spell_learn entry (learnsvc record, ADR 0030 step 20.2), or null. */

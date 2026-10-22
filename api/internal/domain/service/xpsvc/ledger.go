@@ -31,16 +31,16 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	for i := range entries {
 		a := EntryAmount(entries[i].Base, entries[i].Bonus)
 		entries[i].BonusAmount, entries[i].Total = a.BonusAmount, a.Total
-		entries[i].Split = splitAmount(c.Entries(), a.Total)
+		entries[i].Split = splitAmount(c.Entries(), entries[i].ID, a.Total)
 	}
 	// The total and the progress are the first active entry's (its
 	// starting XP plus its share of each award, ADR 0042 step 5; a
 	// single-class character's whole ledger).
 	entryList := c.Entries()
 	first, _ := classes.Primary(entryList)
-	amounts := make([]int, len(entries))
+	amounts := make([]charactersvc.Award, len(entries))
 	for i := range entries {
-		amounts[i] = entries[i].Total
+		amounts[i] = charactersvc.Award{ID: entries[i].ID, Amount: entries[i].Total}
 	}
 	total := charactersvc.EntryXP(first, amounts, len(classes.Active(entryList)))
 	// The level is the target level the rules derive from that total, and
@@ -70,14 +70,19 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 
 // splitAmount is ADR 0042 step 5.1: a multi-class character's award goes in
 // equal shares to every active entry (nil for one class, whose whole award is
-// its own).
-func splitAmount(entries []classes.Entry, total int) []ClassAmount {
+// its own). An entry that ignores the award (id at or under its cut-off) is
+// not in the split; id 0 is an award not yet written (a preview), which no
+// entry ignores.
+func splitAmount(entries []classes.Entry, id int64, total int) []ClassAmount {
 	active := classes.Active(entries)
 	if len(active) < 2 {
 		return nil
 	}
 	out := make([]ClassAmount, 0, len(active))
 	for _, e := range active {
+		if id != 0 && id <= e.IgnoredAwardsThrough {
+			continue
+		}
 		out = append(out, ClassAmount{Class: e.Class, Amount: charactersvc.Share(total, len(active))})
 	}
 	return out
@@ -92,7 +97,7 @@ func (s *service) Preview(ctx context.Context, characterID int64, base int, bonu
 		return Amount{}, err
 	}
 	a := EntryAmount(base, bonus)
-	a.Split = splitAmount(entries, a.Total)
+	a.Split = splitAmount(entries, 0, a.Total)
 	return a, nil
 }
 

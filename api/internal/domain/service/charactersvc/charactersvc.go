@@ -89,7 +89,7 @@ type Reader interface {
 // character splits award by award (ADR 0042 step 5); xpsvc.Totals implements
 // it over the ledger's DAL.
 type XPLedger interface {
-	Awards(ctx context.Context, characterID int64) ([]int, error)
+	Awards(ctx context.Context, characterID int64) ([]Award, error)
 }
 
 // HPLedger is the HP ledger's total, the sum of the effective HP deltas of a

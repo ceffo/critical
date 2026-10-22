@@ -183,6 +183,12 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Tests: `TakeClass_Step3_FreezesTheOldAndStartsTheNewAtOne` (a new service: entries, XP and HP
    before and after; one action-log entry), `TakeClass_Step3_UndoRestoresTheSingleEntry`
    (composition).
+   _(As built, 2026-10-22: `POST /api/character/dual-class {class}` answers `{from, to, leftAtLevel,
+   xp}`; `dualclasssvc.Switch` checks step 2.2 and the new class's ability minimums and alignment
+   (ADR 0040 steps 1.4 and 1.5), each refusal a 409 with its own code, then writes the whole list of
+   entries and records one `class_switch` entry whose `class_entries` snapshot is that list, so undo
+   and redo give the entries back exactly. The tests are in `dualclass_switch_test.go`
+   (composition) and `dualclasssvc_test.go` (mocked ports).)_
 
 4. **Entering an existing character.** A character entered from a sheet gives, per entry, its
    class, its level (the realized level) and its XP (`starting_xp`), and for each frozen entry the
@@ -229,6 +235,12 @@ Every warning is structured data (a code and its numbers), worded by the web.
    (each with its bonus); the share is floored per award. `Derived.Classes[].XP` serves it; the character's
    `XPTotal` and the XP ledger's total and progress are the first active entry's. Both tests are in
    charactersvc, where the split is computed.)_
+   _(As built for the dual-class switch, 2026-10-22: the new class starts at 0 XP by a **cut-off**, not
+   by a negative starting XP: the class entry carries `ignored_awards_through` (migration 036), the id
+   of the ledger's last entry when the class was taken, and earns its share of the awards with a
+   greater id only. An award from before the switch, edited or removed or its removal undone, leaves
+   the new class alone, and a frozen entry's XP stays its fixed starting XP. The cut-off is not on
+   the wire. Test: `TakeClass_Step1_AnAwardBeforeTheSwitchLeavesTheNewClassAlone`.)_
 
 6. **The XP bonus** (amends ADR 0015 step 2 as amended by ADR 0040 step 6). The book gives the 10%
    bonus to a character with 16 or more in all his prime requisites

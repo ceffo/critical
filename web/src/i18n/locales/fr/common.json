@@ -1352,6 +1352,7 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Niveau",
+      "class_switch": "Classe",
       "spell_learn": "Apprentissage",
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
@@ -1590,6 +1591,9 @@
       "equipped": "Équipé : {{name}}",
       "unequipped": "Retiré : {{name}}",
       "swapped": "Équipé : {{name}} (à la place de {{off}})"
+    },
+    "classSwitch": {
+      "text": "Nouvelle classe : {{to}} (ancienne classe : {{from}}, quittée au niveau {{level}} avec {{xp, number}} PX)"
     },
     "acOverride": {
       "set": "CA forcée : {{value}}",
@@ -1855,6 +1859,16 @@
     "languageSlots_one": "{{count}} emplacement de compétence",
     "languageSlots_other": "{{count}} emplacements de compétence"
   },
+  "takeClass": {
+    "open": "Prendre une nouvelle classe",
+    "title": "Prendre une nouvelle classe",
+    "pick": "Nouvelle classe",
+    "placeholder": "Choisir une classe",
+    "next": "Suivant",
+    "back": "Retour",
+    "take": "Prendre {{class}}",
+    "confirm": "La classe {{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
+  },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
     "unit": "XP",
@@ -2105,6 +2119,13 @@
     "invite_not_found": "Cette invitation n'est plus en attente.",
     "invite_not_pending": "Cette invitation a été annulée ou déjà utilisée : elle ne peut plus être renvoyée.",
     "user_not_found": "Cet utilisateur n'existe pas.",
+    "dualclass_not_allowed": "Ce personnage ne peut pas devenir double-classé (multiclassé, ou d'une race qui ne le peut pas).",
+    "prime_requisite_too_low": "Une caractéristique principale est trop basse : 15 dans la classe actuelle, 17 dans la nouvelle.",
+    "level_too_low": "La classe actuelle est d'un niveau trop bas pour la quitter.",
+    "class_already_left": "Cette classe a déjà été quittée : on ne peut pas la reprendre.",
+    "dualclass_same_class": "Le personnage est déjà dans cette classe.",
+    "dualclass_minimums_not_met": "Le personnage n'atteint pas les minimums de caractéristiques de cette classe.",
+    "dualclass_alignment_not_allowed": "Cette classe n'admet pas l'alignement du personnage.",
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",

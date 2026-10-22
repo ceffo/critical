@@ -34,9 +34,18 @@ func entry(class string, level, xp int) classes.Entry {
 }
 
 // derived is c derived with the awards on the fixture's tables.
+// awardsOf are ledger awards of the amounts, with the ids 1, 2, ... in order.
+func awardsOf(amounts ...int) []charactersvc.Award {
+	out := make([]charactersvc.Award, len(amounts))
+	for i, a := range amounts {
+		out[i] = charactersvc.Award{ID: int64(i + 1), Amount: a}
+	}
+	return out
+}
+
 func derived(t *testing.T, c *charactersvc.Character, awards ...int) charactersvc.Derived {
 	t.Helper()
-	d, err := charactersvc.Derive(c, awards, "", cataloguetest.Tables(t))
+	d, err := charactersvc.Derive(c, awardsOf(awards...), "", cataloguetest.Tables(t))
 	require.NoError(t, err)
 	return d
 }
@@ -55,8 +64,8 @@ func entryOf(t *testing.T, d charactersvc.Derived, class string) charactersvc.En
 // remainder lost." A fighter/cleric's 1,001 XP award gives 500 to each; the
 // half-elf's cleric at 14 (Table 7's limit) still takes its share.
 func TestEntryXP_Step5_1_EvenSharesEvenAtTheLimit(t *testing.T) {
-	assert.Equal(t, 500, charactersvc.EntryXP(entry("fighter", 1, 0), []int{1_001}, 2))
-	assert.Equal(t, 1_000+333+33, charactersvc.EntryXP(entry("fighter", 1, 1_000), []int{1_000, 100}, 3), "floor per award")
+	assert.Equal(t, 500, charactersvc.EntryXP(entry("fighter", 1, 0), awardsOf(1_001), 2))
+	assert.Equal(t, 1_000+333+33, charactersvc.EntryXP(entry("fighter", 1, 1_000), awardsOf(1_000, 100), 3), "floor per award")
 
 	c := multi("half_elf", entry("fighter", 13, 1_300_000), entry("cleric", 14, 1_400_000))
 	d := derived(t, c, 1_001)
@@ -69,8 +78,8 @@ func TestEntryXP_Step5_1_EvenSharesEvenAtTheLimit(t *testing.T) {
 // a frozen entry's XP never changes."
 func TestEntryXP_Step5_2_DualClassAllToTheActiveEntry(t *testing.T) {
 	old := classes.Entry{Class: "fighter", RealizedLevel: 9, StartingXP: 250_000, State: classes.EntryFrozen, LeftAtLevel: 9}
-	assert.Equal(t, 250_000, charactersvc.EntryXP(old, []int{1_001, 3_000}, 1), "the frozen entry's XP is unchanged")
-	assert.Equal(t, 4_001, charactersvc.EntryXP(entry("mage", 1, 0), []int{1_001, 3_000}, 1), "every award whole")
+	assert.Equal(t, 250_000, charactersvc.EntryXP(old, awardsOf(1_001, 3_000), 1), "the frozen entry's XP is unchanged")
+	assert.Equal(t, 4_001, charactersvc.EntryXP(entry("mage", 1, 0), awardsOf(1_001, 3_000), 1), "every award whole")
 }
 
 // ADR 0042 step 7: "Each active entry has its own target level, from its XP
@@ -320,4 +329,18 @@ func TestDerive_Step12_OnlyASingleClassFighterSpecializes(t *testing.T) {
 	single := multi("human", entry("fighter", 5, 20_000))
 	single.Classes = nil
 	assert.True(t, derived(t, single).Specializes)
+}
+
+// ADR 0042 steps 1 and 5 (cut-off): a class entry ignores the ledger awards
+// at or under its IgnoredAwardsThrough, so a class taken by a character in
+// play starts at 0 XP; an older award edited or restored later (same id) does
+// not reach it, and the awards after the cut-off all do.
+func TestEntryXP_Step5_ACutOffEntryIgnoresTheOlderAwards(t *testing.T) {
+	mage := entry("mage", 1, 0)
+	mage.IgnoredAwardsThrough = 2
+	assert.Equal(t, 0, charactersvc.EntryXP(mage, awardsOf(5_000, 3_000), 1), "the awards before the switch are ignored")
+	aw := append(awardsOf(5_000, 3_000), charactersvc.Award{ID: 3, Amount: 700})
+	assert.Equal(t, 700, charactersvc.EntryXP(mage, aw, 1), "an award after it counts whole")
+	aw[0].Amount = 9_999 // an older award edited
+	assert.Equal(t, 700, charactersvc.EntryXP(mage, aw, 1), "an older award edited leaves it alone")
 }

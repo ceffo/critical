@@ -125,7 +125,7 @@ func recordOf(e Entry, entries []classes.Entry) entryRecord {
 		ID: e.ID, Date: e.Date, Session: e.Session, Reason: e.Reason,
 		Base: e.Base, Bonus: e.Bonus, BonusAmount: a.BonusAmount, Total: a.Total,
 	}
-	for _, s := range splitAmount(entries, a.Total) {
+	for _, s := range splitAmount(entries, e.ID, a.Total) {
 		rec.Split = append(rec.Split, classAmountRecord(s))
 	}
 	return rec

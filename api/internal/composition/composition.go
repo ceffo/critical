@@ -29,6 +29,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
@@ -71,7 +72,9 @@ type BackingServices struct {
 	Rest     restsvc.SVC
 	XP       xpsvc.SVC
 	LevelUp  levelupsvc.SVC
-	Rolls    creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
+	// DualClass takes a new class for a character in play (ADR 0042 step 3).
+	DualClass dualclasssvc.SVC
+	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	// Powers serves the psionic powers catalogue from memory (ADR 0043 step 8).
 	Powers powersvc.SVC
 	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
@@ -399,6 +402,15 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		DAL: characterDAL, Characters: charSvc, Rules: ruleTables, Dice: dice, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.LevelUp, err); err != nil {
+		return nil, err
+	}
+	// Taking a new class (ADR 0042 step 3) freezes the active entry and
+	// starts the new one; its undo writes the entries back.
+	bs.DualClass, err = dualclasssvc.New(dualclasssvc.Deps{
+		DAL: characterDAL, Characters: charSvc, Ledger: xpsvc.Totals{DAL: st.XP}, Catalogue: defs,
+		Rulesets: bs.Rulesets, Log: logSvc, Tx: tx,
+	})
+	if err := bs.add(bs.DualClass, err); err != nil {
 		return nil, err
 	}
 	// The creation's rolls (ADR 0032 steps 6 and 7) read the rule tables and

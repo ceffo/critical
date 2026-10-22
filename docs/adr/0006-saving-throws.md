@@ -2,7 +2,8 @@
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.9 and
 critical-qki.14, until then in `docs/backend.md`); amended 2026-10-16 (the adjustment moves the
-target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind). Step 1 amended by [ADR 0030](0030-classes-and-races.md) steps 6 and 22.1 (targets derived, racial bonus), implemented 2026-10-18.
+target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind). Step 1 amended by [ADR 0030](0030-classes-and-races.md) steps 6 and 22.1 (targets derived, racial bonus), implemented 2026-10-18. Step 9 (Wisdom's magical defence adjustment on saves against magic that attacks the mind) added
+2026-10-21, decided in triage (user), on implementation.
 
 _UI word: the French UI says jet de sauvegarde ([ADR 0036](0036-vocabulary.md) step 3)._
 
@@ -93,6 +94,45 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    `TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint` (the wire, on a mocked log service); `actionlogsvc`
    `TestListReads_ServeEntriesThroughThePayloadViews`; `combatsvc`
    `TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAmend`.
+9. **Wisdom's magical defence adjustment** _(decided 2026-10-21, user triage; on
+   implementation)_. PHB chapter 1, "Wisdom", the Magical Defense Adjustment paragraph and the
+   column of the same name in Table 5 (p. 17): the adjustment applies to saving throws against
+   magical spells that attack the mind (the paragraph's examples: beguiling, charm, fear,
+   hypnosis, illusions, possession, suggestion), automatically.
+   1. **The value.** Read from Table 5 for the sheet's Wisdom (the score the other Wisdom rules
+      read, [ADR 0030](0030-classes-and-races.md) steps 13 and 14), from -6 at Wisdom 1 to +4 at 18
+      and up. It is rules data, not a constant in the code: the catalogue's `wisdom` rule table
+      gains the column (ADR 0030 step 23; the artifact change follows [ADR
+      0021](0021-spell-catalogue.md)'s format rules), with the fixture's rows.
+   2. **Every character.** It is an ability rule, not a class feature: a character of any class
+      and race with that Wisdom gets it.
+   3. **Which saves: a flag on the save request.** `POST /api/roll/save` takes an optional
+      `mindAffecting` boolean (default false), set by the player when the magic attacks the mind
+      (the DM's call, the PHB's list as the guide). It is not read from spell effect data: the
+      saves rolled here are the character's own against magic aimed at it, which has no entry in
+      the app (`seeds/spell_effects.json` describes the character's own spells); and no code
+      names a spell (hard rule: no per-spell branch). The flag is valid with every category (a
+      fear wand is a Rod/Staff/Wand save); it changes nothing else in the roll.
+   4. **A named modifier on the roll.** With the flag, a non-zero adjustment is one modifier of
+      kind `wisdom` whose detail is the Wisdom score and whose value is the signed adjustment,
+      added to the roll like the race's bonus and the buffs' (step 1, ADR 0030 step 22.1); a
+      negative value is a penalty. It never moves the target: only the DM's adjustment does
+      (step 5). Without the flag, or with an adjustment of 0, there is no `wisdom` modifier. The
+      breakdown and the result card show it as one more modifier line, worded by the web (no
+      presentation text from the backend).
+   5. **Logged with the roll.** The `save` payload gains `mindAffecting` (a field added, step 4;
+      an entry without it reads as false). The `wisdom` modifier is stored among the modifiers,
+      so step 5's recompute keeps it and step 8's view needs nothing new. The flag is fixed at
+      the roll: a save rolled without it is corrected by the DM's adjustment (step 5) or undone
+      and rolled again.
+   Tests (written with the code; `just check-adr-tests` refuses a cited test name before its
+   function exists, so the implementing change adds the `Test` prefix here): `combatsvc`
+   `ResolveSavingThrow_Step9_WisdomMagicDefence` (flagged Wisdom 17 gives +3 and Wisdom 3 gives
+   -3 as a `wisdom` modifier, verdict at and one below the target; Wisdom 12 flagged and Wisdom
+   17 unflagged give none; a flagged Rod/Staff/Wand save; a fighter and a mage get it like a
+   cleric), `AdjustSave_Step9_TheWisdomModifierIsKept`; the rules adapter's
+   `WisdomFor_Step9_MagicDefence` (the column read for Wisdom 1, 7, 8, 14, 15, 18 and 25); `router`
+   `RollSave_Step9_MindAffectingFlag` (the wire: the flag in, the modifier and `mindAffecting` out).
 
 ## Consequences
 
@@ -106,4 +146,5 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
   roll does not change a logged save. The DM's adjustment is the opposite: it moves the target,
   never the roll.
 - Not covered: the target values themselves (they come from the character sheet seed), saves by
-  creatures other than the Bard, and the effect of a failed save (the DM's call).
+  creatures other than the Bard, the effect of a failed save (the DM's call), and Table 5's spell
+  immunity at Wisdom 19 and up (step 9 covers the adjustment only).

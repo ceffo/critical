@@ -31,6 +31,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/powersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/profdescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
@@ -70,6 +71,8 @@ type BackingServices struct {
 	XP       xpsvc.SVC
 	LevelUp  levelupsvc.SVC
 	Rolls    creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
+	// Powers serves the psionic powers catalogue from memory (ADR 0043 step 8).
+	Powers powersvc.SVC
 	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
 	ProficiencyDescriptions profdescsvc.SVC
 	Learn                   learnsvc.SVC
@@ -252,6 +255,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	bs.ProficiencyDescriptions, err = profdescsvc.New(descriptions)
 	if err := bs.add(bs.ProficiencyDescriptions, err); err != nil {
+		return nil, err
+	}
+
+	// The psionic powers are served from the artifact read at start, as the rule tables are
+	// (ADR 0043 step 8): nothing is imported.
+	bs.Powers, err = powersvc.New(artifact.Disciplines, artifact.Powers)
+	if err := bs.add(bs.Powers, err); err != nil {
 		return nil, err
 	}
 

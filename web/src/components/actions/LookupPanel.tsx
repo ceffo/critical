@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SpellDetail, SpellName } from "@/components/dashboard/SpellDetail";
 import { LearnSpell } from "@/components/actions/LearnSpell";
+import { PowerLookup } from "@/components/actions/PowerLookup";
+import { usePowerStore } from "@/stores/powers";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import type { SpellClass } from "@/api/spells_db";
 import { localized } from "@/i18n/localized";
@@ -46,6 +48,8 @@ export function LookupPanel() {
     move,
     loadOptions,
   } = useLookupStore();
+  const powersActive = usePowerStore((s) => s.active);
+  const setPowersActive = usePowerStore((s) => s.setActive);
   const listRef = useRef<HTMLDivElement>(null);
   const priest = query.cls === "priest";
   const selected = items.find((s) => s.id === selectedId) ?? null;
@@ -57,9 +61,10 @@ export function LookupPanel() {
   // Search as the query changes (debounced while typing); the store skips a query
   // whose rows are already shown, so coming back to the tab keeps the selection.
   useEffect(() => {
+    if (powersActive) return;
     const timer = setTimeout(() => void search(), 150);
     return () => clearTimeout(timer);
-  }, [query, search]);
+  }, [query, search, powersActive]);
 
   // Keep the selected row visible (keyboard moves, coming back to the tab).
   useEffect(() => {
@@ -190,6 +195,50 @@ export function LookupPanel() {
     </div>
   );
 
+  // The list the lookup shows: the four spell lists, or the psionic powers (ADR 0043 step 8).
+  const modeSwitch = (
+    <div
+      role="group"
+      aria-label={t("lookup.classLabel")}
+      className="flex flex-wrap self-start rounded-lg bg-raised p-0.5"
+    >
+      {CLASSES.map(({ value, key }) => (
+        <button
+          key={value}
+          type="button"
+          aria-pressed={!powersActive && query.cls === value}
+          className={cn(
+            "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
+            !powersActive && query.cls === value
+              ? "chip-chosen"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => {
+            setPowersActive(false);
+            setQuery({ cls: value });
+          }}
+        >
+          {t(`lookup.${key}`)}
+        </button>
+      ))}
+      <button
+        type="button"
+        aria-pressed={powersActive}
+        className={cn(
+          "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
+          powersActive
+            ? "chip-chosen"
+            : "text-muted-foreground hover:text-foreground",
+        )}
+        onClick={() => setPowersActive(true)}
+      >
+        {t("lookup.classPowers")}
+      </button>
+    </div>
+  );
+
+  if (powersActive) return <PowerLookup modeSwitch={modeSwitch} />;
+
   // ADR 0022 step 2.5 (A2's pane): filter and list in one card on the left, the detail on the
   // right; the cards follow step 4 (outlined, 14 / 16 px padding, no rules).
   return (
@@ -220,28 +269,7 @@ export function LookupPanel() {
               onKeyDown={onKeyDown}
             />
           </div>
-          <div
-            role="group"
-            aria-label={t("lookup.classLabel")}
-            className="flex flex-wrap self-start rounded-lg bg-raised p-0.5"
-          >
-            {CLASSES.map(({ value, key }) => (
-              <button
-                key={value}
-                type="button"
-                aria-pressed={query.cls === value}
-                className={cn(
-                  "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
-                  query.cls === value
-                    ? "chip-chosen"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-                onClick={() => setQuery({ cls: value })}
-              >
-                {t(`lookup.${key}`)}
-              </button>
-            ))}
-          </div>
+          {modeSwitch}
           {levelChips}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-body text-muted-foreground">
             {groupFilter}

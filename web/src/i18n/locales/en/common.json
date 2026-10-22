@@ -566,6 +566,7 @@
     "classWizard": "Wizard",
     "classPriest": "Priest",
     "classAll": "All",
+    "classPowers": "Powers",
     "levelsLabel": "Spell levels",
     "levelShort": "Lvl {{level}}",
     "levelLabel": "Level {{level}}",
@@ -1043,6 +1044,43 @@
       "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)",
       "free": "Level {{level}}'s free spell",
       "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll"
+    },
+    "powers": {
+      "search": "Search powers...",
+      "disciplineLabel": "Discipline",
+      "kindLabel": "Kind",
+      "kinds": {
+        "science": "Science",
+        "devotion": "Devotion",
+        "defence_mode": "Defence mode",
+        "attack_mode": "Attack mode"
+      },
+      "count_one": "{{count}} power",
+      "count_other": "{{count}} powers",
+      "results": "Powers",
+      "noMatch": "No power matches",
+      "detail": "Power details",
+      "noSelection": "Select a power to see it here.",
+      "initialCost": "Initial cost",
+      "maintenance": "Maintenance",
+      "score": "Power score",
+      "range": "Range",
+      "preparationTime": "Preparation time",
+      "area": "Area",
+      "psp_one": "{{count}} PSP",
+      "psp_other": "{{count}} PSP",
+      "costWords": {
+        "variable": "Variable",
+        "contact": "On contact"
+      },
+      "maintenanceValue_one": "{{cost}} per round",
+      "maintenanceValue_other": "{{cost}} every {{count}} rounds",
+      "noMaintenance": "Cannot be maintained",
+      "scoreInText": "Given in the text",
+      "prerequisites": "Prerequisites:",
+      "minLevel": "Level {{level}}+",
+      "powerScoreResult": "On the power score",
+      "natural20Result": "On a natural 20"
     }
   },
   "result": {

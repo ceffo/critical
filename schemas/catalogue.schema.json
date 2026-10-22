@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 14",
-  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9), the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7) and Table 5's spell immunities on the wisdom rows (step 19, ADR 0006 step 10). and, format 13 (step 20, ADR 0043), the psionicist: its rows in the shared tables, the psionic power progression, inherent potential and PSP recovery tables, the psionic disciplines and powers. Format 14 (step 21) drops the unread per-class sphere table: a class's spheres are its sphere_access feature. The API reads format 14 only: formats 3 to 13 were each the same shape without the parts added later (or with the sphere table), and are retired (steps 16.5, 17.3, 18.3, 19.3, 20.3 and 21.2). Shape only: the schema carries no book text.",
+  "title": "Critical! catalogue, format 15",
+  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9), the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7) and Table 5's spell immunities on the wisdom rows (step 19, ADR 0006 step 10). and, format 13 (step 20, ADR 0043), the psionicist: its rows in the shared tables, the psionic power progression, inherent potential and PSP recovery tables, the psionic disciplines and powers. Format 14 (step 21) drops the unread per-class sphere table: a class's spheres are its sphere_access feature. Format 15 (step 22) names a class's Constitution hit point column by the boolean bracketed_constitution. The API reads format 15 only: formats 3 to 14 were each the same shape without the parts added later (or with the sphere table), and are retired (steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2 and 22.2). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -21,9 +21,9 @@
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 14 (ADR 0021 step 21: format 13 without the per-class sphere_access rule table; format 13 was step 20's: format 12 plus the psionicist's rows, three psionic tables and the psionic disciplines and powers; format 12 was step 19's: format 11 plus the spell immunities of each wisdom row; format 11 was step 18's: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 15 (ADR 0021 step 22: format 14 with the boolean bracketed_constitution on each class's hit dice in place of the Table 3 column name; format 14 was step 21's: format 13 without the per-class sphere_access rule table; format 13 was step 20's: format 12 plus the psionicist's rows, three psionic tables and the psionic disciplines and powers; format 12 was step 19's: format 11 plus the spell immunities of each wisdom row; format 11 was step 18's: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        14
+        15
       ]
     },
     "version": {
@@ -2217,7 +2217,7 @@
         "die",
         "dice_levels",
         "after",
-        "constitution"
+        "bracketed_constitution"
       ],
       "properties": {
         "die": {
@@ -2236,12 +2236,9 @@
           "type": "integer",
           "minimum": 1
         },
-        "constitution": {
-          "description": "The PHB Table 3 column the class reads: `warrior` (the parenthesised adjustment) or `standard`.",
-          "enum": [
-            "warrior",
-            "standard"
-          ]
+        "bracketed_constitution": {
+          "description": "Whether the class takes the parenthesised hit point adjustment of PHB Table 3's Constitution column (true) or the plain one (false).",
+          "type": "boolean"
         }
       }
     },

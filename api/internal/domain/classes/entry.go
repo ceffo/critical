@@ -150,3 +150,43 @@ func Grants(entries []Entry, def func(class string) (Class, error), kind string)
 	}
 	return out, nil
 }
+
+// DualClass is a character with a frozen entry (ADR 0042 step 1): a
+// dual-class's old class beside its one active class.
+func DualClass(entries []Entry) bool {
+	return slices.ContainsFunc(entries, func(e Entry) bool { return e.State == EntryFrozen })
+}
+
+// Crossed is ADR 0042 step 13: a dual-class character has reached the
+// crossover when its active entry's realized level is above every frozen
+// entry's left-at level (PHB multi/dual, Dual-Class: higher than his maximum
+// level in any previous class). Before it, the old classes' abilities warn
+// dual_class_old_ability when used, their THAC0 and saves do not count (steps
+// 8 and 9) and a level-up gains no hit points (step 11). A character without
+// a frozen entry has nothing to cross: true.
+func Crossed(entries []Entry) bool {
+	active, ok := Primary(entries)
+	if !ok {
+		return true
+	}
+	return active.RealizedLevel > MaxLeftAt(entries)
+}
+
+// MaxLeftAt is the highest left-at level of the frozen entries (ADR 0042 step
+// 13), 0 without one: the level a dual-class's active entry must pass.
+func MaxLeftAt(entries []Entry) int {
+	m := 0
+	for _, e := range entries {
+		if e.State == EntryFrozen {
+			m = max(m, e.LeftAtLevel)
+		}
+	}
+	return m
+}
+
+// Dormant is a frozen entry before the crossover (ADR 0042 step 13): its
+// features, spells and equipment allowance may be used, each use warning
+// dual_class_old_ability.
+func Dormant(entries []Entry, e Entry) bool {
+	return e.State == EntryFrozen && !Crossed(entries)
+}

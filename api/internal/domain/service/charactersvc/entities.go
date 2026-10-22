@@ -299,6 +299,10 @@ type EntryDerived struct {
 	SpellFailure int
 	// LevelUp are the entry's pending levels (ADR 0042 step 7).
 	LevelUp LevelUp
+	// Dormant is a dual-class's frozen entry before the crossover (ADR 0042
+	// step 13): its features, spells and equipment may be used, each use
+	// warning dual_class_old_ability; its THAC0 and saves do not count.
+	Dormant bool
 }
 
 // CasterLevel is ADR 0042 step 14: the realized level of the first active
@@ -319,6 +323,10 @@ type FeatureGrant struct {
 	Kind  string
 	Class string
 	Level int
+	// Dormant is a grant of a dual-class's frozen entry before the
+	// crossover (ADR 0042 step 13): usable, with the warning
+	// dual_class_old_ability.
+	Dormant bool
 }
 
 // Grant is the first grant of kind (ADR 0042 step 12), false when no entry

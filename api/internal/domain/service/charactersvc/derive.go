@@ -86,8 +86,11 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 		return Derived{}, err
 	}
 	d := Derived{Classes: make([]EntryDerived, len(entries))}
+	es := derivedEntries(entries)
 	for i := range entries {
 		d.Classes[i] = entries[i].out
+		// ADR 0042 step 13: a frozen entry before the crossover.
+		d.Classes[i].Dormant = classes.Dormant(es, entries[i].entry)
 	}
 	// The figures that are one per entry are the first active entry's here
 	// (the mirror of Character.Class): the XP progress, the group of a
@@ -142,15 +145,7 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 // entry's level, read with its params and at that level. A figure that is one
 // per character takes the first entry granting it.
 func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, rules Rules) error {
-	// Each entry at the level it was derived at (step 7.5: a character
-	// being created has no realized level yet, its target's).
-	es := make([]classes.Entry, len(entries))
-	for i, e := range entries {
-		es[i] = e.entry
-		if e.entry.State == classes.EntryActive {
-			es[i].RealizedLevel = e.out.RealizedLevel
-		}
-	}
+	es := derivedEntries(entries)
 	def := func(id string) (classes.Class, error) {
 		for _, e := range entries {
 			if e.def.ID == id {
@@ -165,7 +160,9 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 			return fmt.Errorf("derive %s: %w", kind, err)
 		}
 		for _, g := range gs {
-			d.Features = append(d.Features, FeatureGrant{Kind: kind, Class: g.Class.ID, Level: g.Level})
+			d.Features = append(d.Features, FeatureGrant{
+				Kind: kind, Class: g.Class.ID, Level: g.Level, Dormant: dormant(es, g.Class.ID),
+			})
 		}
 	}
 	grant := func(kind string) (classes.Grant, bool) {
@@ -313,14 +310,30 @@ func EntryXP(e classes.Entry, awards []int, shares int) int {
 	return xp
 }
 
+// derivedEntries are the entries at the levels they were derived at (step
+// 7.5: a character being created has no realized level yet, its target's).
+func derivedEntries(entries []entryCalc) []classes.Entry {
+	es := make([]classes.Entry, len(entries))
+	for i, e := range entries {
+		es[i] = e.entry
+		if e.entry.State == classes.EntryActive {
+			es[i].RealizedLevel = e.out.RealizedLevel
+		}
+	}
+	return es
+}
+
 // bestCore is ADR 0042 steps 8 and 9 (amending ADR 0030 steps 5 and 6): the
 // lowest Table 53 THAC0 and, category by category, the lowest Table 60
 // target among the active entries, each at its realized level (Q6: two
-// classes' rows may mix).
+// classes' rows may mix). A dual-class character's frozen entries count, at
+// their left-at levels, only once the crossover is reached (step 13, Q5);
+// before it the active entry's rows alone.
 func bestCore(entries []entryCalc, rules Rules) (int, Saves, error) {
+	crossed := classes.Crossed(derivedEntries(entries))
 	var best *core
 	for _, e := range entries {
-		if e.entry.State != classes.EntryActive {
+		if e.entry.State != classes.EntryActive && !crossed {
 			continue
 		}
 		k, err := coreAt(e.entry.Class, e.out.Group, e.out.RealizedLevel, rules)
@@ -514,4 +527,15 @@ func (d *Derived) setSpellFailure(c *Character, es []classes.Entry, def func(str
 		}
 	}
 	return nil
+}
+
+// dormant is ADR 0042 step 13 for the entry of class among es: a frozen
+// entry before the crossover, whose use warns dual_class_old_ability.
+func dormant(es []classes.Entry, class string) bool {
+	for _, e := range es {
+		if e.Class == class {
+			return classes.Dormant(es, e)
+		}
+	}
+	return false
 }

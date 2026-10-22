@@ -25,14 +25,18 @@ const FormatMagicDefence = 10
 // of ADR 0040 step 11.
 const FormatClassDefinitions = 11
 
-// FormatSpellImmunities is format 12 (ADR 0021 step 19, ADR 0006 step 10):
-// format 11 plus Table 5's spell immunities on each wisdom row. It is the
-// only format the API reads (step 19.3): the formats 1 to 11 are refused like
-// any unknown format, with the advice to run `just catalogue`.
+// FormatSpellImmunities was format 12 (ADR 0021 step 19, ADR 0006 step 10):
+// format 11 plus Table 5's spell immunities on each wisdom row.
 const FormatSpellImmunities = 12
 
-// Formats lists the formats this API reads: format 12 only (step 19.3).
-var Formats = []int{FormatSpellImmunities}
+// FormatPsionics is format 13 (ADR 0021 step 20, ADR 0043): format 12 plus the
+// psionicist's rows, the psionic tables, the disciplines and the powers. It is
+// the only format the API reads (step 20.6): the formats 1 to 12 are refused
+// like any unknown format, with the advice to run `just catalogue`.
+const FormatPsionics = 13
+
+// Formats lists the formats this API reads: format 13 only (step 20.6).
+var Formats = []int{FormatPsionics}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

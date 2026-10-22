@@ -62,18 +62,35 @@ Invariants:
 - Nothing a rule derives (THAC0, saves, slots, skill percentages) is stored on the character.
 - Every change goes through the action log, so it can be undone ([ADR 0018](adr/0018-transactions-and-undo.md)).
 
-## Class (built as five fixed classes, planned as data)
+## Class (built as five fixed classes, decided as data)
 
-A class belongs to one **class group** (warrior, wizard, priest, rogue); the tables are read by
-group ([ADR 0030](adr/0030-classes-and-races.md) steps 1 and 21). Today the five classes are
-code and tables; the plan is that a class is data in the catalogue and grants **class
-features** (planned): a feature is a row with a **feature kind**, the mechanic it drives, so a
-new class adds no branch to the code, as spell effects already work
-([ADR 0008](adr/0008-spell-slots-and-long-rest.md) step 8). A **kit** (future) would be an
-optional layer over a class.
+A class belongs to one **class group** (warrior, wizard, priest, rogue); the THAC0, saves,
+proficiency slots and by-group spell effects are read by group
+([ADR 0030](adr/0030-classes-and-races.md) step 2). Today the five classes are code and tables;
+[ADR 0040](adr/0040-classes-are-data.md) makes each a **class definition** in the catalogue (format 10): group, prime requisites,
+ability minimums, alignments, equipment limits, XP rows, hit dice, a spell progression by
+reference, and a list of **class features**. A feature is `{kind, from_level, params}`: its
+**feature kind** is one of a closed list the code implements once, so a new class of known kinds
+adds no code, as spell effects already work ([ADR 0008](adr/0008-spell-slots-and-long-rest.md)
+step 8). A new mechanic is a new kind. A **kit** (future) would be data adding or removing
+features on a class.
 
-The **prime requisite** of a class is the ability it is built on; the XP bonus it gives is read in
-[ADR 0015](adr/0015-experience.md) steps 2 and 3.
+```mermaid
+erDiagram
+    CLASS_ENTRY }o--|| CLASS : "is a"
+    CLASS ||--o{ CLASS_FEATURE : lists
+    CLASS_FEATURE }o--|| FEATURE_KIND : "is of"
+    RACE ||--o{ RACE_TRAIT : lists
+    RACE_TRAIT }o--o| TRAIT_KIND : "is of (computed traits)"
+```
+
+- A character has a feature kind when one of its class entries' classes lists it at or under that
+  entry's realized level; the rule reads that entry's parameters and level ([ADR 0040](adr/0040-classes-are-data.md) step 5).
+- No class, group, race or kit id appears in the code: ids live in the catalogue, seeds and tests
+  ([ADR 0040](adr/0040-classes-are-data.md) step 10).
+
+The **prime requisites** of a class are the abilities it is built on; 16 or more in every one
+gives the 10% XP bonus ([ADR 0015](adr/0015-experience.md), [ADR 0040](adr/0040-classes-are-data.md) step 6).
 
 ## Multi-class and dual-class (planned)
 
@@ -100,7 +117,9 @@ stateDiagram-v2
 
 One of the six PHB races. A race has **traits**: ability adjustments, level limits per class,
 the languages, and the percentage adjustments of the thief skills
-([ADR 0030](adr/0030-classes-and-races.md) steps 2, 17 and 22). Traits are data in the catalogue.
+([ADR 0030](adr/0030-classes-and-races.md) steps 17, 21 and 22). Traits are data in the catalogue
+([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`),
+the others text; a human is a race with no traits.
 
 ## Ruleset and house rules (planned)
 

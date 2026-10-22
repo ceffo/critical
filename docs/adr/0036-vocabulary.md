@@ -1,7 +1,8 @@
 # ADR 0036: Vocabulary: the glossary, the UI words and the spelling
 
 **Status**: accepted 2026-10-18 (the user's rulings in the glossary round; the glossary itself
-proposed by the agent and checked against the ADRs, the code and both locale files).
+proposed by the agent and checked against the ADRs, the code and both locale files). Amended
+2026-10-21: steps 1 and 8, the glossary is terms only and the relations move to a domain model.
 
 ## Context
 
@@ -20,9 +21,12 @@ domain, it was just for ingestion, to kickstart the whole thing".
 
 ## Decision
 
-1. **One glossary.** [`GLOSSARY.md`](../../GLOSSARY.md) at the repo root is the vocabulary of the
-   one context. A term gives the English name, the French UI word and the ADR that holds its
-   rules; it never restates a rule. A PR that introduces a concept adds its term in the same PR;
+1. **One glossary, terms only.** [`GLOSSARY.md`](../../GLOSSARY.md) at the repo root is the
+   vocabulary of the one context. A term gives the English name, the French UI word, a one-line
+   meaning and the ADR that holds its rules; it never restates a rule and never explains how
+   terms relate (amended 2026-10-21; user: "the domain model is not the glossary [...] so that an
+   agent can consult the glossary without bloating extra information"). A term for a concept not
+   built yet carries _(planned)_ or _(future)_. A PR that introduces a concept adds its term in the same PR;
    a PR that renames one updates the glossary and this ADR's list below when a UI word changes.
    `docs/all.md` points to it instead of keeping its own list.
 2. **The domain term and the UI word may differ.** Code, the API's codes and the ADRs use the
@@ -49,6 +53,15 @@ domain, it was just for ingestion, to kickstart the whole thing".
 7. **Legacy names are not vocabulary.** `fil`, `moi` (the ADR 0009 columns), `turn` for the
    round in the web are legacy (and the `hp_events` table was, until it was dropped); nothing new
    uses them, and renaming them is an ordinary refactor item, not a rule change.
+
+8. **A domain model beside the glossary** (2026-10-21; user: "from now on, we have to be careful to
+   build a coherent and complete glossary and domain model"). [`docs/domain-model.md`](../domain-model.md)
+   holds the entities, their relations (Mermaid `erDiagram` / `classDiagram`), their invariants,
+   the flow of the mechanics (which ADR computes what) and an "Ambiguities resolved" section. It
+   never restates an ADR's numbers. A PR that adds or changes a concept updates both files.
+9. **The books' words win for rules, the user's for the table.** Where the user's word differs
+   from the book's (multi-class and dual-class, which the user calls "dual" and "serial"), the
+   glossary uses the book's term and notes the user's.
 
 Checks: `web/src/i18n/avoidedWords.test.ts` reads the values of both locale files and refuses the
 avoided words (fr: `MD`, `fiche`, `round`, `test de`, `buff` and a `bonus` that means a buff, `livre

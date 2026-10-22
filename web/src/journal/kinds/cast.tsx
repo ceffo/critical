@@ -52,6 +52,9 @@ function castText(
       }),
     );
   if (p.mode) details.push(modeName(t, p.spellId, p.mode));
+  // ADR 0006 step 10.3: received by a character immune to it, nothing applied.
+  if (p.immunity)
+    details.push(t("log.cast.immune", { score: p.immunity.score }));
   if (p.buff?.applied) {
     details.push(counters(t, p.buff.rounds, p.buff.charges));
     if (p.buff.strGain)
@@ -195,6 +198,15 @@ function CastEntry({
           : t("log.cast.cast", { spell })}
       </div>
       {c.failure && <SpellFailureLine failure={c.failure} />}
+      {c.immunity && (
+        // ADR 0006 step 10.3: the character's Wisdom made them immune, nothing applied.
+        <p
+          className="rounded-lg border border-dashed px-3 py-2 text-body"
+          data-testid="cast-entry-immune"
+        >
+          {t("result.cast.textOnly.immune", { score: c.immunity.score })}
+        </p>
+      )}
       {c.mode && (
         <p className="text-body" data-testid="cast-entry-mode">
           {t("result.cast.mode", { mode: modeName(t, c.spellId, c.mode) })}

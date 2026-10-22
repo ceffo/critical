@@ -149,6 +149,15 @@ export interface RollResult {
 }
 
 /**
+ * Why a save or a spell received rolled nothing (combatsvc.Immunity, ADR 0006 step 10): source
+ * "wisdom" is PHB Table 5's spell immunity, score the Wisdom that gives it. The UI words it.
+ */
+export interface Immunity {
+  source: "wisdom";
+  score: number;
+}
+
+/**
  * A saving throw: the payload of its save entry (an adjusted save's is the latest amend's) and the
  * answer of POST /api/roll/save and its adjust route (combatsvc.SaveBreakdown, one struct).
  */
@@ -159,6 +168,11 @@ export interface SaveBreakdown {
   modifiers?: Modifier[];
   /** The save was flagged as against magic that attacks the mind (ADR 0006 step 9); absent on older entries. */
   mindAffecting?: boolean;
+  /** The spell the save was against (a catalogue id, ADR 0006 step 10.2); absent: none named. */
+  spellId?: string;
+  /** Set when the character was immune to that spell (ADR 0006 step 10.2): no d20 (0), passed,
+   * nothing to adjust. */
+  immunity?: Immunity;
   /** The sheet's target, never adjusted. */
   target: number;
   /** The verdict as rolled, before any adjustment. */

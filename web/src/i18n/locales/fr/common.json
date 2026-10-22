@@ -394,7 +394,14 @@
     },
     "target": "{{value}}+",
     "mindAffecting": "Contre l’esprit",
-    "mindAffectingHint": "Magie qui attaque l’esprit (charme, peur, illusion, suggestion…) : le prochain jet ajoute l’ajustement défensif contre la magie de votre Sagesse"
+    "mindAffectingHint": "Magie qui attaque l’esprit (charme, peur, illusion, suggestion…) : le prochain jet ajoute l’ajustement défensif contre la magie de votre Sagesse",
+    "spell": "Sort",
+    "spellHint": "Le sort visé par le prochain jet : un sort dont votre Sagesse vous immunise ne lance aucun dé",
+    "spellSearchLabel": "Sort visé par le jet",
+    "spellPick": "Sauvegarde contre {{name}}",
+    "spellTag": "contre {{name}}",
+    "spellClear": "Retirer {{name}}",
+    "immuneLast": "Immunité (Sagesse {{score}})"
   },
   "items": {
     "title": "Inventaire",
@@ -1034,6 +1041,9 @@
     "empty": "Lancez une attaque, une sauvegarde ou un sort : le détail complet s'affiche ici.",
     "attackHeading": "{{weapon}} contre CA {{ac}}",
     "saveHeading": "Sauvegarde contre {{name}}",
+    "saveAgainst": "Sauvegarde contre {{name}} · {{spell}}",
+    "immune": "Immunité",
+    "immunity": "Sagesse {{score}} : immunité contre {{spell}}, aucun jet",
     "hit": "Touché",
     "miss": "Raté",
     "crit": "Jet critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
@@ -1121,7 +1131,8 @@
         "low_confidence": "L'effet n'est pas fiable : lisez le texte et ajoutez un effet à la main.",
         "utility": "Aucun effet chiffré à suivre.",
         "not_on_self": "Lancé sur quelqu'un d'autre : rien ne vous est appliqué.",
-        "by_hand": "Une partie de vous seulement est affectée : à appliquer à la main."
+        "by_hand": "Une partie de vous seulement est affectée : à appliquer à la main.",
+        "immune": "Votre Sagesse ({{score}}) vous immunise contre ce sort : rien n’est appliqué."
       },
       "byHand": "À appliquer à la main",
       "tracked": "Effets suivis",
@@ -1350,7 +1361,8 @@
       "attackMiss": "attaque ratée (d20 {{d20}} contre CA {{ac}})",
       "spellFailed": "échec du sort (d100 {{roll}} ≤ {{chance}} %)",
       "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)",
-      "onOther": "{{counters}}, pas sur vous"
+      "onOther": "{{counters}}, pas sur vous",
+      "immune": "immunité (Sagesse {{score}})"
     },
     "item": {
       "rolled": "Objet utilisé : {{name}}, {{dice}} = {{total}} ({{left}} restant)",
@@ -1410,7 +1422,8 @@
     "saveThrow": {
       "rolled": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, {{verdict}}",
       "adjusted": "Sauvegarde contre {{name}} : {{roll}} contre {{adjustedTarget}} (seuil {{target}}, ajusté {{adjustment}}{{reason}}) : {{from}} → {{to}}",
-      "removed": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, ajustement retiré : {{from}} → {{to}}"
+      "removed": "Sauvegarde contre {{name}} : {{roll}} contre {{target}}, ajustement retiré : {{from}} → {{to}}",
+      "immune": "Sauvegarde contre {{name}} face à {{spell}} : immunité (Sagesse {{score}}), {{verdict}}"
     },
     "weapon": {
       "added": "Arme {{name}} ajoutée",
@@ -1935,6 +1948,7 @@
     "forDm": "Pour le MJ : vos PV ne changent pas"
   },
   "apiError": {
+    "save_immune": "Ce sort ne vous atteignait pas : il n’y a pas de jet à ajuster.",
     "over_budget": "Budget dépassé : {{spent}} pour {{limit}} disponibles.",
     "character_not_found": "Ce personnage n'existe plus.",
     "no_character": "Vous n'avez pas encore de personnage : créez le premier.",
@@ -2008,7 +2022,8 @@
       "turned": "repoussés",
       "destroyed": "détruits",
       "destroyedTurned": "détruits, {{turned}} repoussés",
-      "spellFailed": "sort raté"
+      "spellFailed": "sort raté",
+      "immune": "immunité"
     },
     "turn": "Renvoi {{undead}}"
   },

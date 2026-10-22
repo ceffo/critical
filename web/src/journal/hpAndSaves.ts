@@ -50,6 +50,8 @@ export function lastDamage(entries: readonly LogEntry[]): number {
 export interface LastSave {
   d20: number;
   passed: boolean;
+  /** The Wisdom that made the character immune to the spell (ADR 0006 step 10.2): no d20 rolled. */
+  immuneWisdom?: number;
 }
 
 /** Newest non-voided save per category, from the save entries' effective payload. */
@@ -64,12 +66,16 @@ export function lastSaves(
       category?: unknown;
       d20Roll?: unknown;
       passed?: unknown;
+      immunity?: { score?: unknown };
     } | null;
     if (!p || typeof p.category !== "string" || typeof p.passed !== "boolean")
       continue;
     if (typeof p.d20Roll !== "number") continue;
     const cat = p.category as SaveCategory;
-    if (!(cat in out)) out[cat] = { d20: p.d20Roll, passed: p.passed };
+    if (cat in out) continue;
+    out[cat] = { d20: p.d20Roll, passed: p.passed };
+    if (typeof p.immunity?.score === "number")
+      out[cat].immuneWisdom = p.immunity.score;
   }
   return out;
 }

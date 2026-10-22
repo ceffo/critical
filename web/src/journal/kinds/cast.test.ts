@@ -41,6 +41,28 @@ describeKind("cast", fixtures, {
     value: null,
     rolled: false,
   },
+  // ADR 0006 step 10.3: received by a character immune to it, nothing applied or rolled.
+  immune: {
+    en: {
+      text: "Charm Person received (caster level 5): immune (Wisdom 19)",
+      short: "Charm Person",
+      subtitle: "Charm Person",
+      card: [
+        'data-testid="cast-entry-immune"',
+        "Your Wisdom (19) makes you immune to this spell: nothing applied.",
+      ],
+    },
+    fr: {
+      text: "Sort reçu : Charm Person (niveau du lanceur 5): immunité (Sagesse 19)",
+      short: "Charm Person",
+      subtitle: "Charm Person",
+      card: [
+        "Votre Sagesse (19) vous immunise contre ce sort : rien n’est appliqué.",
+      ],
+    },
+    value: null,
+    rolled: false,
+  },
   // ADR 0004 step 20.5: a spell cast on an area, its row on the timeline marked as not on him.
   onOther: {
     en: {

@@ -107,6 +107,21 @@ describe("lastSaves", () => {
     });
   });
 
+  it("marks a save the character was immune to (ADR 0006 step 10.2)", () => {
+    const immune = {
+      ...save("spell", 0, true),
+      effectivePayload: {
+        category: "spell",
+        d20Roll: 0,
+        passed: true,
+        immunity: { source: "wisdom", score: 20 },
+      },
+    };
+    expect(lastSaves([immune])).toEqual({
+      spell: { d20: 0, passed: true, immuneWisdom: 20 },
+    });
+  });
+
   it("ignores entries without a usable payload", () => {
     expect(
       lastSaves([entry("save", { payload: null, effectivePayload: null })]),

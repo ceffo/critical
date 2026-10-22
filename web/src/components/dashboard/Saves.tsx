@@ -4,6 +4,7 @@ import { Check, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
 import { groupHeadClass } from "./fieldStyles";
+import { SaveSpell } from "./SaveSpell";
 import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
@@ -26,7 +27,9 @@ const TARGET_FIELD: Record<SaveCategory, keyof SaveNumbers> = {
  * the save endpoint; the result card shows the breakdown. "Against the mind" flags the next save as
  * against magic that attacks the mind (ADR 0006 step 9.3): the server adds the Wisdom modifier. It
  * is the player's call for one save, so it clears once that save is rolled (not when
- * the request fails).
+ * the request fails). "Spell" names the spell the next save is against (ADR 0006 step 10.2), cleared
+ * the same way: against one the character's Wisdom makes them immune to, the server rolls nothing
+ * and the last-roll column shows the check with no die.
  */
 export function Saves() {
   const { t } = useTranslation();
@@ -34,9 +37,13 @@ export function Saves() {
   const { rollSave, rolling } = useRollStore();
   const last = lastSaves(useLogStore((s) => s.entries));
   const [mindAffecting, setMindAffecting] = useState(false);
+  const [spellId, setSpellId] = useState<string | undefined>();
   const rollOne = async (cat: SaveCategory) => {
-    // Kept on a refused request, so the player doesn't have to tick it again.
-    if (await rollSave(cat, mindAffecting)) setMindAffecting(false);
+    // Kept on a refused request, so the player doesn't have to set them again.
+    if (await rollSave(cat, mindAffecting, spellId)) {
+      setMindAffecting(false);
+      setSpellId(undefined);
+    }
   };
 
   return (
@@ -67,6 +74,7 @@ export function Saves() {
           />
           {t("saves.mindAffecting")}
         </label>
+        <SaveSpell spellId={spellId} onChange={setSpellId} disabled={rolling} />
       </div>
       <ul className="flex flex-col gap-1">
         {SAVE_CATEGORIES.map((cat) => {
@@ -111,7 +119,21 @@ export function Saves() {
                   )}
                   data-testid="save-last"
                 >
-                  {roll ? (
+                  {roll?.immuneWisdom !== undefined ? (
+                    // Immune: passed with no die (ADR 0006 step 10.2).
+                    <span
+                      className="flex items-center"
+                      title={t("saves.immuneLast", {
+                        score: roll.immuneWisdom,
+                      })}
+                      data-testid="save-last-immune"
+                    >
+                      <Check aria-hidden weight="bold" />
+                      <span className="sr-only">
+                        {t("saves.immuneLast", { score: roll.immuneWisdom })}
+                      </span>
+                    </span>
+                  ) : roll ? (
                     <>
                       {roll.passed ? (
                         <Check aria-hidden weight="bold" />

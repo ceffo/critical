@@ -119,7 +119,7 @@ test("admin API: player refused, invite edge cases, root admin protected", async
       data: { email: "x@example.com" },
     }),
     await player.delete(`/api/admin/invites/${rootUser.id}`),
-    await player.put("/api/crit-table", { data: [] }),
+    await player.put("/api/ruleset/crit-table", { data: [] }),
   ];
   for (const r of refused) {
     expect(r.status(), r.url()).toBe(403);
@@ -167,12 +167,10 @@ test("admin API: player refused, invite edge cases, root admin protected", async
   expect((await root.get("/api/admin/users")).ok()).toBe(true);
 });
 
-// A player's browser: no Admin link in the cog menu, the crit table editor hidden. A fresh player
+// A player's browser: no Admin and no Ruleset link in the cog menu. A fresh player
 // has no character, so the root admin's sheet is shown with /api/auth/me answering role "player"
 // (the API's refusal of a real player is the test above).
-test("a player sees no Admin link and no crit table editor", async ({
-  page,
-}) => {
+test("a player sees no Admin link and no Ruleset link", async ({ page }) => {
   await page.route("**/api/auth/me", async (route) => {
     const res = await route.fetch();
     await route.fulfill({
@@ -181,13 +179,11 @@ test("a player sees no Admin link and no crit table editor", async ({
     });
   });
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Weapons" }).click();
-  await expect(
-    page.getByRole("button", { name: /Attack/ }).first(),
-  ).toBeVisible();
-  await expect(page.getByTestId("crit-table")).toHaveCount(0);
   const settings = await openSettings(page);
   await expect(settings.getByTestId("settings-account")).toBeVisible();
+  await expect(
+    settings.getByRole("link", { name: /^Open the ruleset/ }),
+  ).toHaveCount(0);
   await expect(
     settings.getByRole("link", { name: /^Open the admin section/ }),
   ).toHaveCount(0);

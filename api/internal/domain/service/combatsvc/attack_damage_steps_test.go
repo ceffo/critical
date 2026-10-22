@@ -72,7 +72,7 @@ func TestAttack_Step1_DiceInOrderOnEveryAttack(t *testing.T) {
 			f := newFixture(t)
 			dice := &seqDice{t: t, want: c.want, vals: c.vals}
 			svc, err := combatsvc.New(combatsvc.Deps{
-				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Crit: f.crit,
+				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Rulesets: f.rulesets,
 				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)
@@ -183,7 +183,7 @@ func TestAttack_LogPayloadHoldsTheDamageDice(t *testing.T) {
 			f := newFixture(t)
 			dice := &seqDice{t: t, want: []string{"d20", "d100", "d100", "d4", "d4"}, vals: []int{14, 61, 37, 3, 2}}
 			svc, err := combatsvc.New(combatsvc.Deps{
-				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Crit: f.crit,
+				Chars: f.chars, Buffs: f.buffs, Dice: dice, Weapons: f.weapons, Rulesets: f.rulesets,
 				Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 			})
 			require.NoError(t, err)

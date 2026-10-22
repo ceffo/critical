@@ -1,13 +1,11 @@
 // Package combathdl exposes /api/roll/attack (and its target AC
 // correction and GM verdict), /api/roll/save (and its adjustment), /api/weapons,
-// /api/attack/form and /api/crit-table.
+// /api/attack/form.
 package combathdl
 
 import (
 	"context"
 	"encoding/json"
-	"fmt"
-	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -23,7 +21,6 @@ import (
 type Router interface {
 	Get(pattern string, h http.HandlerFunc)
 	Post(pattern string, h http.HandlerFunc)
-	Put(pattern string, h http.HandlerFunc)
 	Patch(pattern string, h http.HandlerFunc)
 }
 
@@ -40,8 +37,6 @@ type combatSvc interface {
 	ListWeapons(ctx context.Context, characterID int64) ([]combatsvc.Weapon, error)
 	GetAttackForm(ctx context.Context, characterID int64) (*combatsvc.AttackFormView, error)
 	UpdateAttackForm(ctx context.Context, characterID int64, p combatsvc.AttackFormPatch) (*combatsvc.AttackFormView, error)
-	GetCritTable(ctx context.Context) (combatsvc.CritTable, error)
-	SetCritTable(ctx context.Context, rows []combatsvc.CritRow) (combatsvc.CritTable, error)
 }
 
 // RegisterRoutes wires the combat endpoints of the current character onto r.
@@ -55,19 +50,6 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc combatsvc.SVC) {
 	r.Get("/api/weapons", render.Handle(ListWeapons(charID, svc)))
 	r.Get("/api/attack/form", render.Handle(GetAttackForm(charID, svc)))
 	r.Patch("/api/attack/form", render.Handle(UpdateAttackForm(charID, svc)))
-}
-
-// RegisterSharedRoutes wires the reading of the house crit table, which no
-// character owns, onto r.
-func RegisterSharedRoutes(r Router, svc combatsvc.SVC) {
-	r.Get("/api/crit-table", render.Handle(GetCritTable(svc)))
-}
-
-// RegisterAdminRoutes wires the editing of the house crit table onto r, which
-// the caller guards with mw.AdminOnly: the table is one rule set shared by
-// every user, so only an admin changes it.
-func RegisterAdminRoutes(r Router, svc combatsvc.SVC) {
-	r.Put("/api/crit-table", render.Handle(PutCritTable(svc)))
 }
 
 // WeaponDTO is the wire shape of a weapon piece as the attack reads it (ADR
@@ -308,82 +290,6 @@ func AdjustSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, res)
-		return nil
-	}
-}
-
-// CritRowDTO is one inclusive D100 range of the crit table.
-type CritRowDTO struct {
-	From       int     `json:"from"`
-	To         int     `json:"to"`
-	Multiplier float64 `json:"multiplier"`
-}
-
-// CritTableDTO is the wire shape of the house crit table. Placeholder is true
-// while it is still the unedited default.
-type CritTableDTO struct {
-	Rows        []CritRowDTO `json:"rows"`
-	Placeholder bool         `json:"placeholder"`
-}
-
-func toCritTableDTO(t combatsvc.CritTable) CritTableDTO {
-	rows := make([]CritRowDTO, 0, len(t.Rows))
-	for _, r := range t.Rows {
-		rows = append(rows, CritRowDTO{From: r.From, To: r.To, Multiplier: r.Multiplier})
-	}
-	return CritTableDTO{Rows: rows, Placeholder: t.Placeholder}
-}
-
-// GetCritTable returns the house crit table.
-func GetCritTable(svc combatSvc) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		t, err := svc.GetCritTable(r.Context())
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toCritTableDTO(t))
-		return nil
-	}
-}
-
-// PutCritTable replaces the whole crit table; an invalid table is a 400 with
-// {"error"} naming the bad row and the stored table is left alone.
-func PutCritTable(svc combatSvc) render.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) error {
-		// Numbers are decoded as text so a bad number gets a message about the row,
-		// not "invalid request body".
-		var req struct {
-			Rows []struct {
-				From       json.Number `json:"from"`
-				To         json.Number `json:"to"`
-				Multiplier json.Number `json:"multiplier"`
-			} `json:"rows"`
-		}
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			return render.BadRequestError("invalid request body")
-		}
-		if len(req.Rows) == 0 {
-			return render.BadRequestError("rows must list at least one range covering 1-100")
-		}
-		rows := make([]combatsvc.CritRow, 0, len(req.Rows))
-		for i, in := range req.Rows {
-			from, errFrom := strconv.Atoi(in.From.String())
-			to, errTo := strconv.Atoi(in.To.String())
-			mult, errMult := strconv.ParseFloat(in.Multiplier.String(), 64)
-			label := fmt.Sprintf("row %d (%s-%s)", i+1, in.From, in.To)
-			switch {
-			case errFrom != nil || errTo != nil:
-				return render.BadRequestError(label + ": from and to must be whole numbers")
-			case errMult != nil || math.IsNaN(mult) || math.IsInf(mult, 0):
-				return render.BadRequestError(fmt.Sprintf("%s: multiplier must be a number, got %q", label, in.Multiplier.String()))
-			}
-			rows = append(rows, combatsvc.CritRow{From: from, To: to, Multiplier: mult})
-		}
-		t, err := svc.SetCritTable(r.Context(), rows)
-		if err != nil {
-			return err
-		}
-		render.OK(r.Context(), w, toCritTableDTO(t))
 		return nil
 	}
 }

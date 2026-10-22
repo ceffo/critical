@@ -20,6 +20,8 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -64,8 +66,8 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 		weapons: mocks.NewMockWeapons(t), items: mocks.NewMockItems(t),
 		entry: actionlog.Entry{ID: entryID, CharacterID: charID, Kind: kind, Payload: logged},
 	}
-	crit, log := mocks.NewMockCritStore(t), mocks.NewMockLog(t)
-	crit.EXPECT().List(mock.Anything).Return(nil, nil).Maybe()
+	rulesets, log := rulesetmocks.NewMockResolver(t), mocks.NewMockLog(t)
+	rulesets.EXPECT().ForCharacter(mock.Anything, mock.Anything).Return(ruleset.Default(), nil).Maybe()
 	if logged == nil {
 		log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 			func(_ context.Context, e actionlog.NewEntry) (int64, error) {
@@ -86,7 +88,7 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 		}).Once()
 
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
-		Chars: w.chars, Buffs: w.buffs, Dice: w.dice, Weapons: w.weapons, Crit: crit,
+		Chars: w.chars, Buffs: w.buffs, Dice: w.dice, Weapons: w.weapons, Rulesets: rulesets,
 		Items: w.items, Forms: mocks.NewMockFormStore(t), Rules: rules, Log: log, Tx: noTx{},
 	})
 	require.NoError(t, err)

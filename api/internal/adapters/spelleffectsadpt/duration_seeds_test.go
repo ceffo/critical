@@ -53,6 +53,26 @@ func TestRepoSeeds_ADR0004Step20_TimedBookDurationsGiveARow(t *testing.T) {
 		"wildzone":                 "2d6 turns",
 		"stabilize":                "1d4+1 turns",
 		"wildwind":                 "1d3 turns",
+		// Priest spells, stat-line durations of the catalogue.
+		"bless":                                 "6 rds.",
+		"protection_from_evil_priest":           "3 rds./level",
+		"protection_from_chaos":                 "3 rds./level",
+		"protection_from_evil_10_radius_priest": "1 turn/level",
+		"faerie_fire":                           "4 rds./level",
+		"barkskin":                              "4 rds. + 1 rd./level",
+		"aid":                                   "1 rd. + 1 rd./level",
+		"prayer":                                "1 rd./level",
+		"recitation":                            "1 rd./level",
+		"righteous_wrath_of_the_faithful":       "1 rd./level",
+		"magical_vestment":                      "5 rds./level",
+		"unfailing_premonition":                 "1 turn + 2 rds./level",
+		"hesitation":                            "1 round/level",
+		"ebony_hand":                            "3 rounds + 1/level",
+		"heat_metal":                            "7 rds.",
+		"produce_fire":                          "1 rd.",
+		"fire_storm":                            "1 rd.",
+		"blade_barrier":                         "3 rds./level",
+		"insect_plague":                         "2 rds./level",
 	}
 	c := repoEffects(t)
 	for id, raw := range book {
@@ -95,6 +115,9 @@ func TestRepoSeeds_ADR0004Step20_SpecialEntriesAreListed(t *testing.T) {
 		"sink", "symbol", "trap_the_soul", "astral_spell", "death_ward", "gate",
 		"glorious_transmutation", "programmed_amnesia", "succor", "time_stop", "weird", "wildfire",
 		"wish",
+		// Priest spells with no time in the book: lasts while chanting or concentrating, or
+		// as long as the seeds keep their power.
+		"chant", "fire_seeds", "wall_of_fire_priest",
 	}
 	var got []string
 	for _, e := range repoEffects(t).All() {

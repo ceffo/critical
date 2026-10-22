@@ -6,11 +6,11 @@ sql:
   - &adapter
     engine: postgresql
     schema: internal/storage/postgres/migrations # read offline: no database server
-    queries: internal/adapters/critdal/queries
+    queries: internal/adapters/rulesetdal/queries
     gen:
       go: &go
         package: queries
-        out: internal/adapters/critdal/queries
+        out: internal/adapters/rulesetdal/queries
         emit_interface: true
         emit_empty_slices: true
         omit_unused_structs: true

@@ -521,6 +521,15 @@
       "within_10_ft": "Within 10 ft",
       "within_20_ft": "Within 20 ft",
       "passing_through": "Passing through"
+    },
+    "wall_of_fire_priest": {
+      "within_10_ft": "Within 10 ft",
+      "within_20_ft": "Within 20 ft",
+      "passing_through": "Passing through"
+    },
+    "fire_seeds": {
+      "acorns": "Acorns (hurled)",
+      "berries": "Holly berries (set off)"
     }
   },
   "spellDice": {
@@ -1541,6 +1550,36 @@
     "saveShort": "Save",
     "saved": "Saved. The next crit uses it."
   },
+  "ruleset": {
+    "open": "Ruleset",
+    "openHint": "Open the ruleset: crit table and house rules",
+    "title": "Ruleset",
+    "back": "Back",
+    "backHint": "Back to the character sheet",
+    "loadFailed": "The ruleset could not be loaded: {{message}}",
+    "houseRules": {
+      "title": "House rules",
+      "liftHelp": "Waive the race's class restriction for a character with several classes. A single-class character is not affected.",
+      "multiclassAnyRace": "Multi-class: any race",
+      "dualclassAnyRace": "Dual-class: any race",
+      "saved": "Saved.",
+      "levelLimits": "Level limits",
+      "levelLimitsMode": {
+        "warn": "Warn: a level past the race's limit is shown as a warning, never refused."
+      }
+    },
+    "effects": {
+      "title": "Success effects",
+      "help": "The effect a successful check puts on the character. A negative AC change betters the armour class.",
+      "none": "No success effect.",
+      "proficiency": "Proficiency",
+      "ac": "AC",
+      "rounds": "Rounds",
+      "save": "Save",
+      "saveHint": "Save the success effects",
+      "saved": "Saved. The next success uses them."
+    }
+  },
   "weapons": {
     "title": "Weapons",
     "list": "Weapon list",
@@ -2046,7 +2085,10 @@
     "inviteHintEmpty": "Invite this email address",
     "language": "Language of the email",
     "languageHint": "Send the invite email in {{language}}",
-    "languageName": { "en": "English", "fr": "French" },
+    "languageName": {
+      "en": "English",
+      "fr": "French"
+    },
     "languageTag": "Email in {{language}}",
     "resend": "Resend",
     "resendHint": "Send the invite email to {{email}} again",

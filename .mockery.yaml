@@ -117,7 +117,6 @@ packages:
       Items:
       Rules:
       Log:
-      CritStore:
       FormStore:
   github.com/ceffo/critical/api/internal/domain/service/itemsvc:
     config:
@@ -208,6 +207,20 @@ packages:
       Points:
       Picks:
       Buffs:
+  github.com/ceffo/critical/api/internal/domain/service/rulesetsvc:
+    config:
+      dir: "internal/domain/service/rulesetsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Proficiencies:
+  github.com/ceffo/critical/api/internal/domain/ruleset:
+    config:
+      dir: "internal/domain/ruleset/mocks"
+      outpkg: "mocks"
+    interfaces:
+      Resolver:
   github.com/ceffo/critical/api/internal/domain/service/dicesvc:
     config:
       dir: "internal/domain/service/dicesvc/mocks"
@@ -227,9 +240,9 @@ packages:
       BuffStore:
       SpellStore:
       SpellbookStore:
-  github.com/ceffo/critical/api/internal/adapters/critdal/queries:
+  github.com/ceffo/critical/api/internal/adapters/rulesetdal/queries:
     config:
-      dir: "internal/adapters/critdal/queries/mocks"
+      dir: "internal/adapters/rulesetdal/queries/mocks"
       outpkg: "mocks"
     interfaces:
       Querier:

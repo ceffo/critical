@@ -36,6 +36,7 @@ export type Start =
   | { show: "login"; error: string | null }
   | { show: "app" }
   | { show: "admin" }
+  | { show: "ruleset" }
   | { show: "create"; hasCurrent: boolean }
   | { go: string };
 
@@ -47,6 +48,9 @@ export const ROSTER_PATH = "/characters";
 
 /** The admin section's page (ADR 0029 step 1.3). */
 export const ADMIN_PATH = "/admin";
+
+/** The ruleset's screen (ADR 0041 step 8): the crit table and the house rules, an admin's. */
+export const RULESET_PATH = "/ruleset";
 
 /** True for the login page's path. */
 export function isLoginPath(path: string): boolean {
@@ -81,6 +85,12 @@ export function startFor(
     if (session.kind === "in" && session.me.role !== "admin")
       return { go: "/" };
     return { show: "admin" };
+  }
+  if (path === RULESET_PATH) {
+    // Like the admin section, an admin's: a player who opens it goes to the app.
+    if (session.kind === "in" && session.me.role !== "admin")
+      return { go: "/" };
+    return { show: "ruleset" };
   }
   if (session.kind === "in" && session.me.currentCharacterId == null)
     return { show: "create", hasCurrent: false };

@@ -22,6 +22,6 @@ tab="$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$main" --label 
 pane="$(jq -r .result.root_pane.pane_id <<<"$tab")"
 herdr agent start "$next" --kind claude --pane "$pane" -- --agent supervisor --model opus >/dev/null
 sleep 15
-herdr agent prompt "$next" "You take over from $me (handed off at ${ctx:-?} context). Read $ledger (start with 'Notes for the next supervisor ($me handoff') and the whole $sup/user-log.md, reconcile with live state, re-arm every wait, then touch $ack and close $me's tab: look it up with herdr agent list by name ($me, pane $HERDR_PANE_ID) and check it isn't yours. Keep replies to the user short." >/dev/null
+herdr agent prompt "$next" "You take over from $me (handed off at ${ctx:-?} context). Read $ledger (start with 'Notes for the next supervisor ($me handoff') and the whole $sup/user-log.md (recent entries; grep user-log-archive.md as needed), reconcile with live state, re-arm every wait, then touch $ack and close $me's tab: look it up with herdr agent list by name ($me, pane $HERDR_PANE_ID) and check it isn't yours. Keep replies to the user short." >/dev/null
 for _ in $(seq 120); do [ -e "$ack" ] && { echo "ACK $next"; exit 0; }; sleep 15; done
 echo "NO ACK from $next after 30 min: check its tab ($pane)" >&2; exit 1

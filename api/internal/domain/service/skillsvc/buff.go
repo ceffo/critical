@@ -7,12 +7,11 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // The buff a successful proficiency check puts on (ADR 0037 step 20): the
 // rules data says which proficiency puts which buff on
-// (ruletablesvc.SuccessBuffFor); this file only follows it. The buff follows
+// (the ruleset's success effects, ADR 0041 step 6); this file only follows it. The buff follows
 // the verdict in effect: the roll's verdict puts it on in the check's entry
 // (step 20.4), a post-roll adjustment that flips the verdict puts it on or
 // takes it off in its correction (step 20.8).
@@ -77,20 +76,24 @@ func (r *buffRecord) applied(renewed bool) *AppliedBuff {
 // proficiency's id, which the client turns into its name (step 20.1); the
 // stored name is the id too, the fallback label and the renewal key (ADR
 // 0004 step 6).
-func successBuff(rec checkRecord) (buffsvc.BuffEffect, bool) {
+func (s *service) successBuff(ctx context.Context, characterID int64, rec checkRecord) (buffsvc.BuffEffect, bool, error) {
 	if rec.Kind != KindProficiency {
-		return buffsvc.BuffEffect{}, false
+		return buffsvc.BuffEffect{}, false, nil
 	}
-	rule, ok := ruletablesvc.SuccessBuffFor(rec.ID)
+	rs, err := s.rulesets.ForCharacter(ctx, characterID)
+	if err != nil {
+		return buffsvc.BuffEffect{}, false, fmt.Errorf("resolve the ruleset: %w", err)
+	}
+	rule, ok := rs.SuccessEffectFor(rec.ID)
 	if !ok {
-		return buffsvc.BuffEffect{}, false
+		return buffsvc.BuffEffect{}, false, nil
 	}
 	b := buffsvc.BuffEffect{Name: rec.ID, ProficiencyID: rec.ID, Duration: rule.Rounds}
 	if rule.AC != 0 {
 		ac := rule.AC
 		b.Effects.AC = &ac
 	}
-	return b, true
+	return b, true, nil
 }
 
 // putBuff puts on the buff the success of rec gives, if any (ADR 0037 steps
@@ -100,9 +103,9 @@ func successBuff(rec checkRecord) (buffsvc.BuffEffect, bool) {
 // (nil: none put on). It runs inside the check's or the correction's
 // transaction. No die: the effect and the rounds are fixed (step 20.5).
 func (s *service) putBuff(ctx context.Context, characterID int64, rec *checkRecord) (*actionlog.Snapshot, error) {
-	buff, ok := successBuff(*rec)
-	if !ok {
-		return nil, nil
+	buff, ok, err := s.successBuff(ctx, characterID, *rec)
+	if err != nil || !ok {
+		return nil, err
 	}
 	active, err := s.buffs.ListActive(ctx, characterID)
 	if err != nil {
@@ -167,7 +170,11 @@ func (s *service) followVerdict(ctx context.Context, characterID int64, checkRou
 	if rec.Success == wasSuccess {
 		return nil, nil
 	}
-	if _, ok := successBuff(*rec); (rec.Success && !ok) || (!rec.Success && rec.Buff == nil) {
+	_, ok, err := s.successBuff(ctx, characterID, *rec)
+	if err != nil {
+		return nil, err
+	}
+	if (rec.Success && !ok) || (!rec.Success && rec.Buff == nil) {
 		return nil, nil // no buff to put on or take off
 	}
 	round, err := s.buffs.GetRound(ctx, characterID)

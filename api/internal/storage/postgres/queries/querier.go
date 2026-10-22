@@ -24,9 +24,12 @@ type Querier interface {
 	// The weapon picks data step after migration 026 (ADR 0037 step 16.2): the distinct weapon types
 	// each character's weapons have, in any state, and every character's stored picks.
 	CharacterWeaponTypes(ctx context.Context) ([]CharacterWeaponTypesRow, error)
+	CopyLegacyCritRows(ctx context.Context, rulesetID int64) error
 	CountCharacters(ctx context.Context) (int64, error)
 	CountItems(ctx context.Context, characterID int64) (int64, error)
 	CountKeyedSpells(ctx context.Context) (int64, error)
+	// The default ruleset's data step (ADR 0041 step 10, defaultRuleset).
+	CountLegacyCritRows(ctx context.Context) (int64, error)
 	CountSkills(ctx context.Context, characterID int64) (int64, error)
 	CountSpellbookEntries(ctx context.Context, characterID int64) (int64, error)
 	// Rows from before each character owned its equipment (migration 002), or written by a release
@@ -54,6 +57,9 @@ type Querier interface {
 	InsertItemRename(ctx context.Context, arg InsertItemRenameParams) error
 	InsertReview(ctx context.Context, arg InsertReviewParams) error
 	InsertRoundState(ctx context.Context, characterID int64) error
+	InsertRuleset(ctx context.Context, arg InsertRulesetParams) (int64, error)
+	InsertRulesetCritRow(ctx context.Context, arg InsertRulesetCritRowParams) error
+	InsertRulesetSuccessEffect(ctx context.Context, arg InsertRulesetSuccessEffectParams) error
 	InsertSpellSlots(ctx context.Context, arg InsertSpellSlotsParams) error
 	InsertSpellbookEntry(ctx context.Context, arg InsertSpellbookEntryParams) error
 	InsertText(ctx context.Context, arg InsertTextParams) error

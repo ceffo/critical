@@ -2,8 +2,6 @@ import type {
   AttackFormPatch,
   AttackFormView,
   AttackRequest,
-  CritRow,
-  CritTable,
   RollResult,
   Weapon,
 } from "../types/combat";
@@ -26,17 +24,4 @@ export function patchAttackForm(
 
 export function fetchWeapons(): Promise<Weapon[]> {
   return request<Weapon[]>("/api/weapons");
-}
-
-export function fetchCritTable(): Promise<CritTable> {
-  return request<CritTable>("/api/crit-table");
-}
-
-/** Replace the whole crit table; rejects with the server's message naming the bad row. */
-export function saveCritTable(rows: CritRow[]): Promise<CritTable> {
-  return request<CritTable>("/api/crit-table", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ rows }),
-  });
 }

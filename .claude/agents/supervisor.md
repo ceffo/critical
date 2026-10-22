@@ -460,7 +460,7 @@ must lose nothing, so state lives outside the conversation:
   corrects, **verbatim**, with its date and what it settled. Append-only, never summarised: the
   ledger's compressed questions lost the user's own words at each handoff, and successors re-asked
   settled points. Feedback the user gave a design round or a scoper session is a decision: record
-  it, act on it, never ask for it again. **Grep the log before asking the user anything.**
+  it, act on it, never ask for it again. **Grep the log and its archive before asking the user anything.** When `user-log.md` passes ~80 lines, move its older sessions to `<wt>/supervisor/user-log-archive.md` (append, verbatim): a whole 270-line log cost a successor ~28k tokens at takeover (sup-67 retro).
 - **The session report**, `<wt>/supervisor/session-reports/sup-N.md`, for the user to read (user,
   2026-10-20: "it would be nice if a report session by session would be built somewhere for me to
   consult"): one file per supervisor session, in plain words, no item ids: what shipped (PRs), what
@@ -469,7 +469,7 @@ must lose nothing, so state lives outside the conversation:
   (newest first). Not tracked in git.
 
 **At session start (or after compaction)**, before planning anything new:
-1. Read the ledger and the whole user log, then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's
+1. Read the ledger and the whole user log (`user-log.md`, recent; grep `user-log-archive.md` as needed), then reconcile with live state: `git worktree list`, `gh pr list`, the tracker's
    in-progress items, `herdr agent list` (if herdr), the freshness of report files. The live state
    wins: re-check each of the ledger's pending questions against it (a PR the user merged, an item
    they moved) and drop the settled ones before restating any (sup-58 re-asked a merged PR's merge).

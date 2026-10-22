@@ -38,14 +38,19 @@ const FormatPsionics = 13
 // spheres became its sphere_access feature.
 const FormatNoSphereTable = 14
 
-// FormatBracketedConstitution is format 15 (ADR 0021 step 22): a class's hit
+// FormatBracketedConstitution was format 15 (ADR 0021 step 22): a class's hit
 // dice carry the boolean bracketed_constitution instead of the Table 3 column
-// name. It is the only format the API reads (step 22.2): the formats 1 to 14
-// are refused like any unknown format, with the advice to run `just catalogue`.
+// name.
 const FormatBracketedConstitution = 15
 
-// Formats lists the formats this API reads: format 15 only (step 22.2).
-var Formats = []int{FormatBracketedConstitution}
+// FormatPowerSlot is format 16 (ADR 0021 step 23): a psionic power may carry
+// the slot its pick takes where its kind does not say it. It is the only
+// format the API reads (step 23.2): the formats 1 to 15 are refused like any
+// unknown format, with the advice to run `just catalogue`.
+const FormatPowerSlot = 16
+
+// Formats lists the formats this API reads: format 16 only (step 23.2).
+var Formats = []int{FormatPowerSlot}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

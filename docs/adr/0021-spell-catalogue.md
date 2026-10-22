@@ -795,6 +795,16 @@ is only ever appended to by play.
     `TestHitDieGain_Step7_1_RaisedDieWarriorBonusAndFloor` (ruletablesvc), the level-up and creation roll tests; in `critical-rulebooks`:
     `scripts/check`'s hit dice cases.
 
+23. **Format 16: a power says which slot it takes** (**decided as built** 2026-10-22; [ADR 0043](0043-psionics.md) steps 8 and 9.1). A psionic
+    power's kind says its slot (science, devotion) except for the attack modes, which take a devotion's slot by the book with one exception,
+    Psionic Blast, a science. The code could not tell it without a power id. Format 16 adds the optional `slot` (`science` or `devotion`) to a
+    power; the known-powers allowance reads it before the kind (`psionics.SlotOf`), so no power id is in the code.
+    1. **`slot` is optional** on a power and absent where the kind says the slot; the builder sets `science` on Psionic Blast. Nothing else changes.
+    2. **Rollout, as step 18.6.** The API reads **format 16 only** (a format-15 artifact is refused at start, naming `just catalogue`). Merge
+       order: the builder publishing format 16 first, then the API change immediately.
+    Tests: `TestSchema_Step23_OnlyFormat16IsValid` (cataloguecheck), `TestParse_Step23_ReadsFormat16AndRefusesFormat15` (catalogueadpt),
+    `TestPicks_Step9_AnAttackModeTakesTheSlotTheCatalogueNames` (psionics); in `critical-rulebooks`: `scripts/check`'s psionic power cases.
+
 ## Consequences
 
 - The builder item and the importer item can proceed in parallel against this ADR and the schema:

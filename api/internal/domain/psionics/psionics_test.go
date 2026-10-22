@@ -180,3 +180,31 @@ func TestPicks_Step9_PrimaryLimitNotNegative(t *testing.T) {
 	assert.Equal(t, psionics.CodePrimaryExceeded, r.Code)
 	assert.Equal(t, 0, r.Limit)
 }
+
+// ADR 0043 step 9.1 (with ADR 0021 step 23): an attack mode takes a devotion's
+// slot unless the catalogue names another for it; the one that names a science
+// takes a science's slot, read from the data and not from its id.
+func TestPicks_Step9_AnAttackModeTakesTheSlotTheCatalogueNames(t *testing.T) {
+	powers := []catalogue.Power{
+		{ID: "plain_attack", Discipline: "telepathy", Kind: catalogue.KindAttackMode},
+		{ID: "science_attack", Discipline: "telepathy", Kind: catalogue.KindAttackMode, Slot: catalogue.KindScience},
+		{ID: "d1", Discipline: "telepathy", Kind: catalogue.KindDevotion},
+		{ID: "d2", Discipline: "telepathy", Kind: catalogue.KindDevotion},
+	}
+	b := psionics.NewBook([]catalogue.Discipline{{ID: "telepathy"}}, powers)
+	assert.Equal(t, psionics.SlotDevotion, psionics.SlotOf(powers[0]))
+	assert.Equal(t, psionics.SlotScience, psionics.SlotOf(powers[1]))
+
+	a := psionics.Allowance{Disciplines: 1, Sciences: 1, Devotions: 2}
+	used, err := psionics.Validate(b, a, join(disc("telepathy"), pow("science_attack", "d1", "d2")))
+	require.NoError(t, err)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Sciences: 1, Devotions: 2}, used, "the science-slot attack mode takes a science, not a devotion")
+
+	used, err = psionics.Validate(b, psionics.Allowance{Disciplines: 1, Devotions: 1}, join(disc("telepathy"), pow("plain_attack")))
+	require.NoError(t, err)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Devotions: 1}, used)
+
+	// With one science, the second pick of that slot is refused.
+	_, err = psionics.Validate(b, a, join(disc("telepathy"), pow("science_attack", "plain_attack", "d1", "d2")))
+	assert.Equal(t, psionics.CodeAllowanceExceeded, refusal(t, err).Code)
+}

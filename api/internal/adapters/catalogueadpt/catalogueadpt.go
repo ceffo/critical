@@ -179,6 +179,7 @@ type powerDTO struct {
 	Name       localized.Text `json:"name"`
 	Discipline string         `json:"discipline"`
 	Kind       string         `json:"kind"`
+	Slot       string         `json:"slot"`
 	Score      *struct {
 		Ability  string `json:"ability"`
 		Modifier int    `json:"modifier"`
@@ -200,7 +201,7 @@ type powerDTO struct {
 
 func (p powerDTO) power() catalogue.Power {
 	out := catalogue.Power{
-		ID: p.ID, Name: p.Name.Clean(), Discipline: p.Discipline, Kind: p.Kind,
+		ID: p.ID, Name: p.Name.Clean(), Discipline: p.Discipline, Kind: p.Kind, Slot: p.Slot,
 		InitialCost:   catalogue.Cost(p.InitialCost),
 		Prerequisites: append([]string{}, p.Prerequisites...), MinLevel: p.MinLevel,
 		Range: p.Range.Clean(), PreparationTime: p.PreparationTime.Clean(), Area: p.Area.Clean(),

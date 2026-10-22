@@ -99,12 +99,17 @@ func (r *Refusal) Error() string {
 // Is makes errors.Is(err, ErrRefused) true for a Refusal.
 func (r *Refusal) Is(target error) bool { return target == ErrRefused }
 
-// SlotOf is the slot kind a power takes (step 9.1): a science, a devotion or
-// a defence mode. An attack mode takes a devotion's place; ADR 0043 step 9's
-// book has one exception, Psionic Blast, which takes a science's slot. The
-// catalogue cannot mark it yet, so every attack mode counts as a devotion
-// here until a catalogue field says otherwise.
+// SlotOf is the slot kind a power takes (step 9.1): the slot the catalogue
+// names for it (ADR 0021 step 23: Psionic Blast, an attack mode, takes a
+// science's slot), else the one its kind gives: a science, a devotion or a
+// defence mode. An attack mode with no slot takes a devotion's place.
 func SlotOf(p catalogue.Power) string {
+	if p.Slot == catalogue.KindScience {
+		return SlotScience
+	}
+	if p.Slot == catalogue.KindDevotion {
+		return SlotDevotion
+	}
 	switch p.Kind {
 	case catalogue.KindScience:
 		return SlotScience

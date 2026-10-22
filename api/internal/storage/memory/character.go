@@ -28,7 +28,7 @@ var (
 	_ charactersvc.Reader = Characters{}
 	_ charactersvc.Owners = Characters{}
 	_ detailssvc.DAL      = Characters{}
-	_ actionlogsvc.Maxima  = Characters{}
+	_ actionlogsvc.Maxima = Characters{}
 )
 
 // Characters returns the character port.

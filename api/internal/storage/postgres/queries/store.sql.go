@@ -461,14 +461,15 @@ func (q *Queries) EquipmentOwners(ctx context.Context) ([]int64, error) {
 
 const fillClassEntries = `-- name: FillClassEntries :exec
 INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
-SELECT c.id, 0, c.class, COALESCE(c.realized_level, c.level), c.xp_total, 'active', 0
+SELECT c.id, 0, c.class, GREATEST(COALESCE(c.realized_level, c.level), 0), GREATEST(c.xp_total, 0), 'active', 0
 FROM characters c
 WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id)
 `
 
 // The class-entries migration (034): every character without an entry gets its one active entry
 // from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
-// changes nothing.
+// changes nothing. A negative level or XP (no path of the app writes one; the columns have no CHECK)
+// is raised to 0, which the entry's CHECKs accept, so the migration never aborts the boot.
 func (q *Queries) FillClassEntries(ctx context.Context) error {
 	_, err := q.db.ExecContext(ctx, fillClassEntries)
 	return err

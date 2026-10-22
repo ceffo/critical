@@ -13,8 +13,12 @@
 #    its realized level and its starting XP; the sheet's derived block (XP, THAC0, saves, hit points,
 #    level-up, slots) is the same as before; the XP ledger is intact.
 # 3. Two restarts: no second entry, nothing else changes.
+#    A character with a negative XP and level 0 in its columns (the app never writes one, the columns
+#    have no CHECK) must not abort the boot: its entry is clamped to 0.
+#    On a migrated character a level-up then its undo move the column and the entry together.
 # 4. The rolling deploy: a character the old release writes beside the migrated database (columns
-#    only, no entry) is read by this checkout with the one entry its columns state.
+#    only, no entry) is read by this checkout with the one entry its columns state; a level-up of it
+#    works and invents no entry.
 #
 # Nothing touches the development database: the server is the `postgres` service of docker-compose.yml
 # under its own compose project (criticalclasses<pid>) on a free port with its own volume, removed at
@@ -168,6 +172,9 @@ declare -A cols
 for n in "${names[@]}"; do
     cols[$n]="$(sql "SELECT class || ' ' || COALESCE(realized_level, level) || ' ' || xp_total FROM characters WHERE id = ${id[$n]}")"
 done
+sql "INSERT INTO characters (name, class, level, xp_total, str, dex, con, int, wis, cha, hp_max, thac0_base, owner_user_id)
+     SELECT 'odd', 'thief', 0, -5, 12, 14, 15, 13, 11, 16, 6, 20, owner_user_id FROM characters WHERE id = ${id[plain]}" >/dev/null
+id[odd]="$(sql "SELECT id FROM characters WHERE name = 'odd'")"
 sql "SELECT to_regclass('character_classes')" | grep -qx '' || fail "the old release already has the entries table"
 stop
 echo "class-entries-rehearsal: old release wrote its data ($old_ref)"
@@ -187,8 +194,34 @@ for n in "${names[@]}"; do
     expect "$n: the sheet is the same" "$(cat "$work/sheet-$n")" "$(sheet)"
     expect "$n: the XP ledger is intact" "$(cat "$work/xp-$n")" "$(xp_ledger)"
 done
+expect "a negative XP and a level 0 booted, clamped to 0" "thief 0 0" \
+    "$(sql "SELECT class || ' ' || realized_level || ' ' || starting_xp FROM character_classes WHERE character_id = ${id[odd]}")"
 expect "no character without an entry" 0 "$(sql "SELECT COUNT(*) FROM characters c WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id)")"
 expect "the roster serves the classes" "bard" "$(call GET /api/characters | jq -r --argjson i "${id[bard]}" '[.characters[]? // .[]? | select(.id == $i) | (.classes[0].class // .class)][0]')"
+after="$(entries)"
+
+# a level-up then its undo on a migrated character: the column and the entry move together
+col_level() { sql "SELECT COALESCE(realized_level, level) FROM characters WHERE id = $1"; }
+ent_level() { sql "SELECT realized_level FROM character_classes WHERE character_id = $1 AND position = 0"; }
+wire_level() { call GET /api/character | jq -r '.classes[0].level'; }
+same_level() { # same_level <what> <id>: column, entry and the wire agree; prints the level
+    local c e w
+    c="$(col_level "$2")" e="$(ent_level "$2")" w="$(wire_level)"
+    [ "$c" = "$e" ] && [ "$e" = "$w" ] || fail "$1: column $c, entry $e, classes[0].level $w"
+    ok "$1: column, entry and classes[0].level are $c"
+    LEVEL="$c"
+}
+use plain
+award 2600 false
+same_level "plain before its level-up" "${id[plain]}"
+before_level="$LEVEL"
+roll
+same_level "plain after the level-up" "${id[plain]}"
+[ "$LEVEL" -gt "$before_level" ] || fail "the level-up did not raise the level ($before_level -> $LEVEL)"
+top="$(call GET /api/log | jq -r .topId)"
+call POST /api/log/undo "{\"expectedTopId\":$top}" >/dev/null
+same_level "plain after the undo" "${id[plain]}"
+expect "the undo gave the level back" "$before_level" "$LEVEL"
 after="$(entries)"
 
 # --- 3. two restarts ---
@@ -204,10 +237,14 @@ stop
 # one already running keeps writing the columns only, which the SQL below does the same way.)
 start "$work/new-srv" "$new_testdata"
 sql "INSERT INTO characters (name, class, level, xp_total, str, dex, con, int, wis, cha, hp_max, thac0_base, owner_user_id)
-     SELECT 'newcomer', 'thief', 1, 0, 12, 14, 15, 13, 11, 16, 6, 20, owner_user_id FROM characters WHERE id = ${id[plain]}" >/dev/null
+     SELECT 'newcomer', 'thief', 1, 2600, 12, 14, 15, 13, 11, 16, 6, 20, owner_user_id FROM characters WHERE id = ${id[plain]}" >/dev/null
 id[newcomer]="$(sql "SELECT id FROM characters WHERE name = 'newcomer'")"
 expect "a character written meanwhile has no entry yet" 0 "$(sql "SELECT COUNT(*) FROM character_classes WHERE character_id = ${id[newcomer]}")"
 use newcomer
 expect "this checkout reads it with the one entry its columns state" "thief 1" "$(first_class)"
+roll
+expect "its level-up works, the level served is 2" 2 "$(wire_level)"
+expect "its level-up invents no entry" 0 "$(sql "SELECT COUNT(*) FROM character_classes WHERE character_id = ${id[newcomer]}")"
+expect "its column took the level" 2 "$(col_level "${id[newcomer]}")"
 stop
 echo "class-entries-rehearsal: PASS"

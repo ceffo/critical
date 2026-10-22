@@ -50,7 +50,8 @@ type Querier interface {
 	EquipmentOwners(ctx context.Context) ([]int64, error)
 	// The class-entries migration (034): every character without an entry gets its one active entry
 	// from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
-	// changes nothing.
+	// changes nothing. A negative level or XP (no path of the app writes one; the columns have no CHECK)
+	// is raised to 0, which the entry's CHECKs accept, so the migration never aborts the boot.
 	FillClassEntries(ctx context.Context) error
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
 	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),

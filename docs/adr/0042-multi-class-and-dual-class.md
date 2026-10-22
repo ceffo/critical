@@ -115,7 +115,13 @@ Every warning is structured data (a code and its numbers), worded by the web.
    `realized_level` stay and are written for the first active entry, so the release before keeps
    reading during a rolling deploy; a character that release creates meanwhile has no entry and
    the reader gives it the one its columns state. Only the default `'bard'` of `class` is gone. The
-   contract step that drops the columns is a later item's, once that release is gone. The wire
+   contract step that drops the columns is a later item's, once that release is gone, and it
+   must first backfill the entry-less characters that release created after the data step (the
+   reader's fallback covers them until then). During the one deploy window a machine still on the
+   release before writes a level-up or its undo to the columns only, so the entry of that
+   character lags its column until the next write of this release (the user is the only writer;
+   re-rolling the level fixes it); this is accepted. A negative level or XP in the columns (the
+   app writes none) is raised to 0 by the data step, so it never aborts the boot. The wire
    serves `classes: [{class, level, startingXp, state, leftAtLevel}]` in place of `class` and
    `level` (the summary and the character); the requests (create, change) still send `class`. The
    derivation reads `classes.Primary` (the first active entry) until the multi-class math lands, so

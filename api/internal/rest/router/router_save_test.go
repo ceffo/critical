@@ -195,7 +195,7 @@ func TestRollSave_Step10_SpellIDAndImmunity(t *testing.T) {
 		Return(&combatsvc.SaveBreakdown{
 			Category: "spell", Modifiers: []combatsvc.BreakdownModifier{}, MindAffecting: true, SpellID: "charm_person",
 			Immunity: &combatsvc.Immunity{Source: combatsvc.ImmunitySourceWisdom, Score: 19},
-			Target: 14, Passed: true, RolledPassed: true, LogEntryID: 11,
+			Target:   14, Passed: true, RolledPassed: true, LogEntryID: 11,
 		}, nil).Once()
 	rec := do(h, "POST", "/api/roll/save", `{"category":"spell","mindAffecting":true,"spellId":" charm_person "}`)
 	require.Equal(t, http.StatusOK, rec.Code)

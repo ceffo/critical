@@ -32,6 +32,7 @@ import {
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
+import { primaryClass } from "@/lib/classEntries";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -112,7 +113,7 @@ function DetailsView({
   const none = (
     <span className="text-muted-foreground">{t("details.none")}</span>
   );
-  const classKey = `details.classes.${c.class}`;
+  const classKey = `details.classes.${primaryClass(c.classes)}`;
   const text = (v: string) => (v === "" ? none : v);
   // ADR 0032 step 8.2: a required value the character lacks is asked for, not shown as "not set".
   const toPick = (
@@ -154,7 +155,7 @@ function DetailsView({
       <dl className="flex flex-col gap-2">
         <Row label={t("characters.name")}>{c.name}</Row>
         <Row label={t("details.class")}>
-          {i18n.exists(classKey) ? t(classKey) : c.class}
+          {i18n.exists(classKey) ? t(classKey) : primaryClass(c.classes)}
         </Row>
         <Row label={t("details.level")}>{c.derived.realizedLevel}</Row>
         <Row label={t("details.raceCode")}>
@@ -172,7 +173,7 @@ function DetailsView({
                   data-testid="details-alignment-warning"
                 >
                   {t("details.warnings.alignment_not_allowed", {
-                    className: i18n.exists(classKey) ? t(classKey) : c.class,
+                    className: i18n.exists(classKey) ? t(classKey) : primaryClass(c.classes),
                   })}
                 </span>
               )}
@@ -247,7 +248,7 @@ function DetailsForm({
   // admitted alignments and the sexes.
   const { options, failed: optionsFailed, retry } = useCreationOptions(true);
   const alignments =
-    options?.classes.find((c) => c.class === character.class)?.alignments ?? [];
+    options?.classes.find((c) => c.class === primaryClass(character.classes))?.alignments ?? [];
   const sexes = options?.sexes ?? [];
   const set = (k: Exclude<keyof Draft, "languages">) => (v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -296,9 +297,11 @@ function DetailsForm({
       <span role="alert" className="text-label text-danger">
         {i18n.exists(key)
           ? t(key, {
-              className: i18n.exists(`details.classes.${character.class}`)
-                ? t(`details.classes.${character.class}`)
-                : character.class,
+              className: i18n.exists(
+                `details.classes.${primaryClass(character.classes)}`,
+              )
+                ? t(`details.classes.${primaryClass(character.classes)}`)
+                : primaryClass(character.classes),
             })
           : error.code}
       </span>

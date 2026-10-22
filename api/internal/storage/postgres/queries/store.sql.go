@@ -459,6 +459,21 @@ func (q *Queries) EquipmentOwners(ctx context.Context) ([]int64, error) {
 	return items, nil
 }
 
+const fillClassEntries = `-- name: FillClassEntries :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+SELECT c.id, 0, c.class, COALESCE(c.realized_level, c.level), c.xp_total, 'active', 0
+FROM characters c
+WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id)
+`
+
+// The class-entries migration (034): every character without an entry gets its one active entry
+// from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
+// changes nothing.
+func (q *Queries) FillClassEntries(ctx context.Context) error {
+	_, err := q.db.ExecContext(ctx, fillClassEntries)
+	return err
+}
+
 const insertActiveBuffs = `-- name: InsertActiveBuffs :exec
 INSERT INTO active_buffs (character_id, buffs) VALUES ($1, '[]')
 `
@@ -534,6 +549,36 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 	var id int64
 	err := row.Scan(&id)
 	return id, err
+}
+
+const insertClassEntry = `-- name: InsertClassEntry :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+VALUES ($1, $2, $3, $4,
+        $5, $6, $7)
+`
+
+type InsertClassEntryParams struct {
+	CharacterID   int64
+	Position      int64
+	Class         string
+	RealizedLevel int64
+	StartingXp    int64
+	State         string
+	LeftAtLevel   int64
+}
+
+// A seed character's one entry, written with the character.
+func (q *Queries) InsertClassEntry(ctx context.Context, arg InsertClassEntryParams) error {
+	_, err := q.db.ExecContext(ctx, insertClassEntry,
+		arg.CharacterID,
+		arg.Position,
+		arg.Class,
+		arg.RealizedLevel,
+		arg.StartingXp,
+		arg.State,
+		arg.LeftAtLevel,
+	)
+	return err
 }
 
 const insertItem = `-- name: InsertItem :exec

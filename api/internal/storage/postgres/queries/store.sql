@@ -388,3 +388,18 @@ VALUES ($1, $2, $3, $4);
 -- name: InsertRulesetSuccessEffect :exec
 INSERT INTO ruleset_success_effects (ruleset_id, proficiency_id, ac, rounds)
 VALUES ($1, $2, $3, $4);
+
+-- The class-entries migration (034): every character without an entry gets its one active entry
+-- from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
+-- changes nothing.
+-- name: FillClassEntries :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+SELECT c.id, 0, c.class, COALESCE(c.realized_level, c.level), c.xp_total, 'active', 0
+FROM characters c
+WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id);
+
+-- A seed character's one entry, written with the character.
+-- name: InsertClassEntry :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+VALUES (sqlc.arg(character_id), sqlc.arg(position), sqlc.arg(class), sqlc.arg(realized_level),
+        sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level));

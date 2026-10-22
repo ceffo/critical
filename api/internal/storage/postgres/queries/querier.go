@@ -48,10 +48,16 @@ type Querier interface {
 	// items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
 	// them with their step once every environment is past 016 (ADR 0025 step 2.1.1).
 	EquipmentOwners(ctx context.Context) ([]int64, error)
+	// The class-entries migration (034): every character without an entry gets its one active entry
+	// from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
+	// changes nothing.
+	FillClassEntries(ctx context.Context) error
 	InsertActiveBuffs(ctx context.Context, characterID int64) error
 	// The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
 	// compared with the derived values, never read as inputs.
 	InsertCharacter(ctx context.Context, arg InsertCharacterParams) (int64, error)
+	// A seed character's one entry, written with the character.
+	InsertClassEntry(ctx context.Context, arg InsertClassEntryParams) error
 	// A piece of equipment (ADR 0033 step 1), every column: the seed and the conversion write it.
 	InsertItem(ctx context.Context, arg InsertItemParams) error
 	InsertItemRename(ctx context.Context, arg InsertItemRenameParams) error

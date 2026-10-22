@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
@@ -59,12 +60,15 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
-	return &charactersvc.Character{
+	entries, err := d.classEntries(ctx, row)
+	if err != nil {
+		return nil, err
+	}
+	c := &charactersvc.Character{
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), RealizedLevel: int(row.RealizedLevel), XPTotal: int(row.XpTotal),
-		Class: row.Class, Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
+		HPMax: int(row.HpMax), Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
 		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -74,7 +78,30 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 			Alignment: row.Alignment, Age: int(row.Age), Sex: row.Sex,
 			Height: row.HeightCm, Weight: row.WeightKg, Hair: row.Hair, Eyes: row.Eyes, Languages: langs,
 		},
-	}, nil
+	}
+	c.SetClasses(entries)
+	return c, nil
+}
+
+// classEntries are the character's class entries (ADR 0042 step 1). A character with none stored
+// (created by the release before migration 034 during a rolling deploy) has the one active entry
+// its columns state, as the migration's data step gives every stored character.
+func (d *DAL) classEntries(ctx context.Context, row queries.GetCharacterRow) ([]classes.Entry, error) {
+	rows, err := d.q.ListClassEntries(ctx, row.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list class entries of character %d: %w", row.ID, err)
+	}
+	if len(rows) == 0 {
+		return []classes.Entry{classes.SingleEntry(row.Class, int(row.RealizedLevel), int(row.XpTotal))}, nil
+	}
+	out := make([]classes.Entry, len(rows))
+	for i, r := range rows {
+		out[i] = classes.Entry{
+			Class: r.Class, RealizedLevel: int(r.RealizedLevel), StartingXP: int(r.StartingXp),
+			State: classes.EntryState(r.State), LeftAtLevel: int(r.LeftAtLevel),
+		}
+	}
+	return out, nil
 }
 
 // SetRealizedLevel implements levelupsvc.DAL: the realized level and the
@@ -89,6 +116,13 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpM
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound
+	}
+	// The first active entry takes the level too (the column above is the release before the class
+	// entries' reading of it; a character with no entry has only the column).
+	if err := d.q.SetFirstActiveEntryLevel(ctx, queries.SetFirstActiveEntryLevelParams{
+		RealizedLevel: int64(realizedLevel), CharacterID: id,
+	}); err != nil {
+		return fmt.Errorf("set realized level of the class entry: %w", err)
 	}
 	return nil
 }
@@ -187,7 +221,7 @@ func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc
 	}
 	out := make([]charactersvc.Summary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, charactersvc.Summary{ID: r.ID, Name: r.Name, Class: r.Class})
+		out = append(out, charactersvc.Summary{ID: r.ID, Name: r.Name})
 	}
 	return out, nil
 }
@@ -226,19 +260,32 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 	if err != nil {
 		return 0, err
 	}
+	entries := c.Entries()
+	if err := classes.ValidateEntries(entries); err != nil {
+		return 0, err
+	}
+	first, _ := classes.Primary(entries) // ValidateEntries refused a character with no active entry
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: c.Name, Str: int64(c.Str), StrExceptional: int64(c.StrExceptional), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
-		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(c.XPTotal),
+		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(first.StartingXP),
 		Thac0Base: int64(c.Sheet.THAC0), Level: int64(c.Sheet.Level),
 		SaveParaPoison: int64(c.Sheet.Saves.ParaPoison), SaveRodStaffWand: int64(c.Sheet.Saves.RodStaffWand),
 		SavePetriPoly: int64(c.Sheet.Saves.PetriPoly), SaveBreath: int64(c.Sheet.Saves.Breath),
-		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
+		SaveSpell: int64(c.Sheet.Saves.Spell), Class: first.Class, RaceCode: c.Race,
 		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
-		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
+		RealizedLevel: sql.NullInt64{Int64: int64(first.RealizedLevel), Valid: true},
 		SkillPoints:   points, ProficiencyPicks: picks,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)
+	}
+	for i, e := range entries {
+		if err := d.q.InsertClassEntry(ctx, queries.InsertClassEntryParams{
+			CharacterID: id, Position: int64(i), Class: e.Class, RealizedLevel: int64(e.RealizedLevel),
+			StartingXp: int64(e.StartingXP), State: string(e.State), LeftAtLevel: int64(e.LeftAtLevel),
+		}); err != nil {
+			return 0, fmt.Errorf("create character %d class entry %d: %w", id, i, err)
+		}
 	}
 	for _, row := range []struct {
 		what   string

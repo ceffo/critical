@@ -12,6 +12,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -60,12 +61,34 @@ type currentSetter interface {
 	SetCurrent(ctx context.Context, owner uuid.UUID, id int64) error
 }
 
+// ClassEntryDTO is one class of a character (ADR 0042 step 1): the class
+// code, the level taken in it, the XP entered for it, whether it is active or
+// frozen and, for a frozen one, the level it was left at (0 otherwise).
+type ClassEntryDTO struct {
+	Class       string `json:"class"`
+	Level       int    `json:"level"`
+	StartingXP  int    `json:"startingXp"`
+	State       string `json:"state"`
+	LeftAtLevel int    `json:"leftAtLevel"`
+}
+
+func classEntriesDTO(entries []classes.Entry) []ClassEntryDTO {
+	out := make([]ClassEntryDTO, len(entries))
+	for i, e := range entries {
+		out[i] = ClassEntryDTO{
+			Class: e.Class, Level: e.RealizedLevel, StartingXP: e.StartingXP, State: string(e.State), LeftAtLevel: e.LeftAtLevel,
+		}
+	}
+	return out
+}
+
 // SummaryDTO is a character in its owner's list.
 type SummaryDTO struct {
-	ID    int64  `json:"id"`
-	Name  string `json:"name"`
-	Class string `json:"class"`
-	Level int    `json:"level"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	// Classes are the class entries in the order the classes were taken, each
+	// with its realized level (ADR 0042 step 1, ADR 0030 step 3).
+	Classes []ClassEntryDTO `json:"classes"`
 	// Race is the race code ("" when none); Alignment and Sex are codes, ""
 	// while still to choose, and Missing names those fields (the card's tag).
 	Race      string   `json:"race"`
@@ -106,7 +129,7 @@ func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLis
 	out := CharactersDTO{Characters: make([]SummaryDTO, 0, len(list))}
 	for _, c := range list {
 		out.Characters = append(out.Characters, SummaryDTO{
-			ID: c.ID, Name: c.Name, Class: c.Class, Level: c.Level, Race: c.Race, Alignment: c.Alignment,
+			ID: c.ID, Name: c.Name, Classes: classEntriesDTO(c.Classes), Race: c.Race, Alignment: c.Alignment,
 			Sex: c.Sex, Missing: c.Missing, CurrentHP: c.CurrentHP, MaxHP: c.MaxHP,
 		})
 		if c.ID == current {
@@ -181,17 +204,17 @@ type CharacterDTO struct {
 	Str  int    `json:"str"`
 	// StrExceptional is a fighter's 18/xx percentile (ADR 0030 step 9), 0
 	// for none.
-	StrExceptional int        `json:"strExceptional"`
-	Dex            int        `json:"dex"`
-	Con            int        `json:"con"`
-	Int            int        `json:"int"`
-	Wis            int        `json:"wis"`
-	Cha            int        `json:"cha"`
-	HPMax          int        `json:"hpMax"`
-	XPTotal        int        `json:"xpTotal"`
-	Class          string     `json:"class"`
-	RaceCode       string     `json:"raceCode"`
-	Derived        DerivedDTO `json:"derived"`
+	StrExceptional int             `json:"strExceptional"`
+	Dex            int             `json:"dex"`
+	Con            int             `json:"con"`
+	Int            int             `json:"int"`
+	Wis            int             `json:"wis"`
+	Cha            int             `json:"cha"`
+	HPMax          int             `json:"hpMax"`
+	XPTotal        int             `json:"xpTotal"`
+	Classes        []ClassEntryDTO `json:"classes"`
+	RaceCode       string          `json:"raceCode"`
+	Derived        DerivedDTO      `json:"derived"`
 	// Missing lists the required fields the character lacks (ADR 0032 step
 	// 8.2: "alignment", "sex"); the card asks the player to pick them.
 	Missing []string `json:"missing"`
@@ -397,7 +420,7 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	return CharacterDTO{
 		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Class: c.Class, RaceCode: c.Race,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Classes: classEntriesDTO(c.Entries()), RaceCode: c.Race,
 		Derived: derivedDTO(c.Derived), DetailsDTO: wire.DetailsToDTO(c.Details),
 		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}

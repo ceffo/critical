@@ -375,7 +375,7 @@ func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) 
 			return nil, fmt.Errorf("character %d HP: %w", list[i].ID, err)
 		}
 		d := c.Details.Coded()
-		list[i].Level = c.Derived.RealizedLevel
+		list[i].Classes = c.Entries()
 		list[i].Race = c.Race
 		list[i].Alignment, list[i].Sex = d.Alignment, d.Sex
 		list[i].Missing = c.Details.Missing()

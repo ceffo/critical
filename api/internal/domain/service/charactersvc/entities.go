@@ -1,6 +1,9 @@
 package charactersvc
 
 import (
+	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -25,6 +28,13 @@ type Character struct {
 	Wis            int
 	Cha            int
 	HPMax          int
+	// Classes are the character's class entries (ADR 0042 step 1): the stored
+	// truth of its class, level and starting XP. Set them with SetClasses;
+	// Class, RealizedLevel and XPTotal below mirror the first active entry, the
+	// one the single-class rules read until the multi-class math reads the
+	// entries (ADR 0042 steps 7 to 15). Empty for a character built from the
+	// mirror alone (Entries gives its one entry).
+	Classes []classes.Entry
 	// RealizedLevel is the level the character has taken (ADR 0030 step 7):
 	// its benefits (max HP, THAC0, saves, slots) are this level's. It starts
 	// at the level the entered max HP is for (step 7.5: an imported sheet's
@@ -59,6 +69,38 @@ type Character struct {
 	// Warnings are the rules the stored character breaks without being
 	// refused (ADR 0032 steps 4.2 and 8.4); set by the service.
 	Warnings []Warning
+}
+
+// SetClasses sets the class entries and the mirror of the first active entry
+// (Class, RealizedLevel, XPTotal) from them.
+func (c *Character) SetClasses(entries []classes.Entry) {
+	c.Classes = entries
+	if first, ok := classes.Primary(entries); ok {
+		c.Class, c.RealizedLevel, c.XPTotal = first.Class, first.RealizedLevel, first.StartingXP
+	}
+}
+
+// SetPrimaryLevel moves the realized level of the first active entry and the
+// mirror (a level-up, ADR 0030 step 7.3, and its undo).
+func (c *Character) SetPrimaryLevel(level int) {
+	c.RealizedLevel = level
+	for i := range c.Classes {
+		if c.Classes[i].State == classes.EntryActive {
+			c.Classes = slices.Clone(c.Classes)
+			c.Classes[i].RealizedLevel = level
+			return
+		}
+	}
+}
+
+// Entries are the class entries: Classes, or the one active entry the mirror
+// states for a character built without them (ADR 0042 step 1: today's columns
+// are the one-entry case).
+func (c *Character) Entries() []classes.Entry {
+	if len(c.Classes) > 0 {
+		return c.Classes
+	}
+	return []classes.Entry{classes.SingleEntry(c.Class, c.RealizedLevel, c.XPTotal)}
 }
 
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
@@ -220,12 +262,13 @@ type LevelUp struct {
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).
 type Summary struct {
-	ID    int64
-	Name  string
-	Class string
-	// Level is the realized level (ADR 0030 step 3): stored, advanced only by the
-	// manual level-up step, not the target level derived from XP. Set by the service.
-	Level int
+	ID   int64
+	Name string
+	// Classes are the character's class entries (ADR 0042 step 1), each with
+	// its realized level (ADR 0030 step 3): stored, advanced only by the
+	// manual level-up step, not the target level derived from XP. Set by the
+	// service.
+	Classes []classes.Entry
 	// Race is the race code, "" when none is set.
 	Race string
 	// Alignment and Sex are codes; "" when still to choose (a value that is no

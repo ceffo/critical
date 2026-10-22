@@ -289,8 +289,10 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     warned. A warning, never a refusal (the DM's table).
     As built (2026-10-22): the check's `warnings` (in the `power_check` payload and the answer)
     carry the code when a non-voided check of a power that is not a defence mode is stamped with
-    the current round and logged after the newest Next Round.
-    Test: `Activate_Step12_ASecondPowerInTheRoundWarns`.
+    the current round and logged after the newest entry that moved the round counter (Next Round,
+    End combat, Set round or passing time: changed 2026-10-22, was the newest Next Round only).
+    Tests: `Activate_Step12_ASecondPowerInTheRoundWarns`, `Use_Step12_SecondPowerOfTheRound`
+    (composition: a defence mode then two powers in one round, only the third warns).
 
 ### Maintenance
 
@@ -306,31 +308,45 @@ Every warning and refusal is structured data (a code and its numbers), worded by
 14. **Next Round charges maintenance** (amends [ADR 0005](0005-rounds-and-time.md) step 1; ch. 2,
     `01-using-powers.md`; power descriptions, Maintenance Cost: per round, to keep the power from
     the previous round, no check). In the `round_advance` transaction, each maintained power whose
-    period falls due (every round for a period of 1; every `period` rounds since its start round,
-    ADR 0004 step 15) charges its cost as the entry's PSP delta, in the list's order. A power whose
+    period falls due (every round for a period of 1; every `period` rounds kept) charges its cost as the entry's PSP delta, in the list's order. A power whose
     cost the remaining PSPs cannot pay **ends** instead (named in the entry with the expired buffs,
     as `maintenance_unpaid`; the book's case: maintained until the PSPs run out). The round a power
     starts in charges nothing (the first charge is for keeping it from that round) _(Q10)_. Undo restores
     the PSPs and the rows (ADR 0005 step 4).
+    As built (2026-10-22, changed the same day: was counted from the row's start round, ADR 0004
+    step 15, which End combat, passing time and Set round move the counter under): the row
+    counts its own `rounds_kept`, 0 in its activation round, +1 per Next Round, +`n` per `n` rounds
+    of passing time; a Next Round charges when the count before it is a positive multiple of the
+    period, so the activation round's own Next Round charges nothing (Q10) and a period of 10
+    first charges at the Next Round ending the 10th round after it. Renewing the power (step 13)
+    starts the count again. End combat or a Set round to another round while a row is still in its
+    activation round closes that round (the count goes to 1, nothing charged; the entry then
+    snapshots the buffs too), so the next Next Round charges: what the round counter reads never
+    matters. The book's rule, a cost per round kept, is unchanged.
     Tests: `AdvanceRound_Step14_ChargesEachMaintainedPower` (buffsvc: two powers of 1 and 3 charge
     4), `AdvanceRound_Step14_UnpaidMaintenanceEnds` (2 PSPs left for a 3-PSP power: it ends, 0
     spent on it), `AdvanceRound_Step14_PeriodOfTenChargesEveryTenthRound`,
-    `AdvanceRound_Step14_UndoRestoresPSPAndRows` (composition).
+    `AdvanceRound_Step14_UndoRestoresPSPAndRows` (composition),
+    `MoveRound_Step14_ClosesTheActivationRound`, and in composition
+    `Maintenance_Step14_CountedOnTheRowAcrossEndCombat` (used in round 5, End combat, 3 Next
+    Rounds charge 3 times, then 1 h charges 60 as previewed), `Maintenance_Step14_UnpaidNextRoundUndoRedo`,
+    `Maintenance_Step13_CheckAndChargeUndoRedo`, `Maintenance_Step13_ReactivationResetsTheCount`.
 
 15. **Passing time charges maintenance** (amends ADR 0005 steps 6 and 7). Passing `n` rounds
     charges each maintained power for every period due in them, in round order, ending a power at
     the first charge it cannot pay; the `time_passed` entry carries the PSP delta and the preview
     (ADR 0005 step 8) shows the PSPs spent and the powers that would end. Passing time recovers no
     PSP (step 6 is its own request) _(Q7)_.
-    As built (2026-10-22): passing `n` rounds from round `r` is the Next Rounds that end rounds
-    `r` to `r + n - 1` (step 14's due rule, so the start round charges nothing); within a round
+    As built (2026-10-22): passing `n` rounds is `n` Next Rounds of step 14's due rule on each
+    row's own count (changed 2026-10-22, was the rounds `r` to `r + n - 1` of the counter; a
+    row's activation round still charges nothing); within a round
     the due rows pay in the list's order. The entry's `maintenance` has one line per power that
     paid, its `cost` the total over the rounds, and `maintenanceUnpaid` the powers that ended
     (among `expired`). The preview answers `pspSpent` beside `expiring`, the unpaid powers among
     them.
     Tests: `PassTime_Step15_ChargesMaintenanceForTheRounds` (buffsvc: 1 h of a 1-PSP power with 40
     PSPs ends it after 40 rounds), `PassTime_Step15_InRoundOrder`, `PassTime_Step15_PaidPowersStay`,
-    `PassTime_Step15_PreviewShowsThePSP`.
+    `PassTime_Step15_PreviewShowsThePSP`, `Maintenance_Step15_PassTimeAfterEndCombat` (composition).
 
 16. **Stopping maintenance** (ch. 2, `01-using-powers.md`; the powers' texts: stopping ends the
     power). Dismissing the row (ADR 0004 step 13's dismiss) stops it: free, one logged entry,

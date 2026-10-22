@@ -41,6 +41,7 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	}
 	buff.StartRound = round
 	buff.ChargesTotal = buff.Charges // ADR 0004 step 16
+	buff.RoundsKept = 0              // ADR 0043 step 14: a renewal starts again
 	after := make([]BuffEffect, 0, len(before)+1)
 	// ADR 0004 step 20.5: a row on someone else or on an area never renews
 	// and is never renewed (two Webs on two areas are two rows).

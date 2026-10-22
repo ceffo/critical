@@ -38,9 +38,17 @@ func thiefPsionicistKnowing(t *testing.T, picks []psionics.Pick) (*composition.B
 // crypto dice).
 func thiefPsionicistRolling(t *testing.T, picks []psionics.Pick, dice composition.Dice) (*composition.BackingServices, int64) {
 	t.Helper()
+	return thiefPsionicistOn(t, picks, dice, fixtureCatalogue)
+}
+
+// thiefPsionicistOn is thiefPsionicistRolling on the catalogue artifact at
+// path.
+func thiefPsionicistOn(t *testing.T, picks []psionics.Pick, dice composition.Dice, path string) (*composition.BackingServices, int64) {
+	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
 	cfg := fixtureConfig()
+	cfg.Catalogue = path
 	cfg.Dice = dice
 	bs, err := composition.Build(ctx, composition.MemoryStorage(m), cfg)
 	require.NoError(t, err)
@@ -424,4 +432,6 @@ func TestLongRest_Step7_EndsMaintainedPowersUndone(t *testing.T) {
 	undoTop(t, bs, id)
 	assert.Equal(t, 1, rows(), "the undo puts the row back")
 	assert.Equal(t, 172, currentPSP(t, bs, id))
+	_, err = bs.Psionics.Recover(ctx, id, 1, "resting")
+	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining, "refused again: the power is kept up")
 }

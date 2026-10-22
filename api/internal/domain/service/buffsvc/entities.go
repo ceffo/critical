@@ -245,43 +245,32 @@ type BuffEffect struct {
 	// check put the row on (ADR 0043 step 13), stamped by the power's use
 	// only; empty for every other buff. MaintenanceCost and
 	// MaintenancePeriod are the power's maintenance: Next Round charges the
-	// cost every period rounds since StartRound (step 14), and the row ends
-	// when the PSPs cannot pay it. A row with a cost is untimed: it lasts
-	// until stopped (step 16) or unpaid.
+	// cost every period rounds kept (step 14), and the row ends when the
+	// PSPs cannot pay it. A row with a cost is untimed: it lasts until
+	// stopped (step 16) or unpaid.
 	PowerID           string
 	MaintenanceCost   int
 	MaintenancePeriod int
+	// RoundsKept counts the rounds a maintained row has been kept: 0 in its
+	// activation round (Add stamps it, a renewal starts again), +1 per Next
+	// Round and +n per n rounds of passing time (steps 14 and 15). 0 for
+	// every other row. Never set by the caller.
+	RoundsKept int
 }
 
 // Maintained reports whether Next Round charges maintenance for the row.
 func (b BuffEffect) Maintained() bool { return b.PowerID != "" && b.MaintenanceCost > 0 }
 
-// MaintenanceDue reports whether the Next Round that ends round from
-// charges the row's maintenance (ADR 0043 step 14, Q10): every period
-// rounds since its start round, and never in the round it started.
-func (b BuffEffect) MaintenanceDue(from int) bool {
-	if !b.Maintained() || from <= b.StartRound {
+// MaintenanceDue reports whether the Next Round ending the row's next round
+// kept charges its maintenance (ADR 0043 step 14, Q10): every period rounds
+// kept, never the activation round itself (RoundsKept 0). It reads the row's
+// own count, not the round counter, which End combat, passing time and Set
+// round move under it.
+func (b BuffEffect) MaintenanceDue() bool {
+	if !b.Maintained() || b.RoundsKept <= 0 {
 		return false
 	}
-	period := max(b.MaintenancePeriod, 1)
-	return (from-b.StartRound)%period == 0
-}
-
-// firstDue is the first round in from to from+rounds-1 whose Next Round
-// charges the row's maintenance, or -1 when none does.
-func (b BuffEffect) firstDue(from, rounds int) int {
-	if !b.Maintained() || rounds < 1 {
-		return -1
-	}
-	period := max(b.MaintenancePeriod, 1)
-	r := max(from, b.StartRound+1)
-	if k := (r - b.StartRound) % period; k != 0 {
-		r += period - k
-	}
-	if r >= from+rounds {
-		return -1
-	}
-	return r
+	return b.RoundsKept%max(b.MaintenancePeriod, 1) == 0
 }
 
 // Timed reports whether Next Round counts this buff down.

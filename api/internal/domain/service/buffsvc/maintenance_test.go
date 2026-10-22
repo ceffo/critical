@@ -13,11 +13,18 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
-// maintained is a row a power's check put on (ADR 0043 step 13).
-func maintained(id, power string, cost, period, start int) buffsvc.BuffEffect {
+// maintained is a row a power's check put on (ADR 0043 step 13), kept for
+// kept rounds already (0: its activation round).
+func maintained(id, power string, cost, period, kept int) buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
-		ID: id, Name: power, PowerID: power, MaintenanceCost: cost, MaintenancePeriod: period, StartRound: start,
+		ID: id, Name: power, PowerID: power, MaintenanceCost: cost, MaintenancePeriod: period, RoundsKept: kept,
 	}
+}
+
+// keptMore is b after n more rounds kept.
+func keptMore(b buffsvc.BuffEffect, n int) buffsvc.BuffEffect {
+	b.RoundsKept += n
+	return b
 }
 
 // pspIs answers the character read of Next Round's maintenance with current
@@ -45,12 +52,12 @@ func (f *fixture) advances(t *testing.T, buffs []buffsvc.BuffEffect, round int) 
 
 func TestAdvanceRound_Step14_ChargesEachMaintainedPower(t *testing.T) {
 	f := newFixture(t)
-	a, b := maintained("a", "ballistic_attack", 1, 1, 2), maintained("b", "levitation", 3, 1, 3)
+	a, b := maintained("a", "ballistic_attack", 1, 1, 2), maintained("b", "levitation", 3, 1, 1)
 	f.pspIs(20)
 
 	active, expired, e := f.advances(t, []buffsvc.BuffEffect{a, b}, 4)
 
-	assert.Equal(t, []buffsvc.BuffEffect{a, b}, active, "both paid: both stay")
+	assert.Equal(t, []buffsvc.BuffEffect{keptMore(a, 1), keptMore(b, 1)}, active, "both paid: both stay, one round more kept")
 	assert.Empty(t, expired)
 	assert.Equal(t, -4, e.PSPDelta, "1 + 3")
 	assert.JSONEq(t, `{"action":"next_round","fromRound":4,"toRound":5,
@@ -59,23 +66,23 @@ func TestAdvanceRound_Step14_ChargesEachMaintainedPower(t *testing.T) {
 
 func TestAdvanceRound_Step14_TheStartRoundChargesNothing(t *testing.T) {
 	f := newFixture(t)
-	a := maintained("a", "levitation", 3, 1, 4)
+	a := maintained("a", "levitation", 3, 1, 0)
 
 	active, _, e := f.advances(t, []buffsvc.BuffEffect{a}, 4)
 
-	assert.Equal(t, []buffsvc.BuffEffect{a}, active)
+	assert.Equal(t, []buffsvc.BuffEffect{keptMore(a, 1)}, active)
 	assert.Zero(t, e.PSPDelta, "Q10: the activation round's own Next Round charges nothing, and reads no PSP")
 }
 
 func TestAdvanceRound_Step14_UnpaidMaintenanceEnds(t *testing.T) {
 	f := newFixture(t)
-	a := maintained("a", "levitation", 3, 1, 1)
-	b := maintained("b", "ballistic_attack", 1, 1, 1)
+	a := maintained("a", "levitation", 3, 1, 2)
+	b := maintained("b", "ballistic_attack", 1, 1, 2)
 	f.pspIs(2)
 
 	active, expired, e := f.advances(t, []buffsvc.BuffEffect{a, b}, 3)
 
-	assert.Equal(t, []buffsvc.BuffEffect{b}, active, "the 1-PSP power after it still pays")
+	assert.Equal(t, []buffsvc.BuffEffect{keptMore(b, 1)}, active, "the 1-PSP power after it still pays")
 	assert.Equal(t, []buffsvc.BuffEffect{a}, expired)
 	assert.Equal(t, -1, e.PSPDelta, "0 spent on the unpaid power")
 	assert.JSONEq(t, `{"action":"next_round","fromRound":3,"toRound":4,"expired":["levitation"],
@@ -83,30 +90,30 @@ func TestAdvanceRound_Step14_UnpaidMaintenanceEnds(t *testing.T) {
 }
 
 func TestAdvanceRound_Step14_PeriodOfTenChargesEveryTenthRound(t *testing.T) {
-	row := maintained("a", "clairvoyance", 5, 10, 2)
-	for from, due := range map[int]bool{3: false, 11: false, 12: true, 13: false, 21: false, 22: true} {
+	for kept, due := range map[int]bool{0: false, 1: false, 9: false, 10: true, 11: false, 19: false, 20: true} {
 		f := newFixture(t)
 		if due {
 			f.pspIs(40)
 		}
-		_, _, e := f.advances(t, []buffsvc.BuffEffect{row}, from)
+		_, _, e := f.advances(t, []buffsvc.BuffEffect{maintained("a", "clairvoyance", 5, 10, kept)}, 3)
 		want := 0
 		if due {
 			want = -5
 		}
-		assert.Equal(t, want, e.PSPDelta, "Next Round from round %d", from)
+		assert.Equal(t, want, e.PSPDelta, "Next Round after %d rounds kept", kept)
 	}
 }
 
 func TestAdd_Step13_APowerActivatedAgainRenewsItsRow(t *testing.T) {
 	f := newFixture(t)
-	old := maintained("old", "levitation", 3, 1, 1)
+	old := maintained("old", "levitation", 3, 1, 7)
 	other := buffsvc.BuffEffect{ID: "x", Name: "Bless"}
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{old, other}, nil).Once()
 	f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(6, nil).Once()
-	renewed := buffsvc.BuffEffect{ID: "new", Name: "Lévitation", PowerID: "levitation", MaintenanceCost: 3, MaintenancePeriod: 1}
+	renewed := buffsvc.BuffEffect{ID: "new", Name: "Lévitation", PowerID: "levitation", MaintenanceCost: 3, MaintenancePeriod: 1, RoundsKept: 4}
 	want := renewed
 	want.StartRound = 6
+	want.RoundsKept = 0 // its count starts again: the next charge is a full period away
 	f.saves([]buffsvc.BuffEffect{other, want})
 
 	got, _, err := f.svc.Add(context.Background(), charID, renewed)
@@ -198,17 +205,18 @@ func TestPassTime_Step15_InRoundOrder(t *testing.T) {
 	assert.Contains(t, string(e.Payload), `"maintenance":[{"powerId":"ballistic_attack","cost":12}],"maintenanceUnpaid":["levitation","ballistic_attack"]`)
 }
 
-// Enough PSPs: every period due is paid and the rows stay; the start round's
-// own Next Round charges nothing (Q10).
+// Enough PSPs: every period due is paid and the rows stay; the activation
+// round's own Next Round charges nothing (Q10).
 func TestPassTime_Step15_PaidPowersStay(t *testing.T) {
 	f := newFixture(t)
-	b, a := maintained("b", "levitation", 5, 10, 3), maintained("a", "ballistic_attack", 1, 1, 3)
+	b, a := maintained("b", "levitation", 5, 10, 0), maintained("a", "ballistic_attack", 1, 1, 0)
 	f.pspIs(100)
 
-	// Rounds 3 to 32: a is due in 4 to 32 (29), b in 13 and 23 (10).
+	// 30 rounds from the activation round: a is due after 1 to 29 rounds
+	// kept (29), b after 10 and 20 (10).
 	active, expired, e := f.passes(t, []buffsvc.BuffEffect{b, a}, 3, 0.5)
 
-	assert.Equal(t, []buffsvc.BuffEffect{b, a}, active)
+	assert.Equal(t, []buffsvc.BuffEffect{keptMore(b, 30), keptMore(a, 30)}, active)
 	assert.Empty(t, expired)
 	assert.Equal(t, -39, e.PSPDelta)
 	assert.Contains(t, string(e.Payload), `"maintenance":[{"powerId":"levitation","cost":10},{"powerId":"ballistic_attack","cost":29}]`)
@@ -220,7 +228,7 @@ func TestPassTime_Step15_PreviewShowsThePSP(t *testing.T) {
 	f := newFixture(t) // mocks fail on any Record or Save
 	a := maintained("a", "ballistic_attack", 1, 1, 0)
 	timed := buffsvc.BuffEffect{ID: "t", Name: "Bless", Duration: 6}
-	f.state([]buffsvc.BuffEffect{timed, a}, 0)
+	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{timed, a}, nil).Once()
 	f.pspIs(40)
 
 	rounds, expiring, spent, err := f.svc.PreviewPassTime(context.Background(), charID, 1)
@@ -229,4 +237,53 @@ func TestPassTime_Step15_PreviewShowsThePSP(t *testing.T) {
 	assert.Equal(t, 40, spent)
 	assert.Equal(t, []string{"t", "a"}, ids(expiring))
 	assert.Zero(t, f.tx.calls)
+}
+
+// ADR 0043 step 14: End combat (or a Set round to another round) closes a
+// maintained row's activation round, charging nothing, so the next Next
+// Round charges it; a row already past its activation round is untouched and
+// the buff list is not written then. The count lives on the row: the round
+// counter going back to 0 changes nothing else.
+func TestMoveRound_Step14_ClosesTheActivationRound(t *testing.T) {
+	ctx := context.Background()
+	fresh, older := maintained("a", "aura_sight", 9, 1, 0), maintained("b", "levitation", 3, 1, 4)
+
+	t.Run("End combat: the fresh row counts one round kept", func(t *testing.T) {
+		f := newFixture(t)
+		f.state([]buffsvc.BuffEffect{fresh, older}, 5)
+		f.records()
+		f.saves([]buffsvc.BuffEffect{keptMore(fresh, 1), older})
+		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
+		f.initiativeIs(nil)
+
+		_, round, err := f.svc.ResetRound(ctx, charID)
+		require.NoError(t, err)
+		assert.Zero(t, round)
+		require.Len(t, f.entries, 1)
+		assert.Zero(t, f.entries[0].PSPDelta, "closing the activation round is free")
+		assert.ElementsMatch(t, []string{buffsvc.StateKeyBuffs, buffsvc.StateKeyRound}, snapKeys(f.entries[0]), "undo reopens it")
+	})
+
+	t.Run("no fresh row: round only", func(t *testing.T) {
+		f := newFixture(t) // SaveActiveBuffs unexpected
+		f.state([]buffsvc.BuffEffect{older}, 5)
+		f.records()
+		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
+		f.initiativeIs(nil)
+
+		_, _, err := f.svc.ResetRound(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(f.entries[0]))
+	})
+
+	t.Run("Set round to the same round closes nothing", func(t *testing.T) {
+		f := newFixture(t)
+		f.state([]buffsvc.BuffEffect{fresh}, 5)
+		f.records()
+		f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 5).Return(nil).Once()
+
+		_, _, err := f.svc.SetRound(ctx, charID, 5)
+		require.NoError(t, err)
+		assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(f.entries[0]))
+	})
 }

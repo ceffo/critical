@@ -25,7 +25,7 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 			active, expired = advanceRoundBuffs(buffs)
 			// ADR 0043 step 14: the maintained powers due pay, in the
 			// list's order; one the PSPs left cannot pay ends.
-			m, err := s.chargeMaintenance(ctx, characterID, active, r, 1)
+			m, err := s.chargeMaintenance(ctx, characterID, active, 1)
 			if err != nil {
 				return change{}, err
 			}
@@ -84,52 +84,76 @@ func (m maintenance) unpaidIDs() []string {
 	return ids
 }
 
-// chargeMaintenance charges the rows of active whose maintenance falls due
-// in the rounds Next Rounds ending rounds from to from+rounds-1, from the
-// current PSPs: round by round, each round's due rows in the list's order. A
-// row whose cost the PSPs left cannot pay ends there, charging nothing more;
-// a cheaper row after it may still pay. charges has one line per power that
-// paid, in the list's order, its Cost the total it paid. The PSPs are read
-// only when a row is due. It writes nothing (the preview runs it too).
-func (s *service) chargeMaintenance(ctx context.Context, characterID int64, active []BuffEffect, from, rounds int) (maintenance, error) {
-	m := maintenance{kept: active}
-	if !slices.ContainsFunc(active, func(b BuffEffect) bool { return b.firstDue(from, rounds) >= 0 }) {
-		return m, nil
-	}
-	c, err := s.chars.GetCharacter(ctx, characterID)
-	if err != nil {
-		return maintenance{}, fmt.Errorf("get character: %w", err)
-	}
+// chargeMaintenance keeps the maintained rows of active for rounds rounds
+// (a Next Round: 1; passing time: its rounds), charging from the current
+// PSPs: round by round, each round's due rows in the list's order. A row
+// whose cost the PSPs left cannot pay ends there, charging nothing more; a
+// cheaper row after it may still pay. Every kept maintained row's RoundsKept
+// grows by rounds. charges has one line per power that paid, in the list's
+// order, its Cost the total it paid. The PSPs are read only when a row is
+// due. It writes nothing (the preview runs it too).
+func (s *service) chargeMaintenance(ctx context.Context, characterID int64, active []BuffEffect, rounds int) (maintenance, error) {
+	m := maintenance{kept: make([]BuffEffect, 0, len(active))}
+	due := slices.ContainsFunc(active, func(b BuffEffect) bool { return b.firstDue(rounds) >= 0 })
 	left := 0
-	if c.Derived.PSP != nil {
-		left = c.Derived.PSP.Current
-	}
-	paid := make([]int, len(active))
-	ended := make([]bool, len(active))
-	for r := from; r < from+rounds; r++ {
-		for i, b := range active {
-			if ended[i] || !b.MaintenanceDue(r) {
-				continue
-			}
-			if b.MaintenanceCost > left {
-				ended[i] = true
-				continue
-			}
-			left -= b.MaintenanceCost
-			paid[i] += b.MaintenanceCost
+	if due {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return maintenance{}, fmt.Errorf("get character: %w", err)
+		}
+		if c.Derived.PSP != nil {
+			left = c.Derived.PSP.Current
 		}
 	}
-	m.kept = make([]BuffEffect, 0, len(active))
-	for i, b := range active {
+	rows := slices.Clone(active)
+	paid := make([]int, len(rows))
+	ended := make([]bool, len(rows))
+	for range rounds {
+		for i := range rows {
+			b := &rows[i]
+			if ended[i] || !b.Maintained() {
+				continue
+			}
+			if b.MaintenanceDue() {
+				if b.MaintenanceCost > left {
+					ended[i] = true
+					continue
+				}
+				left -= b.MaintenanceCost
+				paid[i] += b.MaintenanceCost
+			}
+			b.RoundsKept++
+		}
+	}
+	for i, b := range rows {
 		if paid[i] > 0 {
 			m.spent += paid[i]
 			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Cost: paid[i]})
 		}
 		if ended[i] {
-			m.unpaid = append(m.unpaid, b)
+			m.unpaid = append(m.unpaid, active[i])
 		} else {
 			m.kept = append(m.kept, b)
 		}
 	}
 	return m, nil
+}
+
+// firstDue is how many rounds, out of the next rounds kept, pass before the
+// row's maintenance falls due (0: the next Next Round charges), or -1 when
+// none of them does.
+func (b BuffEffect) firstDue(rounds int) int {
+	if !b.Maintained() || rounds < 1 {
+		return -1
+	}
+	period := max(b.MaintenancePeriod, 1)
+	k := b.RoundsKept
+	next := max(k, 1)
+	if r := next % period; r != 0 {
+		next += period - r
+	}
+	if next-k >= rounds {
+		return -1
+	}
+	return next - k
 }

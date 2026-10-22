@@ -175,7 +175,7 @@ func TestRounds_Step8_PreviewPassTime(t *testing.T) {
 
 	t.Run("1.5 h: 90 rounds, the buffs at 90 or less would expire, nothing is written", func(t *testing.T) {
 		f := newFixture(t) // mocks fail on any Record or Save
-		f.state([]buffsvc.BuffEffect{long, short, mirror, stone}, 0)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{long, short, mirror, stone}, nil).Once()
 
 		rounds, expiring, spent, err := f.svc.PreviewPassTime(ctx, charID, 1.5)
 		require.NoError(t, err)

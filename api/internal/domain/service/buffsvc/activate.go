@@ -24,7 +24,7 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	// ADR 0037 step 20.1: only a successful check stamps a proficiency.
 	buff.ProficiencyID = ""
 	// ADR 0043 step 13: only a power's successful check keeps a power up.
-	buff.PowerID, buff.MaintenanceCost, buff.MaintenancePeriod = "", 0, 0
+	buff.PowerID, buff.MaintenanceCost, buff.MaintenancePeriod, buff.RoundsKept = "", 0, 0, 0
 	if buff.ID == "" {
 		buff.ID = uuid.New().String()
 	}

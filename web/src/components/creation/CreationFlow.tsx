@@ -3,7 +3,7 @@ import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
 import { createCharacter, draftCharacter } from "@/api/characters";
-import { ApiError, OVER_BUDGET } from "@/api/http";
+import { ApiError, codeMessage, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { holdPath } from "@/lib/navigation";
@@ -48,6 +48,7 @@ import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
 import { IdentityStep, ReviewStep } from "./identity";
 import { ProficienciesStep } from "./proficiencies";
 import { SpellbookStep } from "./spellbook";
+import { PsionicsStep } from "./psionics";
 import { useSpellName } from "@/i18n/spellName";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import { isSpecialization } from "@/components/proficiencies/weapons";
@@ -234,6 +235,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const previewing =
     step === "proficiencies" ||
     step === "spellbook" ||
+    step === "psionics" ||
     step === "identity" ||
     step === "review";
   const [previewedKey, setPreviewedKey] = useState("");
@@ -271,6 +273,16 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         }),
       });
     }
+    // The psionics step's fields (ADR 0043 steps 4.4 and 9): a known-powers refusal in the editor's
+    // words (refusalError, or Créer's answer), a PSP maximum refused in the step's.
+    if (e.field === "psionicPicks")
+      return e.message && e.message !== e.code
+        ? e.message
+        : (codeMessage(e.code) ?? e.code);
+    if (e.field === "pspMax")
+      return t(`creation.psionics.errors.${e.code}`, {
+        defaultValue: e.message ?? e.code,
+      });
     if (e.field.startsWith("details.")) {
       const detail = e.field.slice("details.".length);
       return t(
@@ -479,6 +491,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             {step === "extras" && <ExtrasStep {...props} />}
             {step === "proficiencies" && <ProficienciesStep {...props} />}
             {step === "spellbook" && <SpellbookStep {...props} />}
+            {step === "psionics" && <PsionicsStep {...props} />}
             {step === "identity" && <IdentityStep {...props} />}
             {step === "review" && <ReviewStep {...props} go={go} />}
           </div>
@@ -612,6 +625,10 @@ function useStepChoice(
         const n = draftSpellbook(options, draft, answer).length;
         return n > 0 ? t("creation.spellbook.spellsN", { count: n }) : null;
       }
+      case "psionics":
+        return draft.psionicPicks.length > 0
+          ? t("creation.psionics.picksN", { count: draft.psionicPicks.length })
+          : null;
       case "identity":
         return draft.name.trim() || null;
       default:

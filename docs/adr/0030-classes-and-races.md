@@ -854,7 +854,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
       25, Hit Dice column, with chapter 3's hit points paragraphs);
     - Constitution (Table 3): hit point adjustment, the warrior's value and the low-die floor;
     - Intelligence (Table 4): maximum spell level, chance to learn, maximum spells per level;
-    - Wisdom (Table 5): bonus spells and chance of spell failure;
+    - Wisdom (Table 5): bonus spells, chance of spell failure and magical defence adjustment
+      ([ADR 0006](0006-saving-throws.md) step 9);
     - Constitution saving throw bonus (Table 9);
     - THAC0 by group and level (Table 53);
     - saving throws by group and level band (Table 60);
@@ -923,5 +924,6 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
   and dual-class, psionics, level drain, levels above 20, thief scroll use and followers, fighter
   followers, proficiency slots (_covered by [ADR 0037](0037-proficiencies.md), on
   implementation_), a race's conditional combat traits (shown as text), the Wisdom
-  magical defence adjustment on saves, the cleric's blunt-weapon restriction and class armour
+  spell immunity at 19 and up (the magical defence adjustment on saves is _covered by [ADR
+  0006](0006-saving-throws.md) step 9, on implementation_), the cleric's blunt-weapon restriction and class armour
   limits (not enforced).

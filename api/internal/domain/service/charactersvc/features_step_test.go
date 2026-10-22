@@ -321,7 +321,11 @@ func TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode(t *testing.T) {
 	skald := add("test_skald", "thief", "",
 		classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
 			Set: ruletablesvc.SkillSetBard, Budget: classes.SkillBudget{First: 25, PerLevel: 10},
-			Armour: []classes.SkillArmour{{Code: "none", Column: "none"}, {Code: "leather"}},
+			Armour: []classes.SkillArmour{
+				{Code: "none", Column: "none"}, {Code: "leather"}, {Code: "padded_studded", Column: "padded_studded_leather"},
+				{Code: "elven_chain", Column: "elven_chain"}, {Code: "metal", Column: "elven_chain", Extra: -5},
+				{Code: "none_allowed", Column: "padded_studded_leather"},
+			},
 		}},
 		classes.Feature{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 3}},
 	)

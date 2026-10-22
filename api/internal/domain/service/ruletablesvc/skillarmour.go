@@ -1,6 +1,10 @@
 package ruletablesvc
 
-import "github.com/ceffo/critical/api/internal/domain/classes"
+import (
+	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
+)
 
 // The armour a thief's or a bard's skills read (ADR 0033 step 14, amending
 // ADR 0030 steps 1, 17 and 18): the worn body armour's PHB Table 29 column,
@@ -26,9 +30,11 @@ var SkillColumns = []string{ColumnNone, ColumnLeather, ColumnPaddedStudded, Colu
 // (ADR 0040 step 3): the skill armour the skills read when the character wears
 // a body armour of Table 29 column column ("" when it wears none: the none
 // column, PHB p.39, bracers and cloaks included). The params' entry for the
-// column names the Table 29 row it reads; a column with no entry reads the
-// none_allowed entry (the worst column, not chosen: PHB chapter 3's
-// multi-class reading). A shield is no body armour: it changes no skill. ""
+// column names the Table 29 row it reads (none_allowed, the worst column,
+// for an armour the class may not wear: PHB chapter 3's multi-class
+// reading, and for a column outside SkillColumns, which an item cannot
+// store). Every column has an entry: CheckDefinitions refuses the params at
+// start otherwise, so no entry is ever missing. A shield is no body armour: it changes no skill. ""
 // without rogue_skills.
 func SkillArmorFor(rs *classes.RogueSkills, column string) string {
 	if rs == nil {
@@ -37,10 +43,10 @@ func SkillArmorFor(rs *classes.RogueSkills, column string) string {
 	if column == "" {
 		column = ColumnNone
 	}
-	a, ok := rs.SkillArmourFor(column)
-	if !ok {
-		a, _ = rs.SkillArmourFor(ColumnNoneAllowed)
+	if !slices.Contains(SkillColumns, column) {
+		column = ColumnNoneAllowed // no Table 29 column: the worst one
 	}
+	a, _ := rs.SkillArmourFor(column)
 	return skillArmorOf(a)
 }
 

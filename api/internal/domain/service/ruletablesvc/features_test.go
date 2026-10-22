@@ -70,7 +70,9 @@ func addClass(id, like, progression string, fs ...classes.Feature) func([]classe
 
 // ADR 0040 step 8: the start-up check refuses a spell_progression naming no
 // slot table, a feature table param naming another table than its kind's,
-// and an unknown rogue_skills set; the fixture's five classes pass.
+// an unknown rogue_skills set, and a rogue_skills armour list missing a
+// Table 29 column (it would read as leather, the best column); the fixture's
+// five classes pass, and a full list with a known set passes.
 func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 	require.NoError(t, ruletablesvc.CheckDefinitions(cataloguetest.Definitions(t)), "the fixture's definitions")
 	for _, tc := range []struct {
@@ -82,13 +84,29 @@ func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 		{"backstab reading an unknown table", addClass("test_cutthroat", "fighter", "", classes.Feature{Kind: classes.KindBackstab, Table: "test_table"})},
 		{"melee_attacks_per_round reading the turning table", addClass("test_brute", "fighter", "", classes.Feature{Kind: classes.KindMeleeAttacksPerRound, Table: ruletablesvc.TableTurningUndead})},
 		{"an unknown skill set", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-			Set: "test_set", Armour: []classes.SkillArmour{{Code: "none", Column: "none"}},
+			Set: "test_set", Armour: allColumns(),
+		}})},
+		{"rogue_skills without the none_allowed and the metal entries", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
+			Set: ruletablesvc.SkillSetThief, Armour: allColumns()[:4],
 		}})},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Error(t, ruletablesvc.CheckDefinitions(editedDefs(t, tc.edit)))
 		})
 	}
+	require.NoError(t, ruletablesvc.CheckDefinitions(editedDefs(t, addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
+		Set: ruletablesvc.SkillSetThief, Armour: allColumns(),
+	}}))), "every column listed")
+}
+
+// allColumns is a rogue_skills armour list with one entry per Table 29
+// column, in SkillColumns order (none_allowed and metal last).
+func allColumns() []classes.SkillArmour {
+	out := make([]classes.SkillArmour, 0, len(ruletablesvc.SkillColumns))
+	for _, c := range ruletablesvc.SkillColumns {
+		out = append(out, classes.SkillArmour{Code: c})
+	}
+	return out
 }
 
 // ADR 0040 step 1.9 and 0030 steps 8 and 13: the slot table is the one the

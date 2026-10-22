@@ -712,19 +712,22 @@ test("journal split: drag resizes, click toggles, kept across reload", async ({
   const before = await heightOf(slot);
   expect(before).toBeGreaterThanOrEqual(224);
 
-  // Drag the handle up by 120 px: the journal grows by as much, the band shrinks.
+  // Drag the handle down by 120 px: the journal shrinks by as much, the band grows. Down, not up:
+  // the default band is only as tall as its content, so the journal starts large and an upward
+  // drag has little room before the band's minimum (NOW_MIN_PX).
   const h = (await handle.boundingBox())!;
   await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
   await page.mouse.down();
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 60, {
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 60, {
     steps: 4,
   });
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 120, {
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 120, {
     steps: 4,
   });
   await page.mouse.up();
   const dragged = await heightOf(slot);
-  expect(Math.abs(dragged - (before + 120))).toBeLessThanOrEqual(2);
+  expect(Math.abs(dragged - (before - 120))).toBeLessThanOrEqual(2);
+  expect(dragged).toBeGreaterThanOrEqual(224);
   // Keyboard: ArrowDown shrinks it by one step.
   await handle.focus();
   await page.keyboard.press("ArrowDown");

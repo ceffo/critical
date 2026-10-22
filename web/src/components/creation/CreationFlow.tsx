@@ -7,6 +7,7 @@ import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { holdPath } from "@/lib/navigation";
+import type { NewCharacter } from "@/types/character";
 import { formatHeight, formatWeight, unitsFor } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
 import { useCreationOptions } from "@/lib/useCreationOptions";
@@ -28,6 +29,7 @@ import {
   classOf,
   draftSpellbook,
   draftXp,
+  exceptionalOffered,
   hasSpellbook,
   refusalError,
   settle,
@@ -149,10 +151,14 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     data: CreationDraft | null;
     failed: FieldError | null;
   } | null>(null);
-  // The 18/xx is sent only when the server's last answer for the class offers it (ADR 0030 step 9
-  // through the class's features): the form has no rule of its own.
-  const offersExceptional =
-    answered?.cls === draft.cls && answered.data?.exceptionalStrength === true;
+  // The 18/xx is sent only when the server's answer for the draft's class, race and Strength
+  // offers it (ADR 0030 step 9 through the class's features): the form has no rule of its own,
+  // and an answer about a Strength since changed does not count.
+  const offersExceptional = exceptionalOffered(
+    answered ? (JSON.parse(answered.key) as NewCharacter) : null,
+    answered?.data?.exceptionalStrength === true,
+    draft,
+  );
   const built = options
     ? buildBody(options, draft, xp, i18n.language, offersExceptional)
     : null;

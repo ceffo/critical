@@ -14,6 +14,7 @@ import {
   buildBody,
   draftSpellbook,
   emptyPlacement,
+  exceptionalOffered,
   initialPlacement,
   isPlaced,
   mergeDraft,
@@ -138,7 +139,6 @@ describe("buildBody", () => {
       {
         class: "bard",
         races: ["half_elf"],
-        exceptionalStrengthRaces: [],
         skills: ["climb_walls"],
         alignments: ["neutral_good"],
       },
@@ -206,6 +206,39 @@ describe("buildBody", () => {
       code: "out_of_range",
     });
     expect(bad.body.strExceptional).toBe(0);
+  });
+  // ADR 0030 step 9: the answer's offer counts only for the class, race and Strength it answered.
+  // A fighter at Str 18 with 18/50 entered, Strength changed to 17: before the next answer the
+  // body (a draft ask, or a Créer) carries no 18/xx, so no not_allowed refusal comes back.
+  it("sends no 18/xx on an answer about another Strength, race or class", () => {
+    const fighter: FlowDraft = {
+      ...draft,
+      cls: "fighter",
+      race: "human",
+      scores: { ...draft.scores, str: "18" },
+      strExceptional: "50",
+    };
+    const asked = { class: "fighter", raceCode: "human", str: 18 };
+    expect(exceptionalOffered(asked, true, fighter)).toBe(true);
+    expect(exceptionalOffered(asked, false, fighter)).toBe(false);
+    expect(exceptionalOffered(null, true, fighter)).toBe(false);
+    const weaker = { ...fighter, scores: { ...fighter.scores, str: "17" } };
+    expect(exceptionalOffered(asked, true, weaker)).toBe(false);
+    expect(
+      buildBody(
+        options,
+        weaker,
+        "0",
+        "fr",
+        exceptionalOffered(asked, true, weaker),
+      ).body.strExceptional,
+    ).toBe(0);
+    expect(
+      exceptionalOffered(asked, true, { ...fighter, race: "halfling" }),
+    ).toBe(false);
+    expect(exceptionalOffered(asked, true, { ...fighter, cls: "mage" })).toBe(
+      false,
+    );
   });
   it("reads the figures in the language's units", () => {
     const fr = {
@@ -281,7 +314,6 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       {
         class: "thief",
         races: ["elf"],
-        exceptionalStrengthRaces: [],
         skills: ["open_locks", "pick_pockets"],
       },
     ],
@@ -573,7 +605,6 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
   ) => ({
     class: name,
     races: [],
-    exceptionalStrengthRaces: [],
     skills: [],
     alignments: [],
     spellbook,

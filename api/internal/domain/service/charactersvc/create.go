@@ -563,9 +563,6 @@ func (s *service) Module() domain.Module {
 type ClassOption struct {
 	Class string
 	Races []string
-	// ExceptionalStrengthRaces are the races of Races that enter an 18/xx
-	// at Strength 18 with the class (ADR 0030 step 9), empty for none.
-	ExceptionalStrengthRaces []string
 	// Skills are the skills the class enters points in (steps 17 and 18, in
 	// ruletablesvc.SkillsOf order); empty for a class without skill
 	// points.
@@ -766,7 +763,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
+			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
 			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(def),
 		}
@@ -790,9 +787,6 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			}
 			if ok {
 				opt.Races = append(opt.Races, race)
-				if ruletablesvc.ExceptionalStrengthAllowed(def, race, 18) {
-					opt.ExceptionalStrengthRaces = append(opt.ExceptionalStrengthRaces, race)
-				}
 			}
 		}
 		out.Classes = append(out.Classes, opt)

@@ -544,16 +544,16 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
 		// catalogue's race order.
 		Classes: []charactersvc.ClassOption{
-			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{"dwarf", "gnome", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills,
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: ruletablesvc.ThiefSkills,
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 			{
-				Class: "bard", Races: []string{"half_elf", "human"}, ExceptionalStrengthRaces: []string{},
+				Class: "bard", Races: []string{"half_elf", "human"},
 				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},

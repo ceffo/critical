@@ -433,14 +433,10 @@ export interface ProficiencyOption {
 
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
-  /**
-   * `exceptionalStrengthRaces`: the races that enter an 18/xx at Strength 18 with the class (ADR
-   * 0030 step 9; a halfling fighter does not).
-   */
+  /** The 18/xx is not here: the draft answers it (`CreationDraft.exceptionalStrength`). */
   classes: {
     class: string;
     races: string[];
-    exceptionalStrengthRaces: string[];
     /** The skills the class enters points in (ADR 0030 steps 17 and 18); empty for none. */
     skills: string[];
     /** The alignment codes the class admits (ADR 0032 step 2). */

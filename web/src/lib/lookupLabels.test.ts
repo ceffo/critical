@@ -234,4 +234,14 @@ describe("schoolLabel", () => {
     expect(schoolLabel(t, "Chronomancy")).toBe("Chronomancy");
     expect(schoolLabel(t, "")).toBe("");
   });
+
+  // The spell pickers (saving throw, spell received) carry the catalogue's lowercase class code.
+  it("words the catalogue's class codes in both languages", async () => {
+    const en = await tFor("en");
+    const fr = await tFor("fr");
+    expect(classLabel(en, "wizard")).toBe("Wizard");
+    expect(classLabel(en, "priest")).toBe("Priest");
+    expect(classLabel(fr, "wizard")).toBe("Magicien");
+    expect(classLabel(fr, "priest")).toBe("Prêtre");
+  });
 });

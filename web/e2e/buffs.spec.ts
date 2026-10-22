@@ -2,6 +2,7 @@ import { test, expect, snap } from "./fixtures";
 import {
   addBuff,
   apiCall,
+  chooseLanguage,
   combatLog,
   currentHp,
   buffBadge,
@@ -358,4 +359,26 @@ test("stopping Polymorph Self asks how it ended; ended by me heals the d12 (Fren
     await page.setViewportSize({ width: w, height: h });
     await snap(page, `end-cause-journal-${w}`);
   }
+});
+
+// The received-spell picker words each spell's class (never the catalogue code) in en and fr.
+test("the received-spell picker shows the class name, localized (en and fr)", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  const popover = await openAddEffect(page, "Received spell");
+  await popover.getByRole("searchbox").fill("comma");
+  const option = popover.locator("li", { hasText: "Command" }).first();
+  await expect(option).toContainText("Priest");
+  await expect(option).not.toContainText("priest");
+  await chooseLanguage(page, "fr");
+  // Switching language closes the popover: reopen it on its Received spell tab (the first).
+  await page.getByTestId("add-effect").click();
+  const frPopover = page.getByTestId("add-effect-popover");
+  await frPopover.getByRole("tab").first().click();
+  await frPopover.getByRole("searchbox").fill("comma");
+  await expect(frPopover.locator("li").first()).toContainText("Prêtre");
+  await expect(frPopover.locator("li").first()).not.toContainText("priest");
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await snap(page, "received-picker-fr");
 });

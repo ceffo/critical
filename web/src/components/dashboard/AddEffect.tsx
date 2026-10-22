@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { NO_QUERY, searchSpells } from "@/api/spells_db";
 import { localized } from "@/i18n/localized";
+import { classLabel } from "@/lib/lookupLabels";
 import { modeText } from "@/lib/spellMode";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
@@ -183,7 +184,7 @@ function ReceiveSpell({ onDone }: { onDone: () => void }) {
                   {name}
                   <span className="text-muted-foreground tabular-nums">
                     {" "}
-                    · {c.class} {c.level}
+                    · {classLabel(t, c.class)} {c.level}
                   </span>
                 </span>
                 {c.modes && c.modes.length > 0 && (

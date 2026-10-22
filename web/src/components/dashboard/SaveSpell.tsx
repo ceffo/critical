@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/popover";
 import { NO_QUERY, searchSpells } from "@/api/spells_db";
 import { localized } from "@/i18n/localized";
+import { classLabel } from "@/lib/lookupLabels";
 import { useSpellName } from "@/i18n/spellName";
 import type { Spell } from "@/types/spells";
 import { fieldClass } from "./fieldStyles";
@@ -157,7 +158,7 @@ export function SaveSpell({
                     <span className="break-words">{name}</span>
                     <span className="text-muted-foreground tabular-nums">
                       {" "}
-                      · {c.class} {c.level}
+                      · {classLabel(t, c.class)} {c.level}
                     </span>
                   </button>
                 </li>

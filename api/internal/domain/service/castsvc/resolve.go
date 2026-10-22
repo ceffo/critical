@@ -210,8 +210,14 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, group string, onOt
 	}
 	for _, ability := range sortedKeys(e.Buff.AbilityGain) {
 		g := e.Buff.AbilityGain[ability]
-		if onOther && (len(g.ByGroup) > 0 || len(g.MaxByGroup) > 0) {
+		byGroup := len(g.ByGroup) > 0 || len(g.MaxByGroup) > 0
+		if onOther && byGroup {
 			continue
+		}
+		// A by-group gain needs the class group; a gain that is the same
+		// for everybody never does.
+		if byGroup && group == "" {
+			return nil, nil, fmt.Errorf("spell %q: a by-group gain needs the character's class group", e.ID)
 		}
 		f := g.Gain
 		if gf, ok := g.ByGroup[group]; ok {

@@ -21,7 +21,7 @@ import (
 func thief() *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Str: 16, Dex: 17, Class: "thief", Race: "halfling",
-		Derived: charactersvc.Derived{RealizedLevel: 5, THAC0: 18, Backstab: 3},
+		Derived: charactersvc.Derived{RealizedLevel: 5, Group: "rogue", THAC0: 18, Backstab: 3},
 	}
 }
 

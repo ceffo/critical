@@ -21,7 +21,7 @@ import (
 func fighter() *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Str: 18, StrExceptional: 50, Dex: 17, Class: "fighter", Race: "human",
-		Derived: charactersvc.Derived{RealizedLevel: 13, THAC0: 8, Specializes: true},
+		Derived: charactersvc.Derived{RealizedLevel: 13, Group: "warrior", THAC0: 8, Specializes: true},
 	}
 }
 

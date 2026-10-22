@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -61,17 +62,35 @@ func TestRead_Refusals(t *testing.T) {
 		{"item negative count", `[{"id":"a","name":{"en":"A"},"behaviour":"stock","count":-1}]`, "negative count", readItems},
 		{"item above max", `[{"id":"a","name":{"en":"A"},"behaviour":"daily","count":3,"max_count":2}]`, "exceeds max_count", readItems},
 		{"bard skill duplicate", `{"bard_skills":[{"id":"a","percent":5},{"id":"a","percent":6}]}`, "duplicate id", readSkills},
-		{"character pick twice", `{"name":"A","proficiencies":[{"id":"a","slots":1},{"id":"a","slots":2}]}`, `proficiency "a" twice`, readCharacter},
-		{"character pick no slot", `{"name":"A","proficiencies":[{"id":"a","slots":0}]}`, "at least 1 slot", readCharacter},
-		{"character pick no id", `{"name":"A","proficiencies":[{"slots":1}]}`, "id is required", readCharacter},
+		{"character pick twice", `{"name":"A","class":"bard","race":"human","proficiencies":[{"id":"a","slots":1},{"id":"a","slots":2}]}`, `proficiency "a" twice`, readCharacter},
+		{"character pick no slot", `{"name":"A","class":"bard","race":"human","proficiencies":[{"id":"a","slots":0}]}`, "at least 1 slot", readCharacter},
+		{"character pick no id", `{"name":"A","class":"bard","race":"human","proficiencies":[{"slots":1}]}`, "id is required", readCharacter},
 		{"bard skill above 100", `{"bard_skills":[{"id":"a","percent":101}]}`, "outside 0-100", readSkills},
-		{"character race not a PHB race code", `{"name":"A","race":"Half-Elf"}`, `race "Half-Elf" is not one of`, readCharacter},
+		{"character without a class", `{"name":"A","race":"human"}`, "class is required", readCharacter},
+		{"character without a race", `{"name":"A","class":"bard"}`, "race is required", readCharacter},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			assert.ErrorContains(t, c.read(write(t, c.body)), c.want)
 		})
 	}
+}
+
+// ADR 0040 step 9: the seed's class and race must be ones the catalogue
+// defines.
+func TestCheckDefinitions_Refusals(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	cases := []struct{ name, class, race, want string }{
+		{"race not a catalogue race code", "bard", "Half-Elf", `race "Half-Elf" is not one of`},
+		{"class not a catalogue class", "ranger", "human", `class "ranger" is not one of`},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			ch := seedfile.Character{Name: "A", Class: c.class, Race: c.race}
+			assert.ErrorContains(t, ch.CheckDefinitions(defs), c.want)
+		})
+	}
+	assert.NoError(t, seedfile.Character{Name: "A", Class: "bard", Race: "half_elf"}.CheckDefinitions(defs))
 }
 
 func readWeapons(p string) error   { _, err := seedfile.ReadWeapons(p); return err }

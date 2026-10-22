@@ -10,6 +10,7 @@
           "value": 1
         }
       ],
+      "mindAffecting": false,
       "target": 14,
       "rolledPassed": false,
       "adjustment": 2,
@@ -32,6 +33,7 @@
           "value": 1
         }
       ],
+      "mindAffecting": false,
       "target": 14,
       "rolledPassed": false,
       "adjustment": 0,
@@ -55,6 +57,7 @@
           "value": 1
         }
       ],
+      "mindAffecting": false,
       "target": 14,
       "rolledPassed": false,
       "adjustment": 0,

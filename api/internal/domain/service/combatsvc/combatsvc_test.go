@@ -162,7 +162,7 @@ func TestResolveSavingThrow(t *testing.T) {
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.records()
 
-			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category)
+			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, tt.category, combatsvc.SaveOptions{})
 			require.NoError(t, err)
 			assert.Equal(t, int64(42), res.LogEntryID)
 			assert.Equal(t, string(tt.category), res.Category)
@@ -210,7 +210,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil).Once()
 		f.records()
 
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveRodStaffWand)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveRodStaffWand, combatsvc.SaveOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []combatsvc.BreakdownModifier{
 			{Kind: string(combatsvc.ModRace), Detail: "dwarf", Value: 4},
@@ -226,7 +226,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f.dice.EXPECT().RollD20().Return(9).Once()
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
 		f.records()
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 		require.NoError(t, err)
 		assert.Equal(t, []combatsvc.BreakdownModifier{{Kind: string(combatsvc.ModRace), Detail: "dwarf", Value: 5}}, res.Modifiers)
 		assert.Equal(t, 14, res.RollTotal)
@@ -237,7 +237,7 @@ func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
 		f.dice.EXPECT().RollD20().Return(9).Once()
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Once()
 		f.records()
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveParaPoison)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveParaPoison, combatsvc.SaveOptions{})
 		require.NoError(t, err)
 		assert.Empty(t, res.Modifiers)
 		assert.Equal(t, 11, res.Target)
@@ -268,7 +268,7 @@ func TestResolveSavingThrow_NaturalOneAndTwentyArePlain(t *testing.T) {
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(mods, nil)
 			f.records()
 
-			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+			res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantHit, res.Passed)
 			assert.Equal(t, tt.wantTotal, res.Total, "against target 14")
@@ -283,7 +283,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f := newFixture(t)
 		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(nil, domain.ErrCharacterNotFound)
 
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 		assert.Nil(t, res)
 		assert.True(t, errors.Is(err, domain.ErrCharacterNotFound))
 	})
@@ -294,14 +294,14 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f.dice.EXPECT().RollD20().Return(10)
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
 
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 		assert.Nil(t, res)
 		assert.True(t, errors.Is(err, boom))
 	})
 
 	t.Run("unknown category", func(t *testing.T) {
 		f := newFixture(t) // no call reaches a port
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, "fire")
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, "fire", combatsvc.SaveOptions{})
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
 	})
@@ -313,7 +313,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 
-		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell)
+		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, boom)
 	})

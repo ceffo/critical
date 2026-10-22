@@ -101,11 +101,14 @@ type IntelligenceRow struct {
 }
 
 // WisdomRow is PHB Table 5: the bonus spell levels this score adds (not
-// cumulative) and the chance of spell failure.
+// cumulative), the chance of spell failure and the magical defence
+// adjustment (ADR 0006 step 9.1: a signed bonus on saves against magic that
+// attacks the mind).
 type WisdomRow struct {
 	WisMin, WisMax int
 	BonusSpells    []int
 	SpellFailure   int
+	MagicDefence   int
 }
 
 // ConSaveBonusRow is PHB Table 9.

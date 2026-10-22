@@ -165,8 +165,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    effect's by-group entry (an ability gain's `by_group` die and `max_by_group` cap, the
    spell-effects schema; Strength: warrior 1d8, priest and rogue 1d6, wizard 1d4): the group of the
    character the spell is on, whether he cast it, received it or added it from the lookup. A spell
-   cast on someone else rolls the shown gain with the caster's group (the app knows no other
-   character's class yet); it is not applied, and the receiver's own Receive uses his group. A
+   cast on someone else rolls no by-group gain on the caster's side (the app knows no other
+   character's class yet, and a number from the caster's group would mean nothing); the cast is still
+   logged with its target, and the receiver's own Receive rolls with his group. A
    by-group effect on a class with no group is refused before anything is rolled. _(Added
    2026-10-21 with the fix of the cast service, which used the rogue's entry for every class.)_
 
@@ -176,7 +177,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    (charactersvc); `TestCast_Step2_StrengthRollsTheCastersGroupDie`,
    `TestEffects_Step2_ByGroupFollowsTheCharactersClass`,
    `TestEffects_Step2_UnknownClassRefusesAByGroupEffect`,
-   `TestCast_Step2_StrengthOnAnotherShowsTheCastersRollAppliesNothing` (castsvc).
+   `TestCast_Step2_StrengthOnAnotherRollsNoGainOnTheCastersSide` (castsvc).
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1.2 and 7, on implementation: the group is a field of the class definition, not the `classGroups` map, and a group id is data too: Table 53 and 60 are rows keyed by group, no `switch` on a group code)_
 3. **Level from XP.** The target level (step 7) is the highest level `L` from 1 to 20 whose
    threshold `T(L)` in the

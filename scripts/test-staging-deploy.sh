@@ -48,6 +48,10 @@ STUB
 cat > "$stubs/gate" <<STUB
 #!/bin/sh
 echo "gate \$*" >> "$calls"
+# gate-seq: one exit code per call, first line first (a crash-looping app, then a live gate)
+if [ -s "$tmp/gate-seq" ]; then
+    rc=\$(head -n1 "$tmp/gate-seq"); sed -i 1d "$tmp/gate-seq"; exit "\$rc"
+fi
 [ ! -f "$tmp/gate-fails" ]
 STUB
 chmod +x "$stubs/fly" "$stubs/smoke" "$stubs/gate"
@@ -147,6 +151,24 @@ touch "$tmp/gate-fails"; run_deploy A=1
 [ "$status" != 0 ] || fail "public app: exit 0 with the gate failing"
 rm -f "$tmp/gate-fails"
 echo "$private" > "$tmp/ips"
+
+# --- a crash-looping staging (public address, the gate check exits 3: nothing served) does not block the
+# next deploy; the gate must still be live after it, and an app that serves without the gate is still refused ---
+echo "$public" > "$tmp/ips"
+printf '3\n0\n' > "$tmp/gate-seq"
+run_deploy A=1
+[ "$status" = 0 ] || fail "crash-looping staging: the next deploy was refused: $out"
+grep -q '^fly deploy' "$calls" || fail "crash-looping staging: no deploy"
+printf '3\n3\n' > "$tmp/gate-seq"
+run_deploy A=1
+[ "$status" != 0 ] || fail "after the deploy the app still serves nothing: exit 0, the new release must hold the gate"
+printf '3\n1\n' > "$tmp/gate-seq"
+run_deploy A=1
+[ "$status" != 0 ] || fail "after the deploy the gate is not live: exit 0"
+printf '1\n' > "$tmp/gate-seq"
+run_deploy A=1
+[ "$status" != 0 ] && ! grep -q '^fly deploy' "$calls" || fail "an app that answers without the gate was deployed over"
+echo "$private" > "$tmp/ips"; : > "$tmp/gate-seq"
 
 # --- machines on two digests are not one release ---
 echo "$split" > "$tmp/machines"

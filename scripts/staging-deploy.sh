@@ -37,8 +37,10 @@ app="$(sed -n 's/^app = "\(.*\)"$/\1/p' "$config")"
 [ -n "$app" ] || { echo "staging-deploy: no app in $config" >&2; exit 1; }
 image="registry.fly.io/$app:$sha"
 
-# Before: a public IP is allowed only while the login gate is live (no bypass).
-FLY="$fly" "$here/fly-access-check.sh" "$app"
+# Before: a public IP is allowed only while the login gate is live (no bypass), or while the app serves
+# nothing at all (a crash-looping release must not block the deploy that replaces it); after the deploy the
+# gate must be live, unconditionally.
+UNSERVED_OK=1 FLY="$fly" "$here/fly-access-check.sh" "$app"
 
 # The image the machines run now, to put back when the new one fails (a release that crash-loops must not
 # leave staging down). Empty when staging has no machine yet.

@@ -755,6 +755,11 @@ read an empty token), and a calling job cannot have an environment. The job pass
      public address must have its Flycast one; an app with a public address must pass the gate check on its
      public URL ("Going public"), or the job fails before deploying (after it, once the new release runs, the
      deploy is reported failed). The former `PUBLIC_ACCESS_OPTION` variable is gone.
+     One exception, **before** the deploy only (`UNSERVED_OK=1`): an app with a public address that serves
+     nothing at all (`scripts/gate-check.sh` exits 3: `/api/health` never answered 200 and the last answer
+     was no response or a 5xx, as with a crash-looping release) passes, since it exposes no content and
+     the deploy that replaces it must be able to run. An app that answers without the gate is still refused,
+     and the check after the deploy has no exception.
   2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-hit-staging:<sha>` (always the
      commit's own build, with or without a version: runs of different commits can compute one version, and
      `:v<version>` then names whichever pushed last); the machine is started if it was stopped. The image

@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -27,7 +28,7 @@ import (
 // catalogue keys in order, checked against the catalogue by the caller; each
 // entry's origin is starting, ADR 0030 step 20.5). Without a character file nothing owns the starting set, so it is
 // not loaded.
-func (s *Store) Seed(ctx context.Context, seedsDir string, keys []string, equipment ruletablesvc.Equipment) error {
+func (s *Store) Seed(ctx context.Context, seedsDir string, keys []string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
 	return s.InTx(ctx, func(context.Context) error {
 		t := s.t
 		owner, ok, err := t.seedCharacter(seedfile.Path(seedsDir, seedfile.CharacterFile))
@@ -41,7 +42,7 @@ func (s *Store) Seed(ctx context.Context, seedsDir string, keys []string, equipm
 			seedfile.Path(seedsDir, seedfile.WeaponsFile), equipment.Weapons); err != nil {
 			return fmt.Errorf("seed equipment: %w", err)
 		}
-		if err := t.carrySkillArmour(owner, equipment.Armour); err != nil {
+		if err := t.carrySkillArmour(owner, equipment.Armour, defs); err != nil {
 			return fmt.Errorf("seed skill armour: %w", err)
 		}
 		if err := t.seedSkills(owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
@@ -205,7 +206,7 @@ func (s *Store) ProficiencyDescriptions(context.Context) ([]catalogue.Proficienc
 // skills (none: leather), worn, as the database's seed does (ADR 0033 step
 // 14, itemsvc.CarrySkillArmour). Without the catalogue's armours (before
 // format 7) it wears none.
-func (t *tables) carrySkillArmour(owner int64, armours []ruletablesvc.Armour) error {
+func (t *tables) carrySkillArmour(owner int64, armours []ruletablesvc.Armour, defs *classes.Registry) error {
 	if len(armours) == 0 {
 		return nil
 	}
@@ -216,7 +217,8 @@ func (t *tables) carrySkillArmour(owner int64, armours []ruletablesvc.Armour) er
 		}
 	}
 	slices.SortFunc(pieces, func(a, b itemsvc.Item) int { return cmp.Compare(a.Position, b.Position) })
-	co, err := itemsvc.CarrySkillArmour(t.characters[owner].Class, t.skillArmors[owner], pieces, armours)
+	def, _ := defs.Class(t.characters[owner].Class) // an undefined class lists no feature
+	co, err := itemsvc.CarrySkillArmour(def, t.skillArmors[owner], pieces, armours)
 	if err != nil {
 		return err
 	}

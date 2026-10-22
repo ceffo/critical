@@ -5,7 +5,6 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
@@ -106,9 +105,8 @@ func (s *service) startingBook(c *Character, ids []string) (*StartingSpellbook, 
 		}
 		return nil, nil, nil
 	}
-	classMax, _ := ruletablesvc.SpellbookMaxLevel(c.Class)
 	out := &StartingSpellbook{
-		ClassMaxSpellLevel: classMaxAt(c.Derived, classMax), IntMaxSpellLevel: rules.IntMaxSpellLevel,
+		ClassMaxSpellLevel: classMaxAt(c.Derived, rules.ClassMaxSpellLevel), IntMaxSpellLevel: rules.IntMaxSpellLevel,
 		MaxSpellsPerLevel: rules.MaxSpellsPerLevel, NoMaximum: rules.NoMaximum, Levels: []SpellLevelCount{},
 	}
 	counts := map[int]int{}

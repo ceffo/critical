@@ -334,14 +334,18 @@ func (s *service) PreviewPoints(ctx context.Context, characterID int64, points m
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
 func (s *service) withPoints(char *charactersvc.Character, draft map[string]int) error {
-	next, err := skills.ValidSkillPoints(char.Class, draft)
+	def, err := s.classDef(char.Class)
 	if err != nil {
 		return err
 	}
-	if err := skills.SkillPointsWithinBudget(char.Class, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
+	next, err := skills.ValidSkillPoints(def, draft)
+	if err != nil {
 		return err
 	}
-	if err := char.Derived.SetSkillFigures(s.tables, char, next); err != nil {
+	if err := skills.SkillPointsWithinBudget(def, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
+		return err
+	}
+	if err := char.Derived.SetSkillFigures(s.tables, def, char, next); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
 	char.SkillPoints = next

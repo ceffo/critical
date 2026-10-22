@@ -1,7 +1,8 @@
 // Package classes holds the class, group and race definitions of the
 // catalogue (format 11, ADR 0040 steps 1, 2 and 5) and the lookups that
 // read them: a class's group, prime requisites (the XP bonus reads them, xpsvc), ability minimums, allowed
-// alignments and experience thresholds. It is pure: the catalogue adapter
+// alignments, experience thresholds, spell progression and feature list (the
+// lookup of step 5: Class.Feature). It is pure: the catalogue adapter
 // builds a Registry with New and the composition root hands it to the
 // readers. No class, group or race id is written here (ADR 0040 step 10):
 // every id comes from the data.
@@ -36,9 +37,9 @@ type AbilityMinimum struct {
 	Min     int
 }
 
-// Class is one class definition (ADR 0040 step 1). The feature list, the
-// equipment and the hit dice are read by their own readers as they move
-// onto the data (step 11.3); this holds the fields read so far.
+// Class is one class definition (ADR 0040 step 1). The equipment and the
+// hit dice are read by their own readers as they move onto the data (step
+// 11.3); this holds the fields read so far.
 type Class struct {
 	ID   string
 	Name localized.Text
@@ -53,6 +54,12 @@ type Class struct {
 	Alignments []string
 	// Experience[l-1] is the XP that reaches level l, 1..MaxLevel (step 1.7).
 	Experience []int
+	// SpellProgression names the class's spell slot table (step 1.9), ""
+	// for a class without spells.
+	SpellProgression string
+	// Features are the class's feature list (steps 1.11 and 3), in catalogue
+	// order; read through Feature (step 5).
+	Features []Feature
 }
 
 // Group is one class group definition (ADR 0040 steps 1.2 and 7).
@@ -219,10 +226,15 @@ func checkClass(c Class, groups []string) (Class, error) {
 			return Class{}, fmt.Errorf("experience: level %d: %d XP is not above level %d", i+1, c.Experience[i], i)
 		}
 	}
+	features, err := checkFeatures(c.Features)
+	if err != nil {
+		return Class{}, err
+	}
 	return Class{
 		ID: c.ID, Name: c.Name.Clean(), Group: c.Group,
 		PrimeRequisites: slices.Clone(c.PrimeRequisites), AbilityMinimums: mins,
 		Alignments: aligns, Experience: slices.Clone(c.Experience),
+		SpellProgression: c.SpellProgression, Features: features,
 	}, nil
 }
 
@@ -347,6 +359,11 @@ func (c Class) clone() Class {
 	c.AbilityMinimums = slices.Clone(c.AbilityMinimums)
 	c.Alignments = slices.Clone(c.Alignments)
 	c.Experience = slices.Clone(c.Experience)
+	fs := make([]Feature, len(c.Features))
+	for i, f := range c.Features {
+		fs[i] = f.clone()
+	}
+	c.Features = fs
 	return c
 }
 

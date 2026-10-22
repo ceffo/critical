@@ -40,7 +40,7 @@ func TestSkillPointsFigures_Steps17And18_FormulaTermsAtLevels(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, ok := ruletablesvc.SkillPointsFigures(tt.class, tt.level, tt.points)
+			got, ok := ruletablesvc.SkillPointsFigures(rogue(t, tt.class), tt.level, tt.points)
 			assert.True(t, ok)
 			assert.Equal(t, tt.want, got)
 		})
@@ -49,8 +49,8 @@ func TestSkillPointsFigures_Steps17And18_FormulaTermsAtLevels(t *testing.T) {
 
 // A class without skill points, and a level under 1, have no budget.
 func TestSkillPointsFigures_NoBudget(t *testing.T) {
-	_, ok := ruletablesvc.SkillPointsFigures("fighter", 5, nil)
+	_, ok := ruletablesvc.SkillPointsFigures(rogue(t, "fighter"), 5, nil)
 	assert.False(t, ok)
-	_, ok = ruletablesvc.SkillPointsFigures("thief", 0, nil)
+	_, ok = ruletablesvc.SkillPointsFigures(rogue(t, "thief"), 0, nil)
 	assert.False(t, ok)
 }

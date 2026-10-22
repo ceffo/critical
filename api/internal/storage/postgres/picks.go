@@ -160,7 +160,7 @@ const specializationMigration = "027_weapon_specialization_picks.sql"
 // whose picks already hold a specialization is left as it is, so a rerun changes nothing. Nothing is refused (step
 // 16.4): an overspend shows the slots_over_budget warning. The flags stay in the column, read by
 // nothing.
-func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
+func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier, defs *classes.Registry) error {
 	rows, err := q.SpecializedWeaponTypes(ctx)
 	if err != nil {
 		return fmt.Errorf("list specialized weapons: %w", err)
@@ -196,7 +196,8 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier) error {
 		if len(types) == 0 {
 			continue
 		}
-		if !ruletablesvc.Specializes(classOf[c.ID]) {
+		def, _ := defs.Class(classOf[c.ID]) // an undefined class lists no feature
+		if !ruletablesvc.Specializes(def) {
 			slog.Warn("migration 027: dropped the specialization of a class that does not specialize",
 				"character", c.ID, "class", classOf[c.ID], "types", types)
 			continue

@@ -84,16 +84,16 @@ func TestAggregate_Step10_4_GatesRead18xxAs18(t *testing.T) {
 
 // ADR 0030 steps 9 and 10: the Strength the sheet shows is a fighter's
 // 18/xx and the 18/xx in effect; BaseStrengthOf gives the warrior's scale to
-// a fighter only.
+// a character whose derived block has exceptional_strength (a fighter) only.
 func TestGetEffectiveStr_Step10_TheFightersPercentile(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).
-		Return(&charactersvc.Character{ID: charID, Class: "fighter", Str: 18, StrExceptional: 50, Derived: charactersvc.Derived{Group: "warrior"}}, nil).Once()
+		Return(&charactersvc.Character{ID: charID, Class: "fighter", Str: 18, StrExceptional: 50, Derived: charactersvc.Derived{Group: "warrior", ExceptionalStrength: true}}, nil).Once()
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{strength(2)}, nil).Once()
 	got, err := f.svc.GetEffectiveStr(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, buffsvc.Strength{Base: 18, Effective: 18, BaseExceptional: 50, EffectiveExceptional: 70}, got)
 
 	assert.False(t, buffsvc.BaseStrengthOf(&charactersvc.Character{Class: "bard", Str: 18, Derived: charactersvc.Derived{Group: "rogue"}}).Warrior)
-	assert.True(t, buffsvc.BaseStrengthOf(&charactersvc.Character{Class: "fighter", Str: 18, Derived: charactersvc.Derived{Group: "warrior"}}).Warrior)
+	assert.True(t, buffsvc.BaseStrengthOf(&charactersvc.Character{Class: "fighter", Str: 18, Derived: charactersvc.Derived{Group: "warrior", ExceptionalStrength: true}}).Warrior)
 }

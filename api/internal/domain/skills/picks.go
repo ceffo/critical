@@ -167,7 +167,7 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 // WeaponProficiencyOf reads a character of class with picks: its specialization (step 9) and
 // its weapon picks against Table 34's penalty from book (step 8).
 func WeaponProficiencyOf(book Book, class string, picks Picks) WeaponProficiency {
-	out := WeaponProficiency{Specialized: SpecializedType(class, picks), Picked: make([]string, 0, len(picks.Weapon))}
+	out := WeaponProficiency{Specialized: SpecializedType(book, class, picks), Picked: make([]string, 0, len(picks.Weapon))}
 	if row, ok := book.SlotRowOf(class); ok {
 		out.Penalty = row.Penalty
 	}
@@ -175,6 +175,13 @@ func WeaponProficiencyOf(book Book, class string, picks Picks) WeaponProficiency
 		out.Picked = append(out.Picked, p.Type)
 	}
 	return out
+}
+
+// specializes reports whether class lists weapon_specialization (ADR 0040 step 3,
+// ruletablesvc.Specializes); false for a class the book does not define.
+func specializes(book Book, class string) bool {
+	def, ok := book.ClassDef(class)
+	return ok && ruletablesvc.Specializes(def)
 }
 
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
@@ -188,8 +195,8 @@ func (p WeaponPick) IsSpecialization() bool {
 // class with picks is specialized in, every weapon of it specialized: the type of its specialization pick when the class specializes
 // (ruletablesvc.Specializes), else "". It needs no derived figure, so a read of the character
 // row alone gives it.
-func SpecializedType(class string, picks Picks) string {
-	if !ruletablesvc.Specializes(class) {
+func SpecializedType(book Book, class string, picks Picks) string {
+	if !specializes(book, class) {
 		return ""
 	}
 	for _, p := range picks.Weapon {
@@ -278,7 +285,7 @@ func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 	weapon := before.Clone().Weapon
 	if picks.Weapon != nil {
 		var err error
-		if weapon, err = validWeaponPicks(class, picks.Weapon, before.Weapon); err != nil {
+		if weapon, err = validWeaponPicks(book, class, picks.Weapon, before.Weapon); err != nil {
 			return Picks{}, err
 		}
 	}
@@ -326,7 +333,7 @@ func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 // weapon type but that before already has is kept too, as the non-weapon pool keeps a stored id
 // the catalogue does not hold (step 16: older data is never dropped). A refusal is a
 // *domain.FieldError on field weapon.<type>. Never nil.
-func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, error) {
+func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]WeaponPick, error) {
 	specialized := false
 	had := map[string]bool{}
 	for _, p := range before {
@@ -347,7 +354,7 @@ func validWeaponPicks(class string, picks, before []WeaponPick) ([]WeaponPick, e
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		case !had[p.Type] && !ruletablesvc.WeaponTypeAllowed(class, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
-		case p.IsSpecialization() && (!ruletablesvc.Specializes(class) || specialized):
+		case p.IsSpecialization() && (!specializes(book, class) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
 		}
 		specialized = specialized || p.IsSpecialization()

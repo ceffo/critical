@@ -2,100 +2,84 @@ package ruletablesvc
 
 import (
 	"fmt"
-	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
-// The bard's skills (ADR 0030 step 18): the four skills of PHB Table 33 from
-// the entered points with the thief's race, Dexterity and armour adjustments
-// (Tables 27 to 29), and the budget of the points. Step 17's machinery
-// (rogueSkills, budget) with the bard's base table, armours and budget.
+// The rogue_skills feature kind (ADR 0040 step 3 on ADR 0030 steps 17 and
+// 18): a skill set's skills from the entered points with the race, Dexterity
+// and armour adjustments (PHB Tables 27 to 29), the set's base table (Table
+// 26 or 33), and the armour entries of the class's params. Which class has
+// which set is the catalogue's: this file reads the params.
 
-// bardSkillClasses are the classes with the four bard skills (step 18).
-var bardSkillClasses = []string{"bard"}
+// Skill set codes, the rogue_skills `set` param (ADR 0040 step 3): the
+// skill list and base rows a set reads (and the check kind it logs, step
+// 3.2).
+const (
+	// SkillSetThief is the eight thieving skills of PHB Table 26.
+	SkillSetThief = "thief"
+	// SkillSetBard is the four bard skills of PHB Table 33.
+	SkillSetBard = "bard"
+)
 
-// ArmorMetal is the bard's "metal armour up to chain mail" (ADR 0030 step 1:
-// chain, ring, scale, hide or brigandine): Table 29's elven chain column
-// plus the extra adjustment of the table's note (BardArmorPenalty), a
-// ruling, not book text.
+// ArmorMetal is the skill armour of the bard's "metal armour up to chain
+// mail" (ADR 0030 step 1): an armour entry with an extra adjustment is its
+// own skill armour, named by its code (SkillArmorFor).
 const ArmorMetal = "metal"
 
-// armorElvenChain is the Table 29 column ArmorMetal reads.
-const armorElvenChain = "elven_chain"
-
-// BardArmors are the armours a bard enters for its skills (step 1): the
-// thief's and ArmorMetal.
-var BardArmors = append(slices.Clone(ThiefArmors), ArmorMetal)
-
-// Bard skill point budget (ADR 0030 step 18, PHB p.42): 20 points at level
-// 1 and 15 at each level after; the PHB gives no per-skill limit.
-const (
-	BardSkillPointsFirstLevel = 20
-	BardSkillPointsPerLevel   = 15
-)
-
-// HasBardSkills reports whether class has the bard skills (step 18).
-func HasBardSkills(class string) bool { return slices.Contains(bardSkillClasses, class) }
-
-// HasSkillPoints reports whether class enters skill points and a skill
-// armour (steps 1, 17 and 18): a thief or a bard.
-func HasSkillPoints(class string) bool { return HasThiefSkills(class) || HasBardSkills(class) }
-
-// SkillsOf are the skills class enters points in, in its table's order (nil
-// for a class without skill points).
-func SkillsOf(class string) []string {
-	switch {
-	case HasThiefSkills(class):
+// SkillsOf are the skills of the rogue_skills params rs, in its set's table
+// order; nil without rogue_skills (rs nil) or for an unknown set.
+func SkillsOf(rs *classes.RogueSkills) []string {
+	if rs == nil {
+		return nil
+	}
+	switch rs.Set {
+	case SkillSetThief:
 		return ThiefSkills
-	case HasBardSkills(class):
+	case SkillSetBard:
 		return BardSkills
 	}
 	return nil
 }
 
-// SkillBudgetOf is SkillPointBudget or BardSkillPointBudget by class (an
-// empty list for a class without skill points).
-func SkillBudgetOf(class string, level int, points map[string]int) []BudgetWarning {
-	switch {
-	case HasThiefSkills(class):
-		return SkillPointBudget(level, points)
-	case HasBardSkills(class):
-		return BardSkillPointBudget(level, points)
+// CheckSkillSet refuses a rogue_skills set this package does not know (ADR
+// 0040 step 8).
+func CheckSkillSet(set string) error {
+	if set != SkillSetThief && set != SkillSetBard {
+		return fmt.Errorf("unknown skill set %q", set)
 	}
-	return []BudgetWarning{}
+	return nil
 }
 
-// BardSkills is ADR 0030 step 18 for every skill of BardSkills, in order:
-// Table 33's base, the entered points (absent: 0), Table 27 for race, Table
-// 28 for dex (Pick Pockets only: the bard's other skills have no column),
-// and Table 29 for armor (leather: 0; ArmorMetal: the elven chain column
-// plus Table 29's note), capped at MaxSkillPercent and floored at
-// MinSkillPercent. An armor that is none of BardArmors is an error.
-func (t *Tables) BardSkills(race string, dex int, armor string, points map[string]int) ([]SkillPercent, error) {
+// RogueSkills is ADR 0030 steps 17 and 18 for every skill of rs's set, in
+// order: the set's base table (Table 26 or 33), the entered points (absent:
+// 0), Table 27 for race ("" or a race without rows: 0), Table 28 for dex (a
+// skill without a column: 0), and the armour entry whose skill armour
+// (SkillArmorFor) is armor: Table 29's column it reads (leather: 0) plus its
+// extra; capped at MaxSkillPercent and floored at MinSkillPercent. An armor
+// that is no entry's skill armour is an error.
+func (t *Tables) RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]SkillPercent, error) {
 	c, err := t.classTables()
 	if err != nil {
 		return nil, err
 	}
-	if !slices.Contains(BardArmors, armor) {
-		return nil, fmt.Errorf("bard skills: unknown armour %q", armor)
+	var base []SkillBaseRow
+	switch rs.Set {
+	case SkillSetThief:
+		base = c.ThiefSkillBase
+	case SkillSetBard:
+		base = c.BardSkillBase
+	default:
+		return nil, fmt.Errorf("rogue skills: unknown skill set %q", rs.Set)
 	}
-	extra := 0
-	if armor == ArmorMetal {
-		armor = armorElvenChain
-		for _, r := range c.BardArmorPenalty {
-			if r.Armor == ArmorMetal {
-				extra = r.Adjustment
+	for _, a := range rs.Armour {
+		if skillArmorOf(a) == armor {
+			column := a.Column
+			if column == "" {
+				column = ArmorLeather
 			}
+			return rogueSkills(c, SkillsOf(&rs), base, race, dex, column, a.Extra, points), nil
 		}
 	}
-	return rogueSkills(c, BardSkills, c.BardSkillBase, race, dex, armor, extra, points), nil
-}
-
-// BardSkillPointBudget checks the entered points against the bard's budget
-// at level (ADR 0030 step 18): at most BardSkillPointsFirstLevel plus
-// BardSkillPointsPerLevel a level after the first in all (code BudgetTotal);
-// no per-skill check. The warning of points stored over it (a save that
-// grows it is refused, ADR 0037 step 10: skills.SkillPointsWithinBudget).
-func BardSkillPointBudget(level int, points map[string]int) []BudgetWarning {
-	total, perSkill, _ := SkillBudgetLimits("bard", level)
-	return budget(level, points, BardSkills, total, perSkill)
+	return nil, fmt.Errorf("%s skills: unknown armour %q", rs.Set, armor)
 }

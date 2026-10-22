@@ -425,18 +425,40 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
 }
 
 /**
+ * Whether the draft may send its 18/xx: the server's answer `offered` it (its
+ * `exceptionalStrength`, ADR 0030 step 9) and that answer was about the draft's class, race and
+ * Strength as they stand (`asked`, the body it answered, null for none). An answer about other
+ * values does not count: a Strength changed from 18 to 17 sends no 18/xx before the next answer.
+ */
+export function exceptionalOffered(
+  asked: Pick<NewCharacter, "class" | "raceCode" | "str"> | null,
+  offered: boolean,
+  draft: FlowDraft,
+): boolean {
+  return (
+    offered &&
+    asked !== null &&
+    asked.class === draft.cls &&
+    asked.raceCode === draft.race &&
+    asked.str === parseWhole(draft.scores.str)
+  );
+}
+
+/**
  * The one request the flow sends: the creation body of the draft as far as it is entered, asked at
  * `POST /api/characters/draft` on every change and sent by Créer to `POST /api/characters`. A value
  * left blank or unreadable (not a number where one is needed) is left out (a null number), so the
  * draft's answer lists it missing; `error` names the first unreadable one, which Créer does not
  * send. Only the shape is read: every range and rule is the server's. A blank alignment or sex is
- * left out (the server says it is missing).
+ * left out (the server says it is missing). The 18/xx is sent only when `offersExceptional`
+ * (`exceptionalOffered`: the server's answer for the draft's class, race and Strength).
  */
 export function buildBody(
   options: CreationOptions,
   draft: FlowDraft,
   xp: string,
   language: string,
+  offersExceptional = false,
 ): { body: NewCharacter; error: FieldError | null } {
   let error: FieldError | null = null;
   const fail = (field: string, code: string) => {
@@ -470,11 +492,7 @@ export function buildBody(
     else body[f] = v;
   }
   const cls = classOf(options, draft.cls);
-  if (
-    cls?.exceptionalStrengthRaces.includes(draft.race) &&
-    body.str === 18 &&
-    draft.strExceptional.trim() !== ""
-  ) {
+  if (offersExceptional && draft.strExceptional.trim() !== "") {
     const v = parseWhole(draft.strExceptional);
     if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");
     else body.strExceptional = v;

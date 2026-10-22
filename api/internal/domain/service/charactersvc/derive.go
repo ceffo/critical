@@ -31,10 +31,10 @@ type Rules interface {
 	SavesFor(group string, level int) (ruletablesvc.SavingThrowRow, error)
 	// ConSaveBonusFor is PHB Table 9 (step 22.1).
 	ConSaveBonusFor(con int) (int, error)
-	// BardSpellsPerDay is PHB Table 32 by spell level (step 8).
-	BardSpellsPerDay(level int) (map[int]int, error)
-	// WizardSpellsPerDay is PHB Table 21 by spell level (step 8).
-	WizardSpellsPerDay(level int) (map[int]int, error)
+	// SpellsPerDay is step 8: the slot table the class's spell_progression
+	// names at level (ADR 0040 step 1.9), with the Wisdom bonus spells for a
+	// class with wisdom_bonus_spells (step 13).
+	SpellsPerDay(def classes.Class, level, wis int) (map[int]int, error)
 	// HitDiceFor is the group's hit die, name level and fixed gain after it
 	// (step 7).
 	HitDiceFor(group string) (ruletablesvc.HitDiceRow, error)
@@ -46,11 +46,9 @@ type Rules interface {
 	RaceAllows(race, class string) (bool, error)
 	// IntelligenceFor is PHB Table 4 (step 20).
 	IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error)
-	// PriestSpellsPerDay is PHB Table 24 with the Wisdom bonus spells
-	// (step 13).
-	PriestSpellsPerDay(level, wis int) (map[int]int, error)
-	// SpellFailureFor is PHB Table 5's chance of spell failure (step 14).
-	SpellFailureFor(class string, wis int) (int, error)
+	// SpellFailureFor is PHB Table 5's chance of spell failure at a score
+	// (step 14).
+	SpellFailureFor(score int) (int, error)
 	// MagicDefenceFor is PHB Table 5's magical defence adjustment (ADR 0006
 	// step 9.1), for every class.
 	MagicDefenceFor(wis int) (int, error)
@@ -59,12 +57,10 @@ type Rules interface {
 	SpellImmunitiesFor(wis int) ([]string, error)
 	// TurningAt is PHB Table 61 at a priest level (step 16).
 	TurningAt(level int) ([]ruletablesvc.TurningTarget, error)
-	// ThiefSkills is PHB Tables 26 to 29 on the entered points (step 17).
-	ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
-	// BardSkills is PHB Tables 27 to 29 and 33 on the entered points
-	// (step 18).
-	BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
-	// BackstabFor is PHB Table 30 at a thief's level (step 19).
+	// RogueSkills is PHB Tables 26 to 29 and 33 on the entered points,
+	// through a class's rogue_skills params (steps 17 and 18).
+	RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
+	// BackstabFor is PHB Table 30 at a level (step 19).
 	BackstabFor(level int) (int, error)
 }
 
@@ -88,10 +84,11 @@ var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 // read from c.Sheet.
 func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, error) {
 	d := Derived{XPTotal: c.XPTotal + ledgerXP}
-	group, err := rules.ClassGroup(c.Class)
+	def, err := rules.Class(c.Class)
 	if err != nil {
 		return Derived{}, fmt.Errorf("derive: %w", err)
 	}
+	group := def.Group
 	d.Group = group
 	target, err := levelAt(c, d.XPTotal, rules)
 	if err != nil {
@@ -119,8 +116,10 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	if d.RaceSaveBonus, err = raceSaveBonus(c, rules); err != nil {
 		return Derived{}, err
 	}
-	if d.SpellSlots, err = spellSlots(c, realized, rules); err != nil {
-		return Derived{}, err
+	// Step 8: the slot table the class's spell_progression names (ADR 0040
+	// step 1.9), never a class id.
+	if d.SpellSlots, err = rules.SpellsPerDay(def, realized, c.Wis); err != nil {
+		return Derived{}, fmt.Errorf("derive %s spell slots: %w", c.Class, err)
 	}
 	// ADR 0006 step 9: Table 5's magical defence adjustment at the sheet's
 	// Wisdom, an ability rule every class and race gets (step 9.2).
@@ -132,27 +131,31 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	if d.SpellImmunities, err = rules.SpellImmunitiesFor(c.Wis); err != nil {
 		return Derived{}, fmt.Errorf("derive spell immunities: %w", err)
 	}
-	if ruletablesvc.UsesWisdomSpells(c.Class) {
-		if d.SpellFailure, err = rules.SpellFailureFor(c.Class, c.Wis); err != nil {
+	// ADR 0040 steps 3 and 5: each mechanic below is a feature kind the
+	// class grants at the realized level, read with its params.
+	d.ExceptionalStrength = def.Has(classes.KindExceptionalStrength, realized)
+	if f, ok := def.Feature(classes.KindSpellFailure, realized); ok {
+		score, _ := c.Score(Ability(f.Ability)) // classes.New checked the ability code
+		if d.SpellFailure, err = rules.SpellFailureFor(score); err != nil {
 			return Derived{}, fmt.Errorf("derive %s spell failure: %w", c.Class, err)
 		}
 	}
-	if ruletablesvc.TurnsUndead(c.Class) {
+	if def.Has(classes.KindTurnUndead, realized) {
 		if d.Turning, err = rules.TurningAt(realized); err != nil {
 			return Derived{}, fmt.Errorf("derive %s turning: %w", c.Class, err)
 		}
 	}
-	if ruletablesvc.HasSkillPoints(c.Class) {
+	if rs := skills.RogueSkillsAt(def, realized); rs != nil {
 		// Steps 17 and 18: the sheet's Dexterity, the entered points and
 		// the worn body armour's Table 29 column (ADR 0033 step 14: none
 		// worn is the none column); the budget at the realized level. The
 		// figures are the skills module's (ADR 0037 step 17).
-		d.SkillArmor = ruletablesvc.SkillArmorFor(c.Class, armour)
-		if err := d.SetSkillFigures(rules, c, c.SkillPoints); err != nil {
+		d.SkillArmor = ruletablesvc.SkillArmorFor(rs, armour)
+		if err := d.SetSkillFigures(rules, def, c, c.SkillPoints); err != nil {
 			return Derived{}, err
 		}
 	}
-	if ruletablesvc.Backstabs(c.Class) {
+	if def.Has(classes.KindBackstab, realized) {
 		if d.Backstab, err = rules.BackstabFor(realized); err != nil {
 			return Derived{}, fmt.Errorf("derive %s backstab: %w", c.Class, err)
 		}
@@ -160,21 +163,22 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 	if d.LevelUp, err = levelUp(c, group, realized, target, rules); err != nil {
 		return Derived{}, err
 	}
-	d.Specializes = ruletablesvc.Specializes(c.Class)
-	if d.Spellbook, err = spellbookRules(c, rules); err != nil {
+	d.Specializes = def.Has(classes.KindWeaponSpecialization, realized)
+	if d.Spellbook, err = spellbookRules(c, def, realized, rules); err != nil {
 		return Derived{}, err
 	}
 	return d, nil
 }
 
-// spellbookRules is step 20.1 for a class with a spellbook (nil for the
-// others): the class's highest spell level and PHB Table 4 at the sheet's
-// Intelligence.
-func spellbookRules(c *Character, rules Rules) (*SpellbookRules, error) {
-	classMax, ok := ruletablesvc.SpellbookMaxLevel(c.Class)
+// spellbookRules is step 20.1 for a class with the spellbook feature at
+// level (nil for the others, ADR 0040 step 3): its max_spell_level and PHB
+// Table 4 at the sheet's Intelligence.
+func spellbookRules(c *Character, def classes.Class, level int, rules Rules) (*SpellbookRules, error) {
+	f, ok := def.Feature(classes.KindSpellbook, level)
 	if !ok {
 		return nil, nil
 	}
+	classMax := f.Spellbook.MaxSpellLevel
 	row, err := rules.IntelligenceFor(c.Int)
 	if err != nil {
 		return nil, fmt.Errorf("derive %s spellbook: %w", c.Class, err)
@@ -256,39 +260,14 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 	return Saves{RodStaffWand: b, Spell: b}, nil
 }
 
-// spellSlots is step 8: a bard's slots per day are PHB Table 32 at the
-// level, a mage's Table 21, a cleric's Table 24 plus the Wisdom bonus spells
-// at the sheet's Wisdom (step 13); fighters and thieves have none.
-func spellSlots(c *Character, level int, rules Rules) (map[int]int, error) {
-	class := c.Class
-	var table func(int) (map[int]int, error)
-	switch class {
-	case "bard":
-		table = rules.BardSpellsPerDay
-	case "mage":
-		table = rules.WizardSpellsPerDay
-	case "cleric":
-		table = func(level int) (map[int]int, error) { return rules.PriestSpellsPerDay(level, c.Wis) }
-	case "fighter", "thief":
-		return map[int]int{}, nil
-	default:
-		return nil, fmt.Errorf("derive spell slots: class %q is not implemented yet", class)
-	}
-	slots, err := table(level)
-	if err != nil {
-		return nil, fmt.Errorf("derive %s spell slots: %w", class, err)
-	}
-	return slots, nil
-}
-
 // SetSkillFigures sets d's skill percentages, budget and points from points
 // entered on c, at d's realized level and worn skill armour (SkillArmor must
 // be set): the one place those four fields are filled, for the derivation and
 // for a draft of the points (ADR 0030 steps 17 and 18; the figures are the
 // skills module's, ADR 0037 step 17).
-func (d *Derived) SetSkillFigures(t skills.SkillTables, c *Character, points map[string]int) error {
+func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Character, points map[string]int) error {
 	f, err := skills.PointsFiguresOf(t, skills.PointsSheet{
-		Class: c.Class, Race: c.Race, Dex: c.Dex, Level: d.RealizedLevel, Armor: d.SkillArmor, Points: points,
+		Class: def, Race: c.Race, Dex: c.Dex, Level: d.RealizedLevel, Armor: d.SkillArmor, Points: points,
 	})
 	if err != nil {
 		return fmt.Errorf("skill figures: %w", err)

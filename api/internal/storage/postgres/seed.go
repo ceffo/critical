@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -32,12 +33,12 @@ import (
 // 26.4), and its body armours, from which a seed character with skill points gets the armour it
 // entered, worn, when its equipment is seeded (step 14's carry-over, as an upgraded database has).
 // Spells are not seeds: they come from the catalogue artifact (ImportCatalogue).
-func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
-	return seed(ctx, d, d.q, seedsDir, spellbook, equipment)
+func (d *DB) Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
+	return seed(ctx, d, d.q, seedsDir, spellbook, equipment, defs)
 }
 
 // seed is Seed over its ports: tx runs the transaction, q runs on the transaction tx carries.
-func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment) error {
+func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
 	return tx.InTx(ctx, func(ctx context.Context) error {
 		characterPath := seedfile.Path(seedsDir, seedfile.CharacterFile)
 		if err := seedCharacter(ctx, q, characterPath); err != nil {
@@ -48,7 +49,7 @@ func seed(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir st
 			return err
 		}
 		if err := seedEquipment(ctx, q, owner, seedfile.Path(seedsDir, seedfile.ItemsFile),
-			seedfile.Path(seedsDir, seedfile.WeaponsFile), equipment); err != nil {
+			seedfile.Path(seedsDir, seedfile.WeaponsFile), equipment, defs); err != nil {
 			return fmt.Errorf("seed equipment: %w", err)
 		}
 		if err := seedSkills(ctx, q, owner, seedfile.Path(seedsDir, seedfile.SkillsFile)); err != nil {
@@ -271,7 +272,7 @@ func boolInt(b bool) int64 {
 // the items and weapons seeds converted as an upgraded database's are (seedfile.Equipment), with
 // their review rows; once it holds some, only the names of the seeded pieces are reconciled
 // (reconcileName). A seed file that is unreadable is an error only while the character holds none.
-func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath, weaponsPath string, equipment ruletablesvc.Equipment) error {
+func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath, weaponsPath string, equipment ruletablesvc.Equipment, defs *classes.Registry) error {
 	count, err := q.CountItems(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("count items: %w", err)
@@ -333,7 +334,7 @@ func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath
 	if len(equipment.Armour) == 0 {
 		return nil
 	}
-	return carryCharacter(ctx, q, owner, equipment.Armour)
+	return carryCharacter(ctx, q, owner, equipment.Armour, defs)
 }
 
 // seededName is the kind a seeded piece's offers are recorded under (seeded_name_languages): the

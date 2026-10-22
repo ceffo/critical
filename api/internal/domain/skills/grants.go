@@ -19,7 +19,9 @@ func GrantsAt(book Book, class string, level int) LevelGrants {
 	if row, ok := book.SlotRowOf(class); ok {
 		g.WeaponSlots, g.NonweaponSlots = ruletablesvc.SlotsGainedAt(row, level)
 	}
-	g.SkillPoints = ruletablesvc.SkillPointsGainedAt(class, level)
+	if def, ok := book.ClassDef(class); ok {
+		g.SkillPoints = ruletablesvc.SkillPointsGainedAt(RogueSkillsAt(def, level), level)
+	}
 	return g
 }
 

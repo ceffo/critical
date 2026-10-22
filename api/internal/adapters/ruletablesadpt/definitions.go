@@ -11,8 +11,8 @@ import (
 // definitionsDTO is the format-11 artifact's classes, groups and races (ADR
 // 0021 step 18, ADR 0040 steps 1, 2 and 7), as catalogueadpt passes them.
 // The schema has already checked every field; only the ones the registry
-// reads so far are mapped (the features, equipment and traits move with their
-// readers, ADR 0040 step 11.3).
+// reads so far are mapped (the equipment and traits move with their readers,
+// ADR 0040 step 11.3).
 type definitionsDTO struct {
 	Classes []classDefDTO `json:"classes"`
 	Groups  []groupDefDTO `json:"groups"`
@@ -27,6 +27,76 @@ type classDefDTO struct {
 	AbilityMinimums []abilityMinimumDTO  `json:"ability_minimums"`
 	Alignments      []string             `json:"alignments"`
 	Experience      []classExperienceDTO `json:"experience"`
+	// SpellProgression names a slot table (ADR 0040 step 1.9), absent for none.
+	SpellProgression string       `json:"spell_progression"`
+	Features         []featureDTO `json:"features"`
+}
+
+// featureDTO is a class feature (ADR 0040 step 3); params is read by kind.
+type featureDTO struct {
+	Kind      string          `json:"kind"`
+	FromLevel int             `json:"from_level"`
+	Params    json.RawMessage `json:"params"`
+}
+
+// featureParamsDTO is the union of the kinds' params; the schema has checked
+// that each kind carries only its own.
+type featureParamsDTO struct {
+	Table         string           `json:"table"`
+	Ability       string           `json:"ability"`
+	Major         []string         `json:"major"`
+	Minor         []string         `json:"minor"`
+	MinorMaxLevel int              `json:"minor_max_level"`
+	Set           string           `json:"set"`
+	Budget        *rogueBudgetDTO  `json:"budget"`
+	Armour        []rogueArmourDTO `json:"armour"`
+	MaxSpellLevel int              `json:"max_spell_level"`
+	FreeSpell     *bool            `json:"free_spell_per_new_spell_level"`
+}
+
+type rogueBudgetDTO struct {
+	First            int `json:"first"`
+	PerLevel         int `json:"per_level"`
+	PerSkillFirst    int `json:"per_skill_first"`
+	PerSkillPerLevel int `json:"per_skill_per_level"`
+}
+
+type rogueArmourDTO struct {
+	Code   string `json:"code"`
+	Column string `json:"column"`
+	Extra  int    `json:"extra"`
+}
+
+// feature maps a feature to the domain's, its params by kind (an unknown kind
+// keeps no params and is refused by classes.New).
+func (f featureDTO) feature() (classes.Feature, error) {
+	out := classes.Feature{Kind: f.Kind, FromLevel: f.FromLevel}
+	var p featureParamsDTO
+	if len(f.Params) > 0 {
+		if err := json.Unmarshal(f.Params, &p); err != nil {
+			return classes.Feature{}, fmt.Errorf("feature %s params: %w", f.Kind, err)
+		}
+	}
+	switch f.Kind {
+	case classes.KindMeleeAttacksPerRound, classes.KindTurnUndead, classes.KindBackstab:
+		out.Table = p.Table
+	case classes.KindSpellFailure:
+		out.Ability = p.Ability
+	case classes.KindSphereAccess:
+		out.Spheres = &classes.SphereAccess{Major: p.Major, Minor: p.Minor, MinorMaxLevel: p.MinorMaxLevel}
+	case classes.KindRogueSkills:
+		r := &classes.RogueSkills{Set: p.Set}
+		if p.Budget != nil {
+			r.Budget = classes.SkillBudget(*p.Budget)
+		}
+		for _, a := range p.Armour {
+			r.Armour = append(r.Armour, classes.SkillArmour(a))
+		}
+		out.RogueSkills = r
+	case classes.KindSpellbook:
+		out.Spellbook = &classes.Spellbook{MaxSpellLevel: p.MaxSpellLevel, FreeSpellPerNewSpellLevel: p.FreeSpell != nil && *p.FreeSpell}
+	}
+	return out, nil
 }
 
 type abilityMinimumDTO struct {
@@ -82,9 +152,18 @@ func definitions(raw []byte) (*classes.Registry, error) {
 		for j, m := range c.AbilityMinimums {
 			mins[j] = classes.AbilityMinimum(m)
 		}
+		features := make([]classes.Feature, len(c.Features))
+		for j, f := range c.Features {
+			v, err := f.feature()
+			if err != nil {
+				return nil, fmt.Errorf("class %q: %w", c.ID, err)
+			}
+			features[j] = v
+		}
 		cls[i] = classes.Class{
 			ID: c.ID, Name: c.Name, Group: c.Group, PrimeRequisites: c.PrimeRequisites,
 			AbilityMinimums: mins, Alignments: c.Alignments, Experience: xp,
+			SpellProgression: c.SpellProgression, Features: features,
 		}
 	}
 	groups := make([]classes.Group, len(d.Groups))

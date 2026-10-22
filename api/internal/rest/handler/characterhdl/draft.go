@@ -35,7 +35,9 @@ type RefusalDTO struct {
 // (`missing`: name, class, race, the six scores, hpMax, xp, alignment, sex) and, for every
 // creatable class, the abilities whose entered score is under its minimum (`unmetMinimums`), and a
 // mage's or a bard's starting spellbook at the starting level (`spellbook`, ADR 0030 step 20.7;
-// null for another class or while `derived` is).
+// null for another class or while `derived` is), and whether the entries allow an 18/xx
+// (`exceptionalStrength`, ADR 0030 step 9 through the class's features: the form offers the field
+// on it).
 type DraftDTO struct {
 	Derived       *DerivedDTO                `json:"derived"`
 	SkillPoints   *wire.SkillPointsBudgetDTO `json:"skillPoints"`
@@ -45,6 +47,9 @@ type DraftDTO struct {
 	Refusals      []RefusalDTO               `json:"refusals"`
 	Missing       []string                   `json:"missing"`
 	UnmetMinimums []ClassUnmetDTO            `json:"unmetMinimums"`
+	// ExceptionalStrength: the class lists exceptional_strength, the Strength entered is 18 and
+	// the race rolls it.
+	ExceptionalStrength bool `json:"exceptionalStrength"`
 }
 
 // StartingSpellbookDTO is a draft's starting spellbook (ADR 0030 step 20.7): the limits of step
@@ -99,6 +104,7 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 		Warnings: []WarningDTO{}, Languages: []string{}, Refusals: make([]RefusalDTO, 0, len(d.Refusals)),
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
 		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
+		ExceptionalStrength: d.ExceptionalStrength,
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

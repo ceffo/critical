@@ -30,12 +30,12 @@ func seedOn(f *fakeStore, dir string) error { return seedBookOn(f, dir, seedBook
 // wears none (ADR 0033 step 14's carry-over has nothing to give), for the tests about the other
 // seeded rows.
 func seedWithoutArmourOn(f *fakeStore, dir string) error {
-	return seed(context.Background(), f, f, dir, seedBook, ruletablesvc.Equipment{Weapons: catalogueWeapons})
+	return seed(context.Background(), f, f, dir, seedBook, ruletablesvc.Equipment{Weapons: catalogueWeapons}, catalogueDefs)
 }
 
 // seedBookOn is seedOn with the spellbook seed book (catalogue keys, in order).
 func seedBookOn(f *fakeStore, dir string, book []string) error {
-	return seed(context.Background(), f, f, dir, book, catalogueEquipment)
+	return seed(context.Background(), f, f, dir, book, catalogueEquipment, catalogueDefs)
 }
 
 // seedBook is a spellbook seed: the seed writes the keys the caller checked, in order.

@@ -45,7 +45,7 @@ func expectLevel1Bard(e *env) {
 	e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Once()
 	e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
-	e.rules.EXPECT().BardSpellsPerDay(1).Return(map[int]int{}, nil).Once()
+	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Once()
 }
 
 // A new character is stored with its entered values, the name trimmed, and
@@ -261,7 +261,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
 		want := map[string]int{"open_locks": 30, "pick_pockets": 25}
-		e.rules.EXPECT().ThiefSkills("halfling", 17, "none", want).Return(nil, nil).Once()
+		e.rules.EXPECT().RogueSkills(skillSet("thief"), "halfling", 17, "none", want).Return(nil, nil).Once()
 		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
 		e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
 			return c.Class == "thief" && assert.ObjectsAreEqual(want, c.SkillPoints)
@@ -352,7 +352,7 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Times(times)
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Times(times)
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Times(times)
-		e.rules.EXPECT().ThiefSkills("halfling", 17, "none", points).Return(nil, nil).Times(times)
+		e.rules.EXPECT().RogueSkills(skillSet("thief"), "halfling", 17, "none", points).Return(nil, nil).Times(times)
 		e.rules.EXPECT().BackstabFor(1).Return(2, nil).Times(times)
 	}
 	for _, tt := range []struct {
@@ -471,11 +471,11 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 			skills := []ruletablesvc.SkillPercent{{Skill: "climb_walls", Percent: 60}}
 			if tc.class == "thief" {
-				e.rules.EXPECT().ThiefSkills("human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
+				e.rules.EXPECT().RogueSkills(skillSet("thief"), "human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
 				e.rules.EXPECT().BackstabFor(1).Return(2, nil).Once()
 			} else {
-				e.rules.EXPECT().BardSkills("human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
-				e.rules.EXPECT().BardSpellsPerDay(1).Return(map[int]int{}, nil).Once()
+				e.rules.EXPECT().RogueSkills(skillSet("bard"), "human", 12, tc.asked, map[string]int(nil)).Return(skills, nil).Once()
+				e.rules.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Once()
 			}
 			got, err := e.svc.GetCharacter(context.Background(), 5)
 			require.NoError(t, err)
@@ -544,16 +544,16 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
 		// catalogue's race order.
 		Classes: []charactersvc.ClassOption{
-			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{"dwarf", "gnome", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, ExceptionalStrengthRaces: []string{}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), ExceptionalStrengthRaces: []string{}, Skills: ruletablesvc.ThiefSkills,
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: ruletablesvc.ThiefSkills,
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 			{
-				Class: "bard", Races: []string{"half_elf", "human"}, ExceptionalStrengthRaces: []string{},
+				Class: "bard", Races: []string{"half_elf", "human"},
 				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},

@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -124,11 +125,13 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	case c.Race == "":
 		return Character{}, false, errors.New("character.json: race is required")
 	}
-	points, err := skills.ValidSkillPoints(c.Class, c.SkillPoints)
-	if err != nil {
-		return Character{}, false, fmt.Errorf("character.json: skill points: %w", err)
+	// The points are checked against the class's rogue_skills by
+	// CheckDefinitions (ADR 0040 step 3: the class's features are the
+	// catalogue's); a zero is no point.
+	maps.DeleteFunc(c.SkillPoints, func(_ string, v int) bool { return v == 0 })
+	if len(c.SkillPoints) == 0 {
+		c.SkillPoints = nil
 	}
-	c.SkillPoints = points
 	seen := map[string]bool{}
 	for i, p := range c.Proficiencies {
 		switch {
@@ -157,11 +160,16 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 }
 
 // CheckDefinitions refuses a seed character whose class or race the
-// catalogue does not define (ADR 0040 step 9), at start, before anything is
-// seeded.
+// catalogue does not define (ADR 0040 step 9), or whose skill points its
+// class refuses (skills.ValidSkillPoints on the rogue_skills feature, step
+// 3), at start, before anything is seeded.
 func (c Character) CheckDefinitions(defs *classes.Registry) error {
-	if _, ok := defs.Class(c.Class); !ok {
+	def, ok := defs.Class(c.Class)
+	if !ok {
 		return fmt.Errorf("character.json: class %q is not one of %v", c.Class, defs.ClassIDs())
+	}
+	if _, err := skills.ValidSkillPoints(def, c.SkillPoints); err != nil {
+		return fmt.Errorf("character.json: skill points: %w", err)
 	}
 	if !slices.Contains(defs.RaceIDs(), c.Race) {
 		return fmt.Errorf("character.json: race %q is not one of %v", c.Race, defs.RaceIDs())

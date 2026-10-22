@@ -2,7 +2,8 @@ package ruletablesvc
 
 import (
 	"fmt"
-	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The thief's rules (ADR 0030 steps 17 and 19): the thieving skills from the
@@ -11,43 +12,17 @@ import (
 // tables' (PHB Tables 26 to 30); this file says which row and column a thief
 // reads.
 
-// thiefSkillClasses are the classes with the eight thieving skills of PHB
-// Table 26 (ADR 0030 step 17). The bard's four skills are step 18's.
-var thiefSkillClasses = []string{"thief"}
-
-// backstabClasses are the classes whose attack has the backstab option (ADR
-// 0030 step 19: a thief's, not a bard's).
-var backstabClasses = []string{"thief"}
-
 // ArmorLeather is Table 29's baseline (no column: every adjustment 0).
 const ArmorLeather = "leather"
 
-// ThiefArmors are the armours a thief enters for its skills (ADR 0030 step
-// 1): Table 29's columns and leather, its baseline.
-var ThiefArmors = []string{"none", ArmorLeather, "padded_studded_leather", "elven_chain"}
-
-// Thieving skill limits (ADR 0030 step 17, PHB p.39).
+// Thieving skill limits (ADR 0030 step 17, PHB p.39), the same for every
+// class with rogue_skills (ADR 0040 step 3.3).
 const (
 	// MaxSkillPercent caps a skill with every adjustment; MinSkillPercent
 	// floors it.
 	MaxSkillPercent = 95
 	MinSkillPercent = 0
-	// SkillPointsFirstLevel and SkillPointsPerLevel are the points a thief
-	// spends at level 1 and at each level after; SkillPointsPerSkillFirst
-	// and SkillPointsPerSkillPerLevel the most it puts in one skill.
-	SkillPointsFirstLevel       = 60
-	SkillPointsPerLevel         = 30
-	SkillPointsPerSkillFirst    = 30
-	SkillPointsPerSkillPerLevel = 15
 )
-
-// HasThiefSkills reports whether class has the thieving skills (ADR 0030
-// step 17).
-func HasThiefSkills(class string) bool { return slices.Contains(thiefSkillClasses, class) }
-
-// Backstabs reports whether class's attack has the backstab option (ADR
-// 0030 step 19).
-func Backstabs(class string) bool { return slices.Contains(backstabClasses, class) }
 
 // SkillPercent is one thieving skill of ADR 0030 step 17 with its terms:
 // Percent = Base + Points + Race + Dexterity + Armor, capped at
@@ -58,22 +33,6 @@ type SkillPercent struct {
 	Base, Points, Race, Dexterity, Armor int
 	Raw                                  int
 	Percent                              int
-}
-
-// ThiefSkills is ADR 0030 step 17 for every skill of ThiefSkills, in order:
-// Table 26's base, the entered points (a skill absent from points has 0),
-// Table 27 for race ("" or human: 0), Table 28 for dex (a score outside its
-// rows or a skill without a column: 0) and Table 29 for armor (leather: 0).
-// An armor that is none of ThiefArmors is an error.
-func (t *Tables) ThiefSkills(race string, dex int, armor string, points map[string]int) ([]SkillPercent, error) {
-	c, err := t.classTables()
-	if err != nil {
-		return nil, err
-	}
-	if !slices.Contains(ThiefArmors, armor) {
-		return nil, fmt.Errorf("thief skills: unknown armour %q", armor)
-	}
-	return rogueSkills(c, ThiefSkills, c.ThiefSkillBase, race, dex, armor, 0, points), nil
 }
 
 // rogueSkills is the sum of ADR 0030 steps 17 and 18 for each of skills, in
@@ -151,23 +110,12 @@ type BudgetWarning struct {
 	Limit  int
 }
 
-// SkillPointBudget checks the entered points against PHB p.39's budget at
-// level (ADR 0030 step 17): at most SkillPointsFirstLevel plus
-// SkillPointsPerLevel a level after the first in all, at most
-// SkillPointsPerSkillFirst plus SkillPointsPerSkillPerLevel a level after
-// the first in one skill. The points are entered as one total per skill, so
-// the check is on the totals the levels allow. Skills in ThiefSkills order.
-func SkillPointBudget(level int, points map[string]int) []BudgetWarning {
-	total, perSkill, _ := SkillBudgetLimits("thief", level)
-	return budget(level, points, ThiefSkills, total, perSkill)
-}
-
 // SkillBudgetLimits are the limits SkillBudgetOf checks at level (ADR 0030
 // steps 17 and 18), the one source of both: the points in all, and in one
-// skill (0: no limit on one skill, the bard's). ok is false for a class
-// without skill points or a level under 1.
-func SkillBudgetLimits(class string, level int) (total, perSkill int, ok bool) {
-	b, ok := SkillPointsFigures(class, level, nil)
+// skill (0: no limit on one skill, the bard's). ok is false without
+// rogue_skills (rs nil) or for a level under 1.
+func SkillBudgetLimits(rs *classes.RogueSkills, level int) (total, perSkill int, ok bool) {
+	b, ok := SkillPointsFigures(rs, level, nil)
 	return b.Total, b.PerSkill, ok
 }
 
@@ -182,45 +130,56 @@ type SkillPointsBudget struct {
 	PerSkillFirst, PerSkillPerLevel, PerSkill  int
 }
 
-// SkillPointsFigures is the budget of class at level for the entered points
-// (ADR 0030 steps 17 and 18), the one source of the limits. ok is false for a
-// class without skill points or a level under 1.
-func SkillPointsFigures(class string, level int, points map[string]int) (b SkillPointsBudget, ok bool) {
-	if level < 1 {
+// SkillPointsFigures is the budget of the rogue_skills params rs at level for
+// the entered points (ADR 0030 steps 17 and 18, ADR 0040 step 3: the budget is
+// the params'), the one source of the limits. ok is false without rogue_skills
+// (rs nil) or for a level under 1.
+func SkillPointsFigures(rs *classes.RogueSkills, level int, points map[string]int) (b SkillPointsBudget, ok bool) {
+	if rs == nil || level < 1 {
 		return SkillPointsBudget{}, false
 	}
 	b.Level = level
-	switch {
-	case HasThiefSkills(class):
-		b.First, b.PerLevel = SkillPointsFirstLevel, SkillPointsPerLevel
-		b.PerSkillFirst, b.PerSkillPerLevel = SkillPointsPerSkillFirst, SkillPointsPerSkillPerLevel
+	b.First, b.PerLevel = rs.Budget.First, rs.Budget.PerLevel
+	b.PerSkillFirst, b.PerSkillPerLevel = rs.Budget.PerSkillFirst, rs.Budget.PerSkillPerLevel
+	if b.PerSkillFirst > 0 || b.PerSkillPerLevel > 0 {
 		b.PerSkill = b.PerSkillFirst + b.PerSkillPerLevel*(level-1)
-	case HasBardSkills(class):
-		b.First, b.PerLevel = BardSkillPointsFirstLevel, BardSkillPointsPerLevel
-	default:
-		return SkillPointsBudget{}, false
 	}
 	b.Total = b.First + b.PerLevel*(level-1)
-	for _, skill := range SkillsOf(class) {
+	for _, skill := range SkillsOf(rs) {
 		b.Spent += points[skill]
 	}
 	b.Left = b.Total - b.Spent
 	return b, true
 }
 
+// SkillBudgetOf checks the entered points against the budget of rs at level
+// (ADR 0030 steps 17 and 18): at most the budget's total in all and, when the
+// budget has one, its per-skill limit in one skill. The points are entered as
+// one total per skill, so the check is on the totals the levels allow. Skills
+// in the set's order; an empty list without rogue_skills. The warning of
+// points stored over it (a save that grows it is refused, ADR 0037 step 10:
+// skills.SkillPointsWithinBudget).
+func SkillBudgetOf(rs *classes.RogueSkills, level int, points map[string]int) []BudgetWarning {
+	total, perSkill, ok := SkillBudgetLimits(rs, level)
+	if !ok {
+		return []BudgetWarning{}
+	}
+	return budget(level, points, SkillsOf(rs), total, perSkill)
+}
+
 // SkillPointsGainedAt is ADR 0037 step 15 on ADR 0030 steps 17 and 18: the
-// skill points level grants a thief or a bard, the budget at level minus the
-// budget at the level below. None at level 1 (its points are the first
-// level's) or under, nor for a class without skill points.
-func SkillPointsGainedAt(class string, level int) int {
+// skill points level grants with rogue_skills rs, the budget at level minus
+// the budget at the level below. None at level 1 (its points are the first
+// level's) or under, nor without rogue_skills.
+func SkillPointsGainedAt(rs *classes.RogueSkills, level int) int {
 	if level < 2 {
 		return 0
 	}
-	now, ok := SkillPointsFigures(class, level, nil)
+	now, ok := SkillPointsFigures(rs, level, nil)
 	if !ok {
 		return 0
 	}
-	before, _ := SkillPointsFigures(class, level-1, nil)
+	before, _ := SkillPointsFigures(rs, level-1, nil)
 	return now.Total - before.Total
 }
 
@@ -245,7 +204,7 @@ func budget(level int, points map[string]int, skills []string, totalLimit, perSk
 	return out
 }
 
-// BackstabFor is PHB Table 30 at a thief's level (ADR 0030 step 19): the
+// BackstabFor is PHB Table 30 at the level of a class with backstab (ADR 0030 step 19): the
 // multiplier on the weapon's damage dice. An error for a level outside the
 // table.
 func (t *Tables) BackstabFor(level int) (int, error) {

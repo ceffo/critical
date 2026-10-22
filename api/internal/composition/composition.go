@@ -217,7 +217,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	// The starting spellbook's pre-ticked spells (ADR 0030 step 20.7) are
 	// data, checked against the catalogue the same way.
-	startingSeed, err := spellbookadpt.ReadStartingSeed(cfg.SeedsDir, cat)
+	startingSeed, err := spellbookadpt.ReadStartingSeed(cfg.SeedsDir, cat, defs)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +230,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := checkProficiencyDescriptions(cat, proficiencies); err != nil {
 		return nil, err
 	}
-	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment); err != nil {
+	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment, defs); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {

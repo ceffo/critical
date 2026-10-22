@@ -7,6 +7,7 @@ import { ApiError, OVER_BUDGET } from "@/api/http";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { holdPath } from "@/lib/navigation";
+import type { NewCharacter } from "@/types/character";
 import { formatHeight, formatWeight, unitsFor } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
 import { useCreationOptions } from "@/lib/useCreationOptions";
@@ -28,6 +29,7 @@ import {
   classOf,
   draftSpellbook,
   draftXp,
+  exceptionalOffered,
   hasSpellbook,
   refusalError,
   settle,
@@ -143,7 +145,23 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // class minimums, the skill budget, the pools, the warnings, the derived figures and the refusals
   // a Créer would meet. Every change of the draft asks again after a short rest; a reply landing
   // after a newer change (or after the player left) is dropped by the gate.
-  const built = options ? buildBody(options, draft, xp, i18n.language) : null;
+  const [answered, setAnswered] = useState<{
+    key: string;
+    cls: string;
+    data: CreationDraft | null;
+    failed: FieldError | null;
+  } | null>(null);
+  // The 18/xx is sent only when the server's answer for the draft's class, race and Strength
+  // offers it (ADR 0030 step 9 through the class's features): the form has no rule of its own,
+  // and an answer about a Strength since changed does not count.
+  const offersExceptional = exceptionalOffered(
+    answered ? (JSON.parse(answered.key) as NewCharacter) : null,
+    answered?.data?.exceptionalStrength === true,
+    draft,
+  );
+  const built = options
+    ? buildBody(options, draft, xp, i18n.language, offersExceptional)
+    : null;
   const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
   // draft is asked without it, so the step still gets the server's other warnings meanwhile.
@@ -157,12 +175,6 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           : asked,
       )
     : "";
-  const [answered, setAnswered] = useState<{
-    key: string;
-    cls: string;
-    data: CreationDraft | null;
-    failed: FieldError | null;
-  } | null>(null);
   const [draftGate] = useState(replyGate);
   useEffect(() => {
     if (draftKey === "") return;

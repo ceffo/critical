@@ -8,7 +8,9 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -85,7 +87,7 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 		e.rules.EXPECT().XPThreshold("mage", 2).Return(2_500, nil).Once()
 		e.rules.EXPECT().THAC0For("wizard", 1).Return(20, nil).Once()
 		e.rules.EXPECT().SavesFor("wizard", 1).Return(ruletablesvc.SavingThrowRow{Group: "wizard", LevelMin: 1, LevelMax: 5}, nil).Once()
-		e.rules.EXPECT().WizardSpellsPerDay(1).Return(map[int]int{1: 1}, nil).Once()
+		e.rules.EXPECT().SpellsPerDay(classDef("mage"), 1, mock.Anything).Return(map[int]int{1: 1}, nil).Once()
 		e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 		_, err := e.svc.Create(context.Background(), ownerID, n)
 		assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: "weapon_not_allowed"}, fieldErr(t, err))
@@ -108,14 +110,20 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 // specialization's slots for a fighter (2, a bow 3), 0 for a class that does not specialize, and
 // only the types the class may pick.
 func TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost(t *testing.T) {
-	fighter := charactersvc.ClassWeaponTypeOptions("fighter")
+	defs := cataloguetest.Definitions(t)
+	def := func(id string) classes.Class {
+		c, ok := defs.Class(id)
+		require.True(t, ok, id)
+		return c
+	}
+	fighter := charactersvc.ClassWeaponTypeOptions(def("fighter"))
 	require.Len(t, fighter, len(allWeaponTypes))
 	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "long_bow", SpecializationSlots: 3}, fighter[0])
 	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "light_crossbow", SpecializationSlots: 2}, fighter[2])
 	assert.Equal(t, []charactersvc.WeaponTypeOption{
 		{Type: "sling"}, {Type: "other_melee"}, {Type: "other_missile"},
-	}, charactersvc.ClassWeaponTypeOptions("cleric"))
-	for _, o := range charactersvc.ClassWeaponTypeOptions("bard") {
+	}, charactersvc.ClassWeaponTypeOptions(def("cleric")))
+	for _, o := range charactersvc.ClassWeaponTypeOptions(def("bard")) {
 		assert.Zero(t, o.SpecializationSlots, "a bard picks %s but never specializes", o.Type)
 	}
 }

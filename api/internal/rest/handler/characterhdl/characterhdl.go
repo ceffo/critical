@@ -237,6 +237,10 @@ type DerivedDTO struct {
 	LevelUp       LevelUpDTO     `json:"levelUp"`
 	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
 	Specializes bool `json:"specializes"`
+	// ExceptionalStrength is ADR 0030 steps 9 and 10: the class enters an
+	// 18/xx and reads the warrior's scale over 18 (its exceptional_strength
+	// feature, ADR 0040 step 3).
+	ExceptionalStrength bool `json:"exceptionalStrength"`
 	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
 	// spellbook (mage, bard); null for the others.
 	Spellbook *SpellbookRulesDTO `json:"spellbook"`
@@ -358,7 +362,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			Pending: wire.PendingDTO(d.LevelUp.Pending), RealizedAboveTarget: d.LevelUp.RealizedAboveTarget,
 			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend, d.LevelUp.FreeSpellsOwed),
 		},
-		Specializes: d.Specializes, SpellFailure: d.SpellFailure,
+		Specializes: d.Specializes, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure,
 		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,
 		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies), SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
 	}

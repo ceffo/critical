@@ -110,7 +110,7 @@ export function UsePowerForm({
         {draft.modifiers.map((m, i) => (
           <div key={i} className="flex items-center gap-1.5">
             <input
-              className={`${fieldClass} w-16`}
+              className={`${fieldClass} !w-16 shrink-0`}
               inputMode="numeric"
               autoComplete="off"
               aria-label={t("powers.use.modifierValue", { n: i + 1 })}

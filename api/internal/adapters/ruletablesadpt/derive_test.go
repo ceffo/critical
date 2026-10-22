@@ -193,16 +193,17 @@ func TestWizardSpellsPerDay_Step8_Table21(t *testing.T) {
 func TestHitDiceFor_Step7_TheGroupsDieNameLevelAndFixedGain(t *testing.T) {
 	tbl := phb(t)
 	for group, want := range map[string]ruletablesvc.HitDiceRow{
-		"warrior": {Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3},
-		"priest":  {Group: "priest", Die: 8, NameLevel: 9, GainAfter: 2},
-		"rogue":   {Group: "rogue", Die: 6, NameLevel: 10, GainAfter: 2},
-		"wizard":  {Group: "wizard", Die: 4, NameLevel: 10, GainAfter: 1},
+		"warrior":    {Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3},
+		"priest":     {Group: "priest", Die: 8, NameLevel: 9, GainAfter: 2},
+		"rogue":      {Group: "rogue", Die: 6, NameLevel: 10, GainAfter: 2},
+		"wizard":     {Group: "wizard", Die: 4, NameLevel: 10, GainAfter: 1},
+		"psionicist": {Group: "psionicist", Die: 6, NameLevel: 9, GainAfter: 2},
 	} {
 		got, err := tbl.HitDiceFor(group)
 		require.NoError(t, err)
 		assert.Equal(t, want, got, group)
 	}
-	_, err := tbl.HitDiceFor("psionicist")
+	_, err := tbl.HitDiceFor("monk")
 	require.Error(t, err)
 }
 

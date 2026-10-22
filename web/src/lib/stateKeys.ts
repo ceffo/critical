@@ -20,6 +20,7 @@ export const STATE_FAMILIES = [
   "hp",
   "ac_override",
   "buffs",
+  "class_entries",
   "initiative",
   "items",
   "proficiencies",
@@ -40,6 +41,7 @@ export const SLICES = [
   "log",
   "hp",
   "buffs",
+  "class_entries",
   "savedBuffs",
   "round",
   "strength",
@@ -63,6 +65,7 @@ const ITEM_SLICES = [
   "weapons",
   "ac",
   "buffs",
+  "class_entries",
   "strength",
   "skills",
   "spellInfo",
@@ -94,6 +97,8 @@ export const INVALIDATES = {
   // A weapon is specialized by its type's pick, so the pieces and the attack form follow (step 9).
   proficiencies: ["skills", "character", "items", "weapons"],
   // The level and its max HP (ADR 0030 step 7.3).
+  // The class entries: a class taken or left again reshapes the whole sheet (ADR 0042 step 3).
+  class_entries: [...LEVEL_SLICES, "hp"],
   realized_level: [...LEVEL_SLICES, "hp"],
   round: ["round"],
   saved_buffs: ["savedBuffs"],

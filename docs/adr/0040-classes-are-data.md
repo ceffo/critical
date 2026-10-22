@@ -2,12 +2,14 @@
 
 **Status**: accepted 2026-10-21 (the user's triage of the rules-engine foundation, quoted in
 Context). The shape of the definitions, the closed list of feature kinds and their parameters
-(steps 1 to 4) are this ADR's reading of that triage, open to the user's correction in review.
+(steps 1 to 4), and the choices beyond the triage (group ids under the rule of step 10, one
+`rogue_skills` kind with a `set` parameter, the weapon proficiency types derived from the
+`equipment` list, the package `domain/classes`) were accepted in review, 2026-10-21.
 Not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
 [ADR 0036](0036-vocabulary.md) (`GLOSSARY.md`, `docs/domain-model.md`). The house rules live in the
-Ruleset, not in this book data (ADR 0041); multi-class and dual-class rules (ADR 0042) and psionics
+Ruleset, not in this book data ([ADR 0041](0041-ruleset.md)); multi-class and dual-class rules (ADR 0042) and psionics
 (ADR 0043) build on the class entries of step 5.
 
 ## Context
@@ -21,7 +23,7 @@ undo as we go (like when you gave bard talents to all classes)." Decided in the 
   table, hit dice, a spell progression (by reference) and a **list of features with
   parameters**. The app switches on the **feature kind**, never on a class id. Tables keyed by
   class id become rows keyed by class.
-- House rules live in the Ruleset (ADR 0041), not in book data.
+- House rules live in the Ruleset ([ADR 0041](0041-ruleset.md)), not in book data.
 - Foundation first: the five existing classes move onto it before the cleric's remaining work,
   multi-class and dual-class, and psionics.
 
@@ -130,8 +132,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
    language map), the ability adjustments (PHB Table 8) and requirements (Table 7), the identity
    rows (PHB Tables 10 and 11: height, weight, age, today a Go literal), and a list of typed
    **traits** `{kind, params}` (step 4). The thief skill adjustments (Table 27), the racial level
-   limits (DMG Table 7, [ADR 0021](0021-spell-catalogue.md) step 11) and the race languages
-   (format 8) stay tables, rows keyed by race (and class). A human is a race with no adjustments
+   limits and the classes a race admits (DMG Table 7, [ADR 0021](0021-spell-catalogue.md) step 11)
+   and the race languages (format 8) stay tables, rows keyed by race (and class). They are book
+   data; **how they apply** is the ruleset's: the level limits warn (`level_limits` `warn`) and the
+   racial lift waives Table 7's dash for a multi-class or dual-class character ([ADR 0041](0041-ruleset.md) steps 2.2,
+   2.3 and 5). A class or race definition never carries a house rule. A human is a race with no adjustments
    and no traits, not a `race == "human"` test. A race's trait texts that the app does not compute
    stay localized catalogue text (ADR 0030 step 22.3).
    Tests: `RaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt),
@@ -250,7 +255,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     a definition's fields and feature kinds (step 5); the web renders what the server sends (the
     options, the derived block). A kit (a class's optional specialisation from the supplements,
     future) will be data that adds or removes features on a class, under the same rule. A house
-    rule that changes a class's or race's book data is a Ruleset setting (ADR 0041), never an edit
+    rule that changes a class's or race's book data is a Ruleset setting ([ADR 0041](0041-ruleset.md) step 2), never an edit
     of the book data or a literal. Written in `docs/agent-workflow.md` "Hard rules for
     implementers" and review checklist item 9; enforced by `just check-no-class-ids` (part of
     `just validate` once the literals are gone, step 11.5) with a script test that plants a
@@ -295,5 +300,5 @@ writes `Test<name>` and adds the prefix here in the same PR.
 - The by-group spell effects (`by_group`, `max_by_group` in `seeds/spell_effects.json`) already key
   by group code in data; they are unaffected.
 - Out of scope: how several class entries combine (ADR 0042), the psionicist's kinds (ADR 0043),
-  the Ruleset and the racial lift (ADR 0041), kits, and the classes not built (paladin, ranger,
+  the Ruleset and the racial lift ([ADR 0041](0041-ruleset.md)), kits, and the classes not built (paladin, ranger,
   druid, specialist wizards, priests of specific mythoi).

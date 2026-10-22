@@ -119,15 +119,20 @@ One of the six PHB races. A race has **traits**: ability adjustments, level limi
 the languages, and the percentage adjustments of the thief skills
 ([ADR 0030](adr/0030-classes-and-races.md) steps 17, 21 and 22). Traits are data in the catalogue
 ([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`),
-the others text; a human is a race with no traits.
+the others text; a human is a race with no traits. The level limits and the classes a race
+admits are book data; how they apply (they warn; the racial lift for multi-class and dual-class)
+is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).
 
 ## Ruleset and house rules (planned)
 
 A **ruleset** is the set of rules a game plays by: the books' rules plus the table's **house
-rules**. Today a house rule is wired into the character (the crit table of
-[ADR 0001](adr/0001-critical-hits.md) is the first); the plan is that it belongs to a ruleset,
-and a character reads its rules through the ruleset it plays under. One default ruleset
-exists until a second is needed.
+rules**. Each house rule is a typed **house rule setting** of the ruleset
+([ADR 0041](adr/0041-ruleset.md) step 2): the crit table ([ADR 0001](adr/0001-critical-hits.md)),
+the racial lift for multi-class and dual-class, the level limits mode (`warn`) and the success
+effects of proficiencies (Tumbling). Today they are scattered (a global crit table, a Go table);
+the plan is that they belong to the ruleset, and a character reads them through a resolver
+(character to ruleset). One default ruleset exists, used by every character, until a game
+points at its own.
 
 ```mermaid
 flowchart LR
@@ -136,6 +141,9 @@ flowchart LR
     R -->|"rules a roll reads"| C["Character"]
     G["Game (future)"] -->|"plays by"| R
 ```
+
+An admin edits the ruleset; the edit is audited but is not a character action (no undo, not in
+a journal; [ADR 0041](adr/0041-ruleset.md) step 7). A logged outcome keeps the setting it used.
 
 A house rule overrides a book rule by name; it does not fork the catalogue. A character is
 independent of a game, so one character can sit in a game later without changing.

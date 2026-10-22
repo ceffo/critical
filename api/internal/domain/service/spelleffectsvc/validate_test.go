@@ -115,7 +115,7 @@ func TestValidate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := utility()
 			tt.mut(&e)
-			err := e.Validate()
+			err := e.Validate(testGroups)
 			if tt.want == "" {
 				require.NoError(t, err)
 				return
@@ -135,4 +135,16 @@ func TestGrantSlots_SlotSplits(t *testing.T) {
 	for levels, want := range tests {
 		assert.Equal(t, want, spelleffectsvc.GrantSlots{Levels: levels}.SlotSplits(), "%d levels", levels)
 	}
+}
+
+// The by_group keys are the catalogue's class groups, passed in: a group the
+// catalogue defines is accepted, one it does not is refused, whatever its name.
+func TestValidate_ByGroupKeysAreTheCataloguesGroups(t *testing.T) {
+	f := must.Do(formula.Parse("1d6"))
+	e := utility()
+	e.Kind = spelleffectsvc.KindBuff
+	e.Buff = &spelleffectsvc.Buff{AbilityGain: map[string]spelleffectsvc.AbilityGain{"str": {ByGroup: map[string]*formula.Formula{"artisan": f}}}}
+
+	require.NoError(t, e.Validate([]string{"artisan"}), "a group of the catalogue")
+	require.ErrorContains(t, e.Validate(testGroups), "by_group key", "a group the catalogue lacks")
 }

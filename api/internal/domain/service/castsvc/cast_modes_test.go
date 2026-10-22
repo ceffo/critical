@@ -151,7 +151,7 @@ func levelModes(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
 	c, err := spelleffectsadpt.Parse([]byte(`[{"id":"level_bolts","name":"Level Bolts","level":3,
 	  "kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
-	  "modes":[{"key":"bolts","damage":{"dice":"leveld6"}},{"key":"burst","damage":{"dice":"leveld4"}}]}]`))
+	  "modes":[{"key":"bolts","damage":{"dice":"leveld6"}},{"key":"burst","damage":{"dice":"leveld4"}}]}]`), testGroups)
 	require.NoError(t, err)
 	return c
 }

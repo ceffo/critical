@@ -224,7 +224,7 @@ func TestInfo_ItemsListFailure(t *testing.T) {
 // catalog is the test seed of spell effects.
 func catalog(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), testGroups)
 	require.NoError(t, err)
 	return c
 }

@@ -120,7 +120,7 @@ func lowConfidenceInstant(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
 	c, err := spelleffectsadpt.Parse([]byte(`[{"id":"shaky_ward","name":"Shaky Ward","level":2,
 	  "kind":"buff","confidence":"low","note":"Test only.","target":"self","duration":{"kind":"special"},
-	  "modifiers":{"ac":-2}}]`))
+	  "modifiers":{"ac":-2}}]`), testGroups)
 	require.NoError(t, err)
 	return c
 }

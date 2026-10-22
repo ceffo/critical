@@ -55,7 +55,7 @@ type castWire struct {
 
 func newCastWire(t *testing.T) *castWire {
 	t.Helper()
-	effects, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"))
+	effects, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), testGroups)
 	require.NoError(t, err)
 	w := &castWire{
 		slots: mocks.NewMockSlots(t), texts: mocks.NewMockTexts(t), buffs: mocks.NewMockBuffs(t), dice: mocks.NewMockDice(t),

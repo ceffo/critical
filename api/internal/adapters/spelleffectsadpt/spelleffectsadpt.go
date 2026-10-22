@@ -29,16 +29,17 @@ type Catalog struct {
 
 var _ spelleffectsvc.Catalog = (*Catalog)(nil)
 
-// New loads and validates <seedsDir>/spell_effects.json. A missing file, a
+// New loads and validates <seedsDir>/spell_effects.json; groups are the class
+// group ids of the catalogue, which the by_group keys must be. A missing file, a
 // malformed formula or any inconsistent entry is an error naming the spell and
 // the field.
-func New(seedsDir string) (*Catalog, error) {
+func New(seedsDir string, groups []string) (*Catalog, error) {
 	path := filepath.Join(seedsDir, FileName)
 	raw, err := os.ReadFile(path) //nolint:gosec // path is built from the operator-configured seeds dir
 	if err != nil {
 		return nil, fmt.Errorf("spell effects: read %s: %w", path, err)
 	}
-	c, err := Parse(raw)
+	c, err := Parse(raw, groups)
 	if err != nil {
 		return nil, fmt.Errorf("spell effects: %s: %w", path, err)
 	}
@@ -46,7 +47,7 @@ func New(seedsDir string) (*Catalog, error) {
 }
 
 // Parse maps seed JSON bytes to a validated Catalog.
-func Parse(raw []byte) (*Catalog, error) {
+func Parse(raw []byte, groups []string) (*Catalog, error) {
 	var entries []entryDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()
@@ -63,7 +64,7 @@ func Parse(raw []byte) (*Catalog, error) {
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", label, err)
 		}
-		if err := e.Validate(); err != nil {
+		if err := e.Validate(groups); err != nil {
 			return nil, fmt.Errorf("%s: %w", label, err)
 		}
 		if _, dup := c.byID[e.ID]; dup {

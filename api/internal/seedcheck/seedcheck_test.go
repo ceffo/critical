@@ -75,7 +75,7 @@ func TestRepoSeeds_LoadThroughTheServersAdapters(t *testing.T) {
 	defs, err := tables.Definitions()
 	require.NoError(t, err, "the artifact's class definitions")
 
-	effects, err := spelleffectsadpt.New(seedsDir)
+	effects, err := spelleffectsadpt.New(seedsDir, testGroups)
 	require.NoError(t, err)
 	require.NoError(t, effects.CheckAgainst(cat), "every spell effect is a catalogue spell")
 	book, err := spellbookadpt.ReadSeed(seedsDir, cat)
@@ -256,7 +256,7 @@ func mustTable52(t *testing.T, tables *ruletablesvc.Tables) *ruletablesvc.Weapon
 // the catalogue's own id.
 func TestRepoSeeds_EveryEffectIsASpellAtItsLevelAndEveryWizardSpellHasOne(t *testing.T) {
 	cat := realCatalogue(t)
-	effects, err := spelleffectsadpt.New(seedsDir)
+	effects, err := spelleffectsadpt.New(seedsDir, testGroups)
 	require.NoError(t, err)
 
 	wizard := map[string]int{}
@@ -308,7 +308,7 @@ func TestRealCatalogue_AnUnknownSpellEffectIDIsRefused(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
-	effects, err := spelleffectsadpt.New(seeds)
+	effects, err := spelleffectsadpt.New(seeds, testGroups)
 	require.NoError(t, err)
 	err = effects.CheckAgainst(cat)
 	require.Error(t, err)
@@ -318,7 +318,7 @@ func TestRealCatalogue_AnUnknownSpellEffectIDIsRefused(t *testing.T) {
 func TestRepoSeeds_SpellbookSpellsResolve(t *testing.T) {
 	book, err := spellbookadpt.ReadSeed(seedsDir, realCatalogue(t))
 	require.NoError(t, err, "spellbook ids/levels match the catalog")
-	effects, err := spelleffectsadpt.New(seedsDir)
+	effects, err := spelleffectsadpt.New(seedsDir, testGroups)
 	require.NoError(t, err)
 	for _, id := range book {
 		_, ok := effects.Get(id)
@@ -357,7 +357,7 @@ func TestWebWeaponTypes_MatchTheServicesList(t *testing.T) {
 // ADR 0033 step 1.1: every component a spell spends (consume_item.type) is a
 // code of itemsvc.Components, so a piece the editor marks can be spent.
 func TestRepoSeeds_Step1_1_EverySpentComponentIsKnown(t *testing.T) {
-	effects, err := spelleffectsadpt.New(seedsDir)
+	effects, err := spelleffectsadpt.New(seedsDir, testGroups)
 	require.NoError(t, err)
 	n := 0
 	for _, e := range effects.All() {

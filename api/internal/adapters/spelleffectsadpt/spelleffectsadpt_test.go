@@ -17,7 +17,7 @@ var seedsDir = filepath.Join("..", "..", "..", "testdata", "seeds")
 
 func loadRepo(t *testing.T) *spelleffectsadpt.Catalog {
 	t.Helper()
-	c, err := spelleffectsadpt.New(seedsDir)
+	c, err := spelleffectsadpt.New(seedsDir, testGroups)
 	require.NoError(t, err)
 	return c
 }
@@ -115,7 +115,7 @@ func TestParse_MalformedFormulaFailsWithClearError(t *testing.T) {
 	// the original English duration is not a valid formula
 	bad := `[{"id":"haste","name":"Haste","level":3,"kind":"buff","confidence":"high","target":"area",
 	  "duration":{"kind":"rounds","rounds":"3 rds. + 1 rd./level"},"modifiers":{"to_hit":1}}]`
-	_, err := spelleffectsadpt.New(writeSeed(t, bad))
+	_, err := spelleffectsadpt.New(writeSeed(t, bad), testGroups)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, `spell "haste"`)
 	assert.ErrorContains(t, err, "duration.rounds")
@@ -152,7 +152,7 @@ func TestParse_Errors(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, tt.seed))
+			_, err := spelleffectsadpt.New(writeSeed(t, tt.seed), testGroups)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.want)
 		})
@@ -162,7 +162,7 @@ func TestParse_Errors(t *testing.T) {
 func TestParse_AcceptsNumbersAsFormulas(t *testing.T) {
 	seed := `[{"id":"armor","name":"Armor","level":1,"kind":"buff","confidence":"high","target":"self",
 	  "duration":{"kind":"until_discharged"},"modifiers":{"ac_set":6},"charges":{"count":"8+level","unit":"hp"}}]`
-	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	c, err := spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, ok := c.Get("armor")
 	require.True(t, ok)
@@ -170,7 +170,7 @@ func TestParse_AcceptsNumbersAsFormulas(t *testing.T) {
 }
 
 func TestNew_MissingFile(t *testing.T) {
-	_, err := spelleffectsadpt.New(t.TempDir())
+	_, err := spelleffectsadpt.New(t.TempDir(), testGroups)
 	require.ErrorContains(t, err, "spell_effects.json")
 }
 
@@ -188,7 +188,7 @@ func TestParse_DamageParts(t *testing.T) {
 	  {"dice":"2d4","save":"none"},
 	  {"by_level":[{"min_level":1,"dice":"1"},{"min_level":10,"dice":"level"}]}],
 	  "instances":"3","type":"force"}`)
-	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	c, err := spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, ok := c.Get("bolt")
 	require.True(t, ok)
@@ -219,7 +219,7 @@ func TestParse_DamagePartsRefused(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed(tt.save, tt.damage)))
+			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed(tt.save, tt.damage)), testGroups)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, `spell "bolt"`)
 			assert.ErrorContains(t, err, tt.want)
@@ -241,7 +241,7 @@ func TestParse_Modes(t *testing.T) {
 	  {"key":"plane"},
 	  {"key":"sheet","damage":{"dice":"3d10","instances":"2","type":"cold"}},
 	  {"key":"burst","damage":{"parts":[{"dice":"2d4","save":"none"},{"dice":"level"}]}}]`)
-	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	c, err := spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, ok := c.Get("bolt")
 	require.True(t, ok)
@@ -281,7 +281,7 @@ func TestParse_ModesRefused(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, tt.save, tt.rest)))
+			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, tt.save, tt.rest)), testGroups)
 			require.Error(t, err)
 			if name != "mode unknown field" {
 				assert.ErrorContains(t, err, `spell "bolt"`)
@@ -297,7 +297,7 @@ func TestParse_ModesRefused(t *testing.T) {
 func TestParse_DamageSteps(t *testing.T) {
 	seed := damageSeed(`,"save":{"type":"spell","effect":"half"}`, `{"steps":{
 	  "per":"instance","dice":"(max(min(level,12)-(step-1),0))d6","count":"level"},"type":"electricity"}`)
-	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	c, err := spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, ok := c.Get("bolt")
 	require.True(t, ok)
@@ -310,7 +310,7 @@ func TestParse_DamageSteps(t *testing.T) {
 	assert.Nil(t, st.List)
 
 	seed = damageSeed("", `{"steps":{"per":"round","list":[0,"0","leveld2"]},"type":"fire"}`)
-	c, err = spelleffectsadpt.New(writeSeed(t, seed))
+	c, err = spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, _ = c.Get("bolt")
 	require.Len(t, e.Damage.Steps.List, 3)
@@ -319,7 +319,7 @@ func TestParse_DamageSteps(t *testing.T) {
 
 	seed = modesSeed("damage", "", `"modes":[{"key":"a","damage":{"dice":"1d6"}},
 	  {"key":"b","damage":{"steps":{"per":"round","list":["2d6","1d6"]}}}]`)
-	c, err = spelleffectsadpt.New(writeSeed(t, seed))
+	c, err = spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 	e, _ = c.Get("bolt")
 	require.NotNil(t, e.Modes[1].Damage.Steps)
@@ -353,7 +353,7 @@ func TestParse_DamageStepsRefused(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed("", tt.damage)))
+			_, err := spelleffectsadpt.New(writeSeed(t, damageSeed("", tt.damage)), testGroups)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, `spell "bolt"`)
 			assert.ErrorContains(t, err, tt.want)
@@ -372,7 +372,7 @@ func TestParse_Exposure(t *testing.T) {
 		  "exposure":{"modes":[{"key":"near","damage":{"dice":"2d4","type":"fire"}},{"key":"through","damage":{"dice":"2d6+level","type":"fire"}}]}},` +
 		`{"id":"cloud","name":"Cloud","level":5,"kind":"damage","confidence":"high","target":"area","duration":{"kind":"instant"},
 		  "damage":{"dice":"1d4"},"exposure":{"damage":{"parts":[{"dice":"1d10"}],"type":"poison"}}}]`
-	c, err := spelleffectsadpt.New(writeSeed(t, seed))
+	c, err := spelleffectsadpt.New(writeSeed(t, seed), testGroups)
 	require.NoError(t, err)
 
 	fog, ok := c.Get("fog")
@@ -424,7 +424,7 @@ func TestParse_ExposureRefused(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, "", tt.rest)))
+			_, err := spelleffectsadpt.New(writeSeed(t, modesSeed(tt.kind, "", tt.rest)), testGroups)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, `spell "bolt"`)
 			assert.ErrorContains(t, err, tt.want)
@@ -436,7 +436,7 @@ func TestCheckAgainst_ListsEveryIDTheCatalogueDoesNotHold(t *testing.T) {
 	c, err := spelleffectsadpt.Parse([]byte(`[
 	  {"id":"light","name":"Light","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}},
 	  {"id":"sleep","name":"Sleep","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}},
-	  {"id":"lihgt","name":"Lihgt","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}}]`))
+	  {"id":"lihgt","name":"Lihgt","level":1,"kind":"utility","confidence":"high","target":"none","duration":{"kind":"instant"}}]`), testGroups)
 	require.NoError(t, err)
 
 	held := catalogue.Catalogue{Spells: []catalogue.Spell{{ID: "light"}, {ID: "sleep"}, {ID: "lihgt"}}}
@@ -450,7 +450,7 @@ func TestCheckAgainst_ListsEveryIDTheCatalogueDoesNotHold(t *testing.T) {
 // ADR 0004 step 21: the loader maps a spell's end effects, each with its
 // kind, its dice and its causes, in the data's order.
 func TestBuffs_Step21_ParseEndEffects(t *testing.T) {
-	c, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":[{"kind":"heal","dice":"1d12","on":["voluntary","expired"]}]`)))
+	c, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":[{"kind":"heal","dice":"1d12","on":["voluntary","expired"]}]`)), testGroups)
 	require.NoError(t, err)
 	e, ok := c.Get("light")
 	require.True(t, ok)
@@ -479,7 +479,7 @@ func TestBuffs_Step21_ParseEndEffectsRefused(t *testing.T) {
 	}
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
-			_, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":`+tt.effects)))
+			_, err := spelleffectsadpt.New(writeSeed(t, entry(`,"end_effects":`+tt.effects)), testGroups)
 			require.Error(t, err)
 			assert.ErrorContains(t, err, tt.want)
 		})

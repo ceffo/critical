@@ -204,7 +204,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 
 	// The spell effects casting applies; a malformed formula is a startup
 	// error.
-	effects, err := spelleffectsadpt.New(cfg.SeedsDir)
+	effects, err := spelleffectsadpt.New(cfg.SeedsDir, defs.Groups())
 	if err != nil {
 		return nil, err
 	}

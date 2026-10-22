@@ -18,7 +18,6 @@ var (
 	validTargets     = []Target{TargetSelf, TargetOther, TargetSelfOrOther, TargetArea, TargetNone}
 	validDurations   = []DurationKind{DurationRounds, DurationInstant, DurationPermanent, DurationUntilDischarged, DurationSpecial}
 	validAbilities   = []string{"str", "dex", "con", "int", "wis", "cha"}
-	validGroups      = []string{"warrior", "priest", "rogue", "wizard"}
 	// validModifiers are the scalar buff keys, each a formula.
 	validModifiers = []string{
 		"to_hit", "damage", "ac", "ac_set", "ac_set_thrown", "ac_set_missile", "ac_set_other",
@@ -71,8 +70,9 @@ func oneOf[T comparable](v T, set []T, what string) error {
 	return nil
 }
 
-// Validate checks the invariants of an entry.
-func (e Entry) Validate() error {
+// Validate checks the invariants of an entry. groups are the class group ids
+// of the catalogue: the keys a by_group gain may use.
+func (e Entry) Validate(groups []string) error {
 	if e.ID == "" || e.Name == "" {
 		return fmt.Errorf("id and name are required")
 	}
@@ -132,7 +132,7 @@ func (e Entry) Validate() error {
 		if e.Damage != nil {
 			return fmt.Errorf("a buff cannot have damage")
 		}
-		return e.Buff.validate()
+		return e.Buff.validate(groups)
 	case KindDamage:
 		if hasBuff || e.Charges != nil {
 			return fmt.Errorf("a damage spell cannot have buff fields")
@@ -180,7 +180,7 @@ func (e Entry) validateDuration() error {
 	return nil
 }
 
-func (b *Buff) validate() error {
+func (b *Buff) validate(groups []string) error {
 	if b == nil {
 		return nil
 	}
@@ -193,7 +193,7 @@ func (b *Buff) validate() error {
 		if err := oneOf(ab, validAbilities, "ability_gain key"); err != nil {
 			return err
 		}
-		if err := g.validate("ability_gain." + ab); err != nil {
+		if err := g.validate("ability_gain."+ab, groups); err != nil {
 			return err
 		}
 	}
@@ -216,17 +216,17 @@ func (b *Buff) validate() error {
 	return nil
 }
 
-func (g AbilityGain) validate(field string) error {
+func (g AbilityGain) validate(field string, groups []string) error {
 	if (g.Gain == nil) == (len(g.ByGroup) == 0) {
 		return fmt.Errorf("%s: set exactly one of gain and by_group", field)
 	}
 	for grp := range g.ByGroup {
-		if err := oneOf(grp, validGroups, field+".by_group key"); err != nil {
+		if err := oneOf(grp, groups, field+".by_group key"); err != nil {
 			return err
 		}
 	}
 	for grp, m := range g.MaxByGroup {
-		if err := oneOf(grp, validGroups, field+".max_by_group key"); err != nil {
+		if err := oneOf(grp, groups, field+".max_by_group key"); err != nil {
 			return err
 		}
 		if m < 1 || m > 30 {

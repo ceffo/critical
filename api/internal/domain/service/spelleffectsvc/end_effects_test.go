@@ -44,7 +44,7 @@ func TestBuffs_Step21_ValidateEndEffects(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := utility()
 			e.EndEffects = tt.effects
-			err := e.Validate()
+			err := e.Validate(testGroups)
 			if tt.want == "" {
 				require.NoError(t, err)
 				return

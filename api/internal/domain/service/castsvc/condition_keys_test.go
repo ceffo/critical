@@ -17,7 +17,7 @@ import (
 // repoCatalog is the campaign's real seeds/spell_effects.json.
 func repoCatalog(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 	return c
 }

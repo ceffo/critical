@@ -193,11 +193,11 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    As built (2026-10-22): `POST /api/psp/recover` `{hours, activity}` answers the pool
    `{current, max}`; the hours are refused as passing time's are (more than 0, at most 720); the
    delta is rounded down to whole PSPs (1.5 h walking gives 4); exertion logs the hours with a
-   delta of 0; the payload carries `hours`, `activity` and `perHour`. The refusal while
-   maintaining is built with maintenance (steps 13 to 16): until then nothing can be maintained.
+   delta of 0; the payload carries `hours`, `activity` and `perHour`. While a buff row keeps a
+   power up (step 13) the request answers 409 `psp_recovery_while_maintaining` and logs nothing.
    Tests: `TestRecover_Step6_HoursTimesTheActivityRate` (the new `psionicsvc`: 3 h resting gives
    18), `TestRecover_Step6_CappedAndUndone` (composition: capped at the max, undone exactly),
-   `Recover_Step6_RefusedWhileMaintaining` (with maintenance).
+   `Recover_Step6_RefusedWhileMaintaining` (psionicsvc).
 
 7. **The long rest recovers PSPs** (amends [ADR 0008](0008-spell-slots-and-long-rest.md) steps 11
    and 12; the triage's "refilled by rest"). The long rest's one transaction also ends every
@@ -205,10 +205,13 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    `10-special-abilities.md`) and recovers a night's sleep, 8 hours at Table 6's sleeping rate
    (96), capped at the maximum _(Q3: the book has no full refill)_; the `long_rest` entry carries
    the delta and snapshots the maintained powers. Undoing the rest spends them again.
-   As built (2026-10-22): the night's sleep is recovered and undone; ending the maintained powers
-   is built with maintenance (steps 13 to 16): until then nothing can be maintained.
-   Tests: `TestLongRest_Step7_RecoversANightsSleep` (restsvc),
-   `TestLongRest_Step7_UndoRestoresPSP` (composition).
+   As built (2026-10-22): the night's sleep is recovered and undone; the maintained powers' rows
+   come off in the rest's transaction, the entry snapshots the buff list (only when a row came
+   off) and its payload names them in `powersEnded` (catalogue ids). Undoing the rest puts the
+   rows back.
+   Tests: `TestLongRest_Step7_RecoversANightsSleep` and `TestLongRest_Step7_EndsMaintainedPowers`
+   (restsvc), `TestLongRest_Step7_UndoRestoresPSP` and
+   `TestLongRest_Step7_EndsMaintainedPowersUndone` (composition).
 
 ### Powers
 

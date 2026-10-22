@@ -389,3 +389,39 @@ func TestAdvanceRound_Step14_UndoRestoresPSPAndRows(t *testing.T) {
 	assert.Equal(t, 181, currentPSP(t, bs, id))
 	assert.Equal(t, 0, rows(), "the check's undo takes the row off")
 }
+
+// ADR 0043 steps 6 and 7 with a maintained power: recovery is refused, the
+// long rest ends the power, and undoing the rest puts its row back (and
+// spends the night's PSPs again).
+func TestLongRest_Step7_EndsMaintainedPowersUndone(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "clairsentience"}, {Kind: psionics.PickPower, ID: "aura_sight"},
+	}, dice)
+	rows := func() int {
+		b, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		return len(b)
+	}
+	res, err := bs.Psionics.Use(ctx, id, "aura_sight", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	require.True(t, res.Check.Success)
+	require.Equal(t, 1, rows())
+
+	_, err = bs.Psionics.Recover(ctx, id, 1, "resting")
+	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining)
+
+	_, err = bs.Rest.LongRest(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 0, rows(), "no maintenance asleep")
+	assert.Equal(t, 181, currentPSP(t, bs, id), "172 + the night, capped")
+	entries, err := bs.Log.ActiveEntries(ctx, id, actionlog.KindLongRest, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Contains(t, string(entries[0].Payload), `"powersEnded":["aura_sight"]`)
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 1, rows(), "the undo puts the row back")
+	assert.Equal(t, 172, currentPSP(t, bs, id))
+}

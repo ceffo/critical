@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
@@ -22,9 +23,17 @@ import (
 
 func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
 	t.Helper()
+	return newSvcWithBuffs(t, nil)
+}
+
+// newSvcWithBuffs is newSvc with active on the buff list.
+func newSvcWithBuffs(t *testing.T, active []buffsvc.BuffEffect) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
+	t.Helper()
 	rates, log := mocks.NewMockRecoveryRates(t), mocks.NewMockLog(t)
+	buffs := mocks.NewMockBuffs(t)
+	buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(active, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Buffs: mocks.NewMockBuffs(t),
+		Buffs: buffs,
 		Rates: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t), Dice: mocks.NewMockDice(t),
 		Book: psionics.NewBook(nil, nil), Tx: passTx{},
 	})
@@ -97,6 +106,25 @@ func TestRecover_Step6_Refusals(t *testing.T) {
 		_, err := svc.Recover(context.Background(), 7, 1, "resting")
 		assert.True(t, errors.Is(err, actionlogsvc.ErrNoPSPPool))
 	})
+}
+
+// ADR 0043 step 6: no recovery while a power is maintained (the book
+// recovers only in hours with no PSP spent); a buff row that is not a
+// maintained power does not refuse it.
+func TestRecover_Step6_RefusedWhileMaintaining(t *testing.T) {
+	svc, rates, _ := newSvcWithBuffs(t, []buffsvc.BuffEffect{
+		{ID: "b", Name: "Bless"},
+		{ID: "r", Name: "Levitation", PowerID: "levitation", MaintenanceCost: 2, MaintenancePeriod: 1},
+	})
+	rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Maybe()
+	_, err := svc.Recover(context.Background(), 7, 3, "resting")
+	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining, "nothing logged: the log mock has no AppendPSP")
+
+	svc, rates, log := newSvcWithBuffs(t, []buffsvc.BuffEffect{{ID: "b", Name: "Bless"}})
+	rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Once()
+	log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{Current: 18, Max: 25}, nil).Once()
+	_, err = svc.Recover(context.Background(), 7, 3, "resting")
+	require.NoError(t, err)
 }
 
 // passTx runs the unit of work as is: the mocks stand for the store.

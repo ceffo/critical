@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
@@ -31,6 +32,9 @@ type fixture struct {
 	spells  *mocks.MockSpells
 	items   *mocks.MockItems
 	psp     *mocks.MockPSP
+	// maintained is what the buff list ends on a rest (ADR 0043 step 7).
+	maintained []buffsvc.BuffEffect
+	buffSnap   actionlog.Snapshot
 	tx      *fakeTx
 	entries []actionlog.NewEntry
 }
@@ -44,18 +48,28 @@ func newFixture(t *testing.T) *fixture {
 			f.entries = append(f.entries, e)
 			return 7, nil
 		}).Maybe()
-	svc, err := restsvc.New(f.spells, f.items, f.psp, log, f.tx)
+	buffs := mocks.NewMockBuffs(t)
+	buffs.EXPECT().EndMaintained(mock.Anything, mock.Anything).RunAndReturn(
+		func(context.Context, int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error) {
+			if len(f.maintained) == 0 {
+				return nil, actionlog.Snapshot{}, nil
+			}
+			return f.maintained, f.buffSnap, nil
+		}).Maybe()
+	svc, err := restsvc.New(f.spells, f.items, f.psp, buffs, log, f.tx)
 	require.NoError(t, err)
 	f.svc = svc
 	return f
 }
 
 func TestNew_NilDependency(t *testing.T) {
-	_, err := restsvc.New(nil, mocks.NewMockItems(t), mocks.NewMockPSP(t), mocks.NewMockLog(t), &fakeTx{})
+	_, err := restsvc.New(nil, mocks.NewMockItems(t), mocks.NewMockPSP(t), mocks.NewMockBuffs(t), mocks.NewMockLog(t), &fakeTx{})
 	require.Error(t, err)
-	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), nil, mocks.NewMockLog(t), &fakeTx{})
+	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), nil, mocks.NewMockBuffs(t), mocks.NewMockLog(t), &fakeTx{})
 	require.Error(t, err)
-	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), mocks.NewMockPSP(t), nil, &fakeTx{})
+	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), mocks.NewMockPSP(t), nil, mocks.NewMockLog(t), &fakeTx{})
+	require.Error(t, err)
+	_, err = restsvc.New(mocks.NewMockSpells(t), mocks.NewMockItems(t), mocks.NewMockPSP(t), mocks.NewMockBuffs(t), nil, &fakeTx{})
 	require.Error(t, err)
 }
 
@@ -142,4 +156,26 @@ func TestLongRest_Step7_RecoversANightsSleep(t *testing.T) {
 	f.psp.EXPECT().NightsPSPRecovery(mock.Anything, int64(1)).Return(0, boom).Once()
 	require.ErrorIs(t, rest(f), boom)
 	assert.Empty(t, f.entries)
+}
+
+// ADR 0043 step 7: the rest ends every maintained power (no maintenance
+// asleep), its buff snapshot in the long_rest entry so undo puts the rows
+// back, and names the powers in the payload.
+func TestLongRest_Step7_EndsMaintainedPowers(t *testing.T) {
+	f := newFixture(t)
+	f.maintained = []buffsvc.BuffEffect{{ID: "r", Name: "Levitation", PowerID: "levitation", MaintenanceCost: 2}}
+	f.buffSnap = actionlog.Snapshot{Key: "buffs", Before: []byte(`[1]`), After: []byte(`[]`)}
+	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil).Maybe()
+	f.psp.EXPECT().NightsPSPRecovery(mock.Anything, int64(1)).Return(96, nil).Once()
+
+	_, err := f.svc.LongRest(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, f.entries, 1)
+	e := f.entries[0]
+	assert.Contains(t, e.Snapshots, f.buffSnap)
+	assert.JSONEq(t, `{"slotsReset":0,"itemsRefilled":[],"powersEnded":["levitation"]}`, string(e.Payload))
 }

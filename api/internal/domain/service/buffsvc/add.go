@@ -93,3 +93,34 @@ func (s *service) Remove(ctx context.Context, characterID int64, buffID string, 
 	}
 	return true, snap, nil
 }
+
+// EndMaintained takes every maintained power's row off the active list
+// without recording an entry (ADR 0043 step 7: a long rest ends them, the
+// book allows no maintenance asleep). Call it inside the caller's
+// transaction and record the returned snapshot (StateKeyBuffs) in that
+// entry. With no maintained row it writes nothing and the snapshot is the
+// zero value (ended is empty).
+func (s *service) EndMaintained(ctx context.Context, characterID int64) (ended []BuffEffect, snap actionlog.Snapshot, err error) {
+	before, err := s.dal.GetActiveBuffs(ctx, characterID)
+	if err != nil {
+		return nil, actionlog.Snapshot{}, fmt.Errorf("get active buffs: %w", err)
+	}
+	after := make([]BuffEffect, 0, len(before))
+	for _, b := range before {
+		if b.Maintained() {
+			ended = append(ended, b)
+		} else {
+			after = append(after, b)
+		}
+	}
+	if len(ended) == 0 {
+		return nil, actionlog.Snapshot{}, nil
+	}
+	if snap, err = buffsSnapshot(before, after); err != nil {
+		return nil, actionlog.Snapshot{}, err
+	}
+	if err := s.dal.SaveActiveBuffs(ctx, characterID, after); err != nil {
+		return nil, actionlog.Snapshot{}, fmt.Errorf("save active buffs: %w", err)
+	}
+	return ended, snap, nil
+}

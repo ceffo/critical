@@ -159,7 +159,8 @@ type recoverBody struct {
 }
 
 // Recover logs a psp_recovery entry: hours of one of Table 6's activities.
-// It answers the pool after the recovery.
+// It answers the pool after the recovery; 409 psp_recovery_while_maintaining
+// while a power is maintained (ADR 0043 step 6).
 func Recover(charID CharacterIDFunc, svc recoverer) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var body recoverBody

@@ -32,6 +32,9 @@ var (
 	ErrNotEnoughPSP = errors.New("not enough PSPs for the power's initial cost")
 	// ErrPowerNotMaintained: Stop of a power no buff row keeps up (step 16).
 	ErrPowerNotMaintained = errors.New("the power is not maintained")
+	// ErrRecoveryWhileMaintaining: a PSP recovery while a power is
+	// maintained (step 6: the book recovers only in hours with no PSP spent).
+	ErrRecoveryWhileMaintaining = errors.New("no PSP recovery while a power is maintained")
 )
 
 // Bounds of a power use's request.

@@ -2200,6 +2200,7 @@
     "needs_contact": "This power needs contact, which is not available yet.",
     "not_enough_psp": "Not enough PSPs for this power's initial cost.",
     "power_not_maintained": "This power is not maintained.",
+    "psp_recovery_while_maintaining": "No PSP recovery while a power is maintained: stop it first.",
     "not_a_psionicist": "This character is not a psionicist.",
     "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
     "primary_discipline_exceeded": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",

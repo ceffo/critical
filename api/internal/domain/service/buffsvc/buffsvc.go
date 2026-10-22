@@ -38,6 +38,11 @@ type SVC interface {
 	// 0037 step 20.8). removed is false, and nothing is written, when the
 	// buff is not on the list.
 	Remove(ctx context.Context, characterID int64, buffID string, putBack []BuffEffect) (removed bool, snap actionlog.Snapshot, err error)
+	// EndMaintained takes every maintained power's row off without
+	// recording (a long rest, ADR 0043 step 7): the caller records the
+	// snapshot, inside the transaction ctx carries. ended is empty, and
+	// nothing is written, when no power is maintained.
+	EndMaintained(ctx context.Context, characterID int64) (ended []BuffEffect, snap actionlog.Snapshot, err error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	// Dismiss stops a row; cause is how it ended when its spell has end
 	// effects (ADR 0004 step 21), and end what they did.

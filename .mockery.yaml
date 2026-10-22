@@ -156,6 +156,7 @@ packages:
       Items:
       Log:
       PSP:
+      Buffs:
   github.com/ceffo/critical/api/internal/domain/service/psionicsvc:
     config:
       dir: "internal/domain/service/psionicsvc/mocks"

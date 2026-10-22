@@ -243,8 +243,8 @@ type recoveryRecord struct {
 // hours × the activity's hourly rate (whole PSPs, rounded down), as one
 // psp_recovery entry; the recording path caps the gain at the PSPs spent
 // (step 5). An activity whose rate is 0 (exertion) logs the hours with no
-// PSP. Step 6's refusal while a power is maintained waits on maintenance
-// (steps 13 to 16), which does not exist yet: nothing can be maintained.
+// PSP. Refused with ErrRecoveryWhileMaintaining while a power is maintained:
+// the book recovers only in hours with no PSP spent.
 func (s *service) Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error) {
 	if math.IsNaN(hours) || math.IsInf(hours, 0) || hours <= 0 {
 		return actionlog.PSPState{}, domain.FieldErrorf("hours", "hours must be more than 0")
@@ -263,10 +263,25 @@ func (s *service) Recover(ctx context.Context, characterID int64, hours float64,
 	if err != nil {
 		return actionlog.PSPState{}, fmt.Errorf("psp recovery payload: %w", err)
 	}
-	return s.log.AppendPSP(ctx, actionlog.NewEntry{
-		CharacterID: characterID,
-		Kind:        actionlog.KindPSPRecovery,
-		Payload:     payload,
-		PSPDelta:    int(math.Floor(hours*float64(rate) + 1e-9)),
+	var out actionlog.PSPState
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		buffs, err := s.buffs.ListActive(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("list active buffs: %w", err)
+		}
+		if slices.ContainsFunc(buffs, buffsvc.BuffEffect.Maintained) {
+			return ErrRecoveryWhileMaintaining
+		}
+		out, err = s.log.AppendPSP(ctx, actionlog.NewEntry{
+			CharacterID: characterID,
+			Kind:        actionlog.KindPSPRecovery,
+			Payload:     payload,
+			PSPDelta:    int(math.Floor(hours*float64(rate) + 1e-9)),
+		})
+		return err
 	})
+	if err != nil {
+		return actionlog.PSPState{}, err
+	}
+	return out, nil
 }

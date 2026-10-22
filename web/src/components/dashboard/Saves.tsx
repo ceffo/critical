@@ -132,19 +132,13 @@ export function Saves() {
                   data-testid="save-last"
                 >
                   {roll?.immuneWisdom !== undefined ? (
-                    // Immune: passed with no die (ADR 0006 step 10.2).
-                    <span
-                      className="flex items-center"
-                      title={t("saves.immuneLast", {
-                        score: roll.immuneWisdom,
-                      })}
+                    // Immune: passed with no die (ADR 0006 step 10.2); the card and the journal
+                    // say why.
+                    <Check
+                      aria-hidden
+                      weight="bold"
                       data-testid="save-last-immune"
-                    >
-                      <Check aria-hidden weight="bold" />
-                      <span className="sr-only">
-                        {t("saves.immuneLast", { score: roll.immuneWisdom })}
-                      </span>
-                    </span>
+                    />
                   ) : roll ? (
                     <>
                       {roll.passed ? (

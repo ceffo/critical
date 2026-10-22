@@ -400,8 +400,7 @@
     "spellSearchLabel": "Spell the save is against",
     "spellPick": "Save against {{name}}",
     "spellTag": "vs {{name}}",
-    "spellClear": "Clear {{name}}",
-    "immuneLast": "Immune (Wisdom {{score}})"
+    "spellClear": "Clear {{name}}"
   },
   "items": {
     "title": "Inventory",

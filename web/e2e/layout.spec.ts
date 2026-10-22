@@ -2856,9 +2856,7 @@ test("creation route: multi-class rows and a class refusal uncut, fr and en, 128
     await kind
       .getByRole("radio", { name: tr("Multiclassé", "Multi-class") })
       .click();
-    await step
-      .getByRole("button", { name: tr("Ajouter une classe", "Add a class") })
-      .click();
+    await step.getByRole("button", { name: tr("Ajouter", "Add") }).click();
     await pick(0, tr("Classe 1", "Class 1"), "fighter", "1250000");
     await pick(1, tr("Classe 2", "Class 2"), "cleric", "1250000");
     await pick(2, tr("Classe 3", "Class 3"), "thief", "1250000");

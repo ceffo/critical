@@ -9,6 +9,8 @@ import {
   type ExtraSpell,
 } from "./fixtures";
 import {
+  apiCall,
+  reloadSettled,
   buffBadge,
   chooseLanguage,
   chooseSetting,
@@ -18,7 +20,7 @@ import {
   receivePicker,
 } from "./helpers";
 import type { Locator, Page } from "@playwright/test";
-import { expectWholeWords } from "./noClip";
+import { expectNoClippedText, expectWholeWords } from "./noClip";
 
 // The frozen fixture catalogue and spellbook the stack runs on (never the campaign seeds/).
 const testdata = path.resolve(
@@ -803,3 +805,58 @@ test("lookup: gameplay values are highlighted in one style in the text and the t
     }
   }
 });
+
+// "Mine" is the spellbook: only a class that has one is offered it (the unit test lookupClasses holds
+// the rule; this proves the wiring on the server's derived block, and the toggle uncut).
+for (const [cls, hasMine] of [
+  ["mage", true],
+  ["fighter", false],
+] as const) {
+  test(`lookup: ${cls} ${hasMine ? "gets" : "does not get"} Mine; the selection is a valid option`, async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "POST", "/api/characters", {
+        name: `Test ${cls}`,
+        class: cls,
+        raceCode: "human",
+        details: { alignment: "neutral_good", sex: "male" },
+        str: 12,
+        dex: 12,
+        con: 12,
+        int: 16,
+        wis: 12,
+        cha: 10,
+        hpMax: 8,
+        xp: 0,
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await openWorkspace(page, "Spells");
+    await expect(rows(page).first()).toBeVisible();
+    await expect(classButton(page, "Mine")).toHaveCount(hasMine ? 1 : 0);
+    await expect(classButton(page, "Wizard")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    if (hasMine) {
+      await classButton(page, "Mine").click();
+      await expect(classButton(page, "Mine")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    }
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        page.getByRole("group", { name: "Filters" }),
+        `${cls} lookup toggle, ${vp.width}x${vp.height}`,
+      );
+      await snap(page, `${cls}-toggle-${vp.width}x${vp.height}`);
+    }
+  });
+}

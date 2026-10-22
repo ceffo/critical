@@ -509,6 +509,169 @@ func (_c *MockQuerier_GetCharacterDetails_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// GetSkillSets provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) GetSkillSets(ctx context.Context, id int64) (queries.GetSkillSetsRow, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSkillSets")
+	}
+
+	var r0 queries.GetSkillSetsRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (queries.GetSkillSetsRow, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) queries.GetSkillSetsRow); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(queries.GetSkillSetsRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetSkillSets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSkillSets'
+type MockQuerier_GetSkillSets_Call struct {
+	*mock.Call
+}
+
+// GetSkillSets is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockQuerier_Expecter) GetSkillSets(ctx interface{}, id interface{}) *MockQuerier_GetSkillSets_Call {
+	return &MockQuerier_GetSkillSets_Call{Call: _e.mock.On("GetSkillSets", ctx, id)}
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) Run(run func(ctx context.Context, id int64)) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) Return(_a0 queries.GetSkillSetsRow, _a1 error) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetSkillSets_Call) RunAndReturn(run func(context.Context, int64) (queries.GetSkillSetsRow, error)) *MockQuerier_GetSkillSets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// InsertClassEntry provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) InsertClassEntry(ctx context.Context, arg queries.InsertClassEntryParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InsertClassEntry")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.InsertClassEntryParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_InsertClassEntry_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InsertClassEntry'
+type MockQuerier_InsertClassEntry_Call struct {
+	*mock.Call
+}
+
+// InsertClassEntry is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.InsertClassEntryParams
+func (_e *MockQuerier_Expecter) InsertClassEntry(ctx interface{}, arg interface{}) *MockQuerier_InsertClassEntry_Call {
+	return &MockQuerier_InsertClassEntry_Call{Call: _e.mock.On("InsertClassEntry", ctx, arg)}
+}
+
+func (_c *MockQuerier_InsertClassEntry_Call) Run(run func(ctx context.Context, arg queries.InsertClassEntryParams)) *MockQuerier_InsertClassEntry_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.InsertClassEntryParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_InsertClassEntry_Call) Return(_a0 error) *MockQuerier_InsertClassEntry_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_InsertClassEntry_Call) RunAndReturn(run func(context.Context, queries.InsertClassEntryParams) error) *MockQuerier_InsertClassEntry_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListClassEntries provides a mock function with given fields: ctx, characterID
+func (_m *MockQuerier) ListClassEntries(ctx context.Context, characterID int64) ([]queries.ListClassEntriesRow, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListClassEntries")
+	}
+
+	var r0 []queries.ListClassEntriesRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]queries.ListClassEntriesRow, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []queries.ListClassEntriesRow); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]queries.ListClassEntriesRow)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_ListClassEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListClassEntries'
+type MockQuerier_ListClassEntries_Call struct {
+	*mock.Call
+}
+
+// ListClassEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockQuerier_Expecter) ListClassEntries(ctx interface{}, characterID interface{}) *MockQuerier_ListClassEntries_Call {
+	return &MockQuerier_ListClassEntries_Call{Call: _e.mock.On("ListClassEntries", ctx, characterID)}
+}
+
+func (_c *MockQuerier_ListClassEntries_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ListClassEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_ListClassEntries_Call) Return(_a0 []queries.ListClassEntriesRow, _a1 error) *MockQuerier_ListClassEntries_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_ListClassEntries_Call) RunAndReturn(run func(context.Context, int64) ([]queries.ListClassEntriesRow, error)) *MockQuerier_ListClassEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // LockUser provides a mock function with given fields: ctx, id
 func (_m *MockQuerier) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error) {
 	ret := _m.Called(ctx, id)
@@ -896,6 +1059,53 @@ func (_c *MockQuerier_SetCurrentCharacter_Call) Return(_a0 int64, _a1 error) *Mo
 }
 
 func (_c *MockQuerier_SetCurrentCharacter_Call) RunAndReturn(run func(context.Context, queries.SetCurrentCharacterParams) (int64, error)) *MockQuerier_SetCurrentCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetFirstActiveEntryLevel provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetFirstActiveEntryLevel(ctx context.Context, arg queries.SetFirstActiveEntryLevelParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetFirstActiveEntryLevel")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetFirstActiveEntryLevelParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_SetFirstActiveEntryLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetFirstActiveEntryLevel'
+type MockQuerier_SetFirstActiveEntryLevel_Call struct {
+	*mock.Call
+}
+
+// SetFirstActiveEntryLevel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetFirstActiveEntryLevelParams
+func (_e *MockQuerier_Expecter) SetFirstActiveEntryLevel(ctx interface{}, arg interface{}) *MockQuerier_SetFirstActiveEntryLevel_Call {
+	return &MockQuerier_SetFirstActiveEntryLevel_Call{Call: _e.mock.On("SetFirstActiveEntryLevel", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetFirstActiveEntryLevel_Call) Run(run func(ctx context.Context, arg queries.SetFirstActiveEntryLevelParams)) *MockQuerier_SetFirstActiveEntryLevel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetFirstActiveEntryLevelParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetFirstActiveEntryLevel_Call) Return(_a0 error) *MockQuerier_SetFirstActiveEntryLevel_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_SetFirstActiveEntryLevel_Call) RunAndReturn(run func(context.Context, queries.SetFirstActiveEntryLevelParams) error) *MockQuerier_SetFirstActiveEntryLevel_Call {
 	_c.Call.Return(run)
 	return _c
 }

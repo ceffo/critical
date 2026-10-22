@@ -550,7 +550,8 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
     defaultValue: draft.cls,
   });
   const details = body?.details;
-  const skills = d?.bardSkills ?? d?.thiefSkills ?? [];
+  // A new character enters its points in the first skill set its class grants.
+  const skills = d?.skillSets[0]?.skills ?? [];
   const warnedField = (f: string) => read?.warnings.some((w) => w.field === f);
   const fromRoll =
     draft.hpRoll && draft.hpMax.trim() === String(draft.hpRoll.total)

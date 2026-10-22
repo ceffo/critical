@@ -136,6 +136,35 @@ func TestSphereAccess_Step15_Opens(t *testing.T) {
 	assert.Equal(t, []string{"combat", "fire"}, a.Codes())
 }
 
+// ADR 0040 step 3.5: rogue_skills is listed once per skill set, so a class may grant two sets;
+// the same set twice is refused. FeaturesAt answers every set granted at a level, in the class's
+// order, ListsAll every set listed.
+func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
+	skills := func(set string, from int) classes.Feature {
+		rs := rogueSkills()
+		rs.Set = set
+		return classes.Feature{Kind: classes.KindRogueSkills, FromLevel: from, RogueSkills: rs}
+	}
+	r := registry(t, withFeatures(skills("set_a", 1), skills("set_b", 3)))
+	c, ok := r.Class("test_class")
+	require.True(t, ok)
+	sets := func(fs []classes.Feature) []string {
+		var out []string
+		for _, f := range fs {
+			out = append(out, f.RogueSkills.Set)
+		}
+		return out
+	}
+	assert.Equal(t, []string{"set_a"}, sets(c.FeaturesAt(classes.KindRogueSkills, 2)), "the second set starts at its level")
+	assert.Equal(t, []string{"set_a", "set_b"}, sets(c.FeaturesAt(classes.KindRogueSkills, 3)))
+	assert.Equal(t, []string{"set_a", "set_b"}, sets(c.ListsAll(classes.KindRogueSkills)))
+	assert.Empty(t, c.FeaturesAt(classes.KindBackstab, 20))
+
+	_, err := classes.New([]classes.Class{withFeatures(skills("set_a", 1), skills("set_a", 5))}, groups("warrior"),
+		[]classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+	require.Error(t, err, "the same skill set twice")
+}
+
 // ADR 0040 step 8, the creation gate: a class is implemented only when every
 // kind it lists is computed. The kinds the code does not compute yet are
 // psionics and save_bonus; a class listing one of them, with others or alone,

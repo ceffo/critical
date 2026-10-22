@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -126,18 +127,18 @@ func TestCharacters_ListIsTheUsersOwn(t *testing.T) {
 	}))
 	m.char.EXPECT().List(mock.Anything, annID).Return([]charactersvc.Summary{
 		{
-			ID: 3, Name: "Kelsen", Class: "bard", Level: 15, Race: "half_elf", Alignment: "chaotic_good", Sex: "male",
+			ID: 3, Name: "Kelsen", Classes: []classes.Entry{classes.SingleEntry("bard", 15, 1_293_418)}, Race: "half_elf", Alignment: "chaotic_good", Sex: "male",
 			Missing: []string{}, CurrentHP: 55, MaxHP: 85,
 		},
-		{ID: 5, Name: "Vex", Class: "thief", Level: 2, Race: "elf", Missing: []string{"alignment", "sex"}, CurrentHP: 9, MaxHP: 9},
+		{ID: 5, Name: "Vex", Classes: []classes.Entry{classes.SingleEntry("thief", 2, 1250)}, Race: "elf", Missing: []string{"alignment", "sex"}, CurrentHP: 9, MaxHP: 9},
 	}, nil).Once()
 	m.char.EXPECT().List(mock.Anything, bobID).Return([]charactersvc.Summary{}, nil).Once()
 
 	rec := as(h, "ann", "GET", "/api/characters", "")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"characters":[{"id":3,"name":"Kelsen","class":"bard","level":15,"race":"half_elf",`+
+	assert.JSONEq(t, `{"characters":[{"id":3,"name":"Kelsen","classes":[{"class":"bard","level":15,"startingXp":1293418,"state":"active","leftAtLevel":0}],"race":"half_elf",`+
 		`"alignment":"chaotic_good","sex":"male","missing":[],"currentHp":55,"maxHp":85},`+
-		`{"id":5,"name":"Vex","class":"thief","level":2,"race":"elf","alignment":"","sex":"",`+
+		`{"id":5,"name":"Vex","classes":[{"class":"thief","level":2,"startingXp":1250,"state":"active","leftAtLevel":0}],"race":"elf","alignment":"","sex":"",`+
 		`"missing":["alignment","sex"],"currentHp":9,"maxHp":9}],"currentId":3}`, rec.Body.String())
 
 	rec = as(h, "new", "GET", "/api/characters", "")
@@ -154,7 +155,7 @@ func TestCharacters_SetCurrent(t *testing.T) {
 	}))
 	set := m.char.EXPECT().SetCurrent(mock.Anything, annID, int64(5)).Return(nil).Once()
 	m.char.EXPECT().List(mock.Anything, annID).Return([]charactersvc.Summary{
-		{ID: 3, Name: "Kelsen", Class: "bard", Level: 15}, {ID: 5, Name: "Vex", Class: "thief", Level: 2},
+		{ID: 3, Name: "Kelsen", Classes: []classes.Entry{classes.SingleEntry("bard", 15, 0)}}, {ID: 5, Name: "Vex", Classes: []classes.Entry{classes.SingleEntry("thief", 2, 0)}},
 	}, nil).Once().NotBefore(set)
 	rec := as(h, "ann", "PUT", "/api/characters/current", `{"id":5}`)
 	require.Equal(t, http.StatusOK, rec.Code)
@@ -316,8 +317,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"specializes": false, "exceptionalStrength": false,
 		"spellFailure": 0,
 		"turning": null,
-		"thiefSkills": null, "bardSkills": null,
-		"skillArmor": "", "skillBudget": [], "skillPoints": null,
+		"skillSets": [],
 		"backstab": 0,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false}
 	}`, string(derived))
@@ -340,10 +340,10 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	}), []string{"hpMax"}).Return(&charactersvc.Draft{
 		Character: &charactersvc.Character{Derived: charactersvc.Derived{
 			TargetLevel: 2, RealizedLevel: 2,
-			SkillPoints: &ruletablesvc.SkillPointsBudget{
+			SkillSets: []skills.SkillSet{{Set: "thief", Armor: "none", Points: &ruletablesvc.SkillPointsBudget{
 				Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
 				PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
-			},
+			}}},
 		}, Details: charactersvc.Details{Languages: []string{"elvish", "orcish"}}},
 		Refusals: []error{
 			&domain.FieldError{Field: "dex", Message: charactersvc.CodeOutOfRange},
@@ -370,9 +370,20 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	assert.JSONEq(t, `[]`, string(got["warnings"]))
 	var derived map[string]json.RawMessage
 	require.NoError(t, json.Unmarshal(got["derived"], &derived))
+	var sets []struct {
+		Set        string
+		SkillArmor string
+		Warnings   []any
+		Budget     json.RawMessage
+	}
+	require.NoError(t, json.Unmarshal(derived["skillSets"], &sets))
+	require.Len(t, sets, 1)
+	assert.Equal(t, "thief", sets[0].Set)
+	assert.Equal(t, "none", sets[0].SkillArmor)
+	assert.Empty(t, sets[0].Warnings)
 	assert.JSONEq(t, `{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}`,
-		string(derived["skillPoints"]))
-	assert.JSONEq(t, string(derived["skillPoints"]), string(got["skillPoints"]), "the draft's own budget, in the derived block's shape")
+		string(sets[0].Budget))
+	assert.JSONEq(t, string(sets[0].Budget), string(got["skillPoints"]), "the draft's own budget, in the derived set's shape")
 	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
 }
 

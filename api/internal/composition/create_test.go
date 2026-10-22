@@ -26,9 +26,12 @@ func bardWith(details string) string { return bardStart + `,"details":` + detail
 var newBard = bardWith(`{"alignment":"neutral_good","sex":"male"}`)
 
 type createdSheet struct {
-	ID       int64  `json:"id"`
-	Name     string `json:"name"`
-	Class    string `json:"class"`
+	ID      int64  `json:"id"`
+	Name    string `json:"name"`
+	Classes []struct {
+		Class string `json:"class"`
+		Level int    `json:"level"`
+	} `json:"classes"`
 	RaceCode string `json:"raceCode"`
 	HPMax    int    `json:"hpMax"`
 	Derived  struct {
@@ -58,7 +61,9 @@ func TestCreate_ANewBardIsTheOwnersOnlyAndStartsWithNothing(t *testing.T) {
 	var got createdSheet
 	require.Equal(t, http.StatusOK, tb.showing(bob, lyra, "GET", "/api/character", "", &got))
 	assert.Equal(t, "Lyra", got.Name)
-	assert.Equal(t, "bard", got.Class)
+	require.Len(t, got.Classes, 1)
+	assert.Equal(t, "bard", got.Classes[0].Class)
+	assert.Equal(t, 3, got.Classes[0].Level)
 	assert.Equal(t, "half_elf", got.RaceCode)
 	assert.Equal(t, 6, got.HPMax)
 	assert.Equal(t, 3, got.Derived.TargetLevel, "PHB Table 25: 2,500 XP is level 3")
@@ -430,9 +435,12 @@ func TestCharacters_Step14_SkillArmourIsNoEntry(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "PATCH", "/api/characters/"+itoa(id), `{"skillArmor":"elven_chain"}`, nil))
 	var shown struct {
 		Derived struct {
-			SkillArmor string `json:"skillArmor"`
+			SkillSets []struct {
+				SkillArmor string `json:"skillArmor"`
+			} `json:"skillSets"`
 		} `json:"derived"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/character", "", &shown))
-	assert.Equal(t, "none", shown.Derived.SkillArmor, "a new bard wears nothing")
+	require.Len(t, shown.Derived.SkillSets, 1)
+	assert.Equal(t, "none", shown.Derived.SkillSets[0].SkillArmor, "a new bard wears nothing")
 }

@@ -179,6 +179,23 @@ writes `Test<name>` and adds the prefix here in the same PR.
       classes is a parameter.
    4. The starting spellbook stays a seed keyed by class (`seeds/starting_spellbook.json`, ADR 0030
       step 20.7): seeds are data.
+   5. **A skill set per `rogue_skills` feature.** A class lists `rogue_skills` once per
+      `set` (`classes.New` refuses the same set twice), so a thief/bard grants both. A character
+      has one **skill set** for each such feature granted at its realized level, in the class's
+      order, each with its own percentages, skill armour (read through its own armour entries,
+      ADR 0033 step 14) and budget (ADR 0037 step 10), and its own stored points: two sets can
+      share a skill (both have pick pockets) and never share points. The sheet's `derived`
+      block and `GET /api/skills` serve `skillSets: [{set, skillArmor, budget, skills}]` (the
+      skills tab's also `kind`, the check kind of step 3.2), and the client renders one section per
+      set, naming no class. A spend, its preview and its `skill_points` journal entry name the
+      `set` (a class with one set may leave it out); a roll names it in `?set=` when two sets
+      share the skill (else the first set that holds it). The points are stored per set in
+      `characters.skill_sets` (`{"<set>": {"<skill>": points}}`, migration 034, additive; its data
+      step copies the flat `skill_points` under the class's first set); a `skill_points`
+      snapshot without a `set`, from before, restores the character's only set. What is left to
+      spend (ADR 0037 step 15) adds the sets' left points, a set over budget leaving 0. A new
+      character enters its points in the class's first set; a creation that enters points in a
+      second set belongs to the multi-class item (ADR 0042).
 
    Tests: `TestFeatures_Step3_EveryKindParsesItsParams` (domain: each kind with its params, an unknown
    param or a missing one refused), `TestFeatures_Step3_TheFiveClassesGrantTodaysMechanics` (seedcheck:

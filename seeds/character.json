@@ -20,7 +20,7 @@
   "save_breath": 13,
   "save_spell": 9,
   "languages": ["elvish", "common", "orcish", "dwarvish"],
-  "skill_points": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 },
+  "skill_points": { "bard": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 } },
   "proficiencies": [
     { "id": "musical_instrument", "slots": 1 },
     { "id": "tumbling", "slots": 1 },

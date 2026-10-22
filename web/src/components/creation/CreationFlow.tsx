@@ -708,7 +708,11 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
       : null,
   ].filter(Boolean);
   const warned = read?.derived
-    ? warnedFields(t, read.warnings, read.derived.skillBudget.length)
+    ? warnedFields(
+        t,
+        read.warnings,
+        read.derived.skillSets.reduce((n, s) => n + s.warnings.length, 0),
+      )
     : [];
   return (
     <aside

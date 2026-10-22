@@ -176,6 +176,41 @@ func (c Class) Has(kind string, level int) bool {
 	return ok
 }
 
+// FeaturesAt are all the features of kind the class grants at level, in list
+// order (a kind may be listed once per Feature.Key, as rogue_skills once per
+// skill set): nil for none.
+func (c Class) FeaturesAt(kind string, level int) []Feature {
+	var out []Feature
+	for _, f := range c.Features {
+		if f.Kind == kind && f.FromLevel <= level {
+			out = append(out, f.clone())
+		}
+	}
+	return out
+}
+
+// ListsAll are all the features of kind the class lists at any level, in list
+// order: nil for none.
+func (c Class) ListsAll(kind string) []Feature {
+	var out []Feature
+	for _, f := range c.Features {
+		if f.Kind == kind {
+			out = append(out, f.clone())
+		}
+	}
+	return out
+}
+
+// Key tells two features of a class apart: a kind is listed once, except
+// rogue_skills, listed once per skill set (a class may grant two skill sets,
+// ADR 0040 step 3.5).
+func (f Feature) Key() string {
+	if f.Kind == KindRogueSkills && f.RogueSkills != nil {
+		return f.Kind + ":" + f.RogueSkills.Set
+	}
+	return f.Kind
+}
+
 // Lists is the feature of kind the class lists at any level, false for
 // none: what the creation options show of a class before a level is known.
 func (c Class) Lists(kind string) (Feature, bool) {
@@ -206,10 +241,10 @@ func (f Feature) clone() Feature {
 }
 
 // checkFeatures validates a class's feature list (ADR 0040 step 8): known
-// kinds, each once, a from_level in 1..MaxLevel (0 reads as 1), and exactly
+// kinds, each once (a rogue_skills once per set), a from_level in 1..MaxLevel (0 reads as 1), and exactly
 // the params of each kind. The list comes back copied with FromLevel set.
 func checkFeatures(fs []Feature) ([]Feature, error) {
-	if err := unique(fs, func(f Feature) string { return f.Kind }); err != nil {
+	if err := unique(fs, Feature.Key); err != nil {
 		return nil, fmt.Errorf("features: %w", err)
 	}
 	out := make([]Feature, 0, len(fs))

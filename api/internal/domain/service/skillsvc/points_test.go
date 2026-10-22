@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // pointsFixture is a character of class at realized level 5 whose sheet
@@ -35,7 +36,7 @@ func pointsFixtureAt(t *testing.T, class string, level int, points map[string]in
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: class, SkillPoints: points, RealizedLevel: level,
+		ID: charID, Class: class, SkillPoints: skills.SetPoints(nil).With(class, points), RealizedLevel: level,
 		Derived: charactersvc.Derived{RealizedLevel: level},
 	}, nil).Maybe()
 	return f
@@ -49,20 +50,20 @@ func pointsFixtureAt(t *testing.T, class string, level int, points map[string]in
 func TestSetPoints_Step17_WritesAndLogsTheSpend(t *testing.T) {
 	f := pointsFixture(t, "thief", map[string]int{"open_locks": 30})
 	f.records()
-	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int{"open_locks": 60, "pick_pockets": 15}).Return(nil).Once()
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"thief": {"open_locks": 60, "pick_pockets": 15}}).Return(nil).Once()
 
-	got, err := f.svc.SetPoints(context.Background(), charID, map[string]int{"open_locks": 60, "pick_pockets": 15, "climb_walls": 0})
+	got, err := f.svc.SetPoints(context.Background(), charID, "", map[string]int{"open_locks": 60, "pick_pockets": 15, "climb_walls": 0})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"open_locks": 60, "pick_pockets": 15}, got)
 	assert.Equal(t, 1, f.tx.calls)
 	require.Len(t, f.entries, 1)
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindSkillPoints, e.Kind)
-	assert.JSONEq(t, `{"before":{"open_locks":30},"after":{"open_locks":60,"pick_pockets":15}}`, string(e.Payload))
+	assert.JSONEq(t, `{"set":"thief","before":{"open_locks":30},"after":{"open_locks":60,"pick_pockets":15}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, skillsvc.PointsStateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"points":{"open_locks":30}}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"points":{"open_locks":60,"pick_pockets":15}}`, snaptest.State(t, e.Snapshots[0].After))
+	assert.JSONEq(t, `{"set":"thief","points":{"open_locks":30}}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"set":"thief","points":{"open_locks":60,"pick_pockets":15}}`, snaptest.State(t, e.Snapshots[0].After))
 }
 
 // Step 17: points refused (out of range, an unknown skill, any point of a
@@ -88,7 +89,7 @@ func TestSetPoints_Step17_RefusalsAndNoChange(t *testing.T) {
 				stored = nil
 			}
 			f := pointsFixture(t, tt.class, stored) // the mocks fail any write or record
-			_, err := f.svc.SetPoints(context.Background(), charID, tt.points)
+			_, err := f.svc.SetPoints(context.Background(), charID, "", tt.points)
 			if tt.field == "" {
 				require.NoError(t, err)
 				return
@@ -101,15 +102,20 @@ func TestSetPoints_Step17_RefusalsAndNoChange(t *testing.T) {
 }
 
 // ADR 0019 on step 17: the restorer writes a snapshot's points back, an
-// empty one as none.
+// empty one as none, in the snapshot's skill set (a snapshot from before skill sets: the
+// character's only one).
 func TestSetPoints_Step17_RestorerWritesThePointsBack(t *testing.T) {
 	f := pointsFixture(t, "thief", nil)
 	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
 	require.NotNil(t, r)
-	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int{"open_locks": 30}).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":30}}`)))
-	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int(nil)).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{}}`)))
+	f.points.EXPECT().SkillPoints(mock.Anything, charID).Return("thief", nil, nil).Times(3)
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"thief": {"open_locks": 30}}).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"set":"thief","points":{"open_locks":30}}`)))
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints(nil)).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"set":"thief","points":{}}`)))
+	// An entry from before skill sets has no set: the character's only one.
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"thief": {"open_locks": 10}}).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":10}}`)))
 }
 
 // ADR 0037 step 10 on the skill points: a spend is refused when, after it,
@@ -151,9 +157,9 @@ func TestSetPoints_Step10_SkillPointsRefusedOverAndGrowing(t *testing.T) {
 			f := pointsFixtureAt(t, tt.class, tt.level, tt.stored) // the mocks fail any unexpected write or record
 			if tt.refused == nil {
 				f.records()
-				f.points.EXPECT().SetSkillPoints(mock.Anything, charID, tt.set).Return(nil).Once()
+				f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{tt.class: tt.set}).Return(nil).Once()
 			}
-			got, err := f.svc.SetPoints(context.Background(), charID, tt.set)
+			got, err := f.svc.SetPoints(context.Background(), charID, "", tt.set)
 			if tt.refused == nil {
 				require.NoError(t, err)
 				assert.Equal(t, tt.set, got)
@@ -170,7 +176,7 @@ func TestSetPoints_Step10_SkillPointsRefusedOverAndGrowing(t *testing.T) {
 	t.Run("an overspend unchanged writes nothing and is no refusal", func(t *testing.T) {
 		stored := map[string]int{"open_locks": 40, "pick_pockets": 30}
 		f := pointsFixtureAt(t, "thief", 1, stored)
-		got, err := f.svc.SetPoints(context.Background(), charID, stored)
+		got, err := f.svc.SetPoints(context.Background(), charID, "", stored)
 		require.NoError(t, err)
 		assert.Equal(t, stored, got)
 	})
@@ -191,29 +197,30 @@ func TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt(t *testing.T) {
 	require.NoError(t, err)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (*charactersvc.Character, error) {
 		return &charactersvc.Character{
-			ID: charID, Class: "thief", Race: "elf", Dex: 17, SkillPoints: map[string]int{"open_locks": 30}, RealizedLevel: 1,
-			Derived: charactersvc.Derived{RealizedLevel: 1, SkillArmor: "leather"},
+			ID: charID, Class: "thief", Race: "elf", Dex: 17, SkillPoints: skills.SetPoints{"thief": {"open_locks": 30}}, RealizedLevel: 1,
+			Derived: charactersvc.Derived{RealizedLevel: 1, SkillColumn: "leather"},
 		}, nil
 	})
 	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, mock.Anything).Return(nil, nil)
 
-	got, err := svc.PreviewPoints(context.Background(), charID, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 0})
+	got, err := svc.PreviewPoints(context.Background(), charID, "", map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 0})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"open_locks": 30, "pick_pockets": 30}, tables.points, "the draft without its zeros")
 	assert.Equal(t, "elf", tables.race)
 	assert.Equal(t, 17, tables.dex)
 	assert.Equal(t, "leather", tables.armor, "the character's skill armour")
-	require.NotNil(t, got.Budget)
-	assert.Equal(t, 60, got.Budget.Spent)
-	assert.Equal(t, 0, got.Budget.Left, "a level 1 thief's 60 points, spent")
-	assert.Equal(t, "leather", got.SkillArmor)
+	require.Len(t, got.SkillSets, 1)
+	require.NotNil(t, got.SkillSets[0].Budget)
+	assert.Equal(t, 60, got.SkillSets[0].Budget.Spent)
+	assert.Equal(t, 0, got.SkillSets[0].Budget.Left, "a level 1 thief's 60 points, spent")
+	assert.Equal(t, "leather", got.SkillSets[0].Armor)
 
-	_, err = svc.PreviewPoints(context.Background(), charID, map[string]int{"juggling": 5})
+	_, err = svc.PreviewPoints(context.Background(), charID, "", map[string]int{"juggling": 5})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillPoints.juggling", fe.Field)
 
-	_, err = svc.PreviewPoints(context.Background(), charID, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 5})
+	_, err = svc.PreviewPoints(context.Background(), charID, "", map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 5})
 	var be *domain.BudgetError
 	require.ErrorAs(t, err, &be)
 	assert.Equal(t, domain.BudgetError{Field: "skillPoints", Spent: 65, Limit: 60}, *be)

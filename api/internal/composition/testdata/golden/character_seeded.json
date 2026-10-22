@@ -10,7 +10,15 @@
   "cha": 16,
   "hpMax": 85,
   "xpTotal": 1293418,
-  "class": "bard",
+  "classes": [
+    {
+      "class": "bard",
+      "level": 15,
+      "startingXp": 1293418,
+      "state": "active",
+      "leftAtLevel": 0
+    }
+  ],
   "raceCode": "half_elf",
   "derived": {
     "xpTotal": 1293418,
@@ -75,62 +83,66 @@
     },
     "spellFailure": 0,
     "turning": null,
-    "thiefSkills": null,
-    "bardSkills": [
+    "skillSets": [
       {
-        "skill": "climb_walls",
-        "base": 50,
-        "points": 35,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 85,
-        "percent": 85
-      },
-      {
-        "skill": "detect_noise",
-        "base": 20,
-        "points": 70,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 90,
-        "percent": 90
-      },
-      {
-        "skill": "pick_pockets",
-        "base": 10,
-        "points": 25,
-        "race": 10,
-        "dexterity": 5,
-        "armor": 0,
-        "rawPercent": 50,
-        "percent": 50
-      },
-      {
-        "skill": "read_languages",
-        "base": 5,
-        "points": 70,
-        "race": 0,
-        "dexterity": 0,
-        "armor": 0,
-        "rawPercent": 75,
-        "percent": 75
+        "set": "bard",
+        "skillArmor": "leather",
+        "skills": [
+          {
+            "skill": "climb_walls",
+            "base": 50,
+            "points": 35,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 85,
+            "percent": 85
+          },
+          {
+            "skill": "detect_noise",
+            "base": 20,
+            "points": 70,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 90,
+            "percent": 90
+          },
+          {
+            "skill": "pick_pockets",
+            "base": 10,
+            "points": 25,
+            "race": 10,
+            "dexterity": 5,
+            "armor": 0,
+            "rawPercent": 50,
+            "percent": 50
+          },
+          {
+            "skill": "read_languages",
+            "base": 5,
+            "points": 70,
+            "race": 0,
+            "dexterity": 0,
+            "armor": 0,
+            "rawPercent": 75,
+            "percent": 75
+          }
+        ],
+        "warnings": [],
+        "budget": {
+          "level": 15,
+          "first": 20,
+          "perLevel": 15,
+          "available": 230,
+          "spent": 200,
+          "left": 30,
+          "perSkillFirst": 0,
+          "perSkillPerLevel": 0,
+          "perSkillCap": 0
+        }
       }
     ],
-    "skillArmor": "leather",
-    "skillBudget": [],
-    "skillPoints": {
-      "level": 15,
-      "first": 20,
-      "perLevel": 15,
-      "available": 230,
-      "spent": 200,
-      "left": 30,
-      "perSkillFirst": 0,
-      "perSkillPerLevel": 0,
-      "perSkillCap": 0
-    },
     "backstab": 0,
     "proficiencySlots": {
       "nonWeapon": {

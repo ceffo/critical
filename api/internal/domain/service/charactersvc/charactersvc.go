@@ -344,7 +344,7 @@ func (s *service) readWarnings(c *Character, alignments []string) {
 		p := &c.Derived.LevelUp.Pending[i]
 		p.Grants = skills.GrantsAt(s.profs, c.Class, p.Level)
 	}
-	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillPoints)
+	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillSets)
 }
 
 // fromSkills are the skills module's warnings (ADR 0037 step 11) as the sheet's.
@@ -375,7 +375,7 @@ func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) 
 			return nil, fmt.Errorf("character %d HP: %w", list[i].ID, err)
 		}
 		d := c.Details.Coded()
-		list[i].Level = c.Derived.RealizedLevel
+		list[i].Classes = c.Entries()
 		list[i].Race = c.Race
 		list[i].Alignment, list[i].Sex = d.Alignment, d.Sex
 		list[i].Missing = c.Details.Missing()

@@ -113,6 +113,8 @@ erDiagram
 
 - A character has a feature kind when one of its class entries' classes lists it at or under that
   entry's realized level; the rule reads that entry's parameters and level ([ADR 0040](adr/0040-classes-are-data.md) step 5).
+- A **class save bonus** (`save_bonus`) counts where its entry's saves do (a dual-class's old class only past
+  the crossover), the best one per effect tag; a save flagged with the tag carries it as a modifier (ADR 0043 step 3).
 - No class, group, race or kit id appears in the code: ids live in the catalogue, seeds and tests
   ([ADR 0040](adr/0040-classes-are-data.md) step 10).
 

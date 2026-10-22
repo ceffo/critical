@@ -78,7 +78,7 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 					PerLevel: classes.PSPPerLevel{Ability: "wis", Plus: 10}, Table: "inherent_potential",
 				},
 			}},
-			{Kind: classes.KindSaveBonus, FromLevel: 1},
+			{Kind: classes.KindSaveBonus, FromLevel: 1, SaveBonus: &classes.SaveBonus{Against: classes.SaveAgainstMindAffecting, Bonus: 2}},
 		}},
 	}
 	assert.Len(t, defs.Classes(), len(want), "the fixture's five book classes and the psionicist")

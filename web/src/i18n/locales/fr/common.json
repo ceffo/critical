@@ -1197,6 +1197,7 @@
       "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
       "race": "{{race}} (race)",
+      "class": "{{class}} (classe)",
       "wisdom": "Sagesse {{detail}} (défense contre la magie)",
       "specialization": "Spécialisation",
       "point_blank": "Bout portant",

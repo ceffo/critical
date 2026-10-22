@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
@@ -81,7 +82,8 @@ func savesByCategory(s charactersvc.Saves) map[SaveCategory]int {
 
 // ResolveSavingThrow rolls a D20 against the character's per-category target,
 // applying the race's bonus, the Wisdom magical defence adjustment on a
-// mind-affecting save (ADR 0006 step 9) and buff SaveBonus modifiers, and records the save in the action log
+// mind-affecting save (ADR 0006 step 9), a class's save_bonus on the save its
+// tag names (ADR 0043 step 3) and buff SaveBonus modifiers, and records the save in the action log
 // (kind save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
 func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory, opts SaveOptions) (*SaveBreakdown, error) {
@@ -123,6 +125,14 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// named modifier on the roll (never the target), in any category.
 		if b := char.Derived.MagicDefence; opts.MindAffecting && b != 0 {
 			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModWisdom), Detail: strconv.Itoa(char.Wis), Value: b})
+		}
+		// ADR 0043 step 3: a class's save_bonus is one named modifier on the
+		// roll, beside the Wisdom adjustment, when the request carries its
+		// tag; the one tag is the mind-affecting flag (Q12).
+		for _, b := range char.Derived.ClassSaveBonuses {
+			if b.Against == classes.SaveAgainstMindAffecting && opts.MindAffecting {
+				rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModClass), Detail: b.Class, Value: b.Bonus})
+			}
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =
 		// buff name), so the card labels each one.

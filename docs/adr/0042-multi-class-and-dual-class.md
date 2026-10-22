@@ -211,9 +211,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
    `TestCreate_Step4_EntersLevelAndXPPerEntry` (charactersvc and composition),
    `TestCreate_Step4_TheClassLeftsXP`,
    `TestCreate_ThePartyThroughTheDraftAndTheCreation` (composition: the elf and the half-elf
-   fighter/cleric). The human thief/psionicist cannot be created yet: the psionicist lists
-   psionics, which is not computed (ADR 0043), so it is refused as not creatable
-   (`TestCreate_ThePartyThiefPsionicistWaitsForPsionics`).)_
+   fighter/cleric). The human thief/psionicist is created since every kind the psionicist lists
+   is computed (ADR 0043 step 3, 2026-10-22: `TestCreate_Step8_ThePartyThiefPsionicistIsCreatable`).)_
 
 ### Experience and levels
 

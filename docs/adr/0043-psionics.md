@@ -455,11 +455,19 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
   by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
   row and crossover (`seeds/proficiencies.json`).
-- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but one of its two kinds is not computed yet, so the
-  class is **not offered at creation and refused** (`not_creatable`) until `save_bonus` has a reader. As built: `psionics` left
-  `classes.notImplemented` with its reader (the PSP pool, steps 4 to 7: `TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`), `save_bonus`
-  stays; each kind leaves `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
-  (`KindPsionics`, `KindSaveBonus`: parsed with no params, which the schema checks; nothing reads them).
+- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist; it was not offered at creation and refused
+  (`not_creatable`) while one of its kinds had no reader. As built: `psionics` left `classes.notImplemented` with its reader (the PSP pool,
+  steps 4 to 7), and `save_bonus` with its own (step 3, 2026-10-22), which empties the list: the psionicist is creatable, single-class
+  and in a multi-class (`TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`, a test on kinds, never an id;
+  `TestCreate_Step8_ThePartyThiefPsionicistIsCreatable` in composition). The list and `Class.Implemented` stay for the next kind
+  listed before its reader.
+- **`save_bonus` as built (step 3, 2026-10-22)**: the params `against` (one tag, `mind_affecting`, `classes.SaveAgainst`) and `bonus`
+  (1 to 5) are checked at start like every kind's. The derived character carries `ClassSaveBonuses` (domain only, not in the character
+  DTO): one per tag, the best among the entries whose saves count (ADR 0042 step 9: a dual-class's old class only past the crossover),
+  so two classes' bonuses against one tag do not add up. A save the request flags `mindAffecting` gets each as a modifier of kind
+  `class` (detail: the class code) after the Wisdom line; the web words it "Psionicist (class)". Tests:
+  `TestResolveSavingThrow_Step3_ThePsionicistsTwoAgainstCharm` (combatsvc, there is no savesvc), `TestDerive_Step3_ThePsionicistsSaveBonus`
+  (charactersvc: single, thief/psionicist, fighter, dual-class on both sides of the crossover).
 - **French is optional on a power's text** (the localized schema type: English required, an absent language omitted). 21 of the 152
   descriptions have no French body in the artifact (OCR); a reader serves the English one for a language a text lacks, as every localized
   text does (ADR 0023 step 3): `TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish`.

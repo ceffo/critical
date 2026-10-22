@@ -245,13 +245,13 @@ func thac0Of(t *testing.T, tb table, as string) int {
 	return got.Derived.THAC0
 }
 
-// The human thief/psionicist is the party's third character, but the psionicist lists psionics,
-// which the code does not compute yet (ADR 0043 is the psionics epic's): it is refused as a class
-// not creatable, field by field, until then.
-func TestCreate_ThePartyThiefPsionicistWaitsForPsionics(t *testing.T) {
+// ADR 0040 step 8 and ADR 0043 step 3: the human thief/psionicist, the party's third character,
+// is creatable now that every kind the psionicist lists (psionics, save_bonus) is computed: the
+// draft refuses nothing and the creation succeeds.
+func TestCreate_Step8_ThePartyThiefPsionicistIsCreatable(t *testing.T) {
 	tb, _ := serverOn(t, memory.New())
 	bob, _ := tb.login("bob@example.com")
 	body := classesBody("human", strong, `[{"class":"thief","xp":1000000},{"class":"psionicist","xp":1000000}]`)
-	assert.Equal(t, []string{"classes.1.class:not_creatable"}, refusalsOf(tb.draft(t, bob, body)))
-	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, nil))
+	assert.Empty(t, refusalsOf(tb.draft(t, bob, body)))
+	assert.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, nil))
 }

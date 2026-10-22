@@ -1197,6 +1197,7 @@
       "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
       "race": "{{race}} (race)",
+      "class": "{{class}} (class)",
       "wisdom": "Wisdom {{detail}} (magical defence)",
       "specialization": "Specialization",
       "point_blank": "Point blank",

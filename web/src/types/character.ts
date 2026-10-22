@@ -747,10 +747,11 @@ export type AbilityCode = (typeof ABILITIES)[number];
  */
 export type NewCharacter = {
   name: string;
-  class: string;
+  /** The one class and its XP of a single-class character; absent with `classes`. */
+  class?: string;
   raceCode: string;
   hpMax: number | null;
-  xp: number | null;
+  xp?: number | null;
   /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
   strExceptional: number;
   /** A thief's or a bard's points by skill (ADR 0030 steps 1, 17 and 18); absent for the other

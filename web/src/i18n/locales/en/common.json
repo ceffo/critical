@@ -2599,6 +2599,7 @@
       "alignment": "Pick an alignment.",
       "alignmentAllowed": "Pick an allowed alignment to go on.",
       "sex": "Pick a sex.",
+      "leftAt": "Type the level the first class was left at.",
       "unreadable": "Fix the unreadable value to continue."
     },
     "class": {
@@ -2613,6 +2614,43 @@
       "allRaces": "All",
       "minimums": "Minimums",
       "minimumUnmet": "Score under the minimum"
+    },
+    "classes": {
+      "kind": "Kind of character",
+      "choose": "Choose a class",
+      "nth": "Class {{n}}",
+      "left": "Class left",
+      "new": "New class",
+      "leftAt": "Left at level",
+      "xpLeft": "XP (blank: that level's XP)",
+      "add": "Add a class",
+      "remove": "Remove this class",
+      "title": "Classes and XP",
+      "dualTitle": "Class left and new class",
+      "lead": "Two or three classes from the start. Type the XP of each class: its level follows from it.",
+      "dualLead": "The first class is frozen at the level it was left at (at least {{min}}); the new class is the one the character advances in. Prime requisites: {{prime}} in the class left, {{primeNew}} in the new one.",
+      "leftAtN": "{{className}} (class left at level {{level}})",
+      "kinds": {
+        "single": "One class",
+        "multi": "Multi-class",
+        "dual": "Dual-class"
+      },
+      "errors": {
+        "multiclass_not_allowed": "This race cannot be multi-class under the ruleset.",
+        "dualclass_not_allowed": "This race cannot be dual-class under the ruleset.",
+        "prime_requisite_too_low": "A dual-class character needs {{old}} in the prime requisite of the class left and {{new}} in the new class.",
+        "level_too_low": "A class can be left at level {{min}} or more.",
+        "class_already_left": "This class was already left: a dual-class character cannot return to it.",
+        "duplicate_class": "This class is already listed.",
+        "too_many_classes": "At most {{max}} classes.",
+        "multi_and_dual_class": "A character is multi-class or dual-class, not both.",
+        "no_active_class": "Pick a class the character advances in.",
+        "not_creatable": "This class cannot be created yet.",
+        "out_of_range": "Enter a whole number from {{min}} to {{max}}.",
+        "empty": "Required.",
+        "missing": "Required.",
+        "unknown": "Pick one of the classes."
+      }
     },
     "level": {
       "title": "Starting level",
@@ -2629,6 +2667,7 @@
     "race": {
       "name": "Race",
       "title": "Choose a race",
+      "leadSeveral": "Every race can be picked: the combination of the classes and the race is checked by the server.",
       "lead": "Only the races a {{className}} allows can be picked; the others stay visible.",
       "refused": "No {{className}}",
       "refusedHint": "{{name}}: not allowed for a {{className}}",

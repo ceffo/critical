@@ -11,7 +11,13 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
-import { classOf, hasSpellbook, type StepId, type StepProps } from "./flow";
+import {
+  draftAlignments,
+  draftClasses,
+  hasSpellbook,
+  type StepId,
+  type StepProps,
+} from "./flow";
 import { useSpellName } from "@/i18n/spellName";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
@@ -71,8 +77,7 @@ function rangeOf(
 export function IdentityStep(props: StepProps) {
   const { options, draft, update, errorFor } = props;
   const { t } = useTranslation();
-  const cls = classOf(options, draft.cls);
-  const allowed = cls?.alignments ?? [];
+  const allowed = draftAlignments(options, draft);
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
@@ -665,7 +670,7 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
             ]}
           />
         </ReviewBlock>
-        {hasSpellbook(options, draft.cls) && (
+        {hasSpellbook(options, draftClasses(draft)) && (
           <ReviewBlock
             title={t("creation.spellbook.name")}
             step="spellbook"

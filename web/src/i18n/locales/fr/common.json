@@ -2599,6 +2599,7 @@
       "alignment": "Choisissez un alignement.",
       "alignmentAllowed": "Choisissez un alignement permis pour continuer.",
       "sex": "Choisissez un sexe.",
+      "leftAt": "Saisissez le niveau où la première classe a été quittée.",
       "unreadable": "Corrigez la valeur illisible pour continuer."
     },
     "class": {
@@ -2613,6 +2614,43 @@
       "allRaces": "Toutes",
       "minimums": "Minimums",
       "minimumUnmet": "Score sous le minimum"
+    },
+    "classes": {
+      "kind": "Type de personnage",
+      "choose": "Choisir une classe",
+      "nth": "Classe {{n}}",
+      "left": "Classe quittée",
+      "new": "Nouvelle classe",
+      "leftAt": "Quittée au niveau",
+      "xpLeft": "XP (vide : seuil du niveau)",
+      "add": "Ajouter une classe",
+      "remove": "Retirer cette classe",
+      "title": "Classes et XP",
+      "dualTitle": "Classe quittée et nouvelle classe",
+      "lead": "Deux ou trois classes dès le départ. Saisissez les XP de chaque classe : son niveau en découle.",
+      "dualLead": "La première classe est figée au niveau où elle a été quittée ({{min}} au moins) ; la nouvelle est celle où le personnage progresse. Caractéristiques principales : {{prime}} dans la classe quittée, {{primeNew}} dans la nouvelle.",
+      "leftAtN": "{{className}} (classe quittée au niveau {{level}})",
+      "kinds": {
+        "single": "Une classe",
+        "multi": "Multiclassé",
+        "dual": "Double classé"
+      },
+      "errors": {
+        "multiclass_not_allowed": "Cette race ne peut pas être multiclassée avec ce jeu de règles.",
+        "dualclass_not_allowed": "Cette race ne peut pas être double classée avec ce jeu de règles.",
+        "prime_requisite_too_low": "Un personnage double classé a besoin de {{old}} dans la caractéristique principale de la classe quittée et de {{new}} dans la nouvelle.",
+        "level_too_low": "Une classe se quitte au niveau {{min}} ou plus.",
+        "class_already_left": "Cette classe a déjà été quittée : un personnage double classé n'y revient pas.",
+        "duplicate_class": "Cette classe est déjà dans la liste.",
+        "too_many_classes": "{{max}} classes au plus.",
+        "multi_and_dual_class": "Un personnage est multiclassé ou double classé, pas les deux.",
+        "no_active_class": "Choisissez une classe où le personnage progresse.",
+        "not_creatable": "Cette classe ne peut pas encore être créée.",
+        "out_of_range": "Saisissez un nombre entier de {{min}} à {{max}}.",
+        "empty": "À renseigner.",
+        "missing": "À renseigner.",
+        "unknown": "Choisissez une des classes."
+      }
     },
     "level": {
       "title": "Niveau de départ",
@@ -2629,6 +2667,7 @@
     "race": {
       "name": "Race",
       "title": "Choisissez une race",
+      "leadSeveral": "Toutes les races sont proposées : le serveur vérifie l'accord des classes et de la race.",
       "lead": "Seules les races permises au {{className}} sont proposées ; les autres restent visibles.",
       "refused": "Pas {{className}}",
       "refusedHint": "{{name}} : pas permis au {{className}}",

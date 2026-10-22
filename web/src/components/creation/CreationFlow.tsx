@@ -26,7 +26,10 @@ import {
   STEPS,
   blockedReason,
   buildBody,
-  classOf,
+  bodyClasses,
+  classKey,
+  draftAlignments,
+  draftClasses,
   draftSpellbook,
   draftXp,
   exceptionalOffered,
@@ -165,7 +168,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
   // draft is asked without it, so the step still gets the server's other warnings meanwhile.
-  const allowedAlignments = classOf(options, draft.cls)?.alignments ?? [];
+  const allowedAlignments = draftAlignments(options, draft);
   const asked = built?.body;
   const draftKey = asked
     ? JSON.stringify(
@@ -180,16 +183,21 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     if (draftKey === "") return;
     const current = draftGate.open();
     const timer = setTimeout(() => {
-      const sent = JSON.parse(draftKey) as { class: string };
+      const sent = JSON.parse(draftKey) as NewCharacter;
       draftCharacter(JSON.parse(draftKey)).then(
         (data) =>
           current() &&
-          setAnswered({ key: draftKey, cls: sent.class, data, failed: null }),
+          setAnswered({
+            key: draftKey,
+            cls: bodyClasses(sent).join("+"),
+            data,
+            failed: null,
+          }),
         (err: unknown) =>
           current() &&
           setAnswered({
             key: draftKey,
-            cls: sent.class,
+            cls: bodyClasses(sent).join("+"),
             data: null,
             failed: fieldErrorOf(err),
           }),
@@ -207,7 +215,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const fresh = answered !== null && answered.key === draftKey;
   const answer: DraftAnswer = {
     current: fresh ? answered.data : null,
-    latest: answered?.cls === draft.cls ? answered.data : null,
+    latest: answered?.cls === classKey(draft) ? answered.data : null,
     failed: fresh ? answered.failed : null,
   };
   // The refusals the creation would meet are shown as the former preview showed them (ADR 0034 step
@@ -261,6 +269,23 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         { className, defaultValue: e.message ?? e.code },
       );
     }
+    if (e.field === "classes" || e.field.startsWith("classes.")) {
+      const [, , name] = e.field.split(".");
+      // An unreadable or out-of-range figure of an entry reads as the class step's own field.
+      const field = name === "xp" ? options?.xp : undefined;
+      return t(`creation.classes.errors.${e.code}`, {
+        ...field,
+        min: options?.minLeftAtLevel ?? 2,
+        max:
+          name === "leftAtLevel" || name === "level" ? 20 : options?.maxClasses,
+        old: options?.dualClassOldPrime,
+        new: options?.dualClassNewPrime,
+        defaultValue: t(`characters.errors.${e.code}`, {
+          ...field,
+          defaultValue: e.message ?? e.code,
+        }),
+      });
+    }
     const range =
       e.field === "name"
         ? { max: options?.maxNameLength }
@@ -292,7 +317,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   // The class's steps (the spellbook step for a mage or a bard only); `reached` counts in STEPS,
   // so a class picked again keeps what was reached.
-  const steps = stepsFor(options, draft.cls);
+  const steps = stepsFor(options, draftClasses(draft));
   const index = steps.indexOf(step);
   const go = (to: StepId) => {
     setStep(to);
@@ -364,6 +389,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const blocked =
     blockedReason(step, {
       cls: draft.cls,
+      kind: draft.kind,
+      others: draft.others,
+      leftAt: draft.leftAt,
       race: draft.race,
       xp,
       scores: draft.scores,
@@ -371,17 +399,19 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       name: draft.name,
       alignment: draft.details.alignment,
       sex: draft.details.sex,
-      alignments: classOf(options, draft.cls)?.alignments ?? [],
+      alignments: draftAlignments(options, draft),
     }) ?? (unreadable ? "unreadable" : null);
   const last = index === steps.length - 1;
   const lead =
-    step === "race" && draft.cls
-      ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
-      : step === "extras" && draft.cls
-        ? t("creation.extras.lead", {
-            className: className.toLocaleLowerCase(),
-          })
-        : t(`creation.${step}.lead`);
+    step === "race" && draft.cls && draft.kind !== "single"
+      ? t("creation.race.leadSeveral")
+      : step === "race" && draft.cls
+        ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
+        : step === "extras" && draft.cls
+          ? t("creation.extras.lead", {
+              className: className.toLocaleLowerCase(),
+            })
+          : t(`creation.${step}.lead`);
 
   return (
     <div
@@ -539,9 +569,7 @@ function useStepChoice(
   return (step) => {
     switch (step) {
       case "class":
-        return draft.cls
-          ? `${t(`details.classes.${draft.cls}`, { defaultValue: draft.cls })} · ${levelText(t, draft)}`
-          : null;
+        return draft.cls ? classLine(t, draft) : null;
       case "race":
         return draft.race ? t(`details.races.${draft.race}`) : null;
       case "scores":
@@ -573,6 +601,30 @@ function useStepChoice(
         return null;
     }
   };
+}
+
+/** The classes with their levels or XP: "Mage · niveau 5", "Guerrier 9 000 XP / Clerc 9 000 XP", or
+ * for a dual-class character the class left (at its level) and the new one. */
+function classLine(
+  t: (k: string, o?: Record<string, unknown>) => string,
+  draft: FlowDraft,
+): string {
+  const name = (c: string) => t(`details.classes.${c}`, { defaultValue: c });
+  if (draft.kind === "single")
+    return `${name(draft.cls)} · ${levelText(t, draft)}`;
+  const rows = [
+    draft.kind === "dual"
+      ? t("creation.classes.leftAtN", {
+          className: name(draft.cls),
+          level: draft.leftAt,
+        })
+      : `${name(draft.cls)} ${t("creation.level.xpN", { xp: draft.xp })}`,
+    ...draft.others.map(
+      (o) =>
+        `${o.cls ? name(o.cls) : "…"} ${t("creation.level.xpN", { xp: o.xp })}`,
+    ),
+  ];
+  return rows.join(draft.kind === "dual" ? " → " : " / ");
 }
 
 /** "niveau 5" for a picked level; the typed XP otherwise (the server derives the level from it). */
@@ -689,11 +741,8 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
   const line = [
-    draft.cls
-      ? t(`details.classes.${draft.cls}`, { defaultValue: draft.cls })
-      : null,
+    draft.cls ? classLine(t, { ...draft, xp }) : null,
     draft.race ? t(`details.races.${draft.race}`) : null,
-    draft.cls ? levelText(t, { ...draft, xp }) : null,
   ].filter(Boolean);
   // The languages the server reads (the native one added) once it answered, else the ones picked.
   const read = answer.current?.derived ? answer.current : null;
@@ -786,7 +835,7 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
               ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
               : dash}
           </dd>
-          {hasSpellbook(options, draft.cls) && (
+          {hasSpellbook(options, draftClasses(draft)) && (
             <>
               <dt className="text-ink-muted">{t("creation.spellbook.name")}</dt>
               <dd className="break-words" data-testid="building-spellbook">

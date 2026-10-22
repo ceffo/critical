@@ -11,6 +11,7 @@ import {
   type CreationOptions,
   type HpRoll,
   type NewCharacter,
+  type NewClassEntry,
   type ScoresArrangement,
   type ScoresRoll,
 } from "@/types/character";
@@ -39,16 +40,16 @@ export type StepId = (typeof STEPS)[number];
  * server's options say (the class's `spellbook`). */
 export function hasSpellbook(
   options: CreationOptions | null,
-  cls: string,
+  cls: string | string[],
 ): boolean {
-  return Boolean(classOf(options, cls)?.spellbook);
+  return [cls].flat().some((c) => Boolean(classOf(options, c)?.spellbook));
 }
 
 /** The steps the class goes through, in order: the spellbook step only for a class with a
  * spellbook (ADR 0030 step 20.7); before a class is chosen, the steps of a class without one. */
 export function stepsFor(
   options: CreationOptions | null,
-  cls: string,
+  cls: string | string[],
 ): StepId[] {
   return STEPS.filter((s) => s !== "spellbook" || hasSpellbook(options, cls));
 }
@@ -60,9 +61,11 @@ export function stepsFor(
  */
 export function draftSpellbook(
   options: CreationOptions | null,
-  d: Pick<FlowDraft, "cls" | "spellbook">,
+  d: Pick<FlowDraft, "cls" | "others" | "spellbook">,
 ): string[] {
-  const book = classOf(options, d.cls)?.spellbook;
+  const book = draftClasses(d)
+    .map((c) => classOf(options, c)?.spellbook)
+    .find(Boolean);
   if (!book) return [];
   return d.spellbook ?? book.startingSpells;
 }
@@ -88,7 +91,9 @@ export function spellbookState(
  * stays on the review, where Créer is.
  */
 export function stepOfField(field: string): StepId {
-  if (field === "class" || field === "xp") return "class";
+  if (field === "class" || field === "xp" || field === "classes")
+    return "class";
+  if (field.startsWith("classes.")) return "class";
   if (field === "race") return "race";
   if ((ABILITIES as readonly string[]).includes(field)) return "scores";
   if (
@@ -112,6 +117,47 @@ export function stepOfField(field: string): StepId {
     return "spellbook";
   if (field === "name" || field.startsWith("details.")) return "identity";
   return "review";
+}
+
+/** The classes of the draft in the order of its entries (the first, then the others), blanks left
+ * out: one for a single class, two or three for a multi-class character, the class left and the new
+ * one for a dual-class character. */
+export function draftClasses(d: Pick<FlowDraft, "cls" | "others">): string[] {
+  return [d.cls, ...d.others.map((o) => o.cls)].filter((c) => c !== "");
+}
+
+/** The same classes as one string, to tell one set of classes from another. */
+export function classKey(d: Pick<FlowDraft, "cls" | "others">): string {
+  return draftClasses(d).join("+");
+}
+
+/** The classes a body names, in order. */
+export function bodyClasses(
+  b: Pick<NewCharacter, "class" | "classes">,
+): string[] {
+  return b.classes ? b.classes.map((c) => c.class) : b.class ? [b.class] : [];
+}
+
+/** The alignments every class of the draft admits (the server's lists, intersected). */
+export function draftAlignments(
+  options: CreationOptions | null,
+  d: Pick<FlowDraft, "cls" | "others">,
+): string[] {
+  const lists = draftClasses(d).map(
+    (c) => classOf(options, c)?.alignments ?? [],
+  );
+  const [first, ...rest] = lists;
+  return (first ?? []).filter((a) => rest.every((l) => l.includes(a)));
+}
+
+/** The class that sets the skill points: the first of the draft's that has skills. */
+export function skillClass(
+  options: CreationOptions | null,
+  d: Pick<FlowDraft, "cls" | "others">,
+) {
+  return draftClasses(d)
+    .map((c) => classOf(options, c))
+    .find((c) => c && c.skills.length > 0);
 }
 
 /** The class's options entry, or undefined. */
@@ -227,6 +273,10 @@ export function placedValues(
 /** The entered values a step needs before Suivant; the server checks the ranges and the rules. */
 export interface StepInputs {
   cls: string;
+  kind: ClassKind;
+  others: ClassRow[];
+  /** The level the first class was left at, typed (a dual-class character). */
+  leftAt: string;
   race: string;
   xp: string;
   scores: Record<AbilityCode, string>;
@@ -252,8 +302,13 @@ function filled(v: string): boolean {
 export function blockedReason(step: StepId, d: StepInputs): string | null {
   switch (step) {
     case "class":
-      if (d.cls === "") return "class";
-      return filled(d.xp) ? null : "xp";
+      if (d.cls === "" || d.others.some((o) => o.cls === "")) return "class";
+      if (d.kind === "dual") {
+        if (!filled(d.leftAt)) return "leftAt";
+        if (d.xp.trim() !== "" && !filled(d.xp)) return "xp";
+        return d.others.every((o) => filled(o.xp)) ? null : "xp";
+      }
+      return [d.xp, ...d.others.map((o) => o.xp)].every(filled) ? null : "xp";
     case "race":
       return d.race === "" ? "race" : null;
     case "scores":
@@ -303,16 +358,35 @@ export type DraftPatch = Partial<Omit<FlowDraft, "details">> & {
  * pre-ticked spells (ADR 0030 step 20.7). */
 export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
   const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
-  if (next.cls !== d.cls && patch.picks === undefined) next.picks = [];
-  if (next.cls !== d.cls && patch.weaponPicks === undefined)
-    next.weaponPicks = [];
-  if (next.cls !== d.cls && patch.spellbook === undefined)
-    next.spellbook = null;
+  const moved = classKey(next) !== classKey(d);
+  if (moved && patch.picks === undefined) next.picks = [];
+  if (moved && patch.weaponPicks === undefined) next.weaponPicks = [];
+  if (moved && patch.spellbook === undefined) next.spellbook = null;
   return next;
 }
 
-export interface FlowDraft {
+/** How many classes the character has (ADR 0042): one, several from the start, or one left for
+ * another. */
+export type ClassKind = "single" | "multi" | "dual";
+
+/** The kinds of character the class step offers, in order. */
+export const KINDS: ClassKind[] = ["single", "multi", "dual"];
+
+/** A class after the first, with the XP typed for it. */
+export interface ClassRow {
   cls: string;
+  xp: string;
+}
+
+export interface FlowDraft {
+  /** The first class; with `others`, the class left of a dual-class character. */
+  cls: string;
+  kind: ClassKind;
+  /** The classes after the first (a multi-class character's others, a dual-class character's new
+   * class); none for a single class. */
+  others: ClassRow[];
+  /** A dual-class character: the level the first class was left at, as typed. */
+  leftAt: string;
   race: string;
   /** ADR 0034 step 4: a level (sent as the class's lowest XP for it) or the exact XP. */
   levelMode: "level" | "xp";
@@ -349,6 +423,9 @@ export interface FlowDraft {
 
 export const EMPTY_DRAFT: FlowDraft = {
   cls: "",
+  kind: "single",
+  others: [],
+  leftAt: "",
   race: "",
   levelMode: "level",
   level: 1,
@@ -392,8 +469,10 @@ export interface HpRollInputs {
 /** The XP the request carries: the picked level's (the class's lowest XP for it), or the typed value. */
 export function draftXp(
   options: CreationOptions | null,
-  d: Pick<FlowDraft, "cls" | "level" | "levelMode" | "xp">,
+  d: Pick<FlowDraft, "cls" | "kind" | "level" | "levelMode" | "xp">,
 ): string {
+  // A level picked stands for the XP of one class only; several classes type their XP.
+  if (d.kind !== "single") return d.xp;
   const levelXp = xpOfLevel(options, d.cls, d.level);
   return d.levelMode === "level" && levelXp !== undefined
     ? String(levelXp)
@@ -410,7 +489,7 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
   const f = d.hpRollFor;
   if (!roll || !f) return d;
   if (
-    f.cls === d.cls &&
+    f.cls === classKey(d) &&
     f.con === parseWhole(d.scores.con) &&
     f.xp === parseWhole(xp)
   )
@@ -431,14 +510,14 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
  * values does not count: a Strength changed from 18 to 17 sends no 18/xx before the next answer.
  */
 export function exceptionalOffered(
-  asked: Pick<NewCharacter, "class" | "raceCode" | "str"> | null,
+  asked: Pick<NewCharacter, "class" | "classes" | "raceCode" | "str"> | null,
   offered: boolean,
   draft: FlowDraft,
 ): boolean {
   return (
     offered &&
     asked !== null &&
-    asked.class === draft.cls &&
+    bodyClasses(asked).join("+") === classKey(draft) &&
     asked.raceCode === draft.race &&
     asked.str === parseWhole(draft.scores.str)
   );
@@ -491,7 +570,38 @@ export function buildBody(
     if (v !== null && Number.isNaN(v)) fail(f, "out_of_range");
     else body[f] = v;
   }
-  const cls = classOf(options, draft.cls);
+  if (draft.kind !== "single") {
+    // The entries replace `class` and `xp`: the server refuses both.
+    delete body.class;
+    delete body.xp;
+    const dual = draft.kind === "dual";
+    const typed = [
+      // A blank XP for the class left is the XP that reaches the level it was left at.
+      dual && draft.xp.trim() === "" ? "0" : xp,
+      ...draft.others.map((o) => o.xp),
+    ];
+    body.classes = [draft.cls, ...draft.others.map((o) => o.cls)].map(
+      (c, i) => {
+        const v = parseWhole(typed[i] ?? "");
+        if (v !== null && Number.isNaN(v))
+          fail(`classes.${i}.xp`, "out_of_range");
+        const entry: NewClassEntry = {
+          class: c,
+          xp: v !== null && Number.isNaN(v) ? null : v,
+        };
+        if (dual && i === 0) {
+          const left = parseWhole(draft.leftAt);
+          if (left !== null && Number.isNaN(left))
+            fail("classes.0.leftAtLevel", "out_of_range");
+          // Blank is left out of the level the server reads as "not left" (0): it answers the
+          // missing field.
+          entry.leftAtLevel = left === null || Number.isNaN(left) ? 0 : left;
+        }
+        return entry;
+      },
+    );
+  }
+  const cls = skillClass(options, draft);
   if (offersExceptional && draft.strExceptional.trim() !== "") {
     const v = parseWhole(draft.strExceptional);
     if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");

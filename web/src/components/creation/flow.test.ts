@@ -12,6 +12,7 @@ import {
   allRaces,
   blockedReason,
   buildBody,
+  draftAlignments,
   draftSpellbook,
   emptyPlacement,
   exceptionalOffered,
@@ -527,6 +528,9 @@ describe("place (the player's arrangement, ADR 0032 step 6)", () => {
 describe("blockedReason", () => {
   const ok: StepInputs = {
     cls: "bard",
+    kind: "single",
+    others: [],
+    leftAt: "",
     race: "half_elf",
     xp: "10000",
     scores: {
@@ -653,16 +657,21 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
   });
 
   it("sends a mage's pre-ticked spells until the player changes the list, a bard's none", () => {
-    expect(draftSpellbook(options, { cls: "mage", spellbook: null })).toEqual([
-      "read_magic",
-      "detect_magic",
-    ]);
-    expect(draftSpellbook(options, { cls: "mage", spellbook: [] })).toEqual([]);
-    expect(draftSpellbook(options, { cls: "bard", spellbook: null })).toEqual(
-      [],
-    );
     expect(
-      draftSpellbook(options, { cls: "fighter", spellbook: ["sleep"] }),
+      draftSpellbook(options, { cls: "mage", others: [], spellbook: null }),
+    ).toEqual(["read_magic", "detect_magic"]);
+    expect(
+      draftSpellbook(options, { cls: "mage", others: [], spellbook: [] }),
+    ).toEqual([]);
+    expect(
+      draftSpellbook(options, { cls: "bard", others: [], spellbook: null }),
+    ).toEqual([]);
+    expect(
+      draftSpellbook(options, {
+        cls: "fighter",
+        others: [],
+        spellbook: ["sleep"],
+      }),
     ).toEqual([]);
   });
 
@@ -679,5 +688,89 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
     const bard = mergeDraft({ ...mage, spellbook: ["sleep"] }, { cls: "bard" });
     expect(bard.spellbook).toBe(null);
     expect(buildBody(options, bard, "0", "fr").body.spellbook).toBe(undefined);
+  });
+});
+
+describe("several classes", () => {
+  const options = {
+    classes: [
+      {
+        class: "fighter",
+        races: [],
+        skills: [],
+        alignments: ["lawful_good", "neutral_good"],
+      },
+      {
+        class: "mage",
+        races: [],
+        skills: [],
+        alignments: ["neutral_good"],
+        spellbook: { startingSpells: [] },
+      },
+    ],
+  } as unknown as CreationOptions;
+  const dual: FlowDraft = {
+    ...EMPTY_DRAFT,
+    cls: "fighter",
+    kind: "dual",
+    leftAt: "9",
+    xp: "",
+    others: [{ cls: "mage", xp: "20000" }],
+  };
+  it("sends the entries in place of class and xp, the class left with its level", () => {
+    const { body, error } = buildBody(options, dual, "", "en");
+    expect(error).toBeNull();
+    expect(body.class).toBeUndefined();
+    expect(body.xp).toBeUndefined();
+    expect(body.classes).toEqual([
+      { class: "fighter", xp: 0, leftAtLevel: 9 },
+      { class: "mage", xp: 20000 },
+    ]);
+  });
+  it("names an unreadable XP at its entry", () => {
+    const d = { ...dual, others: [{ cls: "mage", xp: "x" }] };
+    expect(buildBody(options, d, "", "en").error).toEqual({
+      field: "classes.1.xp",
+      code: "out_of_range",
+    });
+  });
+  it("blocks Suivant until every class, XP and the left-at level is entered", () => {
+    const inputs = (d: FlowDraft): StepInputs => ({
+      cls: d.cls,
+      kind: d.kind,
+      others: d.others,
+      leftAt: d.leftAt,
+      race: "",
+      xp: d.xp,
+      scores: { str: "", dex: "", con: "", int: "", wis: "", cha: "" },
+      hpMax: "",
+      name: "",
+      alignment: "",
+      sex: "",
+      alignments: [],
+    });
+    expect(blockedReason("class", inputs(dual))).toBeNull();
+    expect(blockedReason("class", inputs({ ...dual, leftAt: "" }))).toBe(
+      "leftAt",
+    );
+    expect(
+      blockedReason(
+        "class",
+        inputs({ ...dual, others: [{ cls: "", xp: "1" }] }),
+      ),
+    ).toBe("class");
+    const multi = { ...dual, kind: "multi" as const, xp: "4500" };
+    expect(
+      blockedReason(
+        "class",
+        inputs({ ...multi, others: [{ cls: "mage", xp: "" }] }),
+      ),
+    ).toBe("xp");
+  });
+  it("intersects the alignments, offers the spellbook of any class and opens the class step on a refusal", () => {
+    expect(draftAlignments(options, dual)).toEqual(["neutral_good"]);
+    expect(stepsFor(options, ["fighter", "mage"])).toContain("spellbook");
+    expect(stepOfField("classes.1.leftAtLevel")).toBe("class");
+    expect(stepOfField("classes")).toBe("class");
   });
 });

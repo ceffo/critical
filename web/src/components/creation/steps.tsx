@@ -23,10 +23,13 @@ import {
   allRaces,
   classOf,
   initialPlacement,
+  KINDS,
+  skillClass,
   isPlaced,
   place,
   signed,
   emptyPlacement,
+  type ClassKind,
   type FlowDraft,
   type StepProps,
 } from "./flow";
@@ -39,6 +42,7 @@ import { cn } from "@/lib/utils";
 import { ABILITIES, type AbilityCode } from "@/types/character";
 import { arrangeFor, pickRace } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
+import { ClassRows } from "./classes";
 import { budgetFormula, formula } from "@/lib/skillBudget";
 
 const CLASS_ICONS: Record<string, ReactNode> = {
@@ -77,14 +81,8 @@ function fieldProps(field: string, text: string | null, extra?: string) {
 
 // --- Step 1: class ------------------------------------------------------------------------
 
-export function ClassStep({
-  options,
-  draft,
-  update,
-  errorFor,
-  xp,
-  answer,
-}: StepProps) {
+export function ClassStep(props: StepProps) {
+  const { options, draft, update, errorFor, xp, answer } = props;
   const { t, i18n } = useTranslation();
   const raceList = allRaces(options);
   const cls = classOf(options, draft.cls);
@@ -96,6 +94,22 @@ export function ClassStep({
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
   const xpError = errorFor("xp");
+  const several = draft.kind !== "single";
+
+  // Another kind of character keeps the first class and its XP; a multi-class or dual-class
+  // character starts with one more class to pick (ADR 0042 step 1).
+  const pickKind = (kind: ClassKind) => {
+    if (kind === draft.kind) return;
+    const more = draft.others.length > 0 ? draft.others : [{ cls: "", xp: "" }];
+    update({
+      kind,
+      others:
+        kind === "single" ? [] : kind === "dual" ? more.slice(0, 1) : more,
+      leftAt: kind === "dual" ? draft.leftAt : "",
+      ...(kind === "dual" && { xp: "" }),
+      ...(kind !== "dual" && draft.kind === "dual" && { xp: "0" }),
+    });
+  };
 
   const pickClass = (next: string) => {
     const c = classOf(options, next);
@@ -113,175 +127,190 @@ export function ClassStep({
 
   return (
     <>
-      <div
-        role="radiogroup"
-        aria-label={t("creation.class.title")}
-        className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3"
-      >
-        {options.classes.map((c) => {
-          const name = t(`details.classes.${c.class}`, {
-            defaultValue: c.class,
-          });
-          const limit = alignmentLimit(c.alignments, ALIGNMENT_CODES);
-          const names = (codes: string[]) =>
-            codes.map((a) => t(`details.alignments.${a}`)).join(", ");
-          // The server says which minimums the entered scores miss (PHB Table 13).
-          const unmet =
-            answer.latest?.unmetMinimums.find((u) => u.class === c.class)
-              ?.abilities ?? [];
-          return (
-            <Choice
-              key={c.class}
-              on={draft.cls === c.class}
-              onPick={() => pickClass(c.class)}
-              label={name}
-              testId={`class-${c.class}`}
-            >
-              <span className="flex items-center gap-2 [&_svg]:size-5">
-                {CLASS_ICONS[c.class] ?? <UserCircle aria-hidden />}
-                <span className="text-key">{name}</span>
-              </span>
-              {c.hitDie ? (
-                <Row k={t("creation.class.hitDie")} v={`d${c.hitDie}`} />
-              ) : null}
-              <Row
-                k={t("creation.class.alignment")}
-                v={
-                  limit.kind === "all"
-                    ? t("creation.class.allAlignments")
-                    : limit.kind === "except"
-                      ? t("creation.class.allBut", {
-                          list: names(limit.codes),
-                        })
-                      : names(limit.codes)
-                }
-              />
-              <Row
-                k={t("creation.class.races")}
-                v={
-                  c.races.length === raceList.length
-                    ? t("creation.class.allRaces")
-                    : c.races.map((r) => t(`details.races.${r}`)).join(", ")
-                }
-              />
-              {c.minimums && c.minimums.length > 0 ? (
+      <Seg
+        label={t("creation.classes.kind")}
+        testId="class-kind"
+        value={draft.kind}
+        onChange={pickKind}
+        options={KINDS.map((k) => ({
+          value: k,
+          content: t(`creation.classes.kinds.${k}`),
+        }))}
+      />
+      {several && <ClassRows {...props} />}
+      {!several && (
+        <div
+          role="radiogroup"
+          aria-label={t("creation.class.title")}
+          className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3"
+        >
+          {options.classes.map((c) => {
+            const name = t(`details.classes.${c.class}`, {
+              defaultValue: c.class,
+            });
+            const limit = alignmentLimit(c.alignments, ALIGNMENT_CODES);
+            const names = (codes: string[]) =>
+              codes.map((a) => t(`details.alignments.${a}`)).join(", ");
+            // The server says which minimums the entered scores miss (PHB Table 13).
+            const unmet =
+              answer.latest?.unmetMinimums.find((u) => u.class === c.class)
+                ?.abilities ?? [];
+            return (
+              <Choice
+                key={c.class}
+                on={draft.cls === c.class}
+                onPick={() => pickClass(c.class)}
+                label={name}
+                testId={`class-${c.class}`}
+              >
+                <span className="flex items-center gap-2 [&_svg]:size-5">
+                  {CLASS_ICONS[c.class] ?? <UserCircle aria-hidden />}
+                  <span className="text-key">{name}</span>
+                </span>
+                {c.hitDie ? (
+                  <Row k={t("creation.class.hitDie")} v={`d${c.hitDie}`} />
+                ) : null}
                 <Row
-                  k={t("creation.class.minimums")}
+                  k={t("creation.class.alignment")}
                   v={
-                    <span
-                      className="flex flex-wrap gap-x-3 gap-y-0.5"
-                      data-testid={`minimums-${c.class}`}
-                    >
-                      {c.minimums.map((m) => {
-                        const missed = unmet.includes(m.ability);
-                        return (
-                          <span
-                            key={m.ability}
-                            data-unmet={missed ? "true" : undefined}
-                            title={
-                              missed
-                                ? t("creation.class.minimumUnmet")
-                                : undefined
-                            }
-                            className={cn(
-                              "inline-flex items-center gap-1 tabular-nums",
-                              missed && "font-semibold text-danger",
-                            )}
-                          >
-                            {missed && <Warning aria-hidden />}
-                            {t(`attr.${m.ability}`)} {m.min}
-                            {missed && (
-                              <span className="sr-only">
-                                {t("creation.class.minimumUnmet")}
-                              </span>
-                            )}
-                          </span>
-                        );
-                      })}
-                    </span>
+                    limit.kind === "all"
+                      ? t("creation.class.allAlignments")
+                      : limit.kind === "except"
+                        ? t("creation.class.allBut", {
+                            list: names(limit.codes),
+                          })
+                        : names(limit.codes)
                   }
                 />
-              ) : null}
-            </Choice>
-          );
-        })}
-      </div>
+                <Row
+                  k={t("creation.class.races")}
+                  v={
+                    c.races.length === raceList.length
+                      ? t("creation.class.allRaces")
+                      : c.races.map((r) => t(`details.races.${r}`)).join(", ")
+                  }
+                />
+                {c.minimums && c.minimums.length > 0 ? (
+                  <Row
+                    k={t("creation.class.minimums")}
+                    v={
+                      <span
+                        className="flex flex-wrap gap-x-3 gap-y-0.5"
+                        data-testid={`minimums-${c.class}`}
+                      >
+                        {c.minimums.map((m) => {
+                          const missed = unmet.includes(m.ability);
+                          return (
+                            <span
+                              key={m.ability}
+                              data-unmet={missed ? "true" : undefined}
+                              title={
+                                missed
+                                  ? t("creation.class.minimumUnmet")
+                                  : undefined
+                              }
+                              className={cn(
+                                "inline-flex items-center gap-1 tabular-nums",
+                                missed && "font-semibold text-danger",
+                              )}
+                            >
+                              {missed && <Warning aria-hidden />}
+                              {t(`attr.${m.ability}`)} {m.min}
+                              {missed && (
+                                <span className="sr-only">
+                                  {t("creation.class.minimumUnmet")}
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })}
+                      </span>
+                    }
+                  />
+                ) : null}
+              </Choice>
+            );
+          })}
+        </div>
+      )}
       <FieldError id="new-character-class" text={errorFor("class")} />
 
-      <Group title={t("creation.level.title")} testId="starting-level">
-        <div className="flex flex-wrap items-center gap-4">
-          <Seg
-            label={t("creation.level.title")}
-            value={mode}
-            onChange={(v) => update({ levelMode: v })}
-            options={[
-              {
-                value: "level",
-                content: t("creation.level.level"),
-                disabled: !levelsOffered,
-              },
-              { value: "xp", content: t("creation.level.xp") },
-            ]}
-          />
-          <p className="min-w-0 flex-1 text-body text-ink-muted">
-            {t("creation.level.lead")}
-          </p>
-        </div>
-        {mode === "level" ? (
-          <>
-            <div
-              role="radiogroup"
-              aria-label={t("creation.level.level")}
-              className="flex flex-wrap gap-1"
-            >
-              {table.map((r) => (
-                <button
-                  key={r.level}
-                  type="button"
-                  role="radio"
-                  aria-checked={draft.level === r.level}
-                  aria-label={t("creation.level.pick", { level: r.level })}
-                  onClick={() => update({ level: r.level })}
-                  className={cn(
-                    "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-body tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    draft.level === r.level
-                      ? "chip-chosen font-semibold"
-                      : "chip hover:bg-raised-hover",
-                  )}
-                >
-                  {r.level}
-                </button>
-              ))}
-            </div>
-            <p className="text-body" data-testid="level-xp">
-              {t("creation.level.levelN", { level: draft.level })}
-              <span className="text-ink-muted">
-                {draft.cls
-                  ? t("creation.level.xpOfLevel", {
-                      xp: formatNumber(Number(xp), i18n.language),
-                      level: draft.level,
-                      className,
-                    })
-                  : t("creation.level.xpOfLevelNoClass")}
-              </span>
-            </p>
-          </>
-        ) : (
-          <div className="flex w-56 min-w-0 flex-col gap-1">
-            <label htmlFor="new-character-xp" className={labelClass}>
-              {t("characters.xp")}
-            </label>
-            <input
-              {...fieldProps("xp", xpError)}
-              inputMode="numeric"
-              autoComplete="off"
-              value={draft.xp}
-              onChange={(e) => update({ xp: e.target.value })}
+      {!several && (
+        <Group title={t("creation.level.title")} testId="starting-level">
+          <div className="flex flex-wrap items-center gap-4">
+            <Seg
+              label={t("creation.level.title")}
+              value={mode}
+              onChange={(v) => update({ levelMode: v })}
+              options={[
+                {
+                  value: "level",
+                  content: t("creation.level.level"),
+                  disabled: !levelsOffered,
+                },
+                { value: "xp", content: t("creation.level.xp") },
+              ]}
             />
+            <p className="min-w-0 flex-1 text-body text-ink-muted">
+              {t("creation.level.lead")}
+            </p>
           </div>
-        )}
-        <FieldError id="new-character-xp" text={xpError} />
-      </Group>
+          {mode === "level" ? (
+            <>
+              <div
+                role="radiogroup"
+                aria-label={t("creation.level.level")}
+                className="flex flex-wrap gap-1"
+              >
+                {table.map((r) => (
+                  <button
+                    key={r.level}
+                    type="button"
+                    role="radio"
+                    aria-checked={draft.level === r.level}
+                    aria-label={t("creation.level.pick", { level: r.level })}
+                    onClick={() => update({ level: r.level })}
+                    className={cn(
+                      "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-body tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      draft.level === r.level
+                        ? "chip-chosen font-semibold"
+                        : "chip hover:bg-raised-hover",
+                    )}
+                  >
+                    {r.level}
+                  </button>
+                ))}
+              </div>
+              <p className="text-body" data-testid="level-xp">
+                {t("creation.level.levelN", { level: draft.level })}
+                <span className="text-ink-muted">
+                  {draft.cls
+                    ? t("creation.level.xpOfLevel", {
+                        xp: formatNumber(Number(xp), i18n.language),
+                        level: draft.level,
+                        className,
+                      })
+                    : t("creation.level.xpOfLevelNoClass")}
+                </span>
+              </p>
+            </>
+          ) : (
+            <div className="flex w-56 min-w-0 flex-col gap-1">
+              <label htmlFor="new-character-xp" className={labelClass}>
+                {t("characters.xp")}
+              </label>
+              <input
+                {...fieldProps("xp", xpError)}
+                inputMode="numeric"
+                autoComplete="off"
+                value={draft.xp}
+                onChange={(e) => update({ xp: e.target.value })}
+              />
+            </div>
+          )}
+          <FieldError id="new-character-xp" text={xpError} />
+        </Group>
+      )}
     </>
   );
 }
@@ -302,6 +331,9 @@ export function RaceStep({
   const className = t(`details.classes.${draft.cls}`, {
     defaultValue: draft.cls,
   }).toLocaleLowerCase();
+  // Several classes: which races fit is the server's verdict on the entries (the ruleset's racial
+  // lift), shown on the class step and at Créer, so every race stays pickable here.
+  const several = draft.kind !== "single";
   return (
     <>
       <div
@@ -310,7 +342,7 @@ export function RaceStep({
         className="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-3"
       >
         {allRaces(options).map((r) => {
-          const ok = !!cls?.races.includes(r);
+          const ok = several || !!cls?.races.includes(r);
           const name = t(`details.races.${r}`);
           const adj = options.raceAdjustments?.find(
             (x) => x.race === r,
@@ -760,8 +792,9 @@ export function ExtrasStep({
   const budget = answer.latest?.skillPoints ?? null;
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
-  const cls = classOf(options, draft.cls);
-  const skills = cls?.skills ?? [];
+  const skills = skillClass(options, draft)?.skills ?? [];
+  // The hit points roll of ADR 0032 step 7 is for one class: the entries of several are typed.
+  const several = draft.kind !== "single";
   // The server says whether the entries allow an 18/xx (ADR 0030 step 9 through the class's
   // features); the last answer for the class, so the field does not blink while one is asked.
   const offersExceptional = answer.latest?.exceptionalStrength === true;
@@ -818,17 +851,19 @@ export function ExtrasStep({
           title={t("creation.extras.hp")}
           testId="hp-roll"
           right={
-            <Button
-              variant="quiet"
-              size="sm"
-              disabled={!canRoll || busy}
-              onClick={() => void doRoll()}
-              aria-label={t("creation.extras.rollHint")}
-              title={t("creation.extras.rollHint")}
-            >
-              <DiceFive aria-hidden />
-              {hp ? t("creation.reroll") : t("creation.scores.roll")}
-            </Button>
+            several ? undefined : (
+              <Button
+                variant="quiet"
+                size="sm"
+                disabled={!canRoll || busy}
+                onClick={() => void doRoll()}
+                aria-label={t("creation.extras.rollHint")}
+                title={t("creation.extras.rollHint")}
+              >
+                <DiceFive aria-hidden />
+                {hp ? t("creation.reroll") : t("creation.scores.roll")}
+              </Button>
+            )
           }
         >
           {rollError && <Note kind="refusal">{rollError}</Note>}

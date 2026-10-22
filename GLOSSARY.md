@@ -34,13 +34,17 @@ The Dungeon Master, whose rulings the player enters. _Avoid_: GM, MD.
 The seed character, the table's level 15 bard, loaded from `seeds/character.json`.
 
 **Class** (fr: classe):
-What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21.
+What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21, [ADR 0040](docs/adr/0040-classes-are-data.md).
+
+**Class definition** (fr: définition de classe) _(planned)_:
+A class as catalogue data: group, prime requisites, limits, XP table, hit dice, spell progression and its class features. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
+_Avoid_: class table (a rule table is something else).
 
 **Class group** (fr: groupe de classes):
-Warrior, wizard, priest or rogue: the grouping the tables are read by. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21.
+Warrior, wizard, priest or rogue: the grouping the tables are read by; a field of the class definition. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.2.
 
 **Class entry** (fr: classe du personnage) _(planned)_:
-One class of a character with its own level and XP. _Avoid_: "class" for the entry.
+One class of a character with its own level and XP; the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5. _Avoid_: "class" for the entry.
 
 **Multi-class** (fr: multi-classé):
 Several classes from the start, levelled together, the XP split between them. The user also says "dual". PHB p.43.
@@ -51,19 +55,22 @@ Leaving one class for a new one, the old one frozen. The user also says "serial"
 _Avoid_: serial, multi (for this).
 
 **Class feature** (fr: aptitude de classe) _(planned)_:
-One ability a class grants at a level (turning, backstab, a skill set). _Avoid_: power (that is a psionic word).
+One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
 
 **Feature kind** (fr: type d'aptitude) _(planned)_:
-The mechanic a class feature drives, so a feature is data and not a branch in the code.
+The mechanic a class feature drives, one of a closed list the code implements once (`turn_undead`, `rogue_skills`, `spellbook`…); the code switches on it, never on a class id. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
 
 **Kit** (fr: kit) _(future)_:
 An optional specialisation of a class from the supplements; none is modelled.
 
 **Prime requisite** (fr: caractéristique principale):
-The ability a class is built on; a high enough score gives an XP bonus.
+The ability a class is built on; 16 or more in every one gives the 10% XP bonus. [ADR 0040](docs/adr/0040-classes-are-data.md) step 6.
 
 **Race** (fr: race):
-One of the six PHB races. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2.
+One of the six PHB races, catalogue data like a class. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21, [ADR 0040](docs/adr/0040-classes-are-data.md) step 2.
+
+**Race trait** (fr: trait racial):
+What a race brings; a computed one is typed, a trait kind with parameters (`con_save_bonus`, `no_exceptional_strength`), the others are text. [ADR 0040](docs/adr/0040-classes-are-data.md) step 4.
 
 **Ability score** (fr: caractéristique):
 One of the six scores; the **score in effect** has the app's effects applied.

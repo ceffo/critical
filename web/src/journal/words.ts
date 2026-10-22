@@ -79,6 +79,11 @@ export function modLabel(
     return t("result.mods.race", {
       race: t(`details.races.${m.detail ?? ""}`, { defaultValue: m.detail }),
     });
+  // A class's save bonus (ADR 0043 step 3): the detail is the class code.
+  if (m.kind === "class")
+    return t("result.mods.class", {
+      class: t(`details.classes.${m.detail ?? ""}`, { defaultValue: m.detail }),
+    });
   // The non-proficiency penalty (ADR 0037 step 8): the detail is the weapon type code.
   if (m.kind === "nonproficient")
     return t("result.mods.nonproficient", {

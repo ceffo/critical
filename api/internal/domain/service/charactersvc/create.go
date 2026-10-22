@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -36,7 +37,7 @@ const (
 	// MinHPMax and MaxHPMax bound the max HP entered.
 	MinHPMax = 1
 	MaxHPMax = 999
-	// MaxPSPMax bounds the PSP maximum entered (ADR 0043 step 4.4); 0 enters none.
+	// MaxPSPMax bounds the PSP maximum entered (ADR 0043 step 4.4), which runs 1 to this.
 	MaxPSPMax = 999
 	// MinStartingXP and MaxStartingXP bound the starting XP entered (the
 	// highest is more than any class's level 20 threshold).
@@ -128,9 +129,10 @@ type NewCharacter struct {
 	// StrExceptional is a fighter's 18/xx percentile (step 9), 0 for none.
 	StrExceptional int
 	HPMax          int
-	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4), kept as entered; 0
-	// enters none and the rules compute it. Only a character with a psionics entry has one.
-	PSPMax int
+	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4), kept as entered; nil
+	// enters none and the rules compute it (an entered 0 is refused: the maximum runs 1 to
+	// MaxPSPMax). Only a character with a psionics entry has one.
+	PSPMax *int
 	XP     int
 	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18): the points
 	// by skill code (0 to MaxSkillPoints each, absent is 0). Empty for the
@@ -152,6 +154,11 @@ type NewCharacter struct {
 	// 20.7): the catalogue ids of the spells the DM gave, in order, written
 	// without a roll; nil for none. Another class enters none.
 	Spellbook []string
+	// PsionicPicks are a psionicist's known powers (ADR 0043 step 9): the disciplines and powers
+	// in the player's order, checked as the known-powers editor checks them at the psionics
+	// entry's starting level and stored with the character; nil for none. A character with no
+	// psionics entry enters none.
+	PsionicPicks []psionics.Pick
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -525,7 +532,7 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 	case n.HPMax < MinHPMax || n.HPMax > MaxHPMax:
 		refuse(&domain.FieldError{Field: "hpMax", Message: CodeOutOfRange})
 	}
-	if n.PSPMax < 0 || n.PSPMax > MaxPSPMax {
+	if n.PSPMax != nil && (*n.PSPMax < 1 || *n.PSPMax > MaxPSPMax) {
 		refuse(&domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange})
 	}
 	if stop() {
@@ -659,6 +666,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if c.PSPMax, err = startingPSPMax(&c, n.PSPMax, s.rules); err != nil {
 		return 0, err
 	}
+	// ADR 0043 step 9: the known powers within Table 4 at the starting level, as the editor
+	// checks them, written with the character (no psionic_pick entry: creating is no move).
+	if c.PsionicPicks, err = s.startingPicks(c, n.PsionicPicks); err != nil {
+		return 0, err
+	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
 	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), entryLevel(&c, k.def.ID), nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
@@ -742,19 +754,48 @@ const FieldPSPMax = "pspMax"
 // level (a multi-class character's from the psionicist entry alone, its gain not divided, Q2). A
 // character with no psionics entry has none, and a maximum entered for it is refused. c is started
 // (its entries at their starting levels).
-func startingPSPMax(c *Character, entered int, rules Rules) (int, error) {
+func startingPSPMax(c *Character, entered *int, rules Rules) (int, error) {
 	m, ok, err := PSPMaxOf(c, rules)
 	switch {
 	case err != nil:
 		return 0, fmt.Errorf("new character: %w", err)
-	case !ok && entered > 0:
+	case !ok && entered != nil:
 		return 0, &domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange}
 	case !ok:
 		return 0, nil
-	case entered > 0:
-		return entered, nil
+	case entered != nil:
+		return *entered, nil
 	}
 	return m.Max, nil
+}
+
+// FieldPsionicPicks is the creation's field of the known powers (ADR 0043 step 9).
+const FieldPsionicPicks = "psionicPicks"
+
+// startingPicks is ADR 0043 step 9 at creation: the picks a new character is stored with, checked
+// by psionics.Validate against Table 4 at its psionics entry's starting level, as the known-powers
+// editor checks a save. It returns the list (nil for none), a *psionics.Refusal for a list over the
+// rules, a field error on FieldPsionicPicks for a malformed one (the rule's own message, as the
+// editor's) or for picks entered for a character with no psionics entry (CodeNotAllowed). c is
+// started (its entries at their starting levels).
+func (s *service) startingPicks(c Character, picks []psionics.Pick) ([]psionics.Pick, error) {
+	if len(picks) == 0 {
+		return nil, nil
+	}
+	c.PsionicPicks, c.Derived.Powers = nil, nil
+	if err := s.setPowers(&c); err != nil {
+		return nil, fmt.Errorf("new character: %w", err)
+	}
+	if c.Derived.Powers == nil {
+		return nil, &domain.FieldError{Field: FieldPsionicPicks, Message: CodeNotAllowed}
+	}
+	if _, err := psionics.Validate(s.powers, c.Derived.Powers.Allowance, picks); err != nil {
+		if errors.Is(err, psionics.ErrInvalid) {
+			return nil, domain.FieldErrorf(FieldPsionicPicks, "%s", err.Error())
+		}
+		return nil, err
+	}
+	return slices.Clone(picks), nil
 }
 
 // entryLevel is the level of c's entry of class (the realized level, or the left-at level of a
@@ -788,7 +829,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	// of its own.
 	out.ExceptionalStrength = k.exceptional
 	out.Alignments = k.alignments
-	out.SkillsClass, out.SpellbookClass = carriers(k.active)
+	out.SkillsClass, out.SpellbookClass, out.PsionicsClass = carriers(k.active)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -816,6 +857,18 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if c.Derived, err = Derive(&c, nil, "", s.rules); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
+	// ADR 0043 step 9: the known powers against the starting level's allowance, read as entered
+	// beside their refusal.
+	if _, err := s.startingPicks(c, n.PsionicPicks); err != nil {
+		out.Refusals = append(out.Refusals, err)
+	}
+	c.PsionicPicks = slices.Clone(n.PsionicPicks)
+	if err := s.setPowers(&c); err != nil {
+		return nil, fmt.Errorf("draft: %w", err)
+	}
+	if err := draftPSP(out, &c, n.PSPMax, s.rules); err != nil {
+		return nil, err
+	}
 	s.readWarnings(&c, k.defs)
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
@@ -825,10 +878,39 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	return out, nil
 }
 
+// draftPSP is ADR 0043 step 4.4 on a draft: step 4's maximum at the psionics entry's starting
+// level (out.ComputedPSPMax, nil for a character with no psionics entry) and the pool the
+// character would be created with, full at the maximum Create stores (the one entered, else the
+// computed one; no ledger exists yet). A maximum entered for a character with no psionics entry is
+// Create's refusal on pspMax. c is started.
+func draftPSP(out *Draft, c *Character, entered *int, rules Rules) error {
+	m, ok, err := PSPMaxOf(c, rules)
+	if err != nil {
+		return fmt.Errorf("draft: %w", err)
+	}
+	if entered != nil && (*entered < 1 || *entered > MaxPSPMax) {
+		entered = nil // already refused out_of_range by check
+	}
+	stored, err := startingPSPMax(c, entered, rules)
+	if fe, isField := errors.AsType[*domain.FieldError](err); isField {
+		out.Refusals = append(out.Refusals, fe)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("draft: %w", err)
+	}
+	if ok {
+		out.ComputedPSPMax = &m.Max
+		c.Derived.PSP = &PSPPool{Current: stored, Max: stored}
+	}
+	return nil
+}
+
 // carriers are the classes that carry the character's skill points (ADR 0030 steps 17 and 18) and
-// its starting spellbook (step 20.7): the first active class listing rogue skills, the first
-// listing a spellbook, "" for none. The form reads them here instead of choosing.
-func carriers(active []classes.Class) (skills, book string) {
+// its starting spellbook (step 20.7), and its psionics (ADR 0043 step 9: the known powers and the
+// PSP maximum): the first active class listing rogue skills, the first listing a spellbook, the
+// first listing psionics, "" for none. The form reads them here instead of choosing.
+func carriers(active []classes.Class) (skills, book, psi string) {
 	for _, def := range active {
 		if _, ok := def.Lists(classes.KindRogueSkills); ok && skills == "" {
 			skills = def.ID
@@ -836,8 +918,11 @@ func carriers(active []classes.Class) (skills, book string) {
 		if _, ok := def.Lists(classes.KindSpellbook); ok && book == "" {
 			book = def.ID
 		}
+		if _, ok := def.Lists(classes.KindPsionics); ok && psi == "" {
+			psi = def.ID
+		}
 	}
-	return skills, book
+	return skills, book, psi
 }
 
 // skillsLevel is the level the skill point budget reads before a character derives: the skills
@@ -1291,6 +1376,13 @@ type Draft struct {
 	// SkillsClass is the active class that carries the skill points (the first listing rogue
 	// skills), SpellbookClass the one that carries the starting spellbook; "" for none.
 	SkillsClass, SpellbookClass string
+	// PsionicsClass is the active class that lists psionics (ADR 0043: its known powers and PSP
+	// maximum are entered at creation); "" for none.
+	PsionicsClass string
+	// ComputedPSPMax is ADR 0043 step 4's PSP maximum at the psionics entry's starting level, the
+	// one Create stores when none is entered (step 4.4); nil for a character with no psionics
+	// entry or while Character is nil. The pool Create would store is Character's Derived.PSP.
+	ComputedPSPMax *int
 }
 
 // ClassUnmet is a class and the abilities under its minimum.

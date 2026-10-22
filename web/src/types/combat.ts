@@ -14,6 +14,8 @@ export type ModifierKind =
   | "buff"
   | "situational"
   | "race"
+  /** A class's save_bonus (ADR 0043 step 3) on a mind-affecting save; detail is the class code. */
+  | "class"
   | "crit"
   | "specialization"
   | "point_blank"

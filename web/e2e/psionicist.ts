@@ -1,5 +1,5 @@
-// A seeded psionicist for the specs (the class is not creatable yet): the fixture character.json fields it overrides.
-/** A seeded psionicist (the class is not creatable yet): a stored PSP maximum of 40, a real class entry. */
+// A seeded psionicist for the specs (the creation spec builds one through the form): the fixture character.json fields it overrides.
+/** A seeded psionicist: a stored PSP maximum of 40, a real class entry. */
 export const psionicist = {
   class: "psionicist",
   race: "human",

@@ -312,6 +312,7 @@ func (s *Store) AddCharacterOf(ctx context.Context, owner uuid.UUID, c character
 func (c Characters) CreateCharacter(ctx context.Context, owner uuid.UUID, ch charactersvc.Character) (int64, error) {
 	ch.Details.Languages = append([]string{}, ch.Details.Languages...)
 	ch.Proficiencies = ch.Proficiencies.Clone()
+	ch.PsionicPicks = append([]psionics.Pick{}, ch.PsionicPicks...)
 	return c.s.AddCharacterOf(ctx, owner, ch)
 }
 

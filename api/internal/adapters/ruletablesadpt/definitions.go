@@ -74,6 +74,8 @@ type featureParamsDTO struct {
 	Progression   string           `json:"progression"`
 	PSP           *pspRuleDTO      `json:"psp"`
 	Recovery      string           `json:"recovery"`
+	Against       string           `json:"against"`
+	Bonus         int              `json:"bonus"`
 }
 
 type pspRuleDTO struct {
@@ -136,6 +138,8 @@ func (f featureDTO) feature() (classes.Feature, error) {
 			}
 		}
 		out.Psionics = ps
+	case classes.KindSaveBonus:
+		out.SaveBonus = &classes.SaveBonus{Against: p.Against, Bonus: p.Bonus}
 	}
 	return out, nil
 }

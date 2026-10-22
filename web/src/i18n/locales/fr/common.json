@@ -1197,6 +1197,7 @@
       "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
       "race": "{{race}} (race)",
+      "class": "{{class}} (classe)",
       "wisdom": "Sagesse {{detail}} (défense contre la magie)",
       "specialization": "Spécialisation",
       "point_blank": "Bout portant",
@@ -1824,7 +1825,8 @@
       "cleric": "Clerc",
       "fighter": "Guerrier",
       "mage": "Magicien",
-      "thief": "Voleur"
+      "thief": "Voleur",
+      "psionicist": "Psioniste"
     },
     "errors": {
       "too_long": "Trop long.",
@@ -2935,6 +2937,21 @@
         "spell_level_above_intelligence": "L’Intelligence limite les sorts au niveau {{intMax}}.",
         "spellbook_level_full": "Déjà {{max}} sorts de ce niveau, le maximum pour cette Intelligence.",
         "no_spellbook": "Un {{className}} n’a pas de grimoire."
+      }
+    },
+    "psionics": {
+      "name": "Psionique",
+      "title": "Psionique",
+      "lead": "Le maximum de PFP et les pouvoirs connus au niveau de départ, dans les limites de la table 4. Les pouvoirs peuvent être choisis plus tard.",
+      "psp": "Points de force psionique",
+      "pspMax": "PFP maximum",
+      "computed": "Calculé : {{psp}} PFP au niveau de départ. Laissez la case vide pour le garder.",
+      "pspEditable": "Saisissez le maximum de votre feuille pour remplacer le calcul.",
+      "wait": "Le maximum de PFP et les limites s’affichent une fois la classe, la race, les caractéristiques et les XP lus par le serveur.",
+      "picksN_one": "{{count}} choix",
+      "picksN_other": "{{count}} choix",
+      "errors": {
+        "out_of_range": "Ce maximum de PFP est refusé : saisissez un nombre entier, ou laissez la case vide pour le calcul."
       }
     }
   },

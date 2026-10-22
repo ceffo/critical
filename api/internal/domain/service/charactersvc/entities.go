@@ -238,6 +238,12 @@ type Derived struct {
 	// adjustment at the sheet's Wisdom (any class), a named modifier on a
 	// save the player flags as against magic that attacks the mind (0: none).
 	MagicDefence int
+	// ClassSaveBonuses is ADR 0043 step 3: the save_bonus grants of the
+	// entries whose saves count (ADR 0042 step 9: a dual-class's old class
+	// only past the crossover), the best one per effect tag, in entry order.
+	// Each is a named modifier on a save whose request carries its tag, in
+	// any category. Empty for none.
+	ClassSaveBonuses []ClassSaveBonus
 	// SpellImmunities is ADR 0006 step 10.1: the catalogue ids of the spells
 	// PHB Table 5 makes the sheet's Wisdom immune to (cumulative; empty below
 	// 19). A save against one of them, or one cast on the character, rolls
@@ -352,6 +358,14 @@ type FeatureGrant struct {
 	// crossover (ADR 0042 step 13): usable, with the warning
 	// dual_class_old_ability.
 	Dormant bool
+}
+
+// ClassSaveBonus is one save_bonus grant (ADR 0043 step 3): Bonus on a save
+// whose request carries the effect tag Against, through the entry of Class.
+type ClassSaveBonus struct {
+	Class   string
+	Against string
+	Bonus   int
 }
 
 // Grant is the first grant of kind (ADR 0042 step 12), false when no entry

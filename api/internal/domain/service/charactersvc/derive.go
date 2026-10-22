@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -224,7 +225,33 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 			return err
 		}
 	}
+	gs, _ := classes.Grants(es, def, classes.KindSaveBonus) // resolved above
+	d.ClassSaveBonuses = classSaveBonuses(es, gs)
 	return nil
+}
+
+// classSaveBonuses is ADR 0043 step 3 through the save_bonus grants (ADR
+// 0042 step 12): a grant counts where its entry's saves do (ADR 0042 step 9:
+// a dual-class's frozen entry only past the crossover, a passive bonus has no
+// use to warn about), and per effect tag the best bonus, the first entry's on
+// a tie (two classes' bonuses against one tag do not add up, as two classes'
+// saves do not).
+func classSaveBonuses(es []classes.Entry, gs []classes.Grant) []ClassSaveBonus {
+	var out []ClassSaveBonus
+	for _, g := range gs {
+		if dormant(es, g.Class.ID) {
+			continue
+		}
+		b := ClassSaveBonus{Class: g.Class.ID, Against: g.Feature.SaveBonus.Against, Bonus: g.Feature.SaveBonus.Bonus}
+		i := slices.IndexFunc(out, func(o ClassSaveBonus) bool { return o.Against == b.Against })
+		switch {
+		case i < 0:
+			out = append(out, b)
+		case b.Bonus > out[i].Bonus:
+			out[i] = b
+		}
+	}
+	return out
 }
 
 // entryCalc is one class entry while it is derived: the entry, its class

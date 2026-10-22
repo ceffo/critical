@@ -102,8 +102,6 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 		{"empty name", func(n *charactersvc.NewCharacter) { n.Name = "   " }, nil, "name", "empty"},
 		{"long name", func(n *charactersvc.NewCharacter) { n.Name = strings.Repeat("é", 41) }, nil, "name", "too_long"},
 		{"unknown class", func(n *charactersvc.NewCharacter) { n.Class = "paladin" }, nil, "class", "not_creatable"},
-		// ADR 0040 step 8: the fixture's psionicist lists psionics and save_bonus, which the code does not compute yet.
-		{"a class listing a kind not implemented", func(n *charactersvc.NewCharacter) { n.Class = "psionicist" }, nil, "class", "not_creatable"},
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
 		{"race the class does not admit", func(n *charactersvc.NewCharacter) { n.Race = "dwarf" }, ptr(false), "race", "race_not_allowed"},
@@ -533,6 +531,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "mage").Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
+		e.rules.EXPECT().RaceAllows(race, "psionicist").Return(true, nil).Once()
 	}
 	expectOptionTables(e)
 	got, err := e.svc.CreationOptions(context.Background())
@@ -560,6 +559,11 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
+			},
+			// ADR 0043 step 1: creatable once its kinds are computed (step 3).
+			{
+				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{},
+				Alignments: []string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
 			},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
@@ -651,6 +655,8 @@ func TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums(t *testing.T
 		"cleric":  {minimum("wis", 9)},
 		"thief":   {minimum("dex", 9)},
 		"bard":    {minimum("dex", 12), minimum("int", 13), minimum("cha", 15)},
+		// ADR 0043 step 1.2: creatable once every kind it lists is computed (step 3).
+		"psionicist": {minimum("con", 11), minimum("int", 12), minimum("wis", 15)},
 	}, byClass)
 }
 
@@ -674,17 +680,18 @@ func TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
 	}, []string{"con", "hpMax", "xp"})
 	require.NoError(t, err)
 	assert.Equal(t, map[string][]string{
-		"fighter": {"str"},        // 8 < 9
-		"mage":    {},             // int 13 >= 9
-		"cleric":  {},             // wis 9 is the minimum itself
-		"thief":   {},             // dex 11 >= 9
-		"bard":    {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
+		"fighter":    {"str"},        // 8 < 9
+		"mage":       {},             // int 13 >= 9
+		"cleric":     {},             // wis 9 is the minimum itself
+		"thief":      {},             // dex 11 >= 9
+		"bard":       {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
+		"psionicist": {"wis"},        // con blank, int 13 >= 12, wis 9 < 15
 	}, unmetOf(got))
 	assert.Nil(t, got.Character, "no race and no XP: nothing to derive")
 
 	none, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{Class: "bard"}, allNumbers)
 	require.NoError(t, err)
-	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}}, unmetOf(none))
+	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}, "psionicist": {}}, unmetOf(none))
 }
 
 // ADR 0034 amendment of 2026-10-20: an empty draft is no refusal; it lists every field the

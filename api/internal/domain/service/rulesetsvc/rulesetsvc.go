@@ -32,6 +32,8 @@ type SVC interface {
 	SetCritTable(ctx context.Context, by uuid.UUID, rows []ruleset.CritRow) (ruleset.CritTable, error)
 	// SetRacialLift stores the two racial lift switches (step 2.2).
 	SetRacialLift(ctx context.Context, by uuid.UUID, lift ruleset.RacialLift) (ruleset.RacialLift, error)
+	// SetWeaponLift stores the multi-class weapon lift switch (step 2.5).
+	SetWeaponLift(ctx context.Context, by uuid.UUID, lift ruleset.WeaponLift) (ruleset.WeaponLift, error)
 	// SetSuccessEffects replaces the success effects (step 2.4); a proficiency
 	// the book does not know, or an effect of zero rounds, is refused.
 	SetSuccessEffects(ctx context.Context, by uuid.UUID, effects []ruleset.SuccessEffect) ([]ruleset.SuccessEffect, error)
@@ -45,6 +47,7 @@ type DAL interface {
 	// placeholder.
 	ReplaceCritTable(ctx context.Context, rulesetID int64, rows []ruleset.CritRow) error
 	SetRacialLift(ctx context.Context, rulesetID int64, lift ruleset.RacialLift) error
+	SetWeaponLift(ctx context.Context, rulesetID int64, lift ruleset.WeaponLift) error
 	ReplaceSuccessEffects(ctx context.Context, rulesetID int64, effects []ruleset.SuccessEffect) error
 	SetCatalogueVersion(ctx context.Context, rulesetID int64, version string) error
 	// AddChange appends one audit record; the store stamps its id and time.
@@ -190,6 +193,19 @@ func (s *service) SetRacialLift(ctx context.Context, by uuid.UUID, lift ruleset.
 	return lift, nil
 }
 
+func (s *service) SetWeaponLift(ctx context.Context, by uuid.UUID, lift ruleset.WeaponLift) (ruleset.WeaponLift, error) {
+	err := s.edit(ctx, by, ruleset.RuleWeaponLift, func(ctx context.Context, rs ruleset.Ruleset) (any, any, error) {
+		if err := s.dal.SetWeaponLift(ctx, rs.ID, lift); err != nil {
+			return nil, nil, fmt.Errorf("save the weapon lift: %w", err)
+		}
+		return weaponLiftDoc(rs.WeaponLift), weaponLiftDoc(lift), nil
+	})
+	if err != nil {
+		return ruleset.WeaponLift{}, err
+	}
+	return lift, nil
+}
+
 func (s *service) SetSuccessEffects(ctx context.Context, by uuid.UUID, effects []ruleset.SuccessEffect) ([]ruleset.SuccessEffect, error) {
 	sorted, err := ruleset.ValidateSuccessEffects(effects, s.profs.Has)
 	if err != nil {
@@ -230,6 +246,14 @@ type liftDocument struct {
 
 func liftDoc(l ruleset.RacialLift) liftDocument {
 	return liftDocument{MulticlassAnyRace: l.MulticlassAnyRace, DualclassAnyRace: l.DualclassAnyRace}
+}
+
+type weaponLiftDocument struct {
+	MulticlassAnyWeapon bool `json:"multiclassAnyWeapon"`
+}
+
+func weaponLiftDoc(l ruleset.WeaponLift) weaponLiftDocument {
+	return weaponLiftDocument{MulticlassAnyWeapon: l.MulticlassAnyWeapon}
 }
 
 type effectDoc struct {

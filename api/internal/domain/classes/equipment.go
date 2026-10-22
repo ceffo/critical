@@ -138,12 +138,17 @@ func (e Equipment) WeaponTypeAllowed(weaponType string) bool {
 // AllowedTogether is ADR 0042 step 16.1 on the equipment of several class
 // entries judging one weapon (allows asks one class): a BluntOnly class
 // decides alone, whatever the other classes (a multi-class priest keeps his
-// weapon limits); otherwise the weapon is allowed when any class allows it.
-// No limit at all (none given) allows everything.
-func AllowedTogether(limits []Equipment, allows func(Equipment) bool) bool {
-	for _, e := range limits {
-		if e.BluntOnly {
-			return allows(e)
+// weapon limits), unless lifted; otherwise the weapon is allowed when any
+// class allows it. lifted is the ruleset's weapon lift (ADR 0041 step 2.5):
+// on, the BluntOnly class is one class among the others, so any class
+// allowing the weapon allows it. With one class it changes nothing. No limit
+// at all (none given) allows everything.
+func AllowedTogether(limits []Equipment, lifted bool, allows func(Equipment) bool) bool {
+	if !lifted {
+		for _, e := range limits {
+			if e.BluntOnly {
+				return allows(e)
+			}
 		}
 	}
 	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
@@ -155,9 +160,11 @@ func AllowedTogether(limits []Equipment, allows func(Equipment) bool) bool {
 // which warns before the crossover. Each use follows the limits of the class
 // using it (step 13): an active BluntOnly class decides alone, so an old
 // class adds no weapon to an active priest's; nor does a BluntOnly old
-// class restrict the active ones.
-func AllowedWithOld(active, old []Equipment, allows func(Equipment) bool) (allowed, byOld bool) {
-	if AllowedTogether(active, allows) {
+// class restrict the active ones. lifted is AllowedTogether's, on the active
+// classes only: a dual-class has one, so the lift changes nothing for it, and
+// an old class still adds nothing to an active BluntOnly one.
+func AllowedWithOld(active, old []Equipment, lifted bool, allows func(Equipment) bool) (allowed, byOld bool) {
+	if AllowedTogether(active, lifted, allows) {
 		return true, false
 	}
 	if slices.ContainsFunc(active, func(e Equipment) bool { return e.BluntOnly }) {

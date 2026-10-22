@@ -15,6 +15,10 @@ type Sheet struct {
 	Languages    []string
 	Native       string
 	Score        func(ability string) (int, bool)
+	// MulticlassAnyWeapon is the ruleset's weapon lift (ADR 0041 step 2.5): on, a multi-class
+	// character's blunt_only entry no longer restricts the weapon picks to its own (ADR 0042 step
+	// 16.1). The specialization stays refused either way.
+	MulticlassAnyWeapon bool
 }
 
 // classes are the entries s reads: Classes, else Class at Level.
@@ -38,7 +42,7 @@ func (s Sheet) Spending() Spending {
 // pick's figures and check target, and the slot warnings. nil and no warning without a Table 34
 // row for the class.
 func Read(book Book, s Sheet) (*ProficiencySlots, []Warning) {
-	f, ok := FiguresOf(book, s.classes(), s.Intelligence, s.Spending())
+	f, ok := figuresOf(book, s.classes(), s.MulticlassAnyWeapon, s.Intelligence, s.Spending())
 	if !ok {
 		return nil, nil
 	}
@@ -62,7 +66,7 @@ type Edit struct {
 // non-weapon one. It returns the sheet after the edit, or a refusal: a *domain.FieldError or a
 // *domain.BudgetError. Nothing is written.
 func Apply(book Book, languages LanguageBook, race string, before Sheet, e Edit) (Sheet, error) {
-	picks, err := validPicksOf(book, before.classes(), e.Picks, before.Picks)
+	picks, err := validPicksOf(book, before.classes(), before.MulticlassAnyWeapon, e.Picks, before.Picks)
 	if err != nil {
 		return Sheet{}, err
 	}

@@ -553,7 +553,13 @@ bard 15 never).)_
        priest keeps his weapon limits whatever his other classes (same section, Priest: a
        fighter/cleric uses blunt weapons only, with the warrior's combat value). The weapon
        proficiency types (ADR 0037 step 7) follow the same rule (decided in triage: "a cleric
-       multi-class keeps the cleric's weapon limits (warnings)").
+       multi-class keeps the cleric's weapon limits (warnings)"), **unless the ruleset lifts it**:
+       with [ADR 0041](0041-ruleset.md) step 2.5's `multiclass_any_weapon` on, the `blunt_only`
+       entry no longer judges alone, and a weapon or a weapon proficiency type is allowed when any
+       active entry's class allows it (amended 2026-10-22, user: "our DM allows our priest fighter
+       to use a long sword"). Off by default. A single-class character, a dual-class character (its
+       one active entry decides, and an old class still adds nothing to an active `blunt_only` one,
+       step 13) and the specialization (a multi-class character's stays refused) are unchanged.
     2. **Armour**: wearing it is allowed when any active entry's class allows it; what it blocks is
        each class's own: an entry whose class allows no body armour (`armour: none`) and has a
        `spell_progression` warns `spell_in_armour` on every cast of its spells while body armour is

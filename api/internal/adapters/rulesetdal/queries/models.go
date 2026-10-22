@@ -11,13 +11,14 @@ import (
 )
 
 type Ruleset struct {
-	ID                int64
-	Name              string
-	CatalogueVersion  string
-	CritPlaceholder   bool
-	MulticlassAnyRace bool
-	DualclassAnyRace  bool
-	LevelLimits       string
+	ID                  int64
+	Name                string
+	CatalogueVersion    string
+	CritPlaceholder     bool
+	MulticlassAnyRace   bool
+	DualclassAnyRace    bool
+	LevelLimits         string
+	MulticlassAnyWeapon bool
 }
 
 type RulesetChange struct {

@@ -25,7 +25,7 @@ const adminPrefix = "/api/admin/"
 
 // adminOnly are the routes outside adminPrefix that only an admin reaches.
 var adminOnly = map[string]bool{
-	"PUT /api/ruleset/crit-table": true, "PUT /api/ruleset/racial-lift": true, "PUT /api/ruleset/success-effects": true,
+	"PUT /api/ruleset/crit-table": true, "PUT /api/ruleset/racial-lift": true, "PUT /api/ruleset/weapon-lift": true, "PUT /api/ruleset/success-effects": true,
 }
 
 var inviteID = uuid.MustParse("cccccccc-cccc-cccc-cccc-cccccccccccc")
@@ -59,7 +59,7 @@ func TestAdmin_Step1_3_APlayerIsRefusedEveryAdminRoute(t *testing.T) {
 		assert.JSONEq(t, `{"error":"only an admin may do this","code":"admin_only"}`, rec.Body.String(), key)
 		return nil
 	}))
-	assert.Equal(t, 9, guarded, "the walk found the admin routes")
+	assert.Equal(t, 10, guarded, "the walk found the admin routes")
 }
 
 // Without a session the gate answers first: 401, not 403.
@@ -218,6 +218,7 @@ func TestRuleset_APlayerReadsButCannotEdit(t *testing.T) {
 	for path, body := range map[string]string{
 		"/api/ruleset/crit-table":      `{"rows":[{"from":1,"to":100,"multiplier":2}]}`,
 		"/api/ruleset/racial-lift":     `{"multiclassAnyRace":false,"dualclassAnyRace":false}`,
+		"/api/ruleset/weapon-lift":     `{"multiclassAnyWeapon":true}`,
 		"/api/ruleset/success-effects": `{"effects":[]}`,
 	} {
 		rec := as(h, "player", "PUT", path, body)

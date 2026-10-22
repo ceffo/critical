@@ -202,7 +202,7 @@ func (q *Queries) ListRulesetSuccessEffects(ctx context.Context, rulesetID int64
 }
 
 const rulesetByName = `-- name: RulesetByName :one
-SELECT id, name, catalogue_version, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits
+SELECT id, name, catalogue_version, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits, multiclass_any_weapon
 FROM rulesets WHERE name = $1
 `
 
@@ -217,6 +217,7 @@ func (q *Queries) RulesetByName(ctx context.Context, name string) (Ruleset, erro
 		&i.MulticlassAnyRace,
 		&i.DualclassAnyRace,
 		&i.LevelLimits,
+		&i.MulticlassAnyWeapon,
 	)
 	return i, err
 }
@@ -261,5 +262,19 @@ type SetRulesetRacialLiftParams struct {
 
 func (q *Queries) SetRulesetRacialLift(ctx context.Context, arg SetRulesetRacialLiftParams) error {
 	_, err := q.db.ExecContext(ctx, setRulesetRacialLift, arg.ID, arg.MulticlassAnyRace, arg.DualclassAnyRace)
+	return err
+}
+
+const setRulesetWeaponLift = `-- name: SetRulesetWeaponLift :exec
+UPDATE rulesets SET multiclass_any_weapon = $2 WHERE id = $1
+`
+
+type SetRulesetWeaponLiftParams struct {
+	ID                  int64
+	MulticlassAnyWeapon bool
+}
+
+func (q *Queries) SetRulesetWeaponLift(ctx context.Context, arg SetRulesetWeaponLiftParams) error {
+	_, err := q.db.ExecContext(ctx, setRulesetWeaponLift, arg.ID, arg.MulticlassAnyWeapon)
 	return err
 }

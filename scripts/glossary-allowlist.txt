@@ -19,7 +19,6 @@ TxRunner  # Technical: port, service or wiring type (clean architecture plumbing
 Codec  # Technical: port, service or wiring type (clean architecture plumbing)
 Reader  # Technical: port, service or wiring type (clean architecture plumbing)
 Recorder  # Technical: port, service or wiring type (clean architecture plumbing)
-SaveOptions  # Technical: the options of a save roll request
 Resolver  # Technical: port, service or wiring type (clean architecture plumbing)
 Replayer  # Technical: port, service or wiring type (clean architecture plumbing)
 Restorer  # Technical: port, service or wiring type (clean architecture plumbing)

@@ -131,7 +131,7 @@ question; file them yourself with their OK instead of spawning a scoper.
 **Briefs and items frame the problem, never the design.** State the symptom, the user's words, the
 constraints and the hard rules; never prescribe a data shape, a contract or a migration. Before filing
 an item from a symptom, read how that area works today and write it into the item, so the item
-doesn't settle a design by accident. If a contract, schema or ADR change looks needed, the developer
+doesn't settle a design by accident. An item that adds book data (a weapon, a table row) first checks with rules-lookup that the book has it (sup-73: a lasso item asked for "its PHB stats"; the PHB has none, and a developer session ended blocked). If a contract, schema or ADR change looks needed, the developer
 proposes it in its report first; you check it against the workflow doc's hard rules and the existing
 patterns before anything is built. (Post-mortem of PR #147: a brief that prescribed French stat texts
 in the database went through a developer and a review unchallenged; the rule is now ADR 0023, no

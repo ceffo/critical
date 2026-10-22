@@ -62,7 +62,7 @@ func newCastWire(t *testing.T) *castWire {
 	}
 	chars := mocks.NewMockCharacters(t)
 	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel},
+		ID: charID, Class: "bard", Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel},
 	}, nil).Maybe()
 	log := mocks.NewMockLog(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(

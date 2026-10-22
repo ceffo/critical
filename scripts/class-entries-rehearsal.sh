@@ -3,7 +3,7 @@
 # written by the release before is upgraded by this checkout's server, on a throwaway LOCAL compose
 # PostgreSQL, then checked through the API and SQL.
 #
-#   scripts/class-entries-rehearsal.sh [old ref]   # default: the commit before the one that added the migration
+#   scripts/class-entries-rehearsal.sh [old ref]   # default: origin/main while it lacks the migration, else the commit before the one that added it
 #
 # 1. The old release (built from <old ref>, which must not hold 035_character_classes.sql) writes
 #    characters of several classes with a starting XP, an XP history (bonus and plain entries) and,
@@ -33,7 +33,16 @@ ok() { echo "class-entries-rehearsal: ok: $*"; }
 
 mig=api/internal/storage/postgres/migrations/035_character_classes.sql
 # default: the commit before the one that added the migration (the release before, on this branch's base)
-old_ref="${1:-$(git -C "$root" log --diff-filter=A --format=%H -- "$mig" | tail -n 1)^}"
+# (the migration was first numbered 034, before CRI-166's skill sets took that number: both names count)
+mig034="${mig/035_/034_}"
+# The release before is origin/main while it lacks the migration (it carries whatever else changed
+# the wire meanwhile); once it holds it, the commit before the one that added it.
+if git -C "$root" cat-file -e "origin/main:$mig" 2>/dev/null; then
+    default_ref="$(git -C "$root" log --diff-filter=A --format=%H -- "$mig" "$mig034" | tail -n 1)^"
+else
+    default_ref="origin/main"
+fi
+old_ref="${1:-$default_ref}"
 git -C "$root" cat-file -e "$old_ref:$mig" 2>/dev/null &&
     fail "$old_ref already holds the class entries migration: pass a ref of before it"
 

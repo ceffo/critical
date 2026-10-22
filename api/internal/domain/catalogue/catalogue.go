@@ -10,15 +10,19 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
-// FormatProficiencyDescriptions is format 9 (ADR 0021 step 16, ADR 0037 step
+// FormatProficiencyDescriptions was format 9 (ADR 0021 step 16, ADR 0037 step
 // 19): the spells, the PHB rule tables, the equipment, the languages and the
-// description of each non-weapon proficiency, in English and French. It is the
-// only format the API reads (step 16.5): the formats 1 to 8 are refused like
-// any unknown format, with the advice to run `just catalogue`.
+// description of each non-weapon proficiency, in English and French.
 const FormatProficiencyDescriptions = 9
 
-// Formats lists the formats this API reads: format 9 only (step 16.5).
-var Formats = []int{FormatProficiencyDescriptions}
+// FormatMagicDefence is format 10 (ADR 0021 step 17, ADR 0006 step 9): format
+// 9 plus Table 5's magical defence adjustment on each wisdom row. It is the
+// only format the API reads (step 17.3): the formats 1 to 9 are refused like
+// any unknown format, with the advice to run `just catalogue`.
+const FormatMagicDefence = 10
+
+// Formats lists the formats this API reads: format 10 only (step 17.3).
+var Formats = []int{FormatMagicDefence}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:
@@ -28,7 +32,7 @@ type Catalogue struct {
 	Format  int
 	Version string
 	Spells  []Spell
-	// ProficiencyDescriptions are the format-9 descriptions of the non-weapon
+	// ProficiencyDescriptions are the descriptions (format 9 on) of the non-weapon
 	// proficiencies (ADR 0021 step 16): one row per proficiency id.
 	ProficiencyDescriptions []ProficiencyDescription
 }

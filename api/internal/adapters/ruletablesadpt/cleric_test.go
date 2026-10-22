@@ -69,6 +69,25 @@ func TestSpellFailureFor_Step14_LowWisdom(t *testing.T) {
 	}
 }
 
+// ADR 0006 step 9.1: Table 5's magical defence adjustment column, read for
+// the Wisdom of every class, from -6 at Wisdom 1 to +4 at 18 and up; a score
+// outside the table is refused.
+func TestWisdomFor_Step9_MagicDefence(t *testing.T) {
+	tbl := phb(t)
+	for wis, want := range map[int]int{1: -6, 3: -3, 7: -1, 8: 0, 14: 0, 15: 1, 17: 3, 18: 4, 25: 4} {
+		got, err := tbl.MagicDefenceFor(wis)
+		require.NoError(t, err)
+		assert.Equal(t, want, got, "Wisdom %d", wis)
+		row, err := tbl.WisdomFor(wis)
+		require.NoError(t, err)
+		assert.Equal(t, want, row.MagicDefence, "Wisdom %d row", wis)
+	}
+	for _, wis := range []int{0, 26} {
+		_, err := tbl.MagicDefenceFor(wis)
+		assert.Error(t, err, "Wisdom %d", wis)
+	}
+}
+
 // ADR 0030 step 16: Table 61 at a cleric's level, the shared columns above
 // level 9 (10-11, 12-13, 14 and up).
 func TestTurningAt_Step16_Table61(t *testing.T) {

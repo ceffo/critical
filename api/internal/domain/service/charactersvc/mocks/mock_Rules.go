@@ -420,6 +420,62 @@ func (_c *MockRules_LevelFor_Call) RunAndReturn(run func(string, int) (int, erro
 	return _c
 }
 
+// MagicDefenceFor provides a mock function with given fields: wis
+func (_m *MockRules) MagicDefenceFor(wis int) (int, error) {
+	ret := _m.Called(wis)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MagicDefenceFor")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (int, error)); ok {
+		return rf(wis)
+	}
+	if rf, ok := ret.Get(0).(func(int) int); ok {
+		r0 = rf(wis)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(wis)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_MagicDefenceFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MagicDefenceFor'
+type MockRules_MagicDefenceFor_Call struct {
+	*mock.Call
+}
+
+// MagicDefenceFor is a helper method to define mock.On call
+//   - wis int
+func (_e *MockRules_Expecter) MagicDefenceFor(wis interface{}) *MockRules_MagicDefenceFor_Call {
+	return &MockRules_MagicDefenceFor_Call{Call: _e.mock.On("MagicDefenceFor", wis)}
+}
+
+func (_c *MockRules_MagicDefenceFor_Call) Run(run func(wis int)) *MockRules_MagicDefenceFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_MagicDefenceFor_Call) Return(_a0 int, _a1 error) *MockRules_MagicDefenceFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_MagicDefenceFor_Call) RunAndReturn(run func(int) (int, error)) *MockRules_MagicDefenceFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PriestSpellsPerDay provides a mock function with given fields: level, wis
 func (_m *MockRules) PriestSpellsPerDay(level int, wis int) (map[int]int, error) {
 	ret := _m.Called(level, wis)

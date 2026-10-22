@@ -392,7 +392,9 @@
       "breath": "Breath Weapon",
       "spell": "Spells"
     },
-    "target": "{{value}}+"
+    "target": "{{value}}+",
+    "mindAffecting": "Against the mind",
+    "mindAffectingHint": "Magic that attacks the mind (charm, fear, illusion, suggestion…): the next save adds your Wisdom’s magical defence adjustment"
   },
   "items": {
     "title": "Inventory",
@@ -1069,6 +1071,7 @@
       "critRange": "Critical hit ({{from}}–{{to}})",
       "critPlaceholder": "Critical hit (placeholder)",
       "race": "{{race}} (race)",
+      "wisdom": "Wisdom {{detail}} (magical defence)",
       "specialization": "Specialization",
       "point_blank": "Point blank",
       "backstab": "Backstab",

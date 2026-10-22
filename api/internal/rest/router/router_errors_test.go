@@ -287,7 +287,7 @@ var endpoints = []endpoint{
 		m.cmb.On("ResolveAttack", anyArgs(4)...).Return(nil, err)
 	}},
 	{"POST roll/save", "POST", "/api/roll/save", `{"category":"spell"}`, func(m *mocksSet, err error) {
-		m.cmb.On("ResolveSavingThrow", anyArgs(3)...).Return(nil, err)
+		m.cmb.On("ResolveSavingThrow", anyArgs(4)...).Return(nil, err)
 	}},
 	{"POST roll/save/{id}/adjust", "POST", "/api/roll/save/7/adjust", `{"adjustment":4,"reason":"Gaia fire"}`, func(m *mocksSet, err error) {
 		m.cmb.On("AdjustSave", anyArgs(4)...).Return(nil, err)

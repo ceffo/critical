@@ -392,7 +392,9 @@
       "breath": "Souffle",
       "spell": "Sorts"
     },
-    "target": "{{value}}+"
+    "target": "{{value}}+",
+    "mindAffecting": "Contre l’esprit",
+    "mindAffectingHint": "Magie qui attaque l’esprit (charme, peur, illusion, suggestion…) : le prochain jet ajoute l’ajustement défensif contre la magie de votre Sagesse"
   },
   "items": {
     "title": "Inventaire",
@@ -1069,6 +1071,7 @@
       "critRange": "Coup critique ({{from}}–{{to}})",
       "critPlaceholder": "Coup critique (provisoire)",
       "race": "{{race}} (race)",
+      "wisdom": "Sagesse {{detail}} (défense contre la magie)",
       "specialization": "Spécialisation",
       "point_blank": "Bout portant",
       "backstab": "Attaque dans le dos",

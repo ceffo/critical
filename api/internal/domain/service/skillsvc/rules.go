@@ -51,6 +51,12 @@ func SkillUsable(kind Kind, percent int) bool {
 // under MinThiefSkillPercent. The web owns the wording.
 const CodeSkillUnusable = "skill_unusable"
 
+// CodeSkillBlockedByArmour is the FieldError code of a roll of a skill the
+// worn body armour blocks (ADR 0042 step 16.3): a multi-class thief in armour
+// his thief class may not wear uses only Open Locks and Detect Noise. The web
+// owns the wording.
+const CodeSkillBlockedByArmour = "skill_blocked_by_armour"
+
 // KindOfSet is the check kind a skill set logs (ADR 0040 step 3.2, ADR 0014 step 3): the set
 // code is a rogue_skills param, not a class id. ok is false for a set this package does not
 // know (ruletablesvc.CheckSkillSet refuses it at start).

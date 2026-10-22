@@ -431,7 +431,18 @@ bard 15 never).)_
     entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never logged,
     never refusing) while body armour other than `none` is worn, except an elf (race `elf`) in the
     `elven_chain` column (still a race id in the code: the race trait is to come). Test:
-    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: 16.3's thief skills in armour, ADR 0043 step 18's `power_in_armour`.)_
+    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: ADR 0043 step 18's `power_in_armour`.)_
+    _(As built, 2026-10-22, 16.3: "the kind's `armour` list" is read as the skill class's equipment
+    `armour` list (ADR 0040 step 1.6; the rogue_skills armour entries name a Table 29 row for every
+    column, so they list no armour out). A character of several class entries (a dual-class's frozen
+    entry counts) wearing body armour that list does not allow (`skills.PointsSheet.ArmourBlocks`)
+    reads Open Locks and Detect Noise (`ruletablesvc.ArmourFreeSkills`) at the no-armour column and
+    marks every other skill of the set `Blocked` (the skill's `blocked` on the sheet and on GET
+    /api/skills, where it is not `usable`); a roll of a blocked skill is refused before the die
+    with the field code `skill_blocked_by_armour`, as the 0% skill's `skill_unusable`. Tests:
+    `Skills_Step16_3_ArmourBlocksAllButTwo` (charactersvc, the derivation),
+    `Skills_Step16_3_ABlockedSkillIsNotRolled` (skillsvc). The web has no wording for the code
+    yet.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 

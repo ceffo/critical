@@ -331,6 +331,9 @@ type SkillTermsDTO struct {
 	// RawPercent is the sum before the cap and the floor.
 	Raw     int `json:"rawPercent"`
 	Percent int `json:"percent"`
+	// Blocked: the worn body armour blocks the skill (ADR 0042 step 16.3,
+	// skill_blocked_by_armour); absent when it does not.
+	Blocked bool `json:"blocked,omitempty"`
 }
 
 // BudgetWarningDTO is a breach of the skill point budget (ADR 0030 step 17):

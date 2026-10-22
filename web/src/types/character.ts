@@ -238,6 +238,8 @@ export interface ThiefSkillTerms {
   /** The sum before the cap and the floor. */
   rawPercent: number;
   percent: number;
+  /** The worn body armour blocks the skill (ADR 0042 step 16.3). Absent when it does not. */
+  blocked?: boolean;
 }
 
 /** ADR 0030 step 17: a breach of the skill point budget. `skill_points_total` has no `skill`. */

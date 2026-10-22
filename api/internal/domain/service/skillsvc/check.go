@@ -54,6 +54,9 @@ type checkRecord struct {
 	// before the latest post-roll adjustment; set on adjustment amends only.
 	PreviousSuccess    *bool `json:"previousSuccess,omitempty"`
 	PreviousAdjustment *int  `json:"previousAdjustment,omitempty"`
+	// blocked: the worn armour blocks the skill (ADR 0042 step 16.3); never
+	// logged, a blocked check is not rolled.
+	blocked bool
 	// Buff is the buff the verdict in effect put on (ADR 0037 step 20.4),
 	// Renewed true when it replaced an active one (step 20.3). Absent when
 	// it put none, and in entries logged before: they read as no buff.
@@ -255,6 +258,10 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	if err := checkRange(rec.Kind, adj.Value); err != nil {
 		return checkRecord{}, err
 	}
+	// ADR 0042 step 16.3: a skill the worn armour blocks is not rolled.
+	if rec.blocked {
+		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillBlockedByArmour}
+	}
 	// ADR 0030 step 17 (PHB p.39): a thieving skill under 1% cannot be used
 	// until points raise it, whatever the DM's adjustment.
 	if !SkillUsable(rec.Kind, rec.Target) {
@@ -320,7 +327,7 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		}
 		for _, sk := range ss.Skills {
 			if sk.Skill == id {
-				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent}, nil
+				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent, blocked: sk.Blocked}, nil
 			}
 		}
 	}

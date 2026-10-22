@@ -28,6 +28,12 @@ var ThiefSkills = []string{
 	"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
 }
 
+// ArmourFreeSkills are the two thieving skills a multi-class thief in body
+// armour its class may not wear still uses, at the no-armour percentage (ADR
+// 0042 step 16.3, Q16; PHB multi/dual, Thief: the gauntlets off for the first,
+// the helmet for the second). Every other skill of the set is blocked.
+var ArmourFreeSkills = []string{"open_locks", "detect_noise"}
+
 // BardSkills are the four bard skills of PHB Table 33.
 var BardSkills = []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}
 

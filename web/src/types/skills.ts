@@ -47,6 +47,9 @@ export interface RogueSkill {
   maxPoints: number;
   /** False while the server says the skill cannot be rolled. */
   usable: boolean;
+  /** The worn body armour blocks the skill (ADR 0042 step 16.3): its roll is refused with
+   * `skill_blocked_by_armour`. Absent when it does not. */
+  blocked?: boolean;
   last: LastCheck | null;
 }
 

@@ -468,6 +468,7 @@ func saveField(s *Saves, cat string) *int {
 func (d *Derived) SetSkillFigures(t skills.SkillTables, def classes.Class, c *Character, points skills.SetPoints) error {
 	sets, err := skills.SkillSetsOf(t, skills.PointsSheet{
 		Class: def, Race: c.Race, Dex: c.Dex, Level: d.FeatureLevel(classes.KindRogueSkills), ArmorColumn: d.SkillColumn, Points: points,
+		MultiClass: len(c.Entries()) > 1, // ADR 0042 step 16.3: a dual-class's frozen entry counts
 	})
 	if err != nil {
 		return fmt.Errorf("skill figures: %w", err)

@@ -116,9 +116,13 @@ type RogueSkillDTO struct {
 	RawPercent int `json:"rawPercent"`
 	MaxPercent int `json:"maxPercent"`
 	MaxPoints  int `json:"maxPoints"`
-	// Usable is false while the skill cannot be rolled (a thieving skill under 1%, PHB p.39).
-	Usable bool     `json:"usable"`
-	Last   *LastDTO `json:"last"`
+	// Usable is false while the skill cannot be rolled (a thieving skill under 1%, PHB p.39, or
+	// one the worn armour blocks).
+	Usable bool `json:"usable"`
+	// Blocked: the worn body armour blocks the skill (ADR 0042 step 16.3, its roll refused with
+	// skill_blocked_by_armour); absent when it does not.
+	Blocked bool     `json:"blocked,omitempty"`
+	Last    *LastDTO `json:"last"`
 }
 
 // SkillsDTO is the GET /api/skills answer.
@@ -226,7 +230,7 @@ func rogueSkillDTO(kind skillsvc.Kind, p ruletablesvc.SkillPercent, last *skills
 	return RogueSkillDTO{
 		ID: p.Skill, Base: p.Base, Points: p.Points, Race: p.Race, Dexterity: p.Dexterity, Armor: p.Armor,
 		Percent: p.Percent, RawPercent: p.Raw, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
-		Usable: skillsvc.SkillUsable(kind, p.Percent), Last: lastDTO(last),
+		Usable: skillsvc.SkillUsable(kind, p.Percent) && !p.Blocked, Blocked: p.Blocked, Last: lastDTO(last),
 	}
 }
 

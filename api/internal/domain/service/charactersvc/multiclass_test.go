@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // ADR 0042's multi-class steps on the derived sheet, derived on the fixture
@@ -230,4 +231,50 @@ func TestDerive_Step7_LevelLimitWarnsPerEntry(t *testing.T) {
 	human := multi("human", entry("thief", 15, 1_200_000), entry("psionicist", 15, 1_600_000))
 	assert.Empty(t, limits(human.Race, derived(t, human).Classes))
 	assert.Empty(t, limits("half_elf", []charactersvc.EntryDerived{{Class: "bard", State: classes.EntryActive, RealizedLevel: 15}}))
+}
+
+// ADR 0042 step 16.3: "an entry with rogue_skills whose character wears body armour outside
+// [its class's] armour list can use only Open Locks and Detect Noise; every other skill of the
+// set warns skill_blocked_by_armour and is not rolled [...] (Q16: they take the no-armour
+// percentage). A single-class thief or bard is unchanged." A fighter/thief in chain (Table 29's
+// metal column, outside the thief's list) has the two at its unarmoured percentages and the six
+// others blocked; the same thief alone in chain, and the fighter/thief in leather, block nothing.
+func TestSkills_Step16_3_ArmourBlocksAllButTwo(t *testing.T) {
+	tables := cataloguetest.Tables(t)
+	fighterThief := func() *charactersvc.Character {
+		return multi("human", entry("fighter", 5, 20_000), entry("thief", 6, 20_000))
+	}
+	in := func(c *charactersvc.Character, armour string) map[string]ruletablesvc.SkillPercent {
+		t.Helper()
+		d, err := charactersvc.Derive(c, nil, armour, tables)
+		require.NoError(t, err)
+		require.Len(t, d.SkillSets, 1)
+		out := map[string]ruletablesvc.SkillPercent{}
+		for _, sk := range d.SkillSets[0].Skills {
+			out[sk.Skill] = sk
+		}
+		return out
+	}
+	bare := in(fighterThief(), "")
+	chain := in(fighterThief(), ruletablesvc.ColumnMetal)
+	require.Len(t, chain, len(ruletablesvc.ThiefSkills))
+	for _, skill := range ruletablesvc.ThiefSkills {
+		if skill == "open_locks" || skill == "detect_noise" {
+			assert.Equal(t, bare[skill], chain[skill], "%s at the no-armour percentage", skill)
+			continue
+		}
+		assert.True(t, chain[skill].Blocked, "%s blocked", skill)
+	}
+	assert.NotEqual(t, bare["climb_walls"].Percent, chain["climb_walls"].Percent, "a blocked skill still shows the armour's figure")
+
+	single := multi("human", entry("thief", 6, 20_000))
+	single.Classes = nil
+	alone := in(single, ruletablesvc.ColumnMetal)
+	for _, skill := range ruletablesvc.ThiefSkills {
+		assert.False(t, alone[skill].Blocked, "a single-class thief: %s", skill)
+	}
+	assert.NotEqual(t, bare["open_locks"].Percent, alone["open_locks"].Percent, "a single-class thief reads the armour's column")
+	for skill, sk := range in(fighterThief(), ruletablesvc.ColumnLeather) {
+		assert.False(t, sk.Blocked, "leather is on the thief's list: %s", skill)
+	}
 }

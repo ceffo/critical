@@ -98,4 +98,47 @@ test.describe("a psionicist's known powers", () => {
     await expect(count("disciplines")).toContainText("1 / 2");
     await expect(panel.getByTestId("known-discipline")).toHaveCount(1);
   });
+
+  test("removing a power takes its relearns, removing a relearn takes one", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    const panel = page.getByTestId("known-powers");
+    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await panel
+      .getByRole("searchbox", { name: "Search powers..." })
+      .fill("contact");
+    await panel
+      .getByTestId("pick-row")
+      .filter({ hasText: "Contact" })
+      .getByRole("button", { name: "Add Contact" })
+      .click();
+    const devotions = panel.getByTestId("powers-count-devotions");
+    const rows = panel.getByTestId("known-power");
+    await panel.getByRole("button", { name: "Relearn" }).click();
+    await panel.getByRole("button", { name: "Relearn" }).click();
+    await expect(devotions).toContainText("3 / 10");
+    await expect(rows).toHaveCount(3);
+
+    // One relearn goes, the other and the power stay.
+    await rows
+      .nth(1)
+      .getByRole("button", { name: /^Remove/ })
+      .click();
+    await expect(devotions).toContainText("2 / 10");
+    await expect(rows).toHaveCount(2);
+
+    // The power goes with its relearn, no refusal.
+    await rows
+      .first()
+      .getByRole("button", { name: /^Remove/ })
+      .click();
+    await expect(devotions).toContainText("0 / 10");
+    await expect(rows).toHaveCount(0);
+    await expect(panel.getByTestId("powers-refusal")).toHaveCount(0);
+  });
 });

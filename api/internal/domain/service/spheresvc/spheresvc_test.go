@@ -10,9 +10,9 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 )
 
@@ -43,20 +43,28 @@ var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
 	{ID: "sleep", Class: "Wizard", Level: 1},
 }}
 
-func access(t *testing.T, rows ...ruletablesvc.SphereAccessRow) *ruletablesvc.SphereAccess {
+// defs are the fixture's definitions with every class's sphere_access
+// feature replaced by spheres (a class without the feature stays without).
+func defs(t *testing.T, spheres classes.SphereAccess) *classes.Registry {
 	t.Helper()
-	a, err := ruletablesvc.NewSphereAccess(rows, cataloguetest.Definitions(t))
+	fixture := cataloguetest.Definitions(t)
+	cs := fixture.Classes()
+	for i := range cs {
+		for j := range cs[i].Features {
+			if cs[i].Features[j].Kind == classes.KindSphereAccess {
+				sp := spheres
+				cs[i].Features[j].Spheres = &sp
+			}
+		}
+	}
+	r, err := classes.New(cs, fixture.GroupDefs(), fixture.Races())
 	require.NoError(t, err)
-	return a
+	return r
 }
 
-func cleric(t *testing.T) *ruletablesvc.SphereAccess {
-	return access(t,
-		ruletablesvc.SphereAccessRow{Class: "cleric", Sphere: "all", Access: ruletablesvc.AccessMajor},
-		ruletablesvc.SphereAccessRow{Class: "cleric", Sphere: "combat", Access: ruletablesvc.AccessMajor},
-		ruletablesvc.SphereAccessRow{Class: "cleric", Sphere: "elemental_fire", Access: ruletablesvc.AccessMinor},
-	)
-}
+// cleric is a cleric's sphere access as the fixture catalogue gives it,
+// narrowed to the spheres of these tests.
+var cleric = classes.SphereAccess{Major: []string{"all", "combat"}, Minor: []string{"elemental_fire"}, MinorMaxLevel: 3}
 
 func ids(es []prepsvc.SpellbookEntry) []string {
 	out := make([]string, len(es))
@@ -68,12 +76,11 @@ func ids(es []prepsvc.SpellbookEntry) []string {
 
 // ADR 0030 step 15: a cleric prepares from the priest spells its spheres
 // open, only at the spell levels it has slots of (the ruling), level then id
-// order; another class from its spellbook; without a sphere access a cleric
-// prepares nothing.
+// order; another class from its spellbook.
 func TestSpheres_Step15_WhatAClassPreparesFrom(t *testing.T) {
 	ctx := context.Background()
-	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{SpellSlots: map[int]int{1: 3, 2: 2, 4: 1}}}
-	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Access: cleric(t), Catalogue: cat})
+	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 4: 1}}}
+	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
 	all, err := s.All(ctx, 1)
 	require.NoError(t, err)
@@ -83,25 +90,36 @@ func TestSpheres_Step15_WhatAClassPreparesFrom(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"bless", "chant", "produce_flame"}, keys)
 
-	mage := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{SpellSlots: map[int]int{1: 1}}}
-	s, err = spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{mage}, Access: cleric(t), Catalogue: cat})
+	mage := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{RealizedLevel: 1, SpellSlots: map[int]int{1: 1}}}
+	s, err = spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{mage}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
 	all, err = s.All(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, []string{"sleep"}, ids(all), "the stored spellbook")
-
-	s, err = spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Catalogue: cat})
-	require.NoError(t, err)
-	all, err = s.All(ctx, 1)
-	require.NoError(t, err)
-	assert.Equal(t, []string{"sleep"}, ids(all), "no access (format 5): the stored spellbook, empty for a real cleric")
 }
 
-// A sphere access row whose code is on no spell (a typo) is refused at load:
-// it would silently close the sphere.
+// ADR 0030 step 15 / ADR 0040 step 3: the spheres and the minor cap are the
+// class's sphere_access params, not a cleric table: the same class given
+// other spheres and another minor cap is offered a different set of spells.
+func TestSpheres_Step15_TheFeatureDrivesTheSpheres(t *testing.T) {
+	ctx := context.Background()
+	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 9, SpellSlots: map[int]int{1: 3, 2: 2, 4: 1, 5: 1}}}
+	other := classes.SphereAccess{Major: []string{"thought"}, Minor: []string{"elemental_fire", "combat"}, MinorMaxLevel: 4}
+	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, other), Catalogue: cat})
+	require.NoError(t, err)
+	all, err := s.All(ctx, 1)
+	require.NoError(t, err)
+	// Thought is major (Thought Capture); Elemental Fire and Combat minor to
+	// 4th (Chant, Produce Flame, Produce Fire, not the 5th-level Flame
+	// Strike); All is closed (no Bless).
+	assert.Equal(t, []string{"thought_capture", "chant", "produce_flame", "produce_fire"}, ids(all))
+}
+
+// A sphere_access feature naming a code on no spell (a typo) is refused at
+// load: it would silently close the sphere.
 func TestSpheres_RefusesAnUnknownSphereCode(t *testing.T) {
-	typo := access(t, ruletablesvc.SphereAccessRow{Class: "cleric", Sphere: "combatt", Access: ruletablesvc.AccessMajor})
-	_, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{}, Access: typo, Catalogue: cat})
+	typo := classes.SphereAccess{Major: []string{"combatt"}, MinorMaxLevel: 3}
+	_, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{}, Classes: defs(t, typo), Catalogue: cat})
 	require.ErrorContains(t, err, `"combatt" is on no spell`)
 }
 
@@ -119,7 +137,7 @@ func TestSpheres_Step15_SixthLevelNeedsWisdom17(t *testing.T) {
 		{"Wisdom 17", map[int]int{1: 7, 2: 6, 3: 5, 4: 3, 5: 2, 6: 1}, true},
 	} {
 		c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 11, SpellSlots: tc.slots}}
-		s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Access: cleric(t), Catalogue: cat})
+		s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 		require.NoError(t, err)
 		all, err := s.All(ctx, 1)
 		require.NoError(t, err)

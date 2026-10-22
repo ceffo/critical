@@ -38,6 +38,7 @@ import (
 	levelupmocks "github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/service/rulesetsvc/mocks"
 	skillmocks "github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -66,20 +67,21 @@ func signedIn(t *testing.T) *authmocks.MockSVC {
 }
 
 type mocksSet struct {
-	char    *charmocks.MockSVC
-	buffs   *buffmocks.MockSVC
-	spell   *spellmocks.MockSVC
-	cast    *castmocks.MockSVC
-	cmb     *combatmocks.MockSVC
-	log     *logmocks.MockSVC
-	items   *itemmocks.MockSVC
-	rest    *restmocks.MockSVC
-	xp      *xpmocks.MockSVC
-	details *detailsmocks.MockSVC
-	skills  *skillmocks.MockSVC
-	dice    *dicemocks.MockSVC
-	levelUp *levelupmocks.MockSVC
-	ac      *acmocks.MockSVC
+	char     *charmocks.MockSVC
+	buffs    *buffmocks.MockSVC
+	spell    *spellmocks.MockSVC
+	cast     *castmocks.MockSVC
+	cmb      *combatmocks.MockSVC
+	rulesets *rulesetmocks.MockSVC
+	log      *logmocks.MockSVC
+	items    *itemmocks.MockSVC
+	rest     *restmocks.MockSVC
+	xp       *xpmocks.MockSVC
+	details  *detailsmocks.MockSVC
+	skills   *skillmocks.MockSVC
+	dice     *dicemocks.MockSVC
+	levelUp  *levelupmocks.MockSVC
+	ac       *acmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -97,23 +99,24 @@ func newRouterWith(t *testing.T, a authsvc.SVC) (http.Handler, *mocksSet) {
 func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handler, *mocksSet) {
 	t.Helper()
 	m := &mocksSet{
-		char:    charmocks.NewMockSVC(t),
-		buffs:   buffmocks.NewMockSVC(t),
-		spell:   spellmocks.NewMockSVC(t),
-		cast:    castmocks.NewMockSVC(t),
-		cmb:     combatmocks.NewMockSVC(t),
-		log:     logmocks.NewMockSVC(t),
-		items:   itemmocks.NewMockSVC(t),
-		rest:    restmocks.NewMockSVC(t),
-		xp:      xpmocks.NewMockSVC(t),
-		details: detailsmocks.NewMockSVC(t),
-		skills:  skillmocks.NewMockSVC(t),
-		dice:    dicemocks.NewMockSVC(t),
-		levelUp: levelupmocks.NewMockSVC(t),
-		ac:      acmocks.NewMockSVC(t),
+		char:     charmocks.NewMockSVC(t),
+		buffs:    buffmocks.NewMockSVC(t),
+		spell:    spellmocks.NewMockSVC(t),
+		cast:     castmocks.NewMockSVC(t),
+		cmb:      combatmocks.NewMockSVC(t),
+		rulesets: rulesetmocks.NewMockSVC(t),
+		log:      logmocks.NewMockSVC(t),
+		items:    itemmocks.NewMockSVC(t),
+		rest:     restmocks.NewMockSVC(t),
+		xp:       xpmocks.NewMockSVC(t),
+		details:  detailsmocks.NewMockSVC(t),
+		skills:   skillmocks.NewMockSVC(t),
+		dice:     dicemocks.NewMockSVC(t),
+		levelUp:  levelupmocks.NewMockSVC(t),
+		ac:       acmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
-		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Log: m.log, Items: m.items, Rest: m.rest,
+		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Rulesets: m.rulesets, Log: m.log, Items: m.items, Rest: m.rest,
 		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))

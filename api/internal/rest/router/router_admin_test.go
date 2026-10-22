@@ -15,16 +15,18 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
-	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
 // adminPrefix is the admin section's routes.
 const adminPrefix = "/api/admin/"
 
 // adminOnly are the routes outside adminPrefix that only an admin reaches.
-var adminOnly = map[string]bool{"PUT /api/crit-table": true}
+var adminOnly = map[string]bool{
+	"PUT /api/ruleset/crit-table": true, "PUT /api/ruleset/racial-lift": true, "PUT /api/ruleset/success-effects": true,
+}
 
 var inviteID = uuid.MustParse("cccccccc-cccc-cccc-cccc-cccccccccccc")
 
@@ -57,7 +59,7 @@ func TestAdmin_Step1_3_APlayerIsRefusedEveryAdminRoute(t *testing.T) {
 		assert.JSONEq(t, `{"error":"only an admin may do this","code":"admin_only"}`, rec.Body.String(), key)
 		return nil
 	}))
-	assert.Equal(t, 7, guarded, "the walk found the admin routes")
+	assert.Equal(t, 9, guarded, "the walk found the admin routes")
 }
 
 // Without a session the gate answers first: 401, not 403.
@@ -206,13 +208,20 @@ func TestAdmin_ChangeUser(t *testing.T) {
 	})
 }
 
-// The crit table is one rule set for every user: a player reads it, only an
-// admin saves it.
-func TestCritTable_APlayerReadsButCannotSave(t *testing.T) {
+// The ruleset is one rule set for every user: a player reads it, only an
+// admin edits it (ADR 0041 step 7). Each edit has its own route; the service
+// is never reached by a player's edit.
+func TestRuleset_APlayerReadsButCannotEdit(t *testing.T) {
 	h, m := newRouterWith(t, adminAndPlayer(t))
-	m.cmb.EXPECT().GetCritTable(mock.Anything).Return(combatsvc.CritTable{Rows: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 2}}}, nil).Once()
-	assert.Equal(t, http.StatusOK, as(h, "player", "GET", "/api/crit-table", "").Code)
-	rec := as(h, "player", "PUT", "/api/crit-table", `{"rows":[{"from":1,"to":100,"multiplier":2}]}`)
-	assert.Equal(t, http.StatusForbidden, rec.Code)
-	assert.Contains(t, rec.Body.String(), `"code":"admin_only"`)
+	m.rulesets.EXPECT().Get(mock.Anything).Return(ruleset.Default(), nil).Once()
+	assert.Equal(t, http.StatusOK, as(h, "player", "GET", "/api/ruleset", "").Code)
+	for path, body := range map[string]string{
+		"/api/ruleset/crit-table":      `{"rows":[{"from":1,"to":100,"multiplier":2}]}`,
+		"/api/ruleset/racial-lift":     `{"multiclassAnyRace":false,"dualclassAnyRace":false}`,
+		"/api/ruleset/success-effects": `{"effects":[]}`,
+	} {
+		rec := as(h, "player", "PUT", path, body)
+		assert.Equal(t, http.StatusForbidden, rec.Code, path)
+		assert.Contains(t, rec.Body.String(), `"code":"admin_only"`, path)
+	}
 }

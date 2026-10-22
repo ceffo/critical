@@ -408,11 +408,11 @@ Step 7 as built (the characters-per-user item; the user approves ADR changes at 
 
 Steps 1.3, 2 and 5.2 as built (the admin section item; the user approves ADR changes at merge):
 
-1. **One guard.** Every `/api/admin/*` route, and `PUT /api/crit-table` (the house crit table is one
-   rule set shared by every user, so only an admin changes it; reading it stays open to every
-   session), is mounted behind one router middleware, `mw.AdminOnly`: a player gets **403
+1. **One guard.** Every `/api/admin/*` route, and the `PUT /api/ruleset/*` edits (the ruleset is one
+   rule set shared by every user, so only an admin changes it, [ADR 0041](0041-ruleset.md) step 7;
+   reading it stays open to every session), is mounted behind one router middleware, `mw.AdminOnly`: a player gets **403
    `admin_only`** before any service runs. Tests: `router` `TestAdmin_Step1_3_APlayerIsRefusedEveryAdminRoute`
-   (walks every admin route), `TestCritTable_APlayerReadsButCannotSave`.
+   (walks every admin route), `TestRuleset_APlayerReadsButCannotEdit`.
 2. **Endpoints.** `GET /api/admin/users`, `PATCH /api/admin/users/{id} {disabled?, role?}`,
    `GET /api/admin/invites` (the pending invites: the item named the other three; listing them is what
    the screen needs), `POST /api/admin/invites {email}`, `DELETE /api/admin/invites/{id}` (sets

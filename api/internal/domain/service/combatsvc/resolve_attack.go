@@ -57,7 +57,7 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if err != nil {
 			return fmt.Errorf("aggregate buffs: %w", err)
 		}
-		crit, err := s.loadCritTable(ctx)
+		crit, err := s.loadCritTable(ctx, characterID)
 		if err != nil {
 			return err
 		}
@@ -174,7 +174,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	res.D20Roll = s.dice.RollD20()
 	res.D100CritRoll = s.dice.RollD100()
 	res.D100MultiplierRoll = s.dice.RollD100()
-	row, err := lookupCrit(crit.Rows, res.D100MultiplierRoll)
+	row, err := crit.Lookup(res.D100MultiplierRoll)
 	if err != nil {
 		return nil, err
 	}

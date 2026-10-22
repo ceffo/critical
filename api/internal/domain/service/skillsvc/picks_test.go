@@ -43,7 +43,7 @@ func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.L
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), tx: &countingTx{},
 	}, picks: mocks.NewMockPicks(t)}
 	svc, err := skillsvc.New(skillsvc.Deps{
-		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks, Buffs: mocks.NewMockBuffs(t),
+		Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: f.picks, Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets,
 		Book: testBook(t), Languages: languages, Tables: &fakeTables{}, Tx: f.tx,
 	})
 	require.NoError(t, err)

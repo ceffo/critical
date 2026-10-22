@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -47,10 +48,6 @@ type SVC interface {
 	// UpdateAttackForm saves the set fields of the patch and returns the
 	// form as GetAttackForm does. A *domain.FieldError for invalid input.
 	UpdateAttackForm(ctx context.Context, characterID int64, p AttackFormPatch) (*AttackFormView, error)
-	// GetCritTable returns the house crit table (the placeholder default
-	// until edited); SetCritTable replaces it after validating it.
-	GetCritTable(ctx context.Context) (CritTable, error)
-	SetCritTable(ctx context.Context, rows []CritRow) (CritTable, error)
 }
 
 // Characters is the narrow inter-service port (just the read we need).
@@ -84,13 +81,6 @@ type Weapons interface {
 	Get(ctx context.Context, characterID int64, id string) (Weapon, error)
 	// List returns the weapons in list order.
 	List(ctx context.Context, characterID int64) ([]Weapon, error)
-}
-
-// CritStore stores the house crit table. List returns no rows until one was
-// saved; Replace swaps the whole table and joins the ctx transaction.
-type CritStore interface {
-	List(ctx context.Context) ([]CritRow, error)
-	Replace(ctx context.Context, rows []CritRow) error
 }
 
 // Items is the character's equipment (itemsvc, ADR 0033): Use spends
@@ -131,25 +121,27 @@ type Deps struct {
 	Buffs   Buffs
 	Dice    Dice
 	Weapons Weapons
-	Crit    CritStore
-	Items   Items
-	Forms   FormStore
-	Rules   Rules
-	Log     Log
-	Tx      domain.TxRunner
+	// Rulesets gives a character its ruleset: the crit table is read from it
+	// (ADR 0041 step 3).
+	Rulesets ruleset.Resolver
+	Items    Items
+	Forms    FormStore
+	Rules    Rules
+	Log      Log
+	Tx       domain.TxRunner
 }
 
 type service struct {
-	chars   Characters
-	buffs   Buffs
-	dice    Dice
-	weapons Weapons
-	crit    CritStore
-	items   Items
-	forms   FormStore
-	rules   Rules
-	log     Log
-	tx      domain.TxRunner
+	chars    Characters
+	buffs    Buffs
+	dice     Dice
+	weapons  Weapons
+	rulesets ruleset.Resolver
+	items    Items
+	forms    FormStore
+	rules    Rules
+	log      Log
+	tx       domain.TxRunner
 }
 
 // New constructs the service.
@@ -162,12 +154,12 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 	if cfg == nil {
 		return nil, fmt.Errorf("combatsvc: nil config")
 	}
-	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Crit == nil ||
+	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Rulesets == nil ||
 		d.Items == nil || d.Forms == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("combatsvc: nil dependency")
 	}
 	return &service{
-		chars: d.Chars, buffs: d.Buffs, dice: d.Dice, weapons: d.Weapons, crit: d.Crit,
+		chars: d.Chars, buffs: d.Buffs, dice: d.Dice, weapons: d.Weapons, rulesets: d.Rulesets,
 		items: d.Items, forms: d.Forms, rules: d.Rules, log: d.Log, tx: d.Tx,
 	}, nil
 }

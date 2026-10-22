@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { fetchCritTable, saveCritTable } from "@/api/combat";
+import { fetchRuleset, saveCritTable } from "@/api/ruleset";
 import { labelClass, fieldClass } from "@/components/dashboard/fieldStyles";
 import { parseDecimal } from "@/lib/decimalInput";
 import type { CritRow, CritTable } from "@/types/combat";
@@ -43,8 +43,8 @@ export function CritTableEditor() {
   }
 
   useEffect(() => {
-    fetchCritTable()
-      .then(load)
+    fetchRuleset()
+      .then((rs) => load(rs.critTable))
       .catch((e: unknown) =>
         setError(e instanceof Error ? e.message : String(e)),
       );

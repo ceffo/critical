@@ -290,6 +290,9 @@ export interface TurnResult {
   /** How many undead are destroyed and turned, worked out by the server (D*: both). */
   destroyed: number;
   turned: number;
+  /** The turn's class warnings, logged with it (ADR 0042 step 13: `dual_class_old_ability`, a
+   * dual-class's old class turning before the crossover). Absent when none. */
+  warnings?: "dual_class_old_ability"[];
 }
 
 /** ADR 0030 step 20.1: the class's and PHB Table 4's highest spell level, Table 4's chance to

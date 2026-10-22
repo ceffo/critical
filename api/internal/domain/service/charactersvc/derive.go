@@ -506,6 +506,9 @@ func (d *Derived) SetSkillFigures(t skills.SkillTables, def func(string) (classe
 		if err != nil {
 			return fmt.Errorf("skill figures: %w", err)
 		}
+		for i := range got {
+			got[i].Dormant = g.Dormant // ADR 0042 step 13
+		}
 		sets = append(sets, got...)
 	}
 	d.SkillSets = sets

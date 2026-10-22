@@ -91,6 +91,10 @@ type Result struct {
 	// Destroyed and Turned are how many undead the turn destroys and turns:
 	// a D* cell destroys the 2d6 and turns the 2d4 (0 on a failure).
 	Destroyed, Turned int
+	// Warnings are the turn's class warnings, served and logged, never a
+	// refusal (ADR 0042 step 13: dual_class_old_ability, a dual-class's old
+	// class turning before the crossover).
+	Warnings []string
 }
 
 type service struct{ Deps }
@@ -141,6 +145,11 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 	}
 	res := &Result{
 		Undead: row.Undead, HDMin: row.HDMin, HDMax: row.HDMax, ClericLevel: level, Cell: row.Cell,
+	}
+	// ADR 0042 step 13: a dual-class's old class turns before the
+	// crossover, allowed and warned.
+	if g, ok := c.Derived.Grant(classes.KindTurnUndead); ok && g.Dormant {
+		res.Warnings = []string{classes.WarnOldAbility}
 	}
 	switch row.Cell.Outcome {
 	case "":
@@ -202,12 +211,14 @@ type record struct {
 	More        []int  `json:"more,omitempty"`
 	Destroyed   int    `json:"destroyed"`
 	Turned      int    `json:"turned"`
+	// Warnings as Result's (ADR 0042 step 13); absent when none.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 func recordOf(r *Result) record {
 	return record{
 		Undead: r.Undead, ClericLevel: r.ClericLevel, Target: r.Cell.Roll, Outcome: r.Cell.Outcome,
 		D20: r.D20, Success: r.Success, Effect: r.Effect, Affected: r.Affected, More: r.More,
-		Destroyed: r.Destroyed, Turned: r.Turned,
+		Destroyed: r.Destroyed, Turned: r.Turned, Warnings: r.Warnings,
 	}
 }

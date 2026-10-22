@@ -140,3 +140,31 @@ func TestSkills_Step16_3_ABlockedSkillIsNotRolled(t *testing.T) {
 	f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(40).Once()
 	assert.True(t, f.roll(t, "open_locks").Success)
 }
+
+// ADR 0042 step 13: "an action that uses a frozen entry's feature [...]
+// before the crossover is allowed and carries the warning
+// dual_class_old_ability [...], shown on the action and in its journal entry."
+// A thief left at 9, now a fighter 5, rolls the thief's set (Dormant, from its
+// grant): rolled, warned on the answer and in the payload; past the crossover
+// (the set no longer dormant), not warned.
+func TestThiefSkill_Step13_AnOldClassSkillWarnsBeforeTheCrossover(t *testing.T) {
+	for _, dormant := range []bool{true, false} {
+		f := thiefFixture(t)
+		char, err := f.chars.GetCharacter(context.Background(), charID)
+		require.NoError(t, err)
+		char.Class = "fighter"
+		char.Derived.SkillSets[0].Dormant = dormant
+		f.records()
+		f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(30).Once()
+		got := f.roll(t, "open_locks")
+		assert.True(t, got.Success, "rolled at the thief's 40%%")
+		require.Len(t, f.entries, 1)
+		if !dormant {
+			assert.Empty(t, got.Warnings)
+			assert.NotContains(t, string(f.entries[0].Payload), "warnings")
+			continue
+		}
+		assert.Equal(t, []string{"dual_class_old_ability"}, got.Warnings)
+		assert.Contains(t, string(f.entries[0].Payload), `"warnings":["dual_class_old_ability"]`)
+	}
+}

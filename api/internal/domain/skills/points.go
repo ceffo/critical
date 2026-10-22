@@ -252,6 +252,10 @@ type SkillSet struct {
 	Armor  string
 	Budget []ruletablesvc.BudgetWarning
 	Points *ruletablesvc.SkillPointsBudget
+	// Dormant: the set is a dual-class's old class's before the crossover
+	// (ADR 0042 step 13): rolled, warning dual_class_old_ability. Set by the
+	// character's derivation from its grant. Domain only, not on the wire.
+	Dormant bool `json:"-"`
 }
 
 // SkillSetsOf is ADR 0030 steps 17 and 18 on s: for each skill set the class grants at s.Level

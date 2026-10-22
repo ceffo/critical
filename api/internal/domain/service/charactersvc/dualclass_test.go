@@ -154,3 +154,20 @@ func TestDerive_Step13_TheOldClassAddsNoFigureBeforeTheCrossover(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, charactersvc.FeatureGrant{Kind: classes.KindMeleeAttacksPerRound, Class: "fighter", Level: 9}, g)
 }
+
+// ADR 0042 step 13 on the skill sets: a thief left at 9, now a fighter, has
+// the thief's set at 9, Dormant until the fighter passes 9 (skillsvc warns its
+// rolls).
+func TestDerive_Step13_TheOldClassSkillSetIsDormantUntilTheCrossover(t *testing.T) {
+	for _, tc := range []struct {
+		fighter, xp int
+		dormant     bool
+	}{{5, 20_000, true}, {10, 600_000, false}} {
+		c := multi("human", frozen("thief", 9, 120_000), entry("fighter", tc.fighter, tc.xp))
+		c.Class, c.RealizedLevel, c.XPTotal, c.Dex = "fighter", tc.fighter, tc.xp, 17
+		d := derived(t, c)
+		if assert.NotEmpty(t, d.SkillSets, "fighter %d", tc.fighter) {
+			assert.Equal(t, tc.dormant, d.SkillSets[0].Dormant, "fighter %d", tc.fighter)
+		}
+	}
+}

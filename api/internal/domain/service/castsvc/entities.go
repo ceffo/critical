@@ -7,10 +7,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
-// ClassGroup is the Bard's class group for by-group effects (PHB: a bard is
-// a rogue), e.g. Strength gives a rogue 1d6.
-const ClassGroup = "rogue"
-
 // MaxCasterLevel bounds a received spell's caster level (formulas are
 // checked up to this level when the seed loads).
 const MaxCasterLevel = spelleffectsvc.MaxCasterLevel

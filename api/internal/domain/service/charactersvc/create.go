@@ -65,14 +65,61 @@ const (
 	// halfling), or skill points or a skill armour for a class without
 	// skill points (steps 17 and 18).
 	CodeNotAllowed = "not_allowed"
+	// The refusals of the class entries (ADR 0042 steps 1 and 2).
+	// CodeMultiClassNotAllowed is a multi-class character of a race the ruleset does not lift the
+	// book's limit for, CodeDualClassNotAllowed a dual-class one.
+	CodeMultiClassNotAllowed = "multiclass_not_allowed"
+	CodeDualClassNotAllowed  = "dualclass_not_allowed"
+	// CodePrimeRequisiteTooLow is a dual-class character with a prime requisite under 15 in a class
+	// it left or under 17 in its new class.
+	CodePrimeRequisiteTooLow = "prime_requisite_too_low"
+	// CodeLevelTooLow is a class left under level 2.
+	CodeLevelTooLow = "level_too_low"
+	// CodeClassAlreadyLeft is the new class of a dual-class character that it already left.
+	CodeClassAlreadyLeft = "class_already_left"
+	// CodeDuplicateClass is a class listed twice.
+	CodeDuplicateClass = "duplicate_class"
+	// CodeTooManyClasses is a multi-class character of more than three classes.
+	CodeTooManyClasses = "too_many_classes"
+	// CodeMultiAndDualClass is a character both multi-class and dual-class.
+	CodeMultiAndDualClass = "multi_and_dual_class"
+	// CodeNoActiveClass is a character with no class it is still advancing in.
+	CodeNoActiveClass = "no_active_class"
 )
+
+// Prime requisite scores a dual-class character needs (ADR 0042 step 2.2; PHB multi/dual, Dual-Class
+// Benefits and Restrictions): in the class it left, and in its new class.
+const (
+	DualClassOldPrime = 15
+	DualClassNewPrime = 17
+)
+
+// FieldClasses is the creation's field of the class entries as a whole; a refusal of one entry
+// names FieldClasses + "." + its index + "." + the entry's field.
+const FieldClasses = "classes"
+
+// NewClass is one class of a new character (ADR 0042 steps 1 and 4): the class, its XP and level
+// as the sheet states them and, for a class the character left (a dual-class's old one), the level
+// it was left at.
+type NewClass struct {
+	Class string
+	// XP is the XP entered for the class; for a class left, 0 is the XP that reaches its left-at level.
+	XP int
+	// Level is the level taken in the class (ADR 0042 step 4); 0 is the level its XP reaches.
+	Level int
+	// LeftAtLevel is the level a frozen class was left at; 0 for a class the character advances in.
+	LeftAtLevel int
+}
 
 // NewCharacter are the values entered for a new character (ADR 0030 step 1):
 // never its level, THAC0, saves or slots, which the rules derive.
 type NewCharacter struct {
-	Name                         string
-	Class                        string
-	Race                         string
+	Name  string
+	Class string
+	Race  string
+	// Classes are the class entries entered (ADR 0042 steps 1 and 4); when set they replace Class
+	// and XP, which enter the one-class case.
+	Classes                      []NewClass
 	Str, Dex, Con, Int, Wis, Cha int
 	// StrExceptional is a fighter's 18/xx percentile (step 9), 0 for none.
 	StrExceptional int

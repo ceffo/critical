@@ -178,7 +178,7 @@ The quota gate applies.
   doc's "Parallelism" rules (compare each in-flight branch's committed and pending changes,
   `git -C <worktree> diff --name-only origin/<db>...HEAD` plus `git -C <worktree> status --short`,
   with the files the item names).
-- Parallel lanes in the same area (the web, a shared store): each brief names the shared modules the lane must not add callers to or duplicate (sup-52: a journal lane added a second creation-options fetch while another lane made it once per page load).
+- Parallel lanes in the same area (the web, a shared store): each brief names the shared modules the lane must not add callers to or duplicate (sup-52: a journal lane added a second creation-options fetch while another lane made it once per page load). A brief names only files and components that exist on the lane's own branch: `git -C <worktree> grep -l <name>` before naming one that another lane is adding (sup-80 named a powers editor that existed only on the creation branch, and had to send a correction).
 - **At every transition** (report read, PR shipped, merge), list Linear's Todo items and fill every
   free lane before ending the turn. One lane busy and eligible disjoint items waiting is idling.
 - The quota gate caps the lane count (projected over 100%: fewer lanes, Sonnet where allowed).

@@ -106,5 +106,6 @@ and only when you're done. Decisions the user made go into the items you file, p
 - Implement, edit repo files, create branches or PRs, merge.
 - File as ready when an acceptance criterion is a guess.
 - File an acceptance criterion that an ADR gate forbids until another item lands (e.g. "entered at creation" while the class is refused at creation): move it to the item that lifts the gate, or block on it (sup-78: the known-powers item asked for creation of a class the psionics ADR keeps out of creation).
+- File a criterion the app cannot reach today: a screen the role in the criterion can't open (sup-80: "a player sees the switch read-only" on an admin-only Ruleset screen), or a refusal "read from the class data" when the data has no field for it (sup-80: the bard multi-class refusal needed a new catalogue flag and a format bump). Check the route guard or the catalogue schema first; name the missing piece in the item, or file it as its own item.
 - Answer a grilling question yourself.
 - Reorder or re-prioritise existing items without the user's say-so.

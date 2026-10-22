@@ -264,20 +264,29 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 	}
 	var out Saves
 	for _, cat := range trait.Categories {
-		switch cat {
-		case "para_poison":
-			out.ParaPoison = b
-		case "rod_staff_wand":
-			out.RodStaffWand = b
-		case "petri_poly":
-			out.PetriPoly = b
-		case "breath":
-			out.Breath = b
-		case "spell":
-			out.Spell = b
+		if p := saveField(&out, cat); p != nil {
+			*p = b
 		}
 	}
 	return out, nil
+}
+
+// saveField is the field of s for a save category code (classes.SaveCategories),
+// nil for a code that is none.
+func saveField(s *Saves, cat string) *int {
+	switch cat {
+	case classes.SaveCategories[0]:
+		return &s.ParaPoison
+	case classes.SaveCategories[1]:
+		return &s.RodStaffWand
+	case classes.SaveCategories[2]:
+		return &s.PetriPoly
+	case classes.SaveCategories[3]:
+		return &s.Breath
+	case classes.SaveCategories[4]:
+		return &s.Spell
+	}
+	return nil
 }
 
 // SetSkillFigures sets d's skill percentages, budget and points from points

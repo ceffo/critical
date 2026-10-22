@@ -143,7 +143,8 @@ type Deps struct {
 	Chars     Characters
 	Equipment *ruletablesvc.Equipment
 	// Classes reads a class's definition for its equipment limits (ADR 0033
-	// step 20, ADR 0040 step 1.6). Nil: no class is limited.
+	// step 20, ADR 0040 step 1.6). Required: a nil one would drop every class
+	// warning silently.
 	Classes ClassLookup
 	// Initiative corrects the round's initiative when a magic item is used
 	// (ADR 0035 item 6.2); InitiativeItems is PHB Table 56, the modifier of
@@ -193,7 +194,7 @@ type service struct {
 
 // New constructs the service.
 func New(dal DAL, d Deps) (SVC, error) {
-	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil || d.Initiative == nil {
+	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil || d.Classes == nil || d.Initiative == nil {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
 	s := &service{

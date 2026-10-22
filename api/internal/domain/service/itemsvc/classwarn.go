@@ -133,11 +133,8 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 }
 
 // equipmentOf is the class's equipment (ADR 0040 step 1.6); ruled is false
-// when no class definitions are wired (no class limit then).
+// for a class the definitions do not know (no class limit then).
 func (s *service) equipmentOf(class string) (eq classes.Equipment, ruled bool, err error) {
-	if s.classes == nil {
-		return classes.Equipment{}, false, nil
-	}
 	def, err := s.classes.Class(class)
 	if errors.Is(err, classes.ErrUnknownClass) {
 		return classes.Equipment{}, false, nil

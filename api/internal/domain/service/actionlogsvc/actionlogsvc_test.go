@@ -62,11 +62,11 @@ func newSvc(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, 
 
 // newSvcMaxHP also returns the max HP port, which only damage (the HP floor)
 // reads.
-func newSvcMaxHP(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, *passTx, *mocks.MockMaxHP) {
+func newSvcMaxHP(t *testing.T) (actionlogsvc.SVC, *mocks.MockDAL, *mocks.MockRounds, *passTx, *mocks.MockMaxima) {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
 	rounds := mocks.NewMockRounds(t)
-	maxHP := mocks.NewMockMaxHP(t)
+	maxHP := mocks.NewMockMaxima(t)
 	tx := &passTx{}
 	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, tx, rounds, maxHP)
 	require.NoError(t, err)
@@ -78,20 +78,20 @@ func intp(v int) *int { return &v }
 func TestNewWithConfig_Validation(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	rounds := mocks.NewMockRounds(t)
-	maxHP := mocks.NewMockMaxHP(t)
+	maxHP := mocks.NewMockMaxima(t)
 	cases := []struct {
 		name   string
 		cfg    *actionlogsvc.Config
 		dal    actionlogsvc.DAL
 		tx     domain.TxRunner
 		rounds actionlogsvc.Rounds
-		maxHP  actionlogsvc.MaxHP
+		maxHP  actionlogsvc.Maxima
 	}{
 		{"nil config", nil, dal, &passTx{}, rounds, maxHP},
 		{"nil dal", actionlogsvc.DefaultConfig(), nil, &passTx{}, rounds, maxHP},
 		{"nil tx", actionlogsvc.DefaultConfig(), dal, nil, rounds, maxHP},
 		{"nil rounds", actionlogsvc.DefaultConfig(), dal, &passTx{}, nil, maxHP},
-		{"nil max hp", actionlogsvc.DefaultConfig(), dal, &passTx{}, rounds, nil},
+		{"nil maxima", actionlogsvc.DefaultConfig(), dal, &passTx{}, rounds, nil},
 		{"default above max", &actionlogsvc.Config{DefaultLimit: 10, MaxLimit: 5}, dal, &passTx{}, rounds, maxHP},
 		{"zero limit", &actionlogsvc.Config{DefaultLimit: 0, MaxLimit: 5}, dal, &passTx{}, rounds, maxHP},
 	}

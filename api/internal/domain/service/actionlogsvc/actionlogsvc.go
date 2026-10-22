@@ -103,10 +103,12 @@ type Rounds interface {
 	GetRound(ctx context.Context, characterID int64) (int, error)
 }
 
-// MaxHP supplies a character's max HP, which the HP floor needs (current HP is
-// max HP plus the ledger total). Read inside the recording transaction.
-type MaxHP interface {
+// Maxima supplies a character's stored maxima, read inside the recording
+// transaction: max HP, which the HP floor needs (current HP is max HP plus the
+// ledger total), and max PSP, which the PSP floor needs (ADR 0043 step 5).
+type Maxima interface {
 	GetMaxHP(ctx context.Context, characterID int64) (int, error)
+	GetMaxPSP(ctx context.Context, characterID int64) (int, error)
 }
 
 // Amendment is the only thing an amend may change: the entry's note (any
@@ -120,7 +122,7 @@ type service struct {
 	dal    DAL
 	tx     domain.TxRunner
 	rounds Rounds
-	maxHP  MaxHP
+	maxima Maxima
 	mu     sync.RWMutex
 	// restorers are the registered codecs by family, owners the module that
 	// claimed each family and each kind's view.
@@ -136,16 +138,16 @@ type service struct {
 // New constructs the service from environment-driven config. The payload
 // views registered modules declare (Register) are applied to every entry the
 // service returns, so no reader serves an entry in the shape it was logged in.
-func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+func New(dal DAL, tx domain.TxRunner, rounds Rounds, maxima Maxima) (SVC, error) {
 	cfg := &Config{}
 	if err := env.Parse(cfg); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: parse env: %w", err)
 	}
-	return NewWithConfig(cfg, dal, tx, rounds, maxHP)
+	return NewWithConfig(cfg, dal, tx, rounds, maxima)
 }
 
 // NewWithConfig is the test-friendly constructor.
-func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxHP MaxHP) (SVC, error) {
+func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxima Maxima) (SVC, error) {
 	switch {
 	case cfg == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil config")
@@ -155,14 +157,14 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, rounds Rounds, maxH
 		return nil, fmt.Errorf("actionlogsvc: nil tx runner")
 	case rounds == nil:
 		return nil, fmt.Errorf("actionlogsvc: nil rounds")
-	case maxHP == nil:
-		return nil, fmt.Errorf("actionlogsvc: nil max hp")
+	case maxima == nil:
+		return nil, fmt.Errorf("actionlogsvc: nil maxima")
 	}
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("actionlogsvc: invalid config: %w", err)
 	}
 	return &service{
-		cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxHP: maxHP,
+		cfg: cfg, dal: dal, tx: Transactions(tx), rounds: rounds, maxima: maxima,
 		restorers: map[string]actionlog.Restorer{}, owners: map[string]string{},
 		views: actionlog.PayloadViews{}, viewOwner: map[actionlog.Kind]string{},
 	}, nil

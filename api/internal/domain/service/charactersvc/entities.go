@@ -28,6 +28,9 @@ type Character struct {
 	Wis            int
 	Cha            int
 	HPMax          int
+	// PSPMax is the stored PSP maximum (ADR 0043 step 4.4, like HPMax): 0 for
+	// a character with no psionics entry.
+	PSPMax int
 	// Classes are the character's class entries (ADR 0042 step 1): the stored
 	// truth of its class, level and starting XP. Set them with SetClasses;
 	// Class, RealizedLevel and XPTotal below mirror the first active entry, the

@@ -31,7 +31,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 
 	q.EXPECT().GetCharacter(ctx, int64(3)).Return(queries.GetCharacterRow{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HpMax: 42, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
+		HpMax: 42, PspMax: 25, RealizedLevel: 6, Thac0Base: 16, Level: 5, XpTotal: 1200,
 		SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12, SaveBreath: 16, SaveSpell: 15,
 		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
 		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
@@ -44,7 +44,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.Character{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
-		HPMax: 42, RealizedLevel: 6, XPTotal: 1200, Class: "bard", Race: "half_elf",
+		HPMax: 42, PSPMax: 25, RealizedLevel: 6, XPTotal: 1200, Class: "bard", Race: "half_elf",
 		Classes: []classes.Entry{classes.SingleEntry("bard", 6, 1200)},
 		// The stored level, THAC0 and saves are the sheet's figures (ADR 0030 step 24), never inputs.
 		Sheet: charactersvc.Sheet{Level: 5, THAC0: 16, Saves: charactersvc.Saves{
@@ -200,7 +200,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	owner := uuid.MustParse("0b6a8c7e-5f1d-4a59-9a3e-3c2d1e0f4a11")
 	lock := q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Once()
 	row := q.EXPECT().CreateCharacter(ctx, queries.CreateCharacterParams{
-		Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HpMax: 6, XpTotal: 2500,
+		Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HpMax: 6, PspMax: 30, XpTotal: 2500,
 		Thac0Base: 19, Level: 3, SaveParaPoison: 13, SaveRodStaffWand: 14, SavePetriPoly: 12,
 		SaveBreath: 16, SaveSpell: 15, Class: "bard", RaceCode: "half_elf",
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
@@ -218,7 +218,7 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 	q.EXPECT().SetLanguages(ctx, queries.SetLanguagesParams{Languages: `["Elfique","Commun"]`, ID: 7}).Return(1, nil).Once().NotBefore(details)
 
 	id, err := characterdal.New(q).CreateCharacter(ctx, owner, charactersvc.Character{
-		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, RealizedLevel: 3, XPTotal: 2500,
+		ID: 99, Name: "Lyra", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6, PSPMax: 30, RealizedLevel: 3, XPTotal: 2500,
 		Class: "bard", Race: "half_elf",
 		Details: charactersvc.Details{Alignment: "neutral_good", Age: 23, Languages: []string{"Elfique", "Commun"}},
 		Sheet: charactersvc.Sheet{Level: 3, THAC0: 19, Saves: charactersvc.Saves{

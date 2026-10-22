@@ -118,7 +118,7 @@ type SpellbookStore interface {
 type Storage struct {
 	Store     Store
 	Character CharacterStore
-	HP        actionlogsvc.MaxHP
+	HP        actionlogsvc.Maxima
 	Log       actionlogsvc.DAL
 	Buff      BuffStore
 	Spell     SpellStore

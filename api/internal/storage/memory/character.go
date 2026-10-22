@@ -20,7 +20,7 @@ import (
 
 // Characters is the character port: the sheet reads (charactersvc.Reader),
 // who owns and plays which character (charactersvc.Owners), the details edit
-// (detailssvc.DAL), the maximum HP (actionlogsvc.MaxHP) and the realized level
+// (detailssvc.DAL), the maximum HP and PSPs (actionlogsvc.Maxima) and the realized level
 // (levelupsvc.DAL).
 type Characters struct{ s *Store }
 
@@ -28,7 +28,7 @@ var (
 	_ charactersvc.Reader = Characters{}
 	_ charactersvc.Owners = Characters{}
 	_ detailssvc.DAL      = Characters{}
-	_ actionlogsvc.MaxHP  = Characters{}
+	_ actionlogsvc.Maxima  = Characters{}
 )
 
 // Characters returns the character port.
@@ -229,6 +229,16 @@ func (c Characters) GetMaxHP(ctx context.Context, characterID int64) (int, error
 		return 0, err
 	}
 	return ch.HPMax, nil
+}
+
+// GetMaxPSP returns the character's maximum PSPs (ADR 0043 step 4.4), or
+// domain.ErrCharacterNotFound.
+func (c Characters) GetMaxPSP(ctx context.Context, characterID int64) (int, error) {
+	ch, err := c.GetCharacter(ctx, characterID)
+	if err != nil {
+		return 0, err
+	}
+	return ch.PSPMax, nil
 }
 
 // AddCharacterOf is AddCharacter for a character owner owns (a user of the

@@ -18,7 +18,7 @@ import (
 
 // stubState stubs the GetHPState reads with fixed max HP and log total and
 // the given history.
-func stubState(dal *mocks.MockDAL, maxHP *mocks.MockMaxHP, max, total int, history []actionlog.Entry) {
+func stubState(dal *mocks.MockDAL, maxHP *mocks.MockMaxima, max, total int, history []actionlog.Entry) {
 	maxHP.EXPECT().GetMaxHP(mock.Anything, mock.Anything).Return(max, nil)
 	dal.EXPECT().HPTotal(mock.Anything, mock.Anything).Return(total, nil)
 	dal.EXPECT().ListActiveEntries(mock.Anything, mock.Anything, actionlog.KindHPChange, mock.Anything).Return(history, nil)
@@ -49,17 +49,17 @@ func TestGetState(t *testing.T) {
 func TestGetState_Errors(t *testing.T) {
 	cases := []struct {
 		name  string
-		setup func(dal *mocks.MockDAL, maxHP *mocks.MockMaxHP)
+		setup func(dal *mocks.MockDAL, maxHP *mocks.MockMaxima)
 		want  error
 	}{
-		{"character missing", func(_ *mocks.MockDAL, maxHP *mocks.MockMaxHP) {
+		{"character missing", func(_ *mocks.MockDAL, maxHP *mocks.MockMaxima) {
 			maxHP.EXPECT().GetMaxHP(mock.Anything, mock.Anything).Return(0, domain.ErrCharacterNotFound)
 		}, domain.ErrCharacterNotFound},
-		{"total fails", func(dal *mocks.MockDAL, maxHP *mocks.MockMaxHP) {
+		{"total fails", func(dal *mocks.MockDAL, maxHP *mocks.MockMaxima) {
 			maxHP.EXPECT().GetMaxHP(mock.Anything, mock.Anything).Return(20, nil)
 			dal.EXPECT().HPTotal(mock.Anything, mock.Anything).Return(0, errBoom)
 		}, errBoom},
-		{"history fails", func(dal *mocks.MockDAL, maxHP *mocks.MockMaxHP) {
+		{"history fails", func(dal *mocks.MockDAL, maxHP *mocks.MockMaxima) {
 			maxHP.EXPECT().GetMaxHP(mock.Anything, mock.Anything).Return(20, nil)
 			dal.EXPECT().HPTotal(mock.Anything, mock.Anything).Return(0, nil)
 			dal.EXPECT().ListActiveEntries(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, errBoom)
@@ -168,7 +168,7 @@ func TestAppendEvent_RecordFails(t *testing.T) {
 func historyLimitSeen(t *testing.T) int {
 	t.Helper()
 	dal := mocks.NewMockDAL(t)
-	maxHP := mocks.NewMockMaxHP(t)
+	maxHP := mocks.NewMockMaxima(t)
 	maxHP.EXPECT().GetMaxHP(mock.Anything, mock.Anything).Return(10, nil)
 	dal.EXPECT().HPTotal(mock.Anything, mock.Anything).Return(0, nil)
 	var got int
@@ -193,7 +193,7 @@ func TestNew_HistoryLimitEnv(t *testing.T) {
 	})
 	t.Run("zero rejected", func(t *testing.T) {
 		t.Setenv("HP_HISTORY_LIMIT", "0")
-		_, err := actionlogsvc.New(mocks.NewMockDAL(t), &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
+		_, err := actionlogsvc.New(mocks.NewMockDAL(t), &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxima(t))
 		require.ErrorContains(t, err, "HistoryLimit")
 	})
 }

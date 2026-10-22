@@ -16,7 +16,10 @@ import (
 // capped at max HP before it is stored (actionlog.CapHeal, ADR 0007 steps 4 and 5) and the
 // payload gets the requested vs applied breakdown. A negative HPDelta (damage)
 // is clamped so HP stops at the floor (actionlog.FloorDamage, ADR 0011 step 1);
-// a clamped entry gets the breakdown too.
+// a clamped entry gets the breakdown too. A PSPDelta is bounded the same way
+// (ADR 0043 step 5, actionlog.CapPSP): a gain capped at the PSPs spent, a loss
+// floored so the pool never goes under 0; a changed entry carries
+// pspRequested and pspApplied.
 //
 // The entry joins the action-log transaction of the request (ADR 0018 step
 // 1): the first entry recorded inside an outermost InTx of a runner wrapped by
@@ -59,6 +62,11 @@ func (s *service) Record(ctx context.Context, e actionlog.NewEntry) (int64, erro
 				return err
 			}
 		}
+		if e.PSPDelta != 0 {
+			if err := s.boundPSP(ctx, &e); err != nil {
+				return err
+			}
+		}
 		var err error
 		id, err = s.insert(ctx, e)
 		if err != nil {
@@ -94,7 +102,7 @@ func (s *service) capHeal(ctx context.Context, e *actionlog.NewEntry) error {
 // capHeal it runs inside the recording transaction, so the total it reads is
 // the one the entry is added to and the ledger SUM stays the truth.
 func (s *service) floorDamage(ctx context.Context, e *actionlog.NewEntry) error {
-	maxHP, err := s.maxHP.GetMaxHP(ctx, e.CharacterID)
+	maxHP, err := s.maxima.GetMaxHP(ctx, e.CharacterID)
 	if err != nil {
 		return fmt.Errorf("max hp: %w", err)
 	}
@@ -111,5 +119,30 @@ func (s *service) floorDamage(ctx context.Context, e *actionlog.NewEntry) error 
 		return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
 	}
 	e.HPDelta, e.Payload = applied, payload
+	return nil
+}
+
+// boundPSP clips e's PSP delta to the pool's bounds (actionlog.CapPSP, ADR
+// 0043 step 5) and, when it clipped, records the breakdown in its payload.
+// Like capHeal it runs inside the recording transaction, so the total it reads
+// is the one the entry is added to.
+func (s *service) boundPSP(ctx context.Context, e *actionlog.NewEntry) error {
+	maxPSP, err := s.maxima.GetMaxPSP(ctx, e.CharacterID)
+	if err != nil {
+		return fmt.Errorf("max psp: %w", err)
+	}
+	total, err := s.dal.PSPTotal(ctx, e.CharacterID)
+	if err != nil {
+		return fmt.Errorf("psp total: %w", err)
+	}
+	applied := actionlog.CapPSP(maxPSP, total, e.PSPDelta)
+	if applied == e.PSPDelta {
+		return nil
+	}
+	payload, err := actionlog.WithPSPBreakdown(e.Payload, actionlog.PSPBreakdown{Requested: e.PSPDelta, Applied: applied})
+	if err != nil {
+		return fmt.Errorf("%w: %w", domain.ErrInvalidInput, err)
+	}
+	e.PSPDelta, e.Payload = applied, payload
 	return nil
 }

@@ -19,7 +19,7 @@ packages:
       SVC:
       DAL:
       Rounds:
-      MaxHP:
+      Maxima:
   github.com/ceffo/critical/api/internal/domain/service/buffsvc:
     config:
       dir: "internal/domain/service/buffsvc/mocks"

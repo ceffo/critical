@@ -68,7 +68,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
+		HPMax: int(row.HpMax), PSPMax: int(row.PspMax), Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
 		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -324,7 +324,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 	first, _ := classes.Primary(entries) // ValidateEntries refused a character with no active entry
 	id, err := d.q.CreateCharacter(ctx, queries.CreateCharacterParams{
 		Name: c.Name, Str: int64(c.Str), StrExceptional: int64(c.StrExceptional), Dex: int64(c.Dex), Con: int64(c.Con), Int: int64(c.Int),
-		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), XpTotal: int64(first.StartingXP),
+		Wis: int64(c.Wis), Cha: int64(c.Cha), HpMax: int64(c.HPMax), PspMax: int64(c.PSPMax), XpTotal: int64(first.StartingXP),
 		Thac0Base: int64(c.Sheet.THAC0), Level: int64(c.Sheet.Level),
 		SaveParaPoison: int64(c.Sheet.Saves.ParaPoison), SaveRodStaffWand: int64(c.Sheet.Saves.RodStaffWand),
 		SavePetriPoly: int64(c.Sheet.Saves.PetriPoly), SaveBreath: int64(c.Sheet.Saves.Breath),

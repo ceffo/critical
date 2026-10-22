@@ -21,7 +21,7 @@ func TestListReads_ServeEntriesThroughThePayloadViews(t *testing.T) {
 		return json.RawMessage(`{"viewed":` + string(p) + `}`), nil
 	}}
 	dal := mocks.NewMockDAL(t)
-	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxHP(t))
+	svc, err := actionlogsvc.NewWithConfig(actionlogsvc.DefaultConfig(), dal, &passTx{}, mocks.NewMockRounds(t), mocks.NewMockMaxima(t))
 	require.NoError(t, err)
 	require.NoError(t, svc.Register(domain.Module{Name: "saves", Views: views}))
 	stored := []actionlog.Entry{

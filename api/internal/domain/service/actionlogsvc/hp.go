@@ -13,7 +13,7 @@ import (
 // plus the action log's SUM of effective HP deltas, and the last N non-voided
 // HP changes (amended values shown) for the UI.
 func (s *service) GetHPState(ctx context.Context, characterID int64) (*actionlog.HPState, error) {
-	maxHP, err := s.maxHP.GetMaxHP(ctx, characterID)
+	maxHP, err := s.maxima.GetMaxHP(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("get max hp: %w", err)
 	}

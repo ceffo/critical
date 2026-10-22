@@ -238,6 +238,37 @@
       "science": "sciences",
       "devotion": "devotions",
       "defence_mode": "defence modes"
+    },
+    "use": {
+      "use": "Use",
+      "useNamed": "Use {{name}}",
+      "title": "Use {{name}}",
+      "stop": "Stop",
+      "stopNamed": "Stop maintaining {{name}}",
+      "maintained": "maintained",
+      "cost": "Initial cost (PSPs)",
+      "maintenanceCost": "Maintenance cost (PSPs)",
+      "score": "Power score",
+      "scoreHint": "1 to {{max}}, from the power's text",
+      "modifiers": "Modifiers to the score",
+      "addModifier": "Add a modifier",
+      "removeModifier": "Remove modifier {{n}}",
+      "modifierValue": "Modifier {{n}} value",
+      "modifierReason": "Modifier {{n}} reason",
+      "reason": "Reason",
+      "youHave": "You have {{count}}.",
+      "rolled": "d20 {{d20}} vs {{target}}",
+      "spent": "PSPs {{amount}}",
+      "keptUp": "kept up: {{cost}} PSPs every {{count}} rounds",
+      "outcome": {
+        "success": "Success",
+        "failure": "Failed",
+        "power_score": "Power score",
+        "natural_20": "Natural 20"
+      },
+      "warning": {
+        "second_power_this_round": "A second power in the same combat round."
+      }
     }
   },
   "round": {
@@ -1447,6 +1478,10 @@
       "endCombat": "Combat ended: round {{from}} → {{to}}",
       "setRound": "Round set: {{from}} → {{to}}",
       "expired": "— expired: {{names}}",
+      "maintenanceOne": "{{power}} {{cost}}",
+      "maintenance": "— maintenance (PSPs): {{powers}}",
+      "powersEnded": "— powers ended, not enough PSPs: {{powers}}",
+      "powerStopped": "Stopped maintaining {{power}}",
       "passTime": "Time passed: {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}",
       "dismissVoluntary": "Ended {{buff}}",
       "dismissDispelled": "{{buff}} dispelled or slain",
@@ -1666,7 +1701,20 @@
       "cleared": "AC override cleared"
     },
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
-    "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}"
+    "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}",
+    "powerCheckWith": "{{text}} ({{parts}})",
+    "powerParts": {
+      "ability": "{{ability}} {{score}} {{modifier}}",
+      "entered": "score {{score}} entered",
+      "relearns_one": "+{{count}} relearned",
+      "relearns_other": "+{{count}} relearned",
+      "modifierWhy": "{{value}} {{reason}}",
+      "halfCost": "paid {{spent}} of {{cost}} PSPs",
+      "maintained": "kept up: {{cost}} PSPs every {{count}} rounds",
+      "warning": {
+        "second_power_this_round": "second power this round"
+      }
+    }
   },
   "critTable": {
     "title": "Crit table (house rule)",

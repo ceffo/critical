@@ -17,5 +17,40 @@
       "expiredSpellIds": ["bless", ""],
       "expiredProficiencyIds": ["", "tumbling"]
     }
+  },
+  "maintained": {
+    "pspDelta": -5,
+    "payload": {
+      "action": "next_round",
+      "fromRound": 4,
+      "toRound": 5,
+      "maintenance": [
+        {
+          "powerId": "mind_thrust",
+          "cost": 3
+        },
+        {
+          "powerId": "body_equilibrium",
+          "cost": 2
+        }
+      ]
+    }
+  },
+  "maintenanceUnpaid": {
+    "pspDelta": -2,
+    "payload": {
+      "action": "next_round",
+      "fromRound": 5,
+      "toRound": 6,
+      "expired": ["Body Equilibrium"],
+      "expiredSpellIds": [""],
+      "maintenance": [
+        {
+          "powerId": "mind_thrust",
+          "cost": 2
+        }
+      ],
+      "maintenanceUnpaid": ["body_equilibrium"]
+    }
   }
 }

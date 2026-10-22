@@ -49,6 +49,18 @@ export interface BuffLogPayload {
   endEffects?: EndEffectRoll[];
   hpBefore?: number;
   hpAfter?: number;
+  /** dismiss: the psionic power the stopped row kept up (ADR 0043 step 16). */
+  powerId?: string;
+  /** next_round / pass_time: what each maintained power was charged (ADR 0043 steps 14 and 15). */
+  maintenance?: { powerId: string; cost: number }[];
+  /** next_round / pass_time: the powers the PSPs left could not pay; they ended. */
+  maintenanceUnpaid?: string[];
+}
+
+/** A power named from its id when the entry has no name: "mind_thrust" is "Mind thrust". */
+export function powerLabel(id: string): string {
+  const words = id.replace(/_/g, " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
 /** The dice of one end effect as rolled: "4", "4 + 2", "7 + 1" (a constant last). */
@@ -147,11 +159,26 @@ function buffText(
   );
   const withEnded = (text: string) =>
     endOfOne ? t("log.buff.withEnd", { text, end: endOfOne }) : text;
+  // ADR 0043 steps 14 and 15: what the maintained powers cost, and the ones that could not be paid.
+  const kept = (p.maintenance ?? [])
+    .map((m) =>
+      t("log.buff.maintenanceOne", {
+        power: powerLabel(m.powerId),
+        cost: m.cost,
+      }),
+    )
+    .join(", ");
   const withExpired = (text: string) => {
-    const out =
+    let out =
       expired.length > 0
         ? `${text} ${t("log.buff.expired", { names: expired.join(", ") })}`
         : text;
+    if (kept) out = `${out} ${t("log.buff.maintenance", { powers: kept })}`;
+    if (p.maintenanceUnpaid?.length) {
+      out = `${out} ${t("log.buff.powersEnded", {
+        powers: p.maintenanceUnpaid.map(powerLabel).join(", "),
+      })}`;
+    }
     return endOfMany
       ? t("log.buff.withEndAfter", { text: out, end: endOfMany })
       : out;
@@ -192,6 +219,7 @@ function buffText(
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
+      if (p.powerId) return t("log.buff.powerStopped", { power: buff });
       return withEnded(
         p.cause === "voluntary"
           ? t("log.buff.dismissVoluntary", { buff })

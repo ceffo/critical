@@ -25,5 +25,12 @@
       "note": "+1 morale",
       "noteChanged": true
     }
+  },
+  "powerStopped": {
+    "payload": {
+      "action": "dismiss",
+      "buff": "Mind Thrust",
+      "powerId": "mind_thrust"
+    }
   }
 }

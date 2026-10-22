@@ -11,6 +11,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { PowerPick } from "@/types/character";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
+import { PowerActions } from "./PowerActions";
 
 const COUNT_KEYS = [
   "disciplines",
@@ -254,19 +255,23 @@ export function KnownPowersPanel() {
                     disabled={busy}
                     onRemove={() => remove(p)}
                     action={
-                      !relearn &&
-                      (kind === "science" ||
-                        kind === "devotion" ||
-                        kind === "attack_mode") ? (
-                        <Button
-                          className="px-2"
-                          disabled={busy}
-                          title={t("powers.relearnHint")}
-                          onClick={() => add({ kind: "relearn", id: p.id })}
-                        >
-                          {t("powers.relearn")}
-                        </Button>
-                      ) : undefined
+                      !relearn && (
+                        <>
+                          {pw && <PowerActions power={pw} />}
+                          {(kind === "science" ||
+                            kind === "devotion" ||
+                            kind === "attack_mode") && (
+                            <Button
+                              className="px-2"
+                              disabled={busy}
+                              title={t("powers.relearnHint")}
+                              onClick={() => add({ kind: "relearn", id: p.id })}
+                            >
+                              {t("powers.relearn")}
+                            </Button>
+                          )}
+                        </>
+                      )
                     }
                   />
                 );

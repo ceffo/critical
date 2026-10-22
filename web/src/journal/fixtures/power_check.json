@@ -22,7 +22,10 @@
       "outcome": "success",
       "success": true,
       "cost": 7,
-      "spent": 7
+      "spent": 7,
+      "maintenanceCost": 3,
+      "maintenancePeriod": 2,
+      "warnings": ["second_power_this_round"]
     },
     "roll": true
   },

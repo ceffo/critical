@@ -48,7 +48,7 @@ func expectKelsenRules(r *mocks.MockRules, xp, level int) {
 func kelsenDerived() charactersvc.Derived {
 	next := 1_320_000
 	return charactersvc.Derived{
-		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
+		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots,
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		Spellbook:  &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
@@ -464,6 +464,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			c := kelsen()
 			c.Class, c.Int, c.RealizedLevel = tc.class, tc.score, 13
 			r := mocks.NewMockRules(t)
+			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().LevelFor(tc.class, mock.Anything).Return(13, nil).Once()
 			r.EXPECT().XPThreshold(tc.class, 14).Return(1_500_000, nil).Once()
@@ -549,6 +550,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			c.SkillPoints = map[string]int{"climb_walls": 40}
 			c.Sheet = charactersvc.Sheet{}
 			r := mocks.NewMockRules(t)
+			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
@@ -575,6 +577,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		c := kelsen()
 		c.Class, c.XPTotal, c.RealizedLevel, c.Sheet = "thief", 0, 1, charactersvc.Sheet{}
 		r := mocks.NewMockRules(t)
+		withDefinitions(t, r)
 		r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 		r.EXPECT().LevelFor("thief", 0).Return(1, nil)
 		r.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()

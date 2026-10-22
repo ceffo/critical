@@ -76,6 +76,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 	t.Helper()
 	e := newEnv(t)
 	e.rules = mocks.NewMockRules(t)
+	withDefinitions(t, e.rules)
 	e.rules.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 	e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(intRow, nil).Maybe()
 	e.rules.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()

@@ -456,6 +456,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			e := newEnv(t)
 			// The skills are what this test asks: none of newRules' defaults.
 			e.rules.ExpectedCalls = nil
+			withDefinitions(t, e.rules)
 			e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			e.rules.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			e.armour.columns[5] = tc.worn

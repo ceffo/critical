@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -27,6 +28,8 @@ type fixture struct {
 func newFixture(t *testing.T) fixture {
 	t.Helper()
 	f := fixture{rules: mocks.NewMockRules(t), dice: mocks.NewMockDice(t)}
+	// ADR 0040 step 5: the classes and races are the catalogue's.
+	f.rules.EXPECT().Definitions().RunAndReturn(cataloguetest.Tables(t).Definitions).Maybe()
 	svc, err := creationrollsvc.New(creationrollsvc.Deps{Rules: f.rules, Dice: f.dice})
 	require.NoError(t, err)
 	f.svc = svc

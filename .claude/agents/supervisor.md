@@ -369,6 +369,9 @@ in progress), then prompt the developer to resolve it. If the parent needed rewo
 branched, prompt the child's developer to merge the updated parent branch first. Two levels deep at
 most.
 
+A catalogue format bump lands in two repos: once the rulebooks half merges, every open app PR fails CI until the app half lands, and after it lands `gh run rerun` is useless (it reuses the old merge sha): run `gh pr update-branch` on each open PR instead, and send a developer to the ones it reports as conflicting (sup-72).
+A developer that commits anything after its gate (even "script-only") reruns `just validate` before reporting: a comment added after the gate broke CI on the tracker-id check (sup-72). Say so in every rework brief.
+
 Notes from practice: when a parent PR squash-merges, GitHub's native stack restacks the child and
 retargets it to `<db>` by itself; reset the child's worktree to `origin/<child>` and rerun the gate. A
 stack with no child PR yet needs `gh stack rebase` run from the child's worktree (from `<main>`,

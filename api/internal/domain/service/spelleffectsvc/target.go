@@ -84,10 +84,11 @@ func (e Entry) DefaultOnSelf(level int) (bool, error) {
 
 // hostileBelow are the modifiers that hurt the bearer when below a threshold
 // (a penalty to hit, to damage or to saves; less movement or fewer attacks),
-// hostileAbove those that hurt him above one (a worse armour class).
+// hostileAbove those that hurt him above one (a worse armour class, attackers
+// who hit him more easily, a later initiative).
 var (
 	hostileBelow = map[string]int{"to_hit": 0, "damage": 0, "save": 0, "move_pct": 100, "attacks_pct": 100}
-	hostileAbove = map[string]int{"ac": 0}
+	hostileAbove = map[string]int{"ac": 0, "attackers_to_hit": 0, "initiative": 0}
 )
 
 // Hostile reports a buff whose effects hurt the bearer (Slow, Malison) at the

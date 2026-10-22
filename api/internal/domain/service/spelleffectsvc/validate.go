@@ -51,6 +51,19 @@ func Slug(name string) string {
 	return b.String()
 }
 
+// idSuffix is what the catalogue's id rule may add to the slug of a name
+// (spellsvc.Keys): "_priest" for a Priest spell that shares its name with a
+// Wizard spell, "_l<level>" for a same-named spell of a higher level.
+var idSuffix = regexp.MustCompile(`^(_priest)?(_l[0-9]+)?$`)
+
+// idMatchesName reports whether id is the slug of name, with at most the
+// suffixes of the catalogue's id rule.
+func idMatchesName(id, name string) bool {
+	slug := Slug(name)
+	rest, ok := strings.CutPrefix(id, slug)
+	return slug != "" && ok && idSuffix.MatchString(rest)
+}
+
 func oneOf[T comparable](v T, set []T, what string) error {
 	if !slices.Contains(set, v) {
 		return fmt.Errorf("%s %v is not one of %v", what, v, set)
@@ -63,8 +76,8 @@ func (e Entry) Validate() error {
 	if e.ID == "" || e.Name == "" {
 		return fmt.Errorf("id and name are required")
 	}
-	if want := Slug(e.Name); e.ID != want {
-		return fmt.Errorf("id must be the slug of the name %q (%q)", e.Name, want)
+	if !idMatchesName(e.ID, e.Name) {
+		return fmt.Errorf("id must be the slug of the name %q (%q), optionally followed by _priest and _l<level>", e.Name, Slug(e.Name))
 	}
 	if e.Level < 1 || e.Level > 9 {
 		return fmt.Errorf("level %d out of range 1..9", e.Level)

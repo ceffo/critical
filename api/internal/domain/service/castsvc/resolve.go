@@ -160,7 +160,9 @@ var trackedCharges = map[string]bool{"attacks": true, "images": true}
 // rollBuff turns a buff entry into a buff on the character at the caster
 // level, plus the effects the engine does not track. class is the
 // character's: its group picks a by-group ability gain (ADR 0030 step 2).
-func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string) (*AppliedBuff, []Untracked, error) {
+// onOther is a buff the character casts on someone else: a by-group gain is
+// not rolled then, since the group is the receiver's.
+func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string, onOther bool) (*AppliedBuff, []Untracked, error) {
 	// ADR 0004 step 17: the buff carries the spell's catalogue id so the
 	// client names it in the player's language.
 	out := &AppliedBuff{Buff: buffsvc.BuffEffect{Name: e.Name, SpellID: e.ID}}
@@ -209,6 +211,9 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, class string) (*Ap
 	}
 	for _, ability := range sortedKeys(e.Buff.AbilityGain) {
 		g := e.Buff.AbilityGain[ability]
+		if onOther && (len(g.ByGroup) > 0 || len(g.MaxByGroup) > 0) {
+			continue
+		}
 		group, err := gainGroup(g, class)
 		if err != nil {
 			return nil, nil, err

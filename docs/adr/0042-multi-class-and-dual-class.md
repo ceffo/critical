@@ -8,7 +8,7 @@ steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
 definitions and the lookup of ADR 0040 and the racial lift and level-limit mode of
 [ADR 0041](0041-ruleset.md). The psionicist's rules as a class of a multi-class character are
-ADR 0043's (not written yet).
+[ADR 0043](0043-psionics.md)'s (steps 4.4 and 18 amend steps 10 and 16).
 
 ## Context
 
@@ -234,6 +234,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
     a d6 of 4 for a three-class character gives 1; a 1 gives 1, never 0; distinct dice through the
     dice port), `Roll_Step10_3_FixedGainAboveTheNameLevel` (as decided in Q8).
 
+    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 4.4, on implementation: a psionicist entry's PSP gain at its level-up is not divided by the number of classes)_
+
 11. **Dual-class hit points** (amends ADR 0030 step 7). Taking a new class keeps the hit points
     (step 3). While the active entry's level is not above every frozen entry's `left_at_level`, a
     level-up of it gains **no** hit points: the level is still taken (its other benefits apply),
@@ -331,6 +333,8 @@ Every warning is structured data (a code and its numbers), worded by the web.
     `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks` (charactersvc),
     `Cast_Step16_2_WizardSpellInArmourWarns` (castsvc: a fighter/mage in chain warned; an elf
     fighter/mage in elven chain not), `Skills_Step16_3_ArmourBlocksAllButTwo` (skillsvc).
+
+    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 
 ### Scope
 

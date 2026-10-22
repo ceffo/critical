@@ -11,7 +11,9 @@ Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; t
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
 Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
-Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; the API reads format 10 only) is **decided as built**, 2026-10-21:
+Step 18 (the class, group and race definitions, format 11; the API reads format 11 only) is **decided as built**, 2026-10-22: the data
+of [ADR 0040](0040-classes-are-data.md) step 11.1, which decided the shape.
+Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; format 10 was the only format read until step 18) is **decided as built**, 2026-10-21:
 the column is decided by [ADR 0006](0006-saving-throws.md) step 9.1 (user triage of 2026-10-21) and step 1's rule makes it a format.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
@@ -652,7 +654,7 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (retired by step 17: `TestSchema_Step17_OnlyFormat10IsValid`) and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by step 18: `TestSchema_Step18_OnlyFormat11IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
     `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
@@ -671,9 +673,45 @@ is only ever appended to by play.
        `critical-rulebooks`), then the API change; a dev checkout runs `just catalogue` once after both are merged.
     4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
        `charactersvc.Derived.MagicDefence`.
-    Tests: `TestParse_Step17_ReadsFormat10WithTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
-    `TestSchema_Step17_OnlyFormat10IsValid` (cataloguecheck), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    Tests: `TestParse_Step17_ReadsFormat11WithTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
+    `TestSchema_Step18_OnlyFormat11IsValid` (cataloguecheck, step 17.3 renamed by step 18), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
     the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
+
+18. **The class, group and race definitions, format 11** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) steps 1, 2, 4 and 7
+    decided the shape, step 11.1 the order). Format 11 is format 10 plus three top-level lists. Each value is a number, a code or a language map; a
+    name is `{en, fr}` ([ADR 0023](0023-localized-text.md)), never a per-language field; the schema carries no book text.
+    1. **`classes`**: one entry per class (the five of today), `{id, name, group, prime_requisites, ability_minimums, [alignments,] equipment,
+       experience, hit_dice, [spell_progression,] nonweapon_groups, features}` (ADR 0040 step 1). `ability_minimums` is Table 13's row (an ability
+       with no minimum has none); `alignments` absent is any; `equipment` is `{[armour,] shields, [weapon_types,] [weapons,] [blunt_only]}` with `armour`
+       the Table 29 skill columns allowed (`none` = no body armour, absent = any); `experience` is `{level, xp}` for levels 1 to 20; `hit_dice` is
+       `{die, dice_levels, after, constitution}` (`constitution` `warrior` or `standard`, the Table 3 column); `spell_progression` is the key of the
+       slot table in `rule_tables` (`bard_spells`, `wizard_spells`, `priest_spells`), absent for none; `nonweapon_groups` is Table 38's row.
+       `features` is `{kind, [from_level,] [params]}` from the closed list of ADR 0040 step 3, each kind with its parameters as the schema types them
+       (`params` absent exactly for the kinds that take none). A `table` parameter and `spell_progression` name a key of `rule_tables`.
+       `rogue_skills.armour` is `[{code, [column,] extra}]`: the armour a skill set is entered with, the Table 29 column it reads (absent for leather,
+       the baseline) and the extra adjustment (the bard's -5 in non-elven chain mail, Table 29's footnote).
+    2. **`groups`**: one entry per class group, `{id, thac0}` with Table 53's THAC0 at levels 1 to 20 (ADR 0040 step 7: rows keyed by group). The
+       group's saving throw rows stay `saving_throws` (already keyed by group).
+    3. **`races`**: one entry per race, the human included, `{id, name, requirements, adjustments, identity, traits}` (ADR 0040 step 2): Table 7's
+       ranges and Table 8's adjustments (none for the human), Tables 10 and 11 as `identity` (`height`, `weight` in inches and pounds, `male`,
+       `female` and modifier `dice`; `start_age`, `max_age` as `base` and `dice`, in years), and `traits` from the closed list of ADR 0040 step 4.
+    4. **Additive.** The class-keyed tables of formats 3 to 10 (`experience`, `hit_dice`, `thac0`, `race_requirements`, `race_adjustments`,
+       `sphere_access`, the warrior, backstab and turning tables) stay in `rule_tables` unchanged: the readers still use them (ADR 0040 step
+       11.3), and a committed test of the builder proves each definition equals the table it repeats. The tables a definition repeats are dropped
+       by a later format, when the last reader moved (step 11.4); the level limits, the thief skill adjustments by race and the languages stay tables
+       keyed by race and class (ADR 0040 step 2).
+    5. **Checked by the builder** (the importer checks the same when it reads the definitions, ADR 0040 step 8): an unknown feature or trait kind, an
+       unknown or missing parameter, a kind twice on a class, a class whose group has no THAC0, saving throw or hit dice rows, a `spell_progression`
+       or `table` naming no table, a sphere in no `sphere_access` row, XP not strictly increasing from 0 over levels 1 to 20, and a race or class key
+       of a table (requirements, adjustments, thief skill by race, level limits, languages, sphere access) that names no definition.
+    6. **Rollout, as step 17.3.** The API reads **format 11 only**: a format-10 artifact (or any older one) is refused at start as an unknown format,
+       naming `this API reads format 11` and `just catalogue`. This step changes the format number, the schema and the fixture only: the API
+       neither imports nor reads the definitions yet (ADR 0040 step 11.2 does). Merge order: the builder publishing format 11 first (its own PR in
+       `critical-rulebooks`), then the API change immediately, with no other main merge between (Release pairs main's API with the rulebooks
+       catalogue); a dev checkout runs `just catalogue` once after both are merged.
+    Tests: `TestSchema_Step18_OnlyFormat11IsValid`, `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
+    `TestParse_Step18_ReadsFormat11AndRefusesFormat10` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s `check_class_defs` (the definitions equal
+    the tables of formats 3 to 10 they repeat, spot values from the PHB, fault injection for each refusal of step 18.5).
 
 ## Consequences
 

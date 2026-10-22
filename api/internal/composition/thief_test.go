@@ -74,12 +74,12 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 2, c.Derived.Backstab, "Table 30 at 1st")
-	assert.Empty(t, c.Derived.SkillBudget, "60 points, 30 in each: PHB p.39's budget at 1st")
-	skills, err := bs.Skills.List(ctx, id)
+	assert.Empty(t, derivedSet(c.Derived, "thief").Budget, "60 points, 30 in each: PHB p.39's budget at 1st")
+	tab, err := bs.Skills.List(ctx, id)
 	require.NoError(t, err)
-	require.Len(t, skills.ThiefSkills, 8)
-	assert.Equal(t, "open_locks", skills.ThiefSkills[1].Skill)
-	assert.Equal(t, 55, skills.ThiefSkills[1].Percent)
+	require.Len(t, tabSet(tab, "thief").Skills, 8)
+	assert.Equal(t, "open_locks", tabSet(tab, "thief").Skills[1].Skill)
+	assert.Equal(t, 55, tabSet(tab, "thief").Skills[1].Percent)
 
 	check, err := bs.Skills.Roll(ctx, id, "open_locks", skillsvc.Adjustment{Value: 10, Reason: "old lock"})
 	require.NoError(t, err)
@@ -133,10 +133,10 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	require.NoError(t, err)
 	openLocks := func() int {
 		t.Helper()
-		skills, err := bs.Skills.List(ctx, id)
+		tab, err := bs.Skills.List(ctx, id)
 		require.NoError(t, err)
-		require.Equal(t, "open_locks", skills.ThiefSkills[1].Skill)
-		return skills.ThiefSkills[1].Percent
+		require.Equal(t, "open_locks", tabSet(tab, "thief").Skills[1].Skill)
+		return tabSet(tab, "thief").Skills[1].Percent
 	}
 	assert.Equal(t, 55, openLocks())
 
@@ -145,14 +145,14 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	_, err = bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 2})
 	require.NoError(t, err)
 	spend := map[string]int{"open_locks": 45, "pick_pockets": 45}
-	got, err := bs.Skills.SetPoints(ctx, id, spend)
+	got, err := bs.Skills.SetPoints(ctx, id, "", spend)
 	require.NoError(t, err)
 	assert.Equal(t, spend, got)
 	assert.Equal(t, 70, openLocks())
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, 2, c.Derived.RealizedLevel)
-	assert.Empty(t, c.Derived.SkillBudget, "90 points, 45 in each: the budget at 2nd")
+	assert.Empty(t, derivedSet(c.Derived, "thief").Budget, "90 points, 45 in each: the budget at 2nd")
 
 	top, ok, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
@@ -163,7 +163,7 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	assert.Equal(t, 55, openLocks(), "the undo gives the points back")
 	c, err = bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, map[string]int{"open_locks": 30, "pick_pockets": 30}, c.SkillPoints)
+	assert.Equal(t, skills.SetPoints{"thief": {"open_locks": 30, "pick_pockets": 30}}, c.SkillPoints)
 	assert.Equal(t, 2, c.Derived.RealizedLevel, "the level-up stays")
 }
 
@@ -198,10 +198,10 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	}
 
 	id := thief(map[string]int{"open_locks": 30, "pick_pockets": 30})
-	skills, err := bs.Skills.List(ctx, id)
+	tab, err := bs.Skills.List(ctx, id)
 	require.NoError(t, err)
 	percents := map[string]int{}
-	for _, sk := range skills.ThiefSkills {
+	for _, sk := range tabSet(tab, "thief").Skills {
 		percents[sk.Skill] = sk.Percent
 	}
 	assert.Equal(t, map[string]int{
@@ -210,7 +210,7 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	}, percents)
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Empty(t, c.Derived.SkillBudget)
+	assert.Empty(t, derivedSet(c.Derived, "thief").Budget)
 
 	check, err := bs.Skills.Roll(ctx, id, "open_locks", skillsvc.Adjustment{})
 	require.NoError(t, err)
@@ -232,26 +232,26 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrOverBudget, "never created over the budget")
 
 	over := thief(nil)
-	require.NoError(t, store.Characters().SetSkillPoints(ctx, over, overspent), "imported over the budget")
+	require.NoError(t, store.Characters().SetSkillPoints(ctx, over, skills.SetPoints{"thief": overspent}), "imported over the budget")
 	c, err = bs.Character.GetCharacter(ctx, over)
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.BudgetWarning{
 		{Code: ruletablesvc.BudgetTotal, Points: 70, Limit: 60},
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 40, Limit: 30},
-	}, c.Derived.SkillBudget)
-	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 40, "pick_pockets": 31})
+	}, derivedSet(c.Derived, "thief").Budget)
+	_, err = bs.Skills.SetPoints(ctx, over, "", map[string]int{"open_locks": 40, "pick_pockets": 31})
 	require.ErrorIs(t, err, domain.ErrOverBudget, "the overspend grown")
 	entries, err := bs.Log.List(ctx, over, 10)
 	require.NoError(t, err)
 	assert.Empty(t, entries, "a refused spend logs nothing")
-	_, err = bs.Skills.SetPoints(ctx, over, map[string]int{"open_locks": 35, "pick_pockets": 30})
+	_, err = bs.Skills.SetPoints(ctx, over, "", map[string]int{"open_locks": 35, "pick_pockets": 30})
 	require.NoError(t, err, "the overspend reduced")
 	c, err = bs.Character.GetCharacter(ctx, over)
 	require.NoError(t, err)
 	assert.Equal(t, []ruletablesvc.BudgetWarning{
 		{Code: ruletablesvc.BudgetTotal, Points: 65, Limit: 60},
 		{Code: ruletablesvc.BudgetPerSkill, Skill: "open_locks", Points: 35, Limit: 30},
-	}, c.Derived.SkillBudget, "still over: the warnings stay")
+	}, derivedSet(c.Derived, "thief").Budget, "still over: the warnings stay")
 
 	// The undo of the reduction writes the imported overspend back: a restore, no refusal.
 	top, ok, err := bs.Log.TopID(ctx, over)
@@ -262,8 +262,8 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	assert.Equal(t, actionlog.KindSkillPoints, e.Kind)
 	c, err = bs.Character.GetCharacter(ctx, over)
 	require.NoError(t, err)
-	assert.Equal(t, overspent, c.SkillPoints)
-	assert.Len(t, c.Derived.SkillBudget, 2, "the overspend's warnings are back")
+	assert.Equal(t, skills.SetPoints{"thief": overspent}, c.SkillPoints)
+	assert.Len(t, derivedSet(c.Derived, "thief").Budget, 2, "the overspend's warnings are back")
 }
 
 // ADR 0037 step 10, each pool on its own (a thief's total and each skill's cap, a bard's total):
@@ -284,7 +284,7 @@ func TestSkillPoints_Step10_EachPoolOnItsOwn(t *testing.T) {
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 	})
 	require.NoError(t, err)
-	require.NoError(t, store.Characters().SetSkillPoints(ctx, thief, map[string]int{"open_locks": 40}), "imported over the cap")
+	require.NoError(t, store.Characters().SetSkillPoints(ctx, thief, skills.SetPoints{"thief": {"open_locks": 40}}), "imported over the cap")
 	for _, tt := range []struct {
 		name   string
 		points map[string]int
@@ -293,7 +293,7 @@ func TestSkillPoints_Step10_EachPoolOnItsOwn(t *testing.T) {
 		{"the overspend moved to another skill", map[string]int{"pick_pockets": 40}, domain.BudgetError{Field: "skillPoints.pick_pockets", Spent: 40, Limit: 30}},
 		{"moved and kept partly: the total grows first", map[string]int{"open_locks": 30, "pick_pockets": 40}, domain.BudgetError{Field: "skillPoints", Spent: 70, Limit: 60}},
 	} {
-		_, err := bs.Skills.SetPoints(ctx, thief, tt.points)
+		_, err := bs.Skills.SetPoints(ctx, thief, "", tt.points)
 		var be *domain.BudgetError
 		require.ErrorAs(t, err, &be, tt.name)
 		assert.Equal(t, tt.want, *be, tt.name)
@@ -304,14 +304,14 @@ func TestSkillPoints_Step10_EachPoolOnItsOwn(t *testing.T) {
 		Name:    "Lyra", Class: "bard", Race: "human", Str: 9, Dex: 16, Con: 10, Int: 13, Wis: 11, Cha: 17, HPMax: 4,
 	})
 	require.NoError(t, err)
-	_, err = bs.Skills.SetPoints(ctx, bard, map[string]int{"climb_walls": 20})
+	_, err = bs.Skills.SetPoints(ctx, bard, "", map[string]int{"climb_walls": 20})
 	require.NoError(t, err, "20 points in one skill: no cap for a bard")
 	over := map[string]int{"climb_walls": 20, "detect_noise": 1}
-	_, err = bs.Skills.PreviewPoints(ctx, bard, over)
+	_, err = bs.Skills.PreviewPoints(ctx, bard, "", over)
 	var previewed *domain.BudgetError
 	require.ErrorAs(t, err, &previewed)
 	assert.Equal(t, domain.BudgetError{Field: "skillPoints", Spent: 21, Limit: 20}, *previewed)
-	_, err = bs.Skills.SetPoints(ctx, bard, over)
+	_, err = bs.Skills.SetPoints(ctx, bard, "", over)
 	var saved *domain.BudgetError
 	require.ErrorAs(t, err, &saved)
 	assert.Equal(t, *previewed, *saved)
@@ -382,9 +382,9 @@ func TestThief_Step14_TheSkillsFollowTheWornArmour(t *testing.T) {
 	require.NoError(t, err)
 	skill := func(skill string) (percent, term int) {
 		t.Helper()
-		skills, err := bs.Skills.List(ctx, id)
+		tab, err := bs.Skills.List(ctx, id)
 		require.NoError(t, err)
-		for _, k := range skills.ThiefSkills {
+		for _, k := range tabSet(tab, "thief").Skills {
 			if k.Skill == skill {
 				return k.Percent, k.Armor
 			}
@@ -400,10 +400,10 @@ func TestThief_Step14_TheSkillsFollowTheWornArmour(t *testing.T) {
 		assert.Equal(t, pickPocketsTerm, term, msg)
 		c, err := bs.Character.GetCharacter(ctx, id)
 		require.NoError(t, err)
-		assert.Equal(t, armour, c.Derived.SkillArmor, msg)
-		skills, err := bs.Skills.List(ctx, id)
+		assert.Equal(t, armour, derivedSet(c.Derived, "thief").Armor, msg)
+		tab, err := bs.Skills.List(ctx, id)
 		require.NoError(t, err)
-		assert.Equal(t, armour, skills.SkillArmor, "the Skills tab names it: "+msg)
+		assert.Equal(t, armour, tabSet(tab, "thief").Armor, "the Skills tab names it: "+msg)
 	}
 	add := func(name, column, row string) string {
 		t.Helper()
@@ -480,8 +480,8 @@ func TestBard_Step14_MetalArmourReadsTheBardsColumn(t *testing.T) {
 	require.NoError(t, err)
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, ruletablesvc.ArmorMetal, c.Derived.SkillArmor)
-	for _, b := range c.Derived.BardSkills {
+	assert.Equal(t, ruletablesvc.ArmorMetal, derivedSet(c.Derived, "bard").Armor)
+	for _, b := range derivedSet(c.Derived, "bard").Skills {
 		if b.Skill == "climb_walls" {
 			assert.Equal(t, -25, b.Armor, "elven chain -20 and the bard's -5")
 		}
@@ -513,7 +513,7 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	require.NoError(t, err)
 
 	draft := map[string]int{"open_locks": 30, "pick_pockets": 25}
-	preview, err := bs.Skills.PreviewPoints(ctx, id, draft)
+	preview, err := bs.Skills.PreviewPoints(ctx, id, "", draft)
 	require.NoError(t, err)
 
 	after, err := bs.Skills.List(ctx, id)
@@ -525,27 +525,27 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 
 	assert.Equal(t, &ruletablesvc.SkillPointsBudget{
 		Level: 1, First: 60, PerLevel: 30, Total: 60, Spent: 55, Left: 5, PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 30,
-	}, preview.Budget, "the draft's budget: 55 spent of 60")
-	assert.Equal(t, 55, preview.ThiefSkills[1].Percent, "open locks: 10 + 30 + 5 + 10")
-	assert.Equal(t, 55, preview.ThiefSkills[1].Raw)
+	}, tabSet(preview, "thief").Budget, "the draft's budget: 55 spent of 60")
+	assert.Equal(t, 55, tabSet(preview, "thief").Skills[1].Percent, "open locks: 10 + 30 + 5 + 10")
+	assert.Equal(t, 55, tabSet(preview, "thief").Skills[1].Raw)
 
-	_, err = bs.Skills.SetPoints(ctx, id, draft)
+	_, err = bs.Skills.SetPoints(ctx, id, "", draft)
 	require.NoError(t, err)
 	stored, err := bs.Skills.List(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, stored, preview, "the preview equals the derived values of the same points")
 
-	_, err = bs.Skills.PreviewPoints(ctx, id, map[string]int{"open_locks": 96})
+	_, err = bs.Skills.PreviewPoints(ctx, id, "", map[string]int{"open_locks": 96})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillPoints.open_locks", fe.Field)
 
 	over := map[string]int{"open_locks": 20, "pick_pockets": 31}
-	_, err = bs.Skills.PreviewPoints(ctx, id, over)
+	_, err = bs.Skills.PreviewPoints(ctx, id, "", over)
 	var previewed *domain.BudgetError
 	require.ErrorAs(t, err, &previewed)
 	assert.Equal(t, domain.BudgetError{Field: "skillPoints.pick_pockets", Spent: 31, Limit: 30}, *previewed)
-	_, err = bs.Skills.SetPoints(ctx, id, over)
+	_, err = bs.Skills.SetPoints(ctx, id, "", over)
 	var saved *domain.BudgetError
 	require.ErrorAs(t, err, &saved)
 	assert.Equal(t, *previewed, *saved, "the preview refuses as the save")
@@ -567,11 +567,11 @@ func TestSkillPoints_AClassWithoutThemHasNoBudgetAndRefusesAPreviewedPoint(t *te
 	require.NoError(t, err)
 	got, err := bs.Skills.List(ctx, id)
 	require.NoError(t, err)
-	assert.Nil(t, got.Budget)
-	empty, err := bs.Skills.PreviewPoints(ctx, id, map[string]int{})
+	assert.Empty(t, got.SkillSets)
+	empty, err := bs.Skills.PreviewPoints(ctx, id, "", map[string]int{})
 	require.NoError(t, err)
-	assert.Nil(t, empty.Budget)
-	_, err = bs.Skills.PreviewPoints(ctx, id, map[string]int{"open_locks": 5})
+	assert.Empty(t, empty.SkillSets)
+	_, err = bs.Skills.PreviewPoints(ctx, id, "", map[string]int{"open_locks": 5})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, "skillPoints", fe.Field)

@@ -48,7 +48,7 @@ type Querier interface {
 	// items or weapons, their rows as stored before it, and the item rows rewritten as pieces. Delete
 	// them with their step once every environment is past 016 (ADR 0025 step 2.1.1).
 	EquipmentOwners(ctx context.Context) ([]int64, error)
-	// The class-entries migration (034): every character without an entry gets its one active entry
+	// The class-entries migration (035): every character without an entry gets its one active entry
 	// from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
 	// changes nothing. A negative level or XP (no path of the app writes one; the columns have no CHECK)
 	// is raised to 0, which the entry's CHECKs accept, so the migration never aborts the boot.
@@ -80,6 +80,9 @@ type Querier interface {
 	// The languages migration (014): every character's stored language list, to map to codes.
 	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
+	// The skill sets migration (034): every character's legacy flat skill points, to copy under the
+	// skill set its class grants. Only the characters that have points and no skill sets yet.
+	ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
@@ -114,6 +117,8 @@ type Querier interface {
 	// The skill points of a character stored before bards entered them (migration 012): only while it
 	// has none, so a rerun changes nothing and points spent since are kept.
 	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error
+	// The skill points of a character per skill set (a JSON object from set code to points).
+	SetSkillSets(ctx context.Context, arg SetSkillSetsParams) error
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error

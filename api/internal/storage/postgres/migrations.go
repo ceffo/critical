@@ -128,6 +128,7 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		dardsMigration:           func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
 		rulesetsMigration:        defaultRuleset,
 		classEntriesMigration:    fillClassEntries,
+		skillSetsMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillSets(ctx, q, defs) },
 	}
 	return before, after
 }

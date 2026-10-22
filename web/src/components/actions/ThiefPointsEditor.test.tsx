@@ -58,7 +58,12 @@ describe("ThiefPointsEditor", () => {
     });
     const html = renderToStaticMarkup(
       <I18nextProvider i18n={inst}>
-        <ThiefPointsEditor skills={skills} budget={budget} onDone={() => {}} />
+        <ThiefPointsEditor
+          set="thief"
+          skills={skills}
+          budget={budget}
+          onDone={() => {}}
+        />
       </I18nextProvider>,
     );
     expect(html).toContain("Available: 60 + 30 × 0 = 60 (level 1)");
@@ -72,14 +77,22 @@ describe("ThiefPointsEditor", () => {
 
 describe("previewDraft", () => {
   it("asks the server for the typed points, zeros left out, and returns its answer", async () => {
-    const answer = { budget, thiefSkills: skills } as unknown as Skills;
+    const answer = {
+      proficiencies: [],
+      skillSets: [
+        { set: "thief", kind: "thiefSkill", skillArmor: "", budget, skills },
+      ],
+    } as unknown as Skills;
     const fetchPreview = vi.fn().mockResolvedValue(answer);
     const got = await previewDraft(
+      "thief",
       { open_locks: "40", pick_pockets: " 0 " },
       skills,
       fetchPreview,
     );
-    expect(fetchPreview).toHaveBeenCalledExactlyOnceWith({ open_locks: 40 });
+    expect(fetchPreview).toHaveBeenCalledExactlyOnceWith("thief", {
+      open_locks: 40,
+    });
     expect(got).toEqual({ ok: true, skills: answer });
   });
 
@@ -87,7 +100,7 @@ describe("previewDraft", () => {
     const fetchPreview = vi.fn();
     expect(typedPoints({ open_locks: "4x" }, skills)).toBeNull();
     expect(
-      await previewDraft({ open_locks: "4x" }, skills, fetchPreview),
+      await previewDraft("thief", { open_locks: "4x" }, skills, fetchPreview),
     ).toEqual({ ok: false });
     expect(fetchPreview).not.toHaveBeenCalled();
   });
@@ -99,7 +112,7 @@ describe("previewDraft", () => {
         new ApiError("out_of_range", 400, "skillPoints.open_locks"),
       );
     expect(
-      await previewDraft({ open_locks: "96" }, skills, fetchPreview),
+      await previewDraft("thief", { open_locks: "96" }, skills, fetchPreview),
     ).toEqual({
       ok: false,
       field: "skillPoints.open_locks",
@@ -119,7 +132,7 @@ describe("previewDraft", () => {
         ),
       );
     expect(
-      await previewDraft({ open_locks: "31" }, skills, fetchPreview),
+      await previewDraft("thief", { open_locks: "31" }, skills, fetchPreview),
     ).toEqual({
       ok: false,
       field: "skillPoints.open_locks",
@@ -131,7 +144,7 @@ describe("previewDraft", () => {
   it("is not ok, with no field, when the call fails", async () => {
     const fetchPreview = vi.fn().mockRejectedValue(new TypeError("offline"));
     expect(
-      await previewDraft({ open_locks: "40" }, skills, fetchPreview),
+      await previewDraft("thief", { open_locks: "40" }, skills, fetchPreview),
     ).toEqual({ ok: false });
   });
 });

@@ -105,7 +105,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Tests: `TestClassEntries_Step1_ShapesAndRefusals` (domain: single, multi, dual accepted; each
    refusal above), `TestMigrate_Step1_ACharacterBecomesOneActiveEntry` (storage, in Go without a
    database: today's class, level and XP give one entry, and every existing step test stays green).
-   _As built (2026-10-22)_: the entries are the table `character_classes` (migration 034:
+   _As built (2026-10-22)_: the entries are the table `character_classes` (migration 035:
    `character_id`, `position`, `class`, `realized_level`, `starting_xp`, `state`, `left_at_level`;
    one row per entry, unique per character and class, with the CHECKs of the refusals above), and
    `classes.Entry` / `classes.ValidateEntries` in the domain. Its data step (`fillClassEntries`)

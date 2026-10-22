@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // A bard whose character service derived its four skills from its points
@@ -27,13 +28,13 @@ func derivedBardFixture(t *testing.T) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	bard := &charactersvc.Character{ID: charID, Class: "bard", Dex: 16, SkillPoints: map[string]int{"detect_noise": 17}}
-	bard.Derived.BardSkills = []ruletablesvc.SkillPercent{
+	bard := &charactersvc.Character{ID: charID, Class: "bard", Dex: 16, SkillPoints: skills.SetPoints{"bard": {"detect_noise": 17}}}
+	bard.Derived.SkillSets = []skills.SkillSet{{Set: "bard", Skills: []ruletablesvc.SkillPercent{
 		{Skill: "climb_walls", Base: 50, Armor: -25, Percent: 25},
 		{Skill: "detect_noise", Base: 20, Points: 17, Percent: 37},
 		{Skill: "pick_pockets", Base: 10, Armor: -25, Percent: 0},
 		{Skill: "read_languages", Base: 5, Percent: 5},
-	}
+	}}}
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard, nil).Maybe()
 	return f
 }
@@ -73,12 +74,15 @@ func TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 	}, nil)
 	got, err := f.svc.List(context.Background(), charID)
 	require.NoError(t, err)
-	require.Len(t, got.BardSkills, 4)
+	require.Len(t, got.SkillSets, 1)
+	set := got.SkillSets[0]
+	assert.Equal(t, "bard", set.Set)
+	assert.Equal(t, skillsvc.KindBardSkill, set.Kind)
+	require.Len(t, set.Skills, 4)
 	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
-		[]string{got.BardSkills[0].Skill, got.BardSkills[1].Skill, got.BardSkills[2].Skill, got.BardSkills[3].Skill})
-	assert.Equal(t, 17, got.BardSkills[1].Points)
-	assert.Equal(t, &skillsvc.LastCheck{EntryID: 5, Roll: 30, Target: 37, AdjustedTarget: 37, Success: true}, got.BardSkills[1].Last)
-	assert.Empty(t, got.ThiefSkills)
+		[]string{set.Skills[0].Skill, set.Skills[1].Skill, set.Skills[2].Skill, set.Skills[3].Skill})
+	assert.Equal(t, 17, set.Skills[1].Points)
+	assert.Equal(t, &skillsvc.LastCheck{EntryID: 5, Roll: 30, Target: 37, AdjustedTarget: 37, Success: true}, set.Skills[1].Last)
 }
 
 // ADR 0030 step 18 after creation: a bard spends its points as a thief
@@ -87,11 +91,11 @@ func TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 func TestSetPoints_Step18_ABardSpendsItsPoints(t *testing.T) {
 	f := pointsFixture(t, "bard", map[string]int{"detect_noise": 17})
 	f.records()
-	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, map[string]int{"detect_noise": 17, "climb_walls": 60}).Return(nil).Once()
-	got, err := f.svc.SetPoints(context.Background(), charID, map[string]int{"detect_noise": 17, "climb_walls": 60, "read_languages": 0})
+	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"bard": {"detect_noise": 17, "climb_walls": 60}}).Return(nil).Once()
+	got, err := f.svc.SetPoints(context.Background(), charID, "", map[string]int{"detect_noise": 17, "climb_walls": 60, "read_languages": 0})
 	require.NoError(t, err)
 	assert.Equal(t, map[string]int{"detect_noise": 17, "climb_walls": 60}, got)
 	require.Len(t, f.entries, 1)
 	assert.Equal(t, actionlog.KindSkillPoints, f.entries[0].Kind)
-	assert.JSONEq(t, `{"before":{"detect_noise":17},"after":{"detect_noise":17,"climb_walls":60}}`, string(f.entries[0].Payload))
+	assert.JSONEq(t, `{"set":"bard","before":{"detect_noise":17},"after":{"detect_noise":17,"climb_walls":60}}`, string(f.entries[0].Payload))
 }

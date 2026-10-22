@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# The class entries upgrade rehearsal (ADR 0042 step 1, migration 034 and its data step): a database
+# The class entries upgrade rehearsal (ADR 0042 step 1, migration 035 and its data step): a database
 # written by the release before is upgraded by this checkout's server, on a throwaway LOCAL compose
 # PostgreSQL, then checked through the API and SQL.
 #
 #   scripts/class-entries-rehearsal.sh [old ref]   # default: the commit before the one that added the migration
 #
-# 1. The old release (built from <old ref>, which must not hold 034_character_classes.sql) writes
+# 1. The old release (built from <old ref>, which must not hold 035_character_classes.sql) writes
 #    characters of several classes with a starting XP, an XP history (bonus and plain entries) and,
 #    for some, a level-up (a realized level); one more has no level-up, so its level is its sheet's.
 #    Each character's sheet is read.
@@ -31,7 +31,7 @@ root="$(dirname "$here")"
 fail() { echo "class-entries-rehearsal: FAIL: $*" >&2; exit 1; }
 ok() { echo "class-entries-rehearsal: ok: $*"; }
 
-mig=api/internal/storage/postgres/migrations/034_character_classes.sql
+mig=api/internal/storage/postgres/migrations/035_character_classes.sql
 # default: the commit before the one that added the migration (the release before, on this branch's base)
 old_ref="${1:-$(git -C "$root" log --diff-filter=A --format=%H -- "$mig" | tail -n 1)^}"
 git -C "$root" cat-file -e "$old_ref:$mig" 2>/dev/null &&
@@ -184,7 +184,7 @@ entries() { sql "SELECT character_id, position, class, realized_level, starting_
 
 # --- 2. this checkout upgrades it ---
 start "$work/new-srv" "$new_testdata"
-expect "migration 034 recorded once" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '034_character_classes.sql'")"
+expect "migration 035 recorded once" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '035_character_classes.sql'")"
 for n in "${names[@]}"; do
     expect "$n: one entry" 1 "$(sql "SELECT COUNT(*) FROM character_classes WHERE character_id = ${id[$n]}")"
     expect "$n: the entry states the class, realized level and starting XP of its columns" \

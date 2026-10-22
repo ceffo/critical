@@ -66,13 +66,14 @@ func TestKelsen_TheSheetMatchesTheDerivedValues(t *testing.T) {
 			assert.Equal(t, sheetSlots, d.SpellSlots, "the slots of the sheet's level against the derived ones")
 			assert.Empty(t, d.RaceSaveBonus, "a half-elf has no racial save bonus")
 			derived := map[string]int{}
-			for _, b := range d.BardSkills {
+			require.Len(t, d.SkillSets, 1)
+			for _, b := range d.SkillSets[0].Skills {
 				derived[b.Skill] = b.Percent
 				assert.Equal(t, sheetSkills[b.Skill]-b.Base-b.Race-b.Dexterity-b.Armor, b.Points,
 					"%s: the points are the sheet's percentage minus the computed terms", b.Skill)
 			}
 			assert.Equal(t, sheetSkills, derived, "the sheet's bard skills against the derived ones (ADR 0030 step 18)")
-			assert.Empty(t, d.SkillBudget, "his points are within the bard's budget at his level")
+			assert.Empty(t, d.SkillSets[0].Budget, "his points are within the bard's budget at his level")
 		})
 	}
 }

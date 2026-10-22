@@ -53,15 +53,25 @@ export interface RogueSkill {
 export type ThiefSkill = RogueSkill;
 export type BardSkill = RogueSkill;
 
+/** One skill set of the character (ADR 0040 step 3.5): one per rogue_skills feature its classes
+ * grant, each with its own budget and points. `set` is the code the points are spent under, `kind`
+ * the check kind its rolls are logged as (a thief's set logs thiefSkill, ADR 0040 step 3.2). */
+export interface SkillSet {
+  set: string;
+  kind: Exclude<SkillKind, "proficiency">;
+  /** ADR 0033 step 14: the skill armour the set reads, from the body armour worn (none, leather,
+   * padded_studded_leather, elven_chain, metal). */
+  skillArmor: string;
+  /** The skill point budget with the terms of its formula; null before the level its points
+   * start. */
+  budget: SkillBudget | null;
+  skills: RogueSkill[];
+}
+
 export interface Skills {
   proficiencies: Proficiency[];
-  bardSkills: BardSkill[];
-  thiefSkills: ThiefSkill[];
-  /** ADR 0033 step 14: the skill armour the bard or thief skills read, from the body armour worn
-   * (none, leather, padded_studded_leather, elven_chain, metal); "" for another class. */
-  skillArmor: string;
-  /** The skill point budget with the terms of its formula; null for a class without skill points. */
-  budget: SkillBudget | null;
+  /** One set per skill set the class grants; empty for a class without. */
+  skillSets: SkillSet[];
 }
 
 /** ADR 0030 steps 17 and 18: available = first + perLevel x (level - 1) points in all, spent

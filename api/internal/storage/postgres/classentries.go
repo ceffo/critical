@@ -9,7 +9,7 @@ import (
 
 // classEntriesMigration creates character_classes (ADR 0042 step 1). Right after it the run gives
 // every stored character its one entry (fillClassEntries).
-const classEntriesMigration = "034_character_classes.sql"
+const classEntriesMigration = "035_character_classes.sql"
 
 // fillClassEntries is the data step after classEntriesMigration: every character becomes one
 // active entry with its class, its realized level (the sheet's level when none was taken in the

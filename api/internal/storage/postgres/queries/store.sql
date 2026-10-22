@@ -12,7 +12,7 @@ SELECT COUNT(*) FROM characters;
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_points, alignment, sex, proficiency_picks, class
+    skill_sets, alignment, sex, proficiency_picks, class
 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 RETURNING id;
 
@@ -49,6 +49,15 @@ WHERE id = sqlc.arg(id);
 -- has none, so a rerun changes nothing and points spent since are kept.
 -- name: SetSkillPointsIfUnset :exec
 UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id) AND skill_points = '{}';
+
+-- The skill sets migration (034): every character's legacy flat skill points, to copy under the
+-- skill set its class grants. Only the characters that have points and no skill sets yet.
+-- name: ListLegacySkillPoints :many
+SELECT id, class, skill_points FROM characters WHERE skill_points <> '{}' AND skill_sets = '{}' ORDER BY id;
+
+-- The skill points of a character per skill set (a JSON object from set code to points).
+-- name: SetSkillSets :exec
+UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);
 
 -- name: InsertSpellSlots :exec
 INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2);
@@ -389,7 +398,7 @@ VALUES ($1, $2, $3, $4);
 INSERT INTO ruleset_success_effects (ruleset_id, proficiency_id, ac, rounds)
 VALUES ($1, $2, $3, $4);
 
--- The class-entries migration (034): every character without an entry gets its one active entry
+-- The class-entries migration (035): every character without an entry gets its one active entry
 -- from its columns (class, COALESCE(realized_level, level), xp_total; ADR 0042 step 1). A rerun
 -- changes nothing. A negative level or XP (no path of the app writes one; the columns have no CHECK)
 -- is raised to 0, which the entry's CHECKs accept, so the migration never aborts the boot.

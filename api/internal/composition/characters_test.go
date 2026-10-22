@@ -46,7 +46,7 @@ func sheetOf(t *testing.T, bs *composition.BackingServices, characterID int64) s
 	}
 	// The bard skills are derived from the character's own points (ADR
 	// 0030 step 18), not owned rows: the points are the character's.
-	for _, b := range skills.BardSkills {
+	for _, b := range tabSet(skills, "bard").Skills {
 		if b.Points > 0 {
 			s.Skills = append(s.Skills, b.Skill)
 		}

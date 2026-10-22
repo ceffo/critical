@@ -55,7 +55,11 @@ interface RollStore {
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
   /** Rolls a proficiency or bard skill check (the server rolls and logs it); a non-zero adjustment moves its target. */
-  rollSkill: (id: string, adjustment?: number) => Promise<boolean>;
+  rollSkill: (
+    id: string,
+    adjustment?: number,
+    set?: string,
+  ) => Promise<boolean>;
   /** Sets the adjustment of the latest skill check (log entry id; the server refuses any other). */
   adjustLastSkill: (
     entryId: number,
@@ -94,10 +98,14 @@ export const useRollStore = create<RollStore>((set) => {
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) })),
     spendItem: (id) =>
       roll(async () => ({ kind: "item_use", result: await postUseItem(id) })),
-    rollSkill: (id, adjustment) =>
+    rollSkill: (id, adjustment, set) =>
       roll(async () => ({
         kind: "skill_check",
-        result: await rollSkill(id, adjustment ? { adjustment } : undefined),
+        result: await rollSkill(
+          id,
+          adjustment ? { adjustment } : undefined,
+          set,
+        ),
       })),
     adjustLastSkill: (id, adjustment, reason) =>
       roll(async () => ({

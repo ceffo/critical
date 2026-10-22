@@ -145,7 +145,6 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	changeloghdl.RegisterRoutes(r, opts.Changelog)
 	spellhdl.RegisterSharedRoutes(r, bs.Spells)
 	rulesethdl.RegisterSharedRoutes(r, bs.Rulesets)
-	xphdl.RegisterSharedRoutes(r, bs.XP)
 	// The psionic powers catalogue (ADR 0043 step 8) is a reference read, no character's.
 	if bs.Powers != nil {
 		powerhdl.RegisterRoutes(r, bs.Powers)

@@ -49,7 +49,7 @@ func TestXP_GetAtLastLevelHasNullCeiling(t *testing.T) {
 
 func TestXP_Preview(t *testing.T) {
 	h, m := newRouter(t)
-	m.xp.EXPECT().Preview(1205, true).Return(xpsvc.Amount{Base: 1205, BonusAmount: 121, Total: 1326}, nil)
+	m.xp.EXPECT().Preview(mock.Anything, mock.Anything, 1205, true).Return(xpsvc.Amount{Base: 1205, BonusAmount: 121, Total: 1326}, nil)
 	rec := do(h, "GET", "/api/xp/preview?base=1205&bonus=true", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"base":1205,"bonusAmount":121,"total":1326}`, rec.Body.String())

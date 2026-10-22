@@ -1722,3 +1722,53 @@ describe("end effects", () => {
     );
   });
 });
+
+describe("entryText: an XP change of a multi-class character", () => {
+  const xp = (total: number, split?: { class: string; amount: number }[]) => ({
+    id: 3,
+    date: "2026-10-10",
+    session: "",
+    reason: "ogre",
+    base: total,
+    bonus: false,
+    bonusAmount: 0,
+    total,
+    split,
+  });
+  const halves = (n: number) => [
+    { class: "mage", amount: n },
+    { class: "cleric", amount: n },
+  ];
+
+  it("words the split on an add, an edit (before and after) and a remove", async () => {
+    const t = await makeT("en");
+    const add = entryText(entry("xp_add", { entry: xp(1000, halves(500)) }), t);
+    const edit = entryText(
+      entry("xp_edit", {
+        entry: xp(2000, halves(1000)),
+        before: xp(1000, halves(500)),
+      }),
+      t,
+    );
+    const remove = entryText(
+      entry("xp_remove", { entry: xp(1000, halves(500)) }),
+      t,
+    );
+    for (const text of [add, edit, remove]) expect(text).toMatch(/500|1,000/);
+    expect(edit).toContain("1,000 → 2,000");
+    expect(edit).toMatch(/1,000/);
+  });
+
+  it("renders entries logged before the split existed", async () => {
+    const t = await makeT("en");
+    expect(entryText(entry("xp_add", { entry: xp(1000) }), t)).toBe(
+      "XP +1,000: ogre",
+    );
+    expect(
+      entryText(entry("xp_edit", { entry: xp(2000), before: xp(1000) }), t),
+    ).toContain("1,000 → 2,000");
+    expect(entryText(entry("xp_remove", { entry: xp(1000) }), t)).toContain(
+      "ogre",
+    );
+  });
+});

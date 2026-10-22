@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -23,9 +24,10 @@ type SVC interface {
 	domain.Service
 	// Get returns the ledger with its totals and progress.
 	Get(ctx context.Context, characterID int64) (*Ledger, error)
-	// Preview returns what an entry of base XP would add, without writing.
-	// A *domain.FieldError for an invalid base.
-	Preview(base int, bonus bool) (Amount, error)
+	// Preview returns what an entry of base XP would add to the character,
+	// shared between its classes, without writing. A *domain.FieldError for
+	// an invalid base.
+	Preview(ctx context.Context, characterID int64, base int, bonus bool) (Amount, error)
 	// Add records an award dated today. A *domain.FieldError for invalid input.
 	Add(ctx context.Context, characterID int64, in EntryInput) (*Ledger, error)
 	// Update changes the fields set in the patch. ErrEntryNotFound,
@@ -59,6 +61,9 @@ type DAL interface {
 // requisites.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	// ClassEntries are the stored class entries, without the derivation: the
+	// award's split and the journal's payload need no more.
+	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)
 }
 
 // Log is the slice of the action log XP changes are recorded into.

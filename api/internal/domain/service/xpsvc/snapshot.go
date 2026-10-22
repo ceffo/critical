@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // StateKeyXP is the state-key family of the XP ledger. Each entry has its own
@@ -100,6 +101,14 @@ type entryRecord struct {
 	Bonus       bool   `json:"bonus"`
 	BonusAmount int    `json:"bonusAmount"`
 	Total       int    `json:"total"`
+	// Split is the award's total shared between a multi-class character's
+	// classes (ADR 0042 step 5.1); absent for one class.
+	Split []classAmountRecord `json:"split,omitempty"`
+}
+
+type classAmountRecord struct {
+	Class  string `json:"class"`
+	Amount int    `json:"amount"`
 }
 
 // changeRecord is the payload of an XP log entry: the entry as it is now (as
@@ -110,12 +119,16 @@ type changeRecord struct {
 	Before *entryRecord `json:"before,omitempty"`
 }
 
-func recordOf(e Entry) entryRecord {
+func recordOf(e Entry, entries []classes.Entry) entryRecord {
 	a := EntryAmount(e.Base, e.Bonus)
-	return entryRecord{
+	rec := entryRecord{
 		ID: e.ID, Date: e.Date, Session: e.Session, Reason: e.Reason,
 		Base: e.Base, Bonus: e.Bonus, BonusAmount: a.BonusAmount, Total: a.Total,
 	}
+	for _, s := range splitAmount(entries, a.Total) {
+		rec.Split = append(rec.Split, classAmountRecord(s))
+	}
+	return rec
 }
 
 // logChange records one XP change with the entry's snapshot, inside the
@@ -125,16 +138,20 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 	if err != nil {
 		return err
 	}
+	entries, err := s.chars.ClassEntries(ctx, characterID)
+	if err != nil {
+		return err
+	}
 	var rec changeRecord
 	switch {
 	case after != nil:
-		rec.Entry = recordOf(*after)
+		rec.Entry = recordOf(*after, entries)
 		if before != nil {
-			b := recordOf(*before)
+			b := recordOf(*before, entries)
 			rec.Before = &b
 		}
 	case before != nil:
-		rec.Entry = recordOf(*before)
+		rec.Entry = recordOf(*before, entries)
 	}
 	payload, err := json.Marshal(rec)
 	if err != nil {

@@ -308,9 +308,19 @@ func EntryXP(e classes.Entry, awards []int, shares int) int {
 		return xp
 	}
 	for _, a := range awards {
-		xp += a / shares
+		xp += Share(a, shares)
 	}
 	return xp
+}
+
+// Share is one active entry's part of an award (ADR 0042 step 5.1): the
+// amount divided by the number of active entries, rounded down, the remainder
+// lost (Q3).
+func Share(amount, shares int) int {
+	if shares < 1 {
+		return amount
+	}
+	return amount / shares
 }
 
 // bestCore is ADR 0042 steps 8 and 9 (amending ADR 0030 steps 5 and 6): the

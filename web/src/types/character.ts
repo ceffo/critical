@@ -104,6 +104,9 @@ export interface Derived {
   /** Slots per day by ascending spell level (levels without a slot left out). */
   spellSlots: { level: number; count: number }[];
   levelUp: LevelUp;
+  /** ADR 0042 steps 5 and 7: each class entry's own figures, in the order of the character's
+   * `classes`. Absent for a single-class character, whose figures are the ones above. */
+  classes?: DerivedClass[];
   /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
   specializes: boolean;
   /** Steps 9 and 10: the class enters an 18/xx and reads the warrior's scale above 18 (its
@@ -124,6 +127,18 @@ export interface Derived {
   /** ADR 0037 steps 3 to 5: the non-weapon pool and each pick's figures; null without the
    * catalogue's Table 34. */
   proficiencySlots: ProficiencySlots | null;
+}
+
+/** ADR 0042 steps 5 and 7: one class entry's figures. `xp` is its starting XP plus its share of the
+ * ledger, `targetLevel` the level that XP gives and `nextLevelXp` the XP that reaches the next one
+ * (0 and null for a frozen entry), `level` the level taken. */
+export interface DerivedClass {
+  class: string;
+  state: "active" | "frozen";
+  xp: number;
+  targetLevel: number;
+  level: number;
+  nextLevelXp: number | null;
 }
 
 /** ADR 0037 step 3: available = initial (Table 34) + levelGained (one slot every `perLevels`

@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
@@ -51,6 +52,14 @@ func newFixture(t *testing.T) fixture {
 func (f fixture) sheet(dex, cha, level, xp int) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
 		Return(&charactersvc.Character{ID: 1, Class: "bard", Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{TargetLevel: level}}, nil)
+}
+
+// entries answers the stored class entries read (a single bard unless told).
+func (f fixture) entries(es ...classes.Entry) {
+	if len(es) == 0 {
+		es = []classes.Entry{classes.SingleEntry("bard", 15, 0)}
+	}
+	f.chars.EXPECT().ClassEntries(mock.Anything, int64(1)).Return(es, nil).Once()
 }
 
 // recorded captures the one action-log entry a write records.
@@ -123,6 +132,7 @@ func TestAdd_RecordsOneTransactionWithTheAwardsSnapshot(t *testing.T) {
 		Date: "2026-10-17", Session: "S42", Reason: "troll", Base: 1200, Bonus: true,
 	}).Return(7, nil).Once()
 	rec := f.recorded()
+	f.entries()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{
 		{ID: 7, Date: "2026-10-17", Session: "S42", Reason: "troll", Base: 1200, Bonus: true},
@@ -177,6 +187,7 @@ func TestUpdate_AppliesOnlyTheSetFieldsInOneTransaction(t *testing.T) {
 		ID: 3, Date: "2026-10-10", Session: "S41", Reason: "ogre chief", Base: 1100, Bonus: false,
 	}).Return(nil).Once()
 	rec := f.recorded()
+	f.entries()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 
@@ -230,6 +241,7 @@ func TestDelete_RecordsTheRemovedAwardOrReportsNotFound(t *testing.T) {
 	f.dal.EXPECT().Get(mock.Anything, int64(1), int64(3)).Return(stored, nil).Once()
 	f.dal.EXPECT().Delete(mock.Anything, int64(1), int64(3)).Return(nil).Once()
 	rec := f.recorded()
+	f.entries()
 	f.sheet(17, 16, 15, 0)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	got, err := f.svc.Delete(context.Background(), 1, 3)
@@ -280,10 +292,11 @@ func TestRestorer_WritesTheSnapshotBack(t *testing.T) {
 
 func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {
 	f := newFixture(t)
-	got, err := f.svc.Preview(1205, true)
+	f.entries()
+	got, err := f.svc.Preview(context.Background(), 1, 1205, true)
 	require.NoError(t, err)
 	assert.Equal(t, xpsvc.Amount{Base: 1205, BonusAmount: 121, Total: 1326}, got)
-	_, err = f.svc.Preview(0, true)
+	_, err = f.svc.Preview(context.Background(), 1, 0, true)
 	require.ErrorIs(t, err, domain.ErrInvalidInput)
 }
 

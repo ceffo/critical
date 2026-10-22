@@ -42,6 +42,10 @@ type SVC interface {
 	// non-proficiency penalty of each type (step 8), from the character row
 	// alone: no XP ledger or armour read (ADR 0025 step 10).
 	WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error)
+	// ClassEntries are character id's class entries as stored, with no
+	// derivation, XP ledger or armour read: what the XP award's split reads
+	// (ADR 0042 step 5.1).
+	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
@@ -238,6 +242,14 @@ func (s *service) WeaponProficiency(ctx context.Context, id int64) (skills.Weapo
 		return skills.WeaponProficiency{}, err
 	}
 	return skills.WeaponProficiencyOf(s.profs, c.ActiveClasses(), c.Proficiencies), nil
+}
+
+func (s *service) ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error) {
+	c, err := s.reader.GetCharacter(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	return c.Entries(), nil
 }
 
 // read is GetCharacter: the stored character, derived and warned.

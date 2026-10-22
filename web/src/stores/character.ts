@@ -28,13 +28,17 @@ interface CharacterStore {
    * module (refused or not, what it names is read again: a stale level shows the pending levels as
    * they are). Null on success, or the ApiError naming the rejected field; other failures go to the
    * action module's error notice. */
-  rollLevelUp: (level: number, die?: number) => Promise<ApiError | null>;
+  rollLevelUp: (
+    level: number,
+    die?: number,
+    cls?: string,
+  ) => Promise<ApiError | null>;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
   character: null,
-  rollLevelUp: (level, die) =>
-    useTableStore.getState().submit(() => rollLevelUp(level, die)),
+  rollLevelUp: (level, die, cls) =>
+    useTableStore.getState().submit(() => rollLevelUp(level, die, cls)),
   loading: false,
   error: null,
   loadCharacter: async () => {

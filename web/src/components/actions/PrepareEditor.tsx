@@ -4,6 +4,7 @@ import { Minus, Plus } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useSpellName } from "@/i18n/spellName";
+import { useClassName } from "@/lib/useClassName";
 import {
   addOne,
   draftRows,
@@ -23,6 +24,11 @@ interface Props {
   limits: LevelLimit[];
   /** Spell ids prepared today (duplicates allowed): the draft starts from them. */
   initial: string[];
+  /** The spellcasting entries to choose from when the character has two (ADR 0042 step 14). */
+  entries?: string[];
+  /** The entry prepared. */
+  entry?: string;
+  onEntry?: (cls: string) => void;
   busy: boolean;
   /** Save the draft; the server enforces the limits and its error is shown by the table. */
   onSave: (ids: string[]) => void;
@@ -55,12 +61,16 @@ export function PrepareEditor({
   spellbook,
   limits,
   initial,
+  entries,
+  entry,
+  onEntry,
   busy,
   onSave,
   onCancel,
 }: Props) {
   const { t } = useTranslation();
   const spellName = useSpellName();
+  const className = useClassName();
   // Ids no longer in the spellbook are shown as dropped and never sent (the API refuses them).
   const [{ kept, dropped }] = useState(() => splitPrepared(initial, spellbook));
   const [draft, setDraft] = useState<string[]>(kept);
@@ -118,6 +128,32 @@ export function PrepareEditor({
       aria-label={t("spellSlots.prepareTitle")}
     >
       <div className="flex flex-wrap items-center gap-2">
+        {entries && (
+          <div
+            role="group"
+            aria-label={t("spellSlots.entry")}
+            className="flex flex-wrap items-center gap-1"
+            data-testid="prepare-entries"
+          >
+            {entries.map((cls) => (
+              <button
+                key={cls}
+                type="button"
+                aria-pressed={cls === entry}
+                disabled={busy}
+                className={cn(
+                  "h-7 px-2.5 text-body font-medium",
+                  cls === entry
+                    ? "chip-chosen"
+                    : "chip text-muted-foreground hover:text-foreground",
+                )}
+                onClick={() => onEntry?.(cls)}
+              >
+                {className(cls)}
+              </button>
+            ))}
+          </div>
+        )}
         <div
           role="group"
           aria-label={t("spellSlots.levelFilter")}

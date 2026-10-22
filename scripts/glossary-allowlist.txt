@@ -1,0 +1,215 @@
+# Exported domain type names exempt from the glossary check (scripts/check-glossary.sh).
+# One name per line, then # and the reason. `*Suffix` and `Prefix*` match by pattern.
+# A name that is a domain concept belongs in GLOSSARY.md instead: prefer a term or a `_Code_:` alias.
+
+*Row  # Technical: rule table row types, one per table in the Rule table entry; no term of their own
+*Wire  # Technical: wire (JSON) form of a domain value
+*Input  # Technical: service input, request, patch and result DTOs
+*Inputs  # Technical: service input, request, patch and result DTOs
+*Request  # Technical: service input, request, patch and result DTOs
+*Patch  # Technical: service input, request, patch and result DTOs
+*Result  # Technical: service input, request, patch and result DTOs
+DAL  # Technical: port, service or wiring type (clean architecture plumbing)
+SVC  # Technical: port, service or wiring type (clean architecture plumbing)
+Deps  # Technical: port, service or wiring type (clean architecture plumbing)
+Config  # Technical: port, service or wiring type (clean architecture plumbing)
+Module  # Technical: port, service or wiring type (clean architecture plumbing)
+Service  # Technical: port, service or wiring type (clean architecture plumbing)
+TxRunner  # Technical: port, service or wiring type (clean architecture plumbing)
+Codec  # Technical: port, service or wiring type (clean architecture plumbing)
+Reader  # Technical: port, service or wiring type (clean architecture plumbing)
+Recorder  # Technical: port, service or wiring type (clean architecture plumbing)
+Replayer  # Technical: port, service or wiring type (clean architecture plumbing)
+Restorer  # Technical: port, service or wiring type (clean architecture plumbing)
+Snapshotter  # Technical: port, service or wiring type (clean architecture plumbing)
+Notifier  # Technical: port, service or wiring type (clean architecture plumbing)
+Lookup  # Technical: port, service or wiring type (clean architecture plumbing)
+ItemLister  # Technical: port, service or wiring type (clean architecture plumbing)
+FormStore  # Technical: port, service or wiring type (clean architecture plumbing)
+CritStore  # Technical: port, service or wiring type (clean architecture plumbing)
+IdentityProvider  # Technical: port, service or wiring type (clean architecture plumbing)
+AmendFunc  # Technical: port, service or wiring type (clean architecture plumbing)
+RemoveFunc  # Technical: port, service or wiring type (clean architecture plumbing)
+WriteFunc  # Technical: port, service or wiring type (clean architecture plumbing)
+LatestAmender  # Technical: port, service or wiring type (clean architecture plumbing)
+Ref  # Technical: generic helper or envelope with no domain meaning of its own
+Raw  # Technical: generic helper or envelope with no domain meaning of its own
+Page  # Technical: generic helper or envelope with no domain meaning of its own
+Filter  # Technical: generic helper or envelope with no domain meaning of its own
+Value  # Technical: generic helper or envelope with no domain meaning of its own
+Values  # Technical: generic helper or envelope with no domain meaning of its own
+Version  # Technical: generic helper or envelope with no domain meaning of its own
+Status  # Technical: generic helper or envelope with no domain meaning of its own
+Summary  # Technical: generic helper or envelope with no domain meaning of its own
+Info  # Technical: generic helper or envelope with no domain meaning of its own
+Kind  # Technical: generic helper or envelope with no domain meaning of its own
+Mode  # Technical: generic helper or envelope with no domain meaning of its own
+Source  # Technical: generic helper or envelope with no domain meaning of its own
+State  # Technical: generic helper or envelope with no domain meaning of its own
+Stats  # Technical: generic helper or envelope with no domain meaning of its own
+Sheet  # Technical: generic helper or envelope with no domain meaning of its own
+Result  # Technical: generic helper or envelope with no domain meaning of its own
+Review  # Technical: generic helper or envelope with no domain meaning of its own
+Totals  # Technical: generic helper or envelope with no domain meaning of its own
+Warning  # Technical: generic helper or envelope with no domain meaning of its own
+Term  # Technical: generic helper or envelope with no domain meaning of its own
+Span  # Technical: generic helper or envelope with no domain meaning of its own
+Range  # Technical: generic helper or envelope with no domain meaning of its own
+Quantity  # Technical: generic helper or envelope with no domain meaning of its own
+Amount  # Technical: generic helper or envelope with no domain meaning of its own
+Off  # Technical: generic helper or envelope with no domain meaning of its own
+Progress  # Technical: generic helper or envelope with no domain meaning of its own
+Details  # Technical: generic helper or envelope with no domain meaning of its own
+Draft  # Technical: generic helper or envelope with no domain meaning of its own
+Edit  # Technical: generic helper or envelope with no domain meaning of its own
+Change  # Technical: generic helper or envelope with no domain meaning of its own
+Changes  # Technical: generic helper or envelope with no domain meaning of its own
+ChangeResult  # Technical: generic helper or envelope with no domain meaning of its own
+FieldChange  # Technical: generic helper or envelope with no domain meaning of its own
+FieldError  # Technical: generic helper or envelope with no domain meaning of its own
+Refusal  # Technical: generic helper or envelope with no domain meaning of its own
+Conversion  # Technical: generic helper or envelope with no domain meaning of its own
+Derived  # Technical: generic helper or envelope with no domain meaning of its own
+Case  # Technical: generic helper or envelope with no domain meaning of its own
+Inputs  # Technical: generic helper or envelope with no domain meaning of its own
+Untracked  # Technical: generic helper or envelope with no domain meaning of its own
+Condition  # Technical: generic helper or envelope with no domain meaning of its own
+Confidence  # Technical: generic helper or envelope with no domain meaning of its own
+FinishLogin  # Technical: login, session and mail plumbing (Users and access)
+LoginStart  # Technical: login, session and mail plumbing (Users and access)
+MailOutcome  # Technical: login, session and mail plumbing (Users and access)
+NewSession  # Technical: login, session and mail plumbing (Users and access)
+Sessions  # Technical: login, session and mail plumbing (Users and access)
+Principal  # Technical: login, session and mail plumbing (Users and access)
+Role  # Technical: login, session and mail plumbing (Users and access)
+UserChange  # Technical: login, session and mail plumbing (Users and access)
+UserSummary  # Technical: login, session and mail plumbing (Users and access)
+Owners  # Technical: login, session and mail plumbing (Users and access)
+Characters  # Technical: login, session and mail plumbing (Users and access)
+IdentityRoll  # Technical: login, session and mail plumbing (Users and access)
+Log  # Technical: action log and payload plumbing (Action log entry)
+History  # Technical: action log and payload plumbing (Action log entry)
+Ledger  # Technical: action log and payload plumbing (Action log entry)
+PayloadAmendment  # Technical: action log and payload plumbing (Action log entry)
+PayloadView  # Technical: action log and payload plumbing (Action log entry)
+PayloadViews  # Technical: action log and payload plumbing (Action log entry)
+Amendment  # Technical: action log and payload plumbing (Action log entry)
+CorrectionKind  # Technical: action log and payload plumbing (Action log entry)
+CorrectionStep  # Technical: action log and payload plumbing (Action log entry)
+NewEntry  # Technical: action log and payload plumbing (Action log entry)
+EntryInput  # Technical: action log and payload plumbing (Action log entry)
+EntryPatch  # Technical: action log and payload plumbing (Action log entry)
+Notice  # Technical: action log and payload plumbing (Action log entry)
+NoticeKind  # Technical: action log and payload plumbing (Action log entry)
+LastCheck  # Technical: action log and payload plumbing (Action log entry)
+Text  # Technical: text and localisation helpers (Localized text)
+Texts  # Technical: text and localisation helpers (Localized text)
+TextOnly  # Technical: text and localisation helpers (Localized text)
+ClassOption  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+ClassUnmet  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+CreationOptions  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+FigureOption  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+RaceAdjustmentOption  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+RaceIdentityOption  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+RaceLanguageOption  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+Identity  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+IdentityResult  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+Points  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+PointsFigures  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+PointsSheet  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+ScoreMethod  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+ScoreRoll  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+ScoresResult  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+BaseStrength  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+Strength  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+StrScore  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+SkillPointsBudget  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+BudgetError  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+BudgetWarning  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+SkillPercent  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+NewCharacter  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+ArrangeResult  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+Language  # Needs a term: language, book and proficiency-pool concepts
+Languages  # Needs a term: language, book and proficiency-pool concepts
+LanguageBook  # Needs a term: language, book and proficiency-pool concepts
+Book  # Needs a term: language, book and proficiency-pool concepts
+ProficiencyBook  # Needs a term: language, book and proficiency-pool concepts
+NonweaponPool  # Needs a term: language, book and proficiency-pool concepts
+WeaponPick  # Needs a term: language, book and proficiency-pool concepts
+WeaponPickFigures  # Needs a term: language, book and proficiency-pool concepts
+ThiefSkill  # Needs a term: language, book and proficiency-pool concepts
+BardSkill  # Needs a term: language, book and proficiency-pool concepts
+Damage  # Needs a term: damage and effect duration concepts
+DamageAt  # Needs a term: damage and effect duration concepts
+DamagePart  # Needs a term: damage and effect duration concepts
+DamagePartAt  # Needs a term: damage and effect duration concepts
+DamageResult  # Needs a term: damage and effect duration concepts
+DamageStepAt  # Needs a term: damage and effect duration concepts
+DamageSteps  # Needs a term: damage and effect duration concepts
+DamageTerm  # Needs a term: damage and effect duration concepts
+DamageTermKind  # Needs a term: damage and effect duration concepts
+Duration  # Needs a term: damage and effect duration concepts
+DurationKind  # Needs a term: damage and effect duration concepts
+Effects  # Needs a term: damage and effect duration concepts
+EndCause  # Needs a term: damage and effect duration concepts
+EndEffect  # Needs a term: damage and effect duration concepts
+EndEffectRoll  # Needs a term: damage and effect duration concepts
+EndKind  # Needs a term: damage and effect duration concepts
+EndResult  # Needs a term: damage and effect duration concepts
+Formula  # Needs a term: damage and effect duration concepts
+FormulaRoll  # Needs a term: damage and effect duration concepts
+RolledDamage  # Needs a term: damage and effect duration concepts
+RolledGroup  # Needs a term: damage and effect duration concepts
+Roll  # Needs a term: damage and effect duration concepts
+RollInput  # Needs a term: damage and effect duration concepts
+RollResult  # Needs a term: damage and effect duration concepts
+ToHitRoll  # Needs a term: damage and effect duration concepts
+DieRoll  # Needs a term: damage and effect duration concepts
+Dice  # Needs a term: damage and effect duration concepts
+Factor  # Needs a term: damage and effect duration concepts
+Modifier  # Needs a term: damage and effect duration concepts
+ModifierKind  # Needs a term: damage and effect duration concepts
+Contribution  # Needs a term: damage and effect duration concepts
+Situational  # Needs a term: damage and effect duration concepts
+SuccessBuff  # Needs a term: damage and effect duration concepts
+AbilityGain  # Needs a term: level, limits and grant concepts
+LevelCell  # Needs a term: level, limits and grant concepts
+LevelDice  # Needs a term: level, limits and grant concepts
+LevelGrants  # Needs a term: level, limits and grant concepts
+LevelLimit  # Needs a term: level, limits and grant concepts
+LevelLimits  # Needs a term: level, limits and grant concepts
+Limits  # Needs a term: level, limits and grant concepts
+PendingLevel  # Needs a term: level, limits and grant concepts
+Thresholds  # Needs a term: level, limits and grant concepts
+Tier  # Needs a term: level, limits and grant concepts
+Spending  # Needs a term: level, limits and grant concepts
+Rounds  # Needs a term: level, limits and grant concepts
+AreaOfEffect  # Needs a term: spell, target and area concepts
+AreaValue  # Needs a term: spell, target and area concepts
+Components  # Needs a term: spell, target and area concepts
+FreeSpell  # Needs a term: spell, target and area concepts
+FreeSpells  # Needs a term: spell, target and area concepts
+Target  # Needs a term: spell, target and area concepts
+TargetChoice  # Needs a term: spell, target and area concepts
+TargetSize  # Needs a term: spell, target and area concepts
+Group  # Needs a term: spell, target and area concepts
+Category  # Needs a term: spell, target and area concepts
+CellStatus  # Needs a term: spell, target and area concepts
+Power  # Needs a term: spell, target and area concepts
+Rules  # Needs a term: spell, target and area concepts
+Armour  # Needs a term: spell, target and area concepts
+AC  # Needs a term: spell, target and area concepts
+Shield  # Needs a term: spell, target and area concepts
+LegacyWeapon  # Needs a term: spell, target and area concepts
+WeaponVsArmor  # Needs a term: spell, target and area concepts
+Charges  # Needs a term: spell, target and area concepts
+CarryOver  # Needs a term: spell, target and area concepts
+Crossover  # Needs a term: spell, target and area concepts
+StepPer  # Needs a term: spell, target and area concepts
+Override  # Needs a term: spell, target and area concepts
+Overrides  # Needs a term: spell, target and area concepts
+Catalog  # Needs a term: spell, target and area concepts
+Favourite  # Needs a term: spell, target and area concepts
+TurningCell  # Needs a term: turning table cell
+ModeAt  # Technical: generic helper or envelope with no domain meaning of its own
+Added  # Technical: generic helper or envelope with no domain meaning of its own

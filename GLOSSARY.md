@@ -198,7 +198,7 @@ The characters adventuring together in a game.
 **Psionicist** (fr: psioniste) _(planned)_:
 The psionic class of the Complete Psionics Handbook, whose powers cost PSP. [ADR 0043](docs/adr/0043-psionics.md) step 1. _Avoid_: psioniciste (not the book's word).
 
-**PSP** (fr: PFP, points de force psionique) _(planned)_:
+**PSP** (fr: PFP, points de force psionique):
 Psionic strength points, the pool a psionicist spends on powers: a maximum, and a ledger of deltas on the action log; recovered over hours of an activity at Table 6's hourly rates. [ADR 0043](docs/adr/0043-psionics.md) steps 4 to 7.
 _Code_: Psionics, PSPRule, PSPPerLevel, PSPMax, PSPBreakdown, PSPState, InherentPotentialRow, PSPPool, RecoveryRates, PSPGain
 

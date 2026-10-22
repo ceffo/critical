@@ -163,7 +163,7 @@ export function PspPanel() {
           onClick={() => void recover()}
         >
           <Moon aria-hidden />
-          {t("psp.recover")}
+          {t("psp.recoverHours")}
         </Button>
       </div>
     </section>

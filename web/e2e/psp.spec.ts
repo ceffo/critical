@@ -44,7 +44,7 @@ test.describe("a psionicist", () => {
     await panel
       .getByRole("combobox", { name: "Activity" })
       .selectOption("resting");
-    await panel.getByRole("button", { name: "Recover" }).last().click();
+    await panel.getByRole("button", { name: "Recover", exact: true }).click();
     await expect(value).toHaveText("22 / 40");
   });
 });

@@ -205,8 +205,10 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    `10-special-abilities.md`) and recovers a night's sleep, 8 hours at Table 6's sleeping rate
    (96), capped at the maximum _(Q3: the book has no full refill)_; the `long_rest` entry carries
    the delta and snapshots the maintained powers. Undoing the rest spends them again.
-   Tests: `LongRest_Step7_RecoversANightsSleepAndEndsMaintenance` (restsvc),
-   `LongRest_Step7_UndoRestoresPSPAndTheMaintainedPowers` (composition).
+   As built (2026-10-22): the night's sleep is recovered and undone; ending the maintained powers
+   is built with maintenance (steps 13 to 16): until then nothing can be maintained.
+   Tests: `TestLongRest_Step7_RecoversANightsSleep` (restsvc),
+   `TestLongRest_Step7_UndoRestoresPSP` (composition).
 
 ### Powers
 

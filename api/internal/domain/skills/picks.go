@@ -113,6 +113,13 @@ type WeaponPickFigures struct {
 	Allowed bool
 }
 
+// WeaponTypeFigure is a weapon type the character may pick now (WeaponTypes), with the slots its
+// specialization would spend (step 9), 0 when the character may not specialize.
+type WeaponTypeFigure struct {
+	Type                string
+	SpecializationSlots int
+}
+
 // ProficiencySlots are the pools (step 3) and each pick's figures: Picks the non-weapon picks,
 // WeaponPicks the weapon picks.
 type ProficiencySlots struct {
@@ -120,6 +127,9 @@ type ProficiencySlots struct {
 	Weapon      ruletablesvc.WeaponPool
 	Picks       []PickFigures
 	WeaponPicks []WeaponPickFigures
+	// WeaponTypes are the types the character may pick (step 16.1: Classes.weaponTypeAllowed, the
+	// rule a save is judged by, the ruleset's weapon lift included), in display order.
+	WeaponTypes []WeaponTypeFigure
 	// Penalty is Table 34's non-proficiency penalty for the class group (ADR 0037 step 8), 0 or
 	// less: what an attack with a weapon type without a pick takes to hit.
 	Penalty int
@@ -334,6 +344,18 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		spent += p.Slots
 	}
 	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
+	out.WeaponTypes = make([]WeaponTypeFigure, 0, len(ruletablesvc.WeaponTypes))
+	specialist := specializes(book, cls.specialist())
+	for _, t := range ruletablesvc.WeaponTypes {
+		if !cls.weaponTypeAllowed(book, lifted, t) {
+			continue
+		}
+		f := WeaponTypeFigure{Type: t}
+		if specialist {
+			f.SpecializationSlots = ruletablesvc.SpecializationSlots(t)
+		}
+		out.WeaponTypes = append(out.WeaponTypes, f)
+	}
 	// ADR 0042 step 15 (Q14): a dual-class keeps the slots of its old class at its left-at level
 	// (the first class's initial count) and adds the new class's gained slots at the new rate.
 	if k, ok := cls.kept(book); ok {

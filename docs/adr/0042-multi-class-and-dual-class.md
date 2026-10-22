@@ -584,7 +584,12 @@ bard 15 never).)_
     weapon alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. The weapon picks follow
     the same rule (`classes.AllowedTogether`, which both read): a type is refused only when no active
     entry's class may pick it, or when a `blunt_only` entry's may not; the specialization stays the
-    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. Each derived entry
+    first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. The types the picker offers are
+    the same rule's answer, not a class's list: `derived.proficiencySlots.weaponTypes`
+    (`[{type, specializationSlots}]`, additive; `skills.figuresOf` over `Classes.weaponTypeAllowed`,
+    the weapon lift included) on the sheet, the editor's preview and the creation draft, so a
+    cleric-first cleric/fighter is offered the long sword under the lift. Test:
+    `WeaponTypes_Step16_1_TheOfferedTypesFollowTheAcceptedPicks`. Each derived entry
     carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
     A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
     entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never

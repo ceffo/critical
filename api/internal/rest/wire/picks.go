@@ -53,6 +53,15 @@ type ProficiencySlotsDTO struct {
 	Weapon      WeaponPoolDTO    `json:"weapon"`
 	Picks       []PickDTO        `json:"picks"`
 	WeaponPicks []WeaponPickDTO  `json:"weaponPicks"`
+	// WeaponTypes are the weapon types the character may pick, with the slots a specialization
+	// of each spends (0 for none), ADR 0042 step 16.1. Additive.
+	WeaponTypes []WeaponTypeDTO `json:"weaponTypes"`
+}
+
+// WeaponTypeDTO is one pickable weapon type and its specialization cost.
+type WeaponTypeDTO struct {
+	Type                string `json:"type"`
+	SpecializationSlots int    `json:"specializationSlots"`
 }
 
 // WeaponPoolDTO is ADR 0037 step 3's weapon pool: `available` = `initial`
@@ -120,6 +129,10 @@ func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 	out := &ProficiencySlotsDTO{
 		NonWeapon: NonweaponPoolDTO(p.Nonweapon), Weapon: WeaponPoolDTO(p.Weapon),
 		Picks: make([]PickDTO, 0, len(p.Picks)), WeaponPicks: make([]WeaponPickDTO, 0, len(p.WeaponPicks)),
+	}
+	out.WeaponTypes = make([]WeaponTypeDTO, 0, len(p.WeaponTypes))
+	for _, w := range p.WeaponTypes {
+		out.WeaponTypes = append(out.WeaponTypes, WeaponTypeDTO(w))
 	}
 	for _, w := range p.WeaponPicks {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickDTO(w))

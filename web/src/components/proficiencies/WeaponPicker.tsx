@@ -21,7 +21,7 @@ import {
 /**
  * The weapon proficiency picker (ADR 0037 steps 3, 7, 9 and 12), shared by the Skills tab's editor
  * and the creation's step: the weapon pool with its terms, then one row per weapon type the class
- * may pick (the options' `weaponTypes`) and per kept pick it may not (shown as such, removable).
+ * may pick (the derived `weaponTypes`) and per kept pick it may not (shown as such, removable).
  * A row adds or removes the type; for a class that specializes, a picked type's toggle makes it
  * the specialization at the cost the options give. Every number is the server's: the pool comes from
  * its preview or checks (`figures`), a specialization's cost from the options; a refusal (a
@@ -35,7 +35,7 @@ export function WeaponPicker({
   stale = false,
   errorFor,
 }: {
-  /** The class's weapon types and their specialization cost (options' `weaponTypes`). */
+  /** The class's weapon types and their specialization cost (the derived `weaponTypes`). */
   types: WeaponTypeOption[];
   picks: WeaponPickInput[];
   onChange: (picks: WeaponPickInput[]) => void;

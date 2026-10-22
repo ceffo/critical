@@ -21,7 +21,7 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   await openDashboard(page);
   await chooseLanguage(page, "fr");
 
-  // A half-elf fighter/cleric, made through the creation flow.
+  // A half-elf cleric/fighter, the cleric first (the picker must not read the first class alone), made through the creation flow.
   await page.goto("/create");
   const step = page.getByTestId("creation-step");
   await step
@@ -32,12 +32,12 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   await rows
     .getByTestId("class-row-0")
     .getByLabel("Classe 1")
-    .selectOption("fighter");
+    .selectOption("cleric");
   await rows.getByTestId("class-row-0").getByLabel("XP").fill("4500");
   await rows
     .getByTestId("class-row-1")
     .getByLabel("Classe 2")
-    .selectOption("cleric");
+    .selectOption("fighter");
   await rows.getByTestId("class-row-1").getByLabel("XP").fill("4500");
   const next = () =>
     step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
@@ -72,7 +72,7 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   // The rail's labels are English in the helpers; the Ruleset screen is checked in French.
   await chooseLanguage(page, "en");
 
-  // Switch off (the default): the cleric's limit holds and the server refuses the long sword, with its words in the row.
+  // Switch off (the default): the cleric's limit holds and the long sword is not offered.
   const openEditor = async () => {
     await openWorkspace(page, "Act");
     await page.getByRole("tab", { name: "Skills" }).click();
@@ -82,8 +82,8 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   };
   let editor = await openEditor();
   let row = editor.getByTestId("weapon-row-long_sword");
-  await row.getByTestId("weapon-add").click();
-  await expect(row.getByRole("alert")).toBeVisible();
+  await expect(editor.getByTestId("weapon-row-sling")).toBeVisible();
+  await expect(row).toHaveCount(0);
   await page.setViewportSize({ width: 1920, height: 1080 });
   await snap(page, "picker-refused-1920x1080");
 

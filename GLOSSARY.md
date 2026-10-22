@@ -40,9 +40,13 @@ The seed character, the table's level 15 bard, loaded from `seeds/character.json
 **Class** (fr: classe):
 What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21, [ADR 0040](docs/adr/0040-classes-are-data.md).
 
-**Class definition** (fr: définition de classe) _(planned)_:
-A class as catalogue data: group, prime requisites, limits, XP table, hit dice, spell progression and its class features. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
+**Class definition** (fr: définition de classe):
+A class as catalogue data (format 11): group, prime requisites, ability minimums, alignments, XP rows, hit dice, spell progression and its class features. The app reads the group, prime requisites, minimums, alignments and XP rows so far; the rest moves with its readers. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
 _Avoid_: class table (a rule table is something else).
+_Code_: Class
+
+**Class registry** (fr: registre des classes):
+The validated class, group and race definitions of the catalogue, in its order; every reader asks it for a class's group, prime requisites, minimums, alignments or XP, never a Go list of classes. Built at start-up, which refuses a broken definition. [ADR 0040](docs/adr/0040-classes-are-data.md) steps 5 and 8.
 _Code_: Registry
 
 **Class group** (fr: groupe de classes):

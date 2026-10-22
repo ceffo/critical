@@ -25,7 +25,7 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 			active, expired = advanceRoundBuffs(buffs)
 			// ADR 0043 step 14: the maintained powers due pay, in the
 			// list's order; one the PSPs left cannot pay ends.
-			m, err := s.chargeMaintenance(ctx, characterID, active, r)
+			m, err := s.chargeMaintenance(ctx, characterID, active, r, 1)
 			if err != nil {
 				return change{}, err
 			}
@@ -67,7 +67,8 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 	return active, expired, *ch.round, initiative, ch.end, nil
 }
 
-// maintenance is what Next Round's maintenance did (ADR 0043 step 14).
+// maintenance is what Next Round's (or passing time's) maintenance did (ADR
+// 0043 steps 14 and 15).
 type maintenance struct {
 	kept    []BuffEffect
 	unpaid  []BuffEffect
@@ -83,14 +84,16 @@ func (m maintenance) unpaidIDs() []string {
 	return ids
 }
 
-// chargeMaintenance charges the rows of active whose maintenance falls due on
-// the Next Round that ends round from, in the list's order, from the current
-// PSPs. A row whose cost the PSPs left cannot pay ends, charging nothing; a
-// cheaper row after it may still pay. The PSPs are read only when a row is
-// due.
-func (s *service) chargeMaintenance(ctx context.Context, characterID int64, active []BuffEffect, from int) (maintenance, error) {
+// chargeMaintenance charges the rows of active whose maintenance falls due
+// in the rounds Next Rounds ending rounds from to from+rounds-1, from the
+// current PSPs: round by round, each round's due rows in the list's order. A
+// row whose cost the PSPs left cannot pay ends there, charging nothing more;
+// a cheaper row after it may still pay. charges has one line per power that
+// paid, in the list's order, its Cost the total it paid. The PSPs are read
+// only when a row is due. It writes nothing (the preview runs it too).
+func (s *service) chargeMaintenance(ctx context.Context, characterID int64, active []BuffEffect, from, rounds int) (maintenance, error) {
 	m := maintenance{kept: active}
-	if !slices.ContainsFunc(active, func(b BuffEffect) bool { return b.MaintenanceDue(from) }) {
+	if !slices.ContainsFunc(active, func(b BuffEffect) bool { return b.firstDue(from, rounds) >= 0 }) {
 		return m, nil
 	}
 	c, err := s.chars.GetCharacter(ctx, characterID)
@@ -101,18 +104,31 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 	if c.Derived.PSP != nil {
 		left = c.Derived.PSP.Current
 	}
-	m.kept = make([]BuffEffect, 0, len(active))
-	for _, b := range active {
-		switch {
-		case !b.MaintenanceDue(from):
-			m.kept = append(m.kept, b)
-		case b.MaintenanceCost <= left:
+	paid := make([]int, len(active))
+	ended := make([]bool, len(active))
+	for r := from; r < from+rounds; r++ {
+		for i, b := range active {
+			if ended[i] || !b.MaintenanceDue(r) {
+				continue
+			}
+			if b.MaintenanceCost > left {
+				ended[i] = true
+				continue
+			}
 			left -= b.MaintenanceCost
-			m.spent += b.MaintenanceCost
-			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Cost: b.MaintenanceCost})
-			m.kept = append(m.kept, b)
-		default:
+			paid[i] += b.MaintenanceCost
+		}
+	}
+	m.kept = make([]BuffEffect, 0, len(active))
+	for i, b := range active {
+		if paid[i] > 0 {
+			m.spent += paid[i]
+			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Cost: paid[i]})
+		}
+		if ended[i] {
 			m.unpaid = append(m.unpaid, b)
+		} else {
+			m.kept = append(m.kept, b)
 		}
 	}
 	return m, nil

@@ -287,6 +287,9 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     ADR 0005), initiating a second power in the same round warns `second_power_this_round`;
     maintained powers and defence modes do not count (same section). Outside combat nothing is
     warned. A warning, never a refusal (the DM's table).
+    As built (2026-10-22): the check's `warnings` (in the `power_check` payload and the answer)
+    carry the code when a non-voided check of a power that is not a defence mode is stamped with
+    the current round and logged after the newest Next Round.
     Test: `Activate_Step12_ASecondPowerInTheRoundWarns`.
 
 ### Maintenance
@@ -319,8 +322,15 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     the first charge it cannot pay; the `time_passed` entry carries the PSP delta and the preview
     (ADR 0005 step 8) shows the PSPs spent and the powers that would end. Passing time recovers no
     PSP (step 6 is its own request) _(Q7)_.
+    As built (2026-10-22): passing `n` rounds from round `r` is the Next Rounds that end rounds
+    `r` to `r + n - 1` (step 14's due rule, so the start round charges nothing); within a round
+    the due rows pay in the list's order. The entry's `maintenance` has one line per power that
+    paid, its `cost` the total over the rounds, and `maintenanceUnpaid` the powers that ended
+    (among `expired`). The preview answers `pspSpent` beside `expiring`, the unpaid powers among
+    them.
     Tests: `PassTime_Step15_ChargesMaintenanceForTheRounds` (buffsvc: 1 h of a 1-PSP power with 40
-    PSPs ends it after 40 rounds), `PassTime_Step15_PreviewShowsThePSP`.
+    PSPs ends it after 40 rounds), `PassTime_Step15_InRoundOrder`, `PassTime_Step15_PaidPowersStay`,
+    `PassTime_Step15_PreviewShowsThePSP`.
 
 16. **Stopping maintenance** (ch. 2, `01-using-powers.md`; the powers' texts: stopping ends the
     power). Dismissing the row (ADR 0004 step 13's dismiss) stops it: free, one logged entry,

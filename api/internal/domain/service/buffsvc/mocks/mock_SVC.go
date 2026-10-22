@@ -1313,7 +1313,7 @@ func (_c *MockSVC_PassTime_Call) RunAndReturn(run func(context.Context, int64, f
 }
 
 // PreviewPassTime provides a mock function with given fields: ctx, characterID, hours
-func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, error) {
+func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID, hours)
 
 	if len(ret) == 0 {
@@ -1322,8 +1322,9 @@ func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours
 
 	var r0 int
 	var r1 []buffsvc.BuffEffect
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)); ok {
+	var r2 int
+	var r3 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, int, error)); ok {
 		return rf(ctx, characterID, hours)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) int); ok {
@@ -1340,13 +1341,19 @@ func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) int); ok {
 		r2 = rf(ctx, characterID, hours)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(int)
 	}
 
-	return r0, r1, r2
+	if rf, ok := ret.Get(3).(func(context.Context, int64, float64) error); ok {
+		r3 = rf(ctx, characterID, hours)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
 }
 
 // MockSVC_PreviewPassTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewPassTime'
@@ -1369,12 +1376,12 @@ func (_c *MockSVC_PreviewPassTime_Call) Run(run func(ctx context.Context, charac
 	return _c
 }
 
-func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.BuffEffect, err error) *MockSVC_PreviewPassTime_Call {
-	_c.Call.Return(rounds, expiring, err)
+func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.BuffEffect, pspSpent int, err error) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Return(rounds, expiring, pspSpent, err)
 	return _c
 }
 
-func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)) *MockSVC_PreviewPassTime_Call {
+func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, int, error)) *MockSVC_PreviewPassTime_Call {
 	_c.Call.Return(run)
 	return _c
 }

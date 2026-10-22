@@ -175,10 +175,11 @@ func TestRounds_Step8_PreviewPassTime(t *testing.T) {
 
 	t.Run("1.5 h: 90 rounds, the buffs at 90 or less would expire, nothing is written", func(t *testing.T) {
 		f := newFixture(t) // mocks fail on any Record or Save
-		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{long, short, mirror, stone}, nil).Once()
+		f.state([]buffsvc.BuffEffect{long, short, mirror, stone}, 0)
 
-		rounds, expiring, err := f.svc.PreviewPassTime(ctx, charID, 1.5)
+		rounds, expiring, spent, err := f.svc.PreviewPassTime(ctx, charID, 1.5)
 		require.NoError(t, err)
+		assert.Zero(t, spent, "nothing maintained")
 		assert.Equal(t, 90, rounds)
 		assert.Equal(t, []string{"b", "m"}, ids(expiring))
 		assert.Zero(t, f.tx.calls, "no transaction")
@@ -187,7 +188,7 @@ func TestRounds_Step8_PreviewPassTime(t *testing.T) {
 	for _, hours := range []float64{0, -1, 0.001, buffsvc.MaxPassHours + 1} {
 		t.Run("invalid hours read nothing", func(t *testing.T) {
 			f := newFixture(t)
-			_, _, err := f.svc.PreviewPassTime(ctx, charID, hours)
+			_, _, _, err := f.svc.PreviewPassTime(ctx, charID, hours)
 			assert.ErrorIs(t, err, domain.ErrInvalidInput)
 		})
 	}

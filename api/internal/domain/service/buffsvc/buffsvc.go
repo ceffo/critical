@@ -63,14 +63,16 @@ type SVC interface {
 	SetRound(ctx context.Context, characterID int64, to int) (active []BuffEffect, round int, err error)
 	// PassTime fast-forwards game time in hours: timed buffs lose
 	// RoundsForHours(hours) rounds (expired at <= 0), charge-only and untimed
-	// buffs are untouched, the round counter goes to 0. Invalid hours (<= 0,
+	// buffs are untouched, the round counter goes to 0; each maintained
+	// power pays every period due in the rounds, ending at the first charge
+	// it cannot pay (ADR 0043 step 15). Invalid hours (<= 0,
 	// > MaxPassHours, under one round): ErrInvalidInput. Logged, voidable.
 	// end is what the expired rows' end effects did (ADR 0004 step 21).
 	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []BuffEffect, rounds, round int, end EndResult, err error)
 	// PreviewPassTime is what PassTime(hours) would do, without writing or
 	// logging anything: the rounds the hours give and the buffs that would
 	// expire. Same validation (ErrInvalidInput).
-	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []BuffEffect, err error)
+	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []BuffEffect, pspSpent int, err error)
 
 	// ListSaved returns the saved buff templates, oldest first.
 	ListSaved(ctx context.Context, characterID int64) ([]SavedBuff, error)

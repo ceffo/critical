@@ -147,3 +147,86 @@ func TestDismiss_Step16_StoppingIsFreeAndUndoable(t *testing.T) {
 	assert.InDelta(t, 3, before[0]["maintenance_cost"], 0, "and its maintenance")
 	assert.InDelta(t, 1, before[0]["maintenance_period"], 0)
 }
+
+// passes runs one PassTime of hours from round with buffs and returns its
+// entry.
+func (f *fixture) passes(t *testing.T, buffs []buffsvc.BuffEffect, round int, hours float64) (active, expired []buffsvc.BuffEffect, e actionlog.NewEntry) {
+	t.Helper()
+	f.state(buffs, round)
+	f.records()
+	f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, mock.Anything).Return(nil).Once()
+	f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 0).Return(nil).Once()
+	f.initiativeIs(nil)
+	active, expired, _, _, _, err := f.svc.PassTime(context.Background(), charID, hours)
+	require.NoError(t, err)
+	require.Len(t, f.entries, 1)
+	return active, expired, f.entries[0]
+}
+
+// ADR 0043 step 15: 1 h (60 rounds, the Next Rounds ending rounds 0 to 59)
+// of a 1-PSP power started in round 0 with 40 PSPs pays rounds 1 to 40 and
+// ends at the 41st charge.
+func TestPassTime_Step15_ChargesMaintenanceForTheRounds(t *testing.T) {
+	f := newFixture(t)
+	a := maintained("a", "ballistic_attack", 1, 1, 0)
+	f.pspIs(40)
+
+	active, expired, e := f.passes(t, []buffsvc.BuffEffect{a}, 0, 1)
+
+	assert.Empty(t, active)
+	assert.Equal(t, []buffsvc.BuffEffect{a}, expired)
+	assert.Equal(t, -40, e.PSPDelta)
+	assert.JSONEq(t, `{"action":"pass_time","hours":1,"rounds":60,"fromRound":0,"toRound":0,
+		"expired":["ballistic_attack"],
+		"maintenance":[{"powerId":"ballistic_attack","cost":40}],"maintenanceUnpaid":["ballistic_attack"]}`, string(e.Payload))
+}
+
+// The charges go round by round, not row by row: a 5-PSP power every 10
+// rounds listed first is due only in round 10, after nine 1-PSP charges of
+// the power after it; with 12 PSPs it cannot pay then and ends, the 1-PSP
+// power pays rounds 1 to 12 and ends at round 13.
+func TestPassTime_Step15_InRoundOrder(t *testing.T) {
+	f := newFixture(t)
+	b, a := maintained("b", "levitation", 5, 10, 0), maintained("a", "ballistic_attack", 1, 1, 0)
+	f.pspIs(12)
+
+	active, expired, e := f.passes(t, []buffsvc.BuffEffect{b, a}, 0, 20.0/60)
+
+	assert.Empty(t, active)
+	assert.Equal(t, []buffsvc.BuffEffect{b, a}, expired)
+	assert.Equal(t, -12, e.PSPDelta)
+	assert.Contains(t, string(e.Payload), `"maintenance":[{"powerId":"ballistic_attack","cost":12}],"maintenanceUnpaid":["levitation","ballistic_attack"]`)
+}
+
+// Enough PSPs: every period due is paid and the rows stay; the start round's
+// own Next Round charges nothing (Q10).
+func TestPassTime_Step15_PaidPowersStay(t *testing.T) {
+	f := newFixture(t)
+	b, a := maintained("b", "levitation", 5, 10, 3), maintained("a", "ballistic_attack", 1, 1, 3)
+	f.pspIs(100)
+
+	// Rounds 3 to 32: a is due in 4 to 32 (29), b in 13 and 23 (10).
+	active, expired, e := f.passes(t, []buffsvc.BuffEffect{b, a}, 3, 0.5)
+
+	assert.Equal(t, []buffsvc.BuffEffect{b, a}, active)
+	assert.Empty(t, expired)
+	assert.Equal(t, -39, e.PSPDelta)
+	assert.Contains(t, string(e.Payload), `"maintenance":[{"powerId":"levitation","cost":10},{"powerId":"ballistic_attack","cost":29}]`)
+}
+
+// The preview runs the same charges and writes nothing: the PSPs spent, and
+// the unpaid power among the buffs that would expire.
+func TestPassTime_Step15_PreviewShowsThePSP(t *testing.T) {
+	f := newFixture(t) // mocks fail on any Record or Save
+	a := maintained("a", "ballistic_attack", 1, 1, 0)
+	timed := buffsvc.BuffEffect{ID: "t", Name: "Bless", Duration: 6}
+	f.state([]buffsvc.BuffEffect{timed, a}, 0)
+	f.pspIs(40)
+
+	rounds, expiring, spent, err := f.svc.PreviewPassTime(context.Background(), charID, 1)
+	require.NoError(t, err)
+	assert.Equal(t, 60, rounds)
+	assert.Equal(t, 40, spent)
+	assert.Equal(t, []string{"t", "a"}, ids(expiring))
+	assert.Zero(t, f.tx.calls)
+}

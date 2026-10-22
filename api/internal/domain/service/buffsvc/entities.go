@@ -267,6 +267,23 @@ func (b BuffEffect) MaintenanceDue(from int) bool {
 	return (from-b.StartRound)%period == 0
 }
 
+// firstDue is the first round in from to from+rounds-1 whose Next Round
+// charges the row's maintenance, or -1 when none does.
+func (b BuffEffect) firstDue(from, rounds int) int {
+	if !b.Maintained() || rounds < 1 {
+		return -1
+	}
+	period := max(b.MaintenancePeriod, 1)
+	r := max(from, b.StartRound+1)
+	if k := (r - b.StartRound) % period; k != 0 {
+		r += period - k
+	}
+	if r >= from+rounds {
+		return -1
+	}
+	return r
+}
+
 // Timed reports whether Next Round counts this buff down.
 func (b BuffEffect) Timed() bool { return b.Duration > 0 }
 

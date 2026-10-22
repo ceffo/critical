@@ -331,10 +331,11 @@ func TestPrepare_RecordFailureFailsTheCall(t *testing.T) {
 
 func TestRestore_WritesTheSnapshotBack(t *testing.T) {
 	f := newFixture(t)
+	// ADR 0042 step 14: an undo gives back each slot's entry class.
 	f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), []spellsvc.SpellSlot{
-		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true},
+		{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true, Class: "mage"},
 	}).Return(nil)
-	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true}})
+	raw, err := json.Marshal([]spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", PreparedSpellName: "Alarm", Used: true, Class: "mage"}})
 	require.NoError(t, err)
 	require.NoError(t, f.svc.Module().Restorer(prepsvc.StateKey).Restore(context.Background(), 1, snaptest.Env(string(raw))))
 

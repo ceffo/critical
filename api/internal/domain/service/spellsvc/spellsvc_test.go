@@ -65,6 +65,14 @@ func TestResetSlots(t *testing.T) {
 		assert.False(t, s.Used)
 	}
 	assert.Equal(t, "Charm Person", got[1].PreparedSpellName)
+
+	// ADR 0042 step 14: a long rest keeps each slot's entry class.
+	svc, dal, _ = newSvc(t)
+	tagged := []spellsvc.SpellSlot{{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Used: true, Class: "mage"}}
+	dal.EXPECT().GetSlots(mock.Anything, int64(1)).Return(tagged, nil)
+	dal.EXPECT().SaveSlots(mock.Anything, int64(1), []spellsvc.SpellSlot{{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Class: "mage"}}).Return(nil)
+	_, err = svc.ResetSlots(context.Background(), 1)
+	require.NoError(t, err)
 }
 
 func TestSearch_PassesTheFilterToTheReader(t *testing.T) {

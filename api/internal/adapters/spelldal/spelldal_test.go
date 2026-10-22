@@ -122,12 +122,14 @@ func TestSlots_ReadsStoredJSON(t *testing.T) {
 }
 
 // Save writes the whole list as the character's one row; what it writes
-// reads back as it was.
+// reads back as it was, a slot's entry class included (ADR 0042 step 14: the
+// JSON blob keeps "class").
 func TestSlots_RoundTripAndOverwrite(t *testing.T) {
 	ctx := context.Background()
 	slots := []spellsvc.SpellSlot{
 		{Level: 1, PreparedSpellName: "Sleep"},
 		{Level: 2, SpellID: "invisibility", PreparedSpellName: "Invisibility", Used: true, Extra: true},
+		{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Used: true, Class: "mage"},
 	}
 	dal, q := mocked(t)
 	var blob string
@@ -137,6 +139,7 @@ func TestSlots_RoundTripAndOverwrite(t *testing.T) {
 		return nil
 	}).Once()
 	require.NoError(t, dal.SaveSlots(ctx, charID, slots))
+	assert.Contains(t, blob, `"class":"mage"`)
 	q.EXPECT().GetSpellSlots(ctx, charID).Return(blob, nil).Once()
 	got, err := dal.GetSlots(ctx, charID)
 	require.NoError(t, err)

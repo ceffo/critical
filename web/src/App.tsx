@@ -18,6 +18,7 @@ import { ActStage } from "@/components/shell/ActStage";
 import { DatabaseBanner } from "@/components/shell/DatabaseBanner";
 import { Rail } from "@/components/shell/Rail";
 import { SettingsPopover } from "@/components/shell/SettingsPopover";
+import { KnownPowersPanel } from "@/components/powers/KnownPowersPanel";
 import { XpPanel } from "@/components/xp/XpPanel";
 import type { Activity } from "@/lib/activities";
 import { cn } from "@/lib/utils";
@@ -160,6 +161,14 @@ function App() {
             label={t("shell.activity.spells")}
           >
             <LookupPanel />
+          </Pane>
+          <Pane
+            id="powers"
+            active={activity}
+            visited={visited}
+            label={t("shell.activity.powers")}
+          >
+            <KnownPowersPanel />
           </Pane>
           <Pane
             id="xp"

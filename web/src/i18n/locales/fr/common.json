@@ -121,6 +121,7 @@
     "activity": {
       "act": "Agir",
       "spells": "Sorts",
+      "powers": "Pouvoirs",
       "xp": "Expérience",
       "inventory": "Inventaire"
     },
@@ -208,6 +209,35 @@
       "walking": "marche",
       "resting": "repos",
       "sleeping": "sommeil"
+    }
+  },
+  "powers": {
+    "known": "Pouvoirs connus",
+    "picker": "Choisir des pouvoirs",
+    "none": "Aucun pour l’instant.",
+    "primary": "primaire",
+    "usedOf": "{{used}} / {{allowed}}",
+    "counts": {
+      "disciplines": "Disciplines",
+      "sciences": "Sciences",
+      "devotions": "Dévotions",
+      "defenceModes": "Modes de défense"
+    },
+    "add": "Ajouter {{name}}",
+    "addShort": "Ajouter",
+    "addDiscipline": "Ajouter une discipline",
+    "remove": "Retirer {{name}}",
+    "relearn": "Réapprendre",
+    "relearnHint": "Le réapprendre : +1 à son score, une place de plus",
+    "relearned": "{{name}} (réappris)",
+    "refusedPower": "pouvoir : {{name}}",
+    "refusedDiscipline": "discipline : {{name}}",
+    "refusedSlot": "place : {{name}}",
+    "slots": {
+      "discipline": "disciplines",
+      "science": "sciences",
+      "devotion": "dévotions",
+      "defence_mode": "modes de défense"
     }
   },
   "round": {

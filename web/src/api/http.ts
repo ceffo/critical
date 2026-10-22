@@ -17,8 +17,17 @@ export class ApiError extends Error {
   readonly code?: string;
   /** Request field the message is about (a validation error), when the server names one. */
   readonly field?: string;
-  constructor(message: string, status: number, field?: string, code?: string) {
+  /** The error body's own fields (a refusal's `power`, `discipline`, `slot`), when it had a JSON body. */
+  readonly body?: Record<string, unknown>;
+  constructor(
+    message: string,
+    status: number,
+    field?: string,
+    code?: string,
+    body?: Record<string, unknown>,
+  ) {
     super(message);
+    this.body = body;
     this.name = "ApiError";
     this.status = status;
     this.field = field;
@@ -47,9 +56,12 @@ function figuresOf(body: Record<string, unknown>): Record<string, number> {
 }
 
 /** Message (and the field and code it comes with, if any) from an error response: the JSON body, else the raw text. */
-async function errorBody(
-  res: Response,
-): Promise<{ message: string; field?: string; code?: string }> {
+async function errorBody(res: Response): Promise<{
+  message: string;
+  field?: string;
+  code?: string;
+  body?: Record<string, unknown>;
+}> {
   const text = await res.text();
   try {
     const body = JSON.parse(text) as {
@@ -67,6 +79,7 @@ async function errorBody(
           body.error,
         field: typeof body.field === "string" ? body.field : undefined,
         code,
+        body,
       };
     }
   } catch {
@@ -246,8 +259,8 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
       void markAnswered();
       return res.json() as Promise<T>;
     }
-    const { message, field, code } = await errorBody(res);
-    const err = new ApiError(message, res.status, field, code);
+    const { message, field, code, body } = await errorBody(res);
+    const err = new ApiError(message, res.status, field, code, body);
     if (res.status === 401 && !url.startsWith(AUTH_PREFIX))
       globalThis.location.assign(loginUrl("session_expired"));
     if (code === CHARACTER_CHANGED) globalThis.location.reload();

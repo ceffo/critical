@@ -121,6 +121,7 @@
     "activity": {
       "act": "Act",
       "spells": "Spells",
+      "powers": "Powers",
       "xp": "Experience",
       "inventory": "Inventory"
     },
@@ -208,6 +209,35 @@
       "walking": "walking",
       "resting": "resting",
       "sleeping": "sleeping"
+    }
+  },
+  "powers": {
+    "known": "Known powers",
+    "picker": "Pick powers",
+    "none": "None yet.",
+    "primary": "primary",
+    "usedOf": "{{used}} / {{allowed}}",
+    "counts": {
+      "disciplines": "Disciplines",
+      "sciences": "Sciences",
+      "devotions": "Devotions",
+      "defenceModes": "Defence modes"
+    },
+    "add": "Add {{name}}",
+    "addShort": "Add",
+    "addDiscipline": "Add a discipline",
+    "remove": "Remove {{name}}",
+    "relearn": "Relearn",
+    "relearnHint": "Relearn it: +1 to its score, one more slot",
+    "relearned": "{{name}} (relearned)",
+    "refusedPower": "power: {{name}}",
+    "refusedDiscipline": "discipline: {{name}}",
+    "refusedSlot": "slot: {{name}}",
+    "slots": {
+      "discipline": "disciplines",
+      "science": "sciences",
+      "devotion": "devotions",
+      "defence_mode": "defence modes"
     }
   },
   "round": {

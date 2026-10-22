@@ -5140,3 +5140,49 @@ test.describe("PSP panel", () => {
     }
   });
 });
+
+// ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
+// the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
+// 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and
+// 2560x1440, French first (ADR 0027 step 2).
+test.describe("Known powers", () => {
+  test.use({ character: psionicist });
+  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    const rail = page.getByTestId("rail");
+    await rail.getByRole("button", { name: "Powers" }).click();
+    const panel = page.getByTestId("known-powers");
+    for (const name of ["Telepathy", "Clairsentience"])
+      await panel.getByRole("button", { name: `Add ${name}` }).click();
+    await panel
+      .getByRole("searchbox", { name: "Search powers..." })
+      .fill("mind");
+    await panel
+      .getByTestId("pick-row")
+      .filter({ hasText: "Mind Blank" })
+      .getByRole("button", { name: "Add Mind Blank" })
+      .click();
+    await panel
+      .getByTestId("pick-row")
+      .filter({ hasText: "Mind Thrust" })
+      .getByRole("button", { name: "Add Mind Thrust" })
+      .click();
+    await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
+    await expect(panel.getByTestId("powers-refusal")).toBeVisible();
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expect(panel).toBeVisible();
+        await expectNoClippedText(panel, `known powers, ${where}`);
+        await expectWholeWords(panel, `known powers, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(page, `known-powers-${lang}-${vp.width}x${vp.height}`);
+      }
+    }
+  });
+});

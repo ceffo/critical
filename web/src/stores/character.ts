@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Character, CharacterDetails } from "@/types/character";
+import type { Character, CharacterDetails, PowerPick } from "@/types/character";
 import {
   fetchCharacter,
   patchCharacterDetails,
@@ -7,6 +7,7 @@ import {
   takeNewClass,
 } from "@/api/character";
 import { renameCharacter } from "@/api/characters";
+import { setKnownPicks } from "@/api/psionics";
 import { ApiError } from "@/api/http";
 import { useTableStore } from "./table";
 
@@ -39,6 +40,11 @@ interface CharacterStore {
    * Null on success; a refusal is returned as its ApiError (the dialog words it), anything else goes
    * to the action module's error notice. */
   takeNewClass: (cls: string) => Promise<ApiError | null>;
+  /** Saves the whole list of known powers (ADR 0043 step 9), a transaction on the action stack: the
+   * answer is set on the character's derived block, the journal is read again by the action
+   * module. Null on success; a refusal (409 with the rule's code) is returned as its ApiError for
+   * the panel to name, anything else goes to the action module's error notice. */
+  saveKnownPicks: (picks: PowerPick[]) => Promise<ApiError | null>;
 }
 
 export const useCharacterStore = create<CharacterStore>((set, get) => ({
@@ -59,6 +65,34 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
         throw e;
       }
     });
+    return refused;
+  },
+  saveKnownPicks: async (picks) => {
+    let refused: ApiError | null = null;
+    await useTableStore.getState().submit(
+      async () => {
+        try {
+          const known = await setKnownPicks(picks);
+          const c = get().character;
+          if (c?.derived) {
+            set({
+              character: {
+                ...c,
+                derived: { ...c.derived, knownPowers: known },
+              },
+            });
+          }
+        } catch (e) {
+          // A refusal changed nothing: the panel words it, nothing to read.
+          if (e instanceof ApiError && e.status === 409) {
+            refused = e;
+            return;
+          }
+          throw e;
+        }
+      },
+      { fresh: ["character"] },
+    );
     return refused;
   },
   loading: false,

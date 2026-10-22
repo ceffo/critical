@@ -48,3 +48,54 @@ test.describe("a psionicist", () => {
     await expect(value).toHaveText("22 / 40");
   });
 });
+
+// What only a browser proves for the known powers (ADR 0043 step 9): the rail lists the Powers
+// activity for a psionicist only, a discipline and a power picked from the catalogue search are saved
+// whole and counted against Table 4's allowance, a pick over it is refused with the rule named and the
+// list kept, the list survives a reload, and the journal's Undo restores the previous list. The rules,
+// the refusals and the undo codec are Go tests (psionics, psionicsvc, composition psionics_test).
+test.describe("a psionicist's known powers", () => {
+  test.use({ character: psionicist });
+
+  test("pick a discipline and a power, a pick over the allowance is refused, Undo restores", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    const rail = page.getByTestId("rail");
+    await rail.getByRole("button", { name: "Powers" }).click();
+    const panel = page.getByTestId("known-powers");
+    const count = (k: string) => panel.getByTestId(`powers-count-${k}`);
+    await expect(count("disciplines")).toContainText("0 / 2");
+
+    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await expect(count("disciplines")).toContainText("1 / 2");
+    await panel
+      .getByRole("searchbox", { name: "Search powers..." })
+      .fill("contact");
+    const row = panel.getByTestId("pick-row").filter({ hasText: "Contact" });
+    await expect(row).toHaveCount(1);
+    await row.getByRole("button", { name: "Add Contact" }).click();
+    await expect(count("devotions")).toContainText("1 / 10");
+    await expect(
+      panel.getByTestId("known-power").filter({ hasText: "Contact" }),
+    ).toBeVisible();
+
+    await panel.getByRole("button", { name: "Add Clairsentience" }).click();
+    await expect(count("disciplines")).toContainText("2 / 2");
+    await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
+    const refusal = panel.getByTestId("powers-refusal");
+    await expect(refusal).toContainText("Over the allowance for this level");
+    await expect(count("disciplines")).toContainText("2 / 2");
+    await expect(panel.getByTestId("known-discipline")).toHaveCount(2);
+
+    await page.reload();
+    await rail.getByRole("button", { name: "Powers" }).click();
+    await expect(count("disciplines")).toContainText("2 / 2");
+
+    await rail.getByRole("button", { name: "Act" }).click();
+    await undoEntry(page, "Known powers: 2 → 3 picks");
+    await rail.getByRole("button", { name: "Powers" }).click();
+    await expect(count("disciplines")).toContainText("1 / 2");
+    await expect(panel.getByTestId("known-discipline")).toHaveCount(1);
+  });
+});

@@ -18,7 +18,7 @@ import (
 // Slow, the Malisons) lands on somebody else and offers none. A buff added to
 // the seeds fails the test until its row is written here.
 func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 
 	onMe := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}
@@ -109,7 +109,7 @@ func TestRepoSeeds_EveryBuffDefaultTargetAndChoice(t *testing.T) {
 // himself. The lists are every such spell: a seed that adds one fails the test
 // until it is written here.
 func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 
 	onMe := &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}
@@ -173,7 +173,7 @@ func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
 // A seed that adds one fails the test until the entry gets a target or is
 // written here as a conscious choice.
 func TestRepoSeeds_RoundLastingEntriesLeftWithNoTarget(t *testing.T) {
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 
 	want := []string{

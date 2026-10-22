@@ -67,7 +67,7 @@ func groupMight(t *testing.T) spelleffectsvc.Catalog {
 	  "ability_gain":{"str":{
 	    "by_group":{"warrior":"1d8","priest":"1d10","rogue":"1d6","wizard":"1d4"},
 	    "max":18,
-	    "max_by_group":{"warrior":21,"priest":20,"rogue":19,"wizard":22}}}}]`))
+	    "max_by_group":{"warrior":21,"priest":20,"rogue":19,"wizard":22}}}}]`), testGroups)
 	require.NoError(t, err)
 	return c
 }

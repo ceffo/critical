@@ -15,7 +15,7 @@ import (
 // effect, and its value (hesitation delays: +4 is later). A buff given one fails the test until its row is
 // written here.
 func TestRepoSeeds_ADR0033Step11_InitiativeEffects(t *testing.T) {
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 
 	got := map[string]int{}

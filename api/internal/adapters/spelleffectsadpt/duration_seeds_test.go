@@ -16,7 +16,7 @@ import (
 
 func repoEffects(t *testing.T) *spelleffectsadpt.Catalog {
 	t.Helper()
-	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"))
+	c, err := spelleffectsadpt.New(filepath.Join("..", "..", "..", "..", "seeds"), testGroups)
 	require.NoError(t, err)
 	return c
 }

@@ -169,7 +169,7 @@ func TestEntry_DamageAt_Parts(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			e := damageEntry(tt.damage)
 			e.Save = tt.save
-			require.NoError(t, e.Validate())
+			require.NoError(t, e.Validate(testGroups))
 			got, err := e.DamageAt(tt.level)
 			require.NoError(t, err)
 			require.NotNil(t, got)
@@ -313,7 +313,7 @@ func TestEntry_DamageAt_Steps(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			e := damageEntry(spelleffectsvc.Damage{Steps: &tt.steps})
-			require.NoError(t, e.Validate())
+			require.NoError(t, e.Validate(testGroups))
 			got, err := e.DamageAt(tt.level)
 			require.NoError(t, err)
 			require.NotNil(t, got)
@@ -333,7 +333,7 @@ func TestEntry_ModesAt_Steps(t *testing.T) {
 			Per: spelleffectsvc.StepPerRound, List: []*formula.Formula{must.Do(formula.ParseStep("2d6")), must.Do(formula.ParseStep("1d6"))},
 		}}},
 	}
-	require.NoError(t, e.Validate())
+	require.NoError(t, e.Validate(testGroups))
 	modes, err := e.ModesAt(5)
 	require.NoError(t, err)
 	require.Len(t, modes, 2)

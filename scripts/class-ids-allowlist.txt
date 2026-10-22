@@ -30,15 +30,9 @@ api/internal/domain/service/ruletablesvc/bard.go:bard
 web/src/components/actions/SkillsTab.tsx:thief
 web/src/components/actions/SkillsTab.tsx:bard
 
-# TEMPORARY, no item yet: the group literals left once the class entries
-# are data. HitDieGain gives warriors the bracketed Constitution hit point value (needs a group field in
-# the catalogue); the spell effect validator lists the groups its by_group keys may use (needs the groups
-# of the catalogue).
+# TEMPORARY, removed by the hit-die work (the catalogue's class hit dice carry a bracketed Constitution flag, format 15):
+# HitDieGain gives warriors the bracketed Constitution hit point value by the group id.
 api/internal/domain/service/ruletablesvc/creation.go:warrior
-api/internal/domain/service/spelleffectsvc/validate.go:warrior
-api/internal/domain/service/spelleffectsvc/validate.go:priest
-api/internal/domain/service/spelleffectsvc/validate.go:rogue
-api/internal/domain/service/spelleffectsvc/validate.go:wizard
 
 # TEMPORARY, removed by the armour-spellcasting race trait work (the elf's elven chain moves to data): SpellInArmour lets an elf's
 # no-armour caster cast in elven chain (ADR 0042 step 16.2) by the race id until the trait carries it.

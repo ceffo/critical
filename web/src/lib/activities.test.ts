@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { railActivities } from "./Rail";
+import { railActivities } from "./activities";
 
 describe("railActivities", () => {
   it("lists Powers only for a character with known powers", () => {

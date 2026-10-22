@@ -9,7 +9,7 @@ import {
   type IconProps,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { ACTIVITIES, type Activity } from "@/lib/activities";
+import { railActivities, type Activity } from "@/lib/activities";
 import { useCharacterStore } from "@/stores/character";
 
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
@@ -19,11 +19,6 @@ const ICONS: Record<Activity, ComponentType<IconProps>> = {
   inventory: Backpack,
   xp: TrendUp,
 };
-
-/** The activities the rail lists: the powers one only for a psionicist. */
-export function railActivities(psionic: boolean): Activity[] {
-  return ACTIVITIES.filter((a) => a !== "powers" || psionic);
-}
 
 /**
  * The rail (ADR 0022 step 2.4), on the ground between the character card and the stage: bare icons

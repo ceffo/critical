@@ -11,3 +11,8 @@ export const ACTIVITIES = [
   "xp",
 ] as const;
 export type Activity = (typeof ACTIVITIES)[number];
+
+/** The activities the rail lists: the powers one only for a psionicist. */
+export function railActivities(psionic: boolean): Activity[] {
+  return ACTIVITIES.filter((a) => a !== "powers" || psionic);
+}

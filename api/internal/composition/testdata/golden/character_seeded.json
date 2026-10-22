@@ -273,6 +273,60 @@
           "slots": 1,
           "allowed": true
         }
+      ],
+      "weaponTypes": [
+        {
+          "type": "long_bow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "short_bow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "light_crossbow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "heavy_crossbow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "hand_crossbow",
+          "specializationSlots": 0
+        },
+        {
+          "type": "dagger",
+          "specializationSlots": 0
+        },
+        {
+          "type": "dart",
+          "specializationSlots": 0
+        },
+        {
+          "type": "sling",
+          "specializationSlots": 0
+        },
+        {
+          "type": "short_sword",
+          "specializationSlots": 0
+        },
+        {
+          "type": "long_sword",
+          "specializationSlots": 0
+        },
+        {
+          "type": "other_melee",
+          "specializationSlots": 0
+        },
+        {
+          "type": "other_thrown",
+          "specializationSlots": 0
+        },
+        {
+          "type": "other_missile",
+          "specializationSlots": 0
+        }
       ]
     }
   },

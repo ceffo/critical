@@ -50,8 +50,20 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
    4. **The success effects**: for a proficiency id, the buff a successful check puts on the
       character (the effects, the rounds). Child rows of the ruleset keyed by proficiency id.
       Tumbling is its one row in the default (ADR 0037 step 20).
+   5. **The weapon lift** (added 2026-10-22): `multiclass_any_weapon`, a boolean, false in the
+      default (the book's rule). On, it lifts [ADR 0042](0042-multi-class-and-dual-class.md)
+      step 16.1's "a `blunt_only` entry judges every weapon alone" for a **multi-class** character
+      (several active class entries): a weapon, or a weapon proficiency type (ADR 0037 step 7), is
+      allowed when any active entry's class allows it, the `blunt_only` one included. It works off
+      the `blunt_only` equipment flag, never a class id (ADR 0040 step 10). A single-class
+      character and a dual-class character are unchanged, and a multi-class character's
+      specialization stays refused (ADR 0037 step 9, ADR 0042) whatever its value. Still
+      warnings, never refusals (ADR 0033 step 20). Why: the PHB keeps a multi-class priest to his
+      mythos's weapons, which the mythos or the DM may widen; the app has no mythos, so the table
+      DM's ruling ("our DM allows our priest fighter to use a long sword", user, 2026-10-22) is a
+      house rule of the ruleset, not of the character.
    Tests needed, one per rule: the default ruleset's value of each (crit table equals today's
-   table, both lifts true, `warn`, the Tumbling row), and that the domain refuses a record with
+   table, both lifts true, `warn`, the Tumbling row, the weapon lift false), and that the domain refuses a record with
    an overlapping or gapped crit range, a multiplier below zero, a success effect for an unknown
    proficiency id or with zero rounds.
 3. **A character resolves its ruleset through one port.** The domain defines
@@ -92,7 +104,7 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
 8. **API and screen.** `GET /api/ruleset` (any logged-in user) returns the default ruleset, house
    rules included, as structured data ([ADR 0023](0023-localized-text.md): no per-language
    fields; names of proficiencies and effects are keys the UI words). Edits are admin-only
-   requests under `/api/ruleset/`, one per rule (crit table, the two lifts, the success effects;
+   requests under `/api/ruleset/`, one per rule (crit table, the two racial lifts, the weapon lift, the success effects;
    the level limits mode is read-only while it has one value). `/api/crit-table` is removed outright, with
    no alias, and its callers move in the same change. The crit table editor leaves the Attack panel for a
    **Ruleset** screen in the cog menu, visible to admins to edit and to players to read (read-only

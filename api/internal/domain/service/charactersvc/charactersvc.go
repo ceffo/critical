@@ -316,7 +316,11 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	if err != nil {
 		return nil, fmt.Errorf("character %d: %w", id, err)
 	}
-	s.readWarnings(c, defs)
+	rs, err := s.rulesets.ForCharacter(ctx, id)
+	if err != nil {
+		return nil, fmt.Errorf("character %d ruleset: %w", id, err)
+	}
+	s.readWarnings(c, defs, rs.WeaponLift)
 	if err := s.setPSP(ctx, c); err != nil {
 		return nil, fmt.Errorf("character %d PSPs: %w", id, err)
 	}
@@ -406,15 +410,16 @@ func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]sp
 // readWarnings sets c's languages, pools, level grants and warnings as a read shows them. The
 // native language is always among the languages (ADR 0032 step 4.1), a character stored before
 // it was added included; the warnings follow what is read (steps 4.2, 5.2 and 8.4). The pools,
-// their warnings and the level grants are the skills module's (ADR 0037 step 17).
-func (s *service) readWarnings(c *Character, defs *classes.Registry) {
+// their warnings and the level grants are the skills module's (ADR 0037 step 17), read under the
+// ruleset's weapon lift (ADR 0041 step 2.5).
+func (s *service) readWarnings(c *Character, defs *classes.Registry, lift ruleset.WeaponLift) {
 	native := s.languages.Native(c.Race)
 	c.Details.Languages = skills.KnownLanguages(s.languages, c.Details.Languages)
 	c.Details = c.Details.WithNative(native)
 	var slotWarnings []skills.Warning
 	c.Derived.Proficiencies, slotWarnings = skills.Read(s.profs, skills.Sheet{
 		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
-		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native,
+		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native, MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
 		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
 	})
 	c.Warnings = c.Details.Warnings(alignmentsOfEntries(defs, c.Entries()))

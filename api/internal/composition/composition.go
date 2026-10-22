@@ -347,7 +347,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	itemInitiative := &lateInitiative{}
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment, Classes: ruleTables,
-		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue,
+		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
 	})
 	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err

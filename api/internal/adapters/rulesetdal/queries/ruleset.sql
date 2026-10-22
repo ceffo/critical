@@ -1,5 +1,5 @@
 -- name: RulesetByName :one
-SELECT id, name, catalogue_version, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits
+SELECT id, name, catalogue_version, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits, multiclass_any_weapon
 FROM rulesets WHERE name = $1;
 
 -- name: ListRulesetCritRows :many
@@ -22,6 +22,9 @@ UPDATE rulesets SET crit_placeholder = $2 WHERE id = $1;
 
 -- name: SetRulesetRacialLift :exec
 UPDATE rulesets SET multiclass_any_race = $2, dualclass_any_race = $3 WHERE id = $1;
+
+-- name: SetRulesetWeaponLift :exec
+UPDATE rulesets SET multiclass_any_weapon = $2 WHERE id = $1;
 
 -- name: DeleteRulesetSuccessEffects :exec
 DELETE FROM ruleset_success_effects WHERE ruleset_id = $1;

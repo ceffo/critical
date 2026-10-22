@@ -618,9 +618,13 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 // skillsAt is the skills module's verdict on a new character at its starting level (ADR 0037
 // steps 6, 10, 14 and 18, skills.Apply with nothing picked before): its picks and its languages
 // checked as the editor checks them, then the non-weapon pool. A refusal on the languages names
-// the creation form's field, DetailsField + FieldLanguages.
-func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
-	before := skills.Sheet{Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race)}
+// the creation form's field, DetailsField + FieldLanguages. The picks are checked under the
+// ruleset's weapon lift (ADR 0041 step 2.5).
+func (s *service) skillsAt(c Character, n NewCharacter, lift ruleset.WeaponLift) (skills.Sheet, error) {
+	before := skills.Sheet{
+		Class: c.Class, Level: c.RealizedLevel, Intelligence: c.Int, Native: s.languages.Native(c.Race),
+		MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
+	}
 	if len(c.Classes) > 0 {
 		// ADR 0042 step 15: the pools of every entry, a class left at its left-at level.
 		before.Classes = c.StoredClasses()
@@ -711,7 +715,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
 	// editor refuses, nor over its non-weapon slots.
-	sheet, err := s.skillsAt(c, n)
+	rs, err := s.ruleset(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("new character: %w", err)
+	}
+	sheet, err := s.skillsAt(c, n, rs.WeaponLift)
 	if err != nil {
 		return 0, err
 	}
@@ -879,7 +887,11 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 		return nil, err
 	}
 	out.SkillPoints = budgetAt(out, k.def, entryLevel(&c, k.def.ID), c.SkillPoints)
-	if sheet, err := s.skillsAt(c, n); err != nil {
+	rs, err := s.ruleset(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("draft: %w", err)
+	}
+	if sheet, err := s.skillsAt(c, n, rs.WeaponLift); err != nil {
 		out.Refusals = append(out.Refusals, err)
 		// Refused picks are read as entered, so the step shows their figures beside the refusal.
 		c.Proficiencies, c.Details.Languages = n.Proficiencies, n.Languages
@@ -902,7 +914,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if err := draftPSP(out, &c, n.PSPMax, s.rules); err != nil {
 		return nil, err
 	}
-	s.readWarnings(&c, k.defs)
+	s.readWarnings(&c, k.defs, rs.WeaponLift)
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
 	out.Spellbook = book

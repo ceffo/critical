@@ -48,6 +48,7 @@ func (d *DAL) Default(ctx context.Context) (ruleset.Ruleset, error) {
 		ID: row.ID, Name: row.Name, CatalogueVersion: row.CatalogueVersion,
 		Crit:        ruleset.CritTable{Placeholder: row.CritPlaceholder, Rows: make([]ruleset.CritRow, 0, len(crit))},
 		RacialLift:  ruleset.RacialLift{MulticlassAnyRace: row.MulticlassAnyRace, DualclassAnyRace: row.DualclassAnyRace},
+		WeaponLift:  ruleset.WeaponLift{MulticlassAnyWeapon: row.MulticlassAnyWeapon},
 		LevelLimits: ruleset.LevelLimitsMode(row.LevelLimits),
 	}
 	for _, r := range crit {
@@ -88,6 +89,17 @@ func (d *DAL) SetRacialLift(ctx context.Context, rulesetID int64, lift ruleset.R
 	})
 	if err != nil {
 		return fmt.Errorf("set the racial lift: %w", err)
+	}
+	return nil
+}
+
+// SetWeaponLift stores the weapon lift switch.
+func (d *DAL) SetWeaponLift(ctx context.Context, rulesetID int64, lift ruleset.WeaponLift) error {
+	err := d.q.SetRulesetWeaponLift(ctx, queries.SetRulesetWeaponLiftParams{
+		ID: rulesetID, MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
+	})
+	if err != nil {
+		return fmt.Errorf("set the weapon lift: %w", err)
 	}
 	return nil
 }

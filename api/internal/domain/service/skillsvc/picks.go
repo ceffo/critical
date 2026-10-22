@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -102,11 +103,13 @@ func (s picksState) picks() skills.Picks {
 
 // edited is the state an edit of c gives (ADR 0037 steps 6, 10, 12 and 18): skills.Apply on the
 // stored sheet at the realized level (the picks, the languages, then the budget); nothing is
-// written. A refusal is a *domain.FieldError or a *domain.BudgetError.
-func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []string, error) {
+// written. A refusal is a *domain.FieldError or a *domain.BudgetError. The weapon picks are
+// checked under the ruleset's weapon lift (ADR 0041 step 2.5).
+func (s *service) edited(c *charactersvc.Character, e Edit, lift ruleset.WeaponLift) (skills.Picks, []string, error) {
 	before := skills.Sheet{
 		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: s.languages.Native(c.Race),
+		MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
 	}
 	after, err := skills.Apply(s.book, s.languages, c.Race, before, skills.Edit(e))
 	if err != nil {
@@ -116,11 +119,11 @@ func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []str
 }
 
 // proficiencies reads the pools of c with picks and languages (skills.Read, the sheet's own
-// assembly).
-func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, languages []string) *Proficiencies {
+// assembly) under the ruleset's weapon lift.
+func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, languages []string, lift ruleset.WeaponLift) *Proficiencies {
 	f, ws := skills.Read(s.book, skills.Sheet{
 		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int, Picks: picks,
-		Languages: languages, Native: s.languages.Native(c.Race),
+		Languages: languages, Native: s.languages.Native(c.Race), MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
 		Score: func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) },
 	})
 	return &Proficiencies{Slots: f, Warnings: ws}
@@ -136,11 +139,15 @@ func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, e
 		if err != nil {
 			return err
 		}
-		next, langs, err := s.edited(c, e)
+		rs, err := s.rulesets.ForCharacter(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("character %d ruleset: %w", characterID, err)
+		}
+		next, langs, err := s.edited(c, e, rs.WeaponLift)
 		if err != nil {
 			return err
 		}
-		out = s.proficiencies(c, next, langs)
+		out = s.proficiencies(c, next, langs, rs.WeaponLift)
 		return nil
 	})
 	return out, err
@@ -161,7 +168,11 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 		if err != nil {
 			return err
 		}
-		next, langs, err := s.edited(c, e)
+		rs, err := s.rulesets.ForCharacter(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("character %d ruleset: %w", characterID, err)
+		}
+		next, langs, err := s.edited(c, e, rs.WeaponLift)
 		if err != nil {
 			return err
 		}
@@ -194,7 +205,7 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 				return fmt.Errorf("record proficiencies: %w", err)
 			}
 		}
-		out = s.proficiencies(c, next, langs)
+		out = s.proficiencies(c, next, langs, rs.WeaponLift)
 		return nil
 	})
 	if err != nil {

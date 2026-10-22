@@ -4,6 +4,7 @@ import type {
   Ruleset,
   RulesetChange,
   SuccessEffect,
+  WeaponLift,
 } from "../types/ruleset";
 import { request } from "./http";
 
@@ -33,6 +34,10 @@ export function saveCritTable(rows: CritRow[]): Promise<CritTable> {
 
 export function saveRacialLift(lift: RacialLift): Promise<RacialLift> {
   return put<RacialLift>("/api/ruleset/racial-lift", lift);
+}
+
+export function saveWeaponLift(lift: WeaponLift): Promise<WeaponLift> {
+  return put<WeaponLift>("/api/ruleset/weapon-lift", lift);
 }
 
 export async function saveSuccessEffects(

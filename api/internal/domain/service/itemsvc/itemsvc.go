@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -157,6 +158,9 @@ type Deps struct {
 	// item 6.2). Nil: no spell is known (naming one is refused, a named
 	// scroll's casting time reads as special).
 	Spells Spells
+	// Rulesets gives the character its ruleset, whose weapon lift the class
+	// warnings read (ADR 0041 steps 2.5 and 3). Required.
+	Rulesets ruleset.Resolver
 }
 
 // ClassLookup is the class definitions (ruletablesvc.Tables.Class).
@@ -190,16 +194,17 @@ type service struct {
 	initiative      Initiative
 	initiativeItems *ruletablesvc.InitiativeItems
 	spells          Spells
+	rulesets        ruleset.Resolver
 }
 
 // New constructs the service.
 func New(dal DAL, d Deps) (SVC, error) {
-	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil || d.Classes == nil || d.Initiative == nil {
+	if dal == nil || d.Dice == nil || d.Log == nil || d.Tx == nil || d.Chars == nil || d.Classes == nil || d.Initiative == nil || d.Rulesets == nil {
 		return nil, fmt.Errorf("itemsvc: nil dependency")
 	}
 	s := &service{
 		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
-		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells,
+		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells, rulesets: d.Rulesets,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

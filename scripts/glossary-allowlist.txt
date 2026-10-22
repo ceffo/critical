@@ -139,6 +139,7 @@ ProficiencyBook  # Needs a term: language, book and proficiency-pool concepts
 NonweaponPool  # Needs a term: language, book and proficiency-pool concepts
 WeaponPick  # Needs a term: language, book and proficiency-pool concepts
 WeaponPickFigures  # Needs a term: language, book and proficiency-pool concepts
+WeaponTypeFigure  # Needs a term: language, book and proficiency-pool concepts
 Damage  # Needs a term: damage and effect duration concepts
 DamageAt  # Needs a term: damage and effect duration concepts
 DamagePart  # Needs a term: damage and effect duration concepts

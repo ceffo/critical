@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -210,7 +211,7 @@ func (n NewCharacter) field(i int, name string) string {
 	if len(n.Classes) == 0 {
 		return name
 	}
-	return fmt.Sprintf("%s.%d.%s", FieldClasses, i, name)
+	return FieldClasses + "." + strconv.Itoa(i) + "." + name
 }
 
 // frozen reports whether the entry is a class left (a dual-class's old one).

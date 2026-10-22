@@ -2143,7 +2143,7 @@
       ],
       "properties": {
         "armour": {
-          "description": "The Table 29 skill columns of the body armour the class may wear (`none` = no armour worn); absent = any.",
+          "description": "The `skill_column` values of the equipment armour rows the class may wear (`none` = no armour worn); absent = any.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
@@ -2251,7 +2251,7 @@
       }
     },
     "rogue_armour": {
-      "description": "An armour a skill set is entered with.",
+      "description": "A body armour a skill set can be worn with, found by the armour row's `skill_column` of the equipment (`code`; `none` = no armour worn). The list must carry an entry for every `skill_column` value of the equipment, so a worn armour always resolves (none_allowed, an armour the class may not wear, is entered with the worst column).",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -2260,11 +2260,12 @@
       ],
       "properties": {
         "code": {
+          "description": "The `skill_column` of the equipment armour rows this entry covers (leather, padded_studded, elven_chain, metal, none_allowed), or `none`.",
           "type": "string",
           "pattern": "^[a-z]+(_[a-z]+)*$"
         },
         "column": {
-          "description": "The Table 29 column read; absent for leather, the baseline.",
+          "description": "The `armor` row code of the `thief_skill_armor` rule table (PHB Table 29) read; absent for leather, the baseline (adds nothing).",
           "type": "string",
           "pattern": "^[a-z]+(_[a-z]+)*$"
         },
@@ -2355,8 +2356,7 @@
       "required": [
         "set",
         "budget",
-        "armour",
-        "min_to_use"
+        "armour"
       ],
       "properties": {
         "set": {
@@ -2374,11 +2374,6 @@
             "$ref": "#/$defs/rogue_armour"
           },
           "minItems": 1
-        },
-        "min_to_use": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 95
         }
       }
     },

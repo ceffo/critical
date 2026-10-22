@@ -237,7 +237,7 @@ func (s *service) WeaponProficiency(ctx context.Context, id int64) (skills.Weapo
 	if err != nil {
 		return skills.WeaponProficiency{}, err
 	}
-	return skills.WeaponProficiencyOf(s.profs, c.ActiveClasses(), c.Proficiencies), nil
+	return skills.WeaponProficiencyOf(s.profs, c.StoredClasses(), c.Proficiencies), nil
 }
 
 // read is GetCharacter: the stored character, derived and warned.

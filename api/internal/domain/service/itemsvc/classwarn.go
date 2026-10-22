@@ -74,7 +74,7 @@ func ClassWarnings(limits []classes.Equipment, old OldClasses, pieces []Item) []
 		case p.Category == CategoryWeapon && p.State == StateWielded:
 			w := wielded(p, pieces)
 			weapon := func(e classes.Equipment) bool { return e.AllowsWeapon(w) }
-			if code, ok := old.judged(weaponAllowedTo(limits, w), weapon, WarnWeaponNotAllowed); !ok {
+			if code, ok := old.weapon(limits, weapon); !ok {
 				out = append(out, Warning{p.ID, code})
 			}
 			if p.WeaponType == "" {
@@ -101,7 +101,8 @@ func ClassWarnings(limits []classes.Equipment, old OldClasses, pieces []Item) []
 // OldClasses are the equipment of a dual-class's frozen entries (ADR 0042
 // steps 13 and 16), Dormant before the crossover. The zero value is none. An
 // old class only adds what it allows: a blunt_only one restricts no weapon
-// of the active classes.
+// of the active classes, and it adds no weapon to an active blunt_only class
+// (each action follows the limits of the class using it, step 13).
 type OldClasses struct {
 	Equipment []classes.Equipment
 	Dormant   bool
@@ -122,17 +123,25 @@ func (old OldClasses) judged(allowed bool, allows func(classes.Equipment) bool, 
 	return "", true
 }
 
+// weapon is a wielded weapon's verdict (ADR 0042 steps 13 and 16.1,
+// classes.AllowedWithOld): allowed by the active classes, or by an old class
+// (dual_class_old_ability before the crossover); an active blunt_only class
+// decides alone, so an old class never lifts its limit, past the crossover too.
+func (old OldClasses) weapon(limits []classes.Equipment, allows func(classes.Equipment) bool) (string, bool) {
+	allowed, byOld := classes.AllowedWithOld(limits, old.Equipment, allows)
+	switch {
+	case !allowed:
+		return WarnWeaponNotAllowed, false
+	case byOld && old.Dormant:
+		return WarnOldAbility, false
+	}
+	return "", true
+}
+
 // anyClass reports whether one of limits allows what allows judges; no limit
 // at all is not judged (nothing warned).
 func anyClass(limits []classes.Equipment, allows func(classes.Equipment) bool) bool {
 	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
-}
-
-// weaponAllowedTo is ADR 0042 step 16.1 (classes.AllowedTogether): a
-// blunt_only class (the cleric) restricts the weapon to its own list whatever
-// the other classes; otherwise the weapon is allowed when any class allows it.
-func weaponAllowedTo(limits []classes.Equipment, w classes.Weapon) bool {
-	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.AllowsWeapon(w) })
 }
 
 // SpellInArmour is ADR 0042 step 16.2: a spell of a class that allows no body

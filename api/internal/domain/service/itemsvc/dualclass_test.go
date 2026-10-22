@@ -38,7 +38,9 @@ func dualClass(old string, leftAt int, newClass string, level int) *charactersvc
 // crossover is allowed and carries the warning `dual_class_old_ability`"; after it nothing is
 // warned (step 16: a frozen class's allowance counts). The elf, fighter left at 9: as a mage 7
 // his chain mail, shield and long sword are the fighter's allowance, warned; as a mage 10 not.
-// A piece no class allows keeps its own warning; an old blunt_only class restricts nothing.
+// A piece no class allows keeps its own warning; an old blunt_only class restricts nothing. Each
+// action follows the limits of the class using it (step 13): an active blunt_only cleric's sword is
+// warned weapon_not_allowed whatever its old fighter allows, past the crossover too.
 func TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover(t *testing.T) {
 	chain, buckler := armour("p", "metal"), shield("s")
 	sword := weapon("l", "long_sword", "long_sword", "s")
@@ -64,6 +66,14 @@ func TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover(t *test
 		{
 			name: "cleric 5 to fighter 3: the old blunt_only restricts nothing", c: dualClass("cleric", 5, "fighter", 3),
 			pieces: []itemsvc.Item{sword},
+		},
+		{
+			name: "fighter 9 to cleric 7: the active blunt_only decides", c: dualClass("fighter", 9, "cleric", 7),
+			pieces: []itemsvc.Item{sword}, want: []itemsvc.Warning{w("l", itemsvc.WarnWeaponNotAllowed)},
+		},
+		{
+			name: "fighter 9 to cleric 10: still, past the crossover", c: dualClass("fighter", 9, "cleric", 10),
+			pieces: []itemsvc.Item{sword}, want: []itemsvc.Warning{w("l", itemsvc.WarnWeaponNotAllowed)},
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

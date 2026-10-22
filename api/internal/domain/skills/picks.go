@@ -165,12 +165,13 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 	return nonproficientPenalty(w.Penalty, weaponType, func(t string) bool { return slices.Contains(w.Picked, t) })
 }
 
-// WeaponProficiencyOf reads a character of the active class entries cls with picks: its
-// specialization (step 9, a single-class character's only: Classes.specialist) and its weapon picks against Table 34's penalty
-// from book (step 8), the smallest of the classes' (ADR 0042 step 15, Q12). The levels of cls
-// are not read.
+// WeaponProficiencyOf reads a character of the class entries cls with picks: its
+// specialization (step 9, a single-class character's only: Classes.specialist; a dual-class's
+// kept one past the crossover, Classes.specializedType) and its weapon picks against Table 34's
+// penalty from book (step 8), the smallest of the active classes' (ADR 0042 step 15, Q12). The
+// levels of cls are read only for the crossover.
 func WeaponProficiencyOf(book Book, cls Classes, picks Picks) WeaponProficiency {
-	out := WeaponProficiency{Specialized: SpecializedType(book, cls.specialist(), picks), Picked: make([]string, 0, len(picks.Weapon))}
+	out := WeaponProficiency{Specialized: cls.specializedType(book, picks), Picked: make([]string, 0, len(picks.Weapon))}
 	if b, ok := cls.basis(book); ok {
 		out.Penalty = b.row.Penalty
 	}
@@ -180,6 +181,29 @@ func WeaponProficiencyOf(book Book, cls Classes, picks Picks) WeaponProficiency 
 	return out
 }
 
+// specializedType is step 9 for cls (ADR 0042): the single active class's specialization; for a
+// dual-class whose active class does not specialize, a specialization pick kept from an old
+// class that does counts past the crossover only (step 13: before it the active class's own
+// figures apply, so the kept pick gives no bonus).
+func (cls Classes) specializedType(book Book, picks Picks) string {
+	if t := SpecializedType(book, cls.specialist(), picks); t != "" || !cls.crossed() {
+		return t
+	}
+	for _, c := range cls {
+		if c.Frozen {
+			if t := SpecializedType(book, c.Class, picks); t != "" {
+				return t
+			}
+		}
+	}
+	return ""
+}
+
+// oldSpecialist reports whether one of a dual-class's old (frozen) classes specializes.
+func (cls Classes) oldSpecialist(book Book) bool {
+	return slices.ContainsFunc(cls, func(c ClassLevel) bool { return c.Frozen && specializes(book, c.Class) })
+}
+
 // specializes reports whether class lists weapon_specialization (ADR 0040 step 3,
 // ruletablesvc.Specializes); false for a class the book does not define.
 func specializes(book Book, class string) bool {
@@ -187,20 +211,28 @@ func specializes(book Book, class string) bool {
 	return ok && ruletablesvc.Specializes(def)
 }
 
-// weaponTypeAllowed is ADR 0037 step 7 for the active class entries cls, judged together by ADR
-// 0042 step 16.1 (classes.AllowedTogether): a type any class may pick, except that a blunt_only
-// class restricts the picks to its own. A class the catalogue does not define limits nothing, so
-// nothing is judged (as itemsvc's class warnings).
+// weaponTypeAllowed is ADR 0037 step 7 for the class entries cls, judged together by ADR 0042
+// step 16.1 (classes.AllowedTogether): a type any active class may pick, except that a blunt_only
+// active class restricts the picks to its own; a dual-class's old (frozen) classes add what they
+// may pick (classes.AllowedWithOld, as itemsvc's class warnings), before and after the
+// crossover: a pick is not a use (step 13 warns the wielding, itemsvc). A class the catalogue does
+// not define limits nothing, so nothing is judged (as itemsvc's class warnings).
 func (cls Classes) weaponTypeAllowed(book Book, weaponType string) bool {
-	limits := make([]classes.Equipment, 0, len(cls))
-	for _, c := range cls.active() {
+	var active, old []classes.Equipment
+	for _, c := range cls {
 		def, ok := book.ClassDef(c.Class)
-		if !ok {
+		switch {
+		case !ok && !c.Frozen:
 			return true
+		case !ok:
+		case c.Frozen:
+			old = append(old, def.Equipment)
+		default:
+			active = append(active, def.Equipment)
 		}
-		limits = append(limits, def.Equipment)
 	}
-	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.WeaponTypeAllowed(weaponType) })
+	allowed, _ := classes.AllowedWithOld(active, old, func(e classes.Equipment) bool { return e.WeaponTypeAllowed(weaponType) })
+	return allowed
 }
 
 // IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
@@ -380,9 +412,12 @@ func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
 func validWeaponPicks(book Book, cls Classes, picks, before []WeaponPick) ([]WeaponPick, error) {
 	class := cls.specialist()
 	specialized := false
-	had := map[string]bool{}
+	had, kept := map[string]bool{}, map[string]bool{}
 	for _, p := range before {
 		had[p.Type] = true
+		// ADR 0042 step 15: a dual-class keeps its old class's picks, its
+		// specialization too when that class specializes.
+		kept[p.Type] = p.IsSpecialization() && cls.oldSpecialist(book)
 	}
 	seen := map[string]bool{}
 	out := make([]WeaponPick, 0, len(picks))
@@ -399,7 +434,7 @@ func validWeaponPicks(book Book, cls Classes, picks, before []WeaponPick) ([]Wea
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		case !had[p.Type] && !cls.weaponTypeAllowed(book, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
-		case p.IsSpecialization() && (!specializes(book, class) || specialized):
+		case p.IsSpecialization() && ((!specializes(book, class) && !kept[p.Type]) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
 		}
 		specialized = specialized || p.IsSpecialization()

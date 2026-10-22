@@ -6,6 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -128,4 +130,66 @@ func TestProficiencySlots_Step15_DualClassKeepsAndGains(t *testing.T) {
 		assert.Equal(t, skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1}, skills.GrantsOf(book, elf(5), "mage", 6))
 		assert.Equal(t, skills.LevelGrants{WeaponSlots: 0, NonweaponSlots: 1}, skills.GrantsOf(book, elf(8), "mage", 9))
 	})
+}
+
+// ADR 0042 step 16.1 with steps 13 and 15: the weapon picks follow the items'
+// rule, so a dual-class's old class adds the types it may pick, before and
+// after the crossover (a pick is not a use; wielding warns, itemsvc): the
+// elf's kept long-sword pick is allowed and a new one accepted (the code
+// before read the active mage alone). Each use follows the limits of the
+// class using it: an active blunt_only cleric keeps its limit whatever its
+// old fighter allows.
+func TestWeaponPick_Step16_1_TheOldClassAllowsThePicks(t *testing.T) {
+	book := profBook(t)
+	refused := domain.FieldError{Field: "weapon.long_sword", Message: "weapon_not_allowed"}
+	for _, tc := range []struct {
+		name    string
+		classes skills.Classes
+		want    *domain.FieldError
+	}{
+		{"elf at mage 7", skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: 7}}, nil},
+		{"elf at mage 10", skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: 10}}, nil},
+		{"cleric 10 after fighter 9", skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "cleric", Level: 10}}, &refused},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			kept := skills.Sheet{Classes: tc.classes, Intelligence: 12, Picks: weapons("long_sword")}
+			slots, _ := skills.Read(book, kept)
+			require.Len(t, slots.WeaponPicks, 1)
+			assert.Equal(t, tc.want == nil, slots.WeaponPicks[0].Allowed, "the kept pick")
+
+			before := skills.Sheet{Classes: tc.classes, Intelligence: 12, Picks: weapons()}
+			_, err := skills.Apply(book, nil, "human", before, skills.Edit{Picks: skills.Picks{Weapon: weapons("long_sword").Weapon}})
+			if tc.want == nil {
+				require.NoError(t, err, "a new pick")
+				return
+			}
+			assert.Equal(t, *tc.want, fieldErr(t, err))
+		})
+	}
+}
+
+// ADR 0042 step 13: a specialization kept from the old fighter gives the elf
+// nothing before the crossover (the active mage's own figures apply) and
+// counts past it; the kept pick survives a save either way (the code before
+// refused it not_allowed, the mage not specializing).
+func TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover(t *testing.T) {
+	book := profBook(t)
+	spec := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	elf := func(mage int) skills.Classes {
+		return skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: mage}}
+	}
+	assert.Empty(t, skills.WeaponProficiencyOf(book, elf(7), spec).Specialized, "mage 7")
+	assert.Empty(t, skills.WeaponProficiencyOf(book, elf(9), spec).Specialized, "mage 9, not above the fighter's 9")
+	assert.Equal(t, "long_sword", skills.WeaponProficiencyOf(book, elf(10), spec).Specialized, "mage 10")
+
+	for _, mage := range []int{7, 10} {
+		before := skills.Sheet{Classes: elf(mage), Intelligence: 12, Picks: spec}
+		got, err := skills.Apply(book, nil, "elf", before, skills.Edit{Picks: skills.Picks{Weapon: spec.Weapon}})
+		require.NoError(t, err, "mage %d keeps the pick", mage)
+		assert.Equal(t, spec.Weapon, got.Picks.Weapon)
+	}
+	// A new specialization is still the active class's: refused to the mage.
+	before := skills.Sheet{Classes: elf(10), Intelligence: 12, Picks: weapons()}
+	_, err := skills.Apply(book, nil, "elf", before, skills.Edit{Picks: skills.Picks{Weapon: spec.Weapon}})
+	assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: "not_allowed"}, fieldErr(t, err))
 }

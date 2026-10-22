@@ -31,6 +31,20 @@ func (cls Classes) active() Classes {
 	return out
 }
 
+// crossed is ADR 0042 step 13 read from cls (classes.Crossed): the active entry's level above
+// every frozen entry's left-at level; true without a frozen entry.
+func (cls Classes) crossed() bool {
+	act, left := 0, 0
+	for _, c := range cls {
+		if c.Frozen {
+			left = max(left, c.Level)
+		} else {
+			act = max(act, c.Level)
+		}
+	}
+	return act > left
+}
+
 // One is the single class entry of class at level.
 func One(class string, level int) Classes { return Classes{{Class: class, Level: level}} }
 

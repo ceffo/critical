@@ -39,3 +39,7 @@ api/internal/domain/service/spelleffectsvc/validate.go:warrior
 api/internal/domain/service/spelleffectsvc/validate.go:priest
 api/internal/domain/service/spelleffectsvc/validate.go:rogue
 api/internal/domain/service/spelleffectsvc/validate.go:wizard
+
+# TEMPORARY, removed by CRI-206 (a race trait kind for armour spellcasting): SpellInArmour lets an elf's
+# no-armour caster cast in elven chain (ADR 0042 step 16.2) by the race id until the trait carries it.
+api/internal/domain/service/itemsvc/classwarn.go:elf

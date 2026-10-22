@@ -2,16 +2,17 @@ package ruletablesvc
 
 import (
 	"math"
-	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // PHB Table 10 (average height and weight) and Table 11 (age), the data of
 // ADR 0032 step 5: per race the base height and weight for each sex and the
-// modifier dice, and the starting age's base and variable dice. The book
-// gives inches, pounds and years; the app stores centimetres and kilograms
-// (ADR 0032 step 5), converted here once. The rows are hand-checked against
-// the rulebook's tables; identity_test.go holds every figure again, written
-// out, so a slip in this file fails there.
+// modifier dice, and the starting age's base and variable dice, read from
+// the race definitions (ADR 0040 step 2). The book gives inches, pounds and
+// years; the app stores centimetres and kilograms (ADR 0032 step 5),
+// converted here once. identity_test.go holds every figure again, written
+// out from the rulebook's tables, so a slip in the catalogue fails there.
 
 // The sex codes of a Table 10 row (the same as charactersvc.Sexes).
 const (
@@ -30,13 +31,7 @@ const (
 const StoredStep = 0.1
 
 // Dice is count dice of sides sides ("2d6").
-type Dice struct{ Count, Sides int }
-
-// Min is the lowest total of the dice (every die 1), Max the highest.
-func (d Dice) Min() int { return d.Count }
-
-// Max is the highest total of the dice (every die at its maximum).
-func (d Dice) Max() int { return d.Count * d.Sides }
+type Dice = classes.Dice
 
 // IdentityRow is one race's row of Tables 10 and 11. Base heights are in
 // inches and base weights in pounds, male then female; ages in years.
@@ -54,27 +49,34 @@ type IdentityRow struct {
 	MaxAgeDice   Dice
 }
 
-// identityRows is Tables 10 and 11, in the book's race order.
-var identityRows = []IdentityRow{
-	{"dwarf", 43, 41, Dice{1, 10}, 130, 105, Dice{4, 10}, 40, Dice{5, 6}, 250, Dice{2, 100}},
-	{"elf", 55, 50, Dice{1, 10}, 90, 70, Dice{3, 10}, 100, Dice{5, 6}, 350, Dice{4, 100}},
-	{"gnome", 38, 36, Dice{1, 6}, 72, 68, Dice{5, 4}, 60, Dice{3, 12}, 200, Dice{3, 100}},
-	{"half_elf", 60, 58, Dice{2, 6}, 110, 85, Dice{3, 12}, 15, Dice{1, 6}, 125, Dice{3, 20}},
-	{"halfling", 32, 30, Dice{2, 8}, 52, 48, Dice{5, 4}, 20, Dice{3, 4}, 100, Dice{1, 100}},
-	{"human", 60, 59, Dice{2, 10}, 140, 100, Dice{6, 10}, 15, Dice{1, 4}, 90, Dice{2, 20}},
+// IdentityRows are the rows of Tables 10 and 11 of the race definitions (ADR
+// 0040 step 2), in catalogue order.
+func IdentityRows(defs *classes.Registry) []IdentityRow {
+	var out []IdentityRow
+	for _, r := range defs.Races() {
+		out = append(out, identityRow(r))
+	}
+	return out
 }
 
-// IdentityRows are the rows of Tables 10 and 11.
-func IdentityRows() []IdentityRow { return slices.Clone(identityRows) }
-
-// IdentityFor is the race's row, false for a race that is none of the six.
-func IdentityFor(race string) (IdentityRow, bool) {
-	for _, r := range identityRows {
-		if r.Race == race {
-			return r, true
-		}
+// IdentityFor is the race's row, false for a race the catalogue does not
+// define.
+func IdentityFor(defs *classes.Registry, race string) (IdentityRow, bool) {
+	r, ok := defs.Race(race)
+	if !ok {
+		return IdentityRow{}, false
 	}
-	return IdentityRow{}, false
+	return identityRow(r), true
+}
+
+func identityRow(r classes.Race) IdentityRow {
+	i := r.Identity
+	return IdentityRow{
+		Race:       r.ID,
+		HeightMale: i.HeightMale, HeightFemale: i.HeightFemale, HeightDice: i.HeightDice,
+		WeightMale: i.WeightMale, WeightFemale: i.WeightFemale, WeightDice: i.WeightDice,
+		StartAge: i.StartAge, StartAgeDice: i.StartAgeDice, MaxAge: i.MaxAge, MaxAgeDice: i.MaxAgeDice,
+	}
 }
 
 // BaseHeight is the Table 10 base height in inches for the sex, false for a
@@ -130,60 +132,43 @@ func sexesOf(sex string) []string {
 // HeightRange is the stored range (cm) of a height: the Table 10 base for the
 // sex plus the modifier dice at their lowest and highest, converted and
 // rounded outward (ADR 0032 step 5.1). An empty sex is the union of the two;
-// ok is false for an unknown race.
-func HeightRange(race, sex string) (Range, bool) {
-	row, ok := IdentityFor(race)
-	if !ok {
-		return Range{}, false
-	}
+func (row IdentityRow) HeightRange(sex string) Range {
 	out := Range{Min: math.Inf(1), Max: math.Inf(-1)}
 	for _, s := range sexesOf(sex) {
 		base, _ := row.BaseHeight(s)
 		out.Min = math.Min(out.Min, floorStep(float64(base+row.HeightDice.Min())*CentimetresPerInch))
 		out.Max = math.Max(out.Max, ceilStep(float64(base+row.HeightDice.Max())*CentimetresPerInch))
 	}
-	return out, true
+	return out
 }
 
 // WeightRange is the stored range (kg) of a weight, as HeightRange.
-func WeightRange(race, sex string) (Range, bool) {
-	row, ok := IdentityFor(race)
-	if !ok {
-		return Range{}, false
-	}
+func (row IdentityRow) WeightRange(sex string) Range {
 	out := Range{Min: math.Inf(1), Max: math.Inf(-1)}
 	for _, s := range sexesOf(sex) {
 		base, _ := row.BaseWeight(s)
 		out.Min = math.Min(out.Min, floorStep(float64(base+row.WeightDice.Min())*KilogramsPerPound))
 		out.Max = math.Max(out.Max, ceilStep(float64(base+row.WeightDice.Max())*KilogramsPerPound))
 	}
-	return out, true
+	return out
 }
 
 // AgeRange is the range of an age in years: from the lowest starting age
 // (Table 11's base plus the variable dice at 1) to the highest maximum age
 // (the maximum age range's base plus its dice at their maximum), so a young
 // character is never warned for being young (ADR 0032 step 5.1).
-func AgeRange(race string) (Range, bool) {
-	row, ok := IdentityFor(race)
-	if !ok {
-		return Range{}, false
-	}
+func (row IdentityRow) AgeRange() Range {
 	return Range{
 		Min: float64(row.StartAge + row.StartAgeDice.Min()),
 		Max: float64(row.MaxAge + row.MaxAgeDice.Max()),
-	}, true
+	}
 }
 
 // StartAgeRange is the range a starting age roll gives (Table 11's base plus
 // the variable dice at their lowest and highest), inside AgeRange.
-func StartAgeRange(race string) (Range, bool) {
-	row, ok := IdentityFor(race)
-	if !ok {
-		return Range{}, false
-	}
+func (row IdentityRow) StartAgeRange() Range {
 	return Range{
 		Min: float64(row.StartAge + row.StartAgeDice.Min()),
 		Max: float64(row.StartAge + row.StartAgeDice.Max()),
-	}, true
+	}
 }

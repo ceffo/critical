@@ -12,19 +12,16 @@ import (
 // numbers are the class tables' (PHB Tables 15, 35 and 45); this file only
 // says which row and column a weapon reads.
 
-// noExceptionalStrengthRaces are the races that never roll it (PHB Table 7,
-// note: halfling fighters do not roll exceptional strength). A race trait
-// (ADR 0040 step 4, no_exceptional_strength): it moves with the race traits.
-var noExceptionalStrengthRaces = []string{"halfling"}
-
 // ExceptionalStrengthAllowed reports whether a character of class def and
 // race with Strength str may enter an exceptional strength (ADR 0030 step 9,
-// ADR 0040 step 3): its class lists exceptional_strength, its Strength is 18
-// and its race rolls it. The entry is checked before a level is known, so
-// the class's listing at any level counts.
-func ExceptionalStrengthAllowed(def classes.Class, race string, str int) bool {
+// ADR 0040 steps 3 and 4): its class lists exceptional_strength, its Strength
+// is 18 and its race does not list no_exceptional_strength. The entry is
+// checked before a level is known, so the class's listing at any level
+// counts.
+func ExceptionalStrengthAllowed(def classes.Class, race classes.Race, str int) bool {
 	_, ok := def.Lists(classes.KindExceptionalStrength)
-	return ok && str == 18 && !slices.Contains(noExceptionalStrengthRaces, race)
+	_, barred := race.Trait(classes.TraitNoExceptionalStrength)
+	return ok && str == 18 && !barred
 }
 
 // Specializes reports whether class def may specialize in a weapon (ADR 0030

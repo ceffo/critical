@@ -38,23 +38,22 @@ func fixtureWeapons(t *testing.T) []catalogueWeapon {
 	return doc.Equipment.Weapons
 }
 
-// ADR 0037 step 7: the weapon types each class may pick (ruletablesvc's committed lists) are
-// what ADR 0033 step 20's class table allows: a type the class's PHB list names (mage p.30,
-// thief p.39), the type of a weapon it names (the knife, the quarterstaff, the club, the broad
-// sword, the lasso), or the type of a catalogue weapon that, wielded alone, draws no
-// weapon_not_allowed warning (the cleric's blunt weapons, p.33; a launcher by its ammunition).
-// A class with no rule (the fighter, p.26; the bard, p.41) may pick every type.
-func TestClassWeaponTypes_Step7_FromTheStep20TableAndTheCatalogue(t *testing.T) {
+// ADR 0037 step 7: the weapon types each class may pick (derived at import, ADR 0040 step 1.6) are
+// what ADR 0033 step 20 allows: a type the class's list names, the type of a weapon it names, or
+// the type of a catalogue weapon that, wielded alone, draws no weapon_not_allowed warning (the
+// cleric's blunt weapons, p.33; a launcher by its ammunition). A class with no weapon limit (the
+// fighter, p.26; the bard, p.41) may pick every type.
+func TestClassWeaponTypes_Step7_AgreesWithTheStep20Warnings(t *testing.T) {
 	weapons := fixtureWeapons(t)
-	for _, class := range cataloguetest.Definitions(t).ClassIDs() {
-		t.Run(class, func(t *testing.T) {
-			rule, ruled := classRules[class]
+	for _, def := range cataloguetest.Definitions(t).Classes() {
+		t.Run(def.ID, func(t *testing.T) {
+			eq := def.Equipment
 			allowed := map[string]bool{}
-			for _, typ := range rule.weaponTypes {
+			for _, typ := range eq.WeaponTypes {
 				allowed[typ] = true
 			}
-			for _, w := range rule.weapons {
-				allowed[w.weaponType] = true
+			for _, w := range eq.Weapons {
+				allowed[w.WeaponType] = true
 			}
 			for _, w := range weapons {
 				piece := Item{
@@ -64,19 +63,19 @@ func TestClassWeaponTypes_Step7_FromTheStep20TableAndTheCatalogue(t *testing.T) 
 				if len(w.Fires) > 0 {
 					piece.Fires = w.Fires[0]
 				}
-				if !slices.ContainsFunc(ClassWarnings(class, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
+				if !slices.ContainsFunc(ClassWarnings(eq, true, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
 					allowed[w.WeaponType] = true
 				}
 			}
 			var derived []string
 			for _, typ := range WeaponTypes {
-				if allowed[typ] || !ruled {
+				if allowed[typ] || !eq.Limited() {
 					derived = append(derived, typ)
 				}
 			}
-			want := ruletablesvc.ClassWeaponTypes(class)
+			want := eq.PickTypes
 			if want == nil {
-				want = WeaponTypes
+				want = ruletablesvc.WeaponTypes
 			}
 			assert.Equal(t, want, derived)
 		})

@@ -127,6 +127,15 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err != nil {
 		return nil, err
 	}
+	eq, err := parseEquipment(equipment)
+	if err != nil {
+		return nil, err
+	}
+	// ADR 0037 step 7: the weapon types a class may pick, derived once from
+	// its equipment list and the weapon catalogue.
+	if reg, err = reg.WithPickTypes(ruletablesvc.WeaponPickTypes(reg, eq)); err != nil {
+		return nil, fmt.Errorf("definitions: %w", err)
+	}
 	tables = tables.WithDefinitions(reg)
 	classTables, err := f.classes(reg)
 	if err != nil {
@@ -137,7 +146,7 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 		return nil, err
 	}
 	tables = tables.WithClasses(classTables).WithLevelLimits(limits)
-	tables, err = withEquipment(tables, f, equipment)
+	tables, err = withEquipment(tables, f, eq)
 	if err != nil {
 		return nil, err
 	}
@@ -146,11 +155,7 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 
 // withEquipment adds the equipment data and its two tables (the rules
 // are ruletablesvc's); all three are required.
-func withEquipment(t *ruletablesvc.Tables, f fileDTO, equipment []byte) (*ruletablesvc.Tables, error) {
-	e, err := parseEquipment(equipment)
-	if err != nil {
-		return nil, err
-	}
+func withEquipment(t *ruletablesvc.Tables, f fileDTO, e *ruletablesvc.Equipment) (*ruletablesvc.Tables, error) {
 	w, err := weaponVsArmor(f.WeaponVsArmor)
 	if err != nil {
 		return nil, err

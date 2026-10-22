@@ -131,7 +131,7 @@ question; file them yourself with their OK instead of spawning a scoper.
 **Briefs and items frame the problem, never the design.** State the symptom, the user's words, the
 constraints and the hard rules; never prescribe a data shape, a contract or a migration. Before filing
 an item from a symptom, read how that area works today and write it into the item, so the item
-doesn't settle a design by accident. If a contract, schema or ADR change looks needed, the developer
+doesn't settle a design by accident. An item that adds book data (a weapon, a table row) first checks with rules-lookup that the book has it (sup-73: a lasso item asked for "its PHB stats"; the PHB has none, and a developer session ended blocked). If a contract, schema or ADR change looks needed, the developer
 proposes it in its report first; you check it against the workflow doc's hard rules and the existing
 patterns before anything is built. (Post-mortem of PR #147: a brief that prescribed French stat texts
 in the database went through a developer and a review unchallenged; the rule is now ADR 0023, no
@@ -368,6 +368,9 @@ Clean rebase → the developer reruns the gate. A conflict → stop (`git rebase
 in progress), then prompt the developer to resolve it. If the parent needed rework after the child
 branched, prompt the child's developer to merge the updated parent branch first. Two levels deep at
 most.
+
+A catalogue format bump lands in two repos: once the rulebooks half merges, every open app PR fails CI until the app half lands, and after it lands `gh run rerun` is useless (it reuses the old merge sha): run `gh pr update-branch` on each open PR instead, and send a developer to the ones it reports as conflicting (sup-72).
+A developer that commits anything after its gate (even "script-only") reruns `just validate` before reporting: a comment added after the gate broke CI on the tracker-id check (sup-72). Say so in every rework brief.
 
 Notes from practice: when a parent PR squash-merges, GitHub's native stack restacks the child and
 retargets it to `<db>` by itself; reset the child's worktree to `origin/<child>` and rerun the gate. A

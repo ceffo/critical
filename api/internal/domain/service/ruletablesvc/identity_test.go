@@ -6,28 +6,38 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
+
+// row is the catalogue's Tables 10 and 11 row of race.
+func row(t *testing.T, race string) ruletablesvc.IdentityRow {
+	t.Helper()
+	r, ok := ruletablesvc.IdentityFor(cataloguetest.Definitions(t), race)
+	require.True(t, ok, race)
+	return r
+}
 
 // ADR 0032 step 5: PHB Tables 10 and 11, every figure written out again from
 // the rulebook's tables (hand-checked), so a slip in the data fails here.
 func TestIdentityRows_Step5_TheBooksTables(t *testing.T) {
 	type d = ruletablesvc.Dice
 	want := []ruletablesvc.IdentityRow{
-		{"dwarf", 43, 41, d{1, 10}, 130, 105, d{4, 10}, 40, d{5, 6}, 250, d{2, 100}},
-		{"elf", 55, 50, d{1, 10}, 90, 70, d{3, 10}, 100, d{5, 6}, 350, d{4, 100}},
-		{"gnome", 38, 36, d{1, 6}, 72, 68, d{5, 4}, 60, d{3, 12}, 200, d{3, 100}},
-		{"half_elf", 60, 58, d{2, 6}, 110, 85, d{3, 12}, 15, d{1, 6}, 125, d{3, 20}},
-		{"halfling", 32, 30, d{2, 8}, 52, 48, d{5, 4}, 20, d{3, 4}, 100, d{1, 100}},
-		{"human", 60, 59, d{2, 10}, 140, 100, d{6, 10}, 15, d{1, 4}, 90, d{2, 20}},
+		{"dwarf", 43, 41, d{Count: 1, Sides: 10}, 130, 105, d{Count: 4, Sides: 10}, 40, d{Count: 5, Sides: 6}, 250, d{Count: 2, Sides: 100}},
+		{"elf", 55, 50, d{Count: 1, Sides: 10}, 90, 70, d{Count: 3, Sides: 10}, 100, d{Count: 5, Sides: 6}, 350, d{Count: 4, Sides: 100}},
+		{"gnome", 38, 36, d{Count: 1, Sides: 6}, 72, 68, d{Count: 5, Sides: 4}, 60, d{Count: 3, Sides: 12}, 200, d{Count: 3, Sides: 100}},
+		{"half_elf", 60, 58, d{Count: 2, Sides: 6}, 110, 85, d{Count: 3, Sides: 12}, 15, d{Count: 1, Sides: 6}, 125, d{Count: 3, Sides: 20}},
+		{"halfling", 32, 30, d{Count: 2, Sides: 8}, 52, 48, d{Count: 5, Sides: 4}, 20, d{Count: 3, Sides: 4}, 100, d{Count: 1, Sides: 100}},
+		{"human", 60, 59, d{Count: 2, Sides: 10}, 140, 100, d{Count: 6, Sides: 10}, 15, d{Count: 1, Sides: 4}, 90, d{Count: 2, Sides: 20}},
 	}
-	assert.Equal(t, want, ruletablesvc.IdentityRows())
+	assert.Equal(t, want, ruletablesvc.IdentityRows(cataloguetest.Definitions(t)))
 	for _, r := range want {
-		got, ok := ruletablesvc.IdentityFor(r.Race)
+		got, ok := ruletablesvc.IdentityFor(cataloguetest.Definitions(t), r.Race)
 		require.True(t, ok)
 		assert.Equal(t, r, got)
 	}
-	_, ok := ruletablesvc.IdentityFor("orc")
+	_, ok := ruletablesvc.IdentityFor(cataloguetest.Definitions(t), "orc")
 	assert.False(t, ok)
 }
 
@@ -57,17 +67,13 @@ func TestHeightWeightRange_Step5_1_RoundedOutward(t *testing.T) {
 		{"halfling", "", rg{81.2, 122.0}, rg{24.0, 32.7}},
 	}
 	for _, c := range cases {
-		h, ok := ruletablesvc.HeightRange(c.race, c.sex)
-		require.True(t, ok)
+		h := row(t, c.race).HeightRange(c.sex)
 		assert.InDeltaf(t, c.h.Min, h.Min, 1e-9, "%s %s height min", c.race, c.sex)
 		assert.InDeltaf(t, c.h.Max, h.Max, 1e-9, "%s %s height max", c.race, c.sex)
-		w, ok := ruletablesvc.WeightRange(c.race, c.sex)
-		require.True(t, ok)
+		w := row(t, c.race).WeightRange(c.sex)
 		assert.InDeltaf(t, c.w.Min, w.Min, 1e-9, "%s %s weight min", c.race, c.sex)
 		assert.InDeltaf(t, c.w.Max, w.Max, 1e-9, "%s %s weight max", c.race, c.sex)
 	}
-	_, ok := ruletablesvc.HeightRange("orc", "male")
-	assert.False(t, ok, "no race, no range")
 }
 
 // ADR 0032 step 5.1: the age runs from the lowest starting age to the highest
@@ -78,18 +84,15 @@ func TestAgeRange_Step5_1_StartingToMaximum(t *testing.T) {
 		"half_elf": {Min: 16, Max: 185}, "halfling": {Min: 23, Max: 200}, "human": {Min: 16, Max: 130},
 	}
 	for race, w := range want {
-		got, ok := ruletablesvc.AgeRange(race)
-		require.True(t, ok)
-		assert.Equal(t, w, got, race)
+		assert.Equal(t, w, row(t, race).AgeRange(), race)
 	}
 }
 
 // Every value a roll can make is inside its range, so a rolled value never warns.
 func TestRanges_Step5_1_ARolledValueNeverWarns(t *testing.T) {
-	for _, row := range ruletablesvc.IdentityRows() {
+	for _, row := range ruletablesvc.IdentityRows(cataloguetest.Definitions(t)) {
 		for _, sex := range []string{"male", "female"} {
-			h, _ := ruletablesvc.HeightRange(row.Race, sex)
-			w, _ := ruletablesvc.WeightRange(row.Race, sex)
+			h, w := row.HeightRange(sex), row.WeightRange(sex)
 			bh, _ := row.BaseHeight(sex)
 			bw, _ := row.BaseWeight(sex)
 			for _, in := range []int{row.HeightDice.Min(), row.HeightDice.Max()} {
@@ -104,4 +107,27 @@ func TestRanges_Step5_1_ARolledValueNeverWarns(t *testing.T) {
 			}
 		}
 	}
+}
+
+// ADR 0040 step 2: the creation rolls and the ranges read the race definition's rows, so a race the
+// code has never seen (a test giant) has its own Tables 10 and 11 row and range with no code change,
+// and the book's rows are the catalogue's, not a literal.
+func TestIdentity_Step2_TablesTenAndElevenFromTheCatalogue(t *testing.T) {
+	book := cataloguetest.Definitions(t)
+	giant := book.Races()[0]
+	giant.ID = "test_giant"
+	giant.Identity = classes.Identity{
+		HeightMale: 100, HeightFemale: 90, HeightDice: classes.Dice{Count: 2, Sides: 10},
+		WeightMale: 300, WeightFemale: 250, WeightDice: classes.Dice{Count: 3, Sides: 10},
+		StartAge: 30, StartAgeDice: classes.Dice{Count: 2, Sides: 6}, MaxAge: 400, MaxAgeDice: classes.Dice{Count: 1, Sides: 100},
+	}
+	defs, err := classes.New(book.Classes(), book.GroupDefs(), append(book.Races(), giant))
+	require.NoError(t, err)
+
+	got, ok := ruletablesvc.IdentityFor(defs, "test_giant")
+	require.True(t, ok)
+	assert.Equal(t, giant.Identity.HeightDice, got.HeightDice)
+	assert.Equal(t, 100, got.HeightMale)
+	assert.InDelta(t, 2.54*102, got.HeightRange("male").Min, 0.2)
+	assert.Equal(t, ruletablesvc.Range{Min: 32, Max: 500}, got.AgeRange(), "start age 30 + 2 to max age 400 + 100")
 }

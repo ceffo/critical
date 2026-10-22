@@ -8,11 +8,23 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 func f64(v float64) *float64 { return &v }
+
+// identityOf is the catalogue's Tables 10 and 11 row of race, nil for a race it does not define.
+func identityOf(t *testing.T, race string) *ruletablesvc.IdentityRow {
+	t.Helper()
+	row, ok := ruletablesvc.IdentityFor(cataloguetest.Definitions(t), race)
+	if !ok {
+		return nil
+	}
+	return &row
+}
 
 // ADR 0032 step 5.2: a height, weight or age outside the table range of the
 // race (and, for the first two, the sex) is a warning with the value and the
@@ -43,14 +55,14 @@ func TestRangeWarnings_Step5_2_OutsideTheRangeWarnsInsideDoesNot(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			var got []string
-			for _, w := range tc.d.RangeWarnings("half_elf") {
+			for _, w := range tc.d.RangeWarnings(identityOf(t, "half_elf")) {
 				got = append(got, w.Code)
 			}
 			assert.Equal(t, tc.want, got)
 		})
 	}
 
-	ws := d(200, 45, 30).RangeWarnings("half_elf")
+	ws := d(200, 45, 30).RangeWarnings(identityOf(t, "half_elf"))
 	require.Len(t, ws, 1)
 	assert.Equal(t, charactersvc.FieldHeight, ws[0].Field)
 	assert.Equal(t, 200.0, *ws[0].Value)
@@ -63,12 +75,12 @@ func TestRangeWarnings_Step5_2_OutsideTheRangeWarnsInsideDoesNot(t *testing.T) {
 func TestRangeWarnings_Step5_1_NoSexIsTheUnionNoRaceIsNothing(t *testing.T) {
 	// 150 cm is a half-elf woman's too short but a halfling's fine; for a human with no sex the
 	// union runs from the woman's 154.9 to the man's 203.2.
-	assert.Empty(t, charactersvc.Details{Height: 203.2}.RangeWarnings("human"))
-	assert.Empty(t, charactersvc.Details{Height: 154.9}.RangeWarnings("human"))
-	assert.Len(t, charactersvc.Details{Height: 154.8}.RangeWarnings("human"), 1)
-	assert.Len(t, charactersvc.Details{Height: 203.3}.RangeWarnings("human"), 1)
-	assert.Empty(t, charactersvc.Details{Height: 5000, Weight: 1, Age: 9999}.RangeWarnings(""), "no race, no range")
-	assert.Empty(t, charactersvc.Details{Sex: "garbage", Height: 160}.RangeWarnings("human"), "a non-code sex reads as missing")
+	assert.Empty(t, charactersvc.Details{Height: 203.2}.RangeWarnings(identityOf(t, "human")))
+	assert.Empty(t, charactersvc.Details{Height: 154.9}.RangeWarnings(identityOf(t, "human")))
+	assert.Len(t, charactersvc.Details{Height: 154.8}.RangeWarnings(identityOf(t, "human")), 1)
+	assert.Len(t, charactersvc.Details{Height: 203.3}.RangeWarnings(identityOf(t, "human")), 1)
+	assert.Empty(t, charactersvc.Details{Height: 5000, Weight: 1, Age: 9999}.RangeWarnings(nil), "no race, no range")
+	assert.Empty(t, charactersvc.Details{Sex: "garbage", Height: 160}.RangeWarnings(identityOf(t, "human")), "a non-code sex reads as missing")
 }
 
 // ADR 0032 step 5.2: the refusals are only about being a number: a height or

@@ -437,7 +437,11 @@ func (s *service) Identity(_ context.Context, in IdentityInput) (*IdentityResult
 	if in.Race == "" {
 		return nil, &domain.FieldError{Field: order[0], Message: charactersvc.CodeRaceRequired}
 	}
-	row, ok := ruletablesvc.IdentityFor(in.Race)
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return nil, fmt.Errorf("identity: %w", err)
+	}
+	row, ok := ruletablesvc.IdentityFor(defs, in.Race)
 	if !ok {
 		return nil, &domain.FieldError{Field: "race", Message: charactersvc.CodeUnknown}
 	}

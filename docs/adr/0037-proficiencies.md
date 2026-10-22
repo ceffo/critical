@@ -192,12 +192,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
    Wielding stays allowed: ADR 0033 step 20 still only warns.
    Tests: `TestWeaponPick_Step7_ClassLimitsRefuseThePick` (charactersvc: each class's allowed and
    one refused type, a duplicate type, an unknown code),
-   `TestClassWeaponTypes_Step7_FromTheStep20TableAndTheCatalogue` (itemsvc: the lists above from
-   the step 20 table and the catalogue).
-   _(As built 2026-10-20: the lists are committed rules data, `ruletablesvc.ClassWeaponTypes` (no
-   list: any type), checked against the PHB pages by `TestClassWeaponTypes_Step7_PhbLists`
-   (ruletablesvc) and re-derived from itemsvc's step 20 table and the fixture catalogue by the
-   itemsvc test (the thief's `other_thrown` comes from the lasso, which the catalogue lacks).
+   `TestClassWeaponTypes_Step7_AgreesWithTheStep20Warnings` (itemsvc: the lists above from
+   the class equipment and the catalogue).
+   _(As built 2026-10-20, moved onto the class data 2026-10-22 ([ADR 0040](0040-classes-are-data.md) step 11): the lists are
+   no longer committed Go data. `ruletablesvc.WeaponPickTypes` derives them at import from the class
+   equipment lists and the weapon catalogue and `classes.Equipment.PickTypes` holds them (absent: any
+   type), checked against the PHB pages by `TestClassWeaponTypes_Step7_DerivedFromTheEquipmentList`
+   (ruletablesvc) and re-derived from the class warnings by the itemsvc test. The thief's
+   `other_thrown`, which came from the lasso, is lost until the catalogue holds a lasso weapon (the
+   class data names catalogue weapons only, ADR 0040 step 1.6).
    `ruletablesvc.WeaponTypes` now owns the weapon type list, `itemsvc.WeaponTypes` reads it. The
    check is `charactersvc.ValidPicks`; a refusal is a field error on `weapon.<type>` (`unknown`,
    `duplicate`, `out_of_range` for any slot count but 1 until step 9, `weapon_not_allowed`), or

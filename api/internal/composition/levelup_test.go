@@ -82,8 +82,8 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 	require.NoError(t, err)
 	grants16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}
 	owed := []charactersvc.PendingLevel{
-		{Level: 16, FixedGain: 2, Grants: grants16},
-		{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
+		{Class: "bard", Classes: 1, Level: 16, FixedGain: 2, Grants: grants16},
+		{Class: "bard", Classes: 1, Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
 	}
 	at15 := skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 30}
 	at16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}
@@ -154,7 +154,7 @@ func TestLevelUp_TwoLevelsAtOnceAreTwoDiceThroughTheDicePort(t *testing.T) {
 	require.NoError(t, err)
 	lu, _, _ = levelUpOf(t, bs, id)
 	points := skills.LevelGrants{SkillPoints: 15}
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 2, Die: 6, Grants: points}, {Level: 3, Die: 6, Grants: points}}, lu.Pending)
+	assert.Equal(t, []charactersvc.PendingLevel{{Class: "bard", Classes: 1, Level: 2, Die: 6, Grants: points}, {Class: "bard", Classes: 1, Level: 3, Die: 6, Grants: points}}, lu.Pending)
 
 	first, err := bs.LevelUp.Roll(ctx, id, levelupsvc.RollInput{Level: 2})
 	require.NoError(t, err)

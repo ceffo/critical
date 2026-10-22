@@ -27,7 +27,9 @@ import (
 // and 13 (the warrior's rate steps), unarmoured with Wisdom 17 and in chain
 // mail with Wisdom 10 (the bard's metal armour, the thief's worst column,
 // the cleric's spell failure). The exceptional Strength
-// flag of the derived block is new and left out; its own tests cover it.
+// flag of the derived block is new and left out, and so are the class
+// entries' blocks and the feature grants; their own tests
+// cover them.
 func TestClasses_Golden_FeaturesDeriveWhatTheGoListsDid(t *testing.T) {
 	ctx := context.Background()
 	m := memory.New()
@@ -99,5 +101,10 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	require.NoError(t, json.Unmarshal(b, &m))
 	delete(m, "ExceptionalStrength")
 	delete(m, "exceptionalStrength")
+	// The class entries' blocks and grants (multi-class) are
+	// new too; the multi-class tests cover them.
+	delete(m, "Classes")
+	delete(m, "Features")
+
 	return m
 }

@@ -104,10 +104,18 @@ func (d *DAL) classEntries(ctx context.Context, row queries.GetCharacterRow) ([]
 	return out, nil
 }
 
-// SetRealizedLevel implements levelupsvc.DAL: the realized level and the
-// max HP that goes with it (ADR 0030 step 7.3). domain.ErrCharacterNotFound
-// when the row is missing.
-func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
+// SetRealizedLevel implements levelupsvc.DAL: the realized level of the class
+// entry of class ("" the first active one) and the max HP that goes with it
+// (ADR 0030 step 7.3, ADR 0042 step 7). domain.ErrCharacterNotFound when the
+// row (or the active entry) is missing.
+func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel, hpMax int) error {
+	entries, err := d.q.ListClassEntries(ctx, id)
+	if err != nil {
+		return fmt.Errorf("list class entries of character %d: %w", id, err)
+	}
+	if class != "" && !firstActiveIs(entries, class) {
+		return d.setOtherEntryLevel(ctx, id, class, realizedLevel, hpMax)
+	}
 	n, err := d.q.SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		RealizedLevel: sql.NullInt64{Int64: int64(realizedLevel), Valid: true}, HpMax: int64(hpMax), ID: id,
 	})
@@ -123,6 +131,38 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpM
 		RealizedLevel: int64(realizedLevel), CharacterID: id,
 	}); err != nil {
 		return fmt.Errorf("set realized level of the class entry: %w", err)
+	}
+	return nil
+}
+
+// firstActiveIs reports whether class is the first active entry's, or there
+// is no entry (the columns are the one entry).
+func firstActiveIs(entries []queries.ListClassEntriesRow, class string) bool {
+	for _, e := range entries {
+		if e.State == string(classes.EntryActive) {
+			return e.Class == class
+		}
+	}
+	return true
+}
+
+// setOtherEntryLevel is a level-up of an entry other than the first active
+// one: its level and the max HP; the columns keep the first's level.
+func (d *DAL) setOtherEntryLevel(ctx context.Context, id int64, class string, realizedLevel, hpMax int) error {
+	n, err := d.q.SetHPMax(ctx, queries.SetHPMaxParams{HpMax: int64(hpMax), ID: id})
+	if err != nil {
+		return fmt.Errorf("set max HP: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	if n, err = d.q.SetEntryLevel(ctx, queries.SetEntryLevelParams{
+		RealizedLevel: int64(realizedLevel), CharacterID: id, Class: class,
+	}); err != nil {
+		return fmt.Errorf("set realized level of class entry %s: %w", class, err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
 	}
 	return nil
 }

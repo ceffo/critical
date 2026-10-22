@@ -55,8 +55,8 @@ describe("LevelUpPrompt (ADR 0030 step 7)", () => {
   it("prompts for the lowest pending level's hit die", async () => {
     const lu: LevelUp = {
       pending: [
-        { level: 9, die: 6, fixedGain: 0, grants: none },
-        { level: 10, die: 6, fixedGain: 0, grants: none },
+        { class: "bard", classes: 1, level: 9, die: 6, fixedGain: 0, grants: none },
+        { class: "bard", classes: 1, level: 10, die: 6, fixedGain: 0, grants: none },
       ],
       realizedAboveTarget: false,
       toSpend: none,
@@ -74,7 +74,7 @@ describe("LevelUpPrompt (ADR 0030 step 7)", () => {
 
   it("offers the fixed gain above the name level, with no die to enter", async () => {
     const lu: LevelUp = {
-      pending: [{ level: 16, die: 0, fixedGain: 2, grants: none }],
+      pending: [{ class: "bard", classes: 1, level: 16, die: 0, fixedGain: 2, grants: none }],
       realizedAboveTarget: false,
       toSpend: none,
     };
@@ -193,7 +193,7 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     const toSpend = { ...none, weaponSlots: 1 };
     const owed = await render(
       {
-        pending: [{ level: 5, die: 6, fixedGain: 0, grants: rogue4 }],
+        pending: [{ class: "bard", classes: 1, level: 5, die: 6, fixedGain: 0, grants: rogue4 }],
         realizedAboveTarget: false,
         toSpend,
       },

@@ -80,17 +80,33 @@ func (c *Character) SetClasses(entries []classes.Entry) {
 	}
 }
 
-// SetPrimaryLevel moves the realized level of the first active entry and the
-// mirror (a level-up, ADR 0030 step 7.3, and its undo).
-func (c *Character) SetPrimaryLevel(level int) {
-	c.RealizedLevel = level
+// SetEntryLevel moves the realized level of the active entry of class (""
+// the first active one) and, for the first active one, the mirror (a
+// level-up, ADR 0030 step 7.3 and ADR 0042 step 7, and its undo); false when
+// there is no such entry.
+func (c *Character) SetEntryLevel(class string, level int) bool {
+	if len(c.Classes) == 0 {
+		if class != "" && class != c.Class {
+			return false
+		}
+		c.RealizedLevel = level
+		return true
+	}
+	first, _ := classes.Primary(c.Classes)
+	if class == "" {
+		class = first.Class
+	}
 	for i := range c.Classes {
-		if c.Classes[i].State == classes.EntryActive {
+		if c.Classes[i].State == classes.EntryActive && c.Classes[i].Class == class {
 			c.Classes = slices.Clone(c.Classes)
 			c.Classes[i].RealizedLevel = level
-			return
+			if class == first.Class {
+				c.RealizedLevel = level
+			}
+			return true
 		}
 	}
+	return false
 }
 
 // Entries are the class entries: Classes, or the one active entry the mirror
@@ -101,6 +117,19 @@ func (c *Character) Entries() []classes.Entry {
 		return c.Classes
 	}
 	return []classes.Entry{classes.SingleEntry(c.Class, c.RealizedLevel, c.XPTotal)}
+}
+
+// ProficiencyClasses are the active entries as the proficiency pools read them
+// (ADR 0042 step 15): each class at its realized level, from the derived
+// block (Derived must be set).
+func (c *Character) ProficiencyClasses() skills.Classes {
+	var out skills.Classes
+	for _, e := range c.Derived.Classes {
+		if e.State == classes.EntryActive {
+			out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel})
+		}
+	}
+	return out
 }
 
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
@@ -123,11 +152,22 @@ type Sheet struct {
 }
 
 // Derived are a character's values derived by the rules (ADR 0030 steps 3 to
-// 8 and 22.1).
+// 8 and 22.1) through its class entries (ADR 0042 steps 5 to 14). The level
+// and XP fields below are the first active entry's (the mirror of
+// Character.Class); Classes holds every entry's.
 type Derived struct {
-	// XPTotal is the starting XP plus every ledger entry (ADR 0015 step 1).
+	// Classes are the class entries' own figures (ADR 0042 steps 5, 7 and
+	// 14), in the entries' order.
+	Classes []EntryDerived
+	// Features are the feature kinds the entries grant (ADR 0042 step 12),
+	// each with the class and the level it is read at, in the kinds' order
+	// then the entries'.
+	Features []FeatureGrant
+	// XPTotal is the first active entry's XP: its starting XP plus its share
+	// of every ledger entry (ADR 0015 step 1, ADR 0042 step 5).
 	XPTotal int
-	// Group is the class's group (ADR 0040 step 1.2, its definition's).
+	// Group is the first active entry's class group (ADR 0040 step 1.2, its
+	// definition's).
 	Group string
 	// ExceptionalStrength is ADR 0030 steps 9 and 10 read through the class's
 	// features (ADR 0040 step 3, exceptional_strength at the realized level):
@@ -162,7 +202,9 @@ type Derived struct {
 	// nothing (steps 10.2 and 10.3).
 	SpellImmunities []string
 	// SpellSlots is step 8 at the realized level: the slots per day by
-	// spell level, levels with no slot absent.
+	// spell level, levels with no slot absent. A multi-class character's
+	// are the first active spellcasting entry's (ADR 0042 step 14; each
+	// entry's are in Classes).
 	SpellSlots map[int]int
 	// LevelUp is step 7: the levels the target is above the realized one.
 	LevelUp LevelUp
@@ -207,6 +249,94 @@ type Derived struct {
 	Proficiencies *skills.ProficiencySlots
 }
 
+// EntryDerived are one class entry's own figures (ADR 0042 steps 5, 7 and
+// 14).
+type EntryDerived struct {
+	Class string
+	// Group is the class's group (ADR 0040 step 1.2).
+	Group string
+	State classes.EntryState
+	// XP is the entry's starting XP plus its share of the ledger (ADR 0042
+	// step 5).
+	XP int
+	// TargetLevel is the class's experience table at XP (ADR 0030 step 3);
+	// 0 for a frozen entry (ADR 0042 step 7).
+	TargetLevel int
+	// RealizedLevel is the level taken in the class (a frozen entry's
+	// left-at level).
+	RealizedLevel int
+	// NextLevelXP is the XP that reaches TargetLevel + 1; nil at the last
+	// level and for a frozen entry.
+	NextLevelXP *int
+	// SpellSlots are the class's slots at RealizedLevel (ADR 0042 step 14),
+	// empty for a class without a spell progression.
+	SpellSlots map[int]int
+	// Casts is a class with a spell progression (ADR 0040 step 1.9).
+	Casts bool
+	// LevelUp are the entry's pending levels (ADR 0042 step 7).
+	LevelUp LevelUp
+}
+
+// CasterLevel is ADR 0042 step 14: the realized level of the first active
+// entry with a spell progression, the one whose slots SpellSlots are; the
+// realized level when no entry casts (a single-class character's).
+func (d *Derived) CasterLevel() int {
+	for _, e := range d.Classes {
+		if e.State == classes.EntryActive && e.Casts {
+			return e.RealizedLevel
+		}
+	}
+	return d.RealizedLevel
+}
+
+// FeatureGrant is one feature kind granted through a class entry (ADR 0042
+// step 12): the class granting it and the level its rule reads.
+type FeatureGrant struct {
+	Kind  string
+	Class string
+	Level int
+}
+
+// Grant is the first grant of kind (ADR 0042 step 12), false when no entry
+// grants it.
+func (d *Derived) Grant(kind string) (FeatureGrant, bool) {
+	for _, g := range d.Features {
+		if g.Kind == kind {
+			return g, true
+		}
+	}
+	return FeatureGrant{}, false
+}
+
+// FeatureLevel is the level the rule of kind reads (ADR 0042 step 12): the
+// level of the entry granting it, the realized level when none does.
+func (d *Derived) FeatureLevel(kind string) int {
+	if g, ok := d.Grant(kind); ok {
+		return g.Level
+	}
+	return d.RealizedLevel
+}
+
+// FeatureClass is the class granting kind (ADR 0042 step 12), fallback when
+// no entry grants it.
+func (d *Derived) FeatureClass(kind, fallback string) string {
+	if g, ok := d.Grant(kind); ok {
+		return g.Class
+	}
+	return fallback
+}
+
+// Entry is the derived block of the entry of class, false when the character
+// has no such entry.
+func (d *Derived) Entry(class string) (EntryDerived, bool) {
+	for _, e := range d.Classes {
+		if e.Class == class {
+			return e, true
+		}
+	}
+	return EntryDerived{}, false
+}
+
 // SpellbookRules are ADR 0030 step 20.1 on a character: what it may write
 // in its spellbook. The sheet's Intelligence picks the PHB Table 4 row.
 type SpellbookRules struct {
@@ -229,6 +359,12 @@ type SpellbookRules struct {
 // level grants beyond hit points (ADR 0037 step 15), set by the service (the
 // slots read the catalogue), not by Derive.
 type PendingLevel struct {
+	// Class is the entry the level is taken in (ADR 0042 step 7).
+	Class string
+	// Classes is the character's number of classes, what the hit die, the
+	// fixed gain and the Constitution adjustment are divided by (ADR 0042
+	// step 10.2 and 10.3); 1 for a single-class character.
+	Classes   int
 	Level     int
 	Die       int
 	FixedGain int

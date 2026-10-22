@@ -41,8 +41,9 @@ func LedgerTotal(opening int, entries []Entry) int {
 }
 
 // BonusEligible is ADR 0040 step 6 (replacing ADR 0015 step 2's bard-only
-// test): every prime requisite of c's class (primes, ability codes, its
-// definition's) is at least BonusMinScore on the sheet. A fighter's 18/xx is
+// test) as amended by ADR 0042 step 6: every prime requisite of every active
+// class of c (primes, ability codes, the definitions') is at least
+// BonusMinScore on the sheet. A fighter's 18/xx is
 // 18 for the test (the plain score). A class without prime requisites gets
 // none.
 func BonusEligible(primes []string, c *charactersvc.Character) bool {

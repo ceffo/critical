@@ -21,23 +21,25 @@ func (_m *MockXPLedger) EXPECT() *MockXPLedger_Expecter {
 	return &MockXPLedger_Expecter{mock: &_m.Mock}
 }
 
-// EntriesTotal provides a mock function with given fields: ctx, characterID
-func (_m *MockXPLedger) EntriesTotal(ctx context.Context, characterID int64) (int, error) {
+// Awards provides a mock function with given fields: ctx, characterID
+func (_m *MockXPLedger) Awards(ctx context.Context, characterID int64) ([]int, error) {
 	ret := _m.Called(ctx, characterID)
 
 	if len(ret) == 0 {
-		panic("no return value specified for EntriesTotal")
+		panic("no return value specified for Awards")
 	}
 
-	var r0 int
+	var r0 []int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) (int, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]int, error)); ok {
 		return rf(ctx, characterID)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64) int); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []int); ok {
 		r0 = rf(ctx, characterID)
 	} else {
-		r0 = ret.Get(0).(int)
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]int)
+		}
 	}
 
 	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
@@ -49,31 +51,31 @@ func (_m *MockXPLedger) EntriesTotal(ctx context.Context, characterID int64) (in
 	return r0, r1
 }
 
-// MockXPLedger_EntriesTotal_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EntriesTotal'
-type MockXPLedger_EntriesTotal_Call struct {
+// MockXPLedger_Awards_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Awards'
+type MockXPLedger_Awards_Call struct {
 	*mock.Call
 }
 
-// EntriesTotal is a helper method to define mock.On call
+// Awards is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
-func (_e *MockXPLedger_Expecter) EntriesTotal(ctx interface{}, characterID interface{}) *MockXPLedger_EntriesTotal_Call {
-	return &MockXPLedger_EntriesTotal_Call{Call: _e.mock.On("EntriesTotal", ctx, characterID)}
+func (_e *MockXPLedger_Expecter) Awards(ctx interface{}, characterID interface{}) *MockXPLedger_Awards_Call {
+	return &MockXPLedger_Awards_Call{Call: _e.mock.On("Awards", ctx, characterID)}
 }
 
-func (_c *MockXPLedger_EntriesTotal_Call) Run(run func(ctx context.Context, characterID int64)) *MockXPLedger_EntriesTotal_Call {
+func (_c *MockXPLedger_Awards_Call) Run(run func(ctx context.Context, characterID int64)) *MockXPLedger_Awards_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(context.Context), args[1].(int64))
 	})
 	return _c
 }
 
-func (_c *MockXPLedger_EntriesTotal_Call) Return(_a0 int, _a1 error) *MockXPLedger_EntriesTotal_Call {
+func (_c *MockXPLedger_Awards_Call) Return(_a0 []int, _a1 error) *MockXPLedger_Awards_Call {
 	_c.Call.Return(_a0, _a1)
 	return _c
 }
 
-func (_c *MockXPLedger_EntriesTotal_Call) RunAndReturn(run func(context.Context, int64) (int, error)) *MockXPLedger_EntriesTotal_Call {
+func (_c *MockXPLedger_Awards_Call) RunAndReturn(run func(context.Context, int64) ([]int, error)) *MockXPLedger_Awards_Call {
 	_c.Call.Return(run)
 	return _c
 }

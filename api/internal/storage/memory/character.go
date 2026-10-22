@@ -55,15 +55,18 @@ func (c Characters) GetCharacter(ctx context.Context, id int64) (*charactersvc.C
 	return out, err
 }
 
-// SetRealizedLevel implements levelupsvc.DAL (ADR 0030 step 7.3), or
-// returns domain.ErrCharacterNotFound.
-func (c Characters) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpMax int) error {
+// SetRealizedLevel implements levelupsvc.DAL (ADR 0030 step 7.3, ADR 0042
+// step 7: the entry of class, "" the first active one), or returns
+// domain.ErrCharacterNotFound.
+func (c Characters) SetRealizedLevel(ctx context.Context, id int64, class string, realizedLevel, hpMax int) error {
 	return c.s.write(ctx, func(t *tables) error {
 		ch, ok := t.characters[id]
 		if !ok {
 			return domain.ErrCharacterNotFound
 		}
-		ch.SetPrimaryLevel(realizedLevel)
+		if !ch.SetEntryLevel(class, realizedLevel) {
+			return domain.ErrCharacterNotFound
+		}
 		ch.HPMax = hpMax
 		t.characters[id] = ch
 		return nil

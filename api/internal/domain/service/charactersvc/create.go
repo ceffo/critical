@@ -395,7 +395,7 @@ func (s *service) startingSpellbook(c Character, d Derived, ids []string) ([]spe
 // returns that derivation (before c's level was set: the realized level is the
 // target one).
 func started(c *Character, rules Rules) (Derived, error) {
-	d, err := Derive(c, 0, "", rules)
+	d, err := Derive(c, nil, "", rules)
 	if err != nil {
 		return Derived{}, fmt.Errorf("new character: %w", err)
 	}
@@ -447,7 +447,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 		c.Proficiencies, c.Details.Languages = sheet.Picks, sheet.Languages
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).
-	if c.Derived, err = Derive(&c, 0, "", s.rules); err != nil {
+	if c.Derived, err = Derive(&c, nil, "", s.rules); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
 	s.readWarnings(&c, AlignmentsOf(k.defs, c.Class))

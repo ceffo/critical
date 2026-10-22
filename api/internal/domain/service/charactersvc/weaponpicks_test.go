@@ -25,7 +25,7 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 		k := kelsen()
 		k.Proficiencies = weapons("other_melee", "long_sword", "short_bow", "dagger")
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(k, nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 		expectKelsenAt(e, target)
 		got, err := e.svc.GetCharacter(context.Background(), 3)
 		require.NoError(t, err)

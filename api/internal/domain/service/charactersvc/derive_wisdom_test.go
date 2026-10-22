@@ -25,7 +25,7 @@ func TestDerive_Step9_MagicDefenceForEveryClass(t *testing.T) {
 			c := &charactersvc.Character{
 				Class: class, Race: "human", Str: 12, Dex: 12, Con: 12, Int: 12, Wis: wis, Cha: 12, RealizedLevel: 1,
 			}
-			d, err := charactersvc.Derive(c, 0, "", tables)
+			d, err := charactersvc.Derive(c, nil, "", tables)
 			require.NoError(t, err, "%s Wisdom %d", class, wis)
 			assert.Equal(t, want, d.MagicDefence, "%s Wisdom %d", class, wis)
 		}
@@ -46,7 +46,7 @@ func TestDerive_Step10_SpellImmunitiesForEveryClass(t *testing.T) {
 			c := &charactersvc.Character{
 				Class: class, Race: "human", Str: 12, Dex: 12, Con: 12, Int: 12, Wis: wis, Cha: 12, RealizedLevel: 1,
 			}
-			d, err := charactersvc.Derive(c, 0, "", tables)
+			d, err := charactersvc.Derive(c, nil, "", tables)
 			require.NoError(t, err, "%s Wisdom %d", class, wis)
 			return d.SpellImmunities
 		}

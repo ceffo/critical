@@ -235,17 +235,20 @@ func TestSetRealizedLevel_WritesTheLevelAndItsMaxHP(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
 	dal := characterdal.New(q)
+	q.EXPECT().ListClassEntries(ctx, int64(3)).Return(nil, nil).Once()
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		HpMax: 91, RealizedLevel: sql.NullInt64{Int64: 16, Valid: true}, ID: 3,
 	}).Return(1, nil).Once()
 	q.EXPECT().SetFirstActiveEntryLevel(ctx, queries.SetFirstActiveEntryLevelParams{RealizedLevel: 16, CharacterID: 3}).
 		Return(nil).Once()
-	require.NoError(t, dal.SetRealizedLevel(ctx, 3, 16, 91))
+	require.NoError(t, dal.SetRealizedLevel(ctx, 3, "", 16, 91))
+
+	q.EXPECT().ListClassEntries(ctx, int64(9)).Return(nil, nil).Once()
 
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		HpMax: 1, RealizedLevel: sql.NullInt64{Int64: 2, Valid: true}, ID: 9,
 	}).Return(0, nil).Once()
-	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, 2, 1), domain.ErrCharacterNotFound)
+	require.ErrorIs(t, dal.SetRealizedLevel(ctx, 9, "", 2, 1), domain.ErrCharacterNotFound)
 }
 
 // A rename or a retirement that matches no row (another user's character, a

@@ -71,7 +71,7 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 		if err != nil {
 			return err
 		}
-		def, err := s.classDef(c.Class)
+		def, err := s.classDef(c.Derived.FeatureClass(classes.KindRogueSkills, c.Class)) // ADR 0042 step 12
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, points map[s
 		}
 		// ADR 0037 step 10: over the budget at the realized level and
 		// spending more is refused before any write or log entry.
-		if err := skills.SkillPointsWithinBudget(def, c.Derived.RealizedLevel, c.SkillPoints, next); err != nil {
+		if err := skills.SkillPointsWithinBudget(def, c.Derived.FeatureLevel(classes.KindRogueSkills), c.SkillPoints, next); err != nil {
 			return err
 		}
 		out = orEmpty(next)

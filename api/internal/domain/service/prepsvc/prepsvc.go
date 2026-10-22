@@ -163,7 +163,7 @@ func (s *service) levelLimits(ctx context.Context, characterID int64) (int, map[
 	if err != nil {
 		return 0, nil, fmt.Errorf("get character: %w", err)
 	}
-	return c.Derived.RealizedLevel, c.Derived.SpellSlots, nil
+	return c.Derived.CasterLevel(), c.Derived.SpellSlots, nil
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {

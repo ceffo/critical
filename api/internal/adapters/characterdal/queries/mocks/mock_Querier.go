@@ -1006,6 +1006,63 @@ func (_c *MockQuerier_SetCurrentCharacter_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// SetEntryLevel provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetEntryLevel(ctx context.Context, arg queries.SetEntryLevelParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetEntryLevel")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetEntryLevelParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetEntryLevelParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetEntryLevelParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetEntryLevel_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetEntryLevel'
+type MockQuerier_SetEntryLevel_Call struct {
+	*mock.Call
+}
+
+// SetEntryLevel is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetEntryLevelParams
+func (_e *MockQuerier_Expecter) SetEntryLevel(ctx interface{}, arg interface{}) *MockQuerier_SetEntryLevel_Call {
+	return &MockQuerier_SetEntryLevel_Call{Call: _e.mock.On("SetEntryLevel", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetEntryLevel_Call) Run(run func(ctx context.Context, arg queries.SetEntryLevelParams)) *MockQuerier_SetEntryLevel_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetEntryLevelParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetEntryLevel_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetEntryLevel_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetEntryLevel_Call) RunAndReturn(run func(context.Context, queries.SetEntryLevelParams) (int64, error)) *MockQuerier_SetEntryLevel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetFirstActiveEntryLevel provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) SetFirstActiveEntryLevel(ctx context.Context, arg queries.SetFirstActiveEntryLevelParams) error {
 	ret := _m.Called(ctx, arg)
@@ -1049,6 +1106,63 @@ func (_c *MockQuerier_SetFirstActiveEntryLevel_Call) Return(_a0 error) *MockQuer
 }
 
 func (_c *MockQuerier_SetFirstActiveEntryLevel_Call) RunAndReturn(run func(context.Context, queries.SetFirstActiveEntryLevelParams) error) *MockQuerier_SetFirstActiveEntryLevel_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetHPMax provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetHPMax(ctx context.Context, arg queries.SetHPMaxParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetHPMax")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetHPMaxParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetHPMaxParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetHPMaxParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetHPMax_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetHPMax'
+type MockQuerier_SetHPMax_Call struct {
+	*mock.Call
+}
+
+// SetHPMax is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetHPMaxParams
+func (_e *MockQuerier_Expecter) SetHPMax(ctx interface{}, arg interface{}) *MockQuerier_SetHPMax_Call {
+	return &MockQuerier_SetHPMax_Call{Call: _e.mock.On("SetHPMax", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetHPMax_Call) Run(run func(ctx context.Context, arg queries.SetHPMaxParams)) *MockQuerier_SetHPMax_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetHPMaxParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetHPMax_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetHPMax_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetHPMax_Call) RunAndReturn(run func(context.Context, queries.SetHPMaxParams) (int64, error)) *MockQuerier_SetHPMax_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -179,6 +179,7 @@ LevelLimit  # Needs a term: level, limits and grant concepts
 LevelLimits  # Needs a term: level, limits and grant concepts
 Limits  # Needs a term: level, limits and grant concepts
 PendingLevel  # Needs a term: level, limits and grant concepts
+TakenLevel  # Needs a term: level, limits and grant concepts
 Thresholds  # Needs a term: level, limits and grant concepts
 Tier  # Needs a term: level, limits and grant concepts
 Spending  # Needs a term: level, limits and grant concepts

@@ -64,7 +64,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		// nothing else happens.
 		var failure *SpellFailure
 		if chance := c.Derived.SpellFailure; chance > 0 {
-			if err := s.checkCast(ctx, characterID, id, req, c.Derived.RealizedLevel); err != nil {
+			if err := s.checkCast(ctx, characterID, id, req, c.Derived.CasterLevel()); err != nil {
 				return err
 			}
 			roll := s.Dice.RollDie(100)
@@ -79,7 +79,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				return err
 			}
 			res = CastResult{
-				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: c.Derived.RealizedLevel,
+				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: c.Derived.CasterLevel(),
 				SlotIndex: &slotIndex, Slots: after, Failure: failure,
 			}
 			res.EntryID, err = s.record(ctx, characterID, res, []actionlog.Snapshot{slotSnap})
@@ -87,7 +87,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 				return err
 			}
 			// A failed cast still took its casting time.
-			return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
+			return s.correctInitiative(ctx, characterID, id, name, c.Derived.CasterLevel())
 		}
 		var extra []int
 		// ADR 0008 step 9: a spell that grants slots adds them, blank.
@@ -109,7 +109,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: c.Derived.CasterLevel(), group: c.Derived.Group, source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -122,7 +122,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		if err != nil {
 			return err
 		}
-		return s.correctInitiative(ctx, characterID, id, name, c.Derived.RealizedLevel)
+		return s.correctInitiative(ctx, characterID, id, name, c.Derived.CasterLevel())
 	})
 	if err != nil {
 		return CastResult{}, err
@@ -247,7 +247,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 	if err != nil {
 		return CastResult{}, fmt.Errorf("get character: %w", err)
 	}
-	if err := checkCasterLevel(c.Derived.RealizedLevel); err != nil {
+	if err := checkCasterLevel(c.Derived.CasterLevel()); err != nil {
 		return CastResult{}, err
 	}
 	mode, err := s.modeFor(id, "")
@@ -259,7 +259,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.RealizedLevel, group: c.Derived.Group, source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.Derived.CasterLevel(), group: c.Derived.Group, source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err

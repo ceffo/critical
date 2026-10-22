@@ -9,8 +9,14 @@ import (
 // PendingLevelDTO is one level whose hit points are owed (ADR 0030 step 7):
 // `die` the hit die's sides to roll up to the name level (0 above it),
 // `fixedGain` the gain above it (0 up to it), `grants` what the level grants
-// beyond hit points (ADR 0037 step 15).
+// beyond hit points (ADR 0037 step 15). A multi-class character's carry
+// `class`, the class entry the level is taken in, and `classes`, the number
+// of its classes, what the die, the fixed gain and the Constitution
+// adjustment are divided by (ADR 0042 steps 7 and 10); a single-class
+// character's have neither (its answer is unchanged).
 type PendingLevelDTO struct {
+	Class     string         `json:"class,omitempty"`
+	Classes   int            `json:"classes,omitempty"`
 	Level     int            `json:"level"`
 	Die       int            `json:"die"`
 	FixedGain int            `json:"fixedGain"`
@@ -52,7 +58,11 @@ func GrantsDTO(g skills.LevelGrants, free []spellbook.FreeSpell) LevelGrantsDTO 
 func PendingDTO(p []charactersvc.PendingLevel) []PendingLevelDTO {
 	out := make([]PendingLevelDTO, 0, len(p))
 	for _, l := range p {
-		out = append(out, PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain, Grants: GrantsDTO(l.Grants, l.FreeSpells)})
+		dto := PendingLevelDTO{Level: l.Level, Die: l.Die, FixedGain: l.FixedGain, Grants: GrantsDTO(l.Grants, l.FreeSpells)}
+		if l.Classes > 1 {
+			dto.Class, dto.Classes = l.Class, l.Classes
+		}
+		out = append(out, dto)
 	}
 	return out
 }

@@ -115,7 +115,7 @@ func TestGetCharacter_Step5_2_TheReadWarnsOutsideTheRange(t *testing.T) {
 	c.Details = charactersvc.Details{Alignment: "neutral_good", Sex: "male", Height: 230, Weight: 60, Age: 40}
 	e := newEnv(t)
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(c, nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 	expectKelsenRules(e.rules, 1_293_418, 15)
 
 	got, err := e.svc.GetCharacter(context.Background(), 3)

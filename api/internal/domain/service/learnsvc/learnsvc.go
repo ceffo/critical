@@ -15,6 +15,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
@@ -189,7 +190,7 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 		if err != nil {
 			return err
 		}
-		level := c.Derived.RealizedLevel
+		level := c.Derived.FeatureLevel(classes.KindSpellbook) // ADR 0042 step 12: the spellbook entry's level
 		// The failure's block of step 20.2.
 		failedAt, failed, err := s.d.DAL.LearnFailure(ctx, c.ID, spellID)
 		if err != nil {

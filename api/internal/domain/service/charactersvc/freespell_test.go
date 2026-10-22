@@ -38,7 +38,7 @@ func TestGetCharacter_Step20_8_OwedIsOpenedLevelsMinusGrants(t *testing.T) {
 			e := newEnv(t)
 			c := &charactersvc.Character{ID: 4, Class: "mage", Race: "human", Int: 14, HPMax: 9, RealizedLevel: 4, XPTotal: 10_000}
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(4)).Return(c, nil).Once()
-			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(4)).Return(0, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(4)).Return(nil, nil).Once()
 			expectMageRules(e.rules, 4)
 			e.free.taken[4] = []int{3, 5, 2, 3}
 			e.free.claimed[4] = tc.claimed
@@ -56,7 +56,7 @@ func TestGetCharacter_Step20_8_OwedIsOpenedLevelsMinusGrants(t *testing.T) {
 func TestGetCharacter_Step20_8_ABardReadsNoFreeSpells(t *testing.T) {
 	e := newEnv(t)
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 	expectKelsenRules(e.rules, 1_293_418, 15)
 	e.free.taken[3] = []int{15}
 	got, err := e.svc.GetCharacter(context.Background(), 3)
@@ -130,7 +130,7 @@ func TestGetCharacter_Step20_8_FreeSpellsFromTheSpellbookParam(t *testing.T) {
 				HPMax: 9, RealizedLevel: 3, XPTotal: 20_000,
 			}
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(9)).Return(c, nil).Once()
-			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(9)).Return(0, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(9)).Return(nil, nil).Once()
 
 			got, err := svc.GetCharacter(context.Background(), 9)
 			require.NoError(t, err)

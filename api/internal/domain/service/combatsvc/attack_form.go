@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -372,9 +373,13 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 // display-only: a class or level the tables cannot read is logged and shows
 // no rate rather than failing the form.
 func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
-	rate, ok, err := s.rules.AttackRateFor(char.Class, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)
+	// ADR 0042 step 12: the entry granting the attacks per round, at its
+	// level.
+	class := char.Derived.FeatureClass(classes.KindMeleeAttacksPerRound, char.Class)
+	level := char.Derived.FeatureLevel(classes.KindMeleeAttacksPerRound)
+	rate, ok, err := s.rules.AttackRateFor(class, level, string(weapon.Kind), weapon.Type, weapon.Specialized)
 	if err != nil {
-		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", char.Derived.RealizedLevel, "weapon", weapon.ID, "err", err)
+		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", level, "weapon", weapon.ID, "err", err)
 		return nil, nil
 	}
 	if !ok {

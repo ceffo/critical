@@ -507,6 +507,25 @@ func (q *Queries) SetCurrentCharacter(ctx context.Context, arg SetCurrentCharact
 	return result.RowsAffected()
 }
 
+const setEntryLevel = `-- name: SetEntryLevel :execrows
+UPDATE character_classes SET realized_level = $1
+WHERE character_id = $2 AND class = $3 AND state = 'active'
+`
+
+type SetEntryLevelParams struct {
+	RealizedLevel int64
+	CharacterID   int64
+	Class         string
+}
+
+func (q *Queries) SetEntryLevel(ctx context.Context, arg SetEntryLevelParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setEntryLevel, arg.RealizedLevel, arg.CharacterID, arg.Class)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setFirstActiveEntryLevel = `-- name: SetFirstActiveEntryLevel :exec
 UPDATE character_classes SET realized_level = $1
 WHERE character_classes.character_id = $2 AND position = (
@@ -522,6 +541,25 @@ type SetFirstActiveEntryLevelParams struct {
 func (q *Queries) SetFirstActiveEntryLevel(ctx context.Context, arg SetFirstActiveEntryLevelParams) error {
 	_, err := q.db.ExecContext(ctx, setFirstActiveEntryLevel, arg.RealizedLevel, arg.CharacterID)
 	return err
+}
+
+const setHPMax = `-- name: SetHPMax :execrows
+UPDATE characters SET hp_max = $1 WHERE id = $2
+`
+
+type SetHPMaxParams struct {
+	HpMax int64
+	ID    int64
+}
+
+// A level-up roll of a multi-class character's other entry and its undo (ADR 0042 step 7): the
+// entry's level and the max HP; the column keeps the first active entry's level.
+func (q *Queries) SetHPMax(ctx context.Context, arg SetHPMaxParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setHPMax, arg.HpMax, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 const setLanguages = `-- name: SetLanguages :execrows

@@ -246,30 +246,35 @@ type Spending struct {
 // one) and each pick's figures. ok is false when the catalogue has no Table 34 row for the class
 // (no catalogue, an unknown class).
 func ProficiencyFigures(book Book, class string, level, intelligence int, spend Spending) (ProficiencySlots, bool) {
+	return FiguresOf(book, One(class, level), intelligence, spend)
+}
+
+// FiguresOf is ProficiencyFigures for the active class entries cls (ADR 0042 step 15): the pools
+// read on the basis Classes.basis combines. ok is false when no class has a Table 34 row.
+func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (ProficiencySlots, bool) {
 	picks := spend.Picks
-	row, ok := book.SlotRowOf(class)
+	b, ok := cls.basis(book)
 	if !ok {
 		return ProficiencySlots{}, false
 	}
-	groups := book.GroupsOf(class)
-	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: row.Penalty}
+	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: b.row.Penalty}
 	spent := 0
 	for _, p := range picks.Nonweapon {
-		f := pickFigures(book, groups, p)
+		f := pickFigures(book, b.groups, p)
 		out.Picks = append(out.Picks, f)
 		spent += p.Slots
 	}
-	out.Nonweapon = ruletablesvc.NonweaponSlots(row, level, intelligence, spent+spend.Languages)
+	out.Nonweapon = ruletablesvc.NonweaponSlots(b.row, b.nonweaponLevel, intelligence, spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages
 	out.WeaponPicks = make([]WeaponPickFigures, 0, len(picks.Weapon))
 	spent = 0
 	for _, p := range picks.Weapon {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickFigures{
-			Type: p.Type, Slots: p.Slots, Allowed: ruletablesvc.WeaponTypeAllowed(class, p.Type),
+			Type: p.Type, Slots: p.Slots, Allowed: ruletablesvc.WeaponTypeAllowed(b.class, p.Type),
 		})
 		spent += p.Slots
 	}
-	out.Weapon = ruletablesvc.WeaponSlots(row, level, spent)
+	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
 	return out, true
 }
 
@@ -282,6 +287,14 @@ func ProficiencyFigures(book Book, class string, level, intelligence int, spend 
 // *domain.FieldError on field nonweapon.<id>. Weapon picks: validWeaponPicks. The picks come
 // back in their order, never nil.
 func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
+	return validPicksOf(book, One(class, 0), picks, before)
+}
+
+// validPicksOf is ValidPicks for the active class entries cls: a non-weapon pick costs Table
+// 37's slots when one of its groups is any class's (ADR 0042 step 15, Q13); the weapon picks
+// are the first class's (ADR 0042 step 16.1 is not read yet).
+func validPicksOf(book Book, cls Classes, picks, before Picks) (Picks, error) {
+	class := cls.first()
 	weapon := before.Clone().Weapon
 	if picks.Weapon != nil {
 		var err error
@@ -292,7 +305,7 @@ func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
 	if picks.Nonweapon == nil {
 		return Picks{Nonweapon: before.Clone().Nonweapon, Weapon: weapon}, nil
 	}
-	groups := book.GroupsOf(class)
+	groups := cls.groups(book)
 	had := map[string]bool{}
 	for _, p := range before.Nonweapon {
 		had[p.ID] = true
@@ -373,18 +386,23 @@ func validWeaponPicks(book Book, class string, picks, before []WeaponPick) ([]We
 // a creation whose languages overspend, step 6), else nonweapon or weapon. No Table 34 row for the
 // class: no budget, nil.
 func PicksWithinBudget(book Book, class string, level, intelligence int, before, after Spending) error {
-	b, ok := ProficiencyFigures(book, class, level, intelligence, after)
+	return picksWithinBudgetOf(book, One(class, level), intelligence, before, after)
+}
+
+// picksWithinBudgetOf is PicksWithinBudget for the active class entries cls (ADR 0042 step 15).
+func picksWithinBudgetOf(book Book, cls Classes, intelligence int, before, after Spending) error {
+	b, ok := FiguresOf(book, cls, intelligence, after)
 	if !ok {
 		return nil
 	}
-	was, _ := ProficiencyFigures(book, class, level, intelligence, before)
+	was, _ := FiguresOf(book, cls, intelligence, before)
 	over := func(f ProficiencySlots) bool {
 		return f.Nonweapon.Spent > f.Nonweapon.Available && f.Nonweapon.Spent > was.Nonweapon.Spent
 	}
 	if over(b) {
 		// The languages are to blame when the picks alone, with the languages as before, pass.
 		field := FieldNonweapon
-		if picksOnly, _ := ProficiencyFigures(book, class, level, intelligence,
+		if picksOnly, _ := FiguresOf(book, cls, intelligence,
 			Spending{Picks: after.Picks, Languages: before.Languages}); !over(picksOnly) {
 			field = FieldLanguages
 		}

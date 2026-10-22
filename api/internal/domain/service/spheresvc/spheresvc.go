@@ -11,6 +11,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -86,12 +87,19 @@ func (s *Spheres) open(ctx context.Context, characterID int64) ([]catalogue.Spel
 	if err != nil {
 		return nil, false, err
 	}
-	if !s.access.HasSpheres(c.Class) {
+	// ADR 0042 steps 12 and 14: the entry granting the sphere access, with
+	// its own slots.
+	class := c.Derived.FeatureClass(classes.KindSphereAccess, c.Class)
+	if !s.access.HasSpheres(class) {
 		return nil, false, nil
+	}
+	slots := c.Derived.SpellSlots
+	if e, ok := c.Derived.Entry(class); ok {
+		slots = e.SpellSlots
 	}
 	out := []catalogue.Spell{}
 	for _, sp := range s.priest {
-		if c.Derived.SpellSlots[sp.Level] > 0 && s.access.Opens(c.Class, sp.Level, sp.Spheres) {
+		if slots[sp.Level] > 0 && s.access.Opens(class, sp.Level, sp.Spheres) {
 			out = append(out, sp)
 		}
 	}

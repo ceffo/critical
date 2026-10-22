@@ -16,6 +16,11 @@ export interface SaveNumbers {
  * the class group's name level (0 above it), `fixedGain` the gain above it (0 up to it).
  */
 export interface PendingLevel {
+  /** ADR 0042 step 7: the class entry the level is taken in. */
+  class: string;
+  /** ADR 0042 step 10: the number of the character's classes, what the die, the fixed gain and the
+   * Constitution adjustment are divided by (1: one class). */
+  classes: number;
   level: number;
   die: number;
   fixedGain: number;
@@ -57,6 +62,12 @@ export interface LevelUp {
  * value after the Constitution 20+ floor (both null for a fixed gain).
  */
 export interface LevelUpRecord {
+  /** ADR 0042 step 10.4: the class entry, the divisor and the die's (or fixed gain's) and the
+   * Constitution adjustment's shares; absent from a record written before multi-class. */
+  class?: string;
+  classes?: number;
+  dieShare?: number;
+  conShare?: number;
   level: number;
   hitDie: number;
   rolled: number | null;

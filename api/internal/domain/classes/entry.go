@@ -101,3 +101,52 @@ func ValidateEntries(entries []Entry) error {
 	}
 	return nil
 }
+
+// Active are the active entries, in order (ADR 0042 step 1.4): the classes
+// that earn XP and level.
+func Active(entries []Entry) []Entry {
+	out := make([]Entry, 0, len(entries))
+	for _, e := range entries {
+		if e.State == EntryActive {
+			out = append(out, e)
+		}
+	}
+	return out
+}
+
+// Level is the level the entry's features and figures are read at (ADR 0042
+// steps 12 and 14): its realized level, a frozen entry's left-at level.
+func (e Entry) Level() int {
+	if e.State == EntryFrozen {
+		return e.LeftAtLevel
+	}
+	return e.RealizedLevel
+}
+
+// Grant is a feature kind a character has through one of its class entries
+// (ADR 0042 step 12): the feature with its params, the entry's class and the
+// level the rule reads it at (the entry's Level).
+type Grant struct {
+	Feature Feature
+	Class   Class
+	Level   int
+}
+
+// Grants is ADR 0042 step 12 (amending ADR 0040 step 5): the grants of kind
+// through entries, in entry order: one for each entry whose class lists kind
+// at or under the entry's Level. Two entries granting the same kind each keep
+// their own grant, read at their own level. def is the class definition of an
+// id (Rules.Class); its error is returned.
+func Grants(entries []Entry, def func(class string) (Class, error), kind string) ([]Grant, error) {
+	var out []Grant
+	for _, e := range entries {
+		c, err := def(e.Class)
+		if err != nil {
+			return nil, err
+		}
+		if f, ok := c.Feature(kind, e.Level()); ok {
+			out = append(out, Grant{Feature: f, Class: c, Level: e.Level()})
+		}
+	}
+	return out, nil
+}

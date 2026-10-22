@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -132,11 +133,14 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 	if row == nil {
 		return nil, fmt.Errorf("%w: unknown undead type %q", domain.ErrInvalidInput, undead)
 	}
+	// ADR 0042 step 12: the turning row is read at the level of the entry
+	// granting turn_undead.
+	level := c.Derived.FeatureLevel(classes.KindTurnUndead)
 	if row.Cell.Outcome == ruletablesvc.TurningCannot {
-		return nil, fmt.Errorf("%w: %s at level %d", ruletablesvc.ErrCannotTurn, undead, c.Derived.RealizedLevel)
+		return nil, fmt.Errorf("%w: %s at level %d", ruletablesvc.ErrCannotTurn, undead, level)
 	}
 	res := &Result{
-		Undead: row.Undead, HDMin: row.HDMin, HDMax: row.HDMax, ClericLevel: c.Derived.RealizedLevel, Cell: row.Cell,
+		Undead: row.Undead, HDMin: row.HDMin, HDMax: row.HDMax, ClericLevel: level, Cell: row.Cell,
 	}
 	switch row.Cell.Outcome {
 	case "":

@@ -3,7 +3,6 @@ package charactersvc_test
 import (
 	"context"
 	"errors"
-	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -52,9 +51,15 @@ type freeSpells struct {
 	reads   int
 }
 
-func (f *freeSpells) LevelsTaken(_ context.Context, id int64) ([]int, error) {
+// LevelsTaken are the taken levels, each in the first active entry (a record
+// with no class).
+func (f *freeSpells) LevelsTaken(_ context.Context, id int64) ([]charactersvc.TakenLevel, error) {
 	f.reads++
-	return slices.Clone(f.taken[id]), nil
+	out := make([]charactersvc.TakenLevel, 0, len(f.taken[id]))
+	for _, l := range f.taken[id] {
+		out = append(out, charactersvc.TakenLevel{Level: l})
+	}
+	return out, nil
 }
 
 func (f *freeSpells) Claimed(_ context.Context, id int64) ([]spellbook.FreeSpell, error) {
@@ -136,7 +141,7 @@ func TestList_IsTheOwnersCharactersAtTheirRealizedLevel(t *testing.T) {
 	e.owners.EXPECT().CharactersOf(mock.Anything, owner).
 		Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
-	e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return([]int{26_582}, nil).Once()
 	e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
 	e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
@@ -179,7 +184,7 @@ func TestList_CarriesTheIdentityAndTheHP(t *testing.T) {
 			e.owners.EXPECT().CharactersOf(mock.Anything, owner).
 				Return([]charactersvc.Summary{{ID: 1, Name: "Kelsen"}}, nil).Once()
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(k, nil).Once()
-			e.xp.EXPECT().EntriesTotal(mock.Anything, int64(1)).Return(26_582, nil).Once()
+			e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return([]int{26_582}, nil).Once()
 			e.rules.EXPECT().LevelFor("bard", 1_320_000).Return(16, nil).Once()
 			e.rules.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 			e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
@@ -226,7 +231,7 @@ func TestGetCharacter(t *testing.T) {
 	t.Run("derived from the reader's character and the ledger", func(t *testing.T) {
 		e := newEnv(t)
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, nil).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
 		expectKelsenRules(e.rules, 1_293_418, 15)
 
 		got, err := e.svc.GetCharacter(context.Background(), 3)
@@ -249,7 +254,7 @@ func TestGetCharacter(t *testing.T) {
 		e := newEnv(t)
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(kelsen(), nil).Once()
 		boom := errors.New("boom")
-		e.xp.EXPECT().EntriesTotal(mock.Anything, int64(3)).Return(0, boom).Once()
+		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, boom).Once()
 		_, err := e.svc.GetCharacter(context.Background(), 3)
 		require.ErrorIs(t, err, boom)
 	})

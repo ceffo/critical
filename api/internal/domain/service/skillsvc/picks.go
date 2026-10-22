@@ -105,7 +105,7 @@ func (s picksState) picks() skills.Picks {
 // written. A refusal is a *domain.FieldError or a *domain.BudgetError.
 func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []string, error) {
 	before := skills.Sheet{
-		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int,
+		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: s.languages.Native(c.Race),
 	}
 	after, err := skills.Apply(s.book, s.languages, c.Race, before, skills.Edit(e))
@@ -119,7 +119,7 @@ func (s *service) edited(c *charactersvc.Character, e Edit) (skills.Picks, []str
 // assembly).
 func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, languages []string) *Proficiencies {
 	f, ws := skills.Read(s.book, skills.Sheet{
-		Class: c.Class, Level: c.Derived.RealizedLevel, Intelligence: c.Int, Picks: picks,
+		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int, Picks: picks,
 		Languages: languages, Native: s.languages.Native(c.Race),
 		Score: func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) },
 	})

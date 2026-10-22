@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
@@ -74,10 +75,25 @@ var groupOf = map[string]string{"fighter": "warrior", "cleric": "priest", "mage"
 // character is a class's character realized at realizedLevel with max HP
 // hpMax, owing pending.
 func character(class string, con, hpMax, realizedLevel int, pending ...charactersvc.PendingLevel) *charactersvc.Character {
+	for i := range pending {
+		pending[i].Class, pending[i].Classes = class, 1
+	}
+	lu := charactersvc.LevelUp{Pending: pending}
 	return &charactersvc.Character{
 		ID: charID, Class: class, Con: con, HPMax: hpMax, RealizedLevel: realizedLevel,
-		Derived: charactersvc.Derived{RealizedLevel: realizedLevel, Group: groupOf[class], LevelUp: charactersvc.LevelUp{Pending: pending}},
+		Derived: charactersvc.Derived{
+			RealizedLevel: realizedLevel, Group: groupOf[class], LevelUp: lu,
+			Classes: []charactersvc.EntryDerived{{
+				Class: class, Group: groupOf[class], State: classes.EntryActive, RealizedLevel: realizedLevel, LevelUp: lu,
+			}},
+		},
 	}
+}
+
+// in is p taken in the one class entry of class (ADR 0042 step 7).
+func in(class string, p charactersvc.PendingLevel) charactersvc.PendingLevel {
+	p.Class, p.Classes = class, 1
+	return p
 }
 
 func d6(level int) charactersvc.PendingLevel {
@@ -115,14 +131,14 @@ func TestRoll_Step7_1_OneHitDieOfTheGroupPlusTheConstitutionAdjustment(t *testin
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(4).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 46).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 9, 46).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
 	require.NoError(t, err)
 	assert.Equal(t, &levelupsvc.Result{
-		Level: 9, HitDie: 6, Rolled: intp(4), Counted: intp(4), ConAdjustment: 2, Gain: 6,
-		HPMaxBefore: 40, HPMaxAfter: 46, Pending: []charactersvc.PendingLevel{},
+		Class: "bard", Classes: 1, Level: 9, HitDie: 6, Rolled: intp(4), Counted: intp(4), ConAdjustment: 2,
+		DieShare: 4, ConShare: 2, Gain: 6, HPMaxBefore: 40, HPMaxAfter: 46, Pending: []charactersvc.PendingLevel{},
 	}, got)
 }
 
@@ -143,7 +159,7 @@ func TestRoll_Step7_1_WarriorsTakeTheBracketedAdjustment(t *testing.T) {
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character(tc.class, 18, 20, 2, tc.pending), nil).Once()
 			f.dice.EXPECT().RollDie(tc.die).Return(5).Once()
 			f.rules.EXPECT().ConstitutionFor(18).Return(con(2, 4, 0), nil).Once()
-			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 3, 20+5+tc.adj).Return(nil).Once()
+			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 3, 20+5+tc.adj).Return(nil).Once()
 			f.recorded()
 
 			got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 3})
@@ -175,7 +191,7 @@ func TestRoll_Step7_1_LowDiceRaisedFromConstitution20(t *testing.T) {
 			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", tc.con, 30, 4, d6(5)), nil).Once()
 			f.dice.EXPECT().RollDie(6).Return(tc.rolled).Once()
 			f.rules.EXPECT().ConstitutionFor(tc.con).Return(con(2, 6, tc.floor), nil).Once()
-			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 5, 30+tc.counted+2).Return(nil).Once()
+			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 5, 30+tc.counted+2).Return(nil).Once()
 			f.recorded()
 
 			got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 5})
@@ -194,7 +210,7 @@ func TestRoll_Step7_1_TheGainIsAtLeastOne(t *testing.T) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 3, 10, 2, d6(3)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(1).Once()
 	f.rules.EXPECT().ConstitutionFor(3).Return(con(-2, -2, 0), nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 3, 11).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 3, 11).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 3})
@@ -209,13 +225,14 @@ func TestRoll_Step7_2_AFixedGainAboveTheNameLevel(t *testing.T) {
 	f := newFixture(t)
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).
 		Return(character("bard", 18, 85, 15, charactersvc.PendingLevel{Level: 16, FixedGain: 2}), nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 16, 87).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 16, 87).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 16})
 	require.NoError(t, err)
 	assert.Equal(t, &levelupsvc.Result{
-		Level: 16, Gain: 2, Fixed: true, HPMaxBefore: 85, HPMaxAfter: 87, Pending: []charactersvc.PendingLevel{},
+		Class: "bard", Classes: 1, Level: 16, DieShare: 2, Gain: 2, Fixed: true, HPMaxBefore: 85, HPMaxAfter: 87,
+		Pending: []charactersvc.PendingLevel{},
 	}, got)
 }
 
@@ -228,13 +245,13 @@ func TestRoll_Step7_3_OneTransactionWithTheRealizedLevelSnapshot(t *testing.T) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9), d6(10)), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 45).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 9, 45).Return(nil).Once()
 	rec := f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
 	require.NoError(t, err)
 	assert.Equal(t, 1, f.tx.n, "one transaction")
-	assert.Equal(t, []charactersvc.PendingLevel{d6(10)}, got.Pending, "the level still owed")
+	assert.Equal(t, []charactersvc.PendingLevel{in("bard", d6(10))}, got.Pending, "the level still owed")
 	require.Len(t, *rec, 1)
 	e := (*rec)[0]
 	assert.Equal(t, actionlog.KindLevelUp, e.Kind)
@@ -260,8 +277,8 @@ func TestRoll_Step7_3_TwoLevelsAtOnceAreTwoRollsLowestFirst(t *testing.T) {
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.dice.EXPECT().RollDie(6).Return(5).Once()
 	f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Twice()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 45).Return(nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 10, 52).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 9, 45).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 10, 52).Return(nil).Once()
 	rec := f.recorded()
 
 	first, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9})
@@ -309,7 +326,7 @@ func TestRoll_TheManualEntryTakesTheDieRolledAtTheTable(t *testing.T) {
 		f := newFixture(t)
 		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("bard", 16, 40, 8, d6(9)), nil).Once()
 		f.rules.EXPECT().ConstitutionFor(16).Return(con(2, 2, 0), nil).Once()
-		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 9, 48).Return(nil).Once()
+		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 9, 48).Return(nil).Once()
 		rec := f.recorded()
 
 		got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 9, Die: intp(6)})
@@ -349,7 +366,7 @@ func TestRestorer_WritesTheRealizedLevelBack(t *testing.T) {
 	f := newFixture(t)
 	r := f.svc.Module().Restorer(levelupsvc.StateKey)
 	require.NotNil(t, r)
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 8, 40).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 8, 40).Return(nil).Once()
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":40}`)))
 	require.Error(t, r.Restore(context.Background(), charID, snaptest.Env(`{"realizedLevel":8,"hpMax":0}`)))
 	require.Error(t, r.Restore(context.Background(), charID, json.RawMessage(`nope`)))
@@ -367,10 +384,10 @@ func TestLevelUp_Step15_GrantsSlotsAndPoints(t *testing.T) {
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(character("thief", 12, 15, 3, four, five), nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(3).Once()
 	f.rules.EXPECT().ConstitutionFor(12).Return(con(0, 0, 0), nil).Once()
-	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, 4, 18).Return(nil).Once()
+	f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, mock.Anything, 4, 18).Return(nil).Once()
 	f.recorded()
 
 	got, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Level: 4})
 	require.NoError(t, err)
-	assert.Equal(t, []charactersvc.PendingLevel{five}, got.Pending)
+	assert.Equal(t, []charactersvc.PendingLevel{in("thief", five)}, got.Pending)
 }

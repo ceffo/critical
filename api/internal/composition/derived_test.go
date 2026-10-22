@@ -28,7 +28,11 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 	require.NoError(t, err)
 	info, err := bs.Prep.Info(ctx, id)
 	require.NoError(t, err)
-	return c.Derived, l.Level, info.Limits
+	// The class entries' blocks and grants (ADR 0042 steps 7, 12 and 14) are
+	// the multi-class tests'; these compare the single-class figures.
+	d := c.Derived
+	d.Classes, d.Features = nil, nil
+	return d, l.Level, info.Limits
 }
 
 // kelsenPicks are the seed bard's eight picks (ADR 0037 step 16) with their figures at the realized
@@ -115,8 +119,8 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	pending.XPTotal, pending.TargetLevel, pending.NextLevelXP = 1_540_000, 17, &next17
 	// Above the rogues' name level, +2 each (step 7.2).
 	pending.LevelUp = charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{
-		{Level: 16, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}},
-		{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
+		{Class: "bard", Classes: 1, Level: 16, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1, SkillPoints: 15}},
+		{Class: "bard", Classes: 1, Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
 	}, ToSpend: at15.LevelUp.ToSpend}
 	assert.Equal(t, pending, d, "the benefits wait for the level-up step")
 	assert.Equal(t, 17, ledgerLevel, "the XP ledger shows the target level")
@@ -150,7 +154,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 	undoTop(t, bs, id)
 	d, _, _ = derivedOf(t, bs, id)
 	assert.Equal(t, 16, d.RealizedLevel)
-	assert.Equal(t, []charactersvc.PendingLevel{{Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}}}, d.LevelUp.Pending)
+	assert.Equal(t, []charactersvc.PendingLevel{{Class: "bard", Classes: 1, Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}}}, d.LevelUp.Pending)
 	assert.Equal(t, skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}, d.LevelUp.ToSpend,
 		"level 17's points go with its roll")
 	undoTop(t, bs, id)

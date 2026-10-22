@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
@@ -579,19 +580,20 @@ type freeSpells struct {
 	book *spellbookadpt.Book
 }
 
-func (f freeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]int, error) {
-	// One entry per level taken at most: the class table's levels bound them.
-	entries, err := f.log.ActiveEntries(ctx, characterID, actionlog.KindLevelUp, ruletablesvc.MaxLevel)
+func (f freeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]charactersvc.TakenLevel, error) {
+	// One entry per level taken at most: the class tables' levels of a
+	// multi-class character's classes bound them (ADR 0042 step 7).
+	entries, err := f.log.ActiveEntries(ctx, characterID, actionlog.KindLevelUp, classes.MaxMultiClasses*ruletablesvc.MaxLevel)
 	if err != nil {
 		return nil, err
 	}
-	levels := make([]int, 0, len(entries))
+	levels := make([]charactersvc.TakenLevel, 0, len(entries))
 	for _, e := range entries {
-		level, err := levelupsvc.LevelReached(e.Payload)
+		class, level, err := levelupsvc.LevelReached(e.Payload)
 		if err != nil {
 			return nil, fmt.Errorf("level_up entry %d: %w", e.ID, err)
 		}
-		levels = append(levels, level)
+		levels = append(levels, charactersvc.TakenLevel{Class: class, Level: level})
 	}
 	return levels, nil
 }

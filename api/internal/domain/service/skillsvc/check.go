@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -334,7 +335,7 @@ func (s *service) PreviewPoints(ctx context.Context, characterID int64, points m
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
 func (s *service) withPoints(char *charactersvc.Character, draft map[string]int) error {
-	def, err := s.classDef(char.Class)
+	def, err := s.classDef(char.Derived.FeatureClass(classes.KindRogueSkills, char.Class)) // ADR 0042 step 12
 	if err != nil {
 		return err
 	}
@@ -342,7 +343,7 @@ func (s *service) withPoints(char *charactersvc.Character, draft map[string]int)
 	if err != nil {
 		return err
 	}
-	if err := skills.SkillPointsWithinBudget(def, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
+	if err := skills.SkillPointsWithinBudget(def, char.Derived.FeatureLevel(classes.KindRogueSkills), char.SkillPoints, next); err != nil {
 		return err
 	}
 	if err := char.Derived.SetSkillFigures(s.tables, def, char, next); err != nil {

@@ -84,7 +84,7 @@ func runFeatureCases(t *testing.T, cases []featureCase) {
 			if tc.set != nil {
 				tc.set(c)
 			}
-			d, err := charactersvc.Derive(c, 0, "", edited(t, tc.edit))
+			d, err := charactersvc.Derive(c, nil, "", edited(t, tc.edit))
 			require.NoError(t, err)
 			tc.check(t, d)
 		})

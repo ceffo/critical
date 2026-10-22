@@ -160,6 +160,15 @@ export function classOf(options: CreationOptions | null, cls: string) {
 }
 
 /**
+ * The classes a row of this kind of character offers: a multi-class character's leave out the
+ * server's `noMultiClass` classes (ADR 0042 step 2.1); the others offer every creatable class.
+ */
+export function classesFor(options: CreationOptions, kind: ClassKind) {
+  const no = kind === "multi" ? (options.noMultiClass ?? []) : [];
+  return options.classes.filter((c) => !no.includes(c.class));
+}
+
+/**
  * ADR 0034 step 4: the XP a picked level stands for, the class's lowest for that level, read from the
  * server's table; undefined when the class or the table is missing (an older server: XP is typed).
  */

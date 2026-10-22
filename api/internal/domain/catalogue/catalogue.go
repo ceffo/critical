@@ -43,14 +43,18 @@ const FormatNoSphereTable = 14
 // name.
 const FormatBracketedConstitution = 15
 
-// FormatPowerSlot is format 16 (ADR 0021 step 23): a psionic power may carry
-// the slot its pick takes where its kind does not say it. It is the only
-// format the API reads (step 23.2): the formats 1 to 15 are refused like any
-// unknown format, with the advice to run `just catalogue`.
+// FormatPowerSlot was format 16 (ADR 0021 step 23): a psionic power may carry
+// the slot its pick takes where its kind does not say it.
 const FormatPowerSlot = 16
 
-// Formats lists the formats this API reads: format 16 only (step 23.2).
-var Formats = []int{FormatPowerSlot}
+// FormatMultiClassFlag is format 17 (ADR 0021 step 24): a class may say it is
+// never one of a multi-class character's classes (`multiclass: false`). It is
+// the only format the API reads (step 24.2): the formats 1 to 16 are refused
+// like any unknown format, with the advice to run `just catalogue`.
+const FormatMultiClassFlag = 17
+
+// Formats lists the formats this API reads: format 17 only (step 24.2).
+var Formats = []int{FormatMultiClassFlag}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

@@ -32,6 +32,9 @@ type classDefDTO struct {
 	Features         []featureDTO      `json:"features"`
 	Equipment        classEquipmentDTO `json:"equipment"`
 	HitDice          classHitDiceDTO   `json:"hit_dice"`
+	// MultiClass is false on a class never part of a multi-class character
+	// (format 17, ADR 0021 step 24); absent means true.
+	MultiClass *bool `json:"multiclass"`
 }
 
 // classHitDiceDTO is the part of a class's hit dice read here: whether it takes
@@ -245,6 +248,7 @@ func definitions(raw []byte) (*classes.Registry, error) {
 			AbilityMinimums: mins, Alignments: c.Alignments, Experience: xp,
 			SpellProgression: c.SpellProgression, Features: features, Equipment: c.Equipment.equipment(),
 			BracketedConstitution: c.HitDice.BracketedConstitution,
+			NoMultiClass:          c.MultiClass != nil && !*c.MultiClass,
 		}
 	}
 	groups := make([]classes.Group, len(d.Groups))

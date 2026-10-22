@@ -142,6 +142,19 @@ Every warning is structured data (a code and its numbers), worded by the web.
       by race, beside the level limits of ADR 0040 step 2). Each class's ability minimums and
       alignments apply (ADR 0040 step 1.4 and 1.5), and Table 7's dash is waived by the lift
       (ADR 0041 step 5).
+      _(Amended 2026-10-22, user ruling: "you can't multiclass with a bard, does not make sense".)_
+      **A bard is never one of a multi-class character's classes**, lift or not. The book agrees:
+      only demihumans multi-class, and no race's combination names the bard (PHB multi/dual,
+      Multi-Class Combinations; the bard's races are human and half-elf). The class says it in the
+      catalogue (`multiclass: false`, [ADR 0021](0021-spell-catalogue.md) step 24), never by its id
+      in the code: each such active entry of a multi-class character is refused at its own field
+      (`classes.<i>.class`, `multiclass_class_not_allowed`), and the creation options list these
+      classes (`noMultiClass`) so the form leaves them out of a multi-class character's rows.
+      **Dual-class is unchanged**: the book never excludes the bard there, so a human may enter or
+      leave it on step 2.2's conditions (Dexterity and Charisma, 15 to leave, 17 to enter).
+      Test: `TestCreate_MultiClass_Step2_1_TheCatalogueBarsTheBard` (charactersvc: a half-elf
+      thief/bard and bard/fighter/mage refused with and without the lift, a bard alone accepted, a
+      human fighter-to-bard and bard-to-fighter dual-class accepted).
    2. **Dual-class**: the book allows only humans, with 15 or more in every prime requisite of the
       first class and 17 or more in every prime requisite of the new class, the current class at
       level 2 or more, and never back to a class already left (PHB multi/dual, Dual-Class Benefits
@@ -385,7 +398,8 @@ bard 15 never).)_
     read one (skill points and their budget, backstab, turning, spell failure, the spellbook). A figure
     one per character takes the first entry granting it. Also tested on the sheet:
     `Derive_Step12_FeaturesAtTheGrantingEntrysLevel` (charactersvc). The skill sets read every
-    `rogue_skills` grant (`Derived.SkillGrants`): a thief/bard has the thief's and the bard's sets,
+    `rogue_skills` grant (`Derived.SkillGrants`) (unreachable through the bard since step 2.1's
+    amendment of 2026-10-22, which bars a thief/bard; kept, generic for any two classes with skill sets): a thief/bard has the thief's and the bard's sets,
     each with its points and its budget at its own entry's level, and a spend names the set, checked
     against the class listing it at that entry's level: `Derive_Step12_TwoSkillGrantsKeepTheirOwnSets`,
     `SetPoints_Step12_EachGrantSpendsItsOwnSet`.)_

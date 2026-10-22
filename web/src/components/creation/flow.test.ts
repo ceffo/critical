@@ -544,6 +544,46 @@ describe("place (the player's arrangement, ADR 0032 step 6)", () => {
   });
 });
 
+describe("mergeDraft with several classes (the picks follow the whole set of classes)", () => {
+  const picked: FlowDraft = {
+    ...EMPTY_DRAFT,
+    cls: "fighter",
+    kind: "multi",
+    others: [
+      { cls: "cleric", xp: "9000", level: "" },
+      { cls: "thief", xp: "9000", level: "" },
+    ],
+    picks: [{ slot: "x" }] as unknown as FlowDraft["picks"],
+    weaponPicks: [{ type: "x" }] as unknown as FlowDraft["weaponPicks"],
+    spellbook: { startingSpells: [] } as unknown as FlowDraft["spellbook"],
+  };
+  it("a class removed or swapped clears the picks, the weapon picks and the spellbook", () => {
+    for (const others of [
+      [{ cls: "cleric", xp: "9000", level: "" }],
+      [
+        { cls: "cleric", xp: "9000", level: "" },
+        { cls: "mage", xp: "9000", level: "" },
+      ],
+    ]) {
+      const d = mergeDraft(picked, { others });
+      expect(d.picks).toEqual([]);
+      expect(d.weaponPicks).toEqual([]);
+      expect(d.spellbook).toBeNull();
+    }
+  });
+  it("an XP or a level typed keeps them", () => {
+    const d = mergeDraft(picked, {
+      others: [
+        { cls: "cleric", xp: "12000", level: "5" },
+        { cls: "thief", xp: "9000", level: "" },
+      ],
+    });
+    expect(d.picks).toEqual(picked.picks);
+    expect(d.weaponPicks).toEqual(picked.weaponPicks);
+    expect(d.spellbook).toEqual(picked.spellbook);
+  });
+});
+
 describe("blockedReason", () => {
   const ok: StepInputs = {
     cls: "bard",

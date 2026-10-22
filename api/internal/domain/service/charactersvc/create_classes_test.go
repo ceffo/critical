@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // classesEnv is a service over the fixture catalogue's tables (the real rules, not a mock) and a
@@ -118,4 +119,36 @@ func TestCreate_Step4_EntersLevelAndXPPerEntry(t *testing.T) {
 	}
 	assert.Equal(t, want, stored.Entries())
 	assert.Equal(t, 60, stored.HPMax)
+}
+
+// The draft says what the form must offer, so the client computes no rule: the alignments every
+// ACTIVE class admits (a class left does not limit), and the active class that carries the skill
+// points and the one that carries the starting spellbook.
+func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
+	e := classesEnv(t, ruleset.RacialLift{MulticlassAnyRace: true, DualclassAnyRace: true})
+	draft := func(es ...charactersvc.NewClass) *charactersvc.Draft {
+		t.Helper()
+		d, err := e.svc.Draft(context.Background(), entered("human", es...), nil)
+		require.NoError(t, err)
+		return d
+	}
+	nine := ruletablesvc.Alignments
+	noLawfulGood := []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"}
+
+	// A thief admits eight alignments (no lawful good); left for the mage, it limits nothing.
+	d := draft(charactersvc.NewClass{Class: "thief", LeftAtLevel: 9}, charactersvc.NewClass{Class: "mage"})
+	assert.Equal(t, nine, d.Alignments, "the class left does not limit")
+	assert.Equal(t, "", d.SkillsClass, "a frozen thief carries no skill points")
+	assert.Equal(t, "mage", d.SpellbookClass)
+
+	// Active together, the thief limits the fighter's nine.
+	d = draft(charactersvc.NewClass{Class: "fighter", XP: 9_000}, charactersvc.NewClass{Class: "thief", XP: 9_000})
+	assert.Equal(t, noLawfulGood, d.Alignments)
+	assert.Equal(t, "thief", d.SkillsClass)
+	assert.Equal(t, "", d.SpellbookClass)
+
+	d = draft(charactersvc.NewClass{Class: "fighter", XP: 9_000}, charactersvc.NewClass{Class: "mage", XP: 9_000})
+	assert.Equal(t, nine, d.Alignments)
+	assert.Equal(t, "", d.SkillsClass)
+	assert.Equal(t, "mage", d.SpellbookClass)
 }

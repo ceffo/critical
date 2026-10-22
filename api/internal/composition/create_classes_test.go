@@ -169,13 +169,40 @@ func TestCreate_Step4_EntersLevelAndXPPerEntry(t *testing.T) {
 	assert.Equal(t, 135_000, elf.Classes[1].StartingXP)
 	assert.Equal(t, 60, elf.HPMax, "the max HP as entered")
 
-	// A level entered above the XP's own is kept (a level-up not pending); one below it stays pending.
+	// A level entered above the XP's own is kept (a level-up not pending).
 	hf := tb.createFrom(t, bob, classesBody("half_elf", strong, `[{"class":"fighter","xp":1000000,"level":13},{"class":"cleric","xp":800000}]`))
 	require.Len(t, hf.Classes, 2)
 	assert.Equal(t, 13, hf.Classes[0].Level)
 	assert.Equal(t, 1_000_000, hf.Classes[0].StartingXP)
 	assert.Equal(t, 11, hf.Classes[1].Level, "no level entered: the level its XP reaches")
 	assert.Equal(t, 800_000, hf.Classes[1].StartingXP)
+
+	// A level entered below the one the XP reaches is kept as entered: the sheet says the character
+	// has not taken that level yet, so the level-up is pending (900,000 XP reaches level 12).
+	below := tb.createFrom(t, bob, classesBody("half_elf", strong, `[{"class":"fighter","xp":900000,"level":10},{"class":"cleric","xp":9000}]`))
+	assert.Equal(t, 10, below.Classes[0].Level)
+	assert.Equal(t, 900_000, below.Classes[0].StartingXP)
+	assert.Equal(t, 10, below.Derived.Classes[0].Level, "the realized level, not the one the XP reaches")
+
+	// A level equal to the XP's own is the same as leaving it out.
+	equal := tb.createFrom(t, bob, classesBody("half_elf", strong, `[{"class":"fighter","xp":9000,"level":5},{"class":"cleric","xp":9000}]`))
+	assert.Equal(t, 5, equal.Classes[0].Level)
+}
+
+// A class left keeps the XP typed even when it is under the threshold of its left-at level (the
+// sheet is trusted, as for any entry); left blank it takes the threshold. A level typed on a
+// class left must be its left-at level.
+func TestCreate_Step4_TheClassLeftsXP(t *testing.T) {
+	tb, _ := serverOn(t, memory.New())
+	bob, _ := tb.login("bob@example.com")
+	low := tb.createFrom(t, bob, classesBody("elf", strong, `[{"class":"fighter","leftAtLevel":9,"xp":1000},{"class":"mage","xp":0}]`))
+	assert.Equal(t, 1_000, low.Classes[0].StartingXP)
+	assert.Equal(t, 9, low.Classes[0].Level)
+	blank := tb.createFrom(t, bob, classesBody("elf", strong, `[{"class":"fighter","leftAtLevel":9},{"class":"mage","xp":0}]`))
+	assert.Equal(t, 250_000, blank.Classes[0].StartingXP)
+
+	body := classesBody("elf", strong, `[{"class":"fighter","leftAtLevel":9,"level":8},{"class":"mage","xp":0}]`)
+	assert.Equal(t, []string{"classes.0.level:out_of_range"}, refusalsOf(tb.draft(t, bob, body)))
 }
 
 // The party's characters, through the draft and the creation: the draft answers no refusal and a

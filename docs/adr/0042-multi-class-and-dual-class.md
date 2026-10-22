@@ -168,7 +168,10 @@ Every warning is structured data (a code and its numbers), worded by the web.
    words the limits without a rule of its own. Tests, in charactersvc and, end to end with the
    party, in composition: `TestCreate_MultiClass_Step2_1_TheLiftDecidesTheRaceLimit`,
    `TestCreate_DualClass_Step2_2_PrimeRequisitesLevelAndNoReturn`,
-   `TestCreate_Step1_TheShapeOfTheEntries`.)_
+   `TestCreate_Step1_TheShapeOfTheEntries`. The draft answer also carries `alignments` (those every
+   ACTIVE class admits: a class left does not limit), `skillsClass` and `spellbookClass` (the active
+   class that carries the skill points and the one that carries the starting spellbook), so the form
+   shows them and computes no rule: `TestDraft_NamesTheAlignmentsAndTheCarriers`.)_
 
 3. **Taking a new class (becoming dual-class).** A request names the new class. In one transaction
    on the action stack ([ADR 0018](0018-transactions-and-undo.md)): the active entry becomes
@@ -194,8 +197,13 @@ Every warning is structured data (a code and its numbers), worded by the web.
    it is kept (the character is then above its target, no level-up pending); a class left with no XP
    entered takes the XP that reaches its left-at level. The skill points go to the first entry whose
    class lists rogue skills, the exceptional strength to any active entry that grants it, and the
-   alignments are those every active class admits. Tests:
+   alignments are those every active class admits. A level entered below the one the XP reaches is
+   kept as entered (the level-up is pending); a class left keeps an XP typed under the threshold of its
+   left-at level (the sheet is trusted) and takes the threshold when none is typed; a level typed on a
+   class left must equal its left-at level. The web form offers an optional level per active class.
+   Tests:
    `TestCreate_Step4_EntersLevelAndXPPerEntry` (charactersvc and composition),
+   `TestCreate_Step4_TheClassLeftsXP`,
    `TestCreate_ThePartyThroughTheDraftAndTheCreation` (composition: the elf and the half-elf
    fighter/cleric). The human thief/psionicist cannot be created yet: the psionicist lists
    psionics, which is not computed (ADR 0043), so it is refused as not creatable

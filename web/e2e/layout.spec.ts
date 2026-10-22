@@ -2900,7 +2900,13 @@ test("creation route: multi-class rows and a class refusal uncut, fr and en, 128
     await next.click();
     await step.getByLabel(tr("PV max", "Max HP")).fill("60");
     await next.click();
+    await expect(step).toHaveAttribute("data-step", "proficiencies");
+    // The spellbook step appears once the draft names the class that carries it.
+    await expect(
+      page.getByRole("navigation", { name: tr("Étapes", "Steps") }),
+    ).toContainText(tr("Grimoire", "Spellbook"));
     await next.click();
+    await expect(step).toHaveAttribute("data-step", "spellbook");
     await next.click();
     await step.getByLabel(tr("Nom", "Name"), { exact: true }).fill("Vael");
     await step

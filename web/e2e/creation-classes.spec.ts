@@ -30,7 +30,7 @@ async function openClassStep(page: Page, kind: string) {
 }
 
 /** From the race step to Créer: race, typed scores, 60 HP, the steps' defaults, a name. */
-async function finish(page: Page, race: string, name: string) {
+async function finish(page: Page, race: string, name: string, book = false) {
   const step = page.getByTestId("creation-step");
   const next = () =>
     step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
@@ -44,8 +44,17 @@ async function finish(page: Page, race: string, name: string) {
   await step.getByLabel("PV max").fill("60");
   await next();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  if (book) {
+    // The spellbook step appears once the draft names the class that carries it.
+    await expect(
+      page.getByRole("navigation", { name: "Étapes" }),
+    ).toContainText("Grimoire");
+  }
   await next();
-  if ((await step.getAttribute("data-step")) === "spellbook") await next();
+  if (book) {
+    await expect(step).toHaveAttribute("data-step", "spellbook");
+    await next();
+  }
   await step.getByLabel("Nom", { exact: true }).fill(name);
   await step
     .getByTestId("alignment-grid")
@@ -74,6 +83,8 @@ test("create a half-elf fighter/cleric from its XP per class", async ({
     .getByLabel("Classe 1")
     .selectOption("fighter");
   await rows.getByTestId("class-row-0").getByLabel("XP").fill("4500");
+  // A level typed on the sheet is sent as entered (4,500 XP reaches level 4); the cleric's is blank.
+  await rows.getByTestId("class-row-0").getByLabel("Niveau").fill("3");
   await rows
     .getByTestId("class-row-1")
     .getByLabel("Classe 2")
@@ -83,6 +94,7 @@ test("create a half-elf fighter/cleric from its XP per class", async ({
   await finish(page, "Demi-elfe", "Morrison");
   await expect(page.getByTestId("character")).toContainText("Guerrier");
   await expect(page.getByTestId("character")).toContainText("Clerc");
+  await expect(page.getByTestId("character")).toContainText(/niveau 3/i);
   await snap(page, "multi-sheet");
 });
 
@@ -100,7 +112,7 @@ test("create an elf fighter who became a mage, with the level it was left at", a
     .selectOption("mage");
   await rows.getByTestId("class-row-1").getByLabel("XP").fill("20000");
   await snap(page, "dual-class-step");
-  await finish(page, "Elfe", "Vael");
+  await finish(page, "Elfe", "Vael", true);
   await expect(page.getByTestId("character")).toContainText("Guerrier");
   await expect(page.getByTestId("character")).toContainText("Magicien");
   await snap(page, "dual-sheet");

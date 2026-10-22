@@ -487,6 +487,19 @@ export interface ProficiencyOption {
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
   /** The 18/xx is not here: the draft answers it (`CreationDraft.exceptionalStrength`). */
+  /** The most active classes of a multi-class character, and the lowest level a class can be left
+   * at (ADR 0042 step 1). Absent from a release that predates them. */
+  maxClasses?: number;
+  minLeftAtLevel?: number;
+  /** The racial lift (ADR 0041 step 2.2): any race may be multi-class / dual-class; with it off
+   * the multi-class races are `restrictedRaces`. */
+  multiclassAnyRace?: boolean;
+  dualclassAnyRace?: boolean;
+  restrictedRaces?: string[];
+  /** The prime requisite score a dual-class character needs in a class it left, and in its new
+   * class (ADR 0042 step 2.2). */
+  dualClassOldPrime?: number;
+  dualClassNewPrime?: number;
   classes: {
     class: string;
     races: string[];
@@ -628,6 +641,13 @@ export interface CreationDraft {
    * Strength entered is 18 and the race rolls it. The form offers the 18/xx field on it (no rule
    * of its own). */
   exceptionalStrength: boolean;
+  /** The alignments every active class admits (a class left does not limit them): the form lists
+   * them and checks none itself. */
+  alignments: string[];
+  /** The class that carries the skill points and the one that carries the starting spellbook ("" for
+   * none): the form reads them, it does not choose. */
+  skillsClass: string;
+  spellbookClass: string;
 }
 
 /** A level and the lowest XP that reaches it, for one class. */
@@ -734,10 +754,11 @@ export type AbilityCode = (typeof ABILITIES)[number];
  */
 export type NewCharacter = {
   name: string;
-  class: string;
+  /** The one class and its XP of a single-class character; absent with `classes`. */
+  class?: string;
   raceCode: string;
   hpMax: number | null;
-  xp: number | null;
+  xp?: number | null;
   /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
   strExceptional: number;
   /** A thief's or a bard's points by skill (ADR 0030 steps 1, 17 and 18); absent for the other
@@ -750,4 +771,22 @@ export type NewCharacter = {
   /** A mage's or a bard's starting spellbook (ADR 0030 step 20.7): the catalogue ids, in order,
    * written without a roll; absent for none. A refused spell's field is `spellbook.<id>`. */
   spellbook?: string[];
+  /**
+   * The class entries of a multi-class or dual-class character (ADR 0042 steps 1 and 4), which the
+   * server reads in place of `class` and `xp` (sending both is refused); a refusal's field is
+   * `classes` or `classes.<i>.<class|xp|level|leftAtLevel>`.
+   */
+  classes?: NewClassEntry[];
 } & Record<AbilityCode, number | null>;
+
+/** One class of a new character (ADR 0042 steps 1 and 4). */
+export type NewClassEntry = {
+  class: string;
+  /** The XP entered for the class; null while blank (the draft lists `classes.<i>.xp` missing),
+   * optional for a class left (the XP that reaches its left-at level). */
+  xp: number | null;
+  /** The level taken, absent for the level its XP reaches. */
+  level?: number;
+  /** The level a class the character left was left at (2 to 20); absent for a class it advances in. */
+  leftAtLevel?: number;
+};

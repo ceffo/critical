@@ -26,7 +26,8 @@ import {
   STEPS,
   blockedReason,
   buildBody,
-  classOf,
+  bodyClasses,
+  classKey,
   draftSpellbook,
   draftXp,
   exceptionalOffered,
@@ -159,17 +160,28 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     answered?.data?.exceptionalStrength === true,
     draft,
   );
+  // The last answer for the draft's classes: it says which class carries the skill points and the
+  // spellbook and which alignments are allowed (the form chooses none of them).
+  const latestAnswer = answered?.cls === classKey(draft) ? answered.data : null;
   const built = options
-    ? buildBody(options, draft, xp, i18n.language, offersExceptional)
+    ? buildBody(
+        options,
+        draft,
+        xp,
+        i18n.language,
+        offersExceptional,
+        latestAnswer,
+      )
     : null;
   const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
   // draft is asked without it, so the step still gets the server's other warnings meanwhile.
-  const allowedAlignments = classOf(options, draft.cls)?.alignments ?? [];
+  const allowedAlignments = latestAnswer?.alignments ?? null;
   const asked = built?.body;
   const draftKey = asked
     ? JSON.stringify(
         asked.details?.alignment !== undefined &&
+          allowedAlignments &&
           !allowedAlignments.includes(asked.details.alignment)
           ? { ...asked, details: { ...asked.details, alignment: undefined } }
           : asked,
@@ -180,16 +192,21 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
     if (draftKey === "") return;
     const current = draftGate.open();
     const timer = setTimeout(() => {
-      const sent = JSON.parse(draftKey) as { class: string };
+      const sent = JSON.parse(draftKey) as NewCharacter;
       draftCharacter(JSON.parse(draftKey)).then(
         (data) =>
           current() &&
-          setAnswered({ key: draftKey, cls: sent.class, data, failed: null }),
+          setAnswered({
+            key: draftKey,
+            cls: bodyClasses(sent).join("+"),
+            data,
+            failed: null,
+          }),
         (err: unknown) =>
           current() &&
           setAnswered({
             key: draftKey,
-            cls: sent.class,
+            cls: bodyClasses(sent).join("+"),
             data: null,
             failed: fieldErrorOf(err),
           }),
@@ -207,7 +224,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const fresh = answered !== null && answered.key === draftKey;
   const answer: DraftAnswer = {
     current: fresh ? answered.data : null,
-    latest: answered?.cls === draft.cls ? answered.data : null,
+    latest: latestAnswer,
     failed: fresh ? answered.failed : null,
   };
   // The refusals the creation would meet are shown as the former preview showed them (ADR 0034 step
@@ -261,6 +278,23 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         { className, defaultValue: e.message ?? e.code },
       );
     }
+    if (e.field === "classes" || e.field.startsWith("classes.")) {
+      const [, , name] = e.field.split(".");
+      // An unreadable or out-of-range figure of an entry reads as the class step's own field.
+      const field = name === "xp" ? options?.xp : undefined;
+      return t(`creation.classes.errors.${e.code}`, {
+        ...field,
+        min: options?.minLeftAtLevel ?? 2,
+        max:
+          name === "leftAtLevel" || name === "level" ? 20 : options?.maxClasses,
+        old: options?.dualClassOldPrime,
+        new: options?.dualClassNewPrime,
+        defaultValue: t(`characters.errors.${e.code}`, {
+          ...field,
+          defaultValue: e.message ?? e.code,
+        }),
+      });
+    }
     const range =
       e.field === "name"
         ? { max: options?.maxNameLength }
@@ -292,7 +326,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 
   // The class's steps (the spellbook step for a mage or a bard only); `reached` counts in STEPS,
   // so a class picked again keeps what was reached.
-  const steps = stepsFor(options, draft.cls);
+  const steps = stepsFor(answer.latest);
   const index = steps.indexOf(step);
   const go = (to: StepId) => {
     setStep(to);
@@ -364,6 +398,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   const blocked =
     blockedReason(step, {
       cls: draft.cls,
+      kind: draft.kind,
+      others: draft.others,
+      leftAt: draft.leftAt,
       race: draft.race,
       xp,
       scores: draft.scores,
@@ -371,17 +408,25 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       name: draft.name,
       alignment: draft.details.alignment,
       sex: draft.details.sex,
-      alignments: classOf(options, draft.cls)?.alignments ?? [],
-    }) ?? (unreadable ? "unreadable" : null);
+      alignments: answer.latest?.alignments ?? null,
+    }) ??
+    (unreadable ? "unreadable" : null) ??
+    // The steps after the class depend on what the server says the classes carry (the spellbook, the
+    // skill points): wait for its first answer for these classes, unless it failed.
+    (step === "class" && body !== null && answered?.cls !== classKey(draft)
+      ? "answering"
+      : null);
   const last = index === steps.length - 1;
   const lead =
-    step === "race" && draft.cls
-      ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
-      : step === "extras" && draft.cls
-        ? t("creation.extras.lead", {
-            className: className.toLocaleLowerCase(),
-          })
-        : t(`creation.${step}.lead`);
+    step === "race" && draft.cls && draft.kind !== "single"
+      ? t("creation.race.leadSeveral")
+      : step === "race" && draft.cls
+        ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
+        : step === "extras" && draft.cls
+          ? t("creation.extras.lead", {
+              className: className.toLocaleLowerCase(),
+            })
+          : t(`creation.${step}.lead`);
 
   return (
     <div
@@ -410,6 +455,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           current={step}
           reached={reached}
           draft={draft}
+          answer={answer.latest}
           onGo={go}
         />
         <main
@@ -534,14 +580,13 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
 function useStepChoice(
   draft: FlowDraft,
   options: CreationOptions,
+  answer: CreationDraft | null,
 ): (step: StepId) => string | null {
   const { t } = useTranslation();
   return (step) => {
     switch (step) {
       case "class":
-        return draft.cls
-          ? `${t(`details.classes.${draft.cls}`, { defaultValue: draft.cls })} · ${levelText(t, draft)}`
-          : null;
+        return draft.cls ? classLine(t, draft) : null;
       case "race":
         return draft.race ? t(`details.races.${draft.race}`) : null;
       case "scores":
@@ -564,7 +609,7 @@ function useStepChoice(
         return parts.length > 0 ? parts.join(" · ") : null;
       }
       case "spellbook": {
-        const n = draftSpellbook(options, draft).length;
+        const n = draftSpellbook(options, draft, answer).length;
         return n > 0 ? t("creation.spellbook.spellsN", { count: n }) : null;
       }
       case "identity":
@@ -573,6 +618,30 @@ function useStepChoice(
         return null;
     }
   };
+}
+
+/** The classes with their levels or XP: "Mage · niveau 5", "Guerrier 9 000 XP / Clerc 9 000 XP", or
+ * for a dual-class character the class left (at its level) and the new one. */
+function classLine(
+  t: (k: string, o?: Record<string, unknown>) => string,
+  draft: FlowDraft,
+): string {
+  const name = (c: string) => t(`details.classes.${c}`, { defaultValue: c });
+  if (draft.kind === "single")
+    return `${name(draft.cls)} · ${levelText(t, draft)}`;
+  const rows = [
+    draft.kind === "dual"
+      ? t("creation.classes.leftAtN", {
+          className: name(draft.cls),
+          level: draft.leftAt,
+        })
+      : `${name(draft.cls)} ${t("creation.level.xpN", { xp: draft.xp })}`,
+    ...draft.others.map(
+      (o) =>
+        `${o.cls ? name(o.cls) : "…"} ${t("creation.level.xpN", { xp: o.xp })}`,
+    ),
+  ];
+  return rows.join(draft.kind === "dual" ? " → " : " / ");
 }
 
 /** "niveau 5" for a picked level; the typed XP otherwise (the server derives the level from it). */
@@ -593,6 +662,7 @@ function StepList({
   current,
   reached,
   draft,
+  answer,
   onGo,
 }: {
   options: CreationOptions;
@@ -600,10 +670,11 @@ function StepList({
   current: StepId;
   reached: number;
   draft: FlowDraft;
+  answer: CreationDraft | null;
   onGo: (s: StepId) => void;
 }) {
   const { t } = useTranslation();
-  const choice = useStepChoice(draft, options);
+  const choice = useStepChoice(draft, options, answer);
   return (
     <nav
       className="zone-card flex w-[clamp(14rem,15vw,16rem)] shrink-0 flex-col"
@@ -684,16 +755,13 @@ function ReviewFoot({
 function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const { t } = useTranslation();
   const spellName = useSpellName();
-  const spells = draftSpellbook(options, draft);
+  const spells = draftSpellbook(options, draft, answer.latest);
   const languageName = useLanguageNames(options);
   const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
   const line = [
-    draft.cls
-      ? t(`details.classes.${draft.cls}`, { defaultValue: draft.cls })
-      : null,
+    draft.cls ? classLine(t, { ...draft, xp }) : null,
     draft.race ? t(`details.races.${draft.race}`) : null,
-    draft.cls ? levelText(t, { ...draft, xp }) : null,
   ].filter(Boolean);
   // The languages the server reads (the native one added) once it answered, else the ones picked.
   const read = answer.current?.derived ? answer.current : null;
@@ -786,7 +854,7 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
               ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
               : dash}
           </dd>
-          {hasSpellbook(options, draft.cls) && (
+          {hasSpellbook(answer.latest) && (
             <>
               <dt className="text-ink-muted">{t("creation.spellbook.name")}</dt>
               <dd className="break-words" data-testid="building-spellbook">

@@ -128,6 +128,7 @@ BudgetError  # Needs a term: domain concept with no glossary entry yet (class an
 BudgetWarning  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
 SkillPercent  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
 NewCharacter  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
+NewClass  # The class of a NewCharacter: one class entry as entered at creation (see Class entry)
 ArrangeResult  # Needs a term: domain concept with no glossary entry yet (class and race creation options)
 Language  # Needs a term: language, book and proficiency-pool concepts
 Languages  # Needs a term: language, book and proficiency-pool concepts

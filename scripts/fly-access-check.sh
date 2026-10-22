@@ -8,7 +8,10 @@
 # No public address: the private check (scripts/fly-private-check.sh: a Flycast address, nothing public).
 # A public address: the gate check (scripts/gate-check.sh) against https://<app>.fly.dev, which fails
 # unless /api/health reports "login":"google" and every route that carries content answers 401 or
-# redirects to the login page. There is no bypass, for staging or production. GATE_CHECK names the gate check
+# redirects to the login page. UNSERVED_OK=1 (the check before a deploy only): an app that serves nothing at
+# all (the gate check exits 3: no response or a 5xx on /api/health, e.g. a crash-looping release) passes,
+# since it exposes no content and the deploy that replaces it must be able to run; the check after the
+# deploy never sets it, so the new release must hold the gate. There is no bypass, for staging or production. GATE_CHECK names the gate check
 # script (the offline tests stub it); prints no secret.
 set -euo pipefail
 
@@ -22,6 +25,13 @@ if [ "$public" = 0 ]; then
     FLY="$fly" "$here/fly-private-check.sh" "$app"
 else
     echo "fly-access-check: $app has $public public address(es): the login gate must be live"
-    "$gate" "https://$app.fly.dev" || { echo "fly-access-check: FAIL: $app has a public address and the login gate check failed" >&2; exit 1; }
-    echo "fly-access-check: OK ($app: public, login gate live)"
+    rc=0
+    "$gate" "https://$app.fly.dev" || rc=$?
+    if [ "$rc" = 3 ] && [ "${UNSERVED_OK:-}" = 1 ]; then
+        echo "fly-access-check: OK ($app: public address, but it serves nothing now; the deploy replaces it and the gate is checked after)"
+    elif [ "$rc" != 0 ]; then
+        echo "fly-access-check: FAIL: $app has a public address and the login gate check failed" >&2; exit 1
+    else
+        echo "fly-access-check: OK ($app: public, login gate live)"
+    fi
 fi

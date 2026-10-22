@@ -24,13 +24,52 @@ digest="${3:?$usage}"
 repo="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
 tag="v$version"
 
-object="$(jq -n --arg tag "$tag" --arg sha "$sha" --arg digest "$digest" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
-        tag: $tag, object: $sha, type: "commit",
-        message: "Release \($tag)\n\nStaging ran and smoke-checked the image \($digest).",
-        tagger: {name: "github-actions[bot]", email: "41898282+github-actions[bot]@users.noreply.github.com", date: $date}}' \
-    | gh api -X POST "repos/$repo/git/tags" --input - --jq .sha)"
-[[ "$object" =~ ^[0-9a-f]{40}$ ]] || { echo "version-tag: no tag object from GitHub" >&2; exit 1; }
-jq -n --arg ref "refs/tags/$tag" --arg sha "$object" '{ref: $ref, sha: $sha}' \
-    | gh api -X POST "repos/$repo/git/refs" --input - >/dev/null \
-    || { echo "version-tag: GitHub refused to create $tag (it exists already, or the workflow token may not write the repository)" >&2; exit 1; }
+# A transient GitHub API error (502, a secondary-rate-limit 403) must not leave main red after a passed
+# staging deploy: every call is retried (TAG_ATTEMPTS, default 5, TAG_DELAY seconds apart, doubling), and
+# the whole step is safe to repeat: a tag that already points at this commit (a retry whose first try
+# reached GitHub but lost the answer, or a rerun) is a success; one that points at another commit is not.
+attempts="${TAG_ATTEMPTS:-5}"
+delay="${TAG_DELAY:-5}"
+retry() {
+    local n=1 wait="$delay"
+    until "$@"; do
+        [ "$n" -lt "$attempts" ] || return 1
+        echo "version-tag: attempt $n/$attempts failed, retrying in ${wait}s" >&2
+        sleep "$wait"
+        n=$((n + 1)); wait=$((wait * 2))
+    done
+}
+
+# The commit the tag $tag points at, empty when there is no such tag (a 404 is not an error to retry).
+tag_commit() {
+    local out
+    out="$(gh api "repos/$repo/git/ref/tags/$tag" 2>&1)" || { [[ "$out" == *"404"* || "$out" == *"Not Found"* ]] && return 0; echo "$out" >&2; return 1; }
+    local type obj
+    type="$(jq -r .object.type <<<"$out")"; obj="$(jq -r .object.sha <<<"$out")"
+    if [ "$type" = tag ]; then
+        gh api "repos/$repo/git/tags/$obj" --jq .object.sha
+    else
+        echo "$obj"
+    fi
+}
+
+make_tag() {
+    local existing object
+    existing="$(tag_commit)" || return 1
+    if [ -n "$existing" ]; then
+        [ "$existing" = "$sha" ] && return 0
+        echo "version-tag: $tag exists already on $existing, not on $sha; a tag is never moved" >&2
+        exit 1
+    fi
+    object="$(jq -n --arg tag "$tag" --arg sha "$sha" --arg digest "$digest" --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" '{
+            tag: $tag, object: $sha, type: "commit",
+            message: "Release \($tag)\n\nStaging ran and smoke-checked the image \($digest).",
+            tagger: {name: "github-actions[bot]", email: "41898282+github-actions[bot]@users.noreply.github.com", date: $date}}' \
+        | gh api -X POST "repos/$repo/git/tags" --input - --jq .sha)" || return 1
+    [[ "$object" =~ ^[0-9a-f]{40}$ ]] || return 1
+    jq -n --arg ref "refs/tags/$tag" --arg sha "$object" '{ref: $ref, sha: $sha}' \
+        | gh api -X POST "repos/$repo/git/refs" --input - >/dev/null
+}
+
+retry make_tag || { echo "version-tag: GitHub refused to create $tag after $attempts attempts (the workflow token may not write the repository)" >&2; exit 1; }
 echo "::notice title=Version::$tag tagged on $sha (staging digest $digest)"

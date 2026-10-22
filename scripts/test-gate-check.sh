@@ -26,12 +26,14 @@ out="$("$here/gate-check.sh" "$url" 2>&1)" || fail "a gated app was refused: $ou
 
 for mode in devlogin devroute opencatalogue openpost openapp; do
     serve "$mode"
-    if out="$("$here/gate-check.sh" "$url" 2>&1)"; then fail "$mode: accepted: $out"; fi
+    rc=0; out="$("$here/gate-check.sh" "$url" 2>&1)" || rc=$?
+    [ "$rc" = 1 ] || fail "$mode: want exit 1 (a server that answers without the gate), got $rc: $out"
     [[ "$out" == *"gate-check: FAIL"* ]] || fail "$mode: no FAIL line: $out"
 done
 
 kill $pid 2>/dev/null || true
-if out="$(GATE_CHECK_WAIT=2 "$here/gate-check.sh" "$url" 2>&1)"; then fail "a dead server was accepted"; fi
+rc=0; out="$(GATE_CHECK_WAIT=2 "$here/gate-check.sh" "$url" 2>&1)" || rc=$?
+[ "$rc" = 3 ] || fail "a dead server must exit 3 (serves nothing), got $rc: $out"
 if "$here/gate-check.sh" 'https://x/../y; rm' >/dev/null 2>&1; then fail "a bad url was accepted"; fi
 
 [ "$fails" = 0 ] || exit 1

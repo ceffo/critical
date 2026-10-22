@@ -15,6 +15,9 @@
 #   / and a page (/characters)  a browser (Accept: text/html) is redirected to /login, the page shows nothing
 #   /login                200, the login page (the one public page; its static bundle under /assets/ is
 #                         public by ADR 0029 "the static bundle is public": it holds no data)
+# Exit codes: 0 gate live; 1 a check failed; 2 bad usage; 3 the app serves nothing at all (/api/health never
+# answered 200 and the last answer was no response or a 5xx: a crash-looping or stopped app), which a caller
+# that is about to replace the release may accept (scripts/fly-access-check.sh, UNSERVED_OK).
 # GATE_CHECK_WAIT (seconds, default 90) is how long a cold machine is waited for on the first request.
 set -euo pipefail
 
@@ -43,7 +46,12 @@ while [ $((SECONDS - start)) -lt "$wait" ]; do
     [ "$code" = 200 ] && break
     sleep 2
 done
-[ "$code" = 200 ] || fail "/api/health: HTTP $code"
+if [ "$code" != 200 ]; then
+    case "$code" in
+        000 | 5??) echo "gate-check: FAIL ($base): /api/health: HTTP $code, the app serves nothing" >&2; exit 3 ;;
+    esac
+    fail "/api/health: HTTP $code"
+fi
 jq -e '.login == "google"' "$body" >/dev/null 2>&1 || fail "/api/health does not report the Google login (the dev login, or a release before the gate): $(cat "$body")"
 echo "gate-check: /api/health 200, login google"
 

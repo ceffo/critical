@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Trash } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { fetchRuleset, saveCritTable } from "@/api/ruleset";
+import { saveCritTable } from "@/api/ruleset";
 import { labelClass, fieldClass } from "@/components/dashboard/fieldStyles";
 import { parseDecimal } from "@/lib/decimalInput";
 import type { CritRow, CritTable } from "@/types/combat";
@@ -29,10 +29,10 @@ const num = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
  * gives the values. The server validates the whole table on save (no gap, no overlap, 1-100,
  * multiplier ≥ 1, decimals allowed) and its message is shown as is; this component only edits and sends rows.
  */
-export function CritTableEditor() {
+export function CritTableCard({ initial }: { initial: CritTable }) {
   const { t } = useTranslation();
-  const [table, setTable] = useState<CritTable | null>(null);
-  const [rows, setRows] = useState<Draft[]>([]);
+  const [table, setTable] = useState<CritTable>(initial);
+  const [rows, setRows] = useState<Draft[]>(() => toDrafts(initial.rows));
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,14 +41,6 @@ export function CritTableEditor() {
     setTable(next);
     setRows(toDrafts(next.rows));
   }
-
-  useEffect(() => {
-    fetchRuleset()
-      .then((rs) => load(rs.critTable))
-      .catch((e: unknown) =>
-        setError(e instanceof Error ? e.message : String(e)),
-      );
-  }, []);
 
   function edit(i: number, field: keyof Draft, value: string) {
     setSaved(false);
@@ -88,18 +80,19 @@ export function CritTableEditor() {
   }
 
   return (
-    <details
-      className="max-w-xl rounded-lg px-3 py-2 open:bg-raised"
+    <section
+      aria-labelledby="ruleset-crit"
+      className="zone-card flex min-w-0 flex-col"
       data-testid="crit-table"
     >
-      <summary className="cursor-pointer text-body text-muted-foreground hover:text-foreground">
-        {t("critTable.title")}
-      </summary>
-      <div className="mt-3 flex flex-col gap-2">
+      <div className="card-band flex items-center px-4 py-2">
+        <h2 id="ruleset-crit" className="section-label">
+          {t("critTable.title")}
+        </h2>
+      </div>
+      <div className="flex flex-col gap-2 px-4 pt-3 pb-3">
         <p className="text-body text-muted-foreground">
-          {table?.placeholder
-            ? t("critTable.placeholder")
-            : t("critTable.help")}
+          {table.placeholder ? t("critTable.placeholder") : t("critTable.help")}
         </p>
         <div className="grid grid-cols-[1fr_1fr_1fr_auto] items-end gap-2">
           <span className={labelClass}>{t("critTable.from")}</span>
@@ -142,7 +135,7 @@ export function CritTableEditor() {
           ))}
         </div>
         {error && (
-          <p role="alert" className="text-body text-destructive">
+          <p role="alert" className="text-body text-danger">
             {error}
           </p>
         )}
@@ -163,7 +156,7 @@ export function CritTableEditor() {
           </Button>
           <Button
             type="button"
-            disabled={saving || table === null}
+            disabled={saving}
             title={t("critTable.save")}
             aria-label={t("critTable.save")}
             onClick={() => void save()}
@@ -172,6 +165,6 @@ export function CritTableEditor() {
           </Button>
         </div>
       </div>
-    </details>
+    </section>
   );
 }

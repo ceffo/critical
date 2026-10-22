@@ -169,8 +169,14 @@ flowchart TD
   as an email before Invite is enabled; Copy puts the app's address on the clipboard, no email is sent;
   the pending invites with who sent them and Cancel) and Users (a table: email, role and the root tag,
   last login, the characters' names, status, and per row Promote/Demote and Disable/Enable; none on
-  the root admin's row). The page is capped at 120rem wide. The crit table editor (Weapons tab) shows to
-  admins only: the API refuses a player's save.
+  the root admin's row). The page is capped at 120rem wide. 
+- Ruleset screen (`components/ruleset/RulesetPage.tsx`, [ADR 0041](adr/0041-ruleset.md) step 8), a page of
+  its own at `/ruleset` like the admin section, reached from the cog menu by admins only (a player who
+  opens the path goes to `/`; the API refuses their saves anyway). Cards: the crit table (the server's
+  validation message shown as is), the house rules (the two racial-lift checkboxes saved as ticked, the
+  level limits mode read-only) and the success effects (AC and rounds per proficiency, worded from its
+  id). The Attack panel keeps only the roll. Players reading it read-only, adding or removing a success
+  effect and the audit list are not built yet.
 - Login page (`components/login/LoginPage.tsx`, [ADR 0029](adr/0029-users-login-and-access.md) steps 3, 6
   and 8), the one page shown without a session. `main.tsx` reads `GET /api/auth/me` before the first
   render and `lib/session.ts` `startFor` decides: `/login` shows the page (a logged-in user goes to `/`),

@@ -15,10 +15,8 @@ import { ClassWarningTag, NonproficientTag } from "@/components/ClassWarning";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
-import { useSessionStore } from "@/stores/session";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { SizeChips } from "@/components/actions/SizeChips";
-import { CritTableEditor } from "@/components/actions/CritTableEditor";
 import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
 import { setModifiers, weaponSwitch } from "@/lib/weaponSwitch";
@@ -58,7 +56,6 @@ export function AttackPanel() {
     (s) => s.character?.derived.backstab ?? 0,
   );
   const rolling = useRollStore((s) => s.rolling);
-  const isAdmin = useSessionStore((s) => s.me?.role === "admin");
   const weapons = useItemsStore((s) => s.weapons);
   const items = useItemsStore((s) => s.items);
   const buffs = useBuffsStore((s) => s.buffs);
@@ -283,8 +280,6 @@ export function AttackPanel() {
           </div>
         )}
       </form>
-      {/* The crit table is one rule set for every user: only an admin edits it (the API refuses a player). */}
-      {isAdmin && <CritTableEditor />}
     </div>
   );
 }

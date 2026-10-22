@@ -1538,6 +1538,36 @@
     "saveShort": "Enregistrer",
     "saved": "Enregistré. Le prochain critique l'utilise."
   },
+  "ruleset": {
+    "open": "Règles",
+    "openHint": "Ouvrir les règles : table des critiques et règles maison",
+    "title": "Règles de la partie",
+    "back": "Retour",
+    "backHint": "Retour à la feuille de personnage",
+    "loadFailed": "Impossible de charger les règles : {{message}}",
+    "houseRules": {
+      "title": "Règles maison",
+      "liftHelp": "Lève la restriction de classe de la race pour un personnage à plusieurs classes. Un personnage à classe unique n'est pas concerné.",
+      "multiclassAnyRace": "Multi-classé : toute race",
+      "dualclassAnyRace": "Double-classé : toute race",
+      "saved": "Enregistré.",
+      "levelLimits": "Limites de niveau",
+      "levelLimitsMode": {
+        "warn": "Avertir : un niveau au-delà de la limite de la race est signalé, jamais refusé."
+      }
+    },
+    "effects": {
+      "title": "Effets de réussite",
+      "help": "L'effet qu'une réussite met sur le personnage. Un changement de CA négatif améliore la classe d'armure.",
+      "none": "Aucun effet de réussite.",
+      "proficiency": "Compétence",
+      "ac": "CA",
+      "rounds": "Tours",
+      "save": "Enregistrer",
+      "saveHint": "Enregistrer les effets de réussite",
+      "saved": "Enregistré. La prochaine réussite les utilise."
+    }
+  },
   "weapons": {
     "title": "Armes",
     "list": "Liste des armes",
@@ -2041,7 +2071,10 @@
     "inviteHintEmpty": "Inviter cette adresse e-mail",
     "language": "Langue de l'e-mail",
     "languageHint": "Envoyer l'e-mail d'invitation en {{language}}",
-    "languageName": { "en": "anglais", "fr": "français" },
+    "languageName": {
+      "en": "anglais",
+      "fr": "français"
+    },
     "languageTag": "E-mail en {{language}}",
     "resend": "Renvoyer",
     "resendHint": "Envoyer de nouveau l'e-mail d'invitation à {{email}}",

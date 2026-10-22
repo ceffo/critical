@@ -160,23 +160,41 @@ The characters adventuring together in a game.
 
 ### Psionics
 
-**Psionicist** (fr: psioniciste) _(planned, to confirm)_:
-The psionic class, whose powers cost PSP.
+**Psionicist** (fr: psioniste) _(planned)_:
+The psionic class of the Complete Psionics Handbook, whose powers cost PSP. [ADR 0043](docs/adr/0043-psionics.md) step 1. _Avoid_: psioniciste (not the book's word).
 
-**PSP** (fr: points psioniques) _(planned, to confirm)_:
-Psionic strength points, the budget a psionicist spends on powers.
+**PSP** (fr: PFP, points de force psionique) _(planned)_:
+Psionic strength points, the pool a psionicist spends on powers: a maximum, and a ledger of deltas on the action log. [ADR 0043](docs/adr/0043-psionics.md) steps 4 to 7.
 
-**Discipline** (fr: discipline) _(planned, to confirm)_:
-The field a psionic power belongs to (telepathy, say). _Avoid_: for the magic school (that is a **school**).
+**Discipline** (fr: discipline) _(planned)_:
+One of the six fields a psionic power belongs to (telepathy, say). [ADR 0043](docs/adr/0043-psionics.md) steps 8 and 9. _Avoid_: for the magic school (that is a **school**).
 
-**Science** (fr: science) _(planned, to confirm)_:
-A psionic power of the great kind, learned within a discipline.
+**Primary discipline** (fr: discipline primaire) _(planned)_:
+The first discipline a psionicist picks; no other discipline may hold as many of his sciences or devotions. [ADR 0043](docs/adr/0043-psionics.md) step 9.
 
-**Devotion** (fr: dévotion) _(planned, to confirm)_:
-A psionic power of the minor kind, learned within a discipline.
+**Science** (fr: science) _(planned)_:
+A major psionic power, learned within a discipline. [ADR 0043](docs/adr/0043-psionics.md) step 9.
 
-**Power check** (fr: test de pouvoir) _(planned, to confirm)_:
-The d20 roll that decides whether a psionic power works. _Avoid_: check (alone).
+**Devotion** (fr: dévotion) _(planned)_:
+A minor psionic power, learned within a discipline; at least twice as many as the sciences in it. [ADR 0043](docs/adr/0043-psionics.md) step 9.
+
+**Power score** (fr: score de pouvoir) _(planned)_:
+A power's target: an ability score plus or minus the power's number. [ADR 0043](docs/adr/0043-psionics.md) step 10.
+
+**Power check** (fr: test de pouvoir) _(planned)_:
+The d20 roll at or under the power score that decides whether a psionic power works. [ADR 0043](docs/adr/0043-psionics.md) step 10. _Avoid_: check (alone).
+
+**Initial cost** (fr: coût initial) _(planned)_:
+The PSPs a power costs when it is used; half on a failed check. [ADR 0043](docs/adr/0043-psionics.md) step 11.
+
+**Maintenance cost** (fr: coût de maintien) _(planned)_:
+The PSPs a maintained power costs each round (or its period) to keep it working, charged on Next Round. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
+
+**Defence mode** (fr: mode de défense) _(future)_:
+A telepathic power that defends against an attack mode in psionic combat. [ADR 0043](docs/adr/0043-psionics.md) step 20.
+
+**Attack mode** (fr: mode d'attaque) _(future)_:
+A telepathic power that attacks a mind in psionic combat. [ADR 0043](docs/adr/0043-psionics.md) step 21.
 
 ### Rounds and time
 

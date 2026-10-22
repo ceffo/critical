@@ -120,6 +120,12 @@ defence adjustment applies. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 PHB Table 5's signed bonus by Wisdom (-6 to +4) on a mind-affecting save, one `wisdom` modifier on
 the roll. [ADR 0006](docs/adr/0006-saving-throws.md) step 9.
 
+**Spell immunity** (fr: immunité contre les sorts):
+PHB Table 5's spells a character with Wisdom 19 or more is immune to, cumulative by score, as
+catalogue spell ids. A save named against one of them rolls nothing and passes; a spell received
+that is one of them applies nothing. [ADR 0006](docs/adr/0006-saving-throws.md) step 10.
+_Code_: Immunity, SpellImmunities
+
 ### Rules and the table
 
 **Ruleset** (fr: ensemble de règles) _(planned)_:

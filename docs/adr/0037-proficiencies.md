@@ -14,6 +14,7 @@ Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (u
 2026-10-20), decided; step 19.4 (the API's description lookup, format 9 import) as built 2026-10-20 (CRI-116), the pop-up itself (19.1 to 19.3) not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
+Steps 3, 7 and 8 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 15 and 16 (multi-class and dual-class), on implementation.
 
 ## Context
 
@@ -121,6 +122,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    (ruletablesvc), `TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel` (charactersvc), and the
    composition's `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP`: 5 at 15 with 17 pending,
    6 once 17 is taken.)_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 15, on implementation: a multi-class character takes, per pool, the largest initial count and the fastest rate among its active class entries' Table 34 rows (the book's reading; the triage's "best line" is ADR 0042's question Q10), the levels gained counted on the level of the entry whose rate is used; the weapon picks are one pool; a dual-class keeps the old class's slots at its left-at level and adds the new class's gains)_
 4. **Cost of a non-weapon pick.** Table 37's slots when one of the proficiency's groups is among
    the class's Table 38 groups, one more otherwise (PHB p.54). A bard pays 1 for Tumbling
    (rogue), a fighter 2.
@@ -209,6 +211,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    (`TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost`, charactersvc;
    `TestProficiencies_Step7_OptionsWeaponTypes`, composition). A kept pick outside the list shows
    with its `allowed: false` as such, removable, never re-added.)_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 16.1, on implementation: with several class entries, a type is allowed when any active entry's class allows it, except that an entry whose class is `blunt_only` restricts the picks to its own list (a multi-class priest keeps his weapon limits))_
 8. **The non-proficiency penalty.** An attack with a weapon whose type has no pick takes Table
    34's penalty for the class group (warrior -2, wizard -5, priest -3, rogue -3; PHB p.50 and
    p.52) as a named to-hit modifier `nonproficient`, not magical. Amends
@@ -242,6 +245,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    (`TestWeaponProficiency_Step8_PenaltyFromThePicks`, charactersvc;
    `TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece`, itemsvc;
    `TestNonproficientPenalty_Step8_OnTheWeaponsAndTheItems`, composition).)_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 15, on implementation: with several class entries, the penalty is the smallest among the active entries' groups (ADR 0042's question Q12))_
 9. **Specialization is a weapon pick.** Fighters only (`derived.specializes`, ADR 0030 step 12;
    another class `not_allowed`), in **one** weapon type at most (PHB p.52: the fighter chooses a
    single weapon; a second `not_allowed`). The pick spends, in all (PHB p.53): **2 slots** for a

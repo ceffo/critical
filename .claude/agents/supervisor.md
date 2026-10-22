@@ -118,6 +118,7 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    developer for its rework rounds. Run one lane per independent item (see "Capacity"), no more:
    never two developers on overlapping files. Close idle agents as soon as they are done (see "Launching agents").
 5. **Mechanical work goes through Bash, not agents:** merging `origin/<db>` into a clean branch,
+6. **Read live state narrowly**: `herdr agent list | jq -r '.result.agents[]|"\(.name) \(.pane_id) \(.agent_status)"'`, never the raw JSON; Linear `list_issues`/`get_issue` with `fields` (id, title, priority, labels; `relations` only for the item you dispatch), never the default description dump (sup-68 reached 150k in ~45 minutes).
    restacking, running the gate (`validate`, e2e) after a sync, pushing, opening PRs.
 
 Keep briefs short (about 30 lines; point at the issue instead of copying it) and PR bodies concise.
@@ -238,6 +239,7 @@ likely involved, any user constraint, and **`review: yes|no`**:
 in rework; its context is under 150k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
 Otherwise close it and start fresh: a stale big context is re-sent every turn and costs more than a
 clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). A reused agent keeps its herdr name (`dev-<old-id>`): prompt it by that name (sup-64 prompted a non-existent `dev-<new-id>`). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 150k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
+A risky item that crosses many packages (a registry, a port change, a catalogue format bump) is cut into rounds in the first brief, each ending on a green commit: (1) production code compiling, (2) existing tests green + `just validate`, (3) the new step tests and docs; one fresh developer per round, review after the last (sup-68: two such items took seven developer sessions, each hitting 140-200k within 15 minutes before reporting).
 developer on the same worktree only if the original's session is gone, with full context in the brief.
 
 ## 3. When a developer reports

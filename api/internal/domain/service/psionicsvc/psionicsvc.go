@@ -66,6 +66,8 @@ type Buffs interface {
 	// the power check's entry records the snapshot.
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
 	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	// GetRound is the round counter (ADR 0005; 0: out of combat).
+	GetRound(ctx context.Context, characterID int64) (int, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
 }
 
@@ -84,6 +86,8 @@ type RecoveryRates interface {
 type Log interface {
 	actionlog.Recorder
 	AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error)
+	// ActiveEntries are the newest non-voided entries of kind, newest first.
+	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 }
 
 // Characters reads a character with its derived known powers (charactersvc).

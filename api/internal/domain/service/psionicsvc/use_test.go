@@ -45,6 +45,10 @@ func useBook() psionics.Book {
 			Maintenance: &catalogue.Maintenance{Cost: catalogue.Cost{Kind: catalogue.CostVariable}, Period: 1},
 		},
 		{
+			ID: "mind_blank", Kind: catalogue.KindDefenceMode,
+			Score: &catalogue.PowerScore{Ability: "wis", Modifier: -7}, InitialCost: catalogue.Cost{Amount: 0},
+		},
+		{
 			ID: "unknown", Discipline: "telepathy", Kind: catalogue.KindDevotion,
 			Score: &catalogue.PowerScore{Ability: "int"}, InitialCost: catalogue.Cost{Amount: 1},
 		},
@@ -61,6 +65,7 @@ func user(current int, relearn bool) *charactersvc.Character {
 		{Kind: psionics.PickPower, ID: "touch"},
 		{Kind: psionics.PickPower, ID: "lift"},
 		{Kind: psionics.PickPower, ID: "push"},
+		{Kind: psionics.PickPower, ID: "mind_blank"},
 	}
 	if relearn {
 		picks = append(picks, psionics.Pick{Kind: psionics.PickRelearn, ID: "thrust"})
@@ -81,6 +86,8 @@ func newUseSvcWithBuffs(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC
 	t.Helper()
 	chars, dice, log, buffs := mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
 	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(c, nil).Maybe()
+	// Out of combat unless a test says otherwise: step 12 warns nothing.
+	buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(0, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
 		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
 		Dice: dice, Buffs: buffs, Book: useBook(), Tx: passTx{},
@@ -273,6 +280,58 @@ func TestUse_RefusalsRollAndWriteNothing(t *testing.T) {
 				return
 			}
 			require.ErrorIs(t, err, c.err)
+		})
+	}
+}
+
+// ADR 0043 step 12: in combat, a power initiated after another's check in
+// the same round (after its Next Round) warns second_power_this_round, a
+// warning, never a refusal; defence modes do not count, out of combat
+// nothing warns.
+func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
+	check := func(id int64, round int, power string) actionlog.Entry {
+		return actionlog.Entry{ID: id, Round: round, Kind: actionlog.KindPowerCheck, Payload: []byte(`{"power":"` + power + `"}`)}
+	}
+	advance := []actionlog.Entry{{ID: 5, Round: 2, Kind: actionlog.KindRoundAdvance}}
+	for _, c := range []struct {
+		name   string
+		power  string
+		round  int
+		checks []actionlog.Entry
+		warns  bool
+	}{
+		{"a second power in the round warns", "thrust", 3, []actionlog.Entry{check(9, 3, "lift")}, true},
+		{"the first power of the round does not", "thrust", 3, nil, false},
+		{"a check before the round's Next Round does not count", "thrust", 3, []actionlog.Entry{check(4, 2, "lift")}, false},
+		{"a check stamped with another round does not count", "thrust", 3, []actionlog.Entry{check(9, 1, "lift")}, false},
+		{"a defence mode before it does not count", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(4, 2, "lift")}, false},
+		{"a defence mode after a power counts the power", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(8, 3, "lift")}, true},
+		{"a defence mode itself does not warn", "mind_blank", 3, []actionlog.Entry{check(9, 3, "lift")}, false},
+		{"out of combat nothing warns", "thrust", 0, []actionlog.Entry{check(9, 0, "lift")}, false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			chars, dice, log, buffs := mocks.NewMockCharacters(t), mocks.NewMockDice(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
+			chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(user(20, false), nil)
+			buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(c.round, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).Return(c.checks, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).Return(advance, nil).Maybe()
+			dice.EXPECT().RollDie(20).Return(1).Once()
+			var got actionlog.NewEntry
+			expectRecord(log, &got)
+			svc, err := psionicsvc.New(psionicsvc.Deps{
+				Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
+				Dice: dice, Buffs: buffs, Book: useBook(), Tx: passTx{},
+			})
+			require.NoError(t, err)
+
+			res, err := svc.Use(context.Background(), 7, c.power, psionicsvc.UseRequest{})
+			require.NoError(t, err, "a warning, never a refusal")
+			if c.warns {
+				assert.Equal(t, []string{psionicsvc.WarnSecondPowerThisRound}, res.Check.Warnings)
+			} else {
+				assert.Empty(t, res.Check.Warnings)
+			}
+			assert.Equal(t, res.Check.Warnings, payloadOf(t, got).Warnings, "logged with the check")
 		})
 	}
 }

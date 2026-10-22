@@ -28,15 +28,15 @@ func (f *fakeTx) InTx(ctx context.Context, fn func(context.Context) error) error
 }
 
 type fixture struct {
-	svc     restsvc.SVC
-	spells  *mocks.MockSpells
-	items   *mocks.MockItems
-	psp     *mocks.MockPSP
+	svc    restsvc.SVC
+	spells *mocks.MockSpells
+	items  *mocks.MockItems
+	psp    *mocks.MockPSP
 	// maintained is what the buff list ends on a rest (ADR 0043 step 7).
 	maintained []buffsvc.BuffEffect
 	buffSnap   actionlog.Snapshot
-	tx      *fakeTx
-	entries []actionlog.NewEntry
+	tx         *fakeTx
+	entries    []actionlog.NewEntry
 }
 
 func newFixture(t *testing.T) *fixture {

@@ -37,6 +37,10 @@ var (
 	ErrRecoveryWhileMaintaining = errors.New("no PSP recovery while a power is maintained")
 )
 
+// WarnSecondPowerThisRound is the warning of a power initiated in a combat
+// round that already had one (step 12). A warning, never a refusal.
+const WarnSecondPowerThisRound = "second_power_this_round"
+
 // Bounds of a power use's request.
 const (
 	// MaxModifiers is the most labelled modifiers on one check.
@@ -111,6 +115,8 @@ type CheckRecord struct {
 	// that has one (step 13): a success keeps it up at that cost.
 	MaintenanceCost   int `json:"maintenanceCost,omitempty"`
 	MaintenancePeriod int `json:"maintenancePeriod,omitempty"`
+	// Warnings are the check's warnings (step 12: WarnSecondPowerThisRound).
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Use is ADR 0043 steps 10 and 11: a power check of a known power, one d20
@@ -150,6 +156,13 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		}
 		if pool.Current < rec.Cost {
 			return ErrNotEnoughPSP
+		}
+		second, err := s.secondPowerThisRound(ctx, characterID, p)
+		if err != nil {
+			return err
+		}
+		if second {
+			rec.Warnings = append(rec.Warnings, WarnSecondPowerThisRound)
 		}
 		rec.Roll = s.dice.RollDie(psionics.CheckDie)
 		rec.Outcome = psionics.Check(rec.Target, rec.Roll)
@@ -321,4 +334,51 @@ func (s *service) Stop(ctx context.Context, characterID int64, powerID string) (
 		return nil, err
 	}
 	return out, nil
+}
+
+// powerCheckLookback is how many of the newest power checks the step 12
+// warning reads: defence modes do not count, so it looks past a few.
+const powerCheckLookback = 20
+
+// secondPowerThisRound is step 12: in combat (the round counter above 0) a
+// power that is not a defence mode is the round's second when a power check
+// of one that is not a defence mode is logged in the same round, after the
+// round's Next Round. Out of combat it is never.
+func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p catalogue.Power) (bool, error) {
+	if p.Kind == catalogue.KindDefenceMode {
+		return false, nil
+	}
+	round, err := s.buffs.GetRound(ctx, characterID)
+	if err != nil {
+		return false, fmt.Errorf("get round: %w", err)
+	}
+	if round < 1 {
+		return false, nil
+	}
+	checks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPowerCheck, powerCheckLookback)
+	if err != nil {
+		return false, fmt.Errorf("power checks: %w", err)
+	}
+	advances, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindRoundAdvance, 1)
+	if err != nil {
+		return false, fmt.Errorf("round advances: %w", err)
+	}
+	var since int64
+	if len(advances) > 0 {
+		since = advances[0].ID
+	}
+	for _, e := range checks {
+		if e.ID <= since || e.Round != round {
+			return false, nil
+		}
+		var rec CheckRecord
+		if err := json.Unmarshal(e.Payload, &rec); err != nil {
+			return false, fmt.Errorf("decode power check %d: %w", e.ID, err)
+		}
+		if q, ok := s.book.Power(rec.Power); ok && q.Kind == catalogue.KindDefenceMode {
+			continue
+		}
+		return true, nil
+	}
+	return false, nil
 }

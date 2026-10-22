@@ -927,6 +927,16 @@ describe("the psionics step (ADR 0043)", () => {
     expect(out.pspMax).toBe(40);
     expect(out.psionicPicks).toEqual(picks);
   });
+  it("sends an entered 0 as 0, for the server to refuse (no silent none)", () => {
+    const base: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "psionicist",
+      race: "human",
+    };
+    const out = buildBody(options, { ...base, pspMax: "0" }, "2500", "en");
+    expect(out.error).toBeNull();
+    expect(out.body.pspMax).toBe(0);
+  });
   it("a class change clears the maximum and the powers, a new pick keeps them", () => {
     const d: FlowDraft = {
       ...EMPTY_DRAFT,

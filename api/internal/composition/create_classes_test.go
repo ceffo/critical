@@ -402,6 +402,13 @@ func TestDraft_Step4_4_TheComputedAndStoredPSPMaximum(t *testing.T) {
 		assert.Equal(t, 25, *computed, "still served beside the one entered")
 		assert.Equal(t, &pool{40, 40}, psp)
 	})
+	t.Run("zero entered is refused, not taken as none", func(t *testing.T) {
+		body := withPsionics(party, 0, `[]`)
+		_, _, refusals := draft(t, body[:len(body)-1]+`,"pspMax":0}`)
+		require.Len(t, refusals, 1)
+		assert.Equal(t, "pspMax", refusals[0]["field"])
+		assert.Equal(t, "out_of_range", refusals[0]["code"])
+	})
 	t.Run("no psionics", func(t *testing.T) {
 		computed, psp, refusals := draft(t, withPsionics(fighter, 30, `[]`))
 		assert.Nil(t, computed)

@@ -173,7 +173,7 @@ func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	t.Run("entered, refused", func(t *testing.T) {
 		e := classesEnv(t, ruleset.RacialLift{})
 		n := fighter
-		n.PSPMax = 30
+		n.PSPMax = new(30)
 		_, err := e.svc.Create(context.Background(), ownerID, n)
 		var fe *domain.FieldError
 		require.ErrorAs(t, err, &fe)
@@ -182,7 +182,14 @@ func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	t.Run("out of range, refused", func(t *testing.T) {
 		e := classesEnv(t, ruleset.RacialLift{})
 		n := fighter
-		n.PSPMax = charactersvc.MaxPSPMax + 1
+		n.PSPMax = new(charactersvc.MaxPSPMax + 1)
+		assert.Equal(t, []string{charactersvc.FieldPSPMax + ": " + charactersvc.CodeOutOfRange}, refused(t, e, n))
+	})
+	// An entered 0 is no "none": the maximum runs 1 to MaxPSPMax (ADR 0043 step 4.4).
+	t.Run("zero, refused", func(t *testing.T) {
+		e := classesEnv(t, ruleset.RacialLift{})
+		n := fighter
+		n.PSPMax = new(0)
 		assert.Equal(t, []string{charactersvc.FieldPSPMax + ": " + charactersvc.CodeOutOfRange}, refused(t, e, n))
 	})
 }

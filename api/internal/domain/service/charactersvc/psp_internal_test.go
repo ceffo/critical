@@ -32,12 +32,12 @@ func TestCreate_Step4_4_PSPMaxEnteredIsKept(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
 		c       *Character
-		entered int
+		entered *int
 		want    int
 	}{
-		{"entered, kept as entered", thiefPsi(), 90, 90},
-		{"not entered, the multi-class gain undivided", thiefPsi(), 0, 49},
-		{"a single-class psionicist at level 1", single(), 0, 25},
+		{"entered, kept as entered", thiefPsi(), new(90), 90},
+		{"not entered, the multi-class gain undivided", thiefPsi(), nil, 49},
+		{"a single-class psionicist at level 1", single(), nil, 25},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := startingPSPMax(tc.c, tc.entered, rules)

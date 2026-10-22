@@ -65,6 +65,12 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
 
   const psionics = step.getByTestId("psionics-step");
   await expect(step.getByTestId("psp-computed")).toContainText("PFP");
+  // A maximum of 0 is refused at its field, not taken as "compute it".
+  const max = step.getByLabel("PFP maximum");
+  await max.fill("0");
+  await expect(step.getByTestId("field-error")).toContainText("refusé");
+  await max.fill("");
+  await expect(step.getByTestId("field-error")).toHaveCount(0);
   const panel = step.getByTestId("known-powers");
   await panel.getByRole("button", { name: /^Ajouter Télépathie/ }).click();
   await panel.getByRole("searchbox").fill("contact");

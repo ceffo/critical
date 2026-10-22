@@ -335,8 +335,8 @@ type CreateBody struct {
 	Wis            *int `json:"wis"`
 	Cha            *int `json:"cha"`
 	HPMax          *int `json:"hpMax"`
-	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4); absent or 0 for the
-	// rules' own.
+	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4); absent for the
+	// rules' own (1 to 999: a 0 is refused).
 	PSPMax *int `json:"pspMax"`
 	XP     *int `json:"xp"`
 	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18):
@@ -453,9 +453,7 @@ func (b CreateBody) entered() (charactersvc.NewCharacter, []string, error) {
 			n.Classes = append(n.Classes, e)
 		}
 	}
-	if b.PSPMax != nil {
-		n.PSPMax = *b.PSPMax
-	}
+	n.PSPMax = b.PSPMax
 	for _, p := range b.PsionicPicks {
 		n.PsionicPicks = append(n.PsionicPicks, psionics.Pick(p))
 	}

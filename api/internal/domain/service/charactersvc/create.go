@@ -37,7 +37,7 @@ const (
 	// MinHPMax and MaxHPMax bound the max HP entered.
 	MinHPMax = 1
 	MaxHPMax = 999
-	// MaxPSPMax bounds the PSP maximum entered (ADR 0043 step 4.4); 0 enters none.
+	// MaxPSPMax bounds the PSP maximum entered (ADR 0043 step 4.4), which runs 1 to this.
 	MaxPSPMax = 999
 	// MinStartingXP and MaxStartingXP bound the starting XP entered (the
 	// highest is more than any class's level 20 threshold).
@@ -129,9 +129,10 @@ type NewCharacter struct {
 	// StrExceptional is a fighter's 18/xx percentile (step 9), 0 for none.
 	StrExceptional int
 	HPMax          int
-	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4), kept as entered; 0
-	// enters none and the rules compute it. Only a character with a psionics entry has one.
-	PSPMax int
+	// PSPMax is the PSP maximum entered from the sheet (ADR 0043 step 4.4), kept as entered; nil
+	// enters none and the rules compute it (an entered 0 is refused: the maximum runs 1 to
+	// MaxPSPMax). Only a character with a psionics entry has one.
+	PSPMax *int
 	XP     int
 	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18): the points
 	// by skill code (0 to MaxSkillPoints each, absent is 0). Empty for the
@@ -531,7 +532,7 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 	case n.HPMax < MinHPMax || n.HPMax > MaxHPMax:
 		refuse(&domain.FieldError{Field: "hpMax", Message: CodeOutOfRange})
 	}
-	if n.PSPMax < 0 || n.PSPMax > MaxPSPMax {
+	if n.PSPMax != nil && (*n.PSPMax < 1 || *n.PSPMax > MaxPSPMax) {
 		refuse(&domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange})
 	}
 	if stop() {
@@ -753,17 +754,17 @@ const FieldPSPMax = "pspMax"
 // level (a multi-class character's from the psionicist entry alone, its gain not divided, Q2). A
 // character with no psionics entry has none, and a maximum entered for it is refused. c is started
 // (its entries at their starting levels).
-func startingPSPMax(c *Character, entered int, rules Rules) (int, error) {
+func startingPSPMax(c *Character, entered *int, rules Rules) (int, error) {
 	m, ok, err := PSPMaxOf(c, rules)
 	switch {
 	case err != nil:
 		return 0, fmt.Errorf("new character: %w", err)
-	case !ok && entered > 0:
+	case !ok && entered != nil:
 		return 0, &domain.FieldError{Field: FieldPSPMax, Message: CodeOutOfRange}
 	case !ok:
 		return 0, nil
-	case entered > 0:
-		return entered, nil
+	case entered != nil:
+		return *entered, nil
 	}
 	return m.Max, nil
 }
@@ -882,13 +883,13 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 // character would be created with, full at the maximum Create stores (the one entered, else the
 // computed one; no ledger exists yet). A maximum entered for a character with no psionics entry is
 // Create's refusal on pspMax. c is started.
-func draftPSP(out *Draft, c *Character, entered int, rules Rules) error {
+func draftPSP(out *Draft, c *Character, entered *int, rules Rules) error {
 	m, ok, err := PSPMaxOf(c, rules)
 	if err != nil {
 		return fmt.Errorf("draft: %w", err)
 	}
-	if entered < 0 || entered > MaxPSPMax {
-		entered = 0 // already refused out_of_range by check
+	if entered != nil && (*entered < 1 || *entered > MaxPSPMax) {
+		entered = nil // already refused out_of_range by check
 	}
 	stored, err := startingPSPMax(c, entered, rules)
 	if fe, isField := errors.AsType[*domain.FieldError](err); isField {

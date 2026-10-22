@@ -68,9 +68,11 @@ type Log interface {
 
 // Thresholds is the class's experience table (PHB Tables 14, 20, 23 and
 // 25): the XP that reaches a level, an error outside the table or for an
-// unknown class.
+// unknown class; and its prime requisites (ADR 0040 step 6), which pick the
+// bonus.
 type Thresholds interface {
 	XPThreshold(class string, level int) (int, error)
+	PrimeRequisites(class string) ([]string, error)
 }
 
 // Deps are the service's collaborators. Now is optional (time.Now).

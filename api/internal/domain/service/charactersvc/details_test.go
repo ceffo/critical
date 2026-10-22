@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -27,7 +28,7 @@ func TestApply_Step2_AlignmentClassLimit(t *testing.T) {
 	for class, no := range refused {
 		for _, alignment := range ruletablesvc.Alignments {
 			t.Run(class+" "+alignment, func(t *testing.T) {
-				got, err := charactersvc.Details{}.Apply(charactersvc.Kind{Class: class}, charactersvc.DetailsPatch{Alignment: str(alignment)})
+				got, err := charactersvc.Details{}.Apply(aligns(t, class), charactersvc.DetailsPatch{Alignment: str(alignment)})
 				if contains(no, alignment) {
 					var fe *domain.FieldError
 					require.ErrorAs(t, err, &fe)
@@ -39,7 +40,7 @@ func TestApply_Step2_AlignmentClassLimit(t *testing.T) {
 				assert.Equal(t, alignment, got.Alignment)
 			})
 		}
-		assert.Len(t, ruletablesvc.AlignmentsOf(class), 9-len(no), class, "the options list the admitted ones")
+		assert.Len(t, aligns(t, class), 9-len(no), class, "the options list the admitted ones")
 	}
 }
 
@@ -68,7 +69,7 @@ func TestApply_Step2And3_EmptyUnknownAndUntouched(t *testing.T) {
 		{"unknown sex", charactersvc.DetailsPatch{Sex: str("M")}, "sex", "unknown"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, tt.p)
+			got, err := stored.Apply(aligns(t, "bard"), tt.p)
 			var fe *domain.FieldError
 			require.ErrorAs(t, err, &fe)
 			assert.Equal(t, tt.field, fe.Field)
@@ -76,7 +77,7 @@ func TestApply_Step2And3_EmptyUnknownAndUntouched(t *testing.T) {
 			assert.Equal(t, stored, got)
 		})
 	}
-	got, err := stored.Apply(charactersvc.Kind{Class: "bard"}, charactersvc.DetailsPatch{Hair: str("black"), Sex: str("female")})
+	got, err := stored.Apply(aligns(t, "bard"), charactersvc.DetailsPatch{Hair: str("black"), Sex: str("female")})
 	require.NoError(t, err)
 	assert.Equal(t, charactersvc.Details{Alignment: "neutral_good", Sex: "female", Hair: "black", Languages: []string{}}, got)
 }
@@ -90,35 +91,42 @@ func TestDetails_Step8_MissingAndKeptAlignmentWarning(t *testing.T) {
 	assert.Empty(t, charactersvc.Details{Alignment: "true_neutral", Sex: "male"}.Missing())
 
 	thief := charactersvc.Details{Alignment: "lawful_good", Sex: "male"}
-	assert.Equal(t, []charactersvc.Warning{{Code: "alignment_not_allowed", Field: "alignment"}}, thief.Warnings("thief"))
-	assert.Empty(t, thief.Warnings("fighter"))
-	assert.Empty(t, charactersvc.Details{}.Warnings("thief"), "a missing value is no warning")
+	assert.Equal(t, []charactersvc.Warning{{Code: "alignment_not_allowed", Field: "alignment"}}, thief.Warnings(aligns(t, "thief")))
+	assert.Empty(t, thief.Warnings(aligns(t, "fighter")))
+	assert.Empty(t, charactersvc.Details{}.Warnings(aligns(t, "thief")), "a missing value is no warning")
 
-	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, charactersvc.DetailsPatch{Eyes: str("grey")})
+	got, err := thief.Apply(aligns(t, "thief"), charactersvc.DetailsPatch{Eyes: str("grey")})
 	require.NoError(t, err)
 	assert.Equal(t, "lawful_good", got.Alignment)
 }
 
 func TestApply_Step8_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T) {
 	thief := charactersvc.Details{Alignment: "lawful_good", Sex: "male"}
-	got, err := thief.Apply(charactersvc.Kind{Class: "thief"}, charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
+	got, err := thief.Apply(aligns(t, "thief"), charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
 	require.NoError(t, err, "the unchanged alignment passes")
 	assert.Equal(t, "red", got.Hair)
 
 	neutral := charactersvc.Details{Alignment: "lawful_good"}
-	_, err = neutral.Apply(charactersvc.Kind{Class: "bard"}, charactersvc.DetailsPatch{Alignment: str("lawful_evil")})
+	_, err = neutral.Apply(aligns(t, "bard"), charactersvc.DetailsPatch{Alignment: str("lawful_evil")})
 	require.Error(t, err, "a change to a forbidden alignment stays refused")
 }
 
 func TestDetails_Step8_ANonCodeReadsAsMissing(t *testing.T) {
 	d := charactersvc.Details{Alignment: "Chaotic Good", Sex: "Homme"}
 	assert.Equal(t, []string{"alignment", "sex"}, d.Missing())
-	assert.Empty(t, d.Warnings("thief"), "no warning for a value that is not a code")
+	assert.Empty(t, d.Warnings(aligns(t, "thief")), "no warning for a value that is not a code")
 	assert.Equal(t, charactersvc.Details{}, d.Coded())
 }
 
-func TestEveryCreatableClassHasADecidedAlignmentList(t *testing.T) {
-	for _, class := range charactersvc.CreatableClasses {
-		assert.True(t, ruletablesvc.HasAlignmentRule(class), "%s: decide its alignments in alignmentLimits", class)
+// ADR 0040 step 1.5: every class of the catalogue lists the alignments it admits.
+func TestEveryClassHasADecidedAlignmentList(t *testing.T) {
+	for _, c := range cataloguetest.Definitions(t).Classes() {
+		assert.NotEmpty(t, c.Alignments, c.ID)
 	}
+}
+
+// aligns are the alignments the fixture catalogue's class admits.
+func aligns(t *testing.T, class string) []string {
+	t.Helper()
+	return charactersvc.AlignmentsOf(cataloguetest.Definitions(t), class)
 }

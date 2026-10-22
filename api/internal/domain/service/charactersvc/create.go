@@ -12,20 +12,15 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
-// CreatableClasses are the classes a new character may have (ADR 0030 step
-// 1): the bard's and the fighter's rules are built (the fighter enters an
-// exceptional strength, step 9), the mage's too (it enters its starting
-// spellbook, step 20.7, as a bard does). Each class item adds its class here with
-// its own entries. The cleric enters nothing more: its slots, spell failure
-// and turning follow its Wisdom and level (steps 13 to 16). The thief enters
-// its skill points and the armour it wears for its skills (steps 1 and 17),
-// and so does the bard (step 18).
-var CreatableClasses = []string{"bard", "fighter", "mage", "cleric", "thief"}
+// Every class the catalogue defines is creatable (ADR 0040 step 8): a class
+// that passed the start-up check is fully supported, and the races are the
+// catalogue's too.
 
 // The ranges a new character's entered values must fall in.
 const (
@@ -138,6 +133,8 @@ type checked struct {
 	missing   []string
 	levelled  bool
 	derivable bool
+	// defs are the class and race definitions the check read.
+	defs *classes.Registry
 }
 
 // check reads n field by field, in the form's order. The creation (draft false) stops at the
@@ -146,6 +143,11 @@ type checked struct {
 // verdict is read; every refusal it gives is the creation's, field and code alike.
 func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, error) {
 	var out checked
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return checked{}, fmt.Errorf("new character: %w", err)
+	}
+	out.defs = defs
 	stop := func() bool { return !draft && len(out.refusals) > 0 }
 	refuse := func(err error) { out.refusals = append(out.refusals, err) }
 	empty := func(field string) {
@@ -166,7 +168,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	if stop() {
 		return out, nil
 	}
-	classOK := slices.Contains(CreatableClasses, n.Class)
+	class, classOK := defs.Class(n.Class)
 	switch {
 	case classOK:
 	case draft && n.Class == "":
@@ -181,7 +183,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 	switch {
 	case n.Race == "":
 		empty("race")
-	case !slices.Contains(Races, n.Race):
+	case !slices.Contains(defs.RaceIDs(), n.Race):
 		refuse(&domain.FieldError{Field: "race", Message: CodeUnknown})
 	case classOK:
 		allowed, err := s.rules.RaceAllows(n.Race, n.Class)
@@ -219,7 +221,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 			return out, nil
 		}
 	}
-	if err := validExceptional(n); err != nil {
+	if err := validExceptional(n, class.Group); err != nil {
 		refuse(err)
 	}
 	if stop() {
@@ -250,7 +252,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		refuse(&domain.FieldError{Field: "xp", Message: CodeOutOfRange})
 		xpOK = false
 	}
-	details, missing, err := newDetails(Kind{Class: n.Class, Race: n.Race}, n.Details, !draft)
+	details, missing, err := newDetails(AlignmentsOf(defs, n.Class), n.Details, !draft)
 	if err != nil {
 		refuse(err)
 	}
@@ -294,13 +296,13 @@ func validSkills(n NewCharacter) (map[string]int, error) {
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
 // 1 to 100, and only a warrior's with Strength 18 who is not a halfling.
-func validExceptional(n NewCharacter) error {
+func validExceptional(n NewCharacter, group string) error {
 	switch {
 	case n.StrExceptional == 0:
 		return nil
 	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
 		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
-	case !ruletablesvc.ExceptionalStrengthAllowed(n.Class, n.Race, n.Str):
+	case !ruletablesvc.ExceptionalStrengthAllowed(group, n.Race, n.Str):
 		return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
 	}
 	return nil
@@ -404,7 +406,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	if err != nil {
 		return nil, err
 	}
-	out := &Draft{Refusals: k.refusals, Missing: k.missing, UnmetMinimums: unmetMinimums(n, blank)}
+	out := &Draft{Refusals: k.refusals, Missing: k.missing, UnmetMinimums: unmetMinimums(k.defs, n, blank)}
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -432,7 +434,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	if c.Derived, err = Derive(&c, 0, "", s.rules); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
-	s.readWarnings(&c)
+	s.readWarnings(&c, AlignmentsOf(k.defs, c.Class))
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
 	out.Spellbook = book
@@ -456,7 +458,7 @@ func budgetAt(out *Draft, class string, level int, points map[string]int) *rulet
 
 // unmetMinimums are, for every creatable class, the abilities whose entered score is under the
 // class's minimum (PHB Table 13); an ability not entered is not unmet.
-func unmetMinimums(n NewCharacter, blank []string) []ClassUnmet {
+func unmetMinimums(defs *classes.Registry, n NewCharacter, blank []string) []ClassUnmet {
 	scores := map[string]int{}
 	for _, a := range []struct {
 		ability Ability
@@ -466,9 +468,9 @@ func unmetMinimums(n NewCharacter, blank []string) []ClassUnmet {
 			scores[string(a.ability)] = a.v
 		}
 	}
-	out := make([]ClassUnmet, 0, len(CreatableClasses))
-	for _, class := range CreatableClasses {
-		out = append(out, ClassUnmet{Class: class, Abilities: ruletablesvc.UnmetMinimums(class, scores)})
+	out := make([]ClassUnmet, 0, len(defs.Classes()))
+	for _, class := range defs.Classes() {
+		out = append(out, ClassUnmet{Class: class.ID, Abilities: class.UnmetMinimums(scores)})
 	}
 	return out
 }
@@ -722,14 +724,19 @@ type RaceLanguageOption struct {
 
 // CreationOptions reads the races of each creatable class from the rules.
 func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return CreationOptions{}, fmt.Errorf("creation options: %w", err)
+	}
+	races := defs.RaceIDs()
 	out := CreationOptions{
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
-		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(CreatableClasses)),
-		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(Races)),
+		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(defs.Classes())),
+		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(races)),
 	}
-	for _, race := range Races {
+	for _, race := range races {
 		adj, err := s.rules.RaceAdjustmentsFor(race)
 		if err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
@@ -739,19 +746,16 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			out.RaceIdentity = append(out.RaceIdentity, id)
 		}
 	}
-	for _, class := range CreatableClasses {
-		group, err := ruletablesvc.ClassGroup(class)
-		if err != nil {
-			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
-		}
-		hd, err := s.rules.HitDiceFor(group)
+	for _, def := range defs.Classes() {
+		class := def.ID
+		hd, err := s.rules.HitDiceFor(def.Group)
 		if err != nil {
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Alignments: ruletablesvc.AlignmentsOf(class), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
+			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
-			Minimums: ruletablesvc.ClassMinimums(class), WeaponTypes: ClassWeaponTypeOptions(class),
+			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(class),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
 			xp, err := s.rules.XPThreshold(class, level)
@@ -766,14 +770,14 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		if _, ok := ruletablesvc.SpellbookMaxLevel(class); ok {
 			opt.Spellbook = s.spellbookOption(class)
 		}
-		for _, race := range Races {
+		for _, race := range races {
 			ok, err := s.rules.RaceAllows(race, class)
 			if err != nil {
 				return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 			}
 			if ok {
 				opt.Races = append(opt.Races, race)
-				if ruletablesvc.ExceptionalStrengthAllowed(class, race, 18) {
+				if ruletablesvc.ExceptionalStrengthAllowed(def.Group, race, 18) {
 					opt.ExceptionalStrengthRaces = append(opt.ExceptionalStrengthRaces, race)
 				}
 			}
@@ -801,7 +805,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 	}
 	out.Languages = s.languages.All()
 	if len(out.Languages) > 0 {
-		for _, race := range Races {
+		for _, race := range races {
 			out.RaceLanguages = append(out.RaceLanguages, RaceLanguageOption{
 				Race: race, Native: s.languages.Native(race), List: s.languages.RaceList(race),
 			})

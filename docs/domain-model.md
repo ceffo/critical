@@ -64,11 +64,11 @@ Invariants:
 - Nothing a rule derives (THAC0, saves, slots, skill percentages) is stored on the character.
 - Every change goes through the action log, so it can be undone ([ADR 0018](adr/0018-transactions-and-undo.md)).
 
-## Class (built as five fixed classes, decided as data)
+## Class (five classes, read from the catalogue's definitions)
 
 A class belongs to one **class group** (warrior, wizard, priest, rogue); the THAC0, saves,
 proficiency slots and by-group spell effects are read by group
-([ADR 0030](adr/0030-classes-and-races.md) step 2). Today the five classes are code and tables;
+([ADR 0030](adr/0030-classes-and-races.md) step 2).
 [ADR 0040](adr/0040-classes-are-data.md) makes each a **class definition** in the catalogue (format 11): group, prime requisites,
 ability minimums, alignments, equipment limits, XP rows, hit dice, a spell progression by
 reference, and a list of **class features**. A feature is `{kind, from_level, params}`: its
@@ -76,6 +76,16 @@ reference, and a list of **class features**. A feature is `{kind, from_level, pa
 adds no code, as spell effects already work ([ADR 0008](adr/0008-spell-slots-and-long-rest.md)
 step 8). A new mechanic is a new kind. A **kit** (future) would be data adding or removing
 features on a class.
+
+The **class registry** (`domain/classes`) holds the definitions, the groups and the races, checked
+at start-up (ADR 0040 step 8). Every class it holds is creatable, in catalogue order. The class
+list, a class's group, prime requisites (the 10% XP bonus needs 16 in every one, step 6),
+ability minimums, alignments and XP rows are read from it, and so is a group's THAC0 (Table 53).
+A race's **racial ability requirements** (its ability ranges) make it **restricted**: a restricted
+race has rows in every per-race table (level limits, requirements, thief skill adjustments); an
+unrestricted one (the human) may have none, and is then any class with no limit. The features, equipment, hit dice
+and race traits are still read from the rule tables and Go until their readers move (step 11.3).
+A character's class is a registry id, and so is the seed's (step 9).
 
 ```mermaid
 erDiagram

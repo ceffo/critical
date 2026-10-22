@@ -10,13 +10,14 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 )
 
 func proficiencyIDs(t *testing.T, dir string) []string {
 	t.Helper()
-	book, err := ruletablesadpt.ReadProficiencies(dir)
+	book, err := ruletablesadpt.ReadProficiencies(dir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	var ids []string
 	for _, p := range book.All() {

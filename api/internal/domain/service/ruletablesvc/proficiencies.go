@@ -1,17 +1,21 @@
 package ruletablesvc
 
 import (
+	"errors"
 	"fmt"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The non-weapon proficiency catalogue and PHB Table 38's crossovers (ADR 0037
 // steps 1 and 2): data a campaign extends with a row, never code. A name is an
 // i18n key by id, so the entities carry none.
 
-// ProficiencyGroups are the groups of PHB Table 37: the four class groups and
-// the general one.
-var ProficiencyGroups = []string{"general", "priest", "rogue", "warrior", "wizard"}
+// GeneralProficiencyGroup is PHB Table 37's group open to every class; the
+// table's other groups are the class groups of the definitions (ADR 0040
+// step 1.2).
+const GeneralProficiencyGroup = "general"
 
 // proficiencyAbilities are the abilities a check can use.
 var proficiencyAbilities = []string{"str", "dex", "con", "int", "wis", "cha"}
@@ -52,18 +56,28 @@ type Proficiencies struct {
 	list       []Proficiency
 	crossovers []Crossover
 	slots      []SlotRow
+	// groupOf is each defined class's group (ADR 0040 step 1.2).
+	groupOf map[string]string
 }
 
 // NewProficiencies validates the rows: an id once and non-empty, a known
 // ability (or none, with a 0 modifier), at least one slot, one or more known
-// groups once each; the crossovers cover each of Classes exactly once with
+// groups (the general one or a class group) once each; the crossovers cover each of Classes exactly once with
 // known groups; the slot rows (Table 34) cover each of Groups exactly once,
 // with initial slots of 0 or more, #Levels of 1 or more and a penalty of 0 or
 // less.
-func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRow) (*Proficiencies, error) {
+func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRow, defs *classes.Registry) (*Proficiencies, error) {
+	if defs == nil {
+		return nil, errors.New("proficiencies: no class definitions")
+	}
+	classIDs, groups := defs.ClassIDs(), defs.Groups()
+	profGroups := append([]string{GeneralProficiencyGroup}, groups...)
 	seen := make(map[string]bool, len(list))
-	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots)}
-	if err := checkSlotRows(slots); err != nil {
+	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots), groupOf: map[string]string{}}
+	for _, c := range defs.Classes() {
+		out.groupOf[c.ID] = c.Group
+	}
+	if err := checkSlotRows(slots, groups); err != nil {
 		return nil, err
 	}
 	for i, p := range list {
@@ -80,7 +94,7 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRo
 			return nil, fmt.Errorf("proficiencies: %q needs at least 1 slot", p.ID)
 		}
 		seen[p.ID] = true
-		if err := checkGroups("proficiencies: "+p.ID, p.Groups); err != nil {
+		if err := checkGroups("proficiencies: "+p.ID, p.Groups, profGroups); err != nil {
 			return nil, err
 		}
 		p.Groups = slices.Clone(p.Groups)
@@ -89,19 +103,19 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRo
 	have := map[string]bool{}
 	for i, c := range crossovers {
 		switch {
-		case !slices.Contains(Classes, c.Class):
+		case !slices.Contains(classIDs, c.Class):
 			return nil, fmt.Errorf("proficiency crossovers: unknown class %q", c.Class)
 		case have[c.Class]:
 			return nil, fmt.Errorf("proficiency crossovers: class %q twice", c.Class)
 		}
 		have[c.Class] = true
-		if err := checkGroups("proficiency crossovers: "+c.Class, c.Groups); err != nil {
+		if err := checkGroups("proficiency crossovers: "+c.Class, c.Groups, profGroups); err != nil {
 			return nil, err
 		}
 		c.Groups = slices.Clone(c.Groups)
 		out.crossovers[i] = c
 	}
-	for _, class := range Classes {
+	for _, class := range classIDs {
 		if len(crossovers) > 0 && !have[class] {
 			return nil, fmt.Errorf("proficiency crossovers: class %q is missing", class)
 		}
@@ -109,11 +123,11 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRo
 	return out, nil
 }
 
-func checkSlotRows(rows []SlotRow) error {
+func checkSlotRows(rows []SlotRow, groups []string) error {
 	have := map[string]bool{}
 	for _, r := range rows {
 		switch {
-		case !slices.Contains(Groups, r.Group):
+		case !slices.Contains(groups, r.Group):
 			return fmt.Errorf("proficiency slots: unknown group %q", r.Group)
 		case have[r.Group]:
 			return fmt.Errorf("proficiency slots: group %q twice", r.Group)
@@ -126,7 +140,7 @@ func checkSlotRows(rows []SlotRow) error {
 		}
 		have[r.Group] = true
 	}
-	for _, g := range Groups {
+	for _, g := range groups {
 		if len(rows) > 0 && !have[g] {
 			return fmt.Errorf("proficiency slots: group %q is missing", g)
 		}
@@ -134,14 +148,14 @@ func checkSlotRows(rows []SlotRow) error {
 	return nil
 }
 
-func checkGroups(where string, groups []string) error {
+func checkGroups(where string, groups, known []string) error {
 	if len(groups) == 0 {
 		return fmt.Errorf("%s: no group", where)
 	}
 	seen := map[string]bool{}
 	for _, g := range groups {
 		switch {
-		case !slices.Contains(ProficiencyGroups, g):
+		case !slices.Contains(known, g):
 			return fmt.Errorf("%s: unknown group %q", where, g)
 		case seen[g]:
 			return fmt.Errorf("%s: group %q twice", where, g)
@@ -191,8 +205,8 @@ func (p *Proficiencies) SlotRowOf(class string) (SlotRow, bool) {
 	if p == nil {
 		return SlotRow{}, false
 	}
-	group, err := ClassGroup(class)
-	if err != nil {
+	group, ok := p.groupOf[class]
+	if !ok {
 		return SlotRow{}, false
 	}
 	for _, r := range p.slots {

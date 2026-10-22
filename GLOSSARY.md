@@ -40,9 +40,14 @@ The seed character, the table's level 15 bard, loaded from `seeds/character.json
 **Class** (fr: classe):
 What a character is trained as: bard, fighter, mage, cleric, thief today. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 1 and 21, [ADR 0040](docs/adr/0040-classes-are-data.md).
 
-**Class definition** (fr: définition de classe) _(planned)_:
-A class as catalogue data: group, prime requisites, limits, XP table, hit dice, spell progression and its class features. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
+**Class definition** (fr: définition de classe):
+A class as catalogue data (format 11): group, prime requisites, ability minimums, alignments, XP rows, hit dice, spell progression and its class features. The app reads the group, prime requisites, minimums, alignments and XP rows so far; the rest moves with its readers. [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.
 _Avoid_: class table (a rule table is something else).
+_Code_: Class
+
+**Class registry** (fr: registre des classes):
+The validated class, group and race definitions of the catalogue, in its order; every reader asks it for a class's group, prime requisites, minimums, alignments or XP, never a Go list of classes. Built at start-up, which refuses a broken definition. [ADR 0040](docs/adr/0040-classes-are-data.md) steps 5 and 8.
+_Code_: Registry
 
 **Class group** (fr: groupe de classes):
 Warrior, wizard, priest or rogue: the grouping the tables are read by; a field of the class definition. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.2.
@@ -75,6 +80,10 @@ The ability a class is built on; 16 or more in every one gives the 10% XP bonus.
 
 **Race** (fr: race):
 One of the six PHB races, catalogue data like a class. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21, [ADR 0040](docs/adr/0040-classes-are-data.md) step 2.
+
+**Racial ability requirements** (fr: conditions raciales de caractéristiques):
+A race's lowest and highest score in each ability (PHB Table 7). A race with them is restricted: it has its rows in every per-race table (level limits, thief skill adjustments); the human has none and no limit. [ADR 0040](docs/adr/0040-classes-are-data.md) step 8.
+_Code_: AbilityRange
 
 **Race trait** (fr: trait racial):
 What a race brings; a computed one is typed, a trait kind with parameters (`con_save_bonus`, `no_exceptional_strength`), the others are text. [ADR 0040](docs/adr/0040-classes-are-data.md) step 4.

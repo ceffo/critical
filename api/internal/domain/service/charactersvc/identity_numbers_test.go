@@ -75,7 +75,7 @@ func TestRangeWarnings_Step5_1_NoSexIsTheUnionNoRaceIsNothing(t *testing.T) {
 // weight above 0 and up to the sanity bound (kept to a tenth), an age 1 to
 // 10,000; the range of the race refuses nothing. Null clears.
 func TestApply_Step5_2_OnlyANonsenseNumberIsRefused(t *testing.T) {
-	k := charactersvc.Kind{Class: "fighter", Race: "halfling"}
+	k := aligns(t, "fighter")
 	_, err := charactersvc.Details{}.Apply(k, charactersvc.DetailsPatch{Height: f64(250.04), Weight: f64(400), Age: new(int)})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe, "age 0 is not a clear")

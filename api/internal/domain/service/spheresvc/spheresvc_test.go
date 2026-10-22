@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -44,7 +45,7 @@ var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
 
 func access(t *testing.T, rows ...ruletablesvc.SphereAccessRow) *ruletablesvc.SphereAccess {
 	t.Helper()
-	a, err := ruletablesvc.NewSphereAccess(rows)
+	a, err := ruletablesvc.NewSphereAccess(rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return a
 }

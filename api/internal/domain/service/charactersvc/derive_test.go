@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -47,7 +48,7 @@ func expectKelsenRules(r *mocks.MockRules, xp, level int) {
 func kelsenDerived() charactersvc.Derived {
 	next := 1_320_000
 	return charactersvc.Derived{
-		XPTotal: 1_293_418, TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
+		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots,
 		LevelUp:    charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		Spellbook:  &kelsenSpellbook, SkillBudget: []ruletablesvc.BudgetWarning{},
@@ -273,7 +274,7 @@ func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 
 func ruleGroup(t *testing.T, class string) string {
 	t.Helper()
-	g, err := ruletablesvc.ClassGroup(class)
+	g, err := cataloguetest.Tables(t).ClassGroup(class)
 	require.NoError(t, err)
 	return g
 }
@@ -423,6 +424,7 @@ var int14 = ruletablesvc.IntelligenceRow{IntMin: 14, IntMax: 14, MaxSpellLevel: 
 // 20), which the tests that are not about it leave at Intelligence 14.
 func newRules(t *testing.T) *mocks.MockRules {
 	r := mocks.NewMockRules(t)
+	withDefinitions(t, r)
 	r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 	r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
@@ -430,6 +432,16 @@ func newRules(t *testing.T) *mocks.MockRules {
 	// about them leave empty.
 	r.EXPECT().BardSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	return r
+}
+
+// withDefinitions backs r's class, group and race lookups (ADR 0040 step 5)
+// with the fixture catalogue's definitions.
+func withDefinitions(t *testing.T, r *mocks.MockRules) {
+	t.Helper()
+	tables := cataloguetest.Tables(t)
+	r.EXPECT().Definitions().RunAndReturn(tables.Definitions).Maybe()
+	r.EXPECT().Class(mock.Anything).RunAndReturn(tables.Class).Maybe()
+	r.EXPECT().ClassGroup(mock.Anything).RunAndReturn(tables.ClassGroup).Maybe()
 }
 
 // Step 20.1: a class with a spellbook (mage, bard) derives the class's
@@ -453,6 +465,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			c := kelsen()
 			c.Class, c.Int, c.RealizedLevel = tc.class, tc.score, 13
 			r := mocks.NewMockRules(t)
+			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 			r.EXPECT().LevelFor(tc.class, mock.Anything).Return(13, nil).Once()
@@ -539,6 +552,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			c.SkillPoints = map[string]int{"climb_walls": 40}
 			c.Sheet = charactersvc.Sheet{}
 			r := mocks.NewMockRules(t)
+			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
@@ -566,6 +580,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		c := kelsen()
 		c.Class, c.XPTotal, c.RealizedLevel, c.Sheet = "thief", 0, 1, charactersvc.Sheet{}
 		r := mocks.NewMockRules(t)
+		withDefinitions(t, r)
 		r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 		r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 		r.EXPECT().LevelFor("thief", 0).Return(1, nil)

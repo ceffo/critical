@@ -74,6 +74,10 @@ type Artifact struct {
 	// Languages is a format-8 artifact's top-level languages list as written
 	// (ADR 0021 step 14), nil before format 8; ruletablesadpt reads it too.
 	Languages json.RawMessage
+	// Definitions is a JSON object of the format-11 artifact's classes,
+	// groups and races lists as written (ADR 0021 step 18); ruletablesadpt
+	// reads it into the class registry (ADR 0040 step 11.2).
+	Definitions json.RawMessage
 }
 
 // Load reads and validates the artifact at path and returns its spells.
@@ -130,6 +134,11 @@ type artifactDTO struct {
 	Languages json.RawMessage `json:"languages"`
 	// ProficiencyDescriptions (format 9, step 16) are the non-weapon proficiencies' texts.
 	ProficiencyDescriptions []proficiencyDescriptionDTO `json:"proficiency_descriptions"`
+	// Classes, Groups and Races (format 11, step 18) are the definitions
+	// ruletablesadpt reads (ADR 0040 steps 1, 2 and 7).
+	Classes json.RawMessage `json:"classes"`
+	Groups  json.RawMessage `json:"groups"`
+	Races   json.RawMessage `json:"races"`
 }
 
 type proficiencyDescriptionDTO struct {
@@ -215,7 +224,15 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate proficiency description ids: %s", strings.Join(first(dups), ", "))
 	}
-	return Artifact{Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages}, nil
+	defs, err := json.Marshal(struct {
+		Classes json.RawMessage `json:"classes"`
+		Groups  json.RawMessage `json:"groups"`
+		Races   json.RawMessage `json:"races"`
+	}{a.Classes, a.Groups, a.Races})
+	if err != nil {
+		return Artifact{}, fmt.Errorf("definitions: %w", err)
+	}
+	return Artifact{Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages, Definitions: defs}, nil
 }
 
 // knownFormat reports whether the raw format value is one this API reads,

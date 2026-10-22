@@ -104,7 +104,7 @@ func newFixture(t *testing.T, dice ...int) *fixture {
 // newFixtureWith is newFixture over another spell-effects catalog.
 func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *fixture {
 	t.Helper()
-	return newFixtureOf(t, effects, &charactersvc.Character{ID: charID, Class: "bard", Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel}}, dice...)
+	return newFixtureOf(t, effects, &charactersvc.Character{ID: charID, Class: "bard", Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: "rogue"}}, dice...)
 }
 
 // newFixtureOf is newFixtureWith for another caster.

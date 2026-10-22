@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -12,6 +13,14 @@ import (
 // (ruletablesvc.Tables implements it). Every method errs on a value outside
 // its table.
 type Rules interface {
+	// Definitions are the catalogue's class, group and race definitions
+	// (ADR 0040 step 5): the creatable classes (step 8) and the races.
+	Definitions() (*classes.Registry, error)
+	// Class is a class's definition (ADR 0040 step 1), an error for a class
+	// the catalogue does not define.
+	Class(class string) (classes.Class, error)
+	// ClassGroup is the class's group (ADR 0040 step 1.2).
+	ClassGroup(class string) (string, error)
 	// LevelFor is the class's level at xp (ADR 0030 step 3).
 	LevelFor(class string, xp int) (int, error)
 	// XPThreshold is the XP that reaches level in the class's table.
@@ -79,9 +88,11 @@ var conSaveRaces = []string{"dwarf", "gnome", "halfling"}
 // read from c.Sheet.
 func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, error) {
 	d := Derived{XPTotal: c.XPTotal + ledgerXP}
-	if _, err := ruletablesvc.ClassGroup(c.Class); err != nil {
+	group, err := rules.ClassGroup(c.Class)
+	if err != nil {
 		return Derived{}, fmt.Errorf("derive: %w", err)
 	}
+	d.Group = group
 	target, err := levelAt(c, d.XPTotal, rules)
 	if err != nil {
 		return Derived{}, err
@@ -93,7 +104,7 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 		realized = target
 	}
 	d.TargetLevel, d.RealizedLevel = target, realized
-	core, err := coreAt(c, realized, rules)
+	core, err := coreAt(c, group, realized, rules)
 	if err != nil {
 		return Derived{}, err
 	}
@@ -146,7 +157,7 @@ func Derive(c *Character, ledgerXP int, armour string, rules Rules) (Derived, er
 			return Derived{}, fmt.Errorf("derive %s backstab: %w", c.Class, err)
 		}
 	}
-	if d.LevelUp, err = levelUp(c, realized, target, rules); err != nil {
+	if d.LevelUp, err = levelUp(c, group, realized, target, rules); err != nil {
 		return Derived{}, err
 	}
 	d.Specializes = ruletablesvc.Specializes(c.Class)
@@ -179,14 +190,10 @@ func spellbookRules(c *Character, rules Rules) (*SpellbookRules, error) {
 // hit die up to its name level (step 7.1), the fixed gain above it (step
 // 7.2). A target under the realized level (an XP correction, step 7.4)
 // removes nothing: it is flagged.
-func levelUp(c *Character, realized, target int, rules Rules) (LevelUp, error) {
+func levelUp(c *Character, group string, realized, target int, rules Rules) (LevelUp, error) {
 	l := LevelUp{Pending: []PendingLevel{}, RealizedAboveTarget: realized > target}
 	if realized >= target {
 		return l, nil
-	}
-	group, err := ruletablesvc.ClassGroup(c.Class)
-	if err != nil {
-		return LevelUp{}, fmt.Errorf("derive level-up: %w", err)
 	}
 	hd, err := rules.HitDiceFor(group)
 	if err != nil {
@@ -218,11 +225,7 @@ func levelAt(c *Character, xp int, rules Rules) (int, error) {
 	return level, nil
 }
 
-func coreAt(c *Character, level int, rules Rules) (core, error) {
-	group, err := ruletablesvc.ClassGroup(c.Class)
-	if err != nil {
-		return core{}, fmt.Errorf("derive: %w", err)
-	}
+func coreAt(c *Character, group string, level int, rules Rules) (core, error) {
 	// Step 5: Table 53 for the group at that level.
 	thac0, err := rules.THAC0For(group, level)
 	if err != nil {

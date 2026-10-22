@@ -11,6 +11,8 @@ package ruletablesvc
 import (
 	"errors"
 	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // MaxSpellLevel is the highest bard spell level in Table 32.
@@ -91,6 +93,9 @@ type Tables struct {
 	// languages is the language catalogue of a format-8 catalogue (ADR 0021
 	// step 14); nil before format 8.
 	languages *Languages
+	// defs are the class, group and race definitions of a format-11
+	// catalogue (ADR 0040 step 11.2).
+	defs *classes.Registry
 }
 
 var _ Lookup = (*Tables)(nil)
@@ -212,6 +217,14 @@ func validateDex(rows []DexRow) error {
 		return errors.New("must cover scores 1..25")
 	}
 	return nil
+}
+
+// WithDefinitions returns a copy of t carrying the class, group and race
+// definitions.
+func (t *Tables) WithDefinitions(d *classes.Registry) *Tables {
+	out := *t
+	out.defs = d
+	return &out
 }
 
 // WithClasses returns a copy of t carrying the class and race tables.

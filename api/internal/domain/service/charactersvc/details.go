@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -203,13 +204,13 @@ func (d Details) RangeWarnings(race string) []Warning {
 	return out
 }
 
-// Warnings are the warnings the details of a character of class carry: the
-// alignment its class no longer admits, kept because it is the player's own
-// recorded choice.
-func (d Details) Warnings(class string) []Warning {
+// Warnings are the warnings the details of a character carry: the alignment
+// its class no longer admits (alignments, the class's: AlignmentsOf), kept
+// because it is the player's own recorded choice.
+func (d Details) Warnings(alignments []string) []Warning {
 	d = d.Coded()
 	out := []Warning{}
-	if d.Alignment != "" && !ruletablesvc.AlignmentAllowed(class, d.Alignment) {
+	if d.Alignment != "" && !slices.Contains(alignments, d.Alignment) {
 		out = append(out, Warning{Code: CodeAlignmentNotAllowed, Field: FieldAlignment})
 	}
 	return out
@@ -231,9 +232,9 @@ func code(field, v string, allowed []string) error {
 // 2, on every set, at creation and on the card's edit alike), the sex male or
 // female (step 3), text trimmed and bounded, the age 1 to MaxAge. A refusal
 // is a *domain.FieldError naming the field (alignment, age, sex, height,
-// weight, hair or eyes).
-func (d Details) Apply(k Kind, p DetailsPatch) (Details, error) {
-	class := k.Class
+// weight, hair or eyes). alignments are the ones the class admits
+// (AlignmentsOf).
+func (d Details) Apply(alignments []string, p DetailsPatch) (Details, error) {
 	cur := d
 	cur.Languages = append([]string{}, d.Languages...)
 	text := func(field string, dst, v *string, limit int) error {
@@ -266,7 +267,7 @@ func (d Details) Apply(k Kind, p DetailsPatch) (Details, error) {
 			return d, err
 		}
 		// A kept forbidden alignment (step 8.4) stays: only a change to one is refused.
-		if a != d.Alignment && !ruletablesvc.AlignmentAllowed(class, a) {
+		if a != d.Alignment && !slices.Contains(alignments, a) {
 			return d, &domain.FieldError{Field: FieldAlignment, Message: CodeAlignmentNotAllowed}
 		}
 		cur.Alignment = a
@@ -315,7 +316,7 @@ func (d Details) Apply(k Kind, p DetailsPatch) (Details, error) {
 // alignment and the sex required (ADR 0032 steps 2 and 3). A draft (required false) lists a blank
 // alignment or sex in missing instead of refusing it. The languages are the skills module's
 // (skills.Apply at creation, ADR 0037 step 18). A refusal names its field under DetailsField.
-func newDetails(k Kind, p DetailsPatch, required bool) (Details, []string, error) {
+func newDetails(alignments []string, p DetailsPatch, required bool) (Details, []string, error) {
 	// A draft leaves a blank alignment or sex unset.
 	if !required {
 		for _, f := range []**string{&p.Alignment, &p.Sex} {
@@ -324,7 +325,7 @@ func newDetails(k Kind, p DetailsPatch, required bool) (Details, []string, error
 			}
 		}
 	}
-	d, err := Details{Languages: []string{}}.Apply(k, p)
+	d, err := Details{Languages: []string{}}.Apply(alignments, p)
 	if err != nil {
 		if fe, ok := errors.AsType[*domain.FieldError](err); ok {
 			return Details{Languages: []string{}}, nil, &domain.FieldError{Field: DetailsField + fe.Field, Message: fe.Message}
@@ -336,4 +337,14 @@ func newDetails(k Kind, p DetailsPatch, required bool) (Details, []string, error
 		return Details{}, nil, &domain.FieldError{Field: DetailsField + missing[0], Message: CodeEmpty}
 	}
 	return d, missing, nil
+}
+
+// AlignmentsOf are the alignments class admits: its definition's (ADR 0040
+// step 1.5, ADR 0032 step 2), every one of the nine for a class the catalogue
+// does not define (no class chosen yet), as before the definitions.
+func AlignmentsOf(defs *classes.Registry, class string) []string {
+	if c, ok := defs.Class(class); ok {
+		return c.Alignments
+	}
+	return slices.Clone(classes.Alignments)
 }

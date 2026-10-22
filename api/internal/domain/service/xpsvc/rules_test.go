@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
@@ -23,6 +24,19 @@ var phbXP = map[string][]int{
 		0, 2500, 5000, 10000, 20000, 40000, 60000, 90000, 135000, 250000,
 		375000, 750000, 1125000, 1500000, 1875000, 2250000, 2625000, 3000000, 3375000, 3750000,
 	},
+}
+
+// phbPrimes are the prime requisites of PHB chapter 3 (ADR 0040 step 6).
+var phbPrimes = map[string][]string{
+	"fighter": {"str"}, "mage": {"int"}, "cleric": {"wis"}, "thief": {"dex"}, "bard": {"dex", "cha"},
+}
+
+func (xpTables) PrimeRequisites(class string) ([]string, error) {
+	p, ok := phbPrimes[class]
+	if !ok {
+		return nil, fmt.Errorf("unknown class %q", class)
+	}
+	return p, nil
 }
 
 func (xpTables) XPThreshold(class string, level int) (int, error) {
@@ -75,23 +89,36 @@ func TestLedgerTotal_OpeningPlusEveryEntry(t *testing.T) {
 	assert.Equal(t, 500, xpsvc.LedgerTotal(500, nil), "no entries: the starting XP")
 }
 
-// ADR 0015 step 2: the bonus applies by default when Dexterity and
-// Charisma are both 16 or more.
-func TestBonusEligible_DexAndChaBothAtLeast16(t *testing.T) {
+// ADR 0040 step 6: the bonus needs every prime requisite of the class (its
+// definition's) at 16 or more; it replaces ADR 0015 step 2's Dexterity and
+// Charisma for every class. On the old test a fighter of Dex 16 and Cha 16 got
+// a bard's bonus and a fighter of Str 16 none.
+func TestBonusEligible_Step6_EveryPrimeRequisiteAt16(t *testing.T) {
 	tests := []struct {
-		dex, cha int
-		want     bool
+		name  string
+		class string
+		c     charactersvc.Character
+		want  bool
 	}{
-		{16, 16, true},
-		{17, 16, true},
-		{18, 18, true},
-		{15, 18, false},
-		{18, 15, false},
-		{15, 15, false},
+		{"fighter Str 16", "fighter", charactersvc.Character{Str: 16, Dex: 10, Cha: 10}, true},
+		{"fighter 18/xx is 18", "fighter", charactersvc.Character{Str: 18, StrExceptional: 50}, true},
+		{"fighter Str 15, Dex 16, Cha 16", "fighter", charactersvc.Character{Str: 15, Dex: 16, Cha: 16}, false},
+		{"mage Int 16", "mage", charactersvc.Character{Int: 16}, true},
+		{"mage Int 15", "mage", charactersvc.Character{Int: 15, Dex: 18, Cha: 18}, false},
+		{"cleric Wis 17", "cleric", charactersvc.Character{Wis: 17}, true},
+		{"thief Dex 16", "thief", charactersvc.Character{Dex: 16, Cha: 3}, true},
+		{"bard Dex 16, Cha 16", "bard", charactersvc.Character{Dex: 16, Cha: 16}, true},
+		{"bard Dex 16, Cha 15", "bard", charactersvc.Character{Dex: 16, Cha: 15}, false},
+		{"bard Dex 15, Cha 18", "bard", charactersvc.Character{Dex: 15, Cha: 18}, false},
 	}
 	for _, tt := range tests {
-		assert.Equal(t, tt.want, xpsvc.BonusEligible(tt.dex, tt.cha), "dex %d cha %d", tt.dex, tt.cha)
+		t.Run(tt.name, func(t *testing.T) {
+			primes, err := xpTables{}.PrimeRequisites(tt.class)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, xpsvc.BonusEligible(primes, &tt.c))
+		})
 	}
+	assert.False(t, xpsvc.BonusEligible(nil, &charactersvc.Character{Str: 18}), "a class without prime requisites gets none")
 }
 
 func cells(from int, statuses ...xpsvc.CellStatus) []xpsvc.LevelCell {

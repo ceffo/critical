@@ -28,7 +28,7 @@ func languagesOf(t *testing.T, mutate func(rows, languages *[]any)) (*ruletables
 	require.NoError(t, err)
 	rawLanguages, err := json.Marshal(languages)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(rawRules, fixtureEquipment(t), rawLanguages)
+	return ruletablesadpt.Parse(rawRules, fixtureEquipment(t), rawLanguages, fixtureDefinitions(t))
 }
 
 // ADR 0021 step 14.1 (ADR 0032 step 4): the artifact hands on the language
@@ -64,9 +64,9 @@ func TestParse_Step14_2_LanguagesAreRequired(t *testing.T) {
 	delete(rules, "race_languages")
 	raw, err := json.Marshal(rules)
 	require.NoError(t, err)
-	_, err = ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t))
+	_, err = ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 	require.ErrorContains(t, err, "the artifact needs the race_languages table")
-	_, err = ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), nil)
+	_, err = ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), nil, fixtureDefinitions(t))
 	require.ErrorContains(t, err, "the artifact needs the languages list")
 }
 

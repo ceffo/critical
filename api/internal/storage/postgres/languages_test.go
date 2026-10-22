@@ -128,7 +128,7 @@ func TestMigrate_Step8_LanguagesFreeTextBecomeCodesTheUnknownAreDroppedAndLogged
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -183,7 +183,7 @@ func TestMigrate_Step8_TheSeedCharactersFrenchLanguagesBecomeCodes(t *testing.T)
 	f := &fakeMigrations{recorded: recorded, store: store}
 	logged(t, func() {
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(campaignSeeds(), catalogueEquipment)
+			before, after := migrationDataSteps(campaignSeeds(), catalogueEquipment, catalogueDefs)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	})

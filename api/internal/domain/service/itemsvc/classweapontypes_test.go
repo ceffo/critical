@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -45,7 +46,7 @@ func fixtureWeapons(t *testing.T) []catalogueWeapon {
 // A class with no rule (the fighter, p.26; the bard, p.41) may pick every type.
 func TestClassWeaponTypes_Step7_FromTheStep20TableAndTheCatalogue(t *testing.T) {
 	weapons := fixtureWeapons(t)
-	for _, class := range ruletablesvc.Classes {
+	for _, class := range cataloguetest.Definitions(t).ClassIDs() {
 		t.Run(class, func(t *testing.T) {
 			rule, ruled := classRules[class]
 			allowed := map[string]bool{}

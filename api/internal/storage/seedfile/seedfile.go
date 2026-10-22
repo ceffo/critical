@@ -13,8 +13,8 @@ import (
 	"path/filepath"
 	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -28,10 +28,6 @@ const (
 	SkillsFile    = "skills.json"
 )
 
-// DefaultClass is the class a seeded character gets: the seed has no class,
-// and the existing character is a bard (the characters table's default).
-const DefaultClass = "bard"
-
 // Path is file in seedsDir.
 func Path(seedsDir, file string) string {
 	return filepath.Join(filepath.Clean(seedsDir), file)
@@ -39,11 +35,13 @@ func Path(seedsDir, file string) string {
 
 // Character is seeds/character.json. Level, Thac0Base and the saves are the
 // figures the campaign sheet states, kept to compare with the derived values
-// (ADR 0030 step 24), never read as inputs. Race is a race code
-// (charactersvc.Races), "" for none; Alignment and Sex are codes
+// (ADR 0030 step 24), never read as inputs. Class and Race are a class and a
+// race id of the catalogue's definitions (ADR 0040 step 9: required, checked
+// against them by CheckDefinitions); Alignment and Sex are codes
 // (ruletablesvc.Alignments, charactersvc.Sexes).
 type Character struct {
 	Name             string   `json:"name"`
+	Class            string   `json:"class"`
 	Race             string   `json:"race"`
 	Alignment        string   `json:"alignment"`
 	Sex              string   `json:"sex"`
@@ -116,10 +114,17 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	if err := json.Unmarshal(data, &c); err != nil {
 		return Character{}, false, fmt.Errorf("parse character.json: %w", err)
 	}
-	if c.Race != "" && !slices.Contains(charactersvc.Races, c.Race) {
-		return Character{}, false, fmt.Errorf("character.json: race %q is not one of %v", c.Race, charactersvc.Races)
+	if c.Name == "" {
+		return Character{}, false, nil
 	}
-	points, err := skills.ValidSkillPoints(DefaultClass, c.SkillPoints)
+	// ADR 0040 step 9: the seed names its class and race.
+	switch {
+	case c.Class == "":
+		return Character{}, false, errors.New("character.json: class is required")
+	case c.Race == "":
+		return Character{}, false, errors.New("character.json: race is required")
+	}
+	points, err := skills.ValidSkillPoints(c.Class, c.SkillPoints)
 	if err != nil {
 		return Character{}, false, fmt.Errorf("character.json: skill points: %w", err)
 	}
@@ -148,7 +153,20 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 		}
 		types[p.Type] = true
 	}
-	return c, c.Name != "", nil
+	return c, true, nil
+}
+
+// CheckDefinitions refuses a seed character whose class or race the
+// catalogue does not define (ADR 0040 step 9), at start, before anything is
+// seeded.
+func (c Character) CheckDefinitions(defs *classes.Registry) error {
+	if _, ok := defs.Class(c.Class); !ok {
+		return fmt.Errorf("character.json: class %q is not one of %v", c.Class, defs.ClassIDs())
+	}
+	if !slices.Contains(defs.RaceIDs(), c.Race) {
+		return fmt.Errorf("character.json: race %q is not one of %v", c.Race, defs.RaceIDs())
+	}
+	return nil
 }
 
 // SlotsJSON is the seed's spell slot list as the spell slots are stored

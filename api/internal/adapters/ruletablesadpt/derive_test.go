@@ -18,11 +18,11 @@ func TestClassGroup_Step2(t *testing.T) {
 	for class, want := range map[string]string{
 		"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue",
 	} {
-		got, err := ruletablesvc.ClassGroup(class)
+		got, err := phb(t).ClassGroup(class)
 		require.NoError(t, err)
 		assert.Equal(t, want, got, class)
 	}
-	_, err := ruletablesvc.ClassGroup("paladin")
+	_, err := phb(t).ClassGroup("paladin")
 	require.Error(t, err)
 }
 
@@ -113,6 +113,22 @@ func TestTHAC0For_Step5_Table53(t *testing.T) {
 	}
 	_, err := tbl.THAC0For("monk", 1)
 	require.Error(t, err)
+}
+
+// ADR 0040 step 7: THAC0For reads the group definitions' rows; at every
+// level they equal the format-10 Table 53 columns they replace.
+func TestRuleTables_Step7_RowsKeyedByClassAndGroup(t *testing.T) {
+	tbl := phb(t)
+	c, ok := tbl.Classes()
+	require.True(t, ok)
+	require.Len(t, c.THAC0, 20)
+	for _, r := range c.THAC0 {
+		for group, want := range map[string]int{"warrior": r.Warrior, "priest": r.Priest, "rogue": r.Rogue, "wizard": r.Wizard} {
+			got, err := tbl.THAC0For(group, r.Level)
+			require.NoError(t, err)
+			assert.Equal(t, want, got, "%s level %d", group, r.Level)
+		}
+	}
 }
 
 // ADR 0030 step 6: the PHB Table 60 (p.101) row of the group's level band,

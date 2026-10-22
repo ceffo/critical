@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -40,8 +41,8 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 	// seed match (ADR 0033 step 26.4), its armours the ones the skill armour
 	// carry-over gives (step 14).
 	var migrated, seeded ruletablesvc.Equipment
-	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything).
-		RunAndReturn(func(_ context.Context, _ string, w ruletablesvc.Equipment) error {
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ string, w ruletablesvc.Equipment, _ *classes.Registry) error {
 			migrated = w
 			return nil
 		}).Once()
@@ -100,14 +101,14 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		want    string
 	}{
 		{"migrate (the unknown-migration guard's refusal travels this way)", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "migrate: boom"},
 		{"seed", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
 		{"adopting the characters without an owner", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
@@ -115,13 +116,13 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 			h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, boom).Once()
 		}, "give the characters without an owner to the root admin: boom"},
 		{"spell catalogue read", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom).Once()
 		}, "load the spell catalogue: boom"},
 		{"catalogue import", func(h *harness) {
-			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
@@ -168,7 +169,7 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, raw, 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once() // no Seed or ImportCatalogue expectation: a call fails the test
 
 	_, err = h.build(t, composition.Config{SeedsDir: seeds, Catalogue: fixtureCatalogue})
@@ -183,15 +184,23 @@ func TestStartup_RefusesSpellEffectsTheCatalogueDoesNotHold(t *testing.T) {
 // threshold, which shows which rule tables a start took.
 const level16XP = 1320000
 
-// setLevel16XP sets the bard level-16 XP of the artifact's class experience
-// table (rule_tables.experience), the one the ledger and the level read.
-func setLevel16XP(tables map[string]any, xp int) {
-	rows := tables["experience"].([]any)
-	row := rows[15].(map[string]any)
-	if row["level"] != float64(16) {
-		panic("experience row 15 is not level 16")
+// setLevel16XP sets the level-16 XP of the artifact's bard definition
+// (classes[].experience, ADR 0040 step 1.7), the one the ledger and the level
+// read.
+func setLevel16XP(doc map[string]any, xp int) {
+	for _, c := range doc["classes"].([]any) {
+		class := c.(map[string]any)
+		if class["id"] != "bard" {
+			continue
+		}
+		row := class["experience"].([]any)[15].(map[string]any)
+		if row["level"] != float64(16) {
+			panic("experience row 15 is not level 16")
+		}
+		row["xp"] = xp
+		return
 	}
-	row["bard"] = xp
+	panic("no bard in the artifact")
 }
 
 // nextThreshold starts the root on the artifact at cfg.Catalogue and reads the
@@ -226,7 +235,7 @@ func nextThreshold(t *testing.T, cfg composition.Config) int {
 func refusedStart(t *testing.T, cfg composition.Config) error {
 	t.Helper()
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Maybe()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	_, err := h.build(t, cfg)
 	require.Error(t, err)
@@ -243,7 +252,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		require.NoError(t, os.CopyFS(broken, os.DirFS(fixtureSeeds)))
 		require.NoError(t, os.WriteFile(filepath.Join(broken, "rule_tables.json"), []byte("not json"), 0o600))
 		artifact := writeArtifact(t, func(d map[string]any) {
-			setLevel16XP(d["rule_tables"].(map[string]any), level16XP+3)
+			setLevel16XP(d, level16XP+3)
 		})
 		assert.Equal(t, level16XP+3, nextThreshold(t, composition.Config{SeedsDir: broken, Catalogue: artifact}))
 	})
@@ -278,14 +287,14 @@ func TestStartup_Step9_5_TheTablesAreReadAtEveryStart(t *testing.T) {
 	assert.Equal(t, level16XP, nextThreshold(t, cfg))
 
 	cfg.Catalogue = writeArtifact(t, func(d map[string]any) {
-		setLevel16XP(d["rule_tables"].(map[string]any), level16XP+7)
+		setLevel16XP(d, level16XP+7)
 	})
 	assert.Equal(t, level16XP+7, nextThreshold(t, cfg), "same version, corrected table")
 
 	cfg.Catalogue = writeArtifact(t, func(d map[string]any) {
-		setLevel16XP(d["rule_tables"].(map[string]any), 1)
+		setLevel16XP(d, 1)
 	})
-	require.ErrorContains(t, refusedStart(t, cfg), "rule_tables: experience table")
+	require.ErrorContains(t, refusedStart(t, cfg), `class "bard": experience: level 16`)
 }
 
 // ADR 0021 step 9.3: what the schema cannot check in a format-3 artifact's
@@ -344,8 +353,13 @@ func TestStartup_Step10_3_RefusesAMissingOrGappedClassTable(t *testing.T) {
 			tables(d)["constitution"] = append(rows[:9:9], rows[10:]...)
 		}, "rule_tables: constitution table: row 9: score 10 expected, got 11"},
 		{"XP not increasing", func(d map[string]any) {
-			row(d, "experience", 9)["mage"] = 2500
-		}, "rule_tables: experience table: mage level 10"},
+			// The thresholds are the class definitions' (ADR 0040 step 1.7).
+			for _, c := range d["classes"].([]any) {
+				if class := c.(map[string]any); class["id"] == "mage" {
+					class["experience"].([]any)[9].(map[string]any)["xp"] = 2500
+				}
+			}
+		}, `rule_tables: class "mage": experience: level 10`},
 		{"a specialist band missing", func(d map[string]any) {
 			rows := tables(d)["specialist_attacks"].([]any)
 			tables(d)["specialist_attacks"] = rows[1:]
@@ -511,7 +525,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 		[]byte(`[{"id":"magic_rocket","name":"Magic Rocket","level":1}]`), 0o600))
 
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Close().Return(nil).Once()
 	cfg := fixtureConfig()
 	cfg.SeedsDir = seeds
@@ -524,7 +538,7 @@ func TestBuild_ASpellbookSeedTheCatalogueRefusesIsRefusedBeforeTheSeed(t *testin
 // requests ask (the mock refuses a second Search or Details).
 func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	h := newHarness(t)
-	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}

@@ -87,7 +87,7 @@ func TestMigrate_Step8_FreeTextBecomesCodesTheRestIsCleared(t *testing.T) {
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -136,7 +136,7 @@ func TestMigrate_Step8_DroppingTheRaceMapsTheFreeTextTheOldReleaseWrote(t *testi
 	run := func(recorded []string) {
 		f := &fakeMigrations{recorded: recorded, store: store}
 		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 			return runMigrations(ctx, f, embedded, before, after)
 		}))
 	}
@@ -168,7 +168,7 @@ func TestMigrate_Step8_TheSeedCharacterGetsAnAlignmentAndSexThatPassTheCheck(t *
 	require.NoError(t, err)
 	require.True(t, ok)
 	assert.Equal(t, seed.Alignment, store.t.Alignments[kelsen], "a new database seeds the identity with the character")
-	assert.True(t, ruletablesvc.AlignmentAllowed(seedfile.DefaultClass, seed.Alignment), "his class admits it")
+	assert.Contains(t, charactersvc.AlignmentsOf(catalogueDefs, seed.Class), seed.Alignment, "his class admits it")
 	assert.Contains(t, charactersvc.Sexes, seed.Sex)
 
 	store.t.Alignments[kelsen], store.t.Sexes[kelsen] = "Neutre bon", "" // free text from before the codes
@@ -180,7 +180,7 @@ func TestMigrate_Step8_TheSeedCharacterGetsAnAlignmentAndSexThatPassTheCheck(t *
 	}
 	f := &fakeMigrations{recorded: recorded, store: store}
 	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-		before, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+		before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 		return runMigrations(ctx, f, embedded, before, after)
 	}))
 	assert.Equal(t, "neutral_good", store.t.Alignments[kelsen], "the free text is mapped")

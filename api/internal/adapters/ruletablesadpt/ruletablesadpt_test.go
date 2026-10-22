@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/pkg/must"
@@ -34,6 +35,13 @@ func fixtureRuleTables(t *testing.T) []byte {
 }
 
 // fixtureLanguages is the fixture's top-level languages list (format 8).
+// fixtureDefinitions is the fixture's class, group and race definitions
+// (format 11).
+func fixtureDefinitions(t *testing.T) []byte {
+	t.Helper()
+	return cataloguetest.Artifact(t).Definitions
+}
+
 func fixtureLanguages(t *testing.T) []byte {
 	t.Helper()
 	raw, err := os.ReadFile(fixture) //nolint:gosec // test path
@@ -63,7 +71,7 @@ func fixtureEquipment(t *testing.T) []byte {
 // does for the artifact's.
 func phb(t *testing.T) *ruletablesvc.Tables {
 	t.Helper()
-	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t)))
+	return must.Do(ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t)))
 }
 
 // Expected values below are read from the PHB 2e pages (Table 1 and 2 on
@@ -218,11 +226,11 @@ func TestParse_Step9_3_RejectsBrokenTables(t *testing.T) {
 	for name, tt := range tests {
 		t.Run(name, func(t *testing.T) {
 			require.Contains(t, string(good), tt.from)
-			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t), fixtureLanguages(t))
+			_, err := ruletablesadpt.Parse([]byte(strings.Replace(string(good), tt.from, tt.to, 1)), fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 			require.ErrorContains(t, err, tt.table)
 		})
 	}
-	_, err := ruletablesadpt.Parse(good, fixtureEquipment(t), fixtureLanguages(t))
+	_, err := ruletablesadpt.Parse(good, fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 	require.NoError(t, err)
 }
 
@@ -235,10 +243,21 @@ func classTablesOf(t *testing.T, mutate func(map[string]any)) (*ruletablesvc.Tab
 	mutate(doc)
 	raw, err := json.Marshal(doc)
 	require.NoError(t, err)
-	return ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t))
+	return ruletablesadpt.Parse(raw, fixtureEquipment(t), fixtureLanguages(t), fixtureDefinitions(t))
 }
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }
+
+// withoutRace is table's rows less race's.
+func withoutRace(d map[string]any, table, race string) []any {
+	var out []any
+	for _, r := range classRows(d, table) {
+		if r.(map[string]any)["race"] != race {
+			out = append(out, r)
+		}
+	}
+	return out
+}
 
 func classRow(d map[string]any, table string, i int) map[string]any {
 	return classRows(d, table)[i].(map[string]any)
@@ -251,8 +270,9 @@ func classRow(d map[string]any, table string, i int) map[string]any {
 func TestParse_Step10_1_ReadsTheClassTables(t *testing.T) {
 	c, ok := phb(t).Classes()
 	require.True(t, ok, "the artifact carries the class tables")
-	assert.Equal(t, 3000000, c.Experience[19].Fighter, "fighter, level 20")
-	assert.Equal(t, 1100000, c.Experience[14].Bard, "bard, level 15")
+	// The thresholds are the class definitions' (ADR 0040 step 1.7).
+	assert.Equal(t, 3000000, must.Do(phb(t).XPThreshold("fighter", 20)), "fighter, level 20")
+	assert.Equal(t, 1100000, must.Do(phb(t).XPThreshold("bard", 15)), "bard, level 15")
 	assert.Equal(t, 13, c.THAC0[14].Rogue, "rogue THAC0, level 15")
 	assert.Equal(t, 1, c.THAC0[19].Warrior, "warrior THAC0, level 20")
 	var rogue ruletablesvc.SavingThrowRow
@@ -284,7 +304,6 @@ func TestParse_Step10_3_RejectsAMissingOrBrokenClassTable(t *testing.T) {
 		want   string
 	}{
 		{"a missing table", func(d map[string]any) { delete(d, "saving_throws") }, "missing: saving_throws"},
-		{"XP not increasing", func(d map[string]any) { classRow(d, "experience", 3)["cleric"] = 1 }, "experience table: cleric level 4"},
 		{"a level twice", func(d map[string]any) { classRow(d, "thac0", 4)["level"] = 4 }, "thac0 table: row 4: level 5 expected, got 4"},
 		{"a gap in a level band", func(d map[string]any) { classRow(d, "saving_throws", 1)["level_min"] = 5 }, "saving_throws table: priest: row 1: level 4 expected, got 5"},
 		{"a gap in the scores", func(d map[string]any) {
@@ -305,6 +324,47 @@ func TestParse_Step10_3_RejectsAMissingOrBrokenClassTable(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := classTablesOf(t, tc.mutate)
+			require.ErrorContains(t, err, tc.want)
+		})
+	}
+}
+
+// definitionsOf parses the fixture with its class definitions mutated.
+func definitionsOf(t *testing.T, mutate func(map[string]any)) (*ruletablesvc.Tables, error) {
+	t.Helper()
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal(fixtureDefinitions(t), &doc))
+	mutate(doc)
+	raw, err := json.Marshal(doc)
+	require.NoError(t, err)
+	return ruletablesadpt.Parse(fixtureRuleTables(t), fixtureEquipment(t), fixtureLanguages(t), raw)
+}
+
+// ADR 0040 step 1.7: a class's experience rows are its levels 1, 2, ... in
+// order, from 0 XP and strictly increasing (the XP table moved from the
+// rule tables to the class definitions).
+func TestParse_Step1_7_RejectsBrokenExperienceRows(t *testing.T) {
+	experience := func(d map[string]any, class string) []any {
+		for _, c := range d["classes"].([]any) {
+			if m := c.(map[string]any); m["id"] == class {
+				return m["experience"].([]any)
+			}
+		}
+		t.Fatalf("no class %q in the fixture", class)
+		return nil
+	}
+	tests := []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"XP not increasing", func(d map[string]any) { experience(d, "cleric")[3].(map[string]any)["xp"] = 1 }, "experience: level 4"},
+		{"a level twice", func(d map[string]any) { experience(d, "cleric")[3].(map[string]any)["level"] = 3 }, `class "cleric" experience: row 3: level 4 expected, got 3`},
+		{"level 1 above 0 XP", func(d map[string]any) { experience(d, "mage")[0].(map[string]any)["xp"] = 1 }, "level 1 must start at 0 XP"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := definitionsOf(t, tc.mutate)
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
@@ -369,11 +429,27 @@ func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
 		},
 		{
 			"a class the app does not have", func(d map[string]any) { classRow(d, levelLimits, 0)["class"] = "paladin" },
-			"race_level_limits table: unknown \"dwarf paladin\"",
+			"race_level_limits table: unknown \"paladin\"",
 		},
-		{"a human row", func(d map[string]any) {
-			classRow(d, levelLimits, 0)["race"] = "human"
-		}, "race_level_limits table: unknown \"human fighter\""},
+		{
+			"a race the catalogue does not define", func(d map[string]any) { classRow(d, levelLimits, 0)["race"] = "orc" },
+			"race_level_limits table: unknown race \"orc\"",
+		},
+		{
+			// A race with ability requirements (every race but the human)
+			// has its rows: dropping them all is refused at start-up, not at
+			// the first creation (ADR 0040 step 8).
+			"a restricted race with no rows", func(d map[string]any) { d[levelLimits] = withoutRace(d, levelLimits, "elf") },
+			"race_level_limits table: missing \"elf fighter\"",
+		},
+		{
+			"a restricted race with no requirement rows", func(d map[string]any) { d["race_requirements"] = withoutRace(d, "race_requirements", "elf") },
+			"race_requirements table: missing \"elf str\"",
+		},
+		{
+			"a restricted race with no thief skill rows", func(d map[string]any) { d["thief_skill_race"] = withoutRace(d, "thief_skill_race", "elf") },
+			"thief_skill_race table: missing \"elf pick_pockets\"",
+		},
 		{
 			"a level above 20", func(d map[string]any) { classRow(d, levelLimits, 0)["max_level"] = 21 },
 			"race_level_limits table: dwarf fighter: level 21 outside 0..20",

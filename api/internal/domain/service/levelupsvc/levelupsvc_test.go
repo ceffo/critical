@@ -67,12 +67,16 @@ func newFixture(t *testing.T) fixture {
 
 const charID = int64(4)
 
+// groupOf is the group of the test catalogue's classes (Derive sets
+// Derived.Group from the class's definition, ADR 0040 step 1.2).
+var groupOf = map[string]string{"fighter": "warrior", "cleric": "priest", "mage": "wizard", "thief": "rogue", "bard": "rogue"}
+
 // character is a class's character realized at realizedLevel with max HP
 // hpMax, owing pending.
 func character(class string, con, hpMax, realizedLevel int, pending ...charactersvc.PendingLevel) *charactersvc.Character {
 	return &charactersvc.Character{
 		ID: charID, Class: class, Con: con, HPMax: hpMax, RealizedLevel: realizedLevel,
-		Derived: charactersvc.Derived{RealizedLevel: realizedLevel, LevelUp: charactersvc.LevelUp{Pending: pending}},
+		Derived: charactersvc.Derived{RealizedLevel: realizedLevel, Group: groupOf[class], LevelUp: charactersvc.LevelUp{Pending: pending}},
 	}
 }
 

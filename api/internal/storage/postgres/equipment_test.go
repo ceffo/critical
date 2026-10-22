@@ -3,12 +3,16 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
@@ -16,6 +20,24 @@ import (
 
 // catalogueWeapons are the catalogue rows (format 7, PHB Table 44's numbers) the seeds' and the
 // conversion's weapons are matched to in these tests.
+// catalogueDefs are the fixture catalogue's class, group and race definitions (the proficiency
+// book of the picks data step checks its classes against them).
+var catalogueDefs = func() *classes.Registry {
+	a, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "..", "testdata", "catalogue.json"))
+	if err != nil {
+		panic(err)
+	}
+	t, err := ruletablesadpt.Parse(a.RuleTables, a.Equipment, a.Languages, a.Definitions)
+	if err != nil {
+		panic(err)
+	}
+	d, err := t.Definitions()
+	if err != nil {
+		panic(err)
+	}
+	return d
+}()
+
 var catalogueWeapons = []ruletablesvc.Weapon{
 	{Code: "long_sword", WeaponType: "long_sword", Kind: "melee", Size: "m", Types: []string{"s"}, Speed: 5, DamageSM: "1d8", DamageL: "1d12"},
 	{Code: "short_bow", WeaponType: "short_bow", Kind: "missile", Size: "m", Speed: 7, Fires: []string{"arrow"}},
@@ -72,7 +94,7 @@ func TestConvertEquipment_Step26_ExistingDatabase(t *testing.T) {
 	for _, w := range f.t.Weapons {
 		names["weapon:"+w.ID] = f.t.Texts[w.Name]
 	}
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[equipmentMigration](ctx, f)
 	}))
@@ -154,7 +176,7 @@ func TestConvertEquipment_Step26_4_MatchedByTheStoredName(t *testing.T) {
 			TwoHanded: true, Name: localized.Text{"en": "Bastard sword, two-handed"},
 		},
 		ruletablesvc.Weapon{Code: "footmans_mace", WeaponType: "other_melee", Kind: "melee", Speed: 7, Name: localized.Text{"en": "Footman's mace"}})
-	_, after := migrationDataSteps(repoSeeds(), ruletablesvc.Equipment{Weapons: rows})
+	_, after := migrationDataSteps(repoSeeds(), ruletablesvc.Equipment{Weapons: rows}, catalogueDefs)
 	require.NoError(t, f.InTx(ctx, func(ctx context.Context) error { return after[equipmentMigration](ctx, f) }))
 
 	sword := f.t.Items[rowKey(owner, "bastard_sword")]
@@ -172,7 +194,7 @@ func TestConvertEquipment_Step26_4_MatchedByTheStoredName(t *testing.T) {
 // to convert does not need the equipment.
 func TestConvertEquipment_Step26_4_RefusesACatalogueWithoutEquipment(t *testing.T) {
 	f, owner := legacyCharacter(t)
-	_, after := migrationDataSteps(repoSeeds(), ruletablesvc.Equipment{})
+	_, after := migrationDataSteps(repoSeeds(), ruletablesvc.Equipment{}, catalogueDefs)
 	err := f.InTx(context.Background(), func(ctx context.Context) error { return after[equipmentMigration](ctx, f) })
 	require.ErrorIs(t, err, ErrCatalogueWithoutEquipment)
 	assert.Contains(t, err.Error(), "just catalogue")
@@ -191,7 +213,7 @@ func TestConvertEquipment_Step26_4_RefusesACatalogueWithoutEquipment(t *testing.
 func TestConvertEquipment_Step26_3_TheChosenAmmunitionFollowsTheRename(t *testing.T) {
 	f, owner := legacyCharacter(t)
 	f.t.AttackAmmo[owner] = "dagger" // the item that shares its id with the weapon
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	require.NoError(t, f.InTx(context.Background(), func(ctx context.Context) error {
 		return after[equipmentMigration](ctx, f)
 	}))
@@ -213,7 +235,7 @@ func TestConvertEquipment_Step26_3_IdsOnlyInTheLogAreKeptApart(t *testing.T) {
 	// The weapon "torch" was removed (its snapshot is in the log) while the item "torch" is stored; the
 	// item "mace" was removed while the weapon "mace" is stored.
 	f.t.SnapshotKeys[owner] = []string{"weapons:torch", "items:mace", "items:never_clashes"}
-	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment)
+	_, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	require.NoError(t, f.InTx(ctx, func(ctx context.Context) error { return after[equipmentMigration](ctx, f) }))
 
 	assert.Equal(t, "torch_2", f.t.Renames[rowKey(owner, "torch")], "the stored item steps aside for the removed weapon")

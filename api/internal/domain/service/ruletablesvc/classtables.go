@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The class and race tables of ADR 0030 step 23, carried by catalogue format
@@ -17,18 +19,8 @@ const MaxLevel = 20
 // MaxScore is the highest ability score of the PHB tables.
 const MaxScore = 25
 
-// Classes are the class codes (ADR 0030 step 1).
-var Classes = []string{"fighter", "mage", "cleric", "thief", "bard"}
-
-// Groups are the class groups (ADR 0030 step 2).
-var Groups = []string{"warrior", "priest", "rogue", "wizard"}
-
-// Races are the non-human PHB races the race tables list (ADR 0030 step 21);
-// humans have no requirement, adjustment or skill row.
-var Races = []string{"dwarf", "elf", "gnome", "half_elf", "halfling"}
-
 // Abilities are the six ability score codes.
-var Abilities = []string{"str", "dex", "con", "int", "wis", "cha"}
+var Abilities = classes.Abilities
 
 // ThiefSkills are the eight thieving skills of PHB Table 26.
 var ThiefSkills = []string{
@@ -69,13 +61,6 @@ const (
 
 // TurningOutcomes are the Table 61 cells that need no die.
 var TurningOutcomes = []string{TurningTurn, TurningDestroy, TurningDestroyMore, TurningCannot}
-
-// ExperienceRow is the XP that reaches Level, per class (PHB Tables 14, 20,
-// 23 and 25).
-type ExperienceRow struct {
-	Level                              int
-	Fighter, Mage, Cleric, Thief, Bard int
-}
 
 // HitDiceRow is a group's hit die, the last level that rolls it and the
 // fixed gain per level after it.
@@ -229,7 +214,6 @@ type TurningRow struct {
 // ClassTables holds the validated class and race tables. Built by
 // NewClassTables only; its slices are not to be modified.
 type ClassTables struct {
-	Experience          []ExperienceRow
 	HitDice             []HitDiceRow
 	Constitution        []ConstitutionRow
 	Intelligence        []IntelligenceRow
@@ -262,27 +246,33 @@ const (
 	MaxPriestSpellLevel = 7
 )
 
-// NewClassTables validates c (the rules the catalogue schema cannot
-// express) and returns it. A violation names the table: levels 1 to 20 once
-// and in order, XP from 0 and strictly increasing per class, ability rows
+// NewClassTables validates c against the definitions (the rules the
+// catalogue schema cannot express) and returns it. The groups and races are
+// the definitions' (ADR 0040 step 8: a row keyed by a group or race names a
+// definition); a race with no row of a race table (a human) has no
+// requirement, adjustment or skill adjustment. A violation names the table:
+// levels 1 to 20 once and in order, ability rows
 // ascending and contiguous (1 to 25 for Constitution, Intelligence and
 // Wisdom), level bands covering 1 to 20, and every code combination exactly
 // once.
-func NewClassTables(c ClassTables) (*ClassTables, error) {
+func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error) {
+	if defs == nil {
+		return nil, errors.New("class tables: no class definitions")
+	}
+	groups, races := defs.Groups(), defs.Races()
 	checks := []struct {
 		table string
 		err   error
 	}{
-		{"experience", checkExperience(c.Experience)},
-		{"hit_dice", once(c.HitDice, func(r HitDiceRow) string { return r.Group }, Groups)},
+		{"hit_dice", once(c.HitDice, func(r HitDiceRow) string { return r.Group }, groups)},
 		{"constitution", checkScores(c.Constitution, func(r ConstitutionRow) (int, int) { return r.ConMin, r.ConMax }, true)},
 		{"intelligence", checkScores(c.Intelligence, func(r IntelligenceRow) (int, int) { return r.IntMin, r.IntMax }, true)},
 		{"wisdom", checkWisdom(c.Wisdom)},
 		{"con_save_bonus", checkScores(c.ConSaveBonus, func(r ConSaveBonusRow) (int, int) { return r.ConMin, r.ConMax }, false)},
-		{"race_requirements", checkRaceRequirements(c.RaceRequirements)},
-		{"race_adjustments", checkRaceAdjustments(c.RaceAdjustments)},
+		{"race_requirements", checkRaceRequirements(c.RaceRequirements, races)},
+		{"race_adjustments", checkRaceAdjustments(c.RaceAdjustments, defs.RaceIDs())},
 		{"thac0", levelsInOrder(c.THAC0, func(r THAC0Row) int { return r.Level })},
-		{"saving_throws", checkSaves(c.SavingThrows)},
+		{"saving_throws", checkSaves(c.SavingThrows, groups)},
 		{"warrior_attacks", checkBands(c.WarriorAttacks, func(r AttackRateRow) (int, int) { return r.LevelMin, r.LevelMax })},
 		{"specialist_attacks", checkSpecialists(c.SpecialistAttacks)},
 		{"rate_of_fire", once(c.RateOfFire, func(r RateOfFireRow) string { return r.WeaponType }, MissileWeaponTypes)},
@@ -290,7 +280,7 @@ func NewClassTables(c ClassTables) (*ClassTables, error) {
 		{"priest_spells", checkProgression(c.PriestSpells, MaxPriestSpellLevel)},
 		{"priest_spell_wisdom", checkPriestWisdom(c.PriestSpellWisdom)},
 		{"thief_skill_base", once(c.ThiefSkillBase, func(r SkillBaseRow) string { return r.Skill }, ThiefSkills)},
-		{"thief_skill_race", once(c.ThiefSkillRace, func(r SkillRaceRow) string { return r.Race + " " + r.Skill }, pairs(Races, ThiefSkills))},
+		{"thief_skill_race", perRace(c.ThiefSkillRace, func(r SkillRaceRow) (string, string) { return r.Race, r.Skill }, races, ThiefSkills)},
 		{"thief_skill_dexterity", checkScores(c.ThiefSkillDexterity, func(r SkillDexterityRow) (int, int) { return r.DexMin, r.DexMax }, false)},
 		{"thief_skill_armor", once(c.ThiefSkillArmor, func(r SkillArmorRow) string { return r.Armor + " " + r.Skill }, pairs(SkillArmors, ThiefSkills))},
 		{"bard_armor_penalty", once(c.BardArmorPenalty, func(r BardArmorPenaltyRow) string { return r.Armor }, []string{"metal"})},
@@ -304,33 +294,6 @@ func NewClassTables(c ClassTables) (*ClassTables, error) {
 		}
 	}
 	return &c, nil
-}
-
-// experienceColumns reads a class's column of the experience table.
-var experienceColumns = map[string]func(ExperienceRow) int{
-	"fighter": func(r ExperienceRow) int { return r.Fighter },
-	"mage":    func(r ExperienceRow) int { return r.Mage },
-	"cleric":  func(r ExperienceRow) int { return r.Cleric },
-	"thief":   func(r ExperienceRow) int { return r.Thief },
-	"bard":    func(r ExperienceRow) int { return r.Bard },
-}
-
-func checkExperience(rows []ExperienceRow) error {
-	if err := levelsInOrder(rows, func(r ExperienceRow) int { return r.Level }); err != nil {
-		return err
-	}
-	for _, class := range Classes {
-		xp := experienceColumns[class]
-		if xp(rows[0]) != 0 {
-			return fmt.Errorf("%s: level 1 must start at 0 XP", class)
-		}
-		for i := 1; i < len(rows); i++ {
-			if xp(rows[i]) <= xp(rows[i-1]) {
-				return fmt.Errorf("%s level %d: %d XP is not above level %d", class, rows[i].Level, xp(rows[i]), i)
-			}
-		}
-	}
-	return nil
 }
 
 func levelsInOrder[R any](rows []R, level func(R) int) error {
@@ -436,8 +399,45 @@ func checkWisdom(rows []WisdomRow) error {
 	return nil
 }
 
-func checkRaceRequirements(rows []RaceRequirementRow) error {
-	if err := once(rows, func(r RaceRequirementRow) string { return r.Race + " " + r.Ability }, pairs(Races, Abilities)); err != nil {
+// perRace: every row's race is one of races and its key one of keys, each
+// pair once; a restricted race (classes.Race.Restricted) has a row for every
+// key, an unrestricted one (the human) one for every key or none.
+func perRace[R any](rows []R, key func(R) (race, k string), races []classes.Race, keys []string) error {
+	ids := make([]string, len(races))
+	for i, r := range races {
+		ids[i] = r.ID
+	}
+	seen := map[string]map[string]bool{}
+	for _, r := range rows {
+		race, k := key(r)
+		switch {
+		case !slices.Contains(ids, race):
+			return fmt.Errorf("unknown race %q", race)
+		case !slices.Contains(keys, k):
+			return fmt.Errorf("unknown %q", k)
+		case seen[race][k]:
+			return fmt.Errorf("%q twice", race+" "+k)
+		}
+		if seen[race] == nil {
+			seen[race] = map[string]bool{}
+		}
+		seen[race][k] = true
+	}
+	for _, race := range races {
+		if seen[race.ID] == nil && !race.Restricted() {
+			continue
+		}
+		for _, k := range keys {
+			if !seen[race.ID][k] {
+				return fmt.Errorf("missing %q", race.ID+" "+k)
+			}
+		}
+	}
+	return nil
+}
+
+func checkRaceRequirements(rows []RaceRequirementRow, races []classes.Race) error {
+	if err := perRace(rows, func(r RaceRequirementRow) (string, string) { return r.Race, r.Ability }, races, Abilities); err != nil {
 		return err
 	}
 	for _, r := range rows {
@@ -448,10 +448,10 @@ func checkRaceRequirements(rows []RaceRequirementRow) error {
 	return nil
 }
 
-func checkRaceAdjustments(rows []RaceAdjustmentRow) error {
+func checkRaceAdjustments(rows []RaceAdjustmentRow, races []string) error {
 	seen := map[string]bool{}
 	for _, r := range rows {
-		if !slices.Contains(Races, r.Race) || !slices.Contains(Abilities, r.Ability) {
+		if !slices.Contains(races, r.Race) || !slices.Contains(Abilities, r.Ability) {
 			return fmt.Errorf("unknown %q %q", r.Race, r.Ability)
 		}
 		k := r.Race + " " + r.Ability
@@ -463,13 +463,13 @@ func checkRaceAdjustments(rows []RaceAdjustmentRow) error {
 	return nil
 }
 
-func checkSaves(rows []SavingThrowRow) error {
+func checkSaves(rows []SavingThrowRow, groups []string) error {
 	for _, r := range rows {
-		if !slices.Contains(Groups, r.Group) {
+		if !slices.Contains(groups, r.Group) {
 			return fmt.Errorf("unknown group %q", r.Group)
 		}
 	}
-	for _, g := range Groups {
+	for _, g := range groups {
 		var band []SavingThrowRow
 		for _, r := range rows {
 			if r.Group == g {

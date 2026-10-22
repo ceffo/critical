@@ -76,6 +76,26 @@ type SphereAccess struct {
 	MinorMaxLevel int
 }
 
+// Opens is ADR 0030 step 15.2: a spell of spellLevel with the sphere codes
+// spheres is open when one of its spheres is a major sphere (any level) or a
+// minor one at levels 1 to MinorMaxLevel. A sphere in neither list is closed.
+func (a SphereAccess) Opens(spellLevel int, spheres []string) bool {
+	for _, s := range spheres {
+		if slices.Contains(a.Major, s) {
+			return true
+		}
+		if spellLevel <= a.MinorMaxLevel && slices.Contains(a.Minor, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// Codes are every sphere code the access names, major then minor.
+func (a SphereAccess) Codes() []string {
+	return append(slices.Clone(a.Major), a.Minor...)
+}
+
 // RogueSkills are the params of rogue_skills (ADR 0030 steps 17 and 18).
 type RogueSkills struct {
 	// Set is the skill set code: the skill list and the base rows it reads

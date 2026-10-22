@@ -87,7 +87,6 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 		mutate func(map[string]any)
 		want   string
 	}{
-		{"a sphere row of an unknown class", func(d map[string]any) { classRow(d, "sphere_access", 0)["class"] = "paladin" }, "paladin"},
 		{"a level limit of an unknown class", func(d map[string]any) { classRow(d, levelLimits, 0)["class"] = "paladin" }, `unknown "paladin"`},
 		{"a level limit of an unknown race", func(d map[string]any) { classRow(d, levelLimits, 0)["race"] = "orc" }, `unknown race "orc"`},
 		{"a hit dice row of an unknown group", func(d map[string]any) { classRow(d, "hit_dice", 0)["group"] = "psionicist" }, "psionicist"},

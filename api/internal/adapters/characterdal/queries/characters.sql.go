@@ -199,7 +199,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks, psionic_picks
 FROM characters WHERE id = $1
 `
 
@@ -237,6 +237,7 @@ type GetCharacterRow struct {
 	SkillSets        string
 	SkillPoints      string
 	ProficiencyPicks string
+	PsionicPicks     string
 }
 
 // level, thac0_base and the save_* columns are the figures the imported sheet stated (ADR 0030
@@ -280,6 +281,7 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.SkillSets,
 		&i.SkillPoints,
 		&i.ProficiencyPicks,
+		&i.PsionicPicks,
 	)
 	return i, err
 }
@@ -678,6 +680,24 @@ type SetProficiencyPicksParams struct {
 // The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 func (q *Queries) SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error) {
 	result, err := q.db.ExecContext(ctx, setProficiencyPicks, arg.ProficiencyPicks, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+const setPsionicPicks = `-- name: SetPsionicPicks :execrows
+UPDATE characters SET psionic_picks = $1 WHERE id = $2
+`
+
+type SetPsionicPicksParams struct {
+	PsionicPicks string
+	ID           int64
+}
+
+// The powers a psionicist knows, saved as one list and restored by its undo (ADR 0043 step 9).
+func (q *Queries) SetPsionicPicks(ctx context.Context, arg SetPsionicPicksParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPsionicPicks, arg.PsionicPicks, arg.ID)
 	if err != nil {
 		return 0, err
 	}

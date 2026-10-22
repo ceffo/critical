@@ -100,9 +100,10 @@ func (r *Refusal) Error() string {
 func (r *Refusal) Is(target error) bool { return target == ErrRefused }
 
 // SlotOf is the slot kind a power takes (step 9.1): a science, a devotion or
-// a defence mode. An attack mode takes a devotion's place; the book's one
-// exception, Psionic Blast taking a science's, is not in the catalogue's data
-// yet (ADR 0043, as built).
+// a defence mode. An attack mode takes a devotion's place; ADR 0043 step 9's
+// book has one exception, Psionic Blast, which takes a science's slot. The
+// catalogue cannot mark it yet, so every attack mode counts as a devotion
+// here until a catalogue field says otherwise.
 func SlotOf(p catalogue.Power) string {
 	switch p.Kind {
 	case catalogue.KindScience:
@@ -274,3 +275,51 @@ func Primary(picks []Pick) string {
 	}
 	return ""
 }
+
+// Count is the slots a list of picks takes, without checking any rule: the
+// figure a read shows beside Table 4's allowance. A pick the book does not
+// know takes nothing.
+func Count(book Book, picks []Pick) Used {
+	var used Used
+	for _, p := range picks {
+		switch p.Kind {
+		case PickDiscipline:
+			used.Disciplines++
+		case PickPower, PickRelearn:
+			pw, ok := book.Power(p.ID)
+			if !ok {
+				continue
+			}
+			switch SlotOf(pw) {
+			case SlotScience:
+				used.Sciences++
+			case SlotDefenceMode:
+				used.DefenceModes++
+			default:
+				used.Devotions++
+			}
+		}
+	}
+	return used
+}
+
+// catalogueBook is a Book over the powers catalogue read at start.
+type catalogueBook struct {
+	disciplines map[string]bool
+	powers      map[string]catalogue.Power
+}
+
+// NewBook is the Book of a powers catalogue.
+func NewBook(disciplines []catalogue.Discipline, powers []catalogue.Power) Book {
+	b := catalogueBook{disciplines: make(map[string]bool, len(disciplines)), powers: make(map[string]catalogue.Power, len(powers))}
+	for _, d := range disciplines {
+		b.disciplines[d.ID] = true
+	}
+	for _, p := range powers {
+		b.powers[p.ID] = p
+	}
+	return b
+}
+
+func (b catalogueBook) Power(id string) (catalogue.Power, bool) { p, ok := b.powers[id]; return p, ok }
+func (b catalogueBook) HasDiscipline(id string) bool           { return b.disciplines[id] }

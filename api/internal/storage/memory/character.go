@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -144,6 +145,20 @@ func (c Characters) SetProficiencyPicks(ctx context.Context, id int64, picks ski
 			return domain.ErrCharacterNotFound
 		}
 		ch.Proficiencies = picks.Clone()
+		t.characters[id] = ch
+		return nil
+	})
+}
+
+// SetPsionicPicks implements psionicsvc's store: the character's known powers
+// (ADR 0043 step 9), or domain.ErrCharacterNotFound. It stores a copy.
+func (c Characters) SetPsionicPicks(ctx context.Context, id int64, picks []psionics.Pick) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.PsionicPicks = slices.Clone(picks)
 		t.characters[id] = ch
 		return nil
 	})

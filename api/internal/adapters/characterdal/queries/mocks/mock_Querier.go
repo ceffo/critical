@@ -1499,6 +1499,63 @@ func (_c *MockQuerier_SetProficiencyPicks_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// SetPsionicPicks provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) SetPsionicPicks(ctx context.Context, arg queries.SetPsionicPicksParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetPsionicPicks")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetPsionicPicksParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.SetPsionicPicksParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.SetPsionicPicksParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_SetPsionicPicks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPsionicPicks'
+type MockQuerier_SetPsionicPicks_Call struct {
+	*mock.Call
+}
+
+// SetPsionicPicks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.SetPsionicPicksParams
+func (_e *MockQuerier_Expecter) SetPsionicPicks(ctx interface{}, arg interface{}) *MockQuerier_SetPsionicPicks_Call {
+	return &MockQuerier_SetPsionicPicks_Call{Call: _e.mock.On("SetPsionicPicks", ctx, arg)}
+}
+
+func (_c *MockQuerier_SetPsionicPicks_Call) Run(run func(ctx context.Context, arg queries.SetPsionicPicksParams)) *MockQuerier_SetPsionicPicks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.SetPsionicPicksParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_SetPsionicPicks_Call) Return(_a0 int64, _a1 error) *MockQuerier_SetPsionicPicks_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_SetPsionicPicks_Call) RunAndReturn(run func(context.Context, queries.SetPsionicPicksParams) (int64, error)) *MockQuerier_SetPsionicPicks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // SetRealizedLevel provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) SetRealizedLevel(ctx context.Context, arg queries.SetRealizedLevelParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

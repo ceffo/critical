@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -59,6 +60,10 @@ type Character struct {
 	// Proficiencies are the proficiency picks (ADR 0037 step 12): catalogue
 	// id and slots spent, in the player's order.
 	Proficiencies skills.Picks
+	// PsionicPicks are the disciplines and powers a psionicist knows (ADR 0043
+	// step 9), in the player's order: the first discipline is the primary one.
+	// Never nil as the store reads it.
+	PsionicPicks []psionics.Pick
 
 	// Sheet is what the character sheet stated when the character was
 	// imported; never an input. Only its level is read: the realized level of
@@ -242,6 +247,10 @@ type Derived struct {
 	// class lists psionics, nil for any other. Set by the service (it reads
 	// the ledger), not by Derive.
 	PSP *PSPPool
+	// Powers is ADR 0043 step 9: the powers known against Table 4's allowance
+	// at the psionics entry's realized level, nil for a character with no such
+	// entry. Set by the service (it reads the powers catalogue), not by Derive.
+	Powers *PowerKnowledge
 	// SpellSlots is step 8 at the realized level: the slots per day by
 	// spell level, levels with no slot absent. A multi-class character's
 	// are the first active spellcasting entry's (ADR 0042 step 14; each
@@ -541,6 +550,16 @@ type LevelUp struct {
 type PSPPool struct {
 	Current int
 	Max     int
+}
+
+// PowerKnowledge is a psionicist's known powers (ADR 0043 step 9): Table 4's
+// Allowance at the entry's realized level, what the Picks take (Used), the
+// Primary discipline ("" until one is picked) and the Picks in order.
+type PowerKnowledge struct {
+	Allowance psionics.Allowance
+	Used      psionics.Used
+	Primary   string
+	Picks     []psionics.Pick
 }
 
 // Summary is a character in its owner's list (ADR 0029 step 7.2).

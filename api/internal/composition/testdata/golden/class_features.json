@@ -16,6 +16,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -149,6 +150,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -282,6 +284,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -421,6 +424,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -560,6 +564,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -697,6 +702,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -834,6 +840,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -1022,6 +1029,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -1210,6 +1218,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 14,
@@ -1402,6 +1411,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 14,
@@ -1595,6 +1605,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -1786,6 +1797,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -1981,6 +1993,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -2053,6 +2066,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -2125,6 +2139,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 13,
@@ -2197,6 +2212,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 13,
@@ -2269,6 +2285,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 11,
@@ -2341,6 +2358,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2000,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 11,
@@ -2409,6 +2427,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -2485,6 +2504,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -2561,6 +2581,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 14,
@@ -2642,6 +2663,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 14,
@@ -2723,6 +2745,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -2802,6 +2825,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 2500,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -2881,6 +2905,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -3048,6 +3073,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 9,
@@ -3215,6 +3241,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -3382,6 +3409,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 12,
@@ -3549,6 +3577,7 @@
       },
       "MagicDefence": 0,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,
@@ -3716,6 +3745,7 @@
       },
       "MagicDefence": 3,
       "NextLevelXP": 1250,
+      "Powers": null,
       "Proficiencies": {
         "Nonweapon": {
           "Available": 10,

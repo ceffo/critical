@@ -72,6 +72,8 @@ type Querier interface {
 	SetPSPMax(ctx context.Context, arg SetPSPMaxParams) (int64, error)
 	// The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 	SetProficiencyPicks(ctx context.Context, arg SetProficiencyPicksParams) (int64, error)
+	// The powers a psionicist knows, saved as one list and restored by its undo (ADR 0043 step 9).
+	SetPsionicPicks(ctx context.Context, arg SetPsionicPicksParams) (int64, error)
 	// A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level
 	// is the character's first active entry's, written to its column too (the release before the
 	// class entries reads it, migration 035).

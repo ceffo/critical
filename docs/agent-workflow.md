@@ -15,7 +15,7 @@ contract; keep them stable.
 | Frontend work | `docs/frontend.md` |
 
 Domain vocabulary lives in `GLOSSARY.md` and the relations between terms in `docs/domain-model.md`
-([ADR 0036](adr/0036-vocabulary.md)); a PR that adds a concept updates both. Phase scope in `docs/all.md`.
+([ADR 0036](adr/0036-vocabulary.md)); a PR that adds a concept updates both (`just check-glossary` checks the exported domain types against the glossary). Phase scope in `docs/all.md`.
 
 Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and rules are indexed in
 `docs/adr/README.md`. Design decisions are read from these docs and the tracker, never from engram.
@@ -262,6 +262,11 @@ Reviewer checklist, in priority order:
    control shows as a tag); the layout is judged **in French first** (step 2: screenshots and the
    content targets in French, the no-cut audit in French and English); **one action word per button
    caption** (step 3: the detail in the tooltip / `aria-label`, never a sentence or a parenthesis).
+13. **Glossary and domain model**: a new domain concept (an exported domain type, a class, race or
+   feature kind) comes with its `GLOSSARY.md` term and its `docs/domain-model.md` entry in the same
+   PR ([ADR 0036](adr/0036-vocabulary.md)). `just check-glossary` enforces the glossary half: a type
+   needs a term, a `_Code_:` alias or an allowlist line with a reason; the domain-model entry is the
+   reviewer's check.
 
 Severity examples: critical = wrong game math in a main flow, ledger/state corruption, broken
 migration on existing data; high = game logic in the frontend; medium = architecture-layer

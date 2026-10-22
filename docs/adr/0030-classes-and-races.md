@@ -22,6 +22,8 @@ _Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-2
 
 _Amended by [ADR 0040](0040-classes-are-data.md) (classes and races are data, accepted 2026-10-21), on implementation: the classes, groups and races, their features and traits are catalogue data (format 11) read through the class entries; no class, group or race id in the code. Steps 1, 2, 3, 4, 8 to 20, 22 and 23 are amended in place; the rules they compute do not change for the five classes._
 
+_Amended by [ADR 0042](0042-multi-class-and-dual-class.md) (multi-class and dual-class, accepted 2026-10-21), on implementation: a character is a list of class entries (class, realized level, XP, active or frozen); steps 1, 3, 5, 6, 7 and 8 are amended in place, the one-entry case unchanged._
+
 ## Context
 
 Until now the app manages one level 15 half-elf Bard and stores what the sheet says: level, THAC0
@@ -156,6 +158,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    and the identity numbers (typing stays possible). Step 7.5's "Level 1 hit points are entered, never
    rolled here" no longer holds for a created character: ADR 0032 step 7 rolls them.
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 8 and 9, on implementation: the class and race lists are the catalogue's definitions, not Go lists; every class the catalogue defines is creatable (`CreatableClasses` goes); the seed names its class (`seedfile.DefaultClass` goes))_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 1 and 4: the class is one to three **class entries**, each with its class, realized level, XP and state (`active`, or `frozen` with the level a dual-class left it at); an existing character enters level and XP per entry and its max HP as on the sheet; today's `class`, level and `xp_total` become one active entry, on implementation)_
 2. **Class groups.** Fighter is a warrior, mage a wizard, cleric a priest, thief and bard rogues.
    The group picks the THAC0 row (step 5), the saving throw rows (step 6), the hit dice (step 7) and
    the Constitution hit point bonus (warriors get the higher one, step 7). It also picks a spell
@@ -195,6 +198,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    threshold raises the target level only; THAC0, saves and slots change with the level-up rolls,
    and the undo brings them back).
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 7, on implementation: the thresholds are rows keyed by class, not a column per class (`experienceColumns` goes))_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 7: the target level and the pending level-ups are per active class entry, from the entry's XP (its share of the awards, ADR 0042 step 5) and its class's thresholds; a frozen entry has none; the level-up request names the entry, on implementation)_
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)
    step 1 when every prime requisite of the class is 16 or more (PHB chapter 3, each class's
    description): fighter Strength (18/xx counts as 18), mage Intelligence, cleric Wisdom, thief
@@ -209,6 +213,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    there is unchanged.
    Tests: `TestTHAC0For_Step5_Table53` (ruletablesadpt), `TestDerive_Step5_THAC0FromTable53`
    (charactersvc); the attack reads it (`TestResolveAttack`, combatsvc, on the derived THAC0).
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 8: a multi-class character takes the best value among its active entries at their realized levels; a dual-class the active entry's until the crossover, on implementation)_
 6. **Saving throws.** The target of each of the five categories of [ADR 0006](0006-saving-throws.md)
    step 1 is the PHB Table 60 (DMG Table 46) row for the class group and realized level (step 7):
    priests 1-3, 4-6,
@@ -219,6 +224,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
    Tests: `TestSavesFor_Step6_Table60` (ruletablesadpt), `TestDerive_Step6_SavesFromTable60`
    (charactersvc), `TestResolveSavingThrow` (combatsvc, on the derived targets).
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 9: the best target per category among the active entries; a dual-class the active entry's until the crossover, on implementation)_
 
 ### Hit points
 
@@ -308,6 +314,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    `TestGetCharacter_MapsEveryColumn`, `TestSetRealizedLevel_WritesTheLevelAndItsMaxHP` (characterdal);
    `TestLevelUp_*` (router); `LevelUpPrompt.test.tsx`, `journal/entryText.test.ts` "level-up entries"
    (web); `web/e2e/xp.spec.ts` "level up: …" and `web/e2e/layout.spec.ts` "level-up prompt: …".
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 7, 10 and 11: realized level and pending levels per class entry; a multi-class level-up rolls the entry's die divided by the number of classes (at least 1) plus its share of the Constitution adjustment, a new multi-class character's first hit points are the average of one die per class; a dual-class gains no hit points until the new class passes every left-at level, on implementation)_
 
 ### Spells
 
@@ -326,6 +333,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    derived slots).
 
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 1.9, on implementation: the slot table is the class's `spell_progression` reference; fighters and thieves have none; no `switch` on the class)_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 14: one slot table, preparation and caster level per spellcasting class entry, at the entry's realized level, on implementation)_
 
 ### Fighter
 

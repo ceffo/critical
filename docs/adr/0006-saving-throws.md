@@ -3,7 +3,7 @@
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.9 and
 critical-qki.14, until then in `docs/backend.md`); amended 2026-10-16 (the adjustment moves the
 target: steps 2, 4 and 5, step 8 added); step 6 amended by 0028 (ability checks are a roll kind). Step 1 amended by [ADR 0030](0030-classes-and-races.md) steps 6 and 22.1 (targets derived, racial bonus), implemented 2026-10-18. Step 9 (Wisdom's magical defence adjustment on saves against magic that attacks the mind) added
-2026-10-21, decided in triage (user), on implementation.
+2026-10-21, decided in triage (user), as built 2026-10-21 (the column is catalogue format 10, [ADR 0021](0021-spell-catalogue.md) step 17).
 
 _UI word: the French UI says jet de sauvegarde ([ADR 0036](0036-vocabulary.md) step 3)._
 
@@ -94,8 +94,8 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    `TestLog_ASaveIsServedWithItsFieldsByEveryEndpoint` (the wire, on a mocked log service); `actionlogsvc`
    `TestListReads_ServeEntriesThroughThePayloadViews`; `combatsvc`
    `TestAdjustSave_Step8_SaveLoggedBeforeTheTargetMovedStoresBothFieldsInTheAmend`.
-9. **Wisdom's magical defence adjustment** _(decided 2026-10-21, user triage; on
-   implementation)_. PHB chapter 1, "Wisdom", the Magical Defense Adjustment paragraph and the
+9. **Wisdom's magical defence adjustment** _(decided 2026-10-21, user triage; as built
+   2026-10-21)_. PHB chapter 1, "Wisdom", the Magical Defense Adjustment paragraph and the
    column of the same name in Table 5 (p. 17): the adjustment applies to saving throws against
    magical spells that attack the mind (the paragraph's examples: beguiling, charm, fear,
    hypnosis, illusions, possession, suggestion), automatically.
@@ -125,14 +125,20 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
       so step 5's recompute keeps it and step 8's view needs nothing new. The flag is fixed at
       the roll: a save rolled without it is corrected by the DM's adjustment (step 5) or undone
       and rolled again.
-   Tests (written with the code; `just check-adr-tests` refuses a cited test name before its
-   function exists, so the implementing change adds the `Test` prefix here): `combatsvc`
-   `ResolveSavingThrow_Step9_WisdomMagicDefence` (flagged Wisdom 17 gives +3 and Wisdom 3 gives
+   6. **As built.** The value is derived for every character as `charactersvc.Derived.MagicDefence`
+      (`ruletablesvc.Tables.MagicDefenceFor`, the catalogue's `magic_defence` column, format 10); the
+      request flag is `combatsvc.SaveOptions.MindAffecting`; the modifier's kind is `wisdom`, its detail the
+      Wisdom score. The web's "Against the mind" checkbox (fr "Contre l'esprit") sits on the saving throws'
+      heading line and clears after each roll; the card words the modifier "Wisdom 17 (magical defence)" /
+      "Sagesse 17 (défense contre la magie)".
+   Tests: `combatsvc`
+   `TestResolveSavingThrow_Step9_WisdomMagicDefence` (flagged Wisdom 17 gives +3 and Wisdom 3 gives
    -3 as a `wisdom` modifier, verdict at and one below the target; Wisdom 12 flagged and Wisdom
    17 unflagged give none; a flagged Rod/Staff/Wand save; a fighter and a mage get it like a
-   cleric), `AdjustSave_Step9_TheWisdomModifierIsKept`; the rules adapter's
-   `WisdomFor_Step9_MagicDefence` (the column read for Wisdom 1, 7, 8, 14, 15, 18 and 25); `router`
-   `RollSave_Step9_MindAffectingFlag` (the wire: the flag in, the modifier and `mindAffecting` out).
+   cleric), `TestAdjustSave_Step9_TheWisdomModifierIsKept`; the rules adapter's
+   `TestWisdomFor_Step9_MagicDefence` (the column read for Wisdom 1, 3, 7, 8, 14, 15, 17, 18 and 25);
+   `charactersvc` `TestDerive_Step9_MagicDefenceForEveryClass` (step 9.2, on the fixture's tables); `router`
+   `TestRollSave_Step9_MindAffectingFlag` (the wire: the flag in, the modifier and `mindAffecting` out).
 
 ## Consequences
 

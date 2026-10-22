@@ -155,8 +155,10 @@ export interface RollResult {
 export interface SaveBreakdown {
   category: string;
   d20Roll: number;
-  /** The modifiers applied when rolling (race, buffs), not the adjustment. */
+  /** The modifiers applied when rolling (race, Wisdom, buffs), not the adjustment. */
   modifiers?: Modifier[];
+  /** The save was flagged as against magic that attacks the mind (ADR 0006 step 9); absent on older entries. */
+  mindAffecting?: boolean;
   /** The sheet's target, never adjusted. */
   target: number;
   /** The verdict as rolled, before any adjustment. */

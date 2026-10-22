@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 9",
-  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) and the non-weapon proficiency descriptions (step 16, ADR 0037 step 19). The API reads format 9 only: formats 3 to 8 were each the same shape without the parts added later, and are retired (step 16.5). Shape only: the schema carries no book text.",
+  "title": "Critical! catalogue, format 10",
+  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) and Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9). The API reads format 10 only: formats 3 to 9 were each the same shape without the parts added later, and are retired (steps 16.5 and 17.3). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -16,9 +16,9 @@
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 9 (ADR 0021 step 16: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 10 (ADR 0021 step 17: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        9
+        10
       ]
     },
     "version": {
@@ -770,14 +770,15 @@
       }
     },
     "wisdom_row": {
-      "description": "PHB Table 5: the bonus spells this score adds (spell levels, not cumulative) and the chance of spell failure in percent.",
+      "description": "PHB Table 5: the bonus spells this score adds (spell levels, not cumulative), the chance of spell failure in percent and the magical defence adjustment (a signed bonus on saving throws against magic that attacks the mind, ADR 0006 step 9).",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "wis_min",
         "wis_max",
         "bonus_spells",
-        "spell_failure"
+        "spell_failure",
+        "magic_defence"
       ],
       "properties": {
         "wis_min": {
@@ -802,6 +803,11 @@
           "type": "integer",
           "minimum": 0,
           "maximum": 100
+        },
+        "magic_defence": {
+          "type": "integer",
+          "minimum": -6,
+          "maximum": 4
         }
       }
     },

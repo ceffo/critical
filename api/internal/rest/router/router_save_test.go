@@ -28,7 +28,7 @@ func TestAdjustSave_WireShape(t *testing.T) {
 		}, nil)
 	rec := do(h, "POST", "/api/roll/save/7/adjust", `{"adjustment":4,"reason":"Gaia fire"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.Equal(t, `{"category":"spell","d20Roll":12,"modifiers":[],"target":14,"rolledPassed":false,`+
+	assert.Equal(t, `{"category":"spell","d20Roll":12,"modifiers":[],"mindAffecting":false,"target":14,"rolledPassed":false,`+
 		`"adjustment":4,"adjustmentReason":"Gaia fire","rollTotal":12,"adjustedTarget":10,"total":16,"passed":true,"margin":2,`+
 		`"previousPassed":false,"previousAdjustment":0,"logEntryId":7}`+"\n", rec.Body.String())
 }
@@ -36,12 +36,37 @@ func TestAdjustSave_WireShape(t *testing.T) {
 // A save always carries its adjustment, 0 included, so the card can show it.
 func TestRollSave_SendsZeroAdjustment(t *testing.T) {
 	h, m := newRouter(t)
-	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveSpell).
+	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveSpell, combatsvc.SaveOptions{}).
 		Return(&combatsvc.SaveBreakdown{Category: "spell", D20Roll: 12, Modifiers: []combatsvc.BreakdownModifier{}, LogEntryID: 7}, nil)
 	rec := do(h, "POST", "/api/roll/save", `{"category":"spell"}`)
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"adjustment":0`)
 	assert.Contains(t, rec.Body.String(), `"logEntryId":7`)
+}
+
+// ADR 0006 steps 9.3 to 9.5 on the wire: the optional mindAffecting flag of
+// POST /api/roll/save reaches the service (absent is false), and the answer
+// carries the wisdom modifier and mindAffecting.
+func TestRollSave_Step9_MindAffectingFlag(t *testing.T) {
+	h, m := newRouter(t)
+	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveRodStaffWand, combatsvc.SaveOptions{MindAffecting: true}).
+		Return(&combatsvc.SaveBreakdown{
+			Category: "rod_staff_wand", D20Roll: 10, MindAffecting: true, Target: 13, RollTotal: 13, AdjustedTarget: 13,
+			Total: 13, Passed: true, RolledPassed: true,
+			Modifiers: []combatsvc.BreakdownModifier{{Kind: "wisdom", Detail: "17", Value: 3}}, LogEntryID: 9,
+		}, nil).Once()
+	rec := do(h, "POST", "/api/roll/save", `{"category":"rod_staff_wand","mindAffecting":true}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got map[string]any
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.Equal(t, true, got["mindAffecting"])
+	assert.Equal(t, []any{map[string]any{"kind": "wisdom", "detail": "17", "value": 3.0}}, got["modifiers"])
+
+	m.cmb.EXPECT().ResolveSavingThrow(mock.Anything, int64(1), combatsvc.SaveSpell, combatsvc.SaveOptions{}).
+		Return(&combatsvc.SaveBreakdown{Category: "spell", D20Roll: 11, Modifiers: []combatsvc.BreakdownModifier{}, LogEntryID: 10}, nil).Once()
+	rec = do(h, "POST", "/api/roll/save", `{"category":"spell"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"mindAffecting":false`)
 }
 
 // savedEntryJSON is the part of a log entry the save tests read.

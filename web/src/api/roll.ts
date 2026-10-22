@@ -34,8 +34,13 @@ export function attackVerdict(
   return post<RollResult>(`/api/roll/attack/${entryId}/verdict`, { hit });
 }
 
+/**
+ * Rolls a save. mindAffecting marks magic that attacks the mind (ADR 0006 step 9.3): the server
+ * adds the Wisdom modifier.
+ */
 export function rollSavingThrow(
   category: SaveCategory,
+  mindAffecting = false,
 ): Promise<SaveBreakdown> {
-  return post<SaveBreakdown>("/api/roll/save", { category });
+  return post<SaveBreakdown>("/api/roll/save", { category, mindAffecting });
 }

@@ -11,6 +11,8 @@ Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; t
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
 Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
+Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; the API reads format 10 only) is **decided as built**, 2026-10-21:
+the column is decided by [ADR 0006](0006-saving-throws.md) step 9.1 (user triage of 2026-10-21) and step 1's rule makes it a format.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -650,14 +652,28 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `TestSchema_Step16_OnlyFormat9IsValid` and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (retired by step 17: `TestSchema_Step17_OnlyFormat10IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
-    `TestParse_Step16_ReadsFormat9`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
+    `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
     `TestImportCatalogue_Step16_FailedImportChangesNothing` (storage/postgres), `TestCheckProficiencyDescriptions_Step16_RefusesAMissingLanguageOrIdMismatch`
     (domain/catalogue), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` and `TestStartup_Step16_RefusesADescriptionIdMismatch`
     (composition), `TestRealCatalogue_Step16_EveryDescriptionPresentInBothLanguages` (seedcheck; skipped without a format-9 `.catalogue/catalogue.json`);
     in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and `Extract_Step16_OverridesAreApplied`.
+17. **The magical defence adjustment, format 10** (**decided as built** 2026-10-21; [ADR 0006](0006-saving-throws.md) step 9.1 decided the column,
+    step 1 makes a new column a new format). Format 10 is format 9 plus one column.
+    1. **`magic_defence` on every `wisdom` row** of `rule_tables` (PHB Table 5's Magical Defense Adjustment column), required, an integer from -6
+       to +4 (the book's range: -6 at Wisdom 1, +4 from 18). Nothing else changes; format 9 may not carry it (the schema accepts format 10 only).
+    2. **The builder** (`critical-rulebooks`) reads the column from the hand-checked Table 5 file like the table's other columns, and its gate
+       spot-checks values of it. **The fixture** (`api/testdata/catalogue.json`) is format 10 with the real column (step 9.7).
+    3. **Rollout, as step 16.5.** The API reads **format 10 only**: a format-9 artifact (or any older one) is refused at start as an unknown format,
+       naming `this API reads format 10` and `just catalogue`. Merge order: the builder publishing format 10 first (its own PR in
+       `critical-rulebooks`), then the API change; a dev checkout runs `just catalogue` once after both are merged.
+    4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
+       `charactersvc.Derived.MagicDefence`.
+    Tests: `TestParse_Step17_ReadsFormat10WithTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
+    `TestSchema_Step17_OnlyFormat10IsValid` (cataloguecheck), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
 
 ## Consequences
 

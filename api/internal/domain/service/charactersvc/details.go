@@ -35,6 +35,10 @@ const (
 	// 0032 step 2), refused when it is set and read as a warning on a
 	// character that already holds it (step 8.4).
 	CodeAlignmentNotAllowed = "alignment_not_allowed"
+	// CodeLevelLimit is a class entry's level above the race's DMG Table 7
+	// limit in that class (ADR 0041 step 5, ADR 0042 step 7): a warning,
+	// never a refusal or a cap, since the ruleset's level_limits is warn.
+	CodeLevelLimit = "level_limit"
 	// CodeNotANumber is a height, weight or age that is no number (ADR 0032
 	// step 5.2).
 	CodeNotANumber = "not_a_number"
@@ -64,6 +68,7 @@ var Sexes = []string{SexMale, SexFemale}
 // The fields a character may lack (Details.Missing) or a warning is about.
 const (
 	FieldAlignment = "alignment"
+	FieldLevel     = "level"
 	FieldSex       = "sex"
 	FieldLanguages = skills.FieldLanguages
 	FieldHeight    = "height"
@@ -174,6 +179,9 @@ type Warning struct {
 	// left; nil (Pool "") for the other warnings.
 	Pool                   string
 	Spent, Available, Left *int
+	// Class is the class entry a level_limit warning is about (its level in
+	// Value, the race's limit in Max); "" for the other warnings.
+	Class string
 }
 
 // WithNative is d with the race's native language among its languages, first

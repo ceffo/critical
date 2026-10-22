@@ -24,7 +24,7 @@ func weapon(id, code, weaponType string, types ...string) itemsvc.Item {
 }
 
 func warned(class string, pieces ...itemsvc.Item) []itemsvc.Warning {
-	return itemsvc.ClassWarnings(class, pieces)
+	return itemsvc.ClassWarnings([]string{class}, pieces)
 }
 
 func w(id, code string) itemsvc.Warning { return itemsvc.Warning{ItemID: id, Code: code} }
@@ -179,4 +179,29 @@ func TestClassWarnings_Step8_WeaponTypeMissing(t *testing.T) {
 		assert.Empty(t, warned(class, carried), class)
 	}
 	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_type_missing")}, warned("fighter", weapon("h", "", "")))
+}
+
+// ADR 0042 step 16.1 and the wearing half of 16.2: a multi-class character's pieces are judged
+// on all its active classes together, whichever comes first. A piece is allowed when any class
+// allows it (a mage/fighter wears chain and a shield, a thief/fighter wields a long sword and a
+// thief/mage wears leather), except that a blunt_only class restricts every weapon to its own
+// list (a fighter/cleric is warned for a long sword, not for a mace).
+func TestWeapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion(t *testing.T) {
+	multi := func(classes []string, pieces ...itemsvc.Item) []itemsvc.Warning {
+		return itemsvc.ClassWarnings(classes, pieces)
+	}
+	sword := weapon("l", "long_sword", "long_sword", "s")
+	mace := weapon("m", "footmans_mace", "other_melee", "b")
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi([]string{"fighter", "cleric"}, sword))
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi([]string{"cleric", "fighter"}, sword))
+	assert.Empty(t, multi([]string{"fighter", "cleric"}, mace))
+	assert.Empty(t, multi([]string{"thief", "fighter"}, sword, weapon("b", "battle_axe", "other_melee", "s")), "the fighter allows any weapon")
+	assert.Equal(t, []itemsvc.Warning{w("l", "weapon_not_allowed")}, multi([]string{"cleric", "thief"}, sword),
+		"the thief's long sword is still not blunt")
+
+	assert.Empty(t, multi([]string{"mage", "fighter"}, armour("p", "metal"), shield("s")))
+	assert.Empty(t, multi([]string{"mage", "thief"}, armour("p", "leather")), "the thief allows leather")
+	assert.Equal(t, []itemsvc.Warning{w("p", "armour_not_allowed"), w("s", "armour_not_allowed")},
+		multi([]string{"mage", "thief"}, armour("p", "metal"), shield("s")), "neither allows metal nor a shield")
+	assert.Empty(t, multi([]string{"mage", "thief"}, weapon("lb", "short_bow", "short_bow", "p")), "the thief's short bow")
 }

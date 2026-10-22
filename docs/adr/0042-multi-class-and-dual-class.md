@@ -223,7 +223,12 @@ Every warning is structured data (a code and its numbers), worded by the web.
    entry); a level of another entry, a frozen one or an unknown class is `level_up_not_pending`.
    `characterdal.SetRealizedLevel` writes the first active entry's level to the column and its row, any
    other entry's to its row only (with the max HP); the `level_up` snapshot names the class when there
-   are several. The per-entry `level_limit` warning is not built yet (with step 16's warnings).)_
+   are several. The per-entry `level_limit` warning is the character's (`charactersvc.LevelLimitWarnings`, on
+every read): code `level_limit`, field `level`, the entry's `class`, its level in `value` and the
+race's limit in `max` (the wire's warning gains an optional `class`); it reads the ruleset's one mode,
+`warn`, without asking for it. Test: `Derive_Step7_LevelLimitWarnsPerEntry` (a half-elf cleric
+13/fighter 15 warned for the fighter only; a frozen elf fighter 13 warned; a human and the half-elf
+bard 15 never).)_
 
 ### Combat values
 
@@ -369,7 +374,9 @@ Every warning is structured data (a code and its numbers), worded by the web.
     with the code: `ProficiencySlots_Step15_LargestInitialFastestRate`,
     `NonproficientPenalty_Step15_SmallestOfTheGroups`, `NonweaponCost_Step15_AnyActiveClassesGroups`,
     `LevelGrants_Step15_TheCombinedPoolsAtTheEntrysLevel`. The attack's penalty
-    (`WeaponProficiencyOf`) still reads the first class, and the dual-class slots are not built.)_
+    (`skills.WeaponProficiencyOf`, read from the stored row's active entries) is the same smallest
+    one: `WeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses` (a mage/fighter takes -2, a
+    mage/thief -3). The dual-class slots are not built.)_
 
 16. **Equipment limits together** (amends [ADR 0037](0037-proficiencies.md) step 7 and the warnings
     of [ADR 0033](0033-equipment.md) step 20; still warnings, never refusals, ADR 0033 step 20).
@@ -398,6 +405,16 @@ Every warning is structured data (a code and its numbers), worded by the web.
     `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks` (charactersvc),
     `Cast_Step16_2_WizardSpellInArmourWarns` (castsvc: a fighter/mage in chain warned; an elf
     fighter/mage in elven chain not), `Skills_Step16_3_ArmourBlocksAllButTwo` (skillsvc).
+    _(As built, 2026-10-22, 16.1 and 16.2: the limits are still `itemsvc`'s class rules by class id
+    (the catalogue's `equipment` is not read yet, ADR 0040 step 11.3), now judged on every active
+    entry: `itemsvc.ClassWarnings` takes the active classes (the AC card's armour warnings too); a
+    piece is warned only when no class allows it, and a `blunt_only` class judges every weapon
+    alone. Test: `Weapons_Step16_1_ABluntOnlyEntryRestrictsTheUnion`. A cast whose spells are a class
+    allowing no body armour (the first active spellcasting entry, step 14) reads the worn pieces and
+    answers `warnings: ["spell_in_armour"]` (never logged, never refusing) while body armour other
+    than `none` is worn, except an elf (race `elf`) in the `elven_chain` column. Test:
+    `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: 16.1's weapon picks
+    (`WeaponPick_Step16_1_…`), 16.3's thief skills in armour, ADR 0043 step 18's `power_in_armour`.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 

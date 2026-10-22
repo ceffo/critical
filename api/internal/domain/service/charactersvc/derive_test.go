@@ -479,6 +479,7 @@ func withDefinitions(t *testing.T, r *mocks.MockRules) {
 	tables := cataloguetest.Tables(t)
 	r.EXPECT().Definitions().RunAndReturn(tables.Definitions).Maybe()
 	r.EXPECT().Class(mock.Anything).RunAndReturn(tables.Class).Maybe()
+	r.EXPECT().LevelLimit(mock.Anything, mock.Anything).RunAndReturn(tables.LevelLimit).Maybe()
 	r.EXPECT().ClassGroup(mock.Anything).RunAndReturn(tables.ClassGroup).Maybe()
 	// A class without a spell_progression has no slots (ADR 0040 step 1.9):
 	// the tables answer it, a test expects only the slots of a caster.

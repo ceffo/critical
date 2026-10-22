@@ -427,6 +427,9 @@ export interface CastResult extends CastBreakdown {
   catalogueSpell?: Spell;
   /** The slots after a cast. */
   slots?: SpellSlot[];
+  /** The cast's class warnings, never logged (ADR 0042 step 16.2: `spell_in_armour`, a spell of
+   * a class that allows no body armour cast in body armour). Absent when none. */
+  warnings?: "spell_in_armour"[];
 }
 
 /** A cast's spell failure roll (ADR 0030 step 14): failed when the d100 is at or under the chance. */

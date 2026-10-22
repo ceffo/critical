@@ -237,7 +237,7 @@ func (s *service) WeaponProficiency(ctx context.Context, id int64) (skills.Weapo
 	if err != nil {
 		return skills.WeaponProficiency{}, err
 	}
-	return skills.WeaponProficiencyOf(s.profs, c.Class, c.Proficiencies), nil
+	return skills.WeaponProficiencyOf(s.profs, c.ActiveClasses(), c.Proficiencies), nil
 }
 
 // read is GetCharacter: the stored character, derived and warned.
@@ -371,6 +371,7 @@ func (s *service) readWarnings(c *Character, alignments []string) {
 	c.Warnings = c.Details.Warnings(alignments)
 	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(c.Race)...)
 	c.Warnings = append(c.Warnings, fromSkills(slotWarnings)...)
+	c.Warnings = append(c.Warnings, LevelLimitWarnings(c.Race, c.Derived.Classes, s.rules.LevelLimit)...)
 	// ADR 0037 step 15, once the pools are known: a level of one entry
 	// among the character's (ADR 0042 steps 7 and 15).
 	cls := c.ProficiencyClasses()
@@ -379,6 +380,25 @@ func (s *service) readWarnings(c *Character, alignments []string) {
 		p.Grants = skills.GrantsOf(s.profs, cls, p.Class, p.Level)
 	}
 	c.Derived.LevelUp.ToSpend = skills.ToSpend(c.Derived.Proficiencies, c.Derived.SkillSets)
+}
+
+// LevelLimitWarnings are ADR 0042 step 7's per-entry check of the race's
+// level limit (DMG Table 7, ADR 0041 step 5): each entry of entries, frozen
+// ones included, whose realized level is above limit's cell for the race in
+// its class warns level_limit with the class, the level (Value) and the
+// limit (Max). The ruleset's level_limits has one mode, warn, so the check
+// never refuses nor caps.
+func LevelLimitWarnings(race string, entries []EntryDerived, limit func(race, class string) (ruletablesvc.LevelLimitRow, bool)) []Warning {
+	var out []Warning
+	for _, e := range entries {
+		row, ok := limit(race, e.Class)
+		if !ok || row.Unlimited || e.RealizedLevel <= row.MaxLevel {
+			continue
+		}
+		level, limit := float64(e.RealizedLevel), float64(row.MaxLevel)
+		out = append(out, Warning{Code: CodeLevelLimit, Field: FieldLevel, Class: e.Class, Value: &level, Max: &limit})
+	}
+	return out
 }
 
 // fromSkills are the skills module's warnings (ADR 0037 step 11) as the sheet's.

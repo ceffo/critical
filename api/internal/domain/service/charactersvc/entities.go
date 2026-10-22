@@ -119,6 +119,29 @@ func (c *Character) Entries() []classes.Entry {
 	return []classes.Entry{classes.SingleEntry(c.Class, c.RealizedLevel, c.XPTotal)}
 }
 
+// ActiveClasses are the active entries of the stored row, each class at its
+// realized level as stored (no derived block needed): what the attack's
+// non-proficiency penalty reads (ADR 0042 step 15).
+func (c *Character) ActiveClasses() skills.Classes {
+	var out skills.Classes
+	for _, e := range c.Entries() {
+		if e.State == classes.EntryActive {
+			out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel})
+		}
+	}
+	return out
+}
+
+// ActiveClassIDs are the classes of the active entries of the stored row, in
+// order: what the class equipment warnings judge together (ADR 0042 step 16).
+func (c *Character) ActiveClassIDs() []string {
+	var out []string
+	for _, e := range c.ActiveClasses() {
+		out = append(out, e.Class)
+	}
+	return out
+}
+
 // ProficiencyClasses are the active entries as the proficiency pools read them
 // (ADR 0042 step 15): each class at its realized level, from the derived
 // block (Derived must be set).

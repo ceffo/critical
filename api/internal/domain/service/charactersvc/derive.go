@@ -44,6 +44,10 @@ type Rules interface {
 	// RaceAllows is DMG Table 7: false for a race the class does not admit
 	// (step 21, checked when a character is created).
 	RaceAllows(race, class string) (bool, error)
+	// LevelLimit is DMG Table 7's cell for the race in the class, false for
+	// none (an unrestricted race, or no limits in the catalogue): the
+	// level_limit warning (ADR 0042 step 7).
+	LevelLimit(race, class string) (ruletablesvc.LevelLimitRow, bool)
 	// IntelligenceFor is PHB Table 4 (step 20).
 	IntelligenceFor(score int) (ruletablesvc.IntelligenceRow, error)
 	// SpellFailureFor is PHB Table 5's chance of spell failure at a score

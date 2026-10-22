@@ -378,6 +378,9 @@ export interface Character {
     spent?: number;
     available?: number;
     left?: number;
+    /** ADR 0042 step 7: `level_limit` (field `level`) names the class entry above the race's
+     * limit, its level in `value` and the limit in `max`. */
+    class?: string;
   }[];
 }
 

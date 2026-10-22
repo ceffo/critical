@@ -389,7 +389,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	specializedIn := func(c *charactersvc.Character) skills.WeaponProficiency {
-		return skills.WeaponProficiencyOf(book, c.Class, c.Proficiencies)
+		return skills.WeaponProficiencyOf(book, c.ActiveClasses(), c.Proficiencies)
 	}
 	spec := skills.WeaponPick{Type: "long_sword", Slots: 2}
 	plain := skills.WeaponPick{Type: "dagger", Slots: 1}

@@ -8,8 +8,11 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -22,6 +25,10 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 	c, err := s.Characters.GetCharacter(ctx, characterID)
 	if err != nil {
 		return CastResult{}, fmt.Errorf("get character: %w", err)
+	}
+	warnings, err := s.castWarnings(ctx, c)
+	if err != nil {
+		return CastResult{}, err
 	}
 	var res CastResult
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
@@ -127,7 +134,34 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 	if err != nil {
 		return CastResult{}, err
 	}
+	res.Warnings = warnings
 	return res, nil
+}
+
+// castWarnings is ADR 0042 step 16.2 on a cast: the spells are the casting
+// entry's (the first active entry with a spell progression, ADR 0042 step 14;
+// the character's class when no entry is derived), and a class that allows
+// no body armour warns spell_in_armour while body armour is worn, whatever
+// the character's other classes allow. Only such a class reads the pieces.
+func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character) ([]string, error) {
+	class := c.Class
+	for _, e := range c.Derived.Classes {
+		if e.State == classes.EntryActive && e.Casts {
+			class = e.Class
+			break
+		}
+	}
+	if !itemsvc.ForbidsArmour(class) {
+		return nil, nil
+	}
+	pieces, err := s.Items.List(ctx, c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list items: %w", err)
+	}
+	if itemsvc.SpellInArmour(class, c.Race, pieces) {
+		return []string{itemsvc.WarnSpellInArmour}, nil
+	}
+	return nil, nil
 }
 
 // correctInitiative is ADR 0035 item 6.2 for a cast: the round's

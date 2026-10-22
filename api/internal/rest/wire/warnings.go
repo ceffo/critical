@@ -24,6 +24,9 @@ type WarningDTO struct {
 	Spent     *int   `json:"spent,omitempty"`
 	Available *int   `json:"available,omitempty"`
 	Left      *int   `json:"left,omitempty"`
+	// Class is the class entry of a level_limit warning (ADR 0042 step 7),
+	// its level in value and the race's limit in max.
+	Class string `json:"class,omitempty"`
 }
 
 // WarningsDTO maps the character's warnings, never nil.

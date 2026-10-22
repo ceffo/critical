@@ -472,6 +472,63 @@ func (_c *MockRules_LevelFor_Call) RunAndReturn(run func(string, int) (int, erro
 	return _c
 }
 
+// LevelLimit provides a mock function with given fields: race, class
+func (_m *MockRules) LevelLimit(race string, class string) (ruletablesvc.LevelLimitRow, bool) {
+	ret := _m.Called(race, class)
+
+	if len(ret) == 0 {
+		panic("no return value specified for LevelLimit")
+	}
+
+	var r0 ruletablesvc.LevelLimitRow
+	var r1 bool
+	if rf, ok := ret.Get(0).(func(string, string) (ruletablesvc.LevelLimitRow, bool)); ok {
+		return rf(race, class)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) ruletablesvc.LevelLimitRow); ok {
+		r0 = rf(race, class)
+	} else {
+		r0 = ret.Get(0).(ruletablesvc.LevelLimitRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) bool); ok {
+		r1 = rf(race, class)
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+
+	return r0, r1
+}
+
+// MockRules_LevelLimit_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LevelLimit'
+type MockRules_LevelLimit_Call struct {
+	*mock.Call
+}
+
+// LevelLimit is a helper method to define mock.On call
+//   - race string
+//   - class string
+func (_e *MockRules_Expecter) LevelLimit(race interface{}, class interface{}) *MockRules_LevelLimit_Call {
+	return &MockRules_LevelLimit_Call{Call: _e.mock.On("LevelLimit", race, class)}
+}
+
+func (_c *MockRules_LevelLimit_Call) Run(run func(race string, class string)) *MockRules_LevelLimit_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockRules_LevelLimit_Call) Return(_a0 ruletablesvc.LevelLimitRow, _a1 bool) *MockRules_LevelLimit_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_LevelLimit_Call) RunAndReturn(run func(string, string) (ruletablesvc.LevelLimitRow, bool)) *MockRules_LevelLimit_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // MagicDefenceFor provides a mock function with given fields: wis
 func (_m *MockRules) MagicDefenceFor(wis int) (int, error) {
 	ret := _m.Called(wis)

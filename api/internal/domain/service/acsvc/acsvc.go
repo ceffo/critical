@@ -130,19 +130,19 @@ func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
 	}
 	ac := Derive(Inputs{Items: items, Buffs: buffs, Powers: powers, Dexterity: c.Dex, DexAdjust: dexAdj})
 	ac.Override = o
-	ac.Warnings = armourWarnings(c.Class, items)
+	ac.Warnings = armourWarnings(c.ActiveClassIDs(), items)
 	return &ac, nil
 }
 
 // armourWarnings are the class warnings (ADR 0033 step 20) of the worn body
 // armour and shield: what the AC card shows beside the breakdown.
-func armourWarnings(class string, items []itemsvc.Item) []itemsvc.Warning {
+func armourWarnings(classes []string, items []itemsvc.Item) []itemsvc.Warning {
 	worn := make(map[string]bool, len(items))
 	for _, it := range items {
 		worn[it.ID] = it.Category == itemsvc.CategoryArmour || it.Category == itemsvc.CategoryShield
 	}
 	var out []itemsvc.Warning
-	for _, w := range itemsvc.ClassWarnings(class, items) {
+	for _, w := range itemsvc.ClassWarnings(classes, items) {
 		if worn[w.ItemID] {
 			out = append(out, w)
 		}

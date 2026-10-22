@@ -64,7 +64,7 @@ func TestClassWeaponTypes_Step7_FromTheStep20TableAndTheCatalogue(t *testing.T) 
 				if len(w.Fires) > 0 {
 					piece.Fires = w.Fires[0]
 				}
-				if !slices.ContainsFunc(ClassWarnings(class, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
+				if !slices.ContainsFunc(ClassWarnings([]string{class}, []Item{piece}), func(x Warning) bool { return x.Code == WarnWeaponNotAllowed }) {
 					allowed[w.WeaponType] = true
 				}
 			}

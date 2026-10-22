@@ -199,3 +199,35 @@ func TestParty_Step17_TheMultiClassCharacters(t *testing.T) {
 		assert.Empty(t, d.LevelUp.Pending)
 	})
 }
+
+// ADR 0042 step 7: "The race's level limit is checked per entry and warns
+// (`level_limit`, with the class, ADR 0041 step 5), frozen entries included."
+// A half-elf cleric 13/fighter 15 warns for the fighter only (Table 7: 14 in
+// both), which reading the first entry alone would miss; a frozen elf fighter
+// at 13 (limit 12) warns too; a human (no Table 7 row) and the half-elf bard
+// 15 (no limit) never do.
+func TestDerive_Step7_LevelLimitWarnsPerEntry(t *testing.T) {
+	tables := cataloguetest.Tables(t)
+	limits := func(race string, es []charactersvc.EntryDerived) []charactersvc.Warning {
+		return charactersvc.LevelLimitWarnings(race, es, tables.LevelLimit)
+	}
+	c := multi("half_elf", entry("cleric", 13, 1_200_000), entry("fighter", 15, 1_600_000))
+	got := limits(c.Race, derived(t, c).Classes)
+	require.Len(t, got, 1)
+	assert.Equal(t, charactersvc.CodeLevelLimit, got[0].Code)
+	assert.Equal(t, "fighter", got[0].Class)
+	assert.Equal(t, 15.0, *got[0].Value)
+	assert.Equal(t, 14.0, *got[0].Max)
+
+	dual := []charactersvc.EntryDerived{
+		{Class: "fighter", State: classes.EntryFrozen, RealizedLevel: 13},
+		{Class: "mage", State: classes.EntryActive, RealizedLevel: 10},
+	}
+	got = limits("elf", dual)
+	require.Len(t, got, 1, "the frozen entry is checked")
+	assert.Equal(t, "fighter", got[0].Class)
+
+	human := multi("human", entry("thief", 15, 1_200_000), entry("psionicist", 15, 1_600_000))
+	assert.Empty(t, limits(human.Race, derived(t, human).Classes))
+	assert.Empty(t, limits("half_elf", []charactersvc.EntryDerived{{Class: "bard", State: classes.EntryActive, RealizedLevel: 15}}))
+}

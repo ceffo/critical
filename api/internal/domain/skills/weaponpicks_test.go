@@ -237,7 +237,7 @@ func TestPicksEqual_Step13_WeaponOrderDoesNotCount(t *testing.T) {
 // weapon with no type none; the specialization is step 9's.
 func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
 	book := profBook(t)
-	mage := skills.WeaponProficiencyOf(book, "mage", skills.Picks{Weapon: []skills.WeaponPick{
+	mage := skills.WeaponProficiencyOf(book, skills.One("mage", 1), skills.Picks{Weapon: []skills.WeaponPick{
 		{Type: "dagger", Slots: 1}, {Type: "long_sword", Slots: 1},
 	}})
 	assert.Equal(t, -5, mage.NonproficientPenalty("sling"))
@@ -246,10 +246,23 @@ func TestWeaponProficiency_Step8_PenaltyFromThePicks(t *testing.T) {
 	assert.Zero(t, mage.NonproficientPenalty(""), "a weapon with no type takes none")
 	assert.Empty(t, mage.Specialized)
 
-	fighter := skills.WeaponProficiencyOf(book, "fighter", skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_bow", Slots: 3}}})
+	fighter := skills.WeaponProficiencyOf(book, skills.One("fighter", 1), skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_bow", Slots: 3}}})
 	assert.Equal(t, "long_bow", fighter.Specialized)
 	assert.Equal(t, -2, fighter.NonproficientPenalty("dagger"))
 
-	none := skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), "fighter", skills.Picks{})
+	none := skills.WeaponProficiencyOf((*ruletablesvc.Proficiencies)(nil), skills.One("fighter", 1), skills.Picks{})
 	assert.Zero(t, none.NonproficientPenalty("dagger"), "without Table 34 no penalty")
+}
+
+// ADR 0042 step 15 (Q12) on the attack: a multi-class character's non-proficiency penalty is the
+// smallest of its active classes', whichever class comes first (a mage/fighter takes the
+// fighter's -2, not the mage's -5); the specialization stays the first class's.
+func TestWeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses(t *testing.T) {
+	book := profBook(t)
+	picks := skills.Picks{Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}}}
+	mageFighter := skills.WeaponProficiencyOf(book, skills.Classes{{Class: "mage", Level: 3}, {Class: "fighter", Level: 4}}, picks)
+	assert.Equal(t, -2, mageFighter.NonproficientPenalty("long_sword"))
+	assert.Zero(t, mageFighter.NonproficientPenalty("dagger"))
+	mageThief := skills.WeaponProficiencyOf(book, skills.Classes{{Class: "mage", Level: 3}, {Class: "thief", Level: 3}}, picks)
+	assert.Equal(t, -3, mageThief.NonproficientPenalty("long_sword"), "the rogue's -3, not the wizard's -5")
 }

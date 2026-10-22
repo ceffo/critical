@@ -201,6 +201,10 @@ type CastResult struct {
 	// 14). A failed spell spends its slot and applies nothing: the result
 	// then carries only the spell, the slot and the roll.
 	Failure *SpellFailure
+	// Warnings are the cast's class warnings (ADR 0042 step 16.2:
+	// itemsvc.WarnSpellInArmour), served with the answer and never logged;
+	// a warning never refuses the cast.
+	Warnings []string
 	// Immunity is why a spell received applied and rolled nothing (ADR 0006
 	// step 10.3; nil: the character is not immune).
 	Immunity *combatsvc.Immunity

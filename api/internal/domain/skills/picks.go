@@ -164,12 +164,14 @@ func (w WeaponProficiency) NonproficientPenalty(weaponType string) int {
 	return nonproficientPenalty(w.Penalty, weaponType, func(t string) bool { return slices.Contains(w.Picked, t) })
 }
 
-// WeaponProficiencyOf reads a character of class with picks: its specialization (step 9) and
-// its weapon picks against Table 34's penalty from book (step 8).
-func WeaponProficiencyOf(book Book, class string, picks Picks) WeaponProficiency {
-	out := WeaponProficiency{Specialized: SpecializedType(book, class, picks), Picked: make([]string, 0, len(picks.Weapon))}
-	if row, ok := book.SlotRowOf(class); ok {
-		out.Penalty = row.Penalty
+// WeaponProficiencyOf reads a character of the active class entries cls with picks: its
+// specialization (step 9, the first class's) and its weapon picks against Table 34's penalty
+// from book (step 8), the smallest of the classes' (ADR 0042 step 15, Q12). The levels of cls
+// are not read.
+func WeaponProficiencyOf(book Book, cls Classes, picks Picks) WeaponProficiency {
+	out := WeaponProficiency{Specialized: SpecializedType(book, cls.first(), picks), Picked: make([]string, 0, len(picks.Weapon))}
+	if b, ok := cls.basis(book); ok {
+		out.Penalty = b.row.Penalty
 	}
 	for _, p := range picks.Weapon {
 		out.Picked = append(out.Picked, p.Type)

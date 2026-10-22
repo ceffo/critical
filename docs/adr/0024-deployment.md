@@ -660,6 +660,11 @@ custom domain). Step 8.3 as built:
   login page). Staging's deploy runs it before and after the deploy, production's promotion too. Staging's
   `PUBLIC_ACCESS_OPTION` bypass (step 8.3, 2026-10-16) and the unused step 8.4 option variable are removed: the
   login is the access control.
+  _As built 2026-10-22 (the staging release must recover from a crash-looping release): the check **before**
+  staging's deploy passes an app with a public address that serves nothing at all (`gate-check.sh` exits 3:
+  `/api/health` gave no response or a 5xx), since it exposes no content and the deploy that replaces it must
+  be able to run; an app that answers without the gate is still refused. The check **after** the deploy stays
+  strict, with no exception. Staging also deploys the image of its own commit (`:<sha>`), never `:v<version>`._
 - **The static bundle stays public** (ADR 0029 amendment): the check does not ask for a 401 on `/assets/*`,
   which the login page needs; it asks that no page but `/login` carries the app and that no `/api` data route
   answers a visitor.

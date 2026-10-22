@@ -35,11 +35,10 @@ const power: Power = {
   description: {},
 };
 
-const form = (psp: number, p: Power = power) => (
+const form = (p: Power = power) => (
   <UsePowerForm
     power={p}
     powerName="Teleport"
-    currentPsp={psp}
     busy={false}
     onUse={async () => ({ refused: "" })}
   />
@@ -47,7 +46,7 @@ const form = (psp: number, p: Power = power) => (
 
 describe("UsePowerForm", () => {
   it("asks for the variable cost and the score the book leaves to the text", async () => {
-    const html = await render("en", form(20));
+    const html = await render("en", form());
     expect(html).toContain('aria-label="Initial cost (PSPs)"');
     expect(html).toContain('aria-label="Power score"');
     expect(html).not.toContain('aria-label="Maintenance cost (PSPs)"');
@@ -58,30 +57,15 @@ describe("UsePowerForm", () => {
     );
   });
 
-  it("words a power that needs contact in plain words, and in French", async () => {
-    const contact = { ...power, initial_cost: "contact" as const };
-    expect(await render("en", form(20, contact))).toContain(
-      "This power needs contact, which is not available yet.",
-    );
-    expect(await render("fr", form(20, contact))).toContain(
-      "Ce pouvoir demande un contact, pas encore disponible.",
-    );
-  });
-
-  it("words a fixed cost the PSPs cannot cover", async () => {
+  it("keeps Use on for a power the PSPs cannot cover: the server refuses and words it", async () => {
     const fixed = {
       ...power,
       initial_cost: 12,
       score: { ability: "int", modifier: 0 },
     };
-    const html = await render("en", form(5, fixed));
-    expect(html).toContain(
-      "Not enough PSPs for this power&#x27;s initial cost.",
-    );
-    expect(html).toContain("You have 5.");
-    expect(await render("en", form(12, fixed))).not.toContain(
-      "Not enough PSPs",
-    );
+    const html = await render("en", form(fixed));
+    expect(html).not.toContain('disabled=""');
+    expect(html).not.toContain("Not enough PSPs");
   });
 });
 

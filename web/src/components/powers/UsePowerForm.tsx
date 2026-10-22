@@ -13,7 +13,6 @@ import {
   MAX_MODIFIERS,
   MAX_REASON_LEN,
   asks,
-  refusalOf,
   requestOf,
   type UseDraft,
 } from "./powerUse";
@@ -21,20 +20,18 @@ import {
 /**
  * The use of one known power (ADR 0043 steps 10 to 13), store-free: the labelled modifiers, the
  * inputs a power asks for (a variable cost or maintenance, a score the book gives in its text), the
- * refusals the numbers already settle in plain words, and the last check once made, with the
+ * server's refusal worded in the dialog, and the last check once made, with the
  * warning of a second power in the round. `onUse` sends the request and answers the check, or the
  * server's refusal as text.
  */
 export function UsePowerForm({
   power,
   powerName,
-  currentPsp,
   busy,
   onUse,
 }: {
   power: Power;
   powerName: string;
-  currentPsp: number;
   busy: boolean;
   onUse: (
     req: NonNullable<ReturnType<typeof requestOf>>,
@@ -46,7 +43,6 @@ export function UsePowerForm({
   const [refused, setRefused] = useState<string | null>(null);
   const need = asks(power);
   const req = requestOf(power, draft);
-  const refusal = refusalOf(power, draft, currentPsp);
   const set = (patch: Partial<UseDraft>) => {
     setDraft((d) => ({ ...d, ...patch }));
     setResult(null);
@@ -60,7 +56,7 @@ export function UsePowerForm({
     });
 
   async function use() {
-    if (!req || refusal || busy) return;
+    if (!req || busy) return;
     setRefused(null);
     const out = await onUse(req);
     if ("check" in out) setResult(out.check);
@@ -153,17 +149,6 @@ export function UsePowerForm({
         </Button>
       </fieldset>
 
-      {refusal && (
-        <p
-          role="alert"
-          className="text-body text-danger"
-          data-testid="use-refusal"
-        >
-          {t(`apiError.${refusal}`)}
-          {refusal === "not_enough_psp" &&
-            ` ${t("powers.use.youHave", { count: currentPsp })}`}
-        </p>
-      )}
       {refused && (
         <p
           role="alert"
@@ -179,7 +164,7 @@ export function UsePowerForm({
         <Button
           type="submit"
           variant="main"
-          disabled={busy || !req || refusal !== null}
+          disabled={busy || !req}
           aria-label={t("powers.use.useNamed", { name: powerName })}
         >
           {t("powers.use.use")}

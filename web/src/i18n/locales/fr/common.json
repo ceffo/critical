@@ -256,7 +256,6 @@
       "modifierValue": "Valeur du modificateur {{n}}",
       "modifierReason": "Raison du modificateur {{n}}",
       "reason": "Raison",
-      "youHave": "Vous en avez {{count}}.",
       "rolled": "d20 {{d20}} contre {{target}}",
       "spent": "PFP {{amount}}",
       "keptUp": "maintenu : {{cost}} PFP tous les {{count}} tours",

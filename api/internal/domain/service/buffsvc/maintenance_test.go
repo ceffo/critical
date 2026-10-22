@@ -155,6 +155,7 @@ func TestDismiss_Step16_StoppingIsFreeAndUndoable(t *testing.T) {
 	assert.Equal(t, "levitation", before[0]["power_id"], "the row comes back with its power")
 	assert.InDelta(t, 3, before[0]["maintenance_cost"], 0, "and its maintenance")
 	assert.InDelta(t, 1, before[0]["maintenance_period"], 0)
+	assert.Equal(t, map[string]any{"en": "En levitation", "fr": "Fr levitation"}, before[0]["power_name"], "and its names")
 }
 
 // passes runs one PassTime of hours from round with buffs and returns its

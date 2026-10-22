@@ -68,17 +68,3 @@ export function requestOf(p: Power, d: UseDraft): UsePowerRequest | null {
   }
   return req;
 }
-
-/** The refusals the numbers on screen already settle: the apiError code to word, else null. */
-export function refusalOf(
-  p: Power,
-  d: UseDraft,
-  currentPsp: number,
-): "needs_contact" | "not_enough_psp" | null {
-  if (p.initial_cost === "contact" || p.maintenance?.cost === "contact")
-    return "needs_contact";
-  const full = p.initial_cost === "variable" ? whole(d.cost) : p.initial_cost;
-  return typeof full === "number" && full > currentPsp
-    ? "not_enough_psp"
-    : null;
-}

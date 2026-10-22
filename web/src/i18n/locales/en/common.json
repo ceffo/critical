@@ -256,7 +256,6 @@
       "modifierValue": "Modifier {{n}} value",
       "modifierReason": "Modifier {{n}} reason",
       "reason": "Reason",
-      "youHave": "You have {{count}}.",
       "rolled": "d20 {{d20}} vs {{target}}",
       "spent": "PSPs {{amount}}",
       "keptUp": "kept up: {{cost}} PSPs every {{count}} rounds",

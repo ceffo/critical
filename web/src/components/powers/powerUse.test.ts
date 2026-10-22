@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Power } from "@/types/powers";
-import { EMPTY_DRAFT, asks, refusalOf, requestOf } from "./powerUse";
+import { EMPTY_DRAFT, asks, requestOf } from "./powerUse";
 
 const power = (over: Partial<Power>): Power => ({
   id: "mind_thrust",
@@ -79,30 +79,5 @@ describe("requestOf", () => {
     });
     expect(requestOf(power({}), d([{ value: "21", reason: "" }]))).toBeNull();
     expect(requestOf(power({}), d([{ value: "x", reason: "" }]))).toBeNull();
-  });
-});
-
-describe("refusalOf", () => {
-  it("refuses a power that needs contact, in the cost or the maintenance", () => {
-    expect(refusalOf(power({ initial_cost: "contact" }), EMPTY_DRAFT, 50)).toBe(
-      "needs_contact",
-    );
-    expect(
-      refusalOf(
-        power({ maintenance: { cost: "contact", period: 1 } }),
-        EMPTY_DRAFT,
-        50,
-      ),
-    ).toBe("needs_contact");
-  });
-
-  it("refuses when the PSPs left do not cover the full initial cost", () => {
-    expect(refusalOf(power({}), EMPTY_DRAFT, 6)).toBe("not_enough_psp");
-    expect(refusalOf(power({}), EMPTY_DRAFT, 7)).toBeNull();
-    const variable = power({ initial_cost: "variable" });
-    expect(refusalOf(variable, { ...EMPTY_DRAFT, cost: "9" }, 8)).toBe(
-      "not_enough_psp",
-    );
-    expect(refusalOf(variable, EMPTY_DRAFT, 8)).toBeNull();
   });
 });

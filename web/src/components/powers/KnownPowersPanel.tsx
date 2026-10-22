@@ -429,9 +429,9 @@ function KnownRow({
   return (
     <div
       data-testid={testId}
-      className="flex items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-body"
+      className="flex flex-wrap items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-body"
     >
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex min-w-40 flex-1 basis-40 flex-col">
         <span lang={i18n.language} className="min-w-0 break-words">
           {name}
           {tag && (

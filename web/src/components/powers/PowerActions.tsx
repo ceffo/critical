@@ -6,7 +6,6 @@ import { ApiError } from "@/api/http";
 import { stopPower, invokePower } from "@/api/psionics";
 import { localized } from "@/i18n/localized";
 import { useBuffsStore } from "@/stores/buffs";
-import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { Power } from "@/types/powers";
 import { UsePowerForm } from "./UsePowerForm";
@@ -21,9 +20,6 @@ export function PowerActions({ power }: { power: Power }) {
   const [open, setOpen] = useState(false);
   const busy = useTableStore((s) => s.busy);
   const run = useTableStore((s) => s.run);
-  const current = useCharacterStore(
-    (s) => s.character?.derived?.psp?.current ?? 0,
-  );
   const maintained = useBuffsStore((s) =>
     s.buffs.some((b) => b.powerId === power.id),
   );
@@ -53,7 +49,7 @@ export function PowerActions({ power }: { power: Power }) {
       {maintained && (
         <>
           <span
-            className="text-label text-muted-foreground"
+            className="shrink-0 text-label whitespace-nowrap text-muted-foreground"
             data-testid="power-maintained"
           >
             {t("powers.use.maintained")}
@@ -84,7 +80,6 @@ export function PowerActions({ power }: { power: Power }) {
           <UsePowerForm
             power={power}
             powerName={name}
-            currentPsp={current}
             busy={busy}
             onUse={use}
           />

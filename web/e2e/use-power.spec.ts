@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage } from "./helpers";
+import { openDashboard, chooseLanguage, undoEntry } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 // Using a psionic power, end to end in French (ADR 0043 steps 10 to 16): a psionicist built through
@@ -122,8 +122,13 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   }
   expect(resultText).toContain("PFP");
   await expect(row.getByTestId("power-maintained")).toBeVisible();
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expectNoClippedText(row, "maintained power row 1280");
+  await snap(page, "powers-row-maintained-1280x800");
+  await page.setViewportSize({ width: 1920, height: 1080 });
   const afterUse = Number((await pool.innerText()).split("/")[0]);
-  expect(afterUse).toBeLessThan(before);
+  // The power is kept up, so the check succeeded: the full cost (3), exactly.
+  expect(afterUse).toBe(before - 3);
 
   await page.getByTestId("rail").getByRole("button", { name: "Agir" }).click();
   // The journal words the breakdown: the ability, the labelled modifier.
@@ -164,4 +169,13 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   expect(Number((await pool.innerText()).split("/")[0])).toBe(afterRound);
   await page.setViewportSize({ width: 2560, height: 1440 });
   await snap(page, "after-stop-2560");
+
+  // Undo the stop from the journal: the tag is back, the PSPs unchanged, the stop line struck.
+  await undoEntry(page, "Maintien arrêté : Contact");
+  expect(Number((await pool.innerText()).split("/")[0])).toBe(afterRound);
+  await page
+    .getByTestId("rail")
+    .getByRole("button", { name: "Pouvoirs" })
+    .click();
+  await expect(row.getByTestId("power-maintained")).toBeVisible();
 });

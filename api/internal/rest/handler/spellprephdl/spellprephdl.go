@@ -103,12 +103,17 @@ type InfoDTO struct {
 // PrepareRequest is the body of PUT /api/spells/prepared.
 type PrepareRequest struct {
 	Spells []string `json:"spells"`
+	// Class names the spellcasting entry prepared (ADR 0042 step 14: a
+	// cleric/mage prepares each class's spells in its slots); absent: the
+	// first one.
+	Class string `json:"class,omitempty"`
 }
 
-// GetInfo returns the spellbook and the limits.
+// GetInfo returns the spellbook and the limits, of the spellcasting entry
+// the optional `class` query names (ADR 0042 step 14; absent: the first).
 func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		info, err := svc.Info(r.Context(), charID(r))
+		info, err := svc.InfoFor(r.Context(), charID(r), r.URL.Query().Get("class"))
 		if err != nil {
 			return err
 		}
@@ -140,7 +145,7 @@ func Prepare(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		slots, err := svc.Prepare(r.Context(), charID(r), req.Spells)
+		slots, err := svc.PrepareFor(r.Context(), charID(r), req.Class, req.Spells)
 		if err != nil {
 			return err
 		}

@@ -81,6 +81,66 @@ func (_c *MockSpellbook_All_Call) RunAndReturn(run func(context.Context, int64) 
 	return _c
 }
 
+// Of provides a mock function with given fields: ctx, characterID, class
+func (_m *MockSpellbook) Of(ctx context.Context, characterID int64, class string) ([]prepsvc.SpellbookEntry, error) {
+	ret := _m.Called(ctx, characterID, class)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Of")
+	}
+
+	var r0 []prepsvc.SpellbookEntry
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) ([]prepsvc.SpellbookEntry, error)); ok {
+		return rf(ctx, characterID, class)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) []prepsvc.SpellbookEntry); ok {
+		r0 = rf(ctx, characterID, class)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]prepsvc.SpellbookEntry)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, class)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSpellbook_Of_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Of'
+type MockSpellbook_Of_Call struct {
+	*mock.Call
+}
+
+// Of is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - class string
+func (_e *MockSpellbook_Expecter) Of(ctx interface{}, characterID interface{}, class interface{}) *MockSpellbook_Of_Call {
+	return &MockSpellbook_Of_Call{Call: _e.mock.On("Of", ctx, characterID, class)}
+}
+
+func (_c *MockSpellbook_Of_Call) Run(run func(ctx context.Context, characterID int64, class string)) *MockSpellbook_Of_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSpellbook_Of_Call) Return(_a0 []prepsvc.SpellbookEntry, _a1 error) *MockSpellbook_Of_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSpellbook_Of_Call) RunAndReturn(run func(context.Context, int64, string) ([]prepsvc.SpellbookEntry, error)) *MockSpellbook_Of_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockSpellbook creates a new instance of MockSpellbook. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSpellbook(t interface {

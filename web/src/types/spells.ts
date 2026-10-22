@@ -11,6 +11,8 @@ export interface SpellSlot {
   used: boolean;
   /** A slot granted by a spell (grant_slots): blank until cast, gone at the long rest. */
   extra?: boolean;
+  /** The class entry whose slot this is, for a character with two spellcasting classes (ADR 0042 step 14). */
+  class?: string;
 }
 
 /** Mirrors api/internal/domain/spellstats. Every typed field keeps `raw`, the PHB text. */

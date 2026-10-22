@@ -157,11 +157,12 @@ func (s *service) rollDamageParts(e spelleffectsvc.Entry, d *spelleffectsvc.Dama
 var trackedCharges = map[string]bool{"attacks": true, "images": true}
 
 // rollBuff turns a buff entry into a buff on the character at the caster
-// level, plus the effects the engine does not track. group is the
-// character's class group: it picks a by-group ability gain (ADR 0030 step 2).
+// level, plus the effects the engine does not track. groups are the
+// character's active class groups: they pick a by-group ability gain (ADR
+// 0030 step 2; a multi-class character's, bestGroup).
 // onOther is a buff the character casts on someone else: a by-group gain is
 // not rolled then, since the group is the receiver's.
-func (s *service) rollBuff(e spelleffectsvc.Entry, level int, group string, onOther bool) (*AppliedBuff, []Untracked, error) {
+func (s *service) rollBuff(e spelleffectsvc.Entry, level int, groups []string, onOther bool) (*AppliedBuff, []Untracked, error) {
 	// ADR 0004 step 17: the buff carries the spell's catalogue id so the
 	// client names it in the player's language.
 	out := &AppliedBuff{Buff: buffsvc.BuffEffect{Name: e.Name, SpellID: e.ID}}
@@ -216,8 +217,12 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, group string, onOt
 		}
 		// A by-group gain needs the class group; a gain that is the same
 		// for everybody never does.
-		if byGroup && group == "" {
+		if byGroup && len(groups) == 0 {
 			return nil, nil, fmt.Errorf("spell %q: a by-group gain needs the character's class group", e.ID)
+		}
+		group, err := bestGroup(g, groups, level)
+		if err != nil {
+			return nil, nil, fmt.Errorf("spell %q: %w", e.ID, err)
 		}
 		f := g.Gain
 		if gf, ok := g.ByGroup[group]; ok {
@@ -255,6 +260,47 @@ func (s *service) rollBuff(e spelleffectsvc.Entry, level int, group string, onOt
 		untracked = append(untracked, Untracked{Key: ability + "_set", Value: score})
 	}
 	return out, untracked, nil
+}
+
+// bestGroup is the group whose line of a by-group gain a character of
+// groups uses: its only one, or for a multi-class character the best die
+// (PHB Strength: "Multi-class characters use the best die"; ADR 0042): the
+// highest maximum at the caster level, then the highest minimum, then the
+// highest cap, then the first active entry's. A group without a line of its
+// own takes the common gain, compared the same way.
+func bestGroup(g spelleffectsvc.AbilityGain, groups []string, level int) (string, error) {
+	if len(groups) <= 1 {
+		if len(groups) == 0 {
+			return "", nil
+		}
+		return groups[0], nil
+	}
+	type score struct{ hi, lo, limit int }
+	best, bestAt := "", score{}
+	for _, grp := range groups {
+		f, ok := g.ByGroup[grp]
+		if !ok {
+			f = g.Gain
+		}
+		at := score{limit: g.Max}
+		if m, ok := g.MaxByGroup[grp]; ok {
+			at.limit = m
+		}
+		if f != nil {
+			var err error
+			if at.hi, err = f.Max(level); err != nil {
+				return "", err
+			}
+			if at.lo, err = f.Min(level); err != nil {
+				return "", err
+			}
+		}
+		if best == "" || at.hi > bestAt.hi ||
+			(at.hi == bestAt.hi && (at.lo > bestAt.lo || (at.lo == bestAt.lo && at.limit > bestAt.limit))) {
+			best, bestAt = grp, at
+		}
+	}
+	return best, nil
 }
 
 // applyModifier maps a seed modifier onto the buff effects the engine

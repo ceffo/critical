@@ -347,8 +347,21 @@ bard 15 never).)_
     (castsvc).
     _(As built, 2026-10-22: `Derived.Classes[].SpellSlots` per entry; the character's `SpellSlots` and
     `Derived.CasterLevel()` are the first active spellcasting entry's, which castsvc, prepsvc and
-    spheresvc read. A preparation or a cast naming the entry (a cleric/mage) is not built yet; nor are
-    the by-group spell effects of a second caster.)_
+    spheresvc read. A preparation and a cast name the entry: a stored slot carries `class` when the
+    character has two active spellcasting entries (no migration: the slot list is a JSON blob; an
+    untagged slot is the first entry's). `prepsvc.InfoFor` / `PrepareFor` (`GET
+    /api/spells/prepared?class=`, the PUT body's optional `class`) read that entry's spells
+    (`Spellbook.Of`: the sphere spells for a class with a sphere access within its own slots, else the
+    stored spellbook), its limits and level; the preparation replaces only that entry's slots and
+    its journal payload names the class. A cast reads its slot's entry for the caster level and
+    step 16.2's armour check; a slot a cast grants keeps the entry. Tests:
+    `Prepare_Step14_EachEntryPreparesInItsOwnSlots` (prepsvc),
+    `Spheres_Step14_EachEntryPreparesFromItsOwnSource` (spheresvc), `Cast_Step14_TheSlotNamesItsEntry`
+    (castsvc). The by-group spell effects (ADR 0030 step 2) read every active entry's group, and a
+    multi-class character takes the best die (PHB Strength: multi-class characters use the best die):
+    the highest maximum at the caster level, then minimum, then cap, with that group's cap.
+    Test: `Effects_Step14_ByGroupGainTakesTheBestDie` (castsvc). The web does not yet send a class:
+    a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB
     multi/dual, Multi-Class Benefits and Restrictions): the **largest** initial number of slots of

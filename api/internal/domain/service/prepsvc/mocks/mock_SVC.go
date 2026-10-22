@@ -175,6 +175,64 @@ func (_c *MockSVC_Info_Call) RunAndReturn(run func(context.Context, int64) (prep
 	return _c
 }
 
+// InfoFor provides a mock function with given fields: ctx, characterID, class
+func (_m *MockSVC) InfoFor(ctx context.Context, characterID int64, class string) (prepsvc.Info, error) {
+	ret := _m.Called(ctx, characterID, class)
+
+	if len(ret) == 0 {
+		panic("no return value specified for InfoFor")
+	}
+
+	var r0 prepsvc.Info
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (prepsvc.Info, error)); ok {
+		return rf(ctx, characterID, class)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) prepsvc.Info); ok {
+		r0 = rf(ctx, characterID, class)
+	} else {
+		r0 = ret.Get(0).(prepsvc.Info)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, class)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_InfoFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'InfoFor'
+type MockSVC_InfoFor_Call struct {
+	*mock.Call
+}
+
+// InfoFor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - class string
+func (_e *MockSVC_Expecter) InfoFor(ctx interface{}, characterID interface{}, class interface{}) *MockSVC_InfoFor_Call {
+	return &MockSVC_InfoFor_Call{Call: _e.mock.On("InfoFor", ctx, characterID, class)}
+}
+
+func (_c *MockSVC_InfoFor_Call) Run(run func(ctx context.Context, characterID int64, class string)) *MockSVC_InfoFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_InfoFor_Call) Return(_a0 prepsvc.Info, _a1 error) *MockSVC_InfoFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_InfoFor_Call) RunAndReturn(run func(context.Context, int64, string) (prepsvc.Info, error)) *MockSVC_InfoFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Module provides a mock function with no fields
 func (_m *MockSVC) Module() domain.Module {
 	ret := _m.Called()
@@ -276,6 +334,67 @@ func (_c *MockSVC_Prepare_Call) Return(_a0 []spellsvc.SpellSlot, _a1 error) *Moc
 }
 
 func (_c *MockSVC_Prepare_Call) RunAndReturn(run func(context.Context, int64, []string) ([]spellsvc.SpellSlot, error)) *MockSVC_Prepare_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// PrepareFor provides a mock function with given fields: ctx, characterID, class, spellIDs
+func (_m *MockSVC) PrepareFor(ctx context.Context, characterID int64, class string, spellIDs []string) ([]spellsvc.SpellSlot, error) {
+	ret := _m.Called(ctx, characterID, class, spellIDs)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PrepareFor")
+	}
+
+	var r0 []spellsvc.SpellSlot
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []string) ([]spellsvc.SpellSlot, error)); ok {
+		return rf(ctx, characterID, class, spellIDs)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []string) []spellsvc.SpellSlot); ok {
+		r0 = rf(ctx, characterID, class, spellIDs)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]spellsvc.SpellSlot)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, []string) error); ok {
+		r1 = rf(ctx, characterID, class, spellIDs)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PrepareFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrepareFor'
+type MockSVC_PrepareFor_Call struct {
+	*mock.Call
+}
+
+// PrepareFor is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - class string
+//   - spellIDs []string
+func (_e *MockSVC_Expecter) PrepareFor(ctx interface{}, characterID interface{}, class interface{}, spellIDs interface{}) *MockSVC_PrepareFor_Call {
+	return &MockSVC_PrepareFor_Call{Call: _e.mock.On("PrepareFor", ctx, characterID, class, spellIDs)}
+}
+
+func (_c *MockSVC_PrepareFor_Call) Run(run func(ctx context.Context, characterID int64, class string, spellIDs []string)) *MockSVC_PrepareFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].([]string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PrepareFor_Call) Return(_a0 []spellsvc.SpellSlot, _a1 error) *MockSVC_PrepareFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PrepareFor_Call) RunAndReturn(run func(context.Context, int64, string, []string) ([]spellsvc.SpellSlot, error)) *MockSVC_PrepareFor_Call {
 	_c.Call.Return(run)
 	return _c
 }

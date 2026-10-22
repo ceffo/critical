@@ -82,14 +82,18 @@ func New(d Deps) (*Spheres, error) {
 
 // open returns the spells the character's spheres open within its slots,
 // ok false for a class without a sphere access.
-func (s *Spheres) open(ctx context.Context, characterID int64) ([]catalogue.Spell, bool, error) {
+func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]catalogue.Spell, bool, error) {
 	c, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
 		return nil, false, err
 	}
 	// ADR 0042 steps 12 and 14: the entry granting the sphere access, with
-	// its own slots.
+	// its own slots; a named entry is that one (a cleric/mage's mage entry
+	// has no sphere access: its stored spellbook).
 	class := c.Derived.FeatureClass(classes.KindSphereAccess, c.Class)
+	if entry != "" {
+		class = entry
+	}
 	if !s.access.HasSpheres(class) {
 		return nil, false, nil
 	}
@@ -108,7 +112,13 @@ func (s *Spheres) open(ctx context.Context, characterID int64) ([]catalogue.Spel
 
 // All implements prepsvc.Spellbook.
 func (s *Spheres) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookEntry, error) {
-	open, ok, err := s.open(ctx, characterID)
+	return s.Of(ctx, characterID, "")
+}
+
+// Of implements prepsvc.Spellbook: the spells the entry of class prepares
+// from (ADR 0042 step 14), All's for an empty class.
+func (s *Spheres) Of(ctx context.Context, characterID int64, class string) ([]prepsvc.SpellbookEntry, error) {
+	open, ok, err := s.open(ctx, characterID, class)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +134,7 @@ func (s *Spheres) All(ctx context.Context, characterID int64) ([]prepsvc.Spellbo
 
 // SpellKeys implements spellsvc.Spellbook (the lookup's "Mine" filter).
 func (s *Spheres) SpellKeys(ctx context.Context, characterID int64) ([]string, error) {
-	open, ok, err := s.open(ctx, characterID)
+	open, ok, err := s.open(ctx, characterID, "")
 	if err != nil {
 		return nil, err
 	}

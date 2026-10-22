@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -20,6 +21,10 @@ type book struct{}
 
 func (book) All(context.Context, int64) ([]prepsvc.SpellbookEntry, error) {
 	return []prepsvc.SpellbookEntry{{ID: "sleep", Name: "Sleep", Level: 1}}, nil
+}
+
+func (b book) Of(ctx context.Context, id int64, _ string) ([]prepsvc.SpellbookEntry, error) {
+	return b.All(ctx, id)
 }
 
 func (book) SpellKeys(context.Context, int64) ([]string, error) { return []string{"sleep"}, nil }
@@ -125,4 +130,27 @@ func TestSpheres_Step15_SixthLevelNeedsWisdom17(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, tc.want, slices.Contains(ids(all), "blade_barrier"), tc.name)
 	}
+}
+
+// ADR 0042 step 14: each spellcasting entry prepares its own spells. A
+// mage 6/cleric 5 (the mage first) prepares the mage's from the stored
+// spellbook and the cleric's from the spheres, within the cleric entry's
+// slots (no 4th level: no Produce Fire), whichever entry is first.
+func TestSpheres_Step14_EachEntryPreparesFromItsOwnSource(t *testing.T) {
+	ctx := context.Background()
+	c := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{
+		SpellSlots: map[int]int{1: 4, 2: 2, 3: 2},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "mage", State: classes.EntryActive, RealizedLevel: 6, Casts: true, SpellSlots: map[int]int{1: 4, 2: 2, 3: 2}},
+			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
+		},
+	}}
+	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Access: cleric(t), Catalogue: cat})
+	require.NoError(t, err)
+	mage, err := s.Of(ctx, 1, "mage")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"sleep"}, ids(mage), "the stored spellbook")
+	priest, err := s.Of(ctx, 1, "cleric")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"bless", "chant", "produce_flame"}, ids(priest))
 }

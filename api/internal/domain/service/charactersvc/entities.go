@@ -341,6 +341,47 @@ func (d *Derived) FeatureClass(kind, fallback string) string {
 	return fallback
 }
 
+// CasterEntry is the entry whose slots, preparation and caster level a
+// spell uses (ADR 0042 step 14): the active spellcasting entry of class, or
+// the first one when class is empty. False when there is none (a character
+// with no derived entries: the caller falls back to the character's level).
+func (d *Derived) CasterEntry(class string) (EntryDerived, bool) {
+	for _, e := range d.Classes {
+		if e.State == classes.EntryActive && e.Casts && (class == "" || e.Class == class) {
+			return e, true
+		}
+	}
+	return EntryDerived{}, false
+}
+
+// Casters is the number of active spellcasting entries: above one, each
+// prepared slot names its entry (ADR 0042 step 14).
+func (d *Derived) Casters() int {
+	n := 0
+	for _, e := range d.Classes {
+		if e.State == classes.EntryActive && e.Casts {
+			n++
+		}
+	}
+	return n
+}
+
+// Groups are the class groups of the active entries, in entry order without
+// repeats (ADR 0042: a by-group rule reads every active class's group); the
+// character's Group when no entry is derived.
+func (d *Derived) Groups() []string {
+	var out []string
+	for _, e := range d.Classes {
+		if e.State == classes.EntryActive && e.Group != "" && !slices.Contains(out, e.Group) {
+			out = append(out, e.Group)
+		}
+	}
+	if len(out) == 0 && d.Group != "" {
+		out = []string{d.Group}
+	}
+	return out
+}
+
 // Entry is the derived block of the entry of class, false when the character
 // has no such entry.
 func (d *Derived) Entry(class string) (EntryDerived, bool) {

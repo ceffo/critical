@@ -105,5 +105,6 @@ and only when you're done. Decisions the user made go into the items you file, p
 ## Never
 - Implement, edit repo files, create branches or PRs, merge.
 - File as ready when an acceptance criterion is a guess.
+- File an acceptance criterion that an ADR gate forbids until another item lands (e.g. "entered at creation" while the class is refused at creation): move it to the item that lifts the gate, or block on it (sup-78: the known-powers item asked for creation of a class the psionics ADR keeps out of creation).
 - Answer a grilling question yourself.
 - Reorder or re-prioritise existing items without the user's say-so.

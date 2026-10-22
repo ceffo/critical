@@ -65,6 +65,9 @@ describe("CastResultView", () => {
       } as never,
     });
     expect(html).toContain('data-testid="cast-spell-ident"');
+    // The catalogue's class code is worded (fr here), never shown raw.
+    expect(html).toMatch(/data-testid="cast-spell-ident"[^>]*>Magicien/);
+    expect(html).not.toContain(">wizard");
     expect(html).toContain("Puts creatures to sleep.");
   });
 });

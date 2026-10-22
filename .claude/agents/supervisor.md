@@ -500,7 +500,7 @@ with the default you apply meanwhile; never "still open, see above". **The list 
 `.claude/scripts/pending-questions.sh`, never from memory**: it prints every open tracker item
 labelled `needs-info` or `question` (with its "Questions" section) and the ledger's own
 pending questions. Run it before each reply that ends a turn; restate every line it prints in plain
-words (no item ids). Write "No questions pending" only when it prints nothing. An item waiting on
+words (no item ids). **Each question stands on its own**: the user never reads agent tabs, so it says in two or three plain sentences what the thing is, where it came from, why it matters, and what each answer would do; a ledger question is written that way when you add it (user, 2026-10-22: "you list me questions with ZERO context ... i can't dig the information deep in other agents' screen"). Write "No questions pending" only when it prints nothing. An item waiting on
 the user is a question, whatever you call it ("held", "later", "parked", "needs-info"): when the
 user defers something ("later", "until we figure out X"), label it `needs-info` and give it a
 "## Questions" section in its description (`save_issue`; the script reads the description, a comment

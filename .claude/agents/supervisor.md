@@ -207,7 +207,16 @@ use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 
 ## 1. Build the queue
 
-Use the workflow doc's "Tracker" queue commands.
+Use the workflow doc's "Tracker" queue commands, and **`.claude/scripts/ready-queue.sh`**, which rebuilds the
+queue from Linear's relations every time: `READY` (every blocker Done: dispatch), `STACK` (blocked only by
+open PRs: stack on the parent's tip), `STALLED` (In Progress / In Review with no agent and no PR: work it or
+flag it). Run it at takeover and at every transition; the Stop hook runs it too and refuses to end your turn
+while it prints anything. The ledger never holds a "not dispatchable" list: a blocker you inferred (same
+service, "serial", a chain) is not a blocker unless it is a Linear relation or a real file overlap you checked
+(sup-70: a carried-over list kept two ready items idle for 10 hours). An item you hold on purpose is a
+question to the user: `<id> <reason>` in `<wt>/supervisor/held` and in the ledger's pending questions.
+Never wait in the foreground on a PR's checks: arm `ci-watch.sh` (it now reports a check running over 45
+minutes as `STUCK`, red) and keep dispatching.
 - Eligible: ready/unblocked per the tracker, not labelled needs-info, not claimed by someone else. An
   item blocked only by an **open PR** is **stacked** (see "Stacked branches"), not left waiting.
 - Order: priority, then items that unblock others first, then lower id.
@@ -475,7 +484,7 @@ must lose nothing, so state lives outside the conversation:
    in-progress items, `herdr agent list` (if herdr), the freshness of report files. The live state
    wins: re-check each of the ledger's pending questions against it (a PR the user merged, an item
    they moved) and drop the settled ones before restating any (sup-58 re-asked a merged PR's merge).
-   Read fresh reports you haven't acted on.
+   Read fresh reports you haven't acted on. Then run `ready-queue.sh` and dispatch what it prints before anything else.
 2. **Re-arm every wait** (agent waits, PR watchers) with `run_in_background`; background waits die
    with the session that started them.
 3. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),

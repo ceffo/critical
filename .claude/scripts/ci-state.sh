@@ -4,6 +4,7 @@
 #     run that CI's success on main's head must trigger;
 #   - every open PR (ours and Dependabot's): its checks.
 # Prints one line per item that is not green: "PENDING <what>" or "RED <what> <url>".
+# A PR check running longer than CI_STUCK_MIN minutes (default 45) is "RED ... STUCK".
 # A cancelled run counts as superseded (concurrency cancels a run when a newer push arrives).
 # Exit 0: all green. 10: something pending, nothing red. 20: something red.
 # A red item listed (its run id or "pr<n>@<sha7>") in supervisor/ci-red-handled is reported as
@@ -45,6 +46,11 @@ while IFS= read -r p; do
   np=$(jq '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED")]|length' <<<"$p")
   bad=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")=="COMPLETED")|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL","CANCELLED"))|not)|.name // .context]|join(",")' <<<"$p")
   [ -n "$bad" ] && flag RED "pr$n@$sha" "PR #$n$who @$sha failing: $bad"
+  # A check running for more than CI_STUCK_MIN minutes (default 45) is stuck, not pending: a ghost job
+  # kept PR 503 "pending" for 10 hours and the watcher waited all along (sup-70). Rerun or cancel it.
+  stuck=$(jq -r --argjson m "${CI_STUCK_MIN:-45}" '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED" and (.startedAt // "")!="")
+    |select((now - (.startedAt|sub("\\.[0-9]+";"")|fromdateiso8601)) > $m*60)|.name // .context]|join(",")' <<<"$p")
+  [ -n "$stuck" ] && [ -z "$bad" ] && flag RED "pr$n@$sha-stuck" "PR #$n$who @$sha STUCK over ${CI_STUCK_MIN:-45} min: $stuck (gh run rerun / cancel)"
   [ "$np" -gt 0 ] && [ -z "$bad" ] && flag PENDING "pr$n" "PR #$n$who @$sha: $np check(s) running"
 done < <(jq -c '.[]' <<<"$prs")
 

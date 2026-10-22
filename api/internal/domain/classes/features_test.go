@@ -122,7 +122,7 @@ func TestLookup_Step5_AFeatureThroughTheClassEntry(t *testing.T) {
 // ADR 0040 step 3.5: rogue_skills is listed once per skill set, so a class may grant two sets;
 // the same set twice is refused. FeaturesAt answers every set granted at a level, in the class's
 // order, ListsAll every set listed.
-func TestFeatures_Step3_4_ARogueSkillsPerSkillSet(t *testing.T) {
+func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
 	skills := func(set string, from int) classes.Feature {
 		rs := rogueSkills()
 		rs.Set = set

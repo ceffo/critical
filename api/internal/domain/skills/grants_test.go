@@ -58,7 +58,7 @@ func TestToSpend_Step15_LeftCountsNeverNegative(t *testing.T) {
 
 // ADR 0040 step 3.5: each skill set has its own budget, so what is left to spend adds the sets'
 // left points, and a set over budget leaves 0 without eating into the other's.
-func TestToSpend_Step3_4_SkillSetsKeepSeparateBudgets(t *testing.T) {
+func TestToSpend_Step3_5_SkillSetsKeepSeparateBudgets(t *testing.T) {
 	sets := []skills.SkillSet{
 		{Set: "thief", Points: &ruletablesvc.SkillPointsBudget{Left: 20}},
 		{Set: "bard", Points: &ruletablesvc.SkillPointsBudget{Left: -7}},

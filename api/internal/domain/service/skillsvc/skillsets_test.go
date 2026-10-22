@@ -75,7 +75,7 @@ func dualFixture(t *testing.T) *fixture {
 // ADR 0040 step 3.5: a character with two skill sets reads each set with its own percentages
 // and its own last check, even for a skill the sets share: the last check of a thief's pick
 // pockets is not the bard's.
-func TestList_Step3_4_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
+func TestList_Step3_5_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
 	f := dualFixture(t)
 	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return([]actionlog.Entry{
 		checkEntry(t, 7, `{"id":"pick_pockets","kind":"bardSkill","die":100,"roll":9,"target":15,"adjustedTarget":15,"success":true}`),
@@ -96,7 +96,7 @@ func TestList_Step3_4_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
 // ADR 0040 steps 3.2 and 3.5: a roll names the skill set when two share the skill, and is judged
 // against that set's percentage and logged as that set's kind; without one it is the first set
 // that holds the skill.
-func TestRoll_Step3_4_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
+func TestRoll_Step3_5_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
 	for _, tt := range []struct {
 		name, set string
 		kind      skillsvc.Kind
@@ -123,7 +123,7 @@ func TestRoll_Step3_4_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
 
 // ADR 0040 step 3.5 on ADR 0037 step 10: a spend addresses one skill set and is checked against
 // that set's budget, the other set's points kept as they are; with two sets the set is required.
-func TestSetPoints_Step3_4_ASpendAddressesOneSkillSet(t *testing.T) {
+func TestSetPoints_Step3_5_ASpendAddressesOneSkillSet(t *testing.T) {
 	f := dualFixture(t)
 	f.records()
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID,
@@ -152,7 +152,7 @@ func TestSetPoints_Step3_4_ASpendAddressesOneSkillSet(t *testing.T) {
 
 // ADR 0019 on ADR 0040 step 3.5: undo writes back the points of the snapshot's skill set only,
 // the other set keeps what it has stored.
-func TestSetPoints_Step3_4_UndoRestoresOneSkillSet(t *testing.T) {
+func TestSetPoints_Step3_5_UndoRestoresOneSkillSet(t *testing.T) {
 	f := dualFixture(t)
 	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
 	require.NotNil(t, r)

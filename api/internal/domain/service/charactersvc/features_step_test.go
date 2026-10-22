@@ -355,7 +355,7 @@ func TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode(t *testing.T) {
 // skill set for each, with its own budget and its own points, even for a skill the two sets
 // share (pick_pockets). test_swashbuckler, a warrior granting the thief's and the bard's sets
 // (the bard's from level 3), derives two sets at level 3 and the thief's alone at level 1.
-func TestFeatures_Step3_4_ASkillSetPerRogueSkillsFeature(t *testing.T) {
+func TestFeatures_Step3_5_ASkillSetPerRogueSkillsFeature(t *testing.T) {
 	defs := cataloguetest.Definitions(t)
 	listed := func(class string) classes.Feature {
 		def, ok := defs.Class(class)

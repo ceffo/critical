@@ -68,6 +68,12 @@ packages:
       Characters:
       Dice:
       Log:
+  github.com/ceffo/critical/api/internal/domain/service/powersvc:
+    config:
+      dir: "internal/domain/service/powersvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
   github.com/ceffo/critical/api/internal/domain/service/profdescsvc:
     config:
       dir: "internal/domain/service/profdescsvc/mocks"

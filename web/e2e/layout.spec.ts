@@ -1571,6 +1571,14 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
         .click();
       await expect(stage.getByTestId("lookup-group-tag")).toHaveCount(0);
     }
+    // ADR 0043 step 8: the powers list and a power's detail, in French, cut nowhere.
+    await stage.getByRole("button", { name: "Pouvoirs", exact: true }).click();
+    await stage.getByRole("option", { name: /Vision de l'Aura/ }).click();
+    await expectNoClippedText(stage, `lookup, powers, ${where}`);
+    await expectWholeWords(stage, `lookup, powers, ${where}`);
+    if (SHOTS.has(`${vp.width}x${vp.height}`))
+      await snap(page, `lookup-powers-fr-${vp.width}x${vp.height}`);
+    await stage.getByRole("button", { name: "Magicien", exact: true }).click();
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
     await rail.nth(3).click();

@@ -357,3 +357,60 @@ func TestCreate_Step9_PicksRefusedAsTheEditorRefuses(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0043 step 4.4 on the draft: it serves step 4's maximum at the starting level beside the pool
+// the creation would store (full, at the maximum entered or else the computed one), refuses a
+// maximum entered for a character with no psionics as the creation does, and a known-powers
+// refusal carries the editor's figures.
+func TestDraft_Step4_4_TheComputedAndStoredPSPMaximum(t *testing.T) {
+	party := classesBody("human", psiScores, `[{"class":"thief","xp":0},{"class":"psionicist","xp":0}]`)
+	fighter := classesBody("human", strong, `[{"class":"fighter","xp":0}]`)
+	type pool struct{ Current, Max int }
+	draft := func(t *testing.T, body string) (computed *int, psp *pool, refusals []map[string]any) {
+		t.Helper()
+		tb, _ := serverOn(t, memory.New())
+		bob, _ := tb.login("bob@example.com")
+		var got struct {
+			ComputedPSPMax *int `json:"computedPspMax"`
+			Derived        *struct {
+				PSP *pool `json:"psp"`
+			} `json:"derived"`
+			Refusals []map[string]any `json:"refusals"`
+		}
+		require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/characters/draft", body, &got))
+		if got.Derived != nil {
+			psp = got.Derived.PSP
+		}
+		return got.ComputedPSPMax, psp, got.Refusals
+	}
+	t.Run("computed", func(t *testing.T) {
+		computed, psp, refusals := draft(t, withPsionics(party, 0, `[]`))
+		assert.Empty(t, refusals)
+		require.NotNil(t, computed)
+		assert.Equal(t, 25, *computed)
+		assert.Equal(t, &pool{25, 25}, psp)
+	})
+	t.Run("entered", func(t *testing.T) {
+		computed, psp, _ := draft(t, withPsionics(party, 40, `[]`))
+		require.NotNil(t, computed)
+		assert.Equal(t, 25, *computed, "still served beside the one entered")
+		assert.Equal(t, &pool{40, 40}, psp)
+	})
+	t.Run("no psionics", func(t *testing.T) {
+		computed, psp, refusals := draft(t, withPsionics(fighter, 30, `[]`))
+		assert.Nil(t, computed)
+		assert.Nil(t, psp)
+		require.Len(t, refusals, 1)
+		assert.Equal(t, "pspMax", refusals[0]["field"])
+		assert.Equal(t, "out_of_range", refusals[0]["code"])
+	})
+	t.Run("refusal figures", func(t *testing.T) {
+		two := `[{"kind":"discipline","id":"telepathy"},{"kind":"discipline","id":"clairsentience"}]`
+		_, _, refusals := draft(t, withPsionics(party, 0, two))
+		require.Len(t, refusals, 1)
+		assert.Equal(t, "psionic_allowance_exceeded", refusals[0]["code"])
+		assert.Equal(t, "discipline", refusals[0]["slot"])
+		assert.InDelta(t, 2, refusals[0]["count"], 0)
+		assert.InDelta(t, 1, refusals[0]["limit"], 0)
+	})
+}

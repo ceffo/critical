@@ -20,11 +20,18 @@ type drafter interface {
 // RefusalDTO is one refusal POST /api/characters would answer the draft with: its `field`, and
 // its `code`, the creation's `error` for an invalid input (out_of_range, race_not_allowed...) or
 // over_budget with the budget's `spent` and `limit`.
+//
+// A known-powers refusal (ADR 0043 step 9) carries the editor's figures: the `power` and the
+// `discipline` it names, the `slot` kind, and the `count` the list takes against the `limit`.
 type RefusalDTO struct {
-	Field string `json:"field"`
-	Code  string `json:"code"`
-	Spent *int   `json:"spent,omitempty"`
-	Limit *int   `json:"limit,omitempty"`
+	Field      string `json:"field"`
+	Code       string `json:"code"`
+	Spent      *int   `json:"spent,omitempty"`
+	Limit      *int   `json:"limit,omitempty"`
+	Power      string `json:"power,omitempty"`
+	Discipline string `json:"discipline,omitempty"`
+	Slot       string `json:"slot,omitempty"`
+	Count      *int   `json:"count,omitempty"`
 }
 
 // DraftDTO is POST /api/characters/draft (ADR 0034, amendment of 2026-10-20): the sheet as it
@@ -58,6 +65,10 @@ type DraftDTO struct {
 	// "" for none.
 	SkillsClass    string `json:"skillsClass"`
 	SpellbookClass string `json:"spellbookClass"`
+	// ComputedPSPMax is ADR 0043 step 4's PSP maximum at the psionics entry's starting level (the
+	// one stored when no `pspMax` is entered); null for a character with no psionics entry or
+	// while `derived` is. `derived.psp` is the pool the creation would store, full.
+	ComputedPSPMax *int `json:"computedPspMax"`
 }
 
 // StartingSpellbookDTO is a draft's starting spellbook (ADR 0030 step 20.7): the limits of step
@@ -106,7 +117,10 @@ func refusalDTO(err error) (RefusalDTO, error) {
 	// A known-powers list over the rules (ADR 0043 step 9) is a refusal on its field with the
 	// editor's code.
 	if rf, ok := errors.AsType[*psionics.Refusal](err); ok {
-		return RefusalDTO{Field: charactersvc.FieldPsionicPicks, Code: rf.Code}, nil
+		return RefusalDTO{
+			Field: charactersvc.FieldPsionicPicks, Code: rf.Code, Power: rf.Power, Discipline: rf.Discipline,
+			Slot: rf.Slot, Count: &rf.Count, Limit: &rf.Limit,
+		}, nil
 	}
 	return RefusalDTO{}, fmt.Errorf("draft refusal: %w", err)
 }
@@ -118,7 +132,7 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
 		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
 		ExceptionalStrength: d.ExceptionalStrength, Alignments: append([]string{}, d.Alignments...),
-		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass,
+		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass, ComputedPSPMax: d.ComputedPSPMax,
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

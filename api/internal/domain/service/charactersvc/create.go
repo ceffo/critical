@@ -865,6 +865,9 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if err := s.setPowers(&c); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
+	if err := draftPSP(out, &c, n.PSPMax, s.rules); err != nil {
+		return nil, err
+	}
 	s.readWarnings(&c, k.defs)
 	// ADR 0030 step 20.7: the starting spellbook's limits and refusals.
 	book, _, refusals := s.startingBook(&c, n.Spellbook)
@@ -872,6 +875,34 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	out.Refusals = append(out.Refusals, refusals...)
 	out.Character = &c
 	return out, nil
+}
+
+// draftPSP is ADR 0043 step 4.4 on a draft: step 4's maximum at the psionics entry's starting
+// level (out.ComputedPSPMax, nil for a character with no psionics entry) and the pool the
+// character would be created with, full at the maximum Create stores (the one entered, else the
+// computed one; no ledger exists yet). A maximum entered for a character with no psionics entry is
+// Create's refusal on pspMax. c is started.
+func draftPSP(out *Draft, c *Character, entered int, rules Rules) error {
+	m, ok, err := PSPMaxOf(c, rules)
+	if err != nil {
+		return fmt.Errorf("draft: %w", err)
+	}
+	if entered < 0 || entered > MaxPSPMax {
+		entered = 0 // already refused out_of_range by check
+	}
+	stored, err := startingPSPMax(c, entered, rules)
+	if fe, isField := errors.AsType[*domain.FieldError](err); isField {
+		out.Refusals = append(out.Refusals, fe)
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("draft: %w", err)
+	}
+	if ok {
+		out.ComputedPSPMax = &m.Max
+		c.Derived.PSP = &PSPPool{Current: stored, Max: stored}
+	}
+	return nil
 }
 
 // carriers are the classes that carry the character's skill points (ADR 0030 steps 17 and 18) and
@@ -1340,6 +1371,10 @@ type Draft struct {
 	// SkillsClass is the active class that carries the skill points (the first listing rogue
 	// skills), SpellbookClass the one that carries the starting spellbook; "" for none.
 	SkillsClass, SpellbookClass string
+	// ComputedPSPMax is ADR 0043 step 4's PSP maximum at the psionics entry's starting level, the
+	// one Create stores when none is entered (step 4.4); nil for a character with no psionics
+	// entry or while Character is nil. The pool Create would store is Character's Derived.PSP.
+	ComputedPSPMax *int
 }
 
 // ClassUnmet is a class and the abilities under its minimum.

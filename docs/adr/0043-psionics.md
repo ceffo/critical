@@ -172,7 +172,10 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    started character (charactersvc); now that the psionicist is creatable,
    `Create_Step9_ThePartyThiefPsionicistWithHisPowers` (composition) creates him through the API
    with the maximum computed (25 at Wis 17, Int 15, Con 16, psionicist 1) and with one entered
-   (kept). The draft does not serve the pool: it has no ledger before the character exists.
+   (kept). The draft serves `computedPspMax` (step 4's maximum at the starting level, null with no psionics entry) and, in
+   `derived.psp`, the pool the creation would store, full (no ledger exists yet); a maximum entered for a character with no
+   psionics entry is its refusal on `pspMax`. The creation form shows the computed figure and takes an entered one in its
+   place. Test: `Draft_Step4_4_TheComputedAndStoredPSPMaximum` (composition).
 
 5. **The PSP ledger.** Like HP (ADR 0007 step 2, ADR 0018 step 4): **any** action-log entry may
    carry a signed `psp_delta`; current PSPs are `psp_max` plus the sum of every entry's effective
@@ -527,8 +530,9 @@ Step 9's backend: the rules, the store, the save with its undo and the route. Th
   entry's starting level, and stored in the creation's insert (`characters.psionic_picks`), in its one transaction. Creating is no move of
   the game, so no `psionic_pick` entry is logged and there is nothing to undo. A list over the rules refuses the creation with the editor's
   409, its code and figures; a malformed list, or picks for a character with no psionics entry (`not_allowed`), is a field error on
-  `psionicPicks`. The draft lists either refusal on `psionicPicks` (the code only, no figures) and serves `knownPowers` with the picks
-  as entered. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
+  `psionicPicks`. The draft lists either refusal on `psionicPicks`, a list over the rules with the editor's figures (`power`, `discipline`,
+  `slot`, `count`, `limit`), and serves `knownPowers` with the picks as entered. The creation form's powers step is the
+  dashboard's editor, fed by the draft instead of the saves. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
 
 ## Consequences
 

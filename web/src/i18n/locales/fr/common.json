@@ -1867,7 +1867,7 @@
     "next": "Suivant",
     "back": "Retour",
     "take": "Prendre {{class}}",
-    "confirm": "{{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
+    "confirm": "La classe {{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
   },
   "xp": {
     "heading": "Expérience · niveau {{level}}",

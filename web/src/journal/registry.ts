@@ -31,6 +31,7 @@ import { diceKind } from "./kinds/dice";
 import { exposureKind } from "./kinds/exposure";
 import { hpChangeKind } from "./kinds/hpChange";
 import { pspChangeKind } from "./kinds/pspChange";
+import { pspRecoveryKind } from "./kinds/pspRecovery";
 import { initiativeCorrectKind, initiativeKind } from "./kinds/initiative";
 import {
   equipmentStateKind,
@@ -50,6 +51,7 @@ import { turnUndeadKind } from "./kinds/turnUndead";
 export const KIND_VIEWS: Record<LogKind, AnyKindView> = {
   hp_change: hpChangeKind,
   psp_change: pspChangeKind,
+  psp_recovery: pspRecoveryKind,
   cast: castKind,
   exposure: exposureKind,
   buff_change: buffChangeKind,

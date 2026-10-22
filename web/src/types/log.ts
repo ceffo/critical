@@ -4,6 +4,8 @@ export type LogKind =
   | "hp_change"
   /** A PSP change entered by hand (ADR 0043 step 5), bounded by the pool; popping it gives them back. */
   | "psp_change"
+  /** PSPs recovered over hours of an activity (ADR 0043 step 6), Table 6's hourly rate. */
+  | "psp_recovery"
   | "cast"
   | "buff_change"
   | "round_advance"

@@ -187,6 +187,28 @@
     "dyingZone": "Agonie, jusqu’à {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
+  "psp": {
+    "title": "PFP",
+    "amountPlaceholder": "PFP",
+    "amount": "Nombre de PFP",
+    "spend": "Dépenser",
+    "recover": "Récupérer",
+    "spendHint": "Dépenser ces PFP (Entrée)",
+    "recoverHint": "Récupérer ces PFP (Maj+Entrée)",
+    "keysHint": "Entrée : dépenser · Maj+Entrée : récupérer",
+    "source": "Source",
+    "sourcePlaceholder": "Source (facultatif) : pouvoir, potion...",
+    "recovery": "Récupération",
+    "hours": "Heures",
+    "activityLabel": "Activité",
+    "recoverOver": "Récupérer avec le temps",
+    "activity": {
+      "exertion": "effort",
+      "walking": "marche",
+      "resting": "repos",
+      "sleeping": "sommeil"
+    }
+  },
   "round": {
     "title": "Tour",
     "next": "Tour suivant",
@@ -1362,7 +1384,8 @@
       "skill_armor": "Armure",
       "equipment_state": "Équipement",
       "ac_override": "CA",
-      "spell_add": "Grimoire"
+      "spell_add": "Grimoire",
+      "psp_recovery": "Récupération de PFP"
     },
     "status": {
       "active": "Actif",
@@ -1600,7 +1623,8 @@
       "set": "CA forcée : {{value}}",
       "setWith": "CA forcée : {{value}} ({{label}})",
       "cleared": "CA forcée effacée"
-    }
+    },
+    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}"
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",

@@ -1,5 +1,5 @@
-// Package psphdl exposes the PSP pool's hand edit over HTTP (ADR 0043 step 5),
-// as hphdl does for HP. The handler depends on a narrow interface
+// Package psphdl exposes the PSP pool's hand edit (ADR 0043 step 5), as hphdl
+// does for HP, and the recovery over hours of an activity (step 6) over HTTP. The handler depends on a narrow interface
 // (clean_architecture.md §7.3) and translates between the HTTP DTOs and the
 // domain types.
 package psphdl
@@ -26,12 +26,40 @@ type changeAppender interface {
 	AppendPSPChange(ctx context.Context, characterID int64, delta int, source string) (actionlog.PSPState, error)
 }
 
+// recoverer is the recovery's one method; psionicsvc.SVC satisfies it.
+type recoverer interface {
+	Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error)
+}
+
 // CharacterIDFunc resolves the active character ID from the request context.
 type CharacterIDFunc func(r *http.Request) int64
 
-// RegisterRoutes wires the PSP endpoint onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender) {
+// RegisterRoutes wires the PSP endpoints onto r.
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec recoverer) {
 	r.Post("/api/psp/event", render.Handle(AppendChange(charID, svc)))
+	r.Post("/api/psp/recover", render.Handle(Recover(charID, rec)))
+}
+
+type recoverBody struct {
+	Hours    float64 `json:"hours"`
+	Activity string  `json:"activity"`
+}
+
+// Recover logs a psp_recovery entry: hours of one of Table 6's activities.
+// It answers the pool after the recovery.
+func Recover(charID CharacterIDFunc, svc recoverer) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body recoverBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		state, err := svc.Recover(r.Context(), charID(r), body.Hours, body.Activity)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, StateDTO{Current: state.Current, Max: state.Max})
+		return nil
+	}
 }
 
 type changeBody struct {

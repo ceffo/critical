@@ -59,6 +59,11 @@ type SVC interface {
 	// bounds apply as in Record; a character with no PSP maximum has no pool
 	// and is refused.
 	AppendPSPChange(ctx context.Context, characterID int64, delta int, source string) (actionlog.PSPState, error)
+	// AppendPSP records an entry whose point is its PSP delta (a recovery,
+	// ADR 0043 step 6) in its own transaction, bounded as in Record, and
+	// returns the pool after it; ErrNoPSPPool for a character with no PSP
+	// maximum.
+	AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error)
 
 	// Register binds a service's module: its codecs, so voiding an entry
 	// with a snapshot under one of their families writes the "before" state

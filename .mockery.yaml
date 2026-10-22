@@ -146,6 +146,14 @@ packages:
       Items:
       Log:
       PSP:
+  github.com/ceffo/critical/api/internal/domain/service/psionicsvc:
+    config:
+      dir: "internal/domain/service/psionicsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      RecoveryRates:
+      Log:
   github.com/ceffo/critical/api/internal/domain/service/prepsvc:
     config:
       dir: "internal/domain/service/prepsvc/mocks"

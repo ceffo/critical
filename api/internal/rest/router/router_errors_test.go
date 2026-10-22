@@ -37,6 +37,7 @@ import (
 	itemmocks "github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	levelupmocks "github.com/ceffo/critical/api/internal/domain/service/levelupsvc/mocks"
+	psionicmocks "github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	restmocks "github.com/ceffo/critical/api/internal/domain/service/restsvc/mocks"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/service/rulesetsvc/mocks"
@@ -83,6 +84,7 @@ type mocksSet struct {
 	dice     *dicemocks.MockSVC
 	levelUp  *levelupmocks.MockSVC
 	ac       *acmocks.MockSVC
+	psionics *psionicmocks.MockSVC
 }
 
 func newRouter(t *testing.T) (http.Handler, *mocksSet) {
@@ -115,10 +117,11 @@ func newRouterOpts(t *testing.T, a authsvc.SVC, opts router.Options) (http.Handl
 		dice:     dicemocks.NewMockSVC(t),
 		levelUp:  levelupmocks.NewMockSVC(t),
 		ac:       acmocks.NewMockSVC(t),
+		psionics: psionicmocks.NewMockSVC(t),
 	}
 	bs := &composition.BackingServices{
 		Character: m.char, Buffs: m.buffs, Spells: m.spell, Cast: m.cast, Combat: m.cmb, Rulesets: m.rulesets, Log: m.log, Items: m.items, Rest: m.rest,
-		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Auth: a,
+		XP: m.xp, LevelUp: m.levelUp, Details: m.details, Skills: m.skills, Dice: m.dice, AC: m.ac, Psionics: m.psionics, Auth: a,
 	}
 	log := slog.New(slog.NewTextHandler(io.Discard, nil))
 	return router.New(log, bs, opts), m

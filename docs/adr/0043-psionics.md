@@ -182,8 +182,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    3, 6 and 12 as data). One transaction, one `psp_recovery` entry whose delta is hours × rate,
    capped (step 5). Refused (`psp_recovery_while_maintaining`) while a power is maintained: the
    book recovers only in hours with no PSP spent. The per-turn optional rates are not taken.
-   Tests: `Recover_Step6_HoursTimesTheActivityRate` (a new `psionicsvc`: 3 h resting gives 18,
-   capped at the max), `Recover_Step6_RefusedWhileMaintaining`.
+   As built (2026-10-22): `POST /api/psp/recover` `{hours, activity}` answers the pool
+   `{current, max}`; the hours are refused as passing time's are (more than 0, at most 720); the
+   delta is rounded down to whole PSPs (1.5 h walking gives 4); exertion logs the hours with a
+   delta of 0; the payload carries `hours`, `activity` and `perHour`. The refusal while
+   maintaining is built with maintenance (steps 13 to 16): until then nothing can be maintained.
+   Tests: `TestRecover_Step6_HoursTimesTheActivityRate` (the new `psionicsvc`: 3 h resting gives
+   18), `TestRecover_Step6_CappedAndUndone` (composition: capped at the max, undone exactly),
+   `Recover_Step6_RefusedWhileMaintaining` (with maintenance).
 
 7. **The long rest recovers PSPs** (amends [ADR 0008](0008-spell-slots-and-long-rest.md) steps 11
    and 12; the triage's "refilled by rest"). The long rest's one transaction also ends every

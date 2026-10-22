@@ -258,3 +258,17 @@ func TestPSPEvent_Step5_WireShape(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"kind":"psp_change"`)
 	assert.Contains(t, rec.Body.String(), `"pspDelta":30`)
 }
+
+// POST /api/psp/recover, hours of an activity (ADR 0043 step 6): the hours and
+// the activity go to the service as sent, the answer is the pool after it.
+func TestPSPRecover_Step6_WireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().Recover(mock.Anything, int64(1), 1.5, "resting").
+		Return(actionlog.PSPState{Current: 30, Max: 181}, nil).Once()
+	rec := do(h, "POST", "/api/psp/recover", `{"hours":1.5,"activity":"resting"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"current":30,"max":181}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/psp/recover", `{"hours":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}

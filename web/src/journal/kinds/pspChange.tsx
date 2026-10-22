@@ -11,7 +11,10 @@ import { InfoBody } from "../parts";
 export type PspChangePayload = Partial<PspBreakdown>;
 
 /** The server's breakdown when a PSP change was cut (a gain by the maximum, a loss at 0), else null. */
-function cut(p: PspChangePayload, e: LogEntry): PspBreakdown | null {
+export function cut(
+  p: Partial<PspBreakdown>,
+  e: LogEntry,
+): PspBreakdown | null {
   if (e.status === "voided") return null;
   if (typeof p.pspRequested !== "number" || typeof p.pspApplied !== "number")
     return null;

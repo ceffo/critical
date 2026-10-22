@@ -19,28 +19,36 @@ func (s *service) AppendPSPChange(ctx context.Context, characterID int64, delta 
 	if delta == 0 {
 		return actionlog.PSPState{}, domain.FieldErrorf("delta", "a PSP change needs a delta")
 	}
+	entry := actionlog.NewEntry{
+		CharacterID: characterID,
+		Kind:        actionlog.KindPSPChange,
+		Summary:     strings.TrimSpace(source),
+		PSPDelta:    delta,
+	}
+	if entry.Summary == "" {
+		entry.Payload = json.RawMessage(`{}`)
+	}
+	return s.AppendPSP(ctx, entry)
+}
+
+// AppendPSP records e, an entry whose point is its PSP delta, in its own
+// transaction through Record (the bounds of ADR 0043 step 5) and returns the
+// pool after it. A character with no PSP maximum has no pool: ErrNoPSPPool,
+// nothing logged.
+func (s *service) AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error) {
 	var state actionlog.PSPState
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		maxPSP, err := s.maxima.GetMaxPSP(ctx, characterID)
+		maxPSP, err := s.maxima.GetMaxPSP(ctx, e.CharacterID)
 		if err != nil {
 			return fmt.Errorf("max psp: %w", err)
 		}
 		if maxPSP <= 0 {
 			return ErrNoPSPPool
 		}
-		entry := actionlog.NewEntry{
-			CharacterID: characterID,
-			Kind:        actionlog.KindPSPChange,
-			Summary:     strings.TrimSpace(source),
-			PSPDelta:    delta,
+		if _, err := s.Record(ctx, e); err != nil {
+			return fmt.Errorf("record %s: %w", e.Kind, err)
 		}
-		if entry.Summary == "" {
-			entry.Payload = json.RawMessage(`{}`)
-		}
-		if _, err := s.Record(ctx, entry); err != nil {
-			return fmt.Errorf("record psp change: %w", err)
-		}
-		total, err := s.dal.PSPTotal(ctx, characterID)
+		total, err := s.dal.PSPTotal(ctx, e.CharacterID)
 		if err != nil {
 			return fmt.Errorf("psp total: %w", err)
 		}

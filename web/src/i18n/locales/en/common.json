@@ -187,6 +187,28 @@
     "dyingZone": "Dying, down to {{floor}}",
     "lastExposure": "{{delta}} {{spell}}"
   },
+  "psp": {
+    "title": "PSPs",
+    "amountPlaceholder": "PSP",
+    "amount": "PSP amount",
+    "spend": "Spend",
+    "recover": "Recover",
+    "spendHint": "Spend these PSPs (Enter)",
+    "recoverHint": "Recover these PSPs (Shift+Enter)",
+    "keysHint": "Enter: spend · Shift+Enter: recover",
+    "source": "Source",
+    "sourcePlaceholder": "Source (optional): power, potion...",
+    "recovery": "Recovery",
+    "hours": "Hours",
+    "activityLabel": "Activity",
+    "recoverOver": "Recover over time",
+    "activity": {
+      "exertion": "exertion",
+      "walking": "walking",
+      "resting": "resting",
+      "sleeping": "sleeping"
+    }
+  },
   "round": {
     "title": "Round",
     "next": "Next round",
@@ -1362,7 +1384,8 @@
       "skill_armor": "Armour",
       "equipment_state": "Equipment",
       "ac_override": "AC",
-      "spell_add": "Spellbook"
+      "spell_add": "Spellbook",
+      "psp_recovery": "PSP recovery"
     },
     "status": {
       "active": "Active",
@@ -1600,7 +1623,8 @@
       "set": "AC overridden: {{value}}",
       "setWith": "AC overridden: {{value}} ({{label}})",
       "cleared": "AC override cleared"
-    }
+    },
+    "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}"
   },
   "critTable": {
     "title": "Crit table (house rule)",

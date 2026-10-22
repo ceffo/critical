@@ -27,7 +27,11 @@ const (
 	// KindPSPChange is a PSP change entered by hand (actionlogsvc, ADR 0043
 	// step 5), like hp_change for HP: its PSP delta is bounded by the pool and
 	// popping it gives the PSPs back.
-	KindPSPChange    Kind = "psp_change"
+	KindPSPChange Kind = "psp_change"
+	// KindPSPRecovery is the PSPs recovered over hours of an activity
+	// (psionicsvc, ADR 0043 step 6): hours times Table 6's hourly rate, as the
+	// entry's PSP delta, capped like any gain.
+	KindPSPRecovery  Kind = "psp_recovery"
 	KindCast         Kind = "cast"
 	KindBuffChange   Kind = "buff_change"
 	KindRoundAdvance Kind = "round_advance"

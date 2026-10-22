@@ -169,3 +169,27 @@ func TestPSPChange_Step5_UndoRedoExact(t *testing.T) {
 		assert.False(t, found)
 	})
 }
+
+// Step 6 through the real ledger: a recovery's gain is capped at the PSPs
+// spent (step 5), and undoing it takes back what was applied.
+func TestRecover_Step6_CappedAndUndone(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicist(t)
+	_, err := bs.Log.AppendPSPChange(ctx, id, -30, "")
+	require.NoError(t, err)
+	state, err := bs.Psionics.Recover(ctx, id, 3, "resting")
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.PSPState{Current: 169, Max: 181}, state, "3 h resting: 18")
+	state, err = bs.Psionics.Recover(ctx, id, 2, "sleeping")
+	require.NoError(t, err)
+	assert.Equal(t, actionlog.PSPState{Current: 181, Max: 181}, state, "24 asked, 12 applied")
+	entries, err := bs.Log.ActiveEntries(ctx, id, actionlog.KindPSPRecovery, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Equal(t, 12, entries[0].PSPDelta)
+	assert.JSONEq(t, `{"hours":2,"activity":"sleeping","perHour":12,"pspRequested":24,"pspApplied":12}`, string(entries[0].Payload))
+	undoTop(t, bs, id)
+	assert.Equal(t, 169, currentPSP(t, bs, id), "the 12 applied are taken back")
+	undoTop(t, bs, id)
+	assert.Equal(t, 151, currentPSP(t, bs, id))
+}

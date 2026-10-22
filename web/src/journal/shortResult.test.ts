@@ -161,6 +161,16 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "PSPs recovered",
     fr: "PFP récupérés",
   },
+  psp_recovery: {
+    e: entry(
+      "psp_recovery",
+      { hours: 3, activity: "resting", perHour: 6 },
+      { pspDelta: 18 },
+    ),
+    value: "+18",
+    en: "PSPs recovered",
+    fr: "PFP récupérés",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

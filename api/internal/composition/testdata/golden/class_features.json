@@ -38,7 +38,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -172,7 +226,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -306,7 +414,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -446,7 +608,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -586,7 +802,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -724,7 +994,61 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -862,7 +1186,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -1051,7 +1389,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -1240,7 +1592,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -1433,7 +1799,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -1627,7 +2007,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -1819,7 +2213,21 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2015,7 +2423,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2088,7 +2550,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2161,7 +2677,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2234,7 +2804,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2307,7 +2931,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2380,7 +3058,61 @@
           "PerLevels": 3,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 3,
+            "Type": "long_bow"
+          },
+          {
+            "SpecializationSlots": 3,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "light_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "heavy_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_melee"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_thrown"
+          },
+          {
+            "SpecializationSlots": 2,
+            "Type": "other_missile"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2449,7 +3181,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2526,7 +3276,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2603,7 +3371,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2685,7 +3471,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2767,7 +3571,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2847,7 +3669,25 @@
           "PerLevels": 6,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -2927,7 +3767,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -3095,7 +3969,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -3263,7 +4171,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -3431,7 +4373,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -3599,7 +4575,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,
@@ -3767,7 +4777,41 @@
           "PerLevels": 4,
           "Spent": 0
         },
-        "WeaponPicks": []
+        "WeaponPicks": [],
+        "WeaponTypes": [
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_bow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "hand_crossbow"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dagger"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "dart"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "sling"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "short_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "long_sword"
+          },
+          {
+            "SpecializationSlots": 0,
+            "Type": "other_melee"
+          }
+        ]
       },
       "RaceSaveBonus": {
         "Breath": 0,

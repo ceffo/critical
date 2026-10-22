@@ -167,17 +167,11 @@ type castAnswer struct {
 	castsvc.CastBreakdown
 	CatalogueSpell *wire.SpellDTO      `json:"catalogueSpell,omitempty"`
 	Slots          []wire.SpellSlotDTO `json:"slots,omitempty"`
-	// Warnings are the cast's class warnings (ADR 0042 step 16.2:
-	// spell_in_armour), never logged.
-	Warnings []string `json:"warnings,omitempty"`
 }
 
 func newCastAnswer(res castsvc.CastResult) castAnswer {
 	b := castsvc.NewCastBreakdown(res)
-	out := castAnswer{
-		CastBreakdown: b,
-		Warnings:      res.Warnings,
-	}
+	out := castAnswer{CastBreakdown: b}
 	if len(res.Spell.Name) > 0 {
 		s := wire.SpellToDTO(res.Spell, res.CasterLevel)
 		out.CatalogueSpell = &s

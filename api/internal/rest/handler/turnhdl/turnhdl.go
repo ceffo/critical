@@ -54,6 +54,9 @@ type ResultDTO struct {
 	More        []int  `json:"more"`
 	Destroyed   int    `json:"destroyed"`
 	Turned      int    `json:"turned"`
+	// Warnings are the turn's class warnings (ADR 0042 step 13:
+	// dual_class_old_ability); absent when none.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // Turn handles POST /api/character/turn-undead.
@@ -76,7 +79,7 @@ func Turn(charID CharacterIDFunc, svc turner) render.HandlerFunc {
 			EntryID: res.EntryID, Undead: res.Undead, HDMin: res.HDMin, HDMax: res.HDMax, ClericLevel: res.ClericLevel,
 			Target: res.Cell.Roll, Outcome: res.Cell.Outcome, D20: res.D20, Success: res.Success, Effect: res.Effect,
 			Affected: append([]int{}, res.Affected...), More: append([]int{}, res.More...),
-			Destroyed: res.Destroyed, Turned: res.Turned,
+			Destroyed: res.Destroyed, Turned: res.Turned, Warnings: res.Warnings,
 		}
 		render.OK(r.Context(), w, out)
 		return nil

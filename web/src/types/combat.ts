@@ -144,6 +144,9 @@ export interface RollResult {
   rolledTargetAc?: number;
   rolledHit?: boolean;
   rolledCrit?: boolean;
+  /** The attack's class warnings, logged with it (ADR 0042 step 13: `dual_class_old_ability`, a
+   * dual-class's old class's backstab or weapon before the crossover). Absent when none. */
+  warnings?: "dual_class_old_ability"[];
   /** The action-log entry recording the attack. */
   logEntryId?: number;
 }

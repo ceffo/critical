@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -56,6 +57,10 @@ type checkRecord struct {
 	// blocked: the worn armour blocks the skill (ADR 0042 step 16.3); never
 	// logged, a blocked check is not rolled.
 	blocked bool
+	// Warnings are the check's class warnings (ADR 0042 step 13:
+	// dual_class_old_ability, a dual-class's old class's skill before the
+	// crossover); absent when none and in older entries.
+	Warnings []string `json:"warnings,omitempty"`
 	// Buff is the buff the verdict in effect put on (ADR 0037 step 20.4),
 	// Renewed true when it replaced an active one (step 20.3). Absent when
 	// it put none, and in entries logged before: they read as no buff.
@@ -98,7 +103,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
 		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
-		Buff: r.Buff.applied(r.Renewed),
+		Buff: r.Buff.applied(r.Renewed), Warnings: r.Warnings,
 	}
 }
 
@@ -326,7 +331,12 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		}
 		for _, sk := range ss.Skills {
 			if sk.Skill == id {
-				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent, blocked: sk.Blocked}, nil
+				rec := checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent, blocked: sk.Blocked}
+				if ss.Dormant {
+					// ADR 0042 step 13: allowed, warned.
+					rec.Warnings = []string{classes.WarnOldAbility}
+				}
+				return rec, nil
 			}
 		}
 	}

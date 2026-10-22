@@ -499,3 +499,44 @@ func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T)
 		require.ErrorIs(t, err, prepsvc.ErrNotInSpellbook, "the cleric's spell is not in the mage's book")
 	})
 }
+
+// ADR 0042 step 13 with step 14: a dual-class's old class keeps its spells at
+// its left-at level and may use them before the crossover (the cast warns).
+// A mage left at 9 now a cleric 5 prepares wizard spells in the mage's own
+// slots and limits, tagged "mage" (two spellcasting entries); the cleric's
+// stay the cleric's.
+func TestPrepare_Step13_TheOldClassPreparesInItsOwnSlots(t *testing.T) {
+	mageToCleric := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
+		RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "mage", Group: "wizard", State: classes.EntryFrozen, RealizedLevel: 9, Casts: true, Dormant: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
+		},
+	}}
+	ctx := context.Background()
+
+	t.Run("the old class's limits", func(t *testing.T) {
+		f := newFixtureFor(t, mageToCleric)
+		f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+		mage, err := f.svc.InfoFor(ctx, 1, "mage")
+		require.NoError(t, err)
+		assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, mage.Limits)
+	})
+
+	t.Run("the old class's slots", func(t *testing.T) {
+		f := newFixtureFor(t, mageToCleric)
+		bless := spellsvc.SpellSlot{Level: 1, SpellID: "bless", PreparedSpellName: "Bless", Class: "cleric"}
+		f.slots.EXPECT().GetSlots(mock.Anything, int64(1)).Return([]spellsvc.SpellSlot{bless}, nil)
+		var saved []spellsvc.SpellSlot
+		f.slots.EXPECT().SaveSlots(mock.Anything, int64(1), mock.Anything).
+			Run(func(_ context.Context, _ int64, s []spellsvc.SpellSlot) { saved = s }).Return(nil)
+		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(7), nil)
+
+		_, err := f.svc.PrepareFor(ctx, 1, "mage", []string{"fireball"})
+		require.NoError(t, err)
+		assert.Equal(t, []spellsvc.SpellSlot{
+			bless,
+			{Level: 3, SpellID: "fireball", PreparedSpellName: "Fireball", Class: "mage"},
+		}, saved)
+	})
+}

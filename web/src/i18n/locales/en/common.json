@@ -49,7 +49,8 @@
       "dismissTitle": "Close what the level grants",
       "dieErrors": {
         "out_of_range": "Enter a die from 1 to {{die}}.",
-        "fixed_gain": "This level has a fixed gain, no die."
+        "fixed_gain": "This level has a fixed gain, no die.",
+        "dual_class_no_hit_points": "This level gains no hit points until the new class passes the old one."
       },
       "titleClass": "{{class}}: level {{level}} reached",
       "sharedHint": "Hit die d{{die}}, divided between {{classes}} classes, plus its share of the CON adjustment",
@@ -2550,6 +2551,7 @@
       "weapon_not_allowed": "Not for {{who}}",
       "hands": "Two-handed weapon with a shield",
       "weapon_type_missing": "No weapon type: weapon proficiency not checked",
+      "dual_class_old_ability": "Your old class’s: the DM may cost you experience",
       "title": "Class warnings",
       "who": {
         "bard": "a bard",

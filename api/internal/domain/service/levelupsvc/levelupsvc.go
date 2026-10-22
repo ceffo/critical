@@ -31,6 +31,10 @@ const (
 	// CodeFixedGain is an entered die for a level above the name level,
 	// whose gain is fixed (step 7.2): there is no die to enter.
 	CodeFixedGain = "fixed_gain"
+	// CodeNoHitPoints is an entered die for a dual-class's level that gains
+	// no hit points (ADR 0042 step 11): there is no die to enter. It is also
+	// the result's Reason for such a level.
+	CodeNoHitPoints = "dual_class_no_hit_points"
 )
 
 // StateKey is the action-log state key of a character's realized level and
@@ -92,6 +96,9 @@ type Result struct {
 	Gain int
 	// Fixed is a level above the name level (step 7.2).
 	Fixed bool
+	// Reason is why the gain is 0: CodeNoHitPoints for a dual-class's level
+	// not above its old class's (ADR 0042 step 11); "" otherwise.
+	Reason string
 	// Manual is a die the player entered.
 	Manual bool
 	// HPMaxBefore and HPMaxAfter are the max HP around the roll.
@@ -209,10 +216,20 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 }
 
 // gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c's entry of
-// group, divided by the number of classes (ADR 0042 steps 10.2 and 10.3).
+// group, divided by the number of classes (ADR 0042 steps 10.2 and 10.3); 0
+// for a dual-class's level before the crossover (ADR 0042 step 11).
 func (s *service) gain(c *charactersvc.Character, group string, p charactersvc.PendingLevel, entered *int) (*Result, error) {
 	classes := max(p.Classes, 1)
 	res := &Result{Class: p.Class, Classes: classes, Level: p.Level, HitDie: p.Die, Manual: entered != nil}
+	// ADR 0042 step 11: a dual-class's level up to its old class's gains no
+	// hit points; the level is still taken. No die, nothing rolled.
+	if p.NoHitPoints {
+		if entered != nil {
+			return nil, &domain.FieldError{Field: "die", Message: CodeNoHitPoints}
+		}
+		res.Reason = CodeNoHitPoints
+		return res, nil
+	}
 	// Step 7.2: above the name level, a fixed gain: no die, no Constitution.
 	if p.Die == 0 {
 		if entered != nil {

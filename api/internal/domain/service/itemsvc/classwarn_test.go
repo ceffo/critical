@@ -40,7 +40,7 @@ func multi(t testing.TB, cls []string, pieces ...itemsvc.Item) []itemsvc.Warning
 		require.True(t, ok, class)
 		limits = append(limits, def.Equipment)
 	}
-	return itemsvc.ClassWarnings(limits, pieces)
+	return itemsvc.ClassWarnings(limits, itemsvc.OldClasses{}, pieces)
 }
 
 func w(id, code string) itemsvc.Warning { return itemsvc.Warning{ItemID: id, Code: code} }
@@ -212,9 +212,9 @@ func TestClassWarnings_Step20_ALimitComesFromTheDataOfAnyClass(t *testing.T) {
 	}
 	assert.Equal(t, []itemsvc.Warning{
 		w("b", "armour_not_allowed"), w("s", "armour_not_allowed"), w("w3", "weapon_not_allowed"),
-	}, itemsvc.ClassWarnings([]classes.Equipment{skald}, pieces))
-	assert.Empty(t, itemsvc.ClassWarnings([]classes.Equipment{{Shields: true}}, pieces))
-	assert.Empty(t, itemsvc.ClassWarnings(nil, pieces), "a class the catalogue does not define is not limited")
+	}, itemsvc.ClassWarnings([]classes.Equipment{skald}, itemsvc.OldClasses{}, pieces))
+	assert.Empty(t, itemsvc.ClassWarnings([]classes.Equipment{{Shields: true}}, itemsvc.OldClasses{}, pieces))
+	assert.Empty(t, itemsvc.ClassWarnings(nil, itemsvc.OldClasses{}, pieces), "a class the catalogue does not define is not limited")
 }
 
 // ADR 0042 step 16.1 and the wearing half of 16.2: a multi-class character's pieces are judged

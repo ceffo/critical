@@ -97,3 +97,29 @@ func TestLookup_Step12_EachEntryReadsItsOwnLevel(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0042 step 13: the crossover is the active entry's realized level above every frozen
+// entry's left-at level; equal is still before it. A frozen entry is dormant until then.
+func TestDualClass_Step13_CrossoverAboveEveryLeftAtLevel(t *testing.T) {
+	cases := []struct {
+		name    string
+		entries []classes.Entry
+		crossed bool
+	}{
+		{"mage 9 after fighter 9: before", []classes.Entry{frozen("fighter", 9), active("mage", 9)}, false},
+		{"mage 10 after fighter 9: after", []classes.Entry{frozen("fighter", 9), active("mage", 10)}, true},
+		{"mage 1 after fighter 2: before", []classes.Entry{frozen("fighter", 2), active("mage", 1)}, false},
+		{"above one frozen entry, not the other", []classes.Entry{frozen("fighter", 5), frozen("thief", 8), active("mage", 7)}, false},
+		{"above both frozen entries", []classes.Entry{frozen("fighter", 5), frozen("thief", 8), active("mage", 9)}, true},
+		{"single class: nothing to cross", []classes.Entry{active("bard", 1)}, true},
+		{"multi-class: nothing to cross", []classes.Entry{active("fighter", 2), active("cleric", 3)}, true},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.crossed, classes.Crossed(tc.entries))
+			assert.Equal(t, !tc.crossed, classes.Dormant(tc.entries, tc.entries[0]), "the first entry dormant")
+			last := tc.entries[len(tc.entries)-1]
+			assert.False(t, classes.Dormant(tc.entries, last), "an active entry is never dormant")
+		})
+	}
+}

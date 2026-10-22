@@ -382,6 +382,14 @@ export type CastTextOnly =
  * Fields marked "older casts" are absent on entries logged before they were recorded.
  */
 export interface CastBreakdown {
+  /** The casting entry's class on a character of several class entries (ADR 0042 step 14);
+   * absent for a single class. */
+  class?: string;
+  /** The cast's class warnings, logged with it (ADR 0042 step 13: `dual_class_old_ability`, a
+   * dual-class's old class's spell before the crossover, the class in `class`; step 16.2:
+   * `spell_in_armour`, a spell of a class that allows no body armour cast in body armour).
+   * Absent when none. */
+  warnings?: ("dual_class_old_ability" | "spell_in_armour")[];
   action: "cast" | "received" | "effect";
   spellId: string;
   /** The spell's name as recorded; the UI names the spell from its id. */
@@ -429,9 +437,6 @@ export interface CastResult extends CastBreakdown {
   catalogueSpell?: Spell;
   /** The slots after a cast. */
   slots?: SpellSlot[];
-  /** The cast's class warnings, never logged (ADR 0042 step 16.2: `spell_in_armour`, a spell of
-   * a class that allows no body armour cast in body armour). Absent when none. */
-  warnings?: "spell_in_armour"[];
 }
 
 /** A cast's spell failure roll (ADR 0030 step 14): failed when the d100 is at or under the chance. */

@@ -67,7 +67,11 @@ Leaving one class for a new one, the old one frozen; its abilities are used with
 _Avoid_: serial, multi (for this).
 
 **Crossover** (fr: dépassement):
-The moment a dual-class character's new class level passes the frozen old class's level; from then on the old class's abilities work again without penalty. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
+The moment a dual-class character's new class level passes every frozen old class's level; from then on the old class's abilities work again without warning, and its THAC0 and saves count. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 13.
+
+**Dormant** (fr: en sommeil):
+A dual-class's frozen class entry before the crossover: its features, spells and equipment may still be used, each use warned `dual_class_old_ability` (the XP cost is the DM's); its THAC0 and saves do not count and the new class's levels gain no hit points. [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) steps 11 and 13.
+_Code_: OldClasses
 
 **Class feature** (fr: aptitude de classe):
 One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.

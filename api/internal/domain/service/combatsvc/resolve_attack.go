@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"slices"
 	"strings"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -68,6 +70,9 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 
 		r, err := s.resolve(char, weapon, ammo, mods, crit, req)
 		if err != nil {
+			return err
+		}
+		if r.Warnings, err = s.attackWarnings(ctx, char, weapon, req.Backstab); err != nil {
 			return err
 		}
 
@@ -405,4 +410,30 @@ func rollDice(d Dice, dice string) (int, []DieRoll, int, error) {
 // or not (ADR 0033 step 8: the form offers the wielded ones first).
 func (s *service) ListWeapons(ctx context.Context, characterID int64) ([]Weapon, error) {
 	return s.weapons.List(ctx, characterID)
+}
+
+// attackWarnings are an attack's class warnings, never a refusal: ADR 0042
+// step 13, dual_class_old_ability when a dual-class uses its old class
+// before the crossover: a backstab only a dormant entry grants, or a weapon
+// only an old class allows (itemsvc's warning on the piece). A character
+// with no dormant entry reads nothing.
+func (s *service) attackWarnings(ctx context.Context, char *charactersvc.Character, weapon Weapon, backstab bool) ([]string, error) {
+	if !char.Derived.HasDormant() {
+		return nil, nil
+	}
+	if g, ok := char.Derived.Grant(classes.KindBackstab); backstab && ok && g.Dormant {
+		return []string{classes.WarnOldAbility}, nil
+	}
+	items, err := s.items.List(ctx, char.ID)
+	if err != nil {
+		return nil, fmt.Errorf("list items: %w", err)
+	}
+	ws, err := s.items.Warnings(ctx, char.ID, items)
+	if err != nil {
+		return nil, fmt.Errorf("class warnings: %w", err)
+	}
+	if slices.Contains(ws, itemsvc.Warning{ItemID: weapon.ID, Code: classes.WarnOldAbility}) {
+		return []string{classes.WarnOldAbility}, nil
+	}
+	return nil, nil
 }

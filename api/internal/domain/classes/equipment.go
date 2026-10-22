@@ -148,3 +148,23 @@ func AllowedTogether(limits []Equipment, allows func(Equipment) bool) bool {
 	}
 	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
 }
+
+// AllowedWithOld is ADR 0042 steps 13 and 16.1 for a dual-class: the active
+// classes' limits judged together (AllowedTogether), then the old (frozen)
+// classes' allowance added. byOld reports that only an old class allows it,
+// which warns before the crossover. Each use follows the limits of the class
+// using it (step 13): an active BluntOnly class decides alone, so an old
+// class adds no weapon to an active priest's; nor does a BluntOnly old
+// class restrict the active ones.
+func AllowedWithOld(active, old []Equipment, allows func(Equipment) bool) (allowed, byOld bool) {
+	if AllowedTogether(active, allows) {
+		return true, false
+	}
+	if slices.ContainsFunc(active, func(e Equipment) bool { return e.BluntOnly }) {
+		return false, false
+	}
+	if slices.ContainsFunc(old, allows) {
+		return true, true
+	}
+	return false, false
+}

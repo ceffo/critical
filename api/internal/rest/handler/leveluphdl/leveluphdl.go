@@ -49,21 +49,24 @@ type RollBody struct {
 // gain's) and the Constitution adjustment's shares (ADR 0042 step 10.4); a
 // single-class character's have none.
 type ResultDTO struct {
-	Class         string                 `json:"class,omitempty"`
-	Classes       int                    `json:"classes,omitempty"`
-	DieShare      int                    `json:"dieShare,omitempty"`
-	ConShare      int                    `json:"conShare,omitempty"`
-	Level         int                    `json:"level"`
-	HitDie        int                    `json:"hitDie"`
-	Rolled        *int                   `json:"rolled"`
-	Counted       *int                   `json:"counted"`
-	ConAdjustment int                    `json:"conAdjustment"`
-	Gain          int                    `json:"gain"`
-	Fixed         bool                   `json:"fixed"`
-	Manual        bool                   `json:"manual"`
-	HPMaxBefore   int                    `json:"hpMaxBefore"`
-	HPMaxAfter    int                    `json:"hpMaxAfter"`
-	Pending       []wire.PendingLevelDTO `json:"pending"`
+	Class         string `json:"class,omitempty"`
+	Classes       int    `json:"classes,omitempty"`
+	DieShare      int    `json:"dieShare,omitempty"`
+	ConShare      int    `json:"conShare,omitempty"`
+	Level         int    `json:"level"`
+	HitDie        int    `json:"hitDie"`
+	Rolled        *int   `json:"rolled"`
+	Counted       *int   `json:"counted"`
+	ConAdjustment int    `json:"conAdjustment"`
+	Gain          int    `json:"gain"`
+	Fixed         bool   `json:"fixed"`
+	Manual        bool   `json:"manual"`
+	HPMaxBefore   int    `json:"hpMaxBefore"`
+	HPMaxAfter    int    `json:"hpMaxAfter"`
+	// Reason is why the gain is 0: dual_class_no_hit_points for a
+	// dual-class's level not above its old class's (ADR 0042 step 11).
+	Reason  string                 `json:"reason,omitempty"`
+	Pending []wire.PendingLevelDTO `json:"pending"`
 }
 
 // Roll is POST /api/character/levelup/roll.
@@ -85,7 +88,7 @@ func Roll(charID CharacterIDFunc, svc roller) render.HandlerFunc {
 		dto := ResultDTO{
 			Level: res.Level, HitDie: res.HitDie, Rolled: res.Rolled, Counted: res.Counted,
 			ConAdjustment: res.ConAdjustment, Gain: res.Gain, Fixed: res.Fixed, Manual: res.Manual,
-			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter,
+			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter, Reason: res.Reason,
 			Pending: wire.PendingDTO(res.Pending),
 		}
 		if res.Classes > 1 {

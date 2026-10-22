@@ -122,4 +122,7 @@ type CheckResult struct {
 	// Buff is the buff the verdict in effect put on (ADR 0037 step 20), nil
 	// when it put none.
 	Buff *AppliedBuff
+	// Warnings are the check's class warnings, logged with it, never a
+	// refusal (ADR 0042 step 13: dual_class_old_ability).
+	Warnings []string
 }

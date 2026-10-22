@@ -29,6 +29,10 @@ const (
 	// while body armour is worn (ADR 0042 step 16.2, Q15), served on the
 	// cast, never refusing it.
 	WarnSpellInArmour = "spell_in_armour"
+	// WarnOldAbility: a worn or wielded piece only a dual-class's old class
+	// allows, before the crossover (ADR 0042 step 13,
+	// classes.WarnOldAbility): allowed, warned.
+	WarnOldAbility = classes.WarnOldAbility
 )
 
 // Warning is one class warning, served with the piece's id.
@@ -47,24 +51,31 @@ type Warning struct {
 // allows it, except that a blunt_only class restricts every weapon to its own
 // list. A homebrew weapon without a catalogue code is judged by its weapon type
 // and damage types; when those do not settle it (a type some listed weapon
-// shares, such as other_melee for a thief), no warning.
-func ClassWarnings(limits []classes.Equipment, pieces []Item) []Warning {
+// shares, such as other_melee for a thief), no warning. old are a
+// dual-class's old classes (ADR 0042 steps 13 and 16): a piece limits does not
+// allow but one of them does is allowed, warned dual_class_old_ability while
+// they are dormant.
+func ClassWarnings(limits []classes.Equipment, old OldClasses, pieces []Item) []Warning {
 	var out []Warning
 	var shields, twoHanded []Item
 	for _, p := range pieces {
 		switch {
 		case p.Category == CategoryShield && p.State == StateWorn:
 			shields = append(shields, p)
-			if !anyClass(limits, func(e classes.Equipment) bool { return e.Shields }) {
-				out = append(out, Warning{p.ID, WarnArmourNotAllowed})
+			shield := func(e classes.Equipment) bool { return e.Shields }
+			if code, ok := old.judged(anyClass(limits, shield), shield, WarnArmourNotAllowed); !ok {
+				out = append(out, Warning{p.ID, code})
 			}
 		case p.Category == CategoryArmour && p.State == StateWorn:
-			if !anyClass(limits, func(e classes.Equipment) bool { return e.AllowsArmour(p.SkillColumn) }) {
-				out = append(out, Warning{p.ID, WarnArmourNotAllowed})
+			armour := func(e classes.Equipment) bool { return e.AllowsArmour(p.SkillColumn) }
+			if code, ok := old.judged(anyClass(limits, armour), armour, WarnArmourNotAllowed); !ok {
+				out = append(out, Warning{p.ID, code})
 			}
 		case p.Category == CategoryWeapon && p.State == StateWielded:
-			if !weaponAllowedTo(limits, wielded(p, pieces)) {
-				out = append(out, Warning{p.ID, WarnWeaponNotAllowed})
+			w := wielded(p, pieces)
+			weapon := func(e classes.Equipment) bool { return e.AllowsWeapon(w) }
+			if code, ok := old.weapon(limits, weapon); !ok {
+				out = append(out, Warning{p.ID, code})
 			}
 			if p.WeaponType == "" {
 				out = append(out, Warning{p.ID, WarnWeaponTypeMissing})
@@ -87,17 +98,50 @@ func ClassWarnings(limits []classes.Equipment, pieces []Item) []Warning {
 	return out
 }
 
+// OldClasses are the equipment of a dual-class's frozen entries (ADR 0042
+// steps 13 and 16), Dormant before the crossover. The zero value is none. An
+// old class only adds what it allows: a blunt_only one restricts no weapon
+// of the active classes, and it adds no weapon to an active blunt_only class
+// (each action follows the limits of the class using it, step 13).
+type OldClasses struct {
+	Equipment []classes.Equipment
+	Dormant   bool
+}
+
+// judged is a piece's verdict: ok when the active classes allow it (allowed)
+// or an old class does past the crossover; dual_class_old_ability when an old
+// class allows it before the crossover (ADR 0042 step 13); code otherwise.
+func (old OldClasses) judged(allowed bool, allows func(classes.Equipment) bool, code string) (string, bool) {
+	switch {
+	case allowed:
+		return "", true
+	case !slices.ContainsFunc(old.Equipment, allows):
+		return code, false
+	case old.Dormant:
+		return WarnOldAbility, false
+	}
+	return "", true
+}
+
+// weapon is a wielded weapon's verdict (ADR 0042 steps 13 and 16.1,
+// classes.AllowedWithOld): allowed by the active classes, or by an old class
+// (dual_class_old_ability before the crossover); an active blunt_only class
+// decides alone, so an old class never lifts its limit, past the crossover too.
+func (old OldClasses) weapon(limits []classes.Equipment, allows func(classes.Equipment) bool) (string, bool) {
+	allowed, byOld := classes.AllowedWithOld(limits, old.Equipment, allows)
+	switch {
+	case !allowed:
+		return WarnWeaponNotAllowed, false
+	case byOld && old.Dormant:
+		return WarnOldAbility, false
+	}
+	return "", true
+}
+
 // anyClass reports whether one of limits allows what allows judges; no limit
 // at all is not judged (nothing warned).
 func anyClass(limits []classes.Equipment, allows func(classes.Equipment) bool) bool {
 	return len(limits) == 0 || slices.ContainsFunc(limits, allows)
-}
-
-// weaponAllowedTo is ADR 0042 step 16.1 (classes.AllowedTogether): a
-// blunt_only class (the cleric) restricts the weapon to its own list whatever
-// the other classes; otherwise the weapon is allowed when any class allows it.
-func weaponAllowedTo(limits []classes.Equipment, w classes.Weapon) bool {
-	return classes.AllowedTogether(limits, func(e classes.Equipment) bool { return e.AllowsWeapon(w) })
 }
 
 // SpellInArmour is ADR 0042 step 16.2: a spell of a class that allows no body
@@ -164,11 +208,26 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 			return nil, err
 		}
 	}
+	entries := c.Entries()
 	limits, err := s.limitsOf(c.ActiveClassIDs())
 	if err != nil {
 		return nil, err
 	}
-	return ClassWarnings(limits, items), nil
+	// ADR 0042 steps 13 and 16: a dual-class's frozen classes, dormant
+	// before the crossover. One the definitions do not know allows nothing
+	// more.
+	var frozen []string
+	for _, e := range entries {
+		if e.State == classes.EntryFrozen {
+			frozen = append(frozen, e.Class)
+		}
+	}
+	oldLimits, err := s.limitsOf(frozen)
+	if err != nil {
+		return nil, err
+	}
+	old := OldClasses{Equipment: oldLimits, Dormant: !classes.Crossed(entries)}
+	return ClassWarnings(limits, old, items), nil
 }
 
 // limitsOf is the equipment of the active classes (ADR 0040 step 1.6, ADR

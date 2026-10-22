@@ -4,9 +4,10 @@
 readings where the book is silent or differs from the triage's outline (Q1 to Q16) were put to the
 user and accepted as written on 2026-10-22 ("Decided with the user"). Step 1 (the class entries as the storage and wire shape, single-class
 characters only) is implemented as built (see "As built" under step 1). The multi-class steps (5 to 10,
-12, 14 to 17) are built 2026-10-22 (CRI-169, see each step's "As built"); creation and entering a
-multi-class character (steps 2 and 4) and the dual-class steps (3, 11, 13, the dual-class slots of
-15) are not. Amends [ADR 0030](0030-classes-and-races.md)
+12, 14 to 17) are built 2026-10-22 (CRI-169, see each step's "As built"); the dual-class
+computation (steps 8, 9, 11, 13, the dual-class slots of 15, the old class's spells and equipment
+of 14 and 16, the elf of 17) is built 2026-10-22 (CRI-170, each step's "As built"). Creation and
+entering a multi-class character (steps 2 and 4) and taking a new class (step 3) are not. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -247,6 +248,10 @@ bard 15 never).)_
    mage's row; at mage 10, as decided in Q5).
    _(As built, 2026-10-22, for a multi-class character: the lowest Table 53 value among the active entries
    (`charactersvc` `bestCore`). The dual-class crossover is not built (dual-class items).)_
+   _(As built, 2026-10-22, for a dual-class character: `bestCore` adds the frozen entries, each at
+   its left-at level, only once `classes.Crossed` holds (step 13). Test:
+   `TestTHAC0_Step8_DualClassNewClassUntilTheCrossover` (charactersvc: the elf, fighter left at 9,
+   uses the mage's 18 at mage 9 and the fighter's 12 at mage 10).)_
 
 9. **Saving throws** (amends ADR 0030 step 6). For each of the five categories, the best (lowest)
    target among the active entries at their realized levels (decided in triage; PHB multi/dual,
@@ -258,6 +263,8 @@ bard 15 never).)_
    better on breath and the mage on spells takes each best).
    _(As built, 2026-10-22, for a multi-class character: per category among the active entries, in the
    same `bestCore`.)_
+   _(As built, 2026-10-22, for a dual-class character: the same `bestCore` gate as step 8. Test:
+   `TestSaves_Step9_DualClassBestPerCategoryAfterTheCrossover` (charactersvc).)_
 
 ### Hit points
 
@@ -302,6 +309,15 @@ bard 15 never).)_
     Tests: `Roll_Step11_NoHitPointsUntilTheCrossover` (levelupsvc: a fighter 9 to mage 9 gains 0;
     mage 10 rolls a d4 plus Constitution, which at level 10 the wizard's step 7.1 still gives),
     `Roll_Step11_TheZeroLevelUpIsUndoable` (composition).
+    _(As built, 2026-10-22: each pending level of the active entry up to the highest frozen
+    `left_at_level` (`classes.MaxLeftAt`) is `NoHitPoints` (no die, no fixed gain; the wire's
+    pending level carries `noHitPoints`). Its roll takes the level with its other benefits (slots,
+    free spells), gains 0 and records `reason: dual_class_no_hit_points` in the `level_up` payload
+    and the answer; an entered die is refused with that code. Tests:
+    `TestDerive_Step11_NoHitPointsUntilTheCrossover` (charactersvc: the elf's mage 7 with mage 10's
+    XP owes 8 and 9 without hit points and 10 with the wizard's d4),
+    `TestRoll_Step11_NoHitPointsUntilTheCrossover` (levelupsvc),
+    `TestRoll_Step11_TheZeroLevelUpIsUndoable` (composition).)_
 
 ### Classes' abilities together
 
@@ -331,9 +347,15 @@ bard 15 never).)_
     available only to single-class fighters". So `Derived.Specializes` and the specialization pick
     need one active entry: a fighter/thief, the fighter first, does not specialize and its
     specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book is silent
-    on a dual-class character; its one active entry is read as single-class. Tests:
-    `Derive_Step12_OnlyASingleClassFighterSpecializes`,
-    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`.)_
+    on a dual-class character; its one active entry is read as single-class: `Derived.Specializes`
+    is that entry's own grant, never a frozen fighter's (the elf's mage does not specialize), and
+    a new specialization pick is the active class's. A specialization pick kept from an old class
+    that specializes survives a save and counts past the crossover only
+    (`skills.WeaponProficiencyOf` reads the stored entries, a frozen one at its left-at level).
+    Tests: `Derive_Step12_OnlyASingleClassFighterSpecializes`,
+    `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`,
+    `TestDerive_Step12_ADualClassSpecializesByItsActiveClass` (charactersvc),
+    `TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover` (skills).)_
 
 13. **The dual-class crossover and the old class's abilities.** The **crossover** is reached when
     the active entry's realized level is above every frozen entry's `left_at_level` (PHB
@@ -349,6 +371,54 @@ bard 15 never).)_
     armour; step 16).
     Tests: `DualClass_Step13_CrossoverAboveEveryLeftAtLevel` (domain: mage 9 after fighter 9 is
     before, mage 10 after), `Cast_Step13_AnOldClassSpellWarnsBeforeTheCrossover` (castsvc).
+    _(As built, 2026-10-22: `classes.Crossed` (the active entry's realized level above
+    `classes.MaxLeftAt`, true without a frozen entry) and `classes.Dormant` (a frozen entry before
+    it); the derived entry and each feature grant carry `Dormant` (domain only, not on the wire);
+    the code is `classes.WarnOldAbility`. Tests: `TestDualClass_Step13_CrossoverAboveEveryLeftAtLevel`
+    (classes), `TestDerive_Step13_TheOldClassIsDormantUntilTheCrossover` (charactersvc).
+    **Spells** (with step 14): a frozen spellcasting entry keeps its slots at its left-at level and
+    is a caster entry (`Derived.CasterEntry` / `Casters`, the active ones first, so an untagged slot
+    is an active entry's when one casts, else the frozen one's): it prepares in its own slots and
+    casts at its own level. A cast from a dormant entry answers and logs `warnings:
+    ["dual_class_old_ability"]` with `class`, the casting entry's class on a character of several
+    class entries; the cast's warnings are now in the logged payload (additive fields), so
+    `spell_in_armour` is logged too. The preparation itself is not warned: the cast is the use.
+    Tests: `TestCast_Step13_AnOldClassSpellWarnsBeforeTheCrossover` (castsvc: a mage left at 9, now a
+    cleric 5, casts at 9 from the mage's slot, warned on the answer and in the journal payload; past
+    the crossover not), `TestPrepare_Step13_TheOldClassPreparesInItsOwnSlots` (prepsvc).
+    **Equipment** (with step 16): `itemsvc.Warnings` also reads the frozen entries' equipment
+    (`itemsvc.OldClasses`): a piece the active classes do not allow but an old class does is not
+    warned past the crossover and warns `dual_class_old_ability` before it (instead of
+    `armour_not_allowed` / `weapon_not_allowed`; the AC card's armour warnings follow). An old class
+    only adds allowance (`classes.AllowedWithOld`): a frozen `blunt_only` class restricts no weapon
+    of the active ones, and each action follows the limits of the class using it, so an active
+    `blunt_only` class decides alone: a cleric who left the fighter at 9 is warned
+    `weapon_not_allowed` for a sword, past the crossover too (supervisor decision 2026-10-22,
+    reversing the first build's reading). The item warning carries the code only (no class: the
+    character's old classes are on its sheet). The weapon picks read the same rule: an old class
+    adds the types it may pick, before and after the crossover (a pick is not a use: the wielding
+    warns). Tests: `TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover` (itemsvc),
+    `TestWeaponPick_Step16_1_TheOldClassAllowsThePicks` (skills).
+    **Feature actions** (the user's default for Q9, 2026-10-22: the old ability's use is a warning
+    only). A figure the character has without choosing to use it is the active classes' own
+    before the crossover: the attack form's rate reads `Derived.ActiveGrant`, which skips a dormant
+    grant (the elf at mage 7 has no fighter 3/2, at mage 10 it has), and a kept specialization gives
+    no bonus (above, step 12). An action that uses the old class anyway is allowed and answers and
+    logs `warnings: ["dual_class_old_ability"]` (additive fields on each payload): an attack with a
+    backstab only a dormant entry grants or with a weapon only an old class allows (itemsvc's
+    warning on the piece, read only for a character with a dormant entry), a turn whose
+    `turn_undead` grant is dormant (read at the old class's level), and a thief skill check of a
+    set whose `rogue_skills` grant is dormant (`skills.SkillSet.Dormant`, domain only). Past the
+    crossover nothing warns and the old figures count (best of both). Tests:
+    `TestGetAttackForm_Step13_NoOldAttackRateBeforeTheCrossover`,
+    `TestResolveAttack_Step13_AnOldClassBackstabWarnsBeforeTheCrossover`,
+    `TestResolveAttack_Step13_AnOldClassWeaponWarnsBeforeTheCrossover` (combatsvc),
+    `TestTurn_Step13_AnOldClassTurnWarnsBeforeTheCrossover` (turnsvc),
+    `TestThiefSkill_Step13_AnOldClassSkillWarnsBeforeTheCrossover` (skillsvc),
+    `TestDerive_Step13_TheOldClassAddsNoFigureBeforeTheCrossover`,
+    `TestDerive_Step13_TheOldClassSkillSetIsDormantUntilTheCrossover` (charactersvc), and end to
+    end `TestCast_Step13_AnOldClassCastIsWarnedAndLogged` (composition). The web has no wording
+    for these warnings yet.)_
 
 14. **Spells: one progression per spellcasting entry** (amends ADR 0030 step 8). Each entry whose
     class has a `spell_progression` has its own slots (its table at its realized level, plus the
@@ -382,9 +452,10 @@ bard 15 never).)_
     rolls the d100 against the casting entry's chance only, so a cleric/mage's wizard spells roll
     none. Tests: `Derive_Step14_SpellFailurePerEntry` (charactersvc),
     `Cast_Step14_SpellFailureIsTheCastingEntrys` (castsvc). The spell lookup's "Mine" filter
-    (`spheresvc.SpellKeys`) holds the spells of every active spellcasting entry's source, each once
-    (a cleric/mage: the cleric's sphere spells within its slots and the stored spellbook). Test:
-    `Spheres_Step14_MineHoldsEveryCastingEntrysSpells` (spheresvc). The web does not yet send a class:
+    (`spheresvc.SpellKeys`) holds the spells of every spellcasting entry's source, a dual-class's
+    frozen one too, each once (a cleric/mage: the cleric's sphere spells within its slots and the
+    stored spellbook). Tests: `Spheres_Step14_MineHoldsEveryCastingEntrysSpells`,
+    `TestSpheres_Step14_MineHoldsTheOldClassSpells` (spheresvc). The web does not yet send a class:
     a cleric/mage prepares and casts only through the first entry from the UI.)_
 
 15. **Proficiency slots** (amends [ADR 0037](0037-proficiencies.md) step 3). The book (PHB
@@ -414,6 +485,15 @@ bard 15 never).)_
     (`skills.WeaponProficiencyOf`, read from the stored row's active entries) is the same smallest
     one: `WeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses` (a mage/fighter takes -2, a
     mage/thief -3). The dual-class slots are not built.)_
+    _(As built, 2026-10-22, the dual-class slots (Q14): `skills.ClassLevel.Frozen` marks a frozen
+    entry, passed at its left-at level (`Character.ProficiencyClasses`); the rate, penalty, in-group
+    cost, weapon picks and specialization read the active entries only. `FiguresOf` then sets the
+    first class's initial counts and adds each frozen entry's gained slots at its left-at level, so
+    the active entry adds `floor(L / #Levels)` and no second initial count; with two frozen entries,
+    only the first class's initial count is kept. A level-up's grants (`GrantsOf`) are the new
+    class's gained slots. Tests: `TestProficiencySlots_Step15_DualClassKeepsAndGains` (skills: the
+    elf, fighter left at 9, has 7 weapon and 6 non-weapon slots at mage 1, 8 and 9 at mage 10, the
+    mage's -5), `TestProficiencyClasses_Step15_TheOldClassKeptAtItsLeftAtLevel` (charactersvc).)_
 
 16. **Equipment limits together** (amends [ADR 0037](0037-proficiencies.md) step 7 and the warnings
     of [ADR 0033](0033-equipment.md) step 20; still warnings, never refusals, ADR 0033 step 20).
@@ -452,8 +532,8 @@ bard 15 never).)_
     first entry's. Test (skills, with the pick check): `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks`. Each derived entry
     carries `NoArmour` (its `armour` list is only `none`; test `Derive_Step16_2_NoArmourComesFromTheEquipment`).
     A cast whose spells are such an entry's (the slot's entry, else the first active spellcasting
-    entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never logged,
-    never refusing) while body armour other than `none` is worn, except an elf (race `elf`) in the
+    entry, step 14) reads the worn pieces and answers `warnings: ["spell_in_armour"]` (never
+    refusing; logged with the cast since the dual-class build, step 13) while body armour other than `none` is worn, except an elf (race `elf`) in the
     `elven_chain` column (still a race id in the code: the race trait is to come). Test:
     `Cast_Step16_2_WizardSpellInArmourWarns`. Not built: ADR 0043 step 18's `power_in_armour`.)_
     _(As built, 2026-10-22, 16.3: "the kind's `armour` list" is read as the skill class's equipment
@@ -483,6 +563,11 @@ bard 15 never).)_
     `Party_Step17_TheMultiClassCharacters` (charactersvc: the half-elf fighter 13/cleric 14 and the human
     thief 15/psionicist 15, the psionicist entry its level, THAC0 and saves only); the bard's golden
     files unchanged. The dual-class elf and the warnings come with their items.)_
+    _(As built, 2026-10-22, the dual-class elf: the party's real levels are recorded nowhere, so the
+    fixture is the ADR's own example, the fighter left at 9, then a mage 10 (past the crossover:
+    the fighter's THAC0 and saves where better, both classes' features, none dormant, the mage's
+    slots at 10) or a mage 7 (the mage's THAC0 and saves alone, the fighter's features dormant).
+    Test: `TestParty_Step17_TheDualClassElf` (charactersvc).)_
 
 ## Decided with the user (2026-10-22)
 

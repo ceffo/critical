@@ -192,3 +192,22 @@ func TestSpheres_Step14_MineHoldsEveryCastingEntrysSpells(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"bless", "chant", "produce_flame", "sleep"}, keys)
 }
+
+// ADR 0042 steps 13 and 14: a dual-class's frozen spellcasting entry casts
+// (warned before the crossover), so the "Mine" filter holds its spells too: a
+// mage left at 9, now a cleric 5, has the cleric's sphere spells and the
+// mage's spellbook (the code before listed the active entries only).
+func TestSpheres_Step14_MineHoldsTheOldClassSpells(t *testing.T) {
+	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
+		SpellSlots: map[int]int{1: 3, 2: 3, 3: 1},
+		Classes: []charactersvc.EntryDerived{
+			{Class: "mage", State: classes.EntryFrozen, RealizedLevel: 9, Casts: true, Dormant: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
+		},
+	}}
+	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
+	require.NoError(t, err)
+	keys, err := s.SpellKeys(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"sleep", "bless", "chant", "produce_flame"}, keys)
+}

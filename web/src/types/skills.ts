@@ -121,6 +121,9 @@ export interface SkillCheck {
    * logged before. `renewed`: it replaced an active one. */
   buff?: SkillCheckBuff;
   renewed?: boolean;
+  /** The check's class warnings, logged with it (ADR 0042 step 13: `dual_class_old_ability`, a
+   * dual-class's old class's skill before the crossover). Absent when none. */
+  warnings?: "dual_class_old_ability"[];
 }
 
 /** The buff a successful check put on (skillhdl CheckBuffDTO, the skill_check payload's `buff`):

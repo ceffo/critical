@@ -132,6 +132,18 @@ func (c *Character) ActiveClasses() skills.Classes {
 	return out
 }
 
+// StoredClasses are every entry of the stored row as the weapon picks read
+// them (no derived figure): the active ones at their realized level, a
+// dual-class's frozen ones at their left-at level (ADR 0042 steps 13 and
+// 15), so a kept specialization counts past the crossover.
+func (c *Character) StoredClasses() skills.Classes {
+	var out skills.Classes
+	for _, e := range c.Entries() {
+		out = append(out, skills.ClassLevel{Class: e.Class, Level: e.Level(), Frozen: e.State == classes.EntryFrozen})
+	}
+	return out
+}
+
 // ActiveClassIDs are the classes of the active entries of the stored row, in
 // order: what the class equipment warnings judge together (ADR 0042 step 16).
 func (c *Character) ActiveClassIDs() []string {
@@ -142,15 +154,14 @@ func (c *Character) ActiveClassIDs() []string {
 	return out
 }
 
-// ProficiencyClasses are the active entries as the proficiency pools read them
-// (ADR 0042 step 15): each class at its realized level, from the derived
+// ProficiencyClasses are the entries as the proficiency pools read them (ADR
+// 0042 step 15): each class at its realized level, a dual-class's frozen ones
+// at their left-at level and Frozen (their slots are kept), from the derived
 // block (Derived must be set).
 func (c *Character) ProficiencyClasses() skills.Classes {
-	var out skills.Classes
+	out := make(skills.Classes, 0, len(c.Derived.Classes))
 	for _, e := range c.Derived.Classes {
-		if e.State == classes.EntryActive {
-			out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel})
-		}
+		out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel, Frozen: e.State == classes.EntryFrozen})
 	}
 	return out
 }
@@ -299,16 +310,18 @@ type EntryDerived struct {
 	SpellFailure int
 	// LevelUp are the entry's pending levels (ADR 0042 step 7).
 	LevelUp LevelUp
+	// Dormant is a dual-class's frozen entry before the crossover (ADR 0042
+	// step 13): its features, spells and equipment may be used, each use
+	// warning dual_class_old_ability; its THAC0 and saves do not count.
+	Dormant bool
 }
 
 // CasterLevel is ADR 0042 step 14: the realized level of the first active
 // entry with a spell progression, the one whose slots SpellSlots are; the
 // realized level when no entry casts (a single-class character's).
 func (d *Derived) CasterLevel() int {
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts {
-			return e.RealizedLevel
-		}
+	if e, ok := d.CasterEntry(""); ok {
+		return e.RealizedLevel
 	}
 	return d.RealizedLevel
 }
@@ -319,6 +332,10 @@ type FeatureGrant struct {
 	Kind  string
 	Class string
 	Level int
+	// Dormant is a grant of a dual-class's frozen entry before the
+	// crossover (ADR 0042 step 13): usable, with the warning
+	// dual_class_old_ability.
+	Dormant bool
 }
 
 // Grant is the first grant of kind (ADR 0042 step 12), false when no entry
@@ -326,6 +343,25 @@ type FeatureGrant struct {
 func (d *Derived) Grant(kind string) (FeatureGrant, bool) {
 	for _, g := range d.Features {
 		if g.Kind == kind {
+			return g, true
+		}
+	}
+	return FeatureGrant{}, false
+}
+
+// HasDormant reports a dual-class before the crossover (ADR 0042 step 13):
+// an entry whose features, spells and equipment warn when used.
+func (d *Derived) HasDormant() bool {
+	return slices.ContainsFunc(d.Classes, func(e EntryDerived) bool { return e.Dormant })
+}
+
+// ActiveGrant is the first grant of kind that is not Dormant (ADR 0042 step
+// 13): a figure the character has without choosing to use it (the attacks
+// per round) is the active classes' own before the crossover, so a
+// dual-class's old class adds none until then. False when none grants it.
+func (d *Derived) ActiveGrant(kind string) (FeatureGrant, bool) {
+	for _, g := range d.Features {
+		if g.Kind == kind && !g.Dormant {
 			return g, true
 		}
 	}
@@ -368,28 +404,38 @@ func (d *Derived) FeatureClass(kind, fallback string) string {
 }
 
 // CasterEntry is the entry whose slots, preparation and caster level a
-// spell uses (ADR 0042 step 14): the active spellcasting entry of class, or
-// the first one when class is empty. False when there is none (a character
+// spell uses (ADR 0042 step 14): the spellcasting entry of class, or the
+// first one when class is empty (an active one before a frozen one). False when there is none (a character
 // with no derived entries: the caller falls back to the character's level).
 func (d *Derived) CasterEntry(class string) (EntryDerived, bool) {
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts && (class == "" || e.Class == class) {
+	for _, e := range d.casterEntries() {
+		if class == "" || e.Class == class {
 			return e, true
 		}
 	}
 	return EntryDerived{}, false
 }
 
-// Casters is the number of active spellcasting entries: above one, each
-// prepared slot names its entry (ADR 0042 step 14).
+// Casters is the number of spellcasting entries, a dual-class's frozen ones
+// included: above one, each prepared slot names its entry (ADR 0042 step 14).
 func (d *Derived) Casters() int {
-	n := 0
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts {
-			n++
+	return len(d.casterEntries())
+}
+
+// casterEntries are the spellcasting entries, the active ones first, then a
+// dual-class's frozen ones: a frozen entry keeps its spells at its left-at
+// level (ADR 0042 step 14) and casts them, with the warning
+// dual_class_old_ability while it is Dormant (step 13).
+func (d *Derived) casterEntries() []EntryDerived {
+	var out []EntryDerived
+	for _, state := range []classes.EntryState{classes.EntryActive, classes.EntryFrozen} {
+		for _, e := range d.Classes {
+			if e.State == state && e.Casts {
+				out = append(out, e)
+			}
 		}
 	}
-	return n
+	return out
 }
 
 // Groups are the class groups of the active entries, in entry order without
@@ -450,7 +496,11 @@ type PendingLevel struct {
 	Level     int
 	Die       int
 	FixedGain int
-	Grants    skills.LevelGrants
+	// NoHitPoints is a dual-class's level not above its old class's (ADR
+	// 0042 step 11): taken with its other benefits, it gains no hit points
+	// (Die and FixedGain 0).
+	NoHitPoints bool
+	Grants      skills.LevelGrants
 	// FreeSpells are the free spells the level grants a mage (ADR 0030 step
 	// 20.8): one per spell level it opens, none above the Intelligence's
 	// maximum. Set by the service; nil for none.

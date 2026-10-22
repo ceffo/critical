@@ -177,6 +177,9 @@ type CheckDTO struct {
 	// one (step 20.3).
 	Buff    *CheckBuffDTO `json:"buff,omitempty"`
 	Renewed bool          `json:"renewed,omitempty"`
+	// Warnings are the check's class warnings (ADR 0042 step 13:
+	// dual_class_old_ability); absent when none.
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // CheckBuffDTO is the buff a check put on: its row id, stored name, the
@@ -239,7 +242,7 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	out := CheckDTO{
 		ID: c.ID, Kind: string(c.Kind), Die: c.Die, Roll: c.Roll, Target: c.Target,
 		Adjustment: c.Adjustment, AdjustmentReason: c.AdjustmentReason, AdjustedTarget: c.AdjustedTarget,
-		Success: c.Success, RolledSuccess: c.RolledSuccess, LogEntryID: c.LogEntryID,
+		Success: c.Success, RolledSuccess: c.RolledSuccess, LogEntryID: c.LogEntryID, Warnings: c.Warnings,
 	}
 	if c.Kind == skillsvc.KindProficiency {
 		score, mod, extra := c.AbilityScore, c.Modifier, c.ExtraSlots

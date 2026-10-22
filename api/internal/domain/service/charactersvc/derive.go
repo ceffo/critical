@@ -86,8 +86,11 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 		return Derived{}, err
 	}
 	d := Derived{Classes: make([]EntryDerived, len(entries))}
+	es := derivedEntries(entries)
 	for i := range entries {
 		d.Classes[i] = entries[i].out
+		// ADR 0042 step 13: a frozen entry before the crossover.
+		d.Classes[i].Dormant = classes.Dormant(es, entries[i].entry)
 	}
 	// The figures that are one per entry are the first active entry's here
 	// (the mirror of Character.Class): the XP progress, the group of a
@@ -105,14 +108,11 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 	}
 	// ADR 0042 step 14: each spellcasting entry has its own slots and caster
 	// level (EntryDerived); the character's slots are the first active
-	// spellcasting entry's (Derived.CasterLevel() is its level), the first
-	// active entry's when none casts.
+	// spellcasting entry's (Derived.CasterLevel() is its level), else a
+	// dual-class's frozen one's, the first active entry's when none casts.
 	d.SpellSlots = primary.out.SpellSlots
-	for _, e := range entries {
-		if e.entry.State == classes.EntryActive && e.out.Casts {
-			d.SpellSlots = e.out.SpellSlots
-			break
-		}
+	if e, ok := d.CasterEntry(""); ok {
+		d.SpellSlots = e.SpellSlots
 	}
 	// ADR 0006 step 9: Table 5's magical defence adjustment at the sheet's
 	// Wisdom, an ability rule every class and race gets (step 9.2).
@@ -142,15 +142,7 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 // entry's level, read with its params and at that level. A figure that is one
 // per character takes the first entry granting it.
 func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, rules Rules) error {
-	// Each entry at the level it was derived at (step 7.5: a character
-	// being created has no realized level yet, its target's).
-	es := make([]classes.Entry, len(entries))
-	for i, e := range entries {
-		es[i] = e.entry
-		if e.entry.State == classes.EntryActive {
-			es[i].RealizedLevel = e.out.RealizedLevel
-		}
-	}
+	es := derivedEntries(entries)
 	def := func(id string) (classes.Class, error) {
 		for _, e := range entries {
 			if e.def.ID == id {
@@ -165,7 +157,9 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 			return fmt.Errorf("derive %s: %w", kind, err)
 		}
 		for _, g := range gs {
-			d.Features = append(d.Features, FeatureGrant{Kind: kind, Class: g.Class.ID, Level: g.Level})
+			d.Features = append(d.Features, FeatureGrant{
+				Kind: kind, Class: g.Class.ID, Level: g.Level, Dormant: dormant(es, g.Class.ID),
+			})
 		}
 	}
 	grant := func(kind string) (classes.Grant, bool) {
@@ -206,9 +200,16 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 	}
 	// ADR 0042 as built (PHB p.52): specialization is a single-class
 	// fighter's; a multi-class character never specializes, whichever entry
-	// grants it. A dual-class's one active entry may.
-	_, d.Specializes = grant(classes.KindWeaponSpecialization)
-	d.Specializes = d.Specializes && len(classes.Active(es)) == 1
+	// grants it. A dual-class's one active entry is read as single-class:
+	// its own grant, never its old class's (a kept specialization pick is
+	// skills.WeaponProficiencyOf's).
+	if act := classes.Active(es); len(act) == 1 {
+		gs, err := classes.Grants(act, def, classes.KindWeaponSpecialization)
+		if err != nil {
+			return fmt.Errorf("derive %s: %w", classes.KindWeaponSpecialization, err)
+		}
+		d.Specializes = len(gs) > 0
+	}
 	if g, ok := grant(classes.KindSpellbook); ok {
 		if d.Spellbook, err = spellbookRules(c, g, rules); err != nil {
 			return err
@@ -257,7 +258,7 @@ func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error)
 			// (ADR 0042 steps 5.2 and 7).
 			ed.RealizedLevel = e.Level()
 			ed.LevelUp = LevelUp{Pending: []PendingLevel{}}
-		} else if err := ed.setLevels(e, shares, rules); err != nil {
+		} else if err := ed.setLevels(e, shares, classes.MaxLeftAt(entries), rules); err != nil {
 			return nil, err
 		}
 		// Step 8 per entry: the slot table the class's spell_progression
@@ -272,8 +273,10 @@ func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error)
 
 // setLevels sets an active entry's target and realized levels, its next
 // threshold and its pending levels; shares is the number of active entries
-// (the hit point divisor, ADR 0042 step 10.2).
-func (ed *EntryDerived) setLevels(e classes.Entry, shares int, rules Rules) error {
+// (the hit point divisor, ADR 0042 step 10.2) and leftAt the highest frozen
+// entry's left-at level (0 for none: the levels up to it gain no hit points,
+// ADR 0042 step 11).
+func (ed *EntryDerived) setLevels(e classes.Entry, shares, leftAt int, rules Rules) error {
 	target, err := rules.LevelFor(e.Class, ed.XP)
 	if err != nil {
 		return fmt.Errorf("derive %s level: %w", e.Class, err)
@@ -292,7 +295,7 @@ func (ed *EntryDerived) setLevels(e classes.Entry, shares int, rules Rules) erro
 		}
 		ed.NextLevelXP = &next
 	}
-	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, rules)
+	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, leftAt, rules)
 	return err
 }
 
@@ -313,6 +316,19 @@ func EntryXP(e classes.Entry, awards []int, shares int) int {
 	return xp
 }
 
+// derivedEntries are the entries at the levels they were derived at (step
+// 7.5: a character being created has no realized level yet, its target's).
+func derivedEntries(entries []entryCalc) []classes.Entry {
+	es := make([]classes.Entry, len(entries))
+	for i, e := range entries {
+		es[i] = e.entry
+		if e.entry.State == classes.EntryActive {
+			es[i].RealizedLevel = e.out.RealizedLevel
+		}
+	}
+	return es
+}
+
 // Share is one active entry's part of an award (ADR 0042 step 5.1): the
 // amount divided by the number of active entries, rounded down, the remainder
 // lost (Q3).
@@ -326,11 +342,14 @@ func Share(amount, shares int) int {
 // bestCore is ADR 0042 steps 8 and 9 (amending ADR 0030 steps 5 and 6): the
 // lowest Table 53 THAC0 and, category by category, the lowest Table 60
 // target among the active entries, each at its realized level (Q6: two
-// classes' rows may mix).
+// classes' rows may mix). A dual-class character's frozen entries count, at
+// their left-at levels, only once the crossover is reached (step 13, Q5);
+// before it the active entry's rows alone.
 func bestCore(entries []entryCalc, rules Rules) (int, Saves, error) {
+	crossed := classes.Crossed(derivedEntries(entries))
 	var best *core
 	for _, e := range entries {
-		if e.entry.State != classes.EntryActive {
+		if e.entry.State != classes.EntryActive && !crossed {
 			continue
 		}
 		k, err := coreAt(e.entry.Class, e.out.Group, e.out.RealizedLevel, rules)
@@ -373,9 +392,12 @@ func spellbookRules(c *Character, g classes.Grant, rules Rules) (*SpellbookRules
 // pending for each level above the realized one up to the target, rolled
 // lowest first; each is the group's hit die up to its name level (step 7.1),
 // the fixed gain above it (step 7.2), divided by shares, the character's
-// number of classes, when it is rolled (ADR 0042 step 10). A target under the
-// realized level (an XP correction, step 7.4) removes nothing: it is flagged.
-func levelUp(class, group string, realized, target, shares int, rules Rules) (LevelUp, error) {
+// number of classes, when it is rolled (ADR 0042 step 10). A dual-class's
+// level up to leftAt, the highest frozen entry's left-at level, gains no hit
+// points (ADR 0042 step 11: no die, no fixed gain); the first level above it
+// is step 7.1 or 7.2 for the new class. A target under the realized level (an
+// XP correction, step 7.4) removes nothing: it is flagged.
+func levelUp(class, group string, realized, target, shares, leftAt int, rules Rules) (LevelUp, error) {
 	l := LevelUp{Pending: []PendingLevel{}, RealizedAboveTarget: realized > target}
 	if realized >= target {
 		return l, nil
@@ -387,7 +409,9 @@ func levelUp(class, group string, realized, target, shares int, rules Rules) (Le
 	// Step 7.5: level 1's hit points are entered, never rolled.
 	for n := max(realized+1, 2); n <= target; n++ {
 		p := PendingLevel{Class: class, Level: n, Classes: shares}
-		if n <= hd.NameLevel {
+		if n <= leftAt {
+			p.NoHitPoints = true
+		} else if n <= hd.NameLevel {
 			p.Die = hd.Die
 		} else {
 			p.FixedGain = hd.GainAfter
@@ -492,6 +516,9 @@ func (d *Derived) SetSkillFigures(t skills.SkillTables, def func(string) (classe
 		if err != nil {
 			return fmt.Errorf("skill figures: %w", err)
 		}
+		for i := range got {
+			got[i].Dormant = g.Dormant // ADR 0042 step 13
+		}
 		sets = append(sets, got...)
 	}
 	d.SkillSets = sets
@@ -524,4 +551,15 @@ func (d *Derived) setSpellFailure(c *Character, es []classes.Entry, def func(str
 		}
 	}
 	return nil
+}
+
+// dormant is ADR 0042 step 13 for the entry of class among es: a frozen
+// entry before the crossover, whose use warns dual_class_old_ability.
+func dormant(es []classes.Entry, class string) bool {
+	for _, e := range es {
+		if e.Class == class {
+			return classes.Dormant(es, e)
+		}
+	}
+	return false
 }

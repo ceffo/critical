@@ -1693,6 +1693,8 @@
       "liftHelp": "Waive the race's class restriction for a character with several classes. A single-class character is not affected.",
       "multiclassAnyRace": "Multi-class: any race",
       "dualclassAnyRace": "Dual-class: any race",
+      "weaponHelp": "Let a character with several classes use any weapon its other classes allow, even if one of them is limited to blunt weapons (the cleric). Off by default. Weapon specialization is not changed.",
+      "multiclassAnyWeapon": "Multi-class: any weapon",
       "saved": "Saved.",
       "levelLimits": "Level limits",
       "levelLimitsMode": {

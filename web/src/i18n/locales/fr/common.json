@@ -1387,7 +1387,8 @@
       "equipment_state": "Équipement",
       "ac_override": "CA",
       "spell_add": "Grimoire",
-      "psp_recovery": "Récupération de PFP"
+      "psp_recovery": "Récupération de PFP",
+      "psionic_pick": "Pouvoirs connus"
     },
     "status": {
       "active": "Actif",
@@ -1613,6 +1614,9 @@
     "skillPoints": {
       "text": "Points de talent : {{changes}}",
       "change": "{{name}} {{from}} → {{to}}"
+    },
+    "psionicPick": {
+      "text": "Pouvoirs connus : {{from}} → {{to}} choix"
     },
     "skillArmor": {
       "text": "Armure des talents : {{from}} → {{to}}"

@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -229,4 +230,58 @@ func TestKnownPowers_Step9_DerivedBesideThePSPPool(t *testing.T) {
 	assert.Equal(t, psionics.Used{Disciplines: 1, Sciences: 1, Devotions: 2, DefenceModes: 1}, c.Derived.Powers.Used)
 	assert.Equal(t, "telepathy", c.Derived.Powers.Primary)
 	assert.Equal(t, picks, c.Derived.Powers.Picks)
+}
+
+// Step 9: the player saves the whole list; it is one psionic_pick entry,
+// undone and redone exactly; a list over Table 4 is refused and writes
+// nothing; a character with no psionics entry is refused.
+func TestKnownPowers_Step9_SaveUndoRedoAndRefusal(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicist(t)
+	picks := []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"},
+		{Kind: psionics.PickPower, ID: "contact"},
+	}
+	k, err := bs.Psionics.SetKnownPowers(ctx, id, picks)
+	require.NoError(t, err)
+	assert.Equal(t, "telepathy", k.Primary)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Devotions: 1}, k.Used)
+	stored := func() []psionics.Pick {
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		return c.Derived.Powers.Picks
+	}
+	assert.Equal(t, picks, stored())
+
+	log, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, log, 1)
+	assert.Equal(t, actionlog.KindPsionicPick, log[0].Kind)
+
+	// Over the allowance: nothing written, nothing logged.
+	over := make([]psionics.Pick, 0, 6)
+	for _, d := range []string{"telepathy", "clairsentience", "psychokinesis", "psychometabolism", "psychoportation", "metapsionics"} {
+		over = append(over, psionics.Pick{Kind: psionics.PickDiscipline, ID: d})
+	}
+	_, err = bs.Psionics.SetKnownPowers(ctx, id, over)
+	require.Error(t, err)
+	assert.Equal(t, picks, stored())
+
+	_, err = bs.Log.Undo(ctx, id, log[0].ID)
+	require.NoError(t, err)
+	assert.Empty(t, stored())
+	redoTop(t, bs, id)
+	assert.Equal(t, picks, stored())
+
+	m := memory.New()
+	other, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, other.Close(ctx)) })
+	fid, err := m.AddCharacter(ctx, charactersvc.Character{
+		Name: "Fighter", Race: "human", Class: "fighter", RealizedLevel: 3, Str: 12, Dex: 12, Con: 12, Int: 12, Wis: 12, Cha: 12, HPMax: 20,
+		Classes: []classes.Entry{classes.SingleEntry("fighter", 3, 0)},
+	})
+	require.NoError(t, err)
+	_, err = other.Psionics.SetKnownPowers(ctx, fid, nil)
+	assert.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
 }

@@ -1387,7 +1387,8 @@
       "equipment_state": "Equipment",
       "ac_override": "AC",
       "spell_add": "Spellbook",
-      "psp_recovery": "PSP recovery"
+      "psp_recovery": "PSP recovery",
+      "psionic_pick": "Known powers"
     },
     "status": {
       "active": "Active",
@@ -1613,6 +1614,9 @@
     "skillPoints": {
       "text": "Skill points: {{changes}}",
       "change": "{{name}} {{from}} → {{to}}"
+    },
+    "psionicPick": {
+      "text": "Known powers: {{from}} → {{to}} picks"
     },
     "skillArmor": {
       "text": "Skill armour: {{from}} → {{to}}"

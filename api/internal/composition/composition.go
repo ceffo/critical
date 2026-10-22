@@ -79,7 +79,8 @@ type BackingServices struct {
 	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	// Powers serves the psionic powers catalogue from memory (ADR 0043 step 8).
 	Powers powersvc.SVC
-	// Psionics recovers PSPs over hours of an activity (ADR 0043 step 6).
+	// Psionics recovers PSPs over hours of an activity (ADR 0043 step 6) and
+	// saves the known powers (step 9).
 	Psionics psionicsvc.SVC
 	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
 	ProficiencyDescriptions profdescsvc.SVC
@@ -390,7 +391,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Rest, err); err != nil {
 		return nil, err
 	}
-	bs.Psionics, err = psionicsvc.New(ruleTables, logSvc)
+	bs.Psionics, err = psionicsvc.New(psionicsvc.Deps{
+		Rates: ruleTables, Log: logSvc, Characters: charSvc, Picks: characterDAL,
+		Book: psionics.NewBook(artifact.Disciplines, artifact.Powers), Tx: tx,
+	})
 	if err := bs.add(bs.Psionics, err); err != nil {
 		return nil, err
 	}

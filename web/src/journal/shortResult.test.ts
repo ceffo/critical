@@ -171,6 +171,15 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "PSPs recovered",
     fr: "PFP récupérés",
   },
+  psionic_pick: {
+    e: entry("psionic_pick", {
+      before: { picks: [] },
+      after: { picks: [{ kind: "discipline", id: "telepathy" }] },
+    }),
+    value: null,
+    en: "Known powers",
+    fr: "Pouvoirs connus",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

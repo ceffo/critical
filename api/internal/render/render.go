@@ -12,6 +12,7 @@ import (
 	"net/http"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -23,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -82,6 +84,14 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 	var be *domain.BudgetError
 	if errors.As(err, &be) {
 		body["field"], body["spent"], body["limit"] = be.Field, be.Spent, be.Limit
+	}
+	// A known-powers refusal (ADR 0043 step 9) carries its own code and the
+	// figures the web words: the power or discipline, the slot kind and the
+	// count against the limit.
+	var rf *psionics.Refusal
+	if errors.As(err, &rf) {
+		body["power"], body["discipline"] = rf.Power, rf.Discipline
+		body["slot"], body["count"], body["limit"] = rf.Slot, rf.Count, rf.Limit
 	}
 	JSON(ctx, w, status, body)
 }
@@ -218,6 +228,10 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrRedoChanged, status: http.StatusConflict, code: "log_redo_changed"},
 	{target: actionlogsvc.ErrNothingToRedo, status: http.StatusConflict, code: "nothing_to_redo"},
 	{target: actionlogsvc.ErrSnapshotNotReencoded, status: http.StatusConflict, code: "snapshot_not_reencoded"},
+	// ADR 0043 step 9: a list of known powers over the rules (its code is the
+	// refusal's own, set in mapError) and a save for a character with no psionics.
+	{target: psionics.ErrRefused, status: http.StatusConflict, code: "psionic_refused"},
+	{target: psionicsvc.ErrNotPsionicist, status: http.StatusConflict, code: "not_a_psionicist"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},
 }
@@ -236,10 +250,16 @@ func mapError(err error) (int, string, string) {
 	}
 	for _, m := range mappings {
 		if errors.Is(err, m.target) {
-			if m.message != nil {
-				return m.status, m.code, m.message(err)
+			code := m.code
+			// A known-powers refusal is coded by the rule it broke.
+			var rf *psionics.Refusal
+			if errors.As(err, &rf) {
+				code = rf.Code
 			}
-			return m.status, m.code, err.Error()
+			if m.message != nil {
+				return m.status, code, m.message(err)
+			}
+			return m.status, code, err.Error()
 		}
 	}
 	return http.StatusInternalServerError, "internal", err.Error()

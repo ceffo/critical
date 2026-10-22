@@ -24,6 +24,7 @@ export const STATE_FAMILIES = [
   "class_entries",
   "initiative",
   "items",
+  "known_powers",
   "proficiencies",
   "realized_level",
   "round",
@@ -94,6 +95,8 @@ export const INVALIDATES = {
   // Read with the round.
   initiative: ["round"],
   items: ITEM_SLICES,
+  // The known powers are served in the character's derived block (ADR 0043 step 9).
+  known_powers: ["character"],
   // The picks' checks are skills; the sheet carries the slots and warns (ADR 0037 steps 11 and 12).
   // A weapon is specialized by its type's pick, so the pieces and the attack form follow (step 9).
   proficiencies: ["skills", "character", "items", "weapons"],

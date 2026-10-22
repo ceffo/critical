@@ -410,6 +410,28 @@ export const skillArmorKind: KindView<{ before?: string; after: string }> = {
   },
 };
 
+/** A psionicist's known powers saved (psionicsvc, ADR 0043 step 9): the picks before and after. */
+interface PsionicPickPayload {
+  before: { picks: unknown[] };
+  after: { picks: unknown[] };
+}
+
+export const psionicPickKind: KindView<PsionicPickPayload> = {
+  decode(e) {
+    const p = e.payload as Partial<PsionicPickPayload> | null;
+    return p && Array.isArray(p.before?.picks) && Array.isArray(p.after?.picks)
+      ? (p as PsionicPickPayload)
+      : null;
+  },
+  icon: ListNumbers,
+  // "Known powers: 2 → 3 picks".
+  text: (p, { t }) =>
+    t("log.psionicPick.text", {
+      from: p.before.picks.length,
+      to: p.after.picks.length,
+    }),
+};
+
 /** The AC override after the change; null once cleared (acsvc, ADR 0033 step 13). */
 interface AcOverridePayload {
   after?: { value: number; label?: string } | null;

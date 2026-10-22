@@ -266,6 +266,12 @@ const KindSkillPoints Kind = "skill_points"
 // nothing is rolled.
 const KindProficiencies Kind = "proficiencies"
 
+// KindPsionicPick is a save of a psionicist's known powers (psionicsvc, ADR
+// 0043 step 9): the list of picks before and after. Its "known_powers"
+// snapshot carries the list, so popping it gives it back. Not one of
+// RollKinds: nothing is rolled.
+const KindPsionicPick Kind = "psionic_pick"
+
 // KindSkillArmor is a thief changing the armour it wears for its skills
 // (charactersvc, ADR 0030 step 1): the armour before and after. Its
 // "skill_armor" snapshot carries the armour, so popping it gives it back and

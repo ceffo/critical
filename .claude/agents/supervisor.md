@@ -237,7 +237,7 @@ likely involved, any user constraint, and **`review: yes|no`**:
 **Reusing an idle developer.** Reuse only if ALL hold: its PR is open or merged and nothing of its is
 in rework; its context is under 150k tokens (gauge in "Token budget"); same model needed; the new item is in the same area.
 Otherwise close it and start fresh: a stale big context is re-sent every turn and costs more than a
-clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 150k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
+clean start. A reused developer keeps its old worktree as its cwd: never remove that worktree; switch it to the new branch instead (`git -C <old-worktree> switch -c <branch> origin/<db>` once its PR merged), or the agent loses its cwd (sup-50). A reused agent keeps its herdr name (`dev-<old-id>`): prompt it by that name (sup-64 prompted a non-existent `dev-<new-id>`). An item with `review: yes` always gets a fresh developer for its post-review round, with a self-contained brief (round-1 report + review path): Opus developers on risky items passed 150k in round 1 every time (sup-53: 241k-315k). Keep `dev-<id>` for the whole item: every later round is a new prompt to it. Start a new
 developer on the same worktree only if the original's session is gone, with full context in the brief.
 
 ## 3. When a developer reports
@@ -500,7 +500,7 @@ with the default you apply meanwhile; never "still open, see above". **The list 
 `.claude/scripts/pending-questions.sh`, never from memory**: it prints every open tracker item
 labelled `needs-info` or `question` (with its "Questions" section) and the ledger's own
 pending questions. Run it before each reply that ends a turn; restate every line it prints in plain
-words (no item ids). Write "No questions pending" only when it prints nothing. An item waiting on
+words (no item ids). **Each question stands on its own**: the user never reads agent tabs, so it says in two or three plain sentences what the thing is, where it came from, why it matters, and what each answer would do; a ledger question is written that way when you add it (user, 2026-10-22: "you list me questions with ZERO context ... i can't dig the information deep in other agents' screen"). Write "No questions pending" only when it prints nothing. An item waiting on
 the user is a question, whatever you call it ("held", "later", "parked", "needs-info"): when the
 user defers something ("later", "until we figure out X"), label it `needs-info` and give it a
 "## Questions" section in its description (`save_issue`; the script reads the description, a comment

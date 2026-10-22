@@ -29,7 +29,7 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type xpSvc interface {
 	Get(ctx context.Context, characterID int64) (*xpsvc.Ledger, error)
-	Preview(base int, bonus bool) (xpsvc.Amount, error)
+	Preview(ctx context.Context, characterID int64, base int, bonus bool) (xpsvc.Amount, error)
 	Add(ctx context.Context, characterID int64, in xpsvc.EntryInput) (*xpsvc.Ledger, error)
 	Update(ctx context.Context, characterID, entryID int64, p xpsvc.EntryPatch) (*xpsvc.Ledger, error)
 	Delete(ctx context.Context, characterID, entryID int64) (*xpsvc.Ledger, error)
@@ -37,16 +37,11 @@ type xpSvc interface {
 
 // RegisterRoutes wires the XP endpoints of the current character onto r.
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc xpsvc.SVC) {
+	r.Get("/api/xp/preview", render.Handle(Preview(charID, svc)))
 	r.Get("/api/xp", render.Handle(Get(charID, svc)))
 	r.Post("/api/xp", render.Handle(Add(charID, svc)))
 	r.Patch("/api/xp/{id}", render.Handle(Update(charID, svc)))
 	r.Delete("/api/xp/{id}", render.Handle(Delete(charID, svc)))
-}
-
-// RegisterSharedRoutes wires the XP preview, a computation on no character's
-// data, onto r.
-func RegisterSharedRoutes(r Router, svc xpsvc.SVC) {
-	r.Get("/api/xp/preview", render.Handle(Preview(svc)))
 }
 
 // AmountDTO is what one entry adds.
@@ -54,6 +49,23 @@ type AmountDTO struct {
 	Base        int `json:"base"`
 	BonusAmount int `json:"bonusAmount"`
 	Total       int `json:"total"`
+	// Split is the total shared between a multi-class character's classes
+	// (ADR 0042 step 5.1); absent for one class.
+	Split []ClassAmountDTO `json:"split,omitempty"`
+}
+
+// ClassAmountDTO is one class entry's share of an award.
+type ClassAmountDTO struct {
+	Class  string `json:"class"`
+	Amount int    `json:"amount"`
+}
+
+func splitDTO(in []xpsvc.ClassAmount) []ClassAmountDTO {
+	var out []ClassAmountDTO
+	for _, s := range in {
+		out = append(out, ClassAmountDTO{Class: s.Class, Amount: s.Amount})
+	}
+	return out
 }
 
 // EntryDTO is one ledger entry; bonus is whether the +10% applies,
@@ -67,6 +79,9 @@ type EntryDTO struct {
 	Bonus       bool   `json:"bonus"`
 	BonusAmount int    `json:"bonusAmount"`
 	Total       int    `json:"total"`
+	// Split is the award's total shared between a multi-class character's
+	// classes; absent for one class.
+	Split []ClassAmountDTO `json:"split,omitempty"`
 }
 
 // LevelDTO is one level of Table 25; status is past, current, next or ahead.
@@ -111,7 +126,7 @@ func ToDTO(l *xpsvc.Ledger) LedgerDTO {
 	for _, e := range l.Entries {
 		out.Entries = append(out.Entries, EntryDTO{
 			ID: e.ID, Date: e.Date, Session: e.Session, Reason: e.Reason,
-			Base: e.Base, Bonus: e.Bonus, BonusAmount: e.BonusAmount, Total: e.Total,
+			Base: e.Base, Bonus: e.Bonus, BonusAmount: e.BonusAmount, Total: e.Total, Split: splitDTO(e.Split),
 		})
 	}
 	return out
@@ -130,7 +145,7 @@ func Get(charID CharacterIDFunc, svc xpSvc) render.HandlerFunc {
 }
 
 // Preview returns what an entry would add: ?base=N&bonus=true|false.
-func Preview(svc xpSvc) render.HandlerFunc {
+func Preview(charID CharacterIDFunc, svc xpSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		q := r.URL.Query()
 		base, err := strconv.Atoi(q.Get("base"))
@@ -143,11 +158,11 @@ func Preview(svc xpSvc) render.HandlerFunc {
 				return render.BadRequestError("bonus must be true or false")
 			}
 		}
-		a, err := svc.Preview(base, bonus)
+		a, err := svc.Preview(r.Context(), charID(r), base, bonus)
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, AmountDTO{Base: a.Base, BonusAmount: a.BonusAmount, Total: a.Total})
+		render.OK(r.Context(), w, AmountDTO{Base: a.Base, BonusAmount: a.BonusAmount, Total: a.Total, Split: splitDTO(a.Split)})
 		return nil
 	}
 }

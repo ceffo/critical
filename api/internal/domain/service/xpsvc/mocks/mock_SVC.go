@@ -340,9 +340,9 @@ func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_M
 	return _c
 }
 
-// Preview provides a mock function with given fields: base, bonus
-func (_m *MockSVC) Preview(base int, bonus bool) (xpsvc.Amount, error) {
-	ret := _m.Called(base, bonus)
+// Preview provides a mock function with given fields: ctx, characterID, base, bonus
+func (_m *MockSVC) Preview(ctx context.Context, characterID int64, base int, bonus bool) (xpsvc.Amount, error) {
+	ret := _m.Called(ctx, characterID, base, bonus)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Preview")
@@ -350,17 +350,17 @@ func (_m *MockSVC) Preview(base int, bonus bool) (xpsvc.Amount, error) {
 
 	var r0 xpsvc.Amount
 	var r1 error
-	if rf, ok := ret.Get(0).(func(int, bool) (xpsvc.Amount, error)); ok {
-		return rf(base, bonus)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, bool) (xpsvc.Amount, error)); ok {
+		return rf(ctx, characterID, base, bonus)
 	}
-	if rf, ok := ret.Get(0).(func(int, bool) xpsvc.Amount); ok {
-		r0 = rf(base, bonus)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, bool) xpsvc.Amount); ok {
+		r0 = rf(ctx, characterID, base, bonus)
 	} else {
 		r0 = ret.Get(0).(xpsvc.Amount)
 	}
 
-	if rf, ok := ret.Get(1).(func(int, bool) error); ok {
-		r1 = rf(base, bonus)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, bool) error); ok {
+		r1 = rf(ctx, characterID, base, bonus)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -374,15 +374,17 @@ type MockSVC_Preview_Call struct {
 }
 
 // Preview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
 //   - base int
 //   - bonus bool
-func (_e *MockSVC_Expecter) Preview(base interface{}, bonus interface{}) *MockSVC_Preview_Call {
-	return &MockSVC_Preview_Call{Call: _e.mock.On("Preview", base, bonus)}
+func (_e *MockSVC_Expecter) Preview(ctx interface{}, characterID interface{}, base interface{}, bonus interface{}) *MockSVC_Preview_Call {
+	return &MockSVC_Preview_Call{Call: _e.mock.On("Preview", ctx, characterID, base, bonus)}
 }
 
-func (_c *MockSVC_Preview_Call) Run(run func(base int, bonus bool)) *MockSVC_Preview_Call {
+func (_c *MockSVC_Preview_Call) Run(run func(ctx context.Context, characterID int64, base int, bonus bool)) *MockSVC_Preview_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int), args[1].(bool))
+		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(bool))
 	})
 	return _c
 }
@@ -392,7 +394,7 @@ func (_c *MockSVC_Preview_Call) Return(_a0 xpsvc.Amount, _a1 error) *MockSVC_Pre
 	return _c
 }
 
-func (_c *MockSVC_Preview_Call) RunAndReturn(run func(int, bool) (xpsvc.Amount, error)) *MockSVC_Preview_Call {
+func (_c *MockSVC_Preview_Call) RunAndReturn(run func(context.Context, int64, int, bool) (xpsvc.Amount, error)) *MockSVC_Preview_Call {
 	_c.Call.Return(run)
 	return _c
 }

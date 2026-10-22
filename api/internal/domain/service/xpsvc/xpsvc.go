@@ -23,9 +23,10 @@ type SVC interface {
 	domain.Service
 	// Get returns the ledger with its totals and progress.
 	Get(ctx context.Context, characterID int64) (*Ledger, error)
-	// Preview returns what an entry of base XP would add, without writing.
-	// A *domain.FieldError for an invalid base.
-	Preview(base int, bonus bool) (Amount, error)
+	// Preview returns what an entry of base XP would add to the character,
+	// shared between its classes, without writing. A *domain.FieldError for
+	// an invalid base.
+	Preview(ctx context.Context, characterID int64, base int, bonus bool) (Amount, error)
 	// Add records an award dated today. A *domain.FieldError for invalid input.
 	Add(ctx context.Context, characterID int64, in EntryInput) (*Ledger, error)
 	// Update changes the fields set in the patch. ErrEntryNotFound,

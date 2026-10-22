@@ -31,6 +31,7 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	for i := range entries {
 		a := EntryAmount(entries[i].Base, entries[i].Bonus)
 		entries[i].BonusAmount, entries[i].Total = a.BonusAmount, a.Total
+		entries[i].Split = splitAmount(c.Entries(), a.Total)
 	}
 	// The total and the progress are the first active entry's (its
 	// starting XP plus its share of each award, ADR 0042 step 5; a
@@ -67,11 +68,32 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	}, nil
 }
 
-func (s *service) Preview(base int, bonus bool) (Amount, error) {
+// splitAmount is ADR 0042 step 5.1: a multi-class character's award goes in
+// equal shares to every active entry (nil for one class, whose whole award is
+// its own).
+func splitAmount(entries []classes.Entry, total int) []ClassAmount {
+	active := classes.Active(entries)
+	if len(active) < 2 {
+		return nil
+	}
+	out := make([]ClassAmount, 0, len(active))
+	for _, e := range active {
+		out = append(out, ClassAmount{Class: e.Class, Amount: charactersvc.Share(total, len(active))})
+	}
+	return out
+}
+
+func (s *service) Preview(ctx context.Context, characterID int64, base int, bonus bool) (Amount, error) {
 	if err := validateBase(base); err != nil {
 		return Amount{}, err
 	}
-	return EntryAmount(base, bonus), nil
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return Amount{}, err
+	}
+	a := EntryAmount(base, bonus)
+	a.Split = splitAmount(c.Entries(), a.Total)
+	return a, nil
 }
 
 func (s *service) Add(ctx context.Context, characterID int64, in EntryInput) (*Ledger, error) {
@@ -118,7 +140,7 @@ func (s *service) Update(ctx context.Context, characterID, entryID int64, p Entr
 		if err := validate(e); err != nil {
 			return err
 		}
-		if e == old {
+		if e.Session == old.Session && e.Reason == old.Reason && e.Base == old.Base && e.Bonus == old.Bonus {
 			return nil // nothing changed: no write, no transaction (ADR 0018 step 1)
 		}
 		if err := s.dal.Update(ctx, characterID, e); err != nil {

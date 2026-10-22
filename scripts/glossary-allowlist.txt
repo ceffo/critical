@@ -211,3 +211,4 @@ Favourite  # Needs a term: spell, target and area concepts
 TurningCell  # Needs a term: turning table cell
 ModeAt  # Technical: generic helper or envelope with no domain meaning of its own
 Added  # Technical: generic helper or envelope with no domain meaning of its own
+ClassAmount  # Technical: one class entry's share of an XP award, a view of the split already named by the class entry term

@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
 // ADR 0042 step 6: "Eligible when every prime requisite of every active
@@ -42,4 +43,25 @@ func TestBonusEligible_Step6_EveryActiveClassesPrimeRequisites(t *testing.T) {
 			assert.Equal(t, tc.want, got.BonusEligible)
 		})
 	}
+}
+
+// ADR 0042 step 5.1: a multi-class character's award goes in equal shares to
+// every active entry, floored; a preview, a ledger entry and the logged
+// payload all carry the split so the web words it without dividing.
+func TestEntrySplit_Step5_1_ThePreviewTheLedgerAndTheLogCarryTheShares(t *testing.T) {
+	f := newFixture(t)
+	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
+		ID: 1, Class: "mage", Derived: charactersvc.Derived{TargetLevel: 1},
+		Classes: []classes.Entry{classes.SingleEntry("mage", 1, 0), classes.SingleEntry("cleric", 1, 0)},
+	}, nil)
+	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{ID: 3, Base: 1001}}, nil)
+	want := []xpsvc.ClassAmount{{Class: "mage", Amount: 500}, {Class: "cleric", Amount: 500}}
+
+	got, err := f.svc.Preview(context.Background(), 1, 1001, false)
+	require.NoError(t, err)
+	assert.Equal(t, want, got.Split)
+
+	l, err := f.svc.Get(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, want, l.Entries[0].Split)
 }

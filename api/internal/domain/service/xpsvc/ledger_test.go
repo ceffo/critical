@@ -280,10 +280,11 @@ func TestRestorer_WritesTheSnapshotBack(t *testing.T) {
 
 func TestPreview_IsStep1AndValidatesTheBase(t *testing.T) {
 	f := newFixture(t)
-	got, err := f.svc.Preview(1205, true)
+	f.sheet(10, 10, 1, 0)
+	got, err := f.svc.Preview(context.Background(), 1, 1205, true)
 	require.NoError(t, err)
 	assert.Equal(t, xpsvc.Amount{Base: 1205, BonusAmount: 121, Total: 1326}, got)
-	_, err = f.svc.Preview(0, true)
+	_, err = f.svc.Preview(context.Background(), 1, 0, true)
 	require.ErrorIs(t, err, domain.ErrInvalidInput)
 }
 

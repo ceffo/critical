@@ -15,6 +15,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -123,6 +124,8 @@ type Characters interface {
 
 // Rules is PHB Table 3.
 type Rules interface {
+	// Definitions are the catalogue's class definitions (ADR 0040 step 5).
+	Definitions() (*classes.Registry, error)
 	ConstitutionFor(con int) (ruletablesvc.ConstitutionRow, error)
 }
 
@@ -189,7 +192,7 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 		if len(pending) == 0 || pending[0].Level != in.Level {
 			return ErrNotPending
 		}
-		if res, err = s.gain(c, entry.Group, pending[0], in.Die); err != nil {
+		if res, err = s.gain(c, pending[0], in.Die); err != nil {
 			return err
 		}
 		res.Pending = slices.DeleteFunc(slices.Clone(c.Derived.LevelUp.Pending), func(p charactersvc.PendingLevel) bool {
@@ -215,12 +218,12 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 	return res, nil
 }
 
-// gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c's entry of
-// group, divided by the number of classes (ADR 0042 steps 10.2 and 10.3); 0
+// gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c's entry,
+// divided by the number of classes (ADR 0042 steps 10.2 and 10.3); 0
 // for a dual-class's level before the crossover (ADR 0042 step 11).
-func (s *service) gain(c *charactersvc.Character, group string, p charactersvc.PendingLevel, entered *int) (*Result, error) {
-	classes := max(p.Classes, 1)
-	res := &Result{Class: p.Class, Classes: classes, Level: p.Level, HitDie: p.Die, Manual: entered != nil}
+func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, entered *int) (*Result, error) {
+	count := max(p.Classes, 1)
+	res := &Result{Class: p.Class, Classes: count, Level: p.Level, HitDie: p.Die, Manual: entered != nil}
 	// ADR 0042 step 11: a dual-class's level up to its old class's gains no
 	// hit points; the level is still taken. No die, nothing rolled.
 	if p.NoHitPoints {
@@ -235,7 +238,7 @@ func (s *service) gain(c *charactersvc.Character, group string, p charactersvc.P
 		if entered != nil {
 			return nil, &domain.FieldError{Field: "die", Message: CodeFixedGain}
 		}
-		res.DieShare, _, res.Gain = ruletablesvc.SharedGain(p.FixedGain, 0, classes)
+		res.DieShare, _, res.Gain = ruletablesvc.SharedGain(p.FixedGain, 0, count)
 		res.Fixed = true
 		return res, nil
 	}
@@ -254,14 +257,22 @@ func (s *service) gain(c *charactersvc.Character, group string, p charactersvc.P
 	if err != nil {
 		return nil, fmt.Errorf("level-up: %w", err)
 	}
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return nil, fmt.Errorf("level-up: %w", err)
+	}
+	def, ok := defs.Class(p.Class)
+	if !ok {
+		return nil, fmt.Errorf("level-up: %w", classes.ErrUnknownClass)
+	}
 	// Table 3's footnotes from Constitution 20 raise a low die (the die
-	// shown is the one rolled), warriors take the bracketed adjustment (the
-	// entry's group, ADR 0042 Q7), and the gain is at least 1: the
+	// shown is the one rolled), a class whose definition says so takes the
+	// bracketed adjustment (ADR 0042 Q7), and the gain is at least 1: the
 	// arithmetic the creation's roll shares; then the shares of ADR 0042
 	// step 10.2.
-	counted, conAdj, _ := ruletablesvc.HitDieGain(group, rolled, row)
+	counted, conAdj, _ := ruletablesvc.HitDieGain(def.BracketedConstitution, rolled, row)
 	res.Rolled, res.Counted = &rolled, &counted
 	res.ConAdjustment = conAdj
-	res.DieShare, res.ConShare, res.Gain = ruletablesvc.SharedGain(counted, conAdj, classes)
+	res.DieShare, res.ConShare, res.Gain = ruletablesvc.SharedGain(counted, conAdj, count)
 	return res, nil
 }

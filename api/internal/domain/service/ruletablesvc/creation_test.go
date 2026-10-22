@@ -49,20 +49,20 @@ func TestHitDieGain_Step7_1_RaisedDieWarriorBonusAndFloor(t *testing.T) {
 	con3 := ruletablesvc.ConstitutionRow{ConMin: 3, ConMax: 3, HP: -2, HPWarrior: -2}
 	type out struct{ counted, adj, gain int }
 	for name, c := range map[string]struct {
-		group  string
-		rolled int
-		con    ruletablesvc.ConstitutionRow
-		want   out
+		bracketed bool
+		rolled    int
+		con       ruletablesvc.ConstitutionRow
+		want      out
 	}{
-		"Constitution 21 raises a 1 to 3":            {"rogue", 1, con21, out{3, 2, 5}},
-		"Constitution 21 raises a 2 to 3":            {"warrior", 2, con21, out{3, 6, 9}},
-		"Constitution 21 keeps a 4":                  {"wizard", 4, con21, out{4, 2, 6}},
-		"a warrior takes the bracketed value":        {"warrior", 7, con18, out{7, 4, 11}},
-		"a priest takes the plain value":             {"priest", 7, con18, out{7, 2, 9}},
-		"the gain is at least 1":                     {"wizard", 2, con3, out{2, -2, 1}},
-		"a die above the penalty gains what is left": {"wizard", 4, con3, out{4, -2, 2}},
+		"Constitution 21 raises a 1 to 3":                                   {false, 1, con21, out{3, 2, 5}},
+		"Constitution 21 raises a 2 to 3":                                   {true, 2, con21, out{3, 6, 9}},
+		"Constitution 21 keeps a 4":                                         {false, 4, con21, out{4, 2, 6}},
+		"a class with the bracketed Constitution takes the bracketed value": {true, 7, con18, out{7, 4, 11}},
+		"a class without it takes the plain value":                          {false, 7, con18, out{7, 2, 9}},
+		"the gain is at least 1":                                            {false, 2, con3, out{2, -2, 1}},
+		"a die above the penalty gains what is left":                        {false, 4, con3, out{4, -2, 2}},
 	} {
-		counted, adj, gain := ruletablesvc.HitDieGain(c.group, c.rolled, c.con)
+		counted, adj, gain := ruletablesvc.HitDieGain(c.bracketed, c.rolled, c.con)
 		assert.Equal(t, c.want, out{counted, adj, gain}, name)
 	}
 }

@@ -2,16 +2,13 @@ package combatsvc_test
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
@@ -22,89 +19,6 @@ func rows(r ...[3]int) []combatsvc.CritRow {
 		out[i] = combatsvc.CritRow{From: x[0], To: x[1], Multiplier: float64(x[2])}
 	}
 	return out
-}
-
-func TestValidateCritRows(t *testing.T) {
-	tests := []struct {
-		name    string
-		in      []combatsvc.CritRow
-		want    []combatsvc.CritRow // sorted rows when valid
-		wantErr string              // substring naming the bad row
-	}{
-		{name: "one row covers everything", in: rows([3]int{1, 100, 2}), want: rows([3]int{1, 100, 2})},
-		{
-			name: "three ranges", in: rows([3]int{1, 50, 2}, [3]int{51, 90, 3}, [3]int{91, 100, 4}),
-			want: rows([3]int{1, 50, 2}, [3]int{51, 90, 3}, [3]int{91, 100, 4}),
-		},
-		{
-			name: "rows in any order are sorted", in: rows([3]int{91, 100, 4}, [3]int{1, 90, 2}),
-			want: rows([3]int{1, 90, 2}, [3]int{91, 100, 4}),
-		},
-		{name: "single-value ranges", in: rows([3]int{1, 1, 5}, [3]int{2, 100, 2}), want: rows([3]int{1, 1, 5}, [3]int{2, 100, 2})},
-		{name: "no rows", in: nil, wantErr: "at least one row"},
-		{name: "gap in the middle", in: rows([3]int{1, 49, 2}, [3]int{51, 100, 3}), wantErr: "gap before row 2 (51-100): 50-50"},
-		{name: "gap at the start", in: rows([3]int{2, 100, 2}), wantErr: "gap before row 1 (2-100): 1-1"},
-		{name: "gap at the end", in: rows([3]int{1, 99, 2}), wantErr: "gap after row 1 (1-99): 100-100"},
-		{name: "overlap by one", in: rows([3]int{1, 50, 2}, [3]int{50, 100, 3}), wantErr: "row 2 (50-100) overlaps"},
-		{name: "duplicate start", in: rows([3]int{1, 100, 2}, [3]int{1, 10, 3}), wantErr: "row 2 (1-10) overlaps"},
-		{name: "from below 1", in: rows([3]int{0, 100, 2}), wantErr: "row 1 (0-100) is outside 1-100"},
-		{name: "to above 100", in: rows([3]int{1, 50, 2}, [3]int{51, 101, 2}), wantErr: "row 2 (51-101) is outside 1-100"},
-		{name: "backwards range", in: rows([3]int{1, 100, 2}, [3]int{60, 50, 2}), wantErr: "row 2 (60-50) ends before it starts"},
-		{name: "multiplier 0", in: rows([3]int{1, 50, 2}, [3]int{51, 100, 0}), wantErr: "row 2 (51-100) has multiplier 0"},
-		{name: "negative multiplier", in: rows([3]int{1, 100, -3}), wantErr: "row 1 (1-100) has multiplier -3"},
-		{name: "multiplier 1 is allowed", in: rows([3]int{1, 100, 1}), want: rows([3]int{1, 100, 1})},
-		{name: "decimal multiplier 1.5", in: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}}, want: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}}},
-		{name: "0.99 is below 1", in: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 0.99}}, wantErr: "row 1 (1-100) has multiplier 0.99"},
-		{name: "NaN multiplier", in: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: math.NaN()}}, wantErr: "row 1 (1-100) has multiplier NaN"},
-		{name: "infinite multiplier", in: []combatsvc.CritRow{{From: 1, To: 100, Multiplier: math.Inf(1)}}, wantErr: "row 1 (1-100) has multiplier +Inf"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := combatsvc.ValidateCritRows(tt.in)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				assert.ErrorIs(t, err, domain.ErrInvalidInput)
-				assert.Contains(t, err.Error(), tt.wantErr)
-				return
-			}
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestSetCritTable(t *testing.T) {
-	t.Run("a valid table is stored sorted", func(t *testing.T) {
-		f := newFixture(t)
-		want := rows([3]int{1, 40, 2}, [3]int{41, 100, 3})
-		f.crit.EXPECT().Replace(mock.Anything, want).Return(nil).Once()
-		got, err := f.svc.SetCritTable(context.Background(), rows([3]int{41, 100, 3}, [3]int{1, 40, 2}))
-		require.NoError(t, err)
-		assert.Equal(t, combatsvc.CritTable{Rows: want}, got)
-	})
-	t.Run("an invalid table never reaches the store", func(t *testing.T) {
-		f := newFixture(t) // the mock fails the test on an unexpected Replace
-		_, err := f.svc.SetCritTable(context.Background(), rows([3]int{1, 40, 2}, [3]int{50, 100, 3}))
-		require.ErrorIs(t, err, domain.ErrInvalidInput)
-	})
-	t.Run("a store failure is returned", func(t *testing.T) {
-		f := newFixture(t)
-		f.crit.EXPECT().Replace(mock.Anything, mock.Anything).Return(errors.New("disk full")).Once()
-		_, err := f.svc.SetCritTable(context.Background(), rows([3]int{1, 100, 2}))
-		require.ErrorContains(t, err, "disk full")
-	})
-}
-
-func TestGetCritTable(t *testing.T) {
-	f := newFixture(t)
-	got, err := f.svc.GetCritTable(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, combatsvc.CritTable{Rows: rows([3]int{1, 100, 2}), Placeholder: true}, got)
-
-	f.critRows = rows([3]int{1, 100, 3})
-	got, err = f.svc.GetCritTable(context.Background())
-	require.NoError(t, err)
-	assert.Equal(t, combatsvc.CritTable{Rows: rows([3]int{1, 100, 3})}, got)
 }
 
 // The multiplier d100 is looked up in the stored table. Target AC 100 makes
@@ -347,4 +261,36 @@ func TestResolveAttack_DecimalCritWithNegativeBonusClampsToZero(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, res.TotalDamage)
 	assert.InDelta(t, -9.5, res.UnroundedDamage, 1e-9, "((5 × 1.0) + 2) × 1.5 + 0 - 20")
+}
+
+// ADR 0041 step 3: the attack takes its crit table from the ruleset the resolver gives the
+// attacking character, never from a default of its own: the same rolls under two rulesets give
+// two multipliers, and the resolver is asked once per attack, for that character.
+func TestResolveAttack_Step3_ReadsTheResolvedRuleset(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		table []combatsvc.CritRow
+		want  float64
+	}{
+		{"a ruleset with x3", rows([3]int{1, 100, 3}), 3},
+		{"a ruleset with x7", rows([3]int{1, 100, 7}), 7},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.rulesets.ExpectedCalls = nil
+			f.rulesets.EXPECT().ForCharacter(mock.Anything, charID).Return(rulesetWithCrit(tc.table), nil).Once()
+			f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
+			f.withChar(bard())
+			f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
+			f.dice.EXPECT().RollD20().Return(20)
+			f.d100s(t, 99, 60)
+			f.dice.EXPECT().RollDie(8).Return(5)
+			f.records()
+
+			res, err := f.svc.ResolveAttack(context.Background(), charID, combatsvc.AttackRequest{WeaponID: "longsword", TargetAC: new(100)})
+			require.NoError(t, err)
+			assert.True(t, res.IsCrit)
+			assert.Equal(t, tc.want, res.CritMultiplier)
+		})
+	}
 }

@@ -116,6 +116,8 @@ func TestEntry_Hostile(t *testing.T) {
 		{"double movement", map[string]string{"move_pct": "200"}, false},
 		{"half attacks", map[string]string{"attacks_pct": "50"}, true},
 		{"a better initiative is not hurting", map[string]string{"initiative": "-2"}, false},
+		{"a later initiative", map[string]string{"initiative": "4"}, true},
+		{"attackers who hit more easily (Faerie Fire)", map[string]string{"attackers_to_hit": "2"}, true},
 		{"a penalty for attackers is not on the bearer", map[string]string{"attackers_to_hit": "-2"}, false},
 		{"a penalty by level", map[string]string{"to_hit": "-(level/5)"}, true},
 		{"a rolled penalty", map[string]string{"to_hit": "-1d4"}, true},

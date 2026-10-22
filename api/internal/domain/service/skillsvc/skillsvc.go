@@ -23,6 +23,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -132,7 +133,10 @@ type Deps struct {
 	// Buffs puts on the buff a successful check gives and takes it off
 	// when an adjustment turns the verdict (ADR 0037 step 20).
 	Buffs Buffs
-	Tx    domain.TxRunner
+	// Rulesets gives the character its ruleset, whose success effects say
+	// which proficiency's success puts which buff on (ADR 0041 step 6).
+	Rulesets ruleset.Resolver
+	Tx       domain.TxRunner
 }
 
 type service struct {
@@ -146,12 +150,13 @@ type service struct {
 	languages skills.LanguageBook
 	tables    skills.SkillTables
 	buffs     Buffs
+	rulesets  ruleset.Resolver
 	tx        domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tables == nil || d.Buffs == nil || d.Tx == nil {
+	if d.Characters == nil || d.Abilities == nil || d.Dice == nil || d.Log == nil || d.Points == nil || d.Picks == nil || d.Book == nil || d.Tables == nil || d.Buffs == nil || d.Rulesets == nil || d.Tx == nil {
 		return nil, fmt.Errorf("skillsvc: nil dependency")
 	}
 	if d.Languages == nil {
@@ -159,7 +164,7 @@ func New(d Deps) (SVC, error) {
 	}
 	return &service{
 		chars: d.Characters, abils: d.Abilities, dice: d.Dice, log: d.Log, points: d.Points, picks: d.Picks,
-		book: d.Book, languages: d.Languages, tables: d.Tables, buffs: d.Buffs, tx: d.Tx,
+		book: d.Book, languages: d.Languages, tables: d.Tables, buffs: d.Buffs, rulesets: d.Rulesets, tx: d.Tx,
 	}, nil
 }
 

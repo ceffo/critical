@@ -280,6 +280,16 @@ func (q *Queries) CharacterWeaponTypes(ctx context.Context) ([]CharacterWeaponTy
 	return items, nil
 }
 
+const copyLegacyCritRows = `-- name: CopyLegacyCritRows :exec
+INSERT INTO ruleset_crit_rows (ruleset_id, roll_from, roll_to, multiplier)
+SELECT $1, roll_from, roll_to, multiplier FROM crit_table_rows
+`
+
+func (q *Queries) CopyLegacyCritRows(ctx context.Context, rulesetID int64) error {
+	_, err := q.db.ExecContext(ctx, copyLegacyCritRows, rulesetID)
+	return err
+}
+
 const countCharacters = `-- name: CountCharacters :one
 SELECT COUNT(*) FROM characters
 `
@@ -308,6 +318,19 @@ SELECT COUNT(*) FROM spells WHERE key IS NOT NULL
 
 func (q *Queries) CountKeyedSpells(ctx context.Context) (int64, error) {
 	row := q.db.QueryRowContext(ctx, countKeyedSpells)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countLegacyCritRows = `-- name: CountLegacyCritRows :one
+
+SELECT count(*) FROM crit_table_rows
+`
+
+// The default ruleset's data step (ADR 0041 step 10, defaultRuleset).
+func (q *Queries) CountLegacyCritRows(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, countLegacyCritRows)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -647,6 +670,78 @@ INSERT INTO round_state (character_id, round_number) VALUES ($1, 0)
 
 func (q *Queries) InsertRoundState(ctx context.Context, characterID int64) error {
 	_, err := q.db.ExecContext(ctx, insertRoundState, characterID)
+	return err
+}
+
+const insertRuleset = `-- name: InsertRuleset :one
+INSERT INTO rulesets (name, crit_placeholder, multiclass_any_race, dualclass_any_race, level_limits)
+VALUES ($1, $2, $3, $4, $5)
+ON CONFLICT (name) DO NOTHING
+RETURNING id
+`
+
+type InsertRulesetParams struct {
+	Name              string
+	CritPlaceholder   bool
+	MulticlassAnyRace bool
+	DualclassAnyRace  bool
+	LevelLimits       string
+}
+
+func (q *Queries) InsertRuleset(ctx context.Context, arg InsertRulesetParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, insertRuleset,
+		arg.Name,
+		arg.CritPlaceholder,
+		arg.MulticlassAnyRace,
+		arg.DualclassAnyRace,
+		arg.LevelLimits,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertRulesetCritRow = `-- name: InsertRulesetCritRow :exec
+INSERT INTO ruleset_crit_rows (ruleset_id, roll_from, roll_to, multiplier)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertRulesetCritRowParams struct {
+	RulesetID  int64
+	RollFrom   int64
+	RollTo     int64
+	Multiplier float64
+}
+
+func (q *Queries) InsertRulesetCritRow(ctx context.Context, arg InsertRulesetCritRowParams) error {
+	_, err := q.db.ExecContext(ctx, insertRulesetCritRow,
+		arg.RulesetID,
+		arg.RollFrom,
+		arg.RollTo,
+		arg.Multiplier,
+	)
+	return err
+}
+
+const insertRulesetSuccessEffect = `-- name: InsertRulesetSuccessEffect :exec
+INSERT INTO ruleset_success_effects (ruleset_id, proficiency_id, ac, rounds)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertRulesetSuccessEffectParams struct {
+	RulesetID     int64
+	ProficiencyID string
+	Ac            int64
+	Rounds        int64
+}
+
+func (q *Queries) InsertRulesetSuccessEffect(ctx context.Context, arg InsertRulesetSuccessEffectParams) error {
+	_, err := q.db.ExecContext(ctx, insertRulesetSuccessEffect,
+		arg.RulesetID,
+		arg.ProficiencyID,
+		arg.Ac,
+		arg.Rounds,
+	)
 	return err
 }
 

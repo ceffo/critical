@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-fly-open test-fly-brevo-secrets check-api check-web
+validate: check-no-tracker-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets check-api check-web
     @echo "--- Project Validation Successful ---"
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
@@ -78,6 +78,16 @@ check-release-scripts:
 check-no-tracker-ids:
     scripts/test-check-no-tracker-ids.sh
     scripts/check-no-tracker-ids.sh
+
+# The Priest spell effects audit script on a throwaway catalogue and mapping.
+test-priest-effects-audit:
+    scripts/test-priest-effects-audit.sh
+
+# Rewrite the Priest entries of seeds/spell_effects.json and docs/priest-effects-audit.md from the real
+# catalogue (`just catalogue`) and the mappings in scripts/priest-effects/. `just priest-effects-audit
+# --check` changes nothing and fails when they are out of date. Needs the private catalogue: not in validate.
+priest-effects-audit *args:
+    scripts/priest-effects-audit.py {{args}}
 
 # The invite mail secrets script against a fake Brevo API and a fake fly.
 test-fly-brevo-secrets:

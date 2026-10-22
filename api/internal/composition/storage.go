@@ -13,14 +13,14 @@ import (
 	buffq "github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	charq "github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
-	"github.com/ceffo/critical/api/internal/adapters/critdal"
-	critq "github.com/ceffo/critical/api/internal/adapters/critdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/dicedal"
 	diceq "github.com/ceffo/critical/api/internal/adapters/dicedal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/hpdal"
 	hpq "github.com/ceffo/critical/api/internal/adapters/hpdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/itemdal"
 	itemq "github.com/ceffo/critical/api/internal/adapters/itemdal/queries"
+	"github.com/ceffo/critical/api/internal/adapters/rulesetdal"
+	rulesetq "github.com/ceffo/critical/api/internal/adapters/rulesetdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/adapters/spellbookdal"
 	spellbookq "github.com/ceffo/critical/api/internal/adapters/spellbookdal/queries"
@@ -45,6 +45,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/rulesetsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -121,7 +122,7 @@ type Storage struct {
 	Log       actionlogsvc.DAL
 	Buff      BuffStore
 	Spell     SpellStore
-	Crit      combatsvc.CritStore
+	Rulesets  rulesetsvc.DAL
 	Items     itemsvc.DAL
 	Forms     combatsvc.FormStore
 	XP        xpsvc.DAL
@@ -148,7 +149,7 @@ func storageOn(store Store, conn postgres.DBTX) Storage {
 		Log:       actionlogdal.New(logq.New(conn)),
 		Buff:      buffdal.New(buffq.New(conn)),
 		Spell:     spelldal.New(spellq.New(conn)),
-		Crit:      critdal.New(critq.New(conn)),
+		Rulesets:  rulesetdal.New(rulesetq.New(conn)),
 		Items:     itemdal.New(itemq.New(conn), texts),
 		Forms:     attackformdal.New(formq.New(conn)),
 		XP:        xpdal.New(xpq.New(conn)),
@@ -168,7 +169,7 @@ func memoryStorage(m *memory.Store) Storage {
 		Log:       m.ActionLog(),
 		Buff:      m.Buffs(),
 		Spell:     m.Spells(),
-		Crit:      m.Crit(),
+		Rulesets:  m.Rulesets(),
 		Items:     m.Items(),
 		Forms:     m.Forms(),
 		XP:        m.XP(),

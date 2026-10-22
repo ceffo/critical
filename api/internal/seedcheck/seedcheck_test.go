@@ -249,28 +249,44 @@ func mustTable52(t *testing.T, tables *ruletablesvc.Tables) *ruletablesvc.Weapon
 	return w
 }
 
-func TestRepoSeeds_EveryWizardSpellHasAnEffectAtItsLevel(t *testing.T) {
+// Every Wizard spell has an effect entry at its level; every other entry is a Priest spell of the
+// catalogue at its level (the Priest entries are the audit's, docs/priest-effects-audit.md), under
+// the catalogue's own id.
+func TestRepoSeeds_EveryEffectIsASpellAtItsLevelAndEveryWizardSpellHasOne(t *testing.T) {
 	cat := realCatalogue(t)
 	effects, err := spelleffectsadpt.New(seedsDir)
 	require.NoError(t, err)
 
 	wizard := map[string]int{}
+	priest := map[string]int{}
 	for _, s := range cat.Spells {
-		if s.Class == "Wizard" {
+		switch s.Class {
+		case "Wizard":
 			wizard[s.ID] = s.Level
+		case "Priest":
+			priest[s.ID] = s.Level
 		}
 	}
 	require.NotEmpty(t, wizard)
-	assert.Equal(t, len(wizard), effects.Len(), "one effect entry per Wizard spell")
+	require.NotEmpty(t, priest)
 	for id, level := range wizard {
 		if e, ok := effects.Get(id); assert.True(t, ok, "no effect for %s", id) {
 			assert.Equal(t, level, e.Level, id)
 		}
 	}
+	priestEntries := 0
 	for _, e := range effects.All() {
-		_, ok := wizard[e.ID]
-		assert.True(t, ok, "effect %s is not a Wizard spell of the catalogue", e.ID)
+		if level, ok := wizard[e.ID]; ok {
+			assert.Equal(t, level, e.Level, e.ID)
+			continue
+		}
+		level, ok := priest[e.ID]
+		assert.True(t, ok, "effect %s is neither a Wizard nor a Priest spell of the catalogue", e.ID)
+		assert.Equal(t, level, e.Level, e.ID)
+		priestEntries++
 	}
+	assert.Equal(t, len(wizard)+priestEntries, effects.Len(), "no entry is counted twice")
+	assert.NotZero(t, priestEntries, "the Priest spells the audit maps have entries")
 }
 
 // The real seeds with one spell effect the real catalogue does not hold do

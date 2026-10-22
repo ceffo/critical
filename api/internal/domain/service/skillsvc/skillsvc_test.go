@@ -14,6 +14,8 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -31,15 +33,18 @@ func (c *countingTx) InTx(ctx context.Context, fn func(context.Context) error) e
 }
 
 type fixture struct {
-	svc     skillsvc.SVC
-	chars   *mocks.MockCharacters
-	abils   *mocks.MockAbilities
-	dice    *mocks.MockDice
-	log     *mocks.MockLog
-	points  *mocks.MockPoints
-	buffs   *mocks.MockBuffs
-	tx      *countingTx
-	entries []actionlog.NewEntry
+	svc    skillsvc.SVC
+	chars  *mocks.MockCharacters
+	abils  *mocks.MockAbilities
+	dice   *mocks.MockDice
+	log    *mocks.MockLog
+	points *mocks.MockPoints
+	buffs  *mocks.MockBuffs
+	// rulesets resolves rs, the default ruleset unless a test changes it (ADR 0041 step 3).
+	rulesets *rulesetmocks.MockResolver
+	rs       ruleset.Ruleset
+	tx       *countingTx
+	entries  []actionlog.NewEntry
 }
 
 // The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16) and
@@ -125,8 +130,11 @@ func newFixture(t *testing.T) *fixture {
 	f := &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
 		log: mocks.NewMockLog(t), points: mocks.NewMockPoints(t), buffs: mocks.NewMockBuffs(t), tx: &countingTx{},
+		rulesets: rulesetmocks.NewMockResolver(t), rs: ruleset.Default(),
 	}
-	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: f.buffs, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
+	f.rulesets.EXPECT().ForCharacter(mock.Anything, mock.Anything).RunAndReturn(
+		func(context.Context, int64) (ruleset.Ruleset, error) { return f.rs, nil }).Maybe()
+	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: f.buffs, Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()

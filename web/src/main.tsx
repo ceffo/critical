@@ -5,6 +5,7 @@ import "./i18n";
 import { startSettings } from "./stores/settings";
 import { readSession } from "./api/auth";
 import { AdminPage } from "./components/admin/AdminPage";
+import { RulesetPage } from "./components/ruleset/RulesetPage";
 import { LoginPage } from "./components/login/LoginPage";
 import { NoCurrent } from "./components/shell/NoCurrent";
 import { Playing } from "./components/shell/Playing";
@@ -35,6 +36,8 @@ void readSession().then((session) => {
   render(
     start.show === "admin" ? (
       <AdminPage />
+    ) : start.show === "ruleset" ? (
+      <RulesetPage />
     ) : start.show === "create" && !start.hasCurrent ? (
       <NoCurrent />
     ) : (

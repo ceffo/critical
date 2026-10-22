@@ -14,6 +14,8 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -66,8 +68,9 @@ type fixture struct {
 	weapons *mocks.MockWeapons
 	items   *mocks.MockItems
 	forms   *mocks.MockFormStore
-	crit    *mocks.MockCritStore
-	// critRows is what the crit store returns (none: the placeholder default).
+	// rulesets resolves the ruleset the crit table is read from (ADR 0041
+	// step 3); critRows is its crit table (none: the placeholder default).
+	rulesets *rulesetmocks.MockResolver
 	critRows []combatsvc.CritRow
 	log      *mocks.MockLog
 	svc      combatsvc.SVC
@@ -77,19 +80,19 @@ type fixture struct {
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
-		chars:   mocks.NewMockCharacters(t),
-		buffs:   mocks.NewMockBuffs(t),
-		dice:    mocks.NewMockDice(t),
-		weapons: mocks.NewMockWeapons(t),
-		items:   mocks.NewMockItems(t),
-		forms:   mocks.NewMockFormStore(t),
-		crit:    mocks.NewMockCritStore(t),
-		log:     mocks.NewMockLog(t),
+		chars:    mocks.NewMockCharacters(t),
+		buffs:    mocks.NewMockBuffs(t),
+		dice:     mocks.NewMockDice(t),
+		weapons:  mocks.NewMockWeapons(t),
+		items:    mocks.NewMockItems(t),
+		forms:    mocks.NewMockFormStore(t),
+		rulesets: rulesetmocks.NewMockResolver(t),
+		log:      mocks.NewMockLog(t),
 	}
-	f.crit.EXPECT().List(mock.Anything).RunAndReturn(
-		func(context.Context) ([]combatsvc.CritRow, error) { return f.critRows, nil }).Maybe()
+	f.rulesets.EXPECT().ForCharacter(mock.Anything, mock.Anything).RunAndReturn(
+		func(context.Context, int64) (ruleset.Ruleset, error) { return rulesetWithCrit(f.critRows), nil }).Maybe()
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
-		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Crit: f.crit,
+		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
 		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
 	})
 	require.NoError(t, err)
@@ -328,3 +331,13 @@ func (noSpells) Get(string) (spelleffectsvc.Entry, bool) { return spelleffectsvc
 type noTx struct{}
 
 func (noTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
+
+// rulesetWithCrit is the default ruleset with the given crit rows; none keeps
+// the placeholder table.
+func rulesetWithCrit(rows []combatsvc.CritRow) ruleset.Ruleset {
+	rs := ruleset.Default()
+	if len(rows) > 0 {
+		rs.Crit = ruleset.CritTable{Rows: rows}
+	}
+	return rs
+}

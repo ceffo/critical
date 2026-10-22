@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Wizard spell effects",
-  "description": "Schema for seeds/spell_effects.json: one structured entry per Wizard spell in seeds/spells.json, extracted once by an agent from the spell text. The Go loader (api/internal/adapters/spelleffectsadpt) is the authority and additionally parses every formula; formulas use the grammar documented in api/pkg/formula. Spell ids are the snake_case slug of the English name (lowercase, apostrophes dropped, other non-alphanumerics become '_').",
+  "title": "Spell effects",
+  "description": "Schema for seeds/spell_effects.json: one structured entry per spell the engine tracks. The Wizard entries were extracted once by an agent from the spell text; the Priest entries at the end of the file are written by scripts/priest-effects-audit.py from scripts/priest-effects/effects.json (docs/priest-effects-audit.md lists every Priest spell). A Priest spell that shares its name with a Wizard spell has the id suffix _priest (and _l<level> for a higher level), as in the catalogue. The Go loader (api/internal/adapters/spelleffectsadpt) is the authority and additionally parses every formula; formulas use the grammar documented in api/pkg/formula. Spell ids are the catalogue's: the snake_case slug of the English name (lowercase, apostrophes dropped, other non-alphanumerics become '_'), with the suffixes above.",
   "type": "array",
   "items": {
     "type": "object",

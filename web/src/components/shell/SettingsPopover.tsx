@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   SignOut,
   Sun,
+  Scales,
 } from "@phosphor-icons/react";
 import { logout } from "@/api/auth";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { ADMIN_PATH } from "@/lib/session";
+import { ADMIN_PATH, RULESET_PATH } from "@/lib/session";
 import { LANGUAGES, themePatch } from "@/lib/settings";
 import {
   MODES,
@@ -208,6 +209,17 @@ export function SettingsPopover() {
               {t("settings.logout")}
             </Button>
           </div>
+          {me?.role === "admin" && (
+            <a
+              href={RULESET_PATH}
+              className={cn(buttonVariants({ variant: "quiet" }), "self-start")}
+              aria-label={t("ruleset.openHint")}
+              title={t("ruleset.openHint")}
+            >
+              <Scales aria-hidden />
+              {t("ruleset.open")}
+            </a>
+          )}
           {me?.role === "admin" && (
             <a
               href={ADMIN_PATH}

@@ -124,6 +124,7 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		specializationMigration:  specializeFlaggedWeapons,
 		spellbookOriginMigration: markLearnedSpells,
 		dardsMigration:           func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
+		rulesetsMigration:        defaultRuleset,
 	}
 	return before, after
 }

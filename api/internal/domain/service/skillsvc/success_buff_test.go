@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -17,7 +18,7 @@ import (
 )
 
 // The buff a successful check puts on (ADR 0037 step 20). The rule lives in the rules data
-// (ruletablesvc.SuccessBuffFor): Tumbling, AC -4 for 1 round.
+// (the ruleset's success effects, ADR 0041 step 6): the default has Tumbling, AC -4 for 1 round.
 
 // tumbler is the bard with Tumbling picked as well as the fixture's catalogue: Dex 17, target 17.
 func tumbler() *charactersvc.Character {
@@ -384,4 +385,41 @@ func TestSkillCheck_Step20_AdjustmentAfterTheChecksRound(t *testing.T) {
 		assert.False(t, r.Success)
 		assert.Equal(t, [][]actionlog.Snapshot{nil}, snaps)
 	})
+}
+
+// ADR 0041 step 6: with the Tumbling row removed from the ruleset a successful Tumbling check adds
+// no buff (the buff service's mock refuses any call); no code names Tumbling.
+func TestSkillCheck_Step6_NoSuccessEffectNoBuff(t *testing.T) {
+	f := newTumbler(t)
+	f.rs.SuccessEffects = nil
+	f.records()
+	f.dice.EXPECT().RollDie(20).Return(5).Once()
+
+	r := f.roll(t, "tumbling")
+
+	assert.True(t, r.Success)
+	assert.Nil(t, r.Buff)
+	assert.Empty(t, f.entries[0].Snapshots)
+}
+
+// ADR 0041 step 3: the check takes the buff from the ruleset its resolver gives, not from the
+// default: another ruleset's effect (AC -2 for 3 rounds) is the buff put on.
+func TestSkillCheck_Step3_ReadsTheResolvedRuleset(t *testing.T) {
+	f := newTumbler(t)
+	f.rs.SuccessEffects = []ruleset.SuccessEffect{{ProficiencyID: "tumbling", AC: -2, Rounds: 3}}
+	f.buffs.EXPECT().ListActive(mock.Anything, charID).Return(nil, nil).Once()
+	f.buffs.EXPECT().Add(mock.Anything, charID, mock.MatchedBy(func(b buffsvc.BuffEffect) bool {
+		return b.Name == "tumbling" && b.Duration == 3 && b.Effects.AC != nil && *b.Effects.AC == -2
+	})).RunAndReturn(func(_ context.Context, _ int64, b buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
+		b.ID, b.StartRound = "row-1", 3
+		return b, buffsSnap, nil
+	}).Once()
+	f.records()
+	f.dice.EXPECT().RollDie(20).Return(5).Once()
+
+	r := f.roll(t, "tumbling")
+
+	require.NotNil(t, r.Buff)
+	assert.Equal(t, 3, r.Buff.Buff.Duration)
+	assert.Equal(t, -2, *r.Buff.Buff.Effects.AC)
 }

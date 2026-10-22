@@ -301,7 +301,7 @@ gate `middleware.Gate`.
 - **Root admin** (step 5): `just root-admin <email>` (`api/cmd/rootadmin`) on `CRITICAL_DSN`, unset:
   the local database `just dev` uses. The schema allows one root, and a root is an enabled admin.
 - **Admin section** (steps 1.3, 2, 5.2; `adminhdl`, mounted behind `middleware.AdminOnly`, which
-  answers 403 `admin_only` to a player before any service runs; `PUT /api/crit-table` sits behind it
+  answers 403 `admin_only` to a player before any service runs; the ruleset's `PUT /api/ruleset/*` edits sit behind it
   too): `GET /api/admin/users` (`{"users": [{id, email, role, root, disabled, lastLogin|null,
   createdAt, characters: [names]}]}`), `PATCH /api/admin/users/{id}` (`{disabled?, role?}`, one
   transaction; disabling deletes the user's sessions; the user as changed), `GET /api/admin/invites`
@@ -608,6 +608,14 @@ Spells are not seeds: they come from the versioned catalogue artifact built in t
   previous version serves its own artifact's catalogue until it is replaced. Spell slots stay in the database.
 - **Seed checks**: the spellbook seed and every `spell_effects.json` id are checked against the catalogue at
   startup, before the seed writes; an id it does not hold refuses the start.
+- **Priest spell effects**: the Priest entries at the end of `seeds/spell_effects.json` are written by
+  `scripts/priest-effects-audit.py` (`just priest-effects-audit`, needs `just catalogue`), never by hand. Its
+  inputs are the catalogue's structured fields and two hand-edited files in `scripts/priest-effects/`
+  (`effects.json`: the entry of each spell the existing effect kinds model; `classification.json`: every other
+  Priest spell, either `utility`, nothing the engine tracks, or a named missing kind). Every Priest spell is in
+  exactly one of them, and the script refuses a gap. Its report, [priest-effects-audit.md](priest-effects-audit.md),
+  lists every Priest spell as mapped, utility or missing a kind; a new effect kind is a separate item.
+  `just priest-effects-audit --check` fails when the seed or the report is out of date.
 - **Import** (`catalogueadpt` reads and validates against the embedded copy of
   `schemas/catalogue.schema.json`, kept identical by a test; `postgres.ImportCatalogue` imports): same
   version as recorded in `catalogue_meta` → only the typed `stats` of rows whose stored English stat texts

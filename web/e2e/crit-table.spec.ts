@@ -1,6 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { forceAttackAc, logEntry, openDashboard } from "./helpers";
+import {
+  forceAttackAc,
+  logEntry,
+  openDashboard,
+  openSettings,
+} from "./helpers";
 
 // Dice are random on the real stack: the tests read the rolled crit d100 from the result card and
 // check the multiplier and range against the table they typed in.
@@ -11,13 +16,21 @@ const TABLE = [
   { from: 91, to: 100, mult: 4 },
 ];
 
+// The crit table lives on the Ruleset screen, reached from the cog menu (an admin's).
 async function openEditor(page: Page): Promise<Locator> {
   await openDashboard(page);
-  await page.getByRole("tab", { name: "Weapons" }).click();
+  const settings = await openSettings(page);
+  await settings.getByRole("link", { name: /^Open the ruleset/ }).click();
+  await expect(page).toHaveURL(/\/ruleset$/);
   const editor = page.getByTestId("crit-table");
-  await editor.getByText("Crit table (house rule)").click();
   await expect(editor.getByRole("group", { name: "Range 1" })).toBeVisible();
   return editor;
+}
+
+async function backToWeapons(page: Page) {
+  await page.getByRole("link", { name: /^Back/ }).click();
+  await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+  await page.getByRole("tab", { name: "Weapons" }).click();
 }
 
 function range(editor: Locator, n: number) {
@@ -32,7 +45,10 @@ function range(editor: Locator, n: number) {
 test("the table saved in the editor is used by the next crit", async ({
   page,
 }) => {
-  const editor = await openEditor(page);
+  await openDashboard(page);
+  await page.getByRole("tab", { name: "Weapons" }).click();
+  // The Attack panel no longer carries the editor.
+  await expect(page.getByTestId("crit-table")).toHaveCount(0);
 
   // Before editing, a crit is the x2 placeholder.
   await forceAttackAc(page, 1000); // so low a roll is needed that every attack crits
@@ -45,6 +61,10 @@ test("the table saved in the editor is used by the next crit", async ({
   );
   await snap(page, "placeholder-crit");
 
+  const settings = await openSettings(page);
+  await settings.getByRole("link", { name: /^Open the ruleset/ }).click();
+  const editor = page.getByTestId("crit-table");
+  await expect(range(editor, 1).to).toBeVisible();
   await range(editor, 1).to.fill("50");
   await editor.getByRole("button", { name: "Add range" }).click();
   await expect(range(editor, 2).from).toHaveValue("51"); // starts where the last range stopped
@@ -63,6 +83,7 @@ test("the table saved in the editor is used by the next crit", async ({
   const again = await openEditor(page);
   await expect(range(again, 3).from).toHaveValue("91");
   await expect(range(again, 3).mult).toHaveValue("4");
+  await backToWeapons(page);
 
   // ADR 0001 step 4: the row is the one of the second (multiplier) d100, not the crit check. Roll
   // until the two d100s fall in different rows so the test tells them apart.
@@ -124,6 +145,7 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
   await page.reload();
   const again = await openEditor(page);
   await expect(range(again, 1).mult).toHaveValue("1.5");
+  await backToWeapons(page);
 
   await forceAttackAc(page, 1000);
   await page.getByRole("button", { name: "Attack", exact: true }).click();
@@ -155,7 +177,7 @@ test("French shows the decimal multiplier with a comma on the card and in the lo
   page,
   stack,
 }) => {
-  const res = await fetch(`${stack.apiUrl}/api/crit-table`, {
+  const res = await fetch(`${stack.apiUrl}/api/ruleset/crit-table`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ rows: [{ from: 1, to: 100, multiplier: 1.5 }] }),

@@ -200,6 +200,7 @@ func TestMigrationDataSteps_NameEmbeddedMigrations(t *testing.T) {
 	require.Contains(t, before, ownerKeysMigration)
 	require.Contains(t, after, snapshotEnvelopesMigration)
 	require.Contains(t, after, weaponTypeMigration)
+	require.Contains(t, after, classEntriesMigration)
 	require.Contains(t, after, raceMigration)
 	for _, steps := range []map[string]dataStep{before, after} {
 		for name := range steps {
@@ -373,4 +374,59 @@ func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t
 	store.t.SkillPoints[kelsen] = "{}"
 	run(append(recorded, bardSkillsMigration))
 	assert.Equal(t, "{}", store.t.SkillPoints[kelsen], "an applied migration runs no step")
+}
+
+// ADR 0042 step 1, existing data: right after migration 034 every stored character becomes one
+// active entry with its class (the column's default bard when none was set), its realized level
+// (the sheet's level when none was taken in the app, ADR 0030 step 7.5) and its starting XP; a
+// character with an entry already is left as it is, and a rerun (the migration applied) runs no
+// step.
+func TestMigrate_Step1_ACharacterBecomesOneActiveEntry(t *testing.T) {
+	embedded, err := embeddedMigrations()
+	require.NoError(t, err)
+	store := newFakeStore()
+	store.t.Characters = []int64{1, 2, 3, 4}
+	store.t.Classes = map[int64]string{2: "thief", 3: "mage"} // 1: the default
+	store.t.Columns = map[int64]legacyColumns{
+		1: {Level: 15, Realized: 15, XPTotal: 1200000},
+		2: {Level: 3, XPTotal: 2600},           // no level taken in the app: the sheet's
+		3: {Level: 1, Realized: 4, XPTotal: 0}, // a level taken in the app
+		4: {Level: 2, XPTotal: 1500},
+	}
+	store.t.Entries = map[int64][]storeq.InsertClassEntryParams{
+		4: {{CharacterID: 4, Position: 0, Class: "fighter", RealizedLevel: 2, StartingXp: 1500, State: "active"}},
+	}
+	var recorded []string
+	for _, m := range embedded {
+		if m.name != classEntriesMigration {
+			recorded = append(recorded, m.name)
+		}
+	}
+	run := func(recorded []string) {
+		f := &fakeMigrations{recorded: recorded, store: store}
+		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
+			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
+			return runMigrations(ctx, f, embedded, before, after)
+		}))
+	}
+
+	run(recorded)
+	one := func(id int64, class string, level, xp int64) {
+		assert.Equal(t, []storeq.InsertClassEntryParams{
+			{CharacterID: id, Position: 0, Class: class, RealizedLevel: level, StartingXp: xp, State: "active"},
+		}, store.t.Entries[id], "character %d", id)
+	}
+	one(1, "bard", 15, 1200000)
+	one(2, "thief", 3, 2600)
+	one(3, "mage", 4, 0)
+	one(4, "fighter", 2, 1500)
+
+	// An applied migration runs no step: a character without an entry stays so.
+	store.t.Characters = append(store.t.Characters, 5)
+	run(append(recorded, classEntriesMigration))
+	assert.Empty(t, store.t.Entries[5])
+	// The step itself, rerun, changes nothing for the others.
+	require.NoError(t, fillClassEntries(context.Background(), store))
+	one(1, "bard", 15, 1200000)
+	assert.Len(t, store.t.Entries[5], 1, "the rerun gives the new character its entry")
 }

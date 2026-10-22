@@ -413,6 +413,15 @@ equipment-rehearsal ref="":
 skill-armour-rehearsal ref="":
     scripts/skill-armour-rehearsal.sh {{ref}}
 
+# Local only: the class entries migration (034, ADR 0042 step 1) on a database written by the release
+# before (old ref, default the commit before the migration was added), in a throwaway compose PostgreSQL
+# (own project and port, never `just dev`'s): every character gets one entry, its sheet, XP ledger and
+# derived figures are compared, restarts, a column-only character of the rolling deploy. Removes the
+# compose project. Needs docker, psql, jq, go.
+# Rehearse the class entries upgrade
+class-entries-rehearsal ref="":
+    scripts/class-entries-rehearsal.sh {{ref}}
+
 # The AC override migration (017) on a copy of a real database: a read-only pg_dump of the source
 # (default: the main checkout's dev database) restored into a throwaway compose PostgreSQL, upgraded
 # by this checkout's server and checked through SQL and the API.

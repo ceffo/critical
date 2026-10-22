@@ -27,6 +27,13 @@ type fakeStore struct {
 	t tables
 }
 
+// legacyColumns are the columns the class entries replace as the one source (ADR 0042 step 1).
+type legacyColumns struct {
+	Level, XPTotal int64
+	// Realized is realized_level, 0 for NULL (no level taken in the app).
+	Realized int64
+}
+
 // tables is the fake's state; JSON copies it for InTx's rollback.
 type tables struct {
 	Characters []int64
@@ -40,6 +47,10 @@ type tables struct {
 	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
 	// characters.skill_armor (absent: '', the column's default).
 	Classes, SkillArmors map[int64]string
+	// Columns are characters.level, realized_level and xp_total (absent: level 1, no realized
+	// level, no XP); Entries are character_classes, by character in position order.
+	Columns map[int64]legacyColumns
+	Entries map[int64][]storeq.InsertClassEntryParams
 	// Alignments and Sexes are characters.alignment and characters.sex ('' missing).
 	Alignments, Sexes map[int64]string
 	// Languages are characters.languages, a JSON list.
@@ -217,10 +228,43 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	return id, nil
 }
 
-// FillClassEntries: the fake keeps no class entries, so there is nothing to give.
-func (f *fakeStore) FillClassEntries(context.Context) error { return nil }
+// FillClassEntries gives every character without an entry its one active entry, as the SQL does:
+// its class (the column's default 'bard'), COALESCE(realized_level, level) and xp_total.
+func (f *fakeStore) FillClassEntries(context.Context) error {
+	for _, id := range f.t.Characters {
+		if len(f.t.Entries[id]) > 0 {
+			continue
+		}
+		col := f.t.Columns[id]
+		if col.Level == 0 {
+			col.Level = 1
+		}
+		class := f.t.Classes[id]
+		if class == "" {
+			class = "bard"
+		}
+		level := col.Level
+		if col.Realized != 0 {
+			level = col.Realized
+		}
+		if f.t.Entries == nil {
+			f.t.Entries = map[int64][]storeq.InsertClassEntryParams{}
+		}
+		f.t.Entries[id] = []storeq.InsertClassEntryParams{{
+			CharacterID: id, Position: 0, Class: class, RealizedLevel: level, StartingXp: col.XPTotal, State: "active",
+		}}
+	}
+	return nil
+}
 
-func (f *fakeStore) InsertClassEntry(context.Context, storeq.InsertClassEntryParams) error {
+func (f *fakeStore) InsertClassEntry(_ context.Context, arg storeq.InsertClassEntryParams) error {
+	if err := f.hasCharacter(arg.CharacterID); err != nil {
+		return err
+	}
+	if f.t.Entries == nil {
+		f.t.Entries = map[int64][]storeq.InsertClassEntryParams{}
+	}
+	f.t.Entries[arg.CharacterID] = append(f.t.Entries[arg.CharacterID], arg)
 	return nil
 }
 

@@ -16,7 +16,7 @@ replaces a built one, the section says so.
 ```mermaid
 erDiagram
     USER ||--o{ CHARACTER : owns
-    CHARACTER ||--|{ CLASS_ENTRY : "has (planned: one today)"
+    CHARACTER ||--|{ CLASS_ENTRY : "has (one to three; one today)"
     CHARACTER }o--|| RACE : "is of"
     CHARACTER ||--|| ABILITY_SCORES : has
     CHARACTER ||--o{ LEDGER_ENTRY : "derives HP and XP from"
@@ -36,7 +36,7 @@ erDiagram
 ```
 
 `RULESET`, `HOUSE_RULE`, `GAME`, `GAME_SESSION`, `PARTY`, `CLASS_FEATURE` and the plurality of
-`CLASS_ENTRY` do not exist yet; the other boxes do, in some form. Each is described in its
+`CLASS_ENTRY` beyond one do not exist yet; the other boxes do, in some form. Each is described in its
 section below.
 
 ## Character (built)
@@ -45,10 +45,12 @@ A player character, owned by one user ([ADR 0029](adr/0029-users-login-and-acces
 holds the inputs, and every figure is derived from them, never entered
 ([ADR 0030](adr/0030-classes-and-races.md)):
 
-- **Class entries** (planned): one to three, each with a class, a realized level, its XP and a
-  state (active, or frozen with the level it was left at; [ADR 0042](adr/0042-multi-class-and-dual-class.md)
-  step 1). Today a character has exactly one class, level and XP total, which is the one-entry
-  case of the same shape.
+- **Class entries** (built, one entry per character so far): one to three, each with a class, a
+  realized level, its starting XP and a state (active, or frozen with the level it was left at;
+  [ADR 0042](adr/0042-multi-class-and-dual-class.md) step 1; table `character_classes`, domain
+  `classes.Entry`, wire `classes[]`). Every character today has the one active entry its class,
+  level and XP total gave at migration 034; the rules read the first active entry
+  (`classes.Primary`) until the multi-class math lands.
 - **Race**, with its traits.
 - **Ability scores**: six stored scores; the **score in effect** adds the app's effects
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).

@@ -1,0 +1,181 @@
+{
+  "bless": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Friendly creatures not yet in melee when it is cast: +1 to attack rolls (and +1 to morale and to saves against fear, not modelled). Not cumulative. The reverse, curse, is not modelled.",
+    "duration": { "kind": "rounds", "rounds": 6 },
+    "modifiers": { "to_hit": 1 }
+  },
+  "protection_from_evil_priest": {
+    "kind": "buff", "confidence": "high", "target": "self_or_other",
+    "note": "Evil (or evilly enchanted) attackers -2 to hit and the bearer saves +2 against their attacks; also blocks mental control and bodily contact from summoned or extraplanar creatures. The reverse, protection from good, is not modelled.",
+    "duration": { "kind": "rounds", "rounds": "3*level" },
+    "modifiers": { "attackers_to_hit": -2, "save": 2 },
+    "condition": "attacks and saves against evil creatures"
+  },
+  "protection_from_chaos": {
+    "kind": "buff", "confidence": "high", "target": "self_or_other",
+    "note": "Chaotic attackers -2 to hit and the bearer saves +2 against spells and attacks of chaotic creatures.",
+    "duration": { "kind": "rounds", "rounds": "3*level" },
+    "modifiers": { "attackers_to_hit": -2, "save": 2 },
+    "condition": "attacks and saves against chaotic creatures"
+  },
+  "protection_from_evil_10_radius_priest": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "As protection from evil, but covers a 10-ft radius around the creature touched; protected creatures break the warding against enchanted or summoned monsters by attacking them.",
+    "duration": { "kind": "rounds", "rounds": "10*level" },
+    "modifiers": { "attackers_to_hit": -2, "save": 2 },
+    "condition": "attacks and saves against evil creatures"
+  },
+  "faerie_fire": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Outlined creatures are easier to strike: opponents gain +2 to attack rolls in darkness and +1 in twilight or better (the +2 is the modifier). No effect on undead or dark-dwelling creatures.",
+    "duration": { "kind": "rounds", "rounds": "4*level" },
+    "modifiers": { "attackers_to_hit": 2 },
+    "condition": "attacks in darkness (+1 only in twilight or better)"
+  },
+  "barkskin": {
+    "kind": "buff", "confidence": "high", "target": "self_or_other",
+    "note": "Base AC 6, one better for every four levels of the priest; does not combine with armour or any magical protection. Saves against every attack form except magic gain +1.",
+    "duration": { "kind": "rounds", "rounds": "4+level" },
+    "modifiers": { "ac_set": "6-level/4", "save": 1 },
+    "condition": "saves against attack forms other than magic",
+    "condition_keys": ["save"]
+  },
+  "aid": {
+    "kind": "buff", "confidence": "high", "target": "self_or_other",
+    "note": "The benefit of a bless (+1 to attack rolls and saves) and 1d8 temporary hit points; the temporary hit points are not modelled.",
+    "duration": { "kind": "rounds", "rounds": "1+level" },
+    "modifiers": { "to_hit": 1, "save": 1 }
+  },
+  "prayer": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Allies of the priest in the area gain +1 to attack rolls, damage rolls and saves; the priest's enemies in it suffer -1 to each (not modelled: it is the same buff, negated, on the enemies).",
+    "duration": { "kind": "rounds", "rounds": "level" },
+    "modifiers": { "to_hit": 1, "damage": 1, "save": 1 }
+  },
+  "chant": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Allies of the priest in the area gain +1 to attack rolls, damage rolls and saves; the priest's enemies in it suffer -1 to each (not modelled). Lasts as long as the priest keeps chanting.",
+    "duration": { "kind": "special" },
+    "modifiers": { "to_hit": 1, "damage": 1, "save": 1 }
+  },
+  "recitation": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Allies of the priest gain +2 to attack rolls and saves, +3 if of the priest's faith (the +2 is the modifier). Enemies suffer a penalty (not modelled).",
+    "duration": { "kind": "rounds", "rounds": "level" },
+    "modifiers": { "to_hit": 2, "save": 2 }
+  },
+  "righteous_wrath_of_the_faithful": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Allies fighting on the priest's side are affected as by an aid: +1 to attack rolls and saves; the 1d8 temporary hit points are not modelled.",
+    "duration": { "kind": "rounds", "rounds": "level" },
+    "modifiers": { "to_hit": 1, "save": 1 }
+  },
+  "magical_vestment": {
+    "kind": "buff", "confidence": "high", "target": "self",
+    "note": "The vestment gives AC 5, one better for every three levels beyond the 5th, at best AC 1 (17th level). Not cumulative with any other AC protection; ends if the caster loses consciousness.",
+    "duration": { "kind": "rounds", "rounds": "5*level" },
+    "modifiers": { "ac_set": "max(1,5-max(level-5,0)/3)" }
+  },
+  "unfailing_premonition": {
+    "kind": "buff", "confidence": "high", "target": "self",
+    "note": "+2 bonus to AC and saves. In any given round there is a 25% chance that the caster must forgo his intended action to obey the warning impulse (not modelled).",
+    "duration": { "kind": "rounds", "rounds": "10+2*level" },
+    "modifiers": { "ac": -2, "save": 2 }
+  },
+  "hesitation": {
+    "kind": "buff", "confidence": "high", "target": "area",
+    "note": "Affects 2-8 Hit Dice or levels of creatures, only one of 4 or more Hit Dice; those who fail the save add 4 to their initiative rolls (a delay), from the round after the casting.",
+    "duration": { "kind": "rounds", "rounds": "level" },
+    "save": { "type": "spell", "effect": "negates" },
+    "modifiers": { "initiative": 4 }
+  },
+  "remove_fear": {
+    "kind": "buff", "confidence": "high", "target": "other",
+    "note": "One creature per four levels; saves against magical fear +4 for one turn.",
+    "duration": { "kind": "rounds", "rounds": 10 },
+    "modifiers": { "save": 4 },
+    "condition": "saves against magical fear"
+  },
+  "ebony_hand": {
+    "kind": "buff", "confidence": "high", "target": "self",
+    "note": "+1 to the priest's attack roll for every three levels past the first, at best +4 (10th level), to deliver harmful touch spells.",
+    "duration": { "kind": "rounds", "rounds": "3+level" },
+    "modifiers": { "to_hit": "min(1+(level-1)/3,4)" },
+    "condition": "attack rolls that deliver a harmful touch spell"
+  },
+  "flame_strike": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "duration": { "kind": "instant" },
+    "save": { "type": "spell", "effect": "half" },
+    "damage": { "dice": "6d8", "type": "fire" }
+  },
+  "fire_storm": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "note": "2d8 + 1 per level to every creature in the area or within 10 ft of its edge, again each round it stays in it (the exposure); a save halves.",
+    "duration": { "kind": "rounds", "rounds": 1 },
+    "save": { "type": "spell", "effect": "half" },
+    "damage": { "dice": "2d8+level", "type": "fire" },
+    "exposure": { "damage": { "dice": "2d8+level", "type": "fire" } }
+  },
+  "wall_of_fire_priest": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "note": "The heat on the side the priest picks deals 2d4 within 10 ft and 1d4 within 20 ft each round; passing through the wall deals 4d4 + 1 per level. Each is an exposure, picked when rolling. Lasts while the priest concentrates, or 1 round per level. Undead take twice normal damage (the DM's).",
+    "duration": { "kind": "special" },
+    "exposure": {
+      "modes": [
+        { "key": "within_10_ft", "damage": { "dice": "2d4", "type": "fire" } },
+        { "key": "within_20_ft", "damage": { "dice": "1d4", "type": "fire" } },
+        { "key": "passing_through", "damage": { "dice": "4d4+level", "type": "fire" } }
+      ]
+    }
+  },
+  "blade_barrier": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "note": "A creature passing through the barrier takes 8d8 (the exposure). Creatures inside it when it is raised save vs. spell to avoid the blades and leave by the shortest way (not modelled).",
+    "duration": { "kind": "rounds", "rounds": "3*level" },
+    "exposure": { "damage": { "dice": "8d8", "type": "slashing" } }
+  },
+  "fire_seeds": {
+    "kind": "damage", "confidence": "high", "target": "other",
+    "note": "Chosen when cast: up to four acorns hurled (2d8 each, burst; a save halves, a direct hit takes full damage) or up to eight holly berries set off by a word (1d8 each). One acorn or berry per roll. The seeds lose their power after one turn per level.",
+    "duration": { "kind": "special" },
+    "save": { "type": "spell", "effect": "half" },
+    "modes": [
+      { "key": "acorns", "damage": { "dice": "2d8", "type": "fire" } },
+      { "key": "berries", "damage": { "dice": "1d8", "type": "fire" } }
+    ]
+  },
+  "produce_fire": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "duration": { "kind": "rounds", "rounds": 1 },
+    "damage": { "dice": "1d4+level", "type": "fire" }
+  },
+  "sunscorch": {
+    "kind": "damage", "confidence": "high", "target": "other",
+    "note": "A save vs. spell makes the ray miss. Undead and monsters vulnerable to bright light take 1d6 + 2 per level (not modelled); a living victim is also blinded for 1d4 rounds (not modelled). The sun must be in the sky.",
+    "duration": { "kind": "instant" },
+    "save": { "type": "spell", "effect": "negates" },
+    "damage": { "dice": "1d6+level", "type": "fire" }
+  },
+  "sols_searing_orb": {
+    "kind": "damage", "confidence": "high", "target": "other",
+    "note": "Thrown gem: +3 to the attack roll (not modelled); 6d6 and blindness 1d6 rounds, half damage and no blindness on a save. Undead take 12d6 (6d6 on a save), not modelled. A miss bursts for 3d6 in a 3-ft radius (not modelled).",
+    "duration": { "kind": "instant" },
+    "attack_roll": true,
+    "save": { "type": "spell", "effect": "half" },
+    "damage": { "dice": "6d6", "type": "fire" }
+  },
+  "heat_metal": {
+    "kind": "damage", "confidence": "high", "target": "other",
+    "note": "Each round's damage by the metal's temperature: very warm (none), hot 1d4, searing 2d4 (rounds 3 to 5), hot 1d4, very warm (none). The save vs. spell on the last searing round is for a disabling effect, not for damage (not modelled).",
+    "duration": { "kind": "rounds", "rounds": 7 },
+    "damage": { "steps": { "per": "round", "list": [0, "1d4", "2d4", "2d4", "2d4", "1d4", 0] }, "type": "fire" }
+  },
+  "insect_plague": {
+    "kind": "damage", "confidence": "high", "target": "area",
+    "note": "Each creature in the cloud takes 1 point of damage for each round it remains in it (the exposure). The insects also obscure vision, make spellcasting in the cloud impossible and drive creatures of 2 or fewer Hit Dice away (not modelled).",
+    "duration": { "kind": "rounds", "rounds": "2*level" },
+    "exposure": { "damage": { "dice": "1", "type": "piercing" } }
+  }
+}

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -101,6 +102,11 @@ func refusalDTO(err error) (RefusalDTO, error) {
 	}
 	if fe, ok := errors.AsType[*domain.FieldError](err); ok {
 		return RefusalDTO{Field: fe.Field, Code: fe.Message}, nil
+	}
+	// A known-powers list over the rules (ADR 0043 step 9) is a refusal on its field with the
+	// editor's code.
+	if rf, ok := errors.AsType[*psionics.Refusal](err); ok {
+		return RefusalDTO{Field: charactersvc.FieldPsionicPicks, Code: rf.Code}, nil
 	}
 	return RefusalDTO{}, fmt.Errorf("draft refusal: %w", err)
 }

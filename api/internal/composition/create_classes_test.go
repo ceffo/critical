@@ -255,3 +255,105 @@ func TestCreate_Step8_ThePartyThiefPsionicistIsCreatable(t *testing.T) {
 	assert.Empty(t, refusalsOf(tb.draft(t, bob, body)))
 	assert.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, nil))
 }
+
+// psiScores are the ADR 0043 step 4.1 example's scores (Wis 17, Int 15, Con 16: 25 PSPs at level 1).
+const psiScores = `"str":12,"dex":16,"con":16,"int":15,"wis":17,"cha":10`
+
+// withPsionics is a creation body with the PSP maximum entered (none for 0) and the known powers.
+func withPsionics(body string, pspMax int, picks string) string {
+	extra := `"psionicPicks":` + picks
+	if pspMax > 0 {
+		extra += fmt.Sprintf(`,"pspMax":%d`, pspMax)
+	}
+	return body[:len(body)-1] + "," + extra + "}"
+}
+
+// psionicsOf is the current character's PSP pool and known powers.
+func psionicsOf(t *testing.T, tb table, as string) (psp struct{ Current, Max int }, picks []map[string]string) {
+	t.Helper()
+	var got struct {
+		Derived struct {
+			PSP *struct {
+				Current int `json:"current"`
+				Max     int `json:"max"`
+			} `json:"psp"`
+			KnownPowers *struct {
+				Picks []map[string]string `json:"picks"`
+			} `json:"knownPowers"`
+		} `json:"derived"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(as, "GET", "/api/character", "", &got))
+	require.NotNil(t, got.Derived.PSP)
+	require.NotNil(t, got.Derived.KnownPowers)
+	psp.Current, psp.Max = got.Derived.PSP.Current, got.Derived.PSP.Max
+	return psp, got.Derived.KnownPowers.Picks
+}
+
+// ADR 0043 steps 4.4 and 9 through the API: the party's thief/psionicist is created with his PSP
+// maximum (computed at the starting level, or kept as entered) and his known powers, which the
+// read serves as stored; the draft shows them against the allowance.
+func TestCreate_Step9_ThePartyThiefPsionicistWithHisPowers(t *testing.T) {
+	picks := `[{"kind":"discipline","id":"telepathy"},{"kind":"power","id":"contact"}]`
+	party := classesBody("human", psiScores, `[{"class":"thief","xp":0},{"class":"psionicist","xp":0}]`)
+	t.Run("computed maximum", func(t *testing.T) {
+		tb, _ := serverOn(t, memory.New())
+		bob, _ := tb.login("bob@example.com")
+		body := withPsionics(party, 0, picks)
+		d := tb.draft(t, bob, body)
+		assert.Empty(t, refusalsOf(d))
+		require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", body, nil))
+		psp, got := psionicsOf(t, tb, bob)
+		assert.Equal(t, 25, psp.Max, "Table 5 at psionicist level 1: 24 + 1 + 0")
+		assert.Equal(t, 25, psp.Current)
+		assert.Equal(t, []map[string]string{{"kind": "discipline", "id": "telepathy"}, {"kind": "power", "id": "contact"}}, got)
+	})
+	t.Run("entered maximum kept", func(t *testing.T) {
+		tb, _ := serverOn(t, memory.New())
+		bob, _ := tb.login("bob@example.com")
+		require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", withPsionics(party, 40, `[]`), nil))
+		psp, got := psionicsOf(t, tb, bob)
+		assert.Equal(t, 40, psp.Max)
+		assert.Empty(t, got)
+	})
+}
+
+// ADR 0043 step 9 at creation: the picks are refused as the known-powers editor refuses them (its
+// 409 and code; the draft names psionicPicks), and a character with no psionics enters none.
+func TestCreate_Step9_PicksRefusedAsTheEditorRefuses(t *testing.T) {
+	party := classesBody("human", psiScores, `[{"class":"thief","xp":0},{"class":"psionicist","xp":0}]`)
+	fighter := classesBody("human", strong, `[{"class":"fighter","xp":0}]`)
+	two := `[{"kind":"discipline","id":"telepathy"},{"kind":"discipline","id":"clairsentience"}]`
+	for _, tt := range []struct {
+		name, body, code string
+		status           int
+	}{
+		{"over the allowance", withPsionics(party, 0, two), "psionic_allowance_exceeded", http.StatusConflict},
+		{"discipline not known", withPsionics(party, 0, `[{"kind":"power","id":"contact"}]`), "discipline_not_known", http.StatusConflict},
+		{"malformed", withPsionics(party, 0, `[{"kind":"spell","id":"contact"}]`), "", http.StatusBadRequest},
+		{"no psionics", withPsionics(fighter, 0, `[{"kind":"discipline","id":"telepathy"}]`), "not_allowed", http.StatusBadRequest},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tb, _ := serverOn(t, memory.New())
+			bob, _ := tb.login("bob@example.com")
+			d := tb.draft(t, bob, tt.body)
+			require.Len(t, d.Refusals, 1)
+			assert.Equal(t, "psionicPicks", d.Refusals[0].Field)
+			var body map[string]any
+			assert.Equal(t, tt.status, tb.call(bob, "POST", "/api/characters", tt.body, &body))
+			if tt.status == http.StatusConflict {
+				assert.Equal(t, tt.code, body["code"], "create")
+			} else if tt.code != "" {
+				assert.Equal(t, "psionicPicks", body["field"])
+				assert.Equal(t, tt.code, body["error"], "create")
+			}
+			if tt.code != "" {
+				assert.Equal(t, tt.code, d.Refusals[0].Code, "draft")
+			}
+			var list struct {
+				Characters []any `json:"characters"`
+			}
+			require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
+			assert.Empty(t, list.Characters, "nothing created")
+		})
+	}
+}

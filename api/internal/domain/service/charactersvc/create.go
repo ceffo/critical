@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -152,6 +153,11 @@ type NewCharacter struct {
 	// 20.7): the catalogue ids of the spells the DM gave, in order, written
 	// without a roll; nil for none. Another class enters none.
 	Spellbook []string
+	// PsionicPicks are a psionicist's known powers (ADR 0043 step 9): the disciplines and powers
+	// in the player's order, checked as the known-powers editor checks them at the psionics
+	// entry's starting level and stored with the character; nil for none. A character with no
+	// psionics entry enters none.
+	PsionicPicks []psionics.Pick
 }
 
 // Change is a rename (Name) or a retirement (Retired true) of a character;
@@ -659,6 +665,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	if c.PSPMax, err = startingPSPMax(&c, n.PSPMax, s.rules); err != nil {
 		return 0, err
 	}
+	// ADR 0043 step 9: the known powers within Table 4 at the starting level, as the editor
+	// checks them, written with the character (no psionic_pick entry: creating is no move).
+	if c.PsionicPicks, err = s.startingPicks(c, n.PsionicPicks); err != nil {
+		return 0, err
+	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
 	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), entryLevel(&c, k.def.ID), nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
@@ -757,6 +768,35 @@ func startingPSPMax(c *Character, entered int, rules Rules) (int, error) {
 	return m.Max, nil
 }
 
+// FieldPsionicPicks is the creation's field of the known powers (ADR 0043 step 9).
+const FieldPsionicPicks = "psionicPicks"
+
+// startingPicks is ADR 0043 step 9 at creation: the picks a new character is stored with, checked
+// by psionics.Validate against Table 4 at its psionics entry's starting level, as the known-powers
+// editor checks a save. It returns the list (nil for none), a *psionics.Refusal for a list over the
+// rules, a field error on FieldPsionicPicks for a malformed one (the rule's own message, as the
+// editor's) or for picks entered for a character with no psionics entry (CodeNotAllowed). c is
+// started (its entries at their starting levels).
+func (s *service) startingPicks(c Character, picks []psionics.Pick) ([]psionics.Pick, error) {
+	if len(picks) == 0 {
+		return nil, nil
+	}
+	c.PsionicPicks, c.Derived.Powers = nil, nil
+	if err := s.setPowers(&c); err != nil {
+		return nil, fmt.Errorf("new character: %w", err)
+	}
+	if c.Derived.Powers == nil {
+		return nil, &domain.FieldError{Field: FieldPsionicPicks, Message: CodeNotAllowed}
+	}
+	if _, err := psionics.Validate(s.powers, c.Derived.Powers.Allowance, picks); err != nil {
+		if errors.Is(err, psionics.ErrInvalid) {
+			return nil, domain.FieldErrorf(FieldPsionicPicks, "%s", err.Error())
+		}
+		return nil, err
+	}
+	return slices.Clone(picks), nil
+}
+
 // entryLevel is the level of c's entry of class (the realized level, or the left-at level of a
 // class left); c's realized level for a class it has none of.
 func entryLevel(c *Character, class string) int {
@@ -814,6 +854,15 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	}
 	// Nothing is worn before the character exists (ADR 0033 step 14).
 	if c.Derived, err = Derive(&c, nil, "", s.rules); err != nil {
+		return nil, fmt.Errorf("draft: %w", err)
+	}
+	// ADR 0043 step 9: the known powers against the starting level's allowance, read as entered
+	// beside their refusal.
+	if _, err := s.startingPicks(c, n.PsionicPicks); err != nil {
+		out.Refusals = append(out.Refusals, err)
+	}
+	c.PsionicPicks = slices.Clone(n.PsionicPicks)
+	if err := s.setPowers(&c); err != nil {
 		return nil, fmt.Errorf("draft: %w", err)
 	}
 	s.readWarnings(&c, k.defs)

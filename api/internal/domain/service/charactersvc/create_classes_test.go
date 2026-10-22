@@ -154,8 +154,8 @@ func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
 }
 
 // ADR 0043 step 4.4 through Create: a fighter is stored with no PSP maximum; a maximum entered for
-// a character with no psionics entry, or out of range, is refused. (The psionicist itself is not
-// creatable yet, ADR 0040 step 8: TestCreate_Step4_4_PSPMaxEnteredIsKept proves its maximum.)
+// a character with no psionics entry, or out of range, is refused. (TestCreate_Step4_4_PSPMaxEnteredIsKept
+// proves a psionicist's maximum.)
 func TestCreate_Step4_4_NoPsionicsNoPSPMax(t *testing.T) {
 	fighter := entered("human")
 	fighter.Class, fighter.Classes = "fighter", nil

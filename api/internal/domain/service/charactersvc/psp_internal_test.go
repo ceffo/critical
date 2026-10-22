@@ -14,8 +14,8 @@ import (
 // kept as entered, else step 4's at its psionics entry's starting level, on the fixture's real
 // Table 5. The party's human thief/psionicist (psionicist 3, Wis 17 Int 15 Con 16) computes
 // 25 + 2 x 12 = 49, its gain not divided by its classes (Q2); a single-class psionicist 1
-// computes 25. Create's own gate refuses the psionicist until every kind it lists is computed
-// (ADR 0040 step 8), so this reads the started character Create passes.
+// computes 25. This reads the started character Create passes; the composition test
+// TestCreate_Step9_ThePartyThiefPsionicistWithHisPowers creates one through the API.
 func TestCreate_Step4_4_PSPMaxEnteredIsKept(t *testing.T) {
 	rules := cataloguetest.Tables(t)
 	thiefPsi := func() *Character {

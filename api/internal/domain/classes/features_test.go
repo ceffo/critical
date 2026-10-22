@@ -167,9 +167,9 @@ func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
 }
 
 // ADR 0040 step 8, the creation gate: a class is implemented only when every
-// kind it lists is computed. The kinds the code does not compute yet are
-// psionics and save_bonus; a class listing one of them, with others or alone,
-// is not. The gate reads kinds, never class ids.
+// kind it lists is computed. The kind the code does not compute yet is
+// save_bonus (psionics left the list with its reader, ADR 0043 step 5); a class
+// listing it, with others or alone, is not. The gate reads kinds, never class ids.
 func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -178,9 +178,10 @@ func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 	}{
 		{"no feature", nil, true},
 		{"only computed kinds", []classes.Feature{{Kind: classes.KindExceptionalStrength}, {Kind: classes.KindBackstab, Table: "t"}}, true},
-		{"psionics", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}}, false},
+		{"psionics", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}}, true},
 		{"save_bonus", []classes.Feature{{Kind: classes.KindSaveBonus}}, false},
-		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics, Psionics: psionics()}}, false},
+		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics, Psionics: psionics()}}, true},
+		{"psionics and save_bonus", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}, {Kind: classes.KindSaveBonus}}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, ok := registry(t, withFeatures(tc.fs...)).Class("test_class")

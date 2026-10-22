@@ -453,9 +453,10 @@ CRI-178 built steps 1, 2, 4, 6 and 8's data ([ADR 0021](0021-spell-catalogue.md)
   THAC0 are in its class and group entries and also a column (`experience`, `thac0`) and a row (`hit_dice`) of the shared grids the API still reads
   by class or group (ADR 0021 step 20.1). The proficiency slots of Table 10 are not in the catalogue: they are the app seed's `psionicist` slot
   row and crossover (`seeds/proficiencies.json`).
-- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but its two kinds are not computed yet, so the
-  class is **not offered at creation and refused** (`not_creatable`) until the implementing items land; each kind leaves
-  `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
+- **The creation gate** (ADR 0040 step 8, amended): the catalogue lists the psionicist now, but one of its two kinds is not computed yet, so the
+  class is **not offered at creation and refused** (`not_creatable`) until `save_bonus` has a reader. As built: `psionics` left
+  `classes.notImplemented` with its reader (the PSP pool, steps 4 to 7: `TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs`), `save_bonus`
+  stays; each kind leaves `classes.notImplemented` when its reader does (`Class.Implemented`, a test on kinds, never an id). The kinds are in the Go closed list
   (`KindPsionics`, `KindSaveBonus`: parsed with no params, which the schema checks; nothing reads them).
 - **French is optional on a power's text** (the localized schema type: English required, an absent language omitted). 21 of the 152
   descriptions have no French body in the artifact (OCR); a reader serves the English one for a language a text lacks, as every localized

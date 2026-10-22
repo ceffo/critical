@@ -59,7 +59,7 @@ var FeatureKinds = []string{
 // yet: the catalogue may list them (a class is data), but a class that does
 // is not offered at creation until its kinds are built (ADR 0040 step 8).
 // A kind leaves this list when its reader lands.
-var notImplemented = []string{KindPsionics, KindSaveBonus}
+var notImplemented = []string{KindSaveBonus}
 
 // Implemented reports whether the code computes every feature kind the class
 // lists: the creation gate of ADR 0040 step 8 ("passed the check = fully

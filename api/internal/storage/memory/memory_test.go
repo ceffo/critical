@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -692,4 +694,35 @@ func TestStore_Step16_KeepsTheProficiencyDescriptions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, got)
 	assert.Equal(t, artifact.Catalogue.ProficiencyDescriptions, got)
+}
+
+// ADR 0043 step 4: a seed character file may carry psp_max, so the e2e stack can seed a
+// psionicist (the class is not creatable yet); without it the maximum is 0.
+func TestSeed_Step4_ThePSPMaxOfTheSeedFileIsStored(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	require.NoError(t, os.CopyFS(dir, os.DirFS(seedsDir)))
+	raw, err := os.ReadFile(filepath.Join(seedsDir, "character.json"))
+	require.NoError(t, err)
+	var sheet map[string]any
+	require.NoError(t, json.Unmarshal(raw, &sheet))
+	sheet["psp_max"] = 37
+	out, err := json.Marshal(sheet)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "character.json"), out, 0o600))
+
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	book, err := spellbookadpt.ReadSeed(seedsDir, artifact.Catalogue)
+	require.NoError(t, err)
+	s := memory.New()
+	require.NoError(t, s.Seed(ctx, dir, book, ruletablesvc.Equipment{}, cataloguetest.Definitions(t)))
+	got, err := s.Characters().GetMaxPSP(ctx, seedCharacter(t, s))
+	require.NoError(t, err)
+	assert.Equal(t, 37, got)
+
+	plain, id := seeded(t)
+	none, err := plain.Characters().GetMaxPSP(ctx, id)
+	require.NoError(t, err)
+	assert.Zero(t, none)
 }

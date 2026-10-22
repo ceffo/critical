@@ -3,6 +3,7 @@ package itemsvc
 import (
 	"errors"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"strconv"
 
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -56,9 +57,9 @@ func WornSkillColumn(pieces []Item) string {
 }
 
 // CarrySkillArmour is ADR 0033 step 14's carry-over for one character of
-// class, which entered skillArmor (characters.skill_armor) and holds pieces,
+// class def, which entered skillArmor (characters.skill_armor) and holds pieces,
 // in list order. armours are the catalogue's body armours. A character
-// without skill points, one that wears a body armour already, and an entered
+// whose class lists no rogue_skills (ADR 0040 step 3), one that wears a body armour already, and an entered
 // "none" get nothing. Otherwise an armour of the entered Table 29 column (""
 // reads as leather) is worn: the first carried piece of that column, else a new piece from the catalogue row the
 // entry names (carriedArmour: its name in every language the catalogue has,
@@ -67,8 +68,8 @@ func WornSkillColumn(pieces []Item) string {
 // review list (ReasonArmourGuessed). ErrCarryOverArmourMissing when the row
 // is not in armours; an entered value that is none of the armours is an
 // error (the column's CHECK refuses one).
-func CarrySkillArmour(class, skillArmor string, pieces []Item, armours []ruletablesvc.Armour) (CarryOver, error) {
-	if !ruletablesvc.HasSkillPoints(class) || skillArmor == "none" {
+func CarrySkillArmour(def classes.Class, skillArmor string, pieces []Item, armours []ruletablesvc.Armour) (CarryOver, error) {
+	if _, ok := def.Lists(classes.KindRogueSkills); !ok || skillArmor == "none" {
 		return CarryOver{}, nil
 	}
 	for _, p := range pieces {

@@ -1,5 +1,7 @@
 package ruletablesvc
 
+import "github.com/ceffo/critical/api/internal/domain/classes"
+
 // The armour a thief's or a bard's skills read (ADR 0033 step 14, amending
 // ADR 0030 steps 1, 17 and 18): the worn body armour's PHB Table 29 column,
 // never an entered value.
@@ -20,31 +22,39 @@ const (
 // SkillColumns are the Table 29 columns of a body armour, in display order.
 var SkillColumns = []string{ColumnNone, ColumnLeather, ColumnPaddedStudded, ColumnElvenChain, ColumnMetal, ColumnNoneAllowed}
 
-// armorPaddedStudded is the skill armour of Table 29's worst column.
-const armorPaddedStudded = "padded_studded_leather"
-
-// SkillArmorFor is ADR 0033 step 14: the skill armour (one of ThiefArmors,
-// or BardArmors for a bard) the class's skills read when it wears a body
-// armour of Table 29 column column ("" when it wears none: the none column,
-// PHB p.39, bracers and cloaks included). An armour whose column is
-// none_allowed, metal for a thief, or a column this list does not know reads
-// the padded or studded column, the worst one (not chosen: PHB chapter 3's
-// multi-class reading, every skill but two unusable). A shield is no body
-// armour: it changes no skill.
-func SkillArmorFor(class, column string) string {
-	switch column {
-	case "", ColumnNone:
-		return ColumnNone
-	case ColumnLeather:
-		return ArmorLeather
-	case ColumnPaddedStudded:
-		return armorPaddedStudded
-	case ColumnElvenChain:
-		return armorElvenChain
-	case ColumnMetal:
-		if HasBardSkills(class) {
-			return ArmorMetal
-		}
+// SkillArmorFor is ADR 0033 step 14 read through the rogue_skills params rs
+// (ADR 0040 step 3): the skill armour the skills read when the character wears
+// a body armour of Table 29 column column ("" when it wears none: the none
+// column, PHB p.39, bracers and cloaks included). The params' entry for the
+// column names the Table 29 row it reads; a column with no entry reads the
+// none_allowed entry (the worst column, not chosen: PHB chapter 3's
+// multi-class reading). A shield is no body armour: it changes no skill. ""
+// without rogue_skills.
+func SkillArmorFor(rs *classes.RogueSkills, column string) string {
+	if rs == nil {
+		return ""
 	}
-	return armorPaddedStudded
+	if column == "" {
+		column = ColumnNone
+	}
+	a, ok := rs.SkillArmourFor(column)
+	if !ok {
+		a, _ = rs.SkillArmourFor(ColumnNoneAllowed)
+	}
+	return skillArmorOf(a)
+}
+
+// skillArmorOf is the skill armour an armour entry reads, the value the
+// derived block shows and the skills take: its Table 29 row (leather, the
+// baseline, for none), or its own code when it adds an extra adjustment
+// (the bard's metal: the elven chain row plus its penalty is not the elven
+// chain).
+func skillArmorOf(a classes.SkillArmour) string {
+	switch {
+	case a.Extra != 0:
+		return a.Code
+	case a.Column == "":
+		return ArmorLeather
+	}
+	return a.Column
 }

@@ -94,6 +94,9 @@ export interface Derived {
   levelUp: LevelUp;
   /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
   specializes: boolean;
+  /** Steps 9 and 10: the class enters an 18/xx and reads the warrior's scale above 18 (its
+   * `exceptional_strength` feature). */
+  exceptionalStrength: boolean;
   /** Step 20.1: what a mage or a bard may write in the spellbook; null for the other classes. */
   spellbook: SpellbookRules | null;
   /** Step 14: the percent chance a cast fails (low Wisdom); 0: no die. */
@@ -572,6 +575,10 @@ export interface CreationDraft {
   refusals: DraftRefusal[];
   missing: string[];
   unmetMinimums: { class: string; abilities: string[] }[];
+  /** ADR 0030 step 9 through the class's features: the class lists `exceptional_strength`, the
+   * Strength entered is 18 and the race rolls it. The form offers the 18/xx field on it (no rule
+   * of its own). */
+  exceptionalStrength: boolean;
 }
 
 /** A level and the lowest XP that reaches it, for one class. */

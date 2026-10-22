@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -18,13 +19,13 @@ const skillArmourMigration = "020_skill_armour_worn.sql"
 // over by carryOver. armours are the catalogue's body armours; a carry-over that needs a row
 // the catalogue does not hold (before format 7) fails the run, which rolls back and is retried
 // on the next start, as the equipment conversion does (ErrCatalogueWithoutEquipment).
-func carrySkillArmour(ctx context.Context, q storeq.Querier, armours []ruletablesvc.Armour) error {
+func carrySkillArmour(ctx context.Context, q storeq.Querier, armours []ruletablesvc.Armour, defs *classes.Registry) error {
 	rows, err := q.SkillArmourCharacters(ctx)
 	if err != nil {
 		return fmt.Errorf("list characters: %w", err)
 	}
 	for _, r := range rows {
-		if err := carryOver(ctx, q, r.ID, r.Class, r.SkillArmor, armours); err != nil {
+		if err := carryOver(ctx, q, r.ID, r.Class, r.SkillArmor, armours, defs); err != nil {
 			return fmt.Errorf("character %d: %w", r.ID, err)
 		}
 	}
@@ -33,18 +34,20 @@ func carrySkillArmour(ctx context.Context, q storeq.Querier, armours []ruletable
 
 // carryCharacter carries the character owner's entered skill armour over to a worn body armour
 // (itemsvc.CarrySkillArmour): the seed's, once its equipment is seeded.
-func carryCharacter(ctx context.Context, q storeq.Querier, owner int64, armours []ruletablesvc.Armour) error {
+func carryCharacter(ctx context.Context, q storeq.Querier, owner int64, armours []ruletablesvc.Armour, defs *classes.Registry) error {
 	c, err := q.CharacterSkillArmour(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("read the skill armour: %w", err)
 	}
-	return carryOver(ctx, q, owner, c.Class, c.SkillArmor, armours)
+	return carryOver(ctx, q, owner, c.Class, c.SkillArmor, armours, defs)
 }
 
 // carryOver applies itemsvc.CarrySkillArmour to one character: it wears the piece it names, or
 // inserts the new piece under a new name key (its name in every language of the catalogue row)
-// with its review row. Nothing is logged: the carry-over is no move of the game.
-func carryOver(ctx context.Context, q storeq.Querier, owner int64, class, skillArmor string, armours []ruletablesvc.Armour) error {
+// with its review row. Nothing is logged: the carry-over is no move of the game. A class the
+// catalogue does not define has no features: nothing to carry.
+func carryOver(ctx context.Context, q storeq.Querier, owner int64, class, skillArmor string, armours []ruletablesvc.Armour, defs *classes.Registry) error {
+	def, _ := defs.Class(class)
 	rows, err := q.CarryOverItems(ctx, owner)
 	if err != nil {
 		return fmt.Errorf("list items: %w", err)
@@ -56,7 +59,7 @@ func carryOver(ctx context.Context, q storeq.Querier, owner int64, class, skillA
 			State: itemsvc.State(r.State), SkillColumn: r.SkillColumn,
 		})
 	}
-	co, err := itemsvc.CarrySkillArmour(class, skillArmor, pieces, armours)
+	co, err := itemsvc.CarrySkillArmour(def, skillArmor, pieces, armours)
 	if err != nil {
 		return err
 	}

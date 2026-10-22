@@ -135,6 +135,11 @@ type checked struct {
 	derivable bool
 	// defs are the class and race definitions the check read.
 	defs *classes.Registry
+	// def is the entered class's definition (zero for a class missing or
+	// unknown).
+	def classes.Class
+	// strOK: the Strength is entered and in range.
+	strOK bool
 }
 
 // check reads n field by field, in the form's order. The creation (draft false) stops at the
@@ -169,6 +174,7 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		return out, nil
 	}
 	class, classOK := defs.Class(n.Class)
+	out.def = class
 	switch {
 	case classOK:
 	case draft && n.Class == "":
@@ -216,18 +222,20 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		case a.v < a.lo || a.v > a.hi:
 			refuse(&domain.FieldError{Field: a.field, Message: CodeOutOfRange})
 			scoresOK = false
+		case a.field == string(AbilityStr):
+			out.strOK = true
 		}
 		if stop() {
 			return out, nil
 		}
 	}
-	if err := validExceptional(n, class.Group); err != nil {
+	if err := validExceptional(n, class); err != nil {
 		refuse(err)
 	}
 	if stop() {
 		return out, nil
 	}
-	points, err := validSkills(n)
+	points, err := validSkills(n, class)
 	pointsOK := err == nil
 	if err != nil {
 		refuse(err)
@@ -290,19 +298,20 @@ func (s *service) skillsAt(c Character, n NewCharacter) (skills.Sheet, error) {
 // validSkills is ADR 0030 steps 1, 17 and 18: a thief or a bard enters its
 // points (skills.ValidSkillPoints); any other class enters none. The armour is
 // no entry (ADR 0033 step 14).
-func validSkills(n NewCharacter) (map[string]int, error) {
-	return skills.ValidSkillPoints(n.Class, n.SkillPoints)
+func validSkills(n NewCharacter, def classes.Class) (map[string]int, error) {
+	return skills.ValidSkillPoints(def, n.SkillPoints)
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,
-// 1 to 100, and only a warrior's with Strength 18 who is not a halfling.
-func validExceptional(n NewCharacter, group string) error {
+// 1 to 100, and only with Strength 18 for a class with exceptional_strength
+// (ADR 0040 step 3) of a race that rolls it.
+func validExceptional(n NewCharacter, def classes.Class) error {
 	switch {
 	case n.StrExceptional == 0:
 		return nil
 	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
 		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
-	case !ruletablesvc.ExceptionalStrengthAllowed(group, n.Race, n.Str):
+	case !ruletablesvc.ExceptionalStrengthAllowed(def, n.Race, n.Str):
 		return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
 	}
 	return nil
@@ -330,7 +339,7 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
-	if err := skills.SkillPointsWithinBudget(c.Class, c.RealizedLevel, nil, c.SkillPoints); err != nil {
+	if err := skills.SkillPointsWithinBudget(k.def, c.RealizedLevel, nil, c.SkillPoints); err != nil {
 		return 0, err
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
@@ -407,6 +416,10 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 		return nil, err
 	}
 	out := &Draft{Refusals: k.refusals, Missing: k.missing, UnmetMinimums: unmetMinimums(k.defs, n, blank)}
+	// ADR 0030 step 9 through the class's features (ADR 0040 step 3): the
+	// form offers the 18/xx field when the server says so, never by a rule
+	// of its own.
+	out.ExceptionalStrength = k.strOK && ruletablesvc.ExceptionalStrengthAllowed(k.def, n.Race, n.Str)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
@@ -414,7 +427,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 			if err != nil {
 				return nil, fmt.Errorf("draft: %w", err)
 			}
-			out.SkillPoints = budgetAt(out, n.Class, level, k.c.SkillPoints)
+			out.SkillPoints = budgetAt(out, k.def, level, k.c.SkillPoints)
 		}
 		return out, nil
 	}
@@ -422,7 +435,7 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 	if _, err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	out.SkillPoints = budgetAt(out, c.Class, c.RealizedLevel, c.SkillPoints)
+	out.SkillPoints = budgetAt(out, k.def, c.RealizedLevel, c.SkillPoints)
 	if sheet, err := s.skillsAt(c, n); err != nil {
 		out.Refusals = append(out.Refusals, err)
 		// Refused picks are read as entered, so the step shows their figures beside the refusal.
@@ -446,11 +459,11 @@ func (s *service) Draft(_ context.Context, n NewCharacter, blank []string) (*Dra
 // budgetAt is a draft's skill point budget at level (ADR 0030 steps 17 and 18), nil for a class
 // without skill points, and adds to out the creation's refusal of points over it (ADR 0037 step
 // 10: nothing was spent before).
-func budgetAt(out *Draft, class string, level int, points map[string]int) *ruletablesvc.SkillPointsBudget {
-	if err := skills.SkillPointsWithinBudget(class, level, nil, points); err != nil {
+func budgetAt(out *Draft, def classes.Class, level int, points map[string]int) *ruletablesvc.SkillPointsBudget {
+	if err := skills.SkillPointsWithinBudget(def, level, nil, points); err != nil {
 		out.Refusals = append(out.Refusals, err)
 	}
-	if b, ok := ruletablesvc.SkillPointsFigures(class, level, points); ok {
+	if b, ok := ruletablesvc.SkillPointsFigures(skills.RogueSkillsAt(def, level), level, points); ok {
 		return &b
 	}
 	return nil
@@ -598,16 +611,16 @@ type WeaponTypeOption struct {
 }
 
 // ClassWeaponTypeOptions is ADR 0037 steps 7 and 9 for the editor: every weapon
-// type class may pick, in display order, with its specialization's cost when the
+// type class def may pick, in display order, with its specialization's cost when the
 // class specializes (ruletablesvc.Specializes), else 0.
-func ClassWeaponTypeOptions(class string) []WeaponTypeOption {
+func ClassWeaponTypeOptions(def classes.Class) []WeaponTypeOption {
 	out := make([]WeaponTypeOption, 0, len(ruletablesvc.WeaponTypes))
 	for _, t := range ruletablesvc.WeaponTypes {
-		if !ruletablesvc.WeaponTypeAllowed(class, t) {
+		if !ruletablesvc.WeaponTypeAllowed(def.ID, t) {
 			continue
 		}
 		o := WeaponTypeOption{Type: t}
-		if ruletablesvc.Specializes(class) {
+		if ruletablesvc.Specializes(def) {
 			o.SpecializationSlots = ruletablesvc.SpecializationSlots(t)
 		}
 		out = append(out, o)
@@ -755,7 +768,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		opt := ClassOption{
 			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, ExceptionalStrengthRaces: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
-			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(class),
+			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(def),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
 			xp, err := s.rules.XPThreshold(class, level)
@@ -764,10 +777,10 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			}
 			opt.LevelXP = append(opt.LevelXP, LevelXP{Level: level, XP: xp})
 		}
-		if ruletablesvc.HasSkillPoints(class) {
-			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(class))
+		if f, ok := def.Lists(classes.KindRogueSkills); ok {
+			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(f.RogueSkills))
 		}
-		if _, ok := ruletablesvc.SpellbookMaxLevel(class); ok {
+		if _, ok := def.Lists(classes.KindSpellbook); ok {
 			opt.Spellbook = s.spellbookOption(class)
 		}
 		for _, race := range races {
@@ -777,7 +790,7 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 			}
 			if ok {
 				opt.Races = append(opt.Races, race)
-				if ruletablesvc.ExceptionalStrengthAllowed(def.Group, race, 18) {
+				if ruletablesvc.ExceptionalStrengthAllowed(def, race, 18) {
 					opt.ExceptionalStrengthRaces = append(opt.ExceptionalStrengthRaces, race)
 				}
 			}
@@ -845,6 +858,10 @@ type Draft struct {
 	// UnmetMinimums are, for every creatable class, the abilities whose entered score is under
 	// the class's minimum (PHB Table 13); empty where the scores meet them or are not entered.
 	UnmetMinimums []ClassUnmet
+	// ExceptionalStrength is ADR 0030 step 9 on the entries: the class lists exceptional_strength
+	// (ADR 0040 step 3), the Strength entered is 18 and the race rolls it. The form offers the
+	// 18/xx field on it, and sends one only then.
+	ExceptionalStrength bool
 }
 
 // ClassUnmet is a class and the abilities under its minimum.

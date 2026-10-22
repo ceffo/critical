@@ -762,9 +762,9 @@ export function ExtrasStep({
   const [rollError, setRollError] = useState<string | null>(null);
   const cls = classOf(options, draft.cls);
   const skills = cls?.skills ?? [];
-  const offersExceptional =
-    !!cls?.exceptionalStrengthRaces.includes(draft.race) &&
-    parseWhole(draft.scores.str) === 18;
+  // The server says whether the entries allow an 18/xx (ADR 0030 step 9 through the class's
+  // features); the last answer for the class, so the field does not blink while one is asked.
+  const offersExceptional = answer.latest?.exceptionalStrength === true;
   const con = parseWhole(draft.scores.con);
   const xpValue = parseWhole(xp);
   const canRoll =

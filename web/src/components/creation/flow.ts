@@ -430,13 +430,15 @@ export function settle(d: FlowDraft, xp: string): FlowDraft {
  * left blank or unreadable (not a number where one is needed) is left out (a null number), so the
  * draft's answer lists it missing; `error` names the first unreadable one, which Créer does not
  * send. Only the shape is read: every range and rule is the server's. A blank alignment or sex is
- * left out (the server says it is missing).
+ * left out (the server says it is missing). The 18/xx is sent only when `offersExceptional`, the
+ * server's last draft answer for the class (its `exceptionalStrength`).
  */
 export function buildBody(
   options: CreationOptions,
   draft: FlowDraft,
   xp: string,
   language: string,
+  offersExceptional = false,
 ): { body: NewCharacter; error: FieldError | null } {
   let error: FieldError | null = null;
   const fail = (field: string, code: string) => {
@@ -470,11 +472,7 @@ export function buildBody(
     else body[f] = v;
   }
   const cls = classOf(options, draft.cls);
-  if (
-    cls?.exceptionalStrengthRaces.includes(draft.race) &&
-    body.str === 18 &&
-    draft.strExceptional.trim() !== ""
-  ) {
+  if (offersExceptional && draft.strExceptional.trim() !== "") {
     const v = parseWhole(draft.strExceptional);
     if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");
     else body.strExceptional = v;

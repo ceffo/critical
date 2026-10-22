@@ -20,9 +20,9 @@ func (_m *MockRules) EXPECT() *MockRules_Expecter {
 	return &MockRules_Expecter{mock: &_m.Mock}
 }
 
-// AttackRateFor provides a mock function with given fields: group, level, kind, weaponType, specialized
-func (_m *MockRules) AttackRateFor(group string, level int, kind string, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error) {
-	ret := _m.Called(group, level, kind, weaponType, specialized)
+// AttackRateFor provides a mock function with given fields: class, level, kind, weaponType, specialized
+func (_m *MockRules) AttackRateFor(class string, level int, kind string, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error) {
+	ret := _m.Called(class, level, kind, weaponType, specialized)
 
 	if len(ret) == 0 {
 		panic("no return value specified for AttackRateFor")
@@ -32,22 +32,22 @@ func (_m *MockRules) AttackRateFor(group string, level int, kind string, weaponT
 	var r1 bool
 	var r2 error
 	if rf, ok := ret.Get(0).(func(string, int, string, string, bool) (ruletablesvc.AttackRate, bool, error)); ok {
-		return rf(group, level, kind, weaponType, specialized)
+		return rf(class, level, kind, weaponType, specialized)
 	}
 	if rf, ok := ret.Get(0).(func(string, int, string, string, bool) ruletablesvc.AttackRate); ok {
-		r0 = rf(group, level, kind, weaponType, specialized)
+		r0 = rf(class, level, kind, weaponType, specialized)
 	} else {
 		r0 = ret.Get(0).(ruletablesvc.AttackRate)
 	}
 
 	if rf, ok := ret.Get(1).(func(string, int, string, string, bool) bool); ok {
-		r1 = rf(group, level, kind, weaponType, specialized)
+		r1 = rf(class, level, kind, weaponType, specialized)
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
 
 	if rf, ok := ret.Get(2).(func(string, int, string, string, bool) error); ok {
-		r2 = rf(group, level, kind, weaponType, specialized)
+		r2 = rf(class, level, kind, weaponType, specialized)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -61,16 +61,16 @@ type MockRules_AttackRateFor_Call struct {
 }
 
 // AttackRateFor is a helper method to define mock.On call
-//   - group string
+//   - class string
 //   - level int
 //   - kind string
 //   - weaponType string
 //   - specialized bool
-func (_e *MockRules_Expecter) AttackRateFor(group interface{}, level interface{}, kind interface{}, weaponType interface{}, specialized interface{}) *MockRules_AttackRateFor_Call {
-	return &MockRules_AttackRateFor_Call{Call: _e.mock.On("AttackRateFor", group, level, kind, weaponType, specialized)}
+func (_e *MockRules_Expecter) AttackRateFor(class interface{}, level interface{}, kind interface{}, weaponType interface{}, specialized interface{}) *MockRules_AttackRateFor_Call {
+	return &MockRules_AttackRateFor_Call{Call: _e.mock.On("AttackRateFor", class, level, kind, weaponType, specialized)}
 }
 
-func (_c *MockRules_AttackRateFor_Call) Run(run func(group string, level int, kind string, weaponType string, specialized bool)) *MockRules_AttackRateFor_Call {
+func (_c *MockRules_AttackRateFor_Call) Run(run func(class string, level int, kind string, weaponType string, specialized bool)) *MockRules_AttackRateFor_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run(args[0].(string), args[1].(int), args[2].(string), args[3].(string), args[4].(bool))
 	})

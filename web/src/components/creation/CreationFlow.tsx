@@ -143,7 +143,19 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // class minimums, the skill budget, the pools, the warnings, the derived figures and the refusals
   // a Créer would meet. Every change of the draft asks again after a short rest; a reply landing
   // after a newer change (or after the player left) is dropped by the gate.
-  const built = options ? buildBody(options, draft, xp, i18n.language) : null;
+  const [answered, setAnswered] = useState<{
+    key: string;
+    cls: string;
+    data: CreationDraft | null;
+    failed: FieldError | null;
+  } | null>(null);
+  // The 18/xx is sent only when the server's last answer for the class offers it (ADR 0030 step 9
+  // through the class's features): the form has no rule of its own.
+  const offersExceptional =
+    answered?.cls === draft.cls && answered.data?.exceptionalStrength === true;
+  const built = options
+    ? buildBody(options, draft, xp, i18n.language, offersExceptional)
+    : null;
   const body = built && !built.error ? built.body : null;
   // An alignment the class's list leaves out is already shown refused (from the options); the
   // draft is asked without it, so the step still gets the server's other warnings meanwhile.
@@ -157,12 +169,6 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           : asked,
       )
     : "";
-  const [answered, setAnswered] = useState<{
-    key: string;
-    cls: string;
-    data: CreationDraft | null;
-    failed: FieldError | null;
-  } | null>(null);
   const [draftGate] = useState(replyGate);
   useEffect(() => {
     if (draftKey === "") return;

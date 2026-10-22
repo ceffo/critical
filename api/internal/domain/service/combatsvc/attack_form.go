@@ -372,12 +372,7 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 // display-only: a class or level the tables cannot read is logged and shows
 // no rate rather than failing the form.
 func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
-	group := char.Derived.Group
-	if group == "" {
-		slog.WarnContext(ctx, "attack rate: no class group", "character", char.ID, "class", char.Class)
-		return nil, nil
-	}
-	rate, ok, err := s.rules.AttackRateFor(group, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)
+	rate, ok, err := s.rules.AttackRateFor(char.Class, char.Derived.RealizedLevel, string(weapon.Kind), weapon.Type, weapon.Specialized)
 	if err != nil {
 		slog.WarnContext(ctx, "attack rate: rule tables", "character", char.ID, "level", char.Derived.RealizedLevel, "weapon", weapon.ID, "err", err)
 		return nil, nil

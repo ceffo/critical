@@ -15,14 +15,6 @@ import (
 // access the catalogue's (format 6); this file says which row, column and
 // cell a cleric reads.
 
-// wisdomFailureClasses are the classes whose low Wisdom may make a spell
-// fail and whose high Wisdom adds bonus spells (ADR 0030 steps 13 and 14,
-// PHB Table 5: priests).
-var wisdomFailureClasses = []string{"cleric"}
-
-// turningClasses are the classes that turn undead (ADR 0030 step 16).
-var turningClasses = []string{"cleric"}
-
 // MinorSphereMaxLevel is the highest spell level a minor sphere opens (ADR
 // 0030 step 15.2, PHB chapter 3: minor access, spells of 1st to 3rd level).
 const MinorSphereMaxLevel = 3
@@ -43,13 +35,6 @@ var ErrCannotTurn = errors.New("this cleric cannot turn that undead")
 // ErrNoSphereAccess means the artifact carries no sphere access (a format-5
 // catalogue, ADR 0021 step 12.4).
 var ErrNoSphereAccess = errors.New("the spell catalogue carries no sphere access: run `just catalogue` to fetch a format-6 artifact")
-
-// UsesWisdomSpells reports whether class gets PHB Table 5's bonus spells and
-// spell failure (ADR 0030 steps 13 and 14).
-func UsesWisdomSpells(class string) bool { return slices.Contains(wisdomFailureClasses, class) }
-
-// TurnsUndead reports whether class turns undead (ADR 0030 step 16).
-func TurnsUndead(class string) bool { return slices.Contains(turningClasses, class) }
 
 // WisdomFor is PHB Table 5's row of a Wisdom score (bonus spells and chance
 // of spell failure). A score outside the table is an error.
@@ -72,6 +57,12 @@ func (t *Tables) WisdomFor(score int) (WisdomRow, error) {
 // lowest up to wis, each only at a spell level Table 24 gives at least one
 // slot of. Levels with no slot are absent.
 func (t *Tables) PriestSpellsPerDay(level, wis int) (map[int]int, error) {
+	return t.priestSpells(level, wis, true)
+}
+
+// priestSpells is PriestSpellsPerDay, with Table 5's bonus spells only when
+// bonus (the wisdom_bonus_spells kind, ADR 0040 step 3).
+func (t *Tables) priestSpells(level, wis int, bonus bool) (map[int]int, error) {
 	c, err := t.classTables()
 	if err != nil {
 		return nil, err
@@ -90,7 +81,7 @@ func (t *Tables) PriestSpellsPerDay(level, wis int) (map[int]int, error) {
 		}
 	}
 	for _, r := range c.Wisdom {
-		if r.WisMin > wis {
+		if !bonus || r.WisMin > wis {
 			break
 		}
 		for _, l := range r.BonusSpells {
@@ -144,12 +135,10 @@ func (t *Tables) SpellImmunitiesFor(wis int) ([]string, error) {
 }
 
 // SpellFailureFor is ADR 0030 step 14: the chance (percent) that a spell of
-// a character of class with Wisdom wis fails; 0 for a class without it or a
-// Wisdom of 13 and up (no die is rolled).
-func (t *Tables) SpellFailureFor(class string, wis int) (int, error) {
-	if !UsesWisdomSpells(class) {
-		return 0, nil
-	}
+// a character with Wisdom wis fails, for a class with spell_failure (ADR 0040
+// step 3; the caller reads the feature); 0 for a Wisdom of 13 and up (no die
+// is rolled).
+func (t *Tables) SpellFailureFor(wis int) (int, error) {
 	r, err := t.WisdomFor(wis)
 	if err != nil {
 		return 0, err

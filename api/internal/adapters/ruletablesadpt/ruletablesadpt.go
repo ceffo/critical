@@ -87,6 +87,9 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err != nil {
 		return nil, err
 	}
+	if err := ruletablesvc.CheckDefinitions(reg); err != nil {
+		return nil, fmt.Errorf("definitions: %w", err)
+	}
 	var f fileDTO
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	dec.DisallowUnknownFields()

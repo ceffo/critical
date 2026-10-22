@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -17,14 +18,35 @@ import (
 // not a bound.
 const MaxSkillPoints = ruletablesvc.MaxSkillPercent
 
+// RogueSkillsAt is ADR 0040 step 5 for rogue_skills: the params the class grants at level, nil
+// when it grants none there.
+func RogueSkillsAt(def classes.Class, level int) *classes.RogueSkills {
+	f, ok := def.Feature(classes.KindRogueSkills, level)
+	if !ok {
+		return nil
+	}
+	return f.RogueSkills
+}
+
+// rogueSkillsListed are the rogue_skills params the class lists at any level, nil for none: what an
+// entry of points is checked against before the level is read.
+func rogueSkillsListed(def classes.Class) *classes.RogueSkills {
+	f, ok := def.Lists(classes.KindRogueSkills)
+	if !ok {
+		return nil
+	}
+	return f.RogueSkills
+}
+
 // ValidSkillPoints is ADR 0030 steps 17 and 18's entry check on a thief's or a bard's points, at
-// creation and when the player spends them later: each skill of ruletablesvc.SkillsOf the class
-// from 0 to MaxSkillPoints. The budget is checked apart, at the realized level
+// creation and when the player spends them later: each skill of the class's rogue_skills set
+// (ADR 0040 step 3) from 0 to MaxSkillPoints. The budget is checked apart, at the realized level
 // (SkillPointsWithinBudget). The points come back without the zeros, nil for none. A class
 // without skill points enters none: any point is refused with field skillPoints; another
 // refusal names the field skillPoints.<skill>.
-func ValidSkillPoints(class string, points map[string]int) (map[string]int, error) {
-	if !ruletablesvc.HasSkillPoints(class) {
+func ValidSkillPoints(def classes.Class, points map[string]int) (map[string]int, error) {
+	rs := rogueSkillsListed(def)
+	if rs == nil {
 		if len(points) > 0 {
 			return nil, &domain.FieldError{Field: FieldSkillPoints, Message: CodeNotAllowed}
 		}
@@ -34,7 +56,7 @@ func ValidSkillPoints(class string, points map[string]int) (map[string]int, erro
 	for _, skill := range slices.Sorted(maps.Keys(points)) {
 		pts := points[skill]
 		switch {
-		case !slices.Contains(ruletablesvc.SkillsOf(class), skill):
+		case !slices.Contains(ruletablesvc.SkillsOf(rs), skill):
 			return nil, &domain.FieldError{Field: FieldSkillPoints + "." + skill, Message: CodeUnknown}
 		case pts < 0 || pts > MaxSkillPoints:
 			return nil, &domain.FieldError{Field: FieldSkillPoints + "." + skill, Message: CodeOutOfRange}
@@ -58,19 +80,20 @@ func ValidSkillPoints(class string, points map[string]int) (map[string]int, erro
 // (field skillPoints for the total, skillPoints.<skill> for one skill), the total first, then
 // the skills in SkillsOf order. A class without skill points, or a level under 1, has no
 // budget: nil.
-func SkillPointsWithinBudget(class string, level int, before, after map[string]int) error {
-	b, ok := ruletablesvc.SkillPointsFigures(class, level, after)
+func SkillPointsWithinBudget(def classes.Class, level int, before, after map[string]int) error {
+	rs := RogueSkillsAt(def, level)
+	b, ok := ruletablesvc.SkillPointsFigures(rs, level, after)
 	if !ok {
 		return nil
 	}
-	was, _ := ruletablesvc.SkillPointsFigures(class, level, before)
+	was, _ := ruletablesvc.SkillPointsFigures(rs, level, before)
 	if b.Spent > b.Total && b.Spent > was.Spent {
 		return &domain.BudgetError{Field: FieldSkillPoints, Spent: b.Spent, Limit: b.Total}
 	}
 	if b.PerSkill == 0 {
 		return nil
 	}
-	for _, skill := range ruletablesvc.SkillsOf(class) {
+	for _, skill := range ruletablesvc.SkillsOf(rs) {
 		if pts := after[skill]; pts > b.PerSkill && pts > before[skill] {
 			return &domain.BudgetError{Field: FieldSkillPoints + "." + skill, Spent: pts, Limit: b.PerSkill}
 		}
@@ -78,21 +101,21 @@ func SkillPointsWithinBudget(class string, level int, before, after map[string]i
 	return nil
 }
 
-// SkillTables are PHB Tables 26 to 29 and 33 on the entered points (ADR 0030 steps 17 and 18);
-// ruletablesvc.Tables satisfies it.
+// SkillTables are PHB Tables 26 to 29 and 33 on the entered points (ADR 0030 steps 17 and 18),
+// read through a class's rogue_skills params (ADR 0040 step 3); ruletablesvc.Tables satisfies it.
 type SkillTables interface {
-	ThiefSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
-	BardSkills(race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
+	RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
 }
 
 // PointsSheet is what a thief's or a bard's skills read of the character: its class, race,
 // Dexterity, realized level, skill armour (ruletablesvc.SkillArmorFor the worn body armour, ADR
 // 0033 step 14) and entered points.
 type PointsSheet struct {
-	Class, Race string
-	Dex, Level  int
-	Armor       string
-	Points      map[string]int
+	Class      classes.Class
+	Race       string
+	Dex, Level int
+	Armor      string
+	Points     map[string]int
 }
 
 // PointsFigures are the skills a thief's or a bard's points give (ADR 0030 steps 17 and 18):
@@ -105,23 +128,27 @@ type PointsFigures struct {
 }
 
 // PointsFiguresOf is ADR 0030 steps 17 and 18 on s: the percentages from the tables, the budget
-// and its warnings. The zero figures for a class without skill points.
+// and its warnings, through the rogue_skills params the class grants at s.Level (ADR 0040 step
+// 3); the set picks the field the percentages fill (Thief or Bard, the derived block's). The zero
+// figures for a class without rogue_skills.
 func PointsFiguresOf(t SkillTables, s PointsSheet) (PointsFigures, error) {
 	var out PointsFigures
-	if !ruletablesvc.HasSkillPoints(s.Class) {
+	rs := RogueSkillsAt(s.Class, s.Level)
+	if rs == nil {
 		return out, nil
 	}
-	var err error
-	if ruletablesvc.HasThiefSkills(s.Class) {
-		out.Thief, err = t.ThiefSkills(s.Race, s.Dex, s.Armor, s.Points)
-	} else {
-		out.Bard, err = t.BardSkills(s.Race, s.Dex, s.Armor, s.Points)
-	}
+	percents, err := t.RogueSkills(*rs, s.Race, s.Dex, s.Armor, s.Points)
 	if err != nil {
-		return PointsFigures{}, fmt.Errorf("%s skills: %w", s.Class, err)
+		return PointsFigures{}, fmt.Errorf("%s skills: %w", s.Class.ID, err)
 	}
-	out.Budget = ruletablesvc.SkillBudgetOf(s.Class, s.Level, s.Points)
-	if b, ok := ruletablesvc.SkillPointsFigures(s.Class, s.Level, s.Points); ok {
+	switch rs.Set {
+	case ruletablesvc.SkillSetThief:
+		out.Thief = percents
+	case ruletablesvc.SkillSetBard:
+		out.Bard = percents
+	}
+	out.Budget = ruletablesvc.SkillBudgetOf(rs, s.Level, s.Points)
+	if b, ok := ruletablesvc.SkillPointsFigures(rs, s.Level, s.Points); ok {
 		out.Points = &b
 	}
 	return out, nil

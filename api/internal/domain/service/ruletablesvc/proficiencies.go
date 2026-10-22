@@ -58,6 +58,15 @@ type Proficiencies struct {
 	slots      []SlotRow
 	// groupOf is each defined class's group (ADR 0040 step 1.2).
 	groupOf map[string]string
+	// defs are the class definitions (ADR 0040 step 5), read for a class's
+	// features.
+	defs *classes.Registry
+}
+
+// ClassDef is class's definition (ADR 0040 step 5), false for a class the
+// catalogue does not define.
+func (p *Proficiencies) ClassDef(class string) (classes.Class, bool) {
+	return p.defs.Class(class)
 }
 
 // NewProficiencies validates the rows: an id once and non-empty, a known
@@ -73,7 +82,7 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRo
 	classIDs, groups := defs.ClassIDs(), defs.Groups()
 	profGroups := append([]string{GeneralProficiencyGroup}, groups...)
 	seen := make(map[string]bool, len(list))
-	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots), groupOf: map[string]string{}}
+	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots), groupOf: map[string]string{}, defs: defs}
 	for _, c := range defs.Classes() {
 		out.groupOf[c.ID] = c.Group
 	}

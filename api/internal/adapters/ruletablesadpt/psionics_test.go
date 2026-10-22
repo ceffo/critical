@@ -40,7 +40,7 @@ func scores(wis, intl, con int) func(string) int {
 func TestPSPMax_Step4_1_InherentPotential(t *testing.T) {
 	got, err := phb(t).PSPMaxFor(pspRule(t), scores(17, 15, 16), 1)
 	require.NoError(t, err)
-	assert.Equal(t, ruletablesvc.PSPMax{InherentPotential: 25, PerLevel: 12, Max: 25}, got)
+	assert.Equal(t, ruletablesvc.PSPMax{InherentPotential: 25, PerLevel: 12, PerLevelModifier: 2, Max: 25}, got)
 
 	got, err = phb(t).PSPMaxFor(pspRule(t), scores(15, 18, 18), 1)
 	require.NoError(t, err)
@@ -73,7 +73,7 @@ func TestPSPMax_Step4_2_EachLevelAddsWisdomModifierPlusTen(t *testing.T) {
 func TestPSPMax_Step4_3_ScoresOutsideTable5(t *testing.T) {
 	got, err := phb(t).PSPMaxFor(pspRule(t), scores(19, 9, 3), 2)
 	require.NoError(t, err)
-	assert.Equal(t, ruletablesvc.PSPMax{InherentPotential: 28, PerLevel: 14, Max: 42}, got,
+	assert.Equal(t, ruletablesvc.PSPMax{InherentPotential: 28, PerLevel: 14, PerLevelModifier: 4, Max: 42}, got,
 		"Wis 19: base 28, modifier 4; Int 9 and Con 3 add 0")
 
 	row, err := phb(t).InherentPotentialFor(20)

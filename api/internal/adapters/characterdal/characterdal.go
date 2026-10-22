@@ -136,6 +136,19 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, class string, real
 	return nil
 }
 
+// SetPSPMax implements levelupsvc.DAL: the PSP maximum (ADR 0043 step 4.2), or
+// domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) SetPSPMax(ctx context.Context, id int64, pspMax int) error {
+	n, err := d.q.SetPSPMax(ctx, queries.SetPSPMaxParams{PspMax: int64(pspMax), ID: id})
+	if err != nil {
+		return fmt.Errorf("set psp max: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
 // ReplaceClassEntries implements dualclasssvc.DAL: the character's class entries are replaced
 // whole (ADR 0042 step 3, and the undo and redo of taking a class). The characters columns keep
 // the first active entry's class, level and starting XP (migration 035). Refused as

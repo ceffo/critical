@@ -1582,7 +1582,8 @@
       "manual": ", die entered",
       "rolledClass": "{{class}} level {{level}}: {{die}}{{con}}, max HP +{{gain}} ({{from}} → {{to}}){{manual}}",
       "fixedClass": "{{class}} level {{level}}: max HP +{{gain}}, fixed gain ({{from}} → {{to}})",
-      "shared": " ÷ {{classes}}"
+      "shared": " ÷ {{classes}}",
+      "psp": "; max PSP +{{gain}} ({{from}} → {{to}})"
     },
     "learn": {
       "learned": "Learned: {{spell}} (d100 {{roll}} ≤ {{chance}}%)",

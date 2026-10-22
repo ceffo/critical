@@ -74,6 +74,20 @@ func (c Characters) SetRealizedLevel(ctx context.Context, id int64, class string
 	})
 }
 
+// SetPSPMax implements levelupsvc.DAL (ADR 0043 step 4.2), or
+// domain.ErrCharacterNotFound.
+func (c Characters) SetPSPMax(ctx context.Context, id int64, pspMax int) error {
+	return c.s.write(ctx, func(t *tables) error {
+		ch, ok := t.characters[id]
+		if !ok {
+			return domain.ErrCharacterNotFound
+		}
+		ch.PSPMax = pspMax
+		t.characters[id] = ch
+		return nil
+	})
+}
+
 // ReplaceClassEntries implements dualclasssvc.DAL (ADR 0042 step 3): the class entries are
 // replaced whole, or domain.ErrCharacterNotFound.
 func (c Characters) ReplaceClassEntries(ctx context.Context, id int64, entries []classes.Entry) error {

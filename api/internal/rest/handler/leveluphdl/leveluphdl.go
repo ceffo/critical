@@ -65,8 +65,21 @@ type ResultDTO struct {
 	HPMaxAfter    int    `json:"hpMaxAfter"`
 	// Reason is why the gain is 0: dual_class_no_hit_points for a
 	// dual-class's level not above its old class's (ADR 0042 step 11).
-	Reason  string                 `json:"reason,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	// PSP is a psionicist level's PSP gain with its terms (ADR 0043 step 4.2); absent otherwise.
+	PSP     *PSPGainDTO            `json:"psp,omitempty"`
 	Pending []wire.PendingLevelDTO `json:"pending"`
+}
+
+// PSPGainDTO is levelupsvc.PSPGain on the wire, the level_up entry's psp payload's shape.
+type PSPGainDTO struct {
+	Ability   string `json:"ability"`
+	Score     int    `json:"score"`
+	Modifier  int    `json:"modifier"`
+	Plus      int    `json:"plus"`
+	Gain      int    `json:"gain"`
+	MaxBefore int    `json:"maxBefore"`
+	MaxAfter  int    `json:"maxAfter"`
 }
 
 // Roll is POST /api/character/levelup/roll.
@@ -90,6 +103,12 @@ func Roll(charID CharacterIDFunc, svc roller) render.HandlerFunc {
 			ConAdjustment: res.ConAdjustment, Gain: res.Gain, Fixed: res.Fixed, Manual: res.Manual,
 			HPMaxBefore: res.HPMaxBefore, HPMaxAfter: res.HPMaxAfter, Reason: res.Reason,
 			Pending: wire.PendingDTO(res.Pending),
+		}
+		if p := res.PSP; p != nil {
+			dto.PSP = &PSPGainDTO{
+				Ability: p.Ability, Score: p.Score, Modifier: p.Modifier, Plus: p.Plus, Gain: p.Gain,
+				MaxBefore: p.MaxBefore, MaxAfter: p.MaxAfter,
+			}
 		}
 		if res.Classes > 1 {
 			dto.Class, dto.Classes, dto.DieShare, dto.ConShare = res.Class, res.Classes, res.DieShare, res.ConShare

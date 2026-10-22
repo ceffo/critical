@@ -162,6 +162,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    Tests: `PSPMax_Step4_1_InherentPotential` (domain: the book's example, Wis 17 Con 16 gives 25),
    `Roll_Step4_2_ALevelUpAddsWisdomModifierPlusTen` (levelupsvc: +12 at Wis 17, in the `level_up`
    entry, undone with it), `Create_Step4_4_PSPMaxEnteredIsKept` (charactersvc).
+   As built (2026-10-22): a psionicist level writes `psp_max` in the `level_up` transaction; the
+   entry's payload carries `psp {ability, score, modifier, plus, gain, maxBefore, maxAfter}` and its
+   `realized_level` snapshot the `pspMax` before and after, which the undo writes back (a level of
+   another class carries neither and leaves the maximum). A dual-class's psionicist level before
+   the crossover gains it too (step 18.2). Creation takes an optional `pspMax` (1 to 999; refused
+   `out_of_range` for a character with no psionics entry); without one the maximum is computed
+   at the psionicist entry's starting level. The psionicist stays not creatable until every kind
+   it lists is computed (ADR 0040 step 8), so the creation test reads the started character.
 
 5. **The PSP ledger.** Like HP (ADR 0007 step 2, ADR 0018 step 4): **any** action-log entry may
    carry a signed `psp_delta`; current PSPs are `psp_max` plus the sum of every entry's effective

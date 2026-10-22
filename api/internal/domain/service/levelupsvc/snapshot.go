@@ -18,6 +18,9 @@ type realized struct {
 	Class         string `json:"class,omitempty"`
 	RealizedLevel int    `json:"realizedLevel"`
 	HPMax         int    `json:"hpMax"`
+	// PSPMax is the PSP maximum of a psionicist level (ADR 0043 step 4.2); absent for a level of
+	// another class (and in a snapshot written before it), whose undo leaves the PSP maximum.
+	PSPMax *int `json:"pspMax,omitempty"`
 }
 
 // realizedSnaps is the snapshotter of the realized level (ADR 0018 step 8).
@@ -49,6 +52,19 @@ type record struct {
 	// Reason is why the gain is 0 (ADR 0042 step 11:
 	// dual_class_no_hit_points); absent otherwise.
 	Reason string `json:"reason,omitempty"`
+	// PSP is a psionicist level's PSP gain with its terms (ADR 0043 step 4.2); absent otherwise.
+	PSP *pspRecord `json:"psp,omitempty"`
+}
+
+// pspRecord is a level_up payload's PSP gain (PSPGain), in the wire names. Add fields, never rename.
+type pspRecord struct {
+	Ability   string `json:"ability"`
+	Score     int    `json:"score"`
+	Modifier  int    `json:"modifier"`
+	Plus      int    `json:"plus"`
+	Gain      int    `json:"gain"`
+	MaxBefore int    `json:"maxBefore"`
+	MaxAfter  int    `json:"maxAfter"`
 }
 
 // record writes the level_up entry with the realized level's snapshot, inside the
@@ -60,6 +76,12 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 		Level: r.Level, HitDie: r.HitDie, Rolled: r.Rolled, Counted: r.Counted,
 		ConAdjustment: r.ConAdjustment, Gain: r.Gain, Fixed: r.Fixed, Manual: r.Manual,
 		HPMaxBefore: r.HPMaxBefore, HPMaxAfter: r.HPMaxAfter, Reason: r.Reason,
+	}
+	if p := r.PSP; p != nil {
+		rec.PSP = &pspRecord{
+			Ability: p.Ability, Score: p.Score, Modifier: p.Modifier, Plus: p.Plus, Gain: p.Gain,
+			MaxBefore: p.MaxBefore, MaxAfter: p.MaxAfter,
+		}
 	}
 	if r.Classes > 1 {
 		// A single-class record stays as it was written before the entries.
@@ -94,6 +116,12 @@ func (s *service) Module() domain.Module {
 			}
 			if err := s.dal.SetRealizedLevel(ctx, characterID, r.Class, r.RealizedLevel, r.HPMax); err != nil {
 				return fmt.Errorf("restore realized level: %w", err)
+			}
+			// ADR 0043 step 4.2: a psionicist level's PSP maximum goes and comes back with it.
+			if r.PSPMax != nil {
+				if err := s.dal.SetPSPMax(ctx, characterID, *r.PSPMax); err != nil {
+					return fmt.Errorf("restore psp max: %w", err)
+				}
 			}
 			return nil
 		}, nil),

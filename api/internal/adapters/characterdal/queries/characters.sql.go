@@ -648,6 +648,24 @@ func (q *Queries) SetLanguages(ctx context.Context, arg SetLanguagesParams) (int
 	return result.RowsAffected()
 }
 
+const setPSPMax = `-- name: SetPSPMax :execrows
+UPDATE characters SET psp_max = $1 WHERE id = $2
+`
+
+type SetPSPMaxParams struct {
+	PspMax int64
+	ID     int64
+}
+
+// A psionicist level-up and its undo (ADR 0043 step 4.2): the PSP maximum.
+func (q *Queries) SetPSPMax(ctx context.Context, arg SetPSPMaxParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, setPSPMax, arg.PspMax, arg.ID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const setProficiencyPicks = `-- name: SetProficiencyPicks :execrows
 UPDATE characters SET proficiency_picks = $1 WHERE id = $2
 `

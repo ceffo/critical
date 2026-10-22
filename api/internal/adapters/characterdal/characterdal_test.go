@@ -482,3 +482,14 @@ func TestSkillPoints_FallsBackToTheLegacyColumnWhileNoSetIsStored(t *testing.T) 
 	require.NoError(t, err)
 	assert.Equal(t, skills.SetPoints{"thief": {"climb_walls": 5}}, points, "the stored sets win once there are some")
 }
+
+// ADR 0043 step 4.2: a psionicist level-up (and its undo) writes the PSP maximum; no row is
+// ErrCharacterNotFound.
+func TestSetPSPMax_WritesThePSPMaximum(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	q.EXPECT().SetPSPMax(ctx, queries.SetPSPMaxParams{PspMax: 193, ID: 3}).Return(1, nil).Once()
+	require.NoError(t, characterdal.New(q).SetPSPMax(ctx, 3, 193))
+	q.EXPECT().SetPSPMax(ctx, queries.SetPSPMaxParams{PspMax: 1, ID: 9}).Return(0, nil).Once()
+	require.ErrorIs(t, characterdal.New(q).SetPSPMax(ctx, 9, 1), domain.ErrCharacterNotFound)
+}

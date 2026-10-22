@@ -84,6 +84,16 @@ export interface LevelUpRecord {
   hpMaxAfter: number;
   /** ADR 0042 step 11: why the gain is 0 (`dual_class_no_hit_points`); absent otherwise. */
   reason?: "dual_class_no_hit_points";
+  /** A psionicist level's PSP gain with its terms (ADR 0043 step 4.2); absent otherwise. */
+  psp?: {
+    ability: string;
+    score: number;
+    modifier: number;
+    plus: number;
+    gain: number;
+    maxBefore: number;
+    maxAfter: number;
+  };
 }
 
 export interface LevelUpResult extends LevelUpRecord {

@@ -69,8 +69,10 @@ func (t *Tables) InherentPotentialFor(score int) (InherentPotentialRow, error) {
 type PSPMax struct {
 	// InherentPotential is step 4.1: the level-1 maximum.
 	InherentPotential int
-	// PerLevel is step 4.2: the gain of each level from 2.
-	PerLevel int
+	// PerLevel is step 4.2: the gain of each level from 2, PerLevelModifier (Table 5's modifier at
+	// the per-level ability) plus the rule's constant.
+	PerLevel         int
+	PerLevelModifier int
 	// Max is InherentPotential plus PerLevel for each level above 1.
 	Max int
 }
@@ -106,7 +108,7 @@ func (t *Tables) PSPMaxFor(rule classes.PSPRule, score func(ability string) int,
 		return PSPMax{}, err
 	}
 	gain := per.Modifier + rule.PerLevel.Plus
-	return PSPMax{InherentPotential: inherent, PerLevel: gain, Max: inherent + (level-1)*gain}, nil
+	return PSPMax{InherentPotential: inherent, PerLevel: gain, PerLevelModifier: per.Modifier, Max: inherent + (level-1)*gain}, nil
 }
 
 // PSPRecoveryRow is CPsiH Table 6 for an activity (ADR 0043 step 6): the PSPs

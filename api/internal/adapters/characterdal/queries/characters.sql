@@ -35,6 +35,10 @@ WHERE id = sqlc.arg(id);
 UPDATE characters SET realized_level = sqlc.arg(realized_level), hp_max = sqlc.arg(hp_max)
 WHERE id = sqlc.arg(id);
 
+-- A psionicist level-up and its undo (ADR 0043 step 4.2): the PSP maximum.
+-- name: SetPSPMax :execrows
+UPDATE characters SET psp_max = sqlc.arg(psp_max) WHERE id = sqlc.arg(id);
+
 -- name: SetFirstActiveEntryLevel :exec
 UPDATE character_classes SET realized_level = sqlc.arg(realized_level)
 WHERE character_classes.character_id = sqlc.arg(character_id) AND position = (

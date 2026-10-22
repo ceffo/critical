@@ -1582,7 +1582,8 @@
       "manual": ", dé saisi",
       "rolledClass": "{{class}} niveau {{level}} : {{die}}{{con}}, PV max +{{gain}} ({{from}} → {{to}}){{manual}}",
       "fixedClass": "{{class}} niveau {{level}} : PV max +{{gain}}, gain fixe ({{from}} → {{to}})",
-      "shared": " ÷ {{classes}}"
+      "shared": " ÷ {{classes}}",
+      "psp": " ; PFP max +{{gain}} ({{from}} → {{to}})"
     },
     "learn": {
       "learned": "Appris : {{spell}} (d100 {{roll}} ≤ {{chance}} %)",

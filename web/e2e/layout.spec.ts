@@ -24,6 +24,7 @@ import {
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import { asMultiClass } from "./multiclass";
+import { psionicist } from "./psionicist";
 import {
   brokenWords,
   clippedText,
@@ -5103,4 +5104,39 @@ test("proficiency pop-up: the Skills rows, the pop-up and the picker uncut in Fr
     await expectWholeWords(editor, `picker rows, ${where}`);
     await snap(page, `proficiency-picker-fr-${where}`);
   }
+});
+
+// ADR 0043 step 5 and 6: the PSP panel in the character card's 280-384px column (the pool, the hand
+// edit and the recovery over hours), uncut in French and English, 1280 to 2560. Screenshots at
+// 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
+test.describe("PSP panel", () => {
+  test.use({ character: psionicist });
+  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    await page.getByTestId("psp-panel").getByLabel("PSP amount").fill("12");
+    await page
+      .getByTestId("psp-panel")
+      .getByRole("button", { name: "Spend" })
+      .click();
+    await expect(page.getByTestId("psp-value")).toHaveText("28 / 40");
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      const panel = page.getByTestId("psp-panel");
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expect(panel).toBeVisible();
+        const box = await panel.boundingBox();
+        expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
+        expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
+        await expectNoClippedText(panel, `PSP panel, ${where}`);
+        await expectWholeWords(panel, `PSP panel, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
+      }
+    }
+  });
 });

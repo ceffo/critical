@@ -83,10 +83,10 @@ export function PspPanel() {
           />
         </div>
       </div>
-      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-x-1.5 gap-y-0.5">
+      <div className="grid grid-cols-2 items-center gap-x-1.5 gap-y-0.5">
         <input
           aria-label={t("psp.amount")}
-          className={`${fieldClass} tabular-nums`}
+          className={`${fieldClass} col-span-2 tabular-nums`}
           type="number"
           min={1}
           inputMode="numeric"

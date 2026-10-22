@@ -140,6 +140,40 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    `charactersvc` `TestDerive_Step9_MagicDefenceForEveryClass` (step 9.2, on the fixture's tables); `router`
    `TestRollSave_Step9_MindAffectingFlag` (the wire: the flag in, the modifier and `mindAffecting` out).
 
+10. **Wisdom's spell immunity** _(decided 2026-10-22, user triage; as built 2026-10-22)_. PHB chapter 1, "Wisdom", the Spell
+   Immunity paragraph and the column of the same name in Table 5 (p. 17): a character with Wisdom 19 or more is immune to the
+   spells listed on Table 5's rows, and the immunities are cumulative (a score keeps every lower row's).
+   1. **The spells.** Read from Table 5 for the sheet's Wisdom (the score step 9.1 reads), as catalogue spell ids: the catalogue's
+      `wisdom` rule table carries each row's own spells (`spell_immunities`, [ADR 0021](0021-spell-catalogue.md) step 19), and the
+      reader adds up every row from the lowest to the score; none below 19. Rules data, never a list of spell ids in Go. Every
+      character gets it, of any class and race (as step 9.2). Two Table 5 names are no catalogue spell and are left out: Rod of
+      rulership (a magic item) and Cause fear (the catalogue has it only as the reverse of Remove fear; mapping it to `remove_fear`
+      would make the character immune to a helpful spell, supervisor decision 2026-10-22).
+   2. **A save names its spell.** `POST /api/roll/save` takes an optional `spellId` (a catalogue id). Against a spell the character
+      is immune to, no d20 is rolled and no modifier read: the save passes, and the breakdown carries `immunity: {source: "wisdom",
+      score}` and `spellId`; it is logged as a `save` entry like any save (step 4). Nothing to adjust: an adjustment of that entry is
+      refused (409 `save_immune`). A spell the character is not immune to, or no spell named, rolls as before (steps 1 to 9; the
+      `spellId` is logged with the roll). The spell is the player's choice; whether it is mind-affecting stays step 9.3's flag.
+      The immune save's numbers: `adjustedTarget` is the `target` (nothing adjusts it); `d20Roll`, `rollTotal`, `total` and `margin`
+      are 0 (there is no roll). The save does not check `spellId` against the catalogue: the picker sends catalogue ids, and an
+      unknown id is logged as sent and matches no immunity (it rolls).
+   3. **A spell cast on the character.** A spell received (cast on the character by someone else, `POST /api/spells/receive`) that the
+      character is immune to applies nothing and rolls nothing (no buff, no damage, no duration roll): one cast entry with `textOnly: "immune"`
+      and the same `immunity`, no snapshot.
+   4. **As built.** `ruletablesvc.Tables.SpellImmunitiesFor`, derived for every character as `charactersvc.Derived.SpellImmunities`;
+      `combatsvc.ImmunityTo` (the one check, read by saves and by `castsvc` Receive), `combatsvc.Immunity`,
+      `combatsvc.SaveOptions.SpellID`, `combatsvc.ErrSaveImmune`. The web's "Spell" picker (fr "Sort") shows under the saves' label
+      line while "Against the mind" is ticked (every Table 5 spell attacks the mind), a tag once set, cleared with the box after each
+      roll; the card says "Immune · Passed" and "Wisdom 19: immune to Command, nothing to roll" (fr "Immunité", "Sagesse 19 :
+      immunité contre Command, aucun jet"), the journal "Save vs Spells against Command: immune (Wisdom 19), PASSED", the last-roll
+      column a check with no die; a spell received words "Your Wisdom (19) makes you immune to this spell: nothing applied."
+   Tests: the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative` (none at 1, 12 and 18; the four at 19, not hold person;
+   hold person, both spells, at 20; 26 at 25; 0 and 26 refused); `charactersvc` `TestDerive_Step10_SpellImmunitiesForEveryClass`;
+   `combatsvc` `TestResolveSavingThrow_Step10_WisdomSpellImmunity` (WIS 18 rolls against charm person; WIS 19 immune to charm
+   person, no die; WIS 19 rolls against hold person; WIS 20 immune to hold person), `TestAdjustSave_Step10_AnImmuneSaveIsRefused`;
+   `castsvc` `TestReceive_Step10_ImmuneSpellAppliesNothing`; `router` `TestRollSave_Step10_SpellIDAndImmunity` (the wire:
+   `spellId` in, `immunity` out, `save_immune`).
+
 ## Consequences
 
 - The verdict a save shows is always the arithmetic of its stored numbers; there is no manual
@@ -152,5 +186,5 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
   roll does not change a logged save. The DM's adjustment is the opposite: it moves the target,
   never the roll.
 - Not covered: the target values themselves (they come from the character sheet seed), saves by
-  creatures other than the Bard, the effect of a failed save (the DM's call), and Table 5's spell
-  immunity at Wisdom 19 and up (step 9 covers the adjustment only).
+  creatures other than the Bard, and the effect of a failed save (the DM's call). Table 5's spell
+  immunity is step 10; immunities from other sources (race, items) are not covered.

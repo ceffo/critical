@@ -398,7 +398,10 @@ export function CastResultView({ result: r }: { result: CastResult }) {
           className="rounded-lg border border-dashed px-3 py-2 text-body"
           data-testid="cast-text-only"
         >
-          {t(`result.cast.textOnly.${r.textOnly}`)}
+          {/* immune: the Wisdom that gives the immunity (ADR 0006 step 10.3). */}
+          {t(`result.cast.textOnly.${r.textOnly}`, {
+            score: r.immunity?.score,
+          })}
         </p>
       )}
 

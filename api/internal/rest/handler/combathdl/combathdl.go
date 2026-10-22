@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -128,6 +129,9 @@ type SituationalDTO struct {
 type SaveRequestDTO struct {
 	Category      combatsvc.SaveCategory `json:"category"`
 	MindAffecting bool                   `json:"mindAffecting"`
+	// SpellID optionally names the spell the save is against (ADR 0006
+	// step 10.2): one the character is immune to rolls nothing.
+	SpellID string `json:"spellId"`
 }
 
 // ResolveAttack runs an attack and returns its breakdown, the payload of its
@@ -163,7 +167,7 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category, combatsvc.SaveOptions{MindAffecting: req.MindAffecting})
+		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category, combatsvc.SaveOptions{MindAffecting: req.MindAffecting, SpellID: strings.TrimSpace(req.SpellID)})
 		if err != nil {
 			return err
 		}

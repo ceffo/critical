@@ -3,12 +3,13 @@
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Shield } from "@phosphor-icons/react";
+import { useSpellName, type SpellNamer } from "@/i18n/spellName";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
 import { formatSigned } from "@/lib/format";
 import { itemNamer } from "@/lib/itemPowers";
 import { stepAdjustment } from "@/lib/saveAdjust";
-import type { Modifier, SaveBreakdown } from "@/types/combat";
+import type { Immunity, Modifier, SaveBreakdown } from "@/types/combat";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { modLabel } from "../words";
@@ -46,6 +47,10 @@ export interface SaveView {
   passed: boolean;
   /** rollTotal − adjustedTarget, as computed by the server. */
   margin: number;
+  /** The spell the save was against (a catalogue id); absent: none named. */
+  spellId?: string;
+  /** Set when the character was immune to that spell (ADR 0006 step 10.2): nothing was rolled. */
+  immunity?: Immunity;
   logEntryId?: number;
 }
 
@@ -62,6 +67,8 @@ export function saveView(p: SaveBreakdown): SaveView {
     adjustedTarget: p.adjustedTarget,
     passed: p.passed,
     margin: p.margin,
+    spellId: p.spellId,
+    immunity: p.immunity,
     logEntryId: p.logEntryId,
   };
 }
@@ -77,9 +84,21 @@ function saveRollText(p: SaveBreakdown): string {
     : `d20 ${p.d20Roll} ${formatSigned(p.rollTotal - p.d20Roll)} = ${p.rollTotal}`;
 }
 
-function saveText(p: SaveBreakdown, t: TFunction): string {
+function saveText(
+  p: SaveBreakdown,
+  t: TFunction,
+  spellName: SpellNamer,
+): string {
   const verdict = (passed: boolean) =>
     t(passed ? "result.passed" : "result.failed").toUpperCase();
+  // ADR 0006 step 10.2: immune to the spell, nothing was rolled.
+  if (p.immunity)
+    return t("log.saveThrow.immune", {
+      name: categoryName(t, p.category),
+      spell: spellName(p.spellId ?? "", p.spellId),
+      score: p.immunity.score,
+      verdict: verdict(p.passed),
+    });
   const args = {
     name: categoryName(t, p.category),
     roll: saveRollText(p),
@@ -104,16 +123,22 @@ function saveText(p: SaveBreakdown, t: TFunction): string {
 export const saveKind: KindView<SaveBreakdown, SaveBreakdown> = {
   decode: decodeSave,
   icon: Shield,
-  text: (p, w) => saveText(p, w.t),
-  value: (p) => ({ text: String(p.d20Roll), tone: p.passed ? "pass" : "fail" }),
-  rolled: () => true,
+  text: (p, w) => saveText(p, w.t, w.spellName),
+  // An immune save rolled no d20: no value to show (ADR 0006 step 10.2).
+  value: (p) =>
+    p.immunity
+      ? null
+      : { text: String(p.d20Roll), tone: p.passed ? "pass" : "fail" },
+  rolled: (p) => p === null || !p.immunity,
   subtitle: (p, w) => categoryName(w.t, p.category),
   short: (p, { t }, _e, value) => ({
     value,
     what: t("lastShort.save", { name: categoryName(t, p.category) }),
-    verdict: p.passed
-      ? { text: t("lastShort.verdict.passed"), tone: "pass" }
-      : { text: t("lastShort.verdict.failed"), tone: "fail" },
+    verdict: p.immunity
+      ? { text: t("lastShort.verdict.immune"), tone: "pass" }
+      : p.passed
+        ? { text: t("lastShort.verdict.passed"), tone: "pass" }
+        : { text: t("lastShort.verdict.failed"), tone: "fail" },
   }),
   card: ({ payload, interactive }) => (
     <SaveCard save={saveView(payload)} interactive={interactive} />
@@ -137,7 +162,38 @@ function SaveCard({
     useItemsStore((st) => st.items),
     i18n.language,
   );
+  const spellName = useSpellName();
   const name = categoryName(t, s.category);
+  const spell = s.spellId ? spellName(s.spellId, s.spellId) : undefined;
+  const heading = spell
+    ? t("result.saveAgainst", { name, spell })
+    : t("result.saveHeading", { name });
+  // ADR 0006 step 10.2: immune to the spell named, the save rolled nothing; the server's reason.
+  if (s.immunity)
+    return (
+      <div className="flex flex-col gap-1" data-testid="save-result">
+        <ResultLine
+          verdict={
+            <Verdict
+              ok={s.passed}
+              yes={t("result.passed")}
+              no={t("result.failed")}
+            />
+          }
+        >
+          <span className="text-key" data-testid="save-immune">
+            {t("result.immune")}
+          </span>
+        </ResultLine>
+        <div className="text-body text-muted-foreground">{heading}</div>
+        <p className="text-body break-words" data-testid="save-immunity">
+          {t("result.immunity", {
+            score: s.immunity.score,
+            spell: spell ?? "",
+          })}
+        </p>
+      </div>
+    );
   return (
     <div className="flex flex-col gap-3" data-testid="save-result">
       <div className="flex items-center gap-3">
@@ -159,9 +215,7 @@ function SaveCard({
               })}
             </span>
           </ResultLine>
-          <div className="text-body text-muted-foreground">
-            {t("result.saveHeading", { name })}
-          </div>
+          <div className="text-body text-muted-foreground">{heading}</div>
         </div>
       </div>
       <dl className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2">

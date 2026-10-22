@@ -37,6 +37,31 @@ type SaveOptions struct {
 	// MindAffecting marks a save against magic that attacks the mind (ADR
 	// 0006 step 9.3, the DM's call): the roll gets the Wisdom modifier.
 	MindAffecting bool
+	// SpellID names the spell the save is against (optional, a catalogue
+	// id): one the character is immune to rolls nothing (ADR 0006 step
+	// 10.2).
+	SpellID string
+}
+
+// Immunity says why a save or a spell received rolled nothing (ADR 0006
+// step 10): Source is the rule ("wisdom": PHB Table 5's spell immunity),
+// Score the ability score that gives it. The web words it.
+type Immunity struct {
+	Source string `json:"source"`
+	Score  int    `json:"score"`
+}
+
+// ImmunitySourceWisdom is PHB Table 5's spell immunity (ADR 0006 step 10).
+const ImmunitySourceWisdom = "wisdom"
+
+// ImmunityTo is ADR 0006 step 10.1: the immunity of char to the spell with
+// catalogue id spellID (nil: none, or no spell named). It reads the derived
+// immunities, never a spell id in the code.
+func ImmunityTo(char *charactersvc.Character, spellID string) *Immunity {
+	if spellID == "" || !slices.Contains(char.Derived.SpellImmunities, spellID) {
+		return nil
+	}
+	return &Immunity{Source: ImmunitySourceWisdom, Score: char.Wis}
 }
 
 // saveCategories are the categories a save can be rolled in; the UI names
@@ -73,7 +98,16 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		// step 1): PHB Table 60 for the class group and level.
 		target := savesByCategory(char.Derived.Saves)[category]
 
-		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}, MindAffecting: opts.MindAffecting}
+		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}, MindAffecting: opts.MindAffecting, SpellID: opts.SpellID}
+		// ADR 0006 step 10.2: against a spell the character is immune to,
+		// nothing is rolled; the save passes and the breakdown names why.
+		// The adjusted target is the target (nothing adjusts it); the roll
+		// side (RollTotal, Total, Margin) stays 0: there is no roll.
+		if rec.Immunity = ImmunityTo(char, opts.SpellID); rec.Immunity != nil {
+			rec.Passed, rec.RolledPassed = true, true
+			rec.AdjustedTarget = rec.Target
+			return s.recordSave(ctx, characterID, rec, &res)
+		}
 		rec.D20Roll = s.dice.RollD20()
 		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 		if err != nil {
@@ -97,26 +131,30 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		}
 		rec.settle()
 		rec.RolledPassed = rec.Passed
-
-		payload, err := json.Marshal(rec)
-		if err != nil {
-			return fmt.Errorf("encode save payload: %w", err)
-		}
-		id, err := s.log.Record(ctx, actionlog.NewEntry{
-			CharacterID: characterID,
-			Kind:        actionlog.KindSave,
-			Payload:     payload,
-		})
-		if err != nil {
-			return fmt.Errorf("record save: %w", err)
-		}
-		res = rec.answer(id)
-		return nil
+		return s.recordSave(ctx, characterID, rec, &res)
 	})
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
+}
+
+// recordSave logs rec (kind save, no snapshots) and sets *res to its answer.
+func (s *service) recordSave(ctx context.Context, characterID int64, rec SaveBreakdown, res **SaveBreakdown) error {
+	payload, err := json.Marshal(rec)
+	if err != nil {
+		return fmt.Errorf("encode save payload: %w", err)
+	}
+	id, err := s.log.Record(ctx, actionlog.NewEntry{
+		CharacterID: characterID,
+		Kind:        actionlog.KindSave,
+		Payload:     payload,
+	})
+	if err != nil {
+		return fmt.Errorf("record save: %w", err)
+	}
+	*res = rec.answer(id)
+	return nil
 }
 
 // AdjustSave sets the adjustment of the latest save entry (replacing any
@@ -139,6 +177,9 @@ func (s *service) AdjustSave(ctx context.Context, characterID, entryID int64, ad
 	e, err := s.log.AmendLatest(ctx, characterID, entryID, actionlog.KindSave, func(e actionlog.Entry) (actionlog.PayloadAmendment, error) {
 		if err := json.Unmarshal(e.EffectivePayload(), &rec); err != nil {
 			return actionlog.PayloadAmendment{}, fmt.Errorf("decode save #%d: %w", e.ID, err)
+		}
+		if rec.Immunity != nil {
+			return actionlog.PayloadAmendment{}, fmt.Errorf("save #%d: %w", e.ID, ErrSaveImmune)
 		}
 		prevPassed, prevAdj := rec.Passed, rec.Adjustment
 		rec.Adjustment, rec.AdjustmentReason = adj.Value, adj.Reason
@@ -174,6 +215,13 @@ type SaveBreakdown struct {
 	// MindAffecting is the request's flag (ADR 0006 step 9.5), fixed at the
 	// roll; an entry logged without it reads as false.
 	MindAffecting bool `json:"mindAffecting"`
+	// SpellID is the spell the save was against (ADR 0006 step 10.2; empty:
+	// none named).
+	SpellID string `json:"spellId,omitempty"`
+	// Immunity is set when the character was immune to that spell (step
+	// 10.2): no d20 (0), no modifiers, passed, nothing to adjust;
+	// AdjustedTarget is Target and RollTotal, Total and Margin are 0.
+	Immunity *Immunity `json:"immunity,omitempty"`
 	// Target is the category's derived target (ADR 0030 step 6), never adjusted.
 	Target int `json:"target"`
 	// RolledPassed is the verdict as rolled, before any adjustment.

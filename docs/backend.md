@@ -758,9 +758,12 @@ enforced (ADR 0030 step 21).
 A format-10 or later artifact (ADR 0021 step 17) adds `magic_defence` to every `wisdom`
 row: PHB Table 5's magical defence adjustment, read by `Tables.MagicDefenceFor` and derived for every character
 as `charactersvc.Derived.MagicDefence` (ADR 0006 step 9: a `wisdom` modifier on a save flagged
-`mindAffecting`). A format-11 artifact (the only format the API reads, ADR 0021 step 18) adds the `classes`, `groups` and
-`races` lists ([ADR 0040](adr/0040-classes-are-data.md)); the API checks their shape with the schema and does not read them yet. An
-older artifact is refused at start with the `just catalogue` advice.
+`mindAffecting`). A format-11 or later artifact (ADR 0021 step 18) adds the `classes`, `groups` and
+`races` lists ([ADR 0040](adr/0040-classes-are-data.md)); the API checks their shape with the schema and does not read them yet.
+A format-12 artifact (the only format the API reads, ADR 0021 step 19) adds `spell_immunities` to every `wisdom` row: the catalogue
+ids of the spells that row of PHB Table 5 adds, summed from the lowest row up by `Tables.SpellImmunitiesFor` and derived for every
+character as `charactersvc.Derived.SpellImmunities`; `combatsvc.ImmunityTo` is the one check, read by the save and by `castsvc`
+Receive (ADR 0006 step 10). An older artifact is refused at start with the `just catalogue` advice.
 
 ## In-memory storage (e2e mode)
 

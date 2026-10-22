@@ -202,6 +202,7 @@ for the shape). Psionic combat (attack and defence modes, contact) is later.
 | Level, target level | class entry, its XP share | [ADR 0015](adr/0015-experience.md), [ADR 0030](adr/0030-classes-and-races.md) steps 3 and 7, [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 5 and 7 |
 | THAC0, saves | class group, level; the best of the class entries | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md), [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 8 and 9 |
 | Magical defence adjustment (a mind-affecting save's `wisdom` modifier) | Wisdom, any class | [ADR 0006](adr/0006-saving-throws.md) step 9 |
+| Spell immunities (`Derived.SpellImmunities`; a save or a spell received against one carries an `Immunity` and rolls nothing) | Wisdom, any class; the catalogue's Table 5 rows up to the score | [ADR 0006](adr/0006-saving-throws.md) step 10 |
 | Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md) |
 | Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md) |
 | Rogue skill percentages | skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md) |

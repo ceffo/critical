@@ -4,6 +4,7 @@ import { Check, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
 import { groupHeadClass } from "./fieldStyles";
+import { SaveSpell } from "./SaveSpell";
 import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
@@ -26,7 +27,10 @@ const TARGET_FIELD: Record<SaveCategory, keyof SaveNumbers> = {
  * the save endpoint; the result card shows the breakdown. "Against the mind" flags the next save as
  * against magic that attacks the mind (ADR 0006 step 9.3): the server adds the Wisdom modifier. It
  * is the player's call for one save, so it clears once that save is rolled (not when
- * the request fails).
+ * the request fails). Ticked, it shows a line to name the spell the save is against (ADR 0006 step
+ * 10.2; every PHB Table 5 immunity is a spell that attacks the mind), cleared with it: against one
+ * the character's Wisdom makes them immune to, the server rolls nothing and the last-roll column
+ * shows the check with no die.
  */
 export function Saves() {
   const { t } = useTranslation();
@@ -34,9 +38,15 @@ export function Saves() {
   const { rollSave, rolling } = useRollStore();
   const last = lastSaves(useLogStore((s) => s.entries));
   const [mindAffecting, setMindAffecting] = useState(false);
+  const [spellId, setSpellId] = useState<string | undefined>();
+  const setMind = (on: boolean) => {
+    setMindAffecting(on);
+    if (!on) setSpellId(undefined);
+  };
   const rollOne = async (cat: SaveCategory) => {
-    // Kept on a refused request, so the player doesn't have to tick it again.
-    if (await rollSave(cat, mindAffecting)) setMindAffecting(false);
+    // Kept on a refused request, so the player doesn't have to set them again.
+    if (await rollSave(cat, mindAffecting, mindAffecting ? spellId : undefined))
+      setMind(false);
   };
 
   return (
@@ -51,6 +61,7 @@ export function Saves() {
           groupHeadClass,
           "flex min-w-0 flex-wrap items-center justify-between gap-x-2",
         )}
+        data-testid="saves-head"
       >
         <h2 className="shrink-0 section-label">{t("saves.sectionLabel")}</h2>
         <label
@@ -62,12 +73,21 @@ export function Saves() {
             className="size-3.5"
             checked={mindAffecting}
             disabled={rolling}
-            onChange={(e) => setMindAffecting(e.target.checked)}
+            onChange={(e) => setMind(e.target.checked)}
             data-testid="save-mind-affecting"
           />
           {t("saves.mindAffecting")}
         </label>
       </div>
+      {mindAffecting && (
+        <div className="flex min-w-0 justify-end" data-testid="save-spell-line">
+          <SaveSpell
+            spellId={spellId}
+            onChange={setSpellId}
+            disabled={rolling}
+          />
+        </div>
+      )}
       <ul className="flex flex-col gap-1">
         {SAVE_CATEGORIES.map((cat) => {
           const name = t(`saves.categories.${cat}`);
@@ -111,7 +131,15 @@ export function Saves() {
                   )}
                   data-testid="save-last"
                 >
-                  {roll ? (
+                  {roll?.immuneWisdom !== undefined ? (
+                    // Immune: passed with no die (ADR 0006 step 10.2); the card and the journal
+                    // say why.
+                    <Check
+                      aria-hidden
+                      weight="bold"
+                      data-testid="save-last-immune"
+                    />
+                  ) : roll ? (
                     <>
                       {roll.passed ? (
                         <Check aria-hidden weight="bold" />

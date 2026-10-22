@@ -46,6 +46,9 @@ type CastBreakdown struct {
 	// journal's cast card rolls an exposure from it (ADR 0008 step 16);
 	// absent without one.
 	Exposure *spelleffectsvc.ExposureAtWire `json:"exposure,omitempty"`
+	// Immunity is set on a spell received by a character immune to it (ADR
+	// 0006 step 10.3): nothing applied or rolled, textOnly "immune".
+	Immunity *combatsvc.Immunity `json:"immunity,omitempty"`
 
 	// Level to Untracked are absent on casts logged before the payload was
 	// the answer (ADR 0018: add fields). Level is the spell's level; SlotIndex the slot spent (a
@@ -207,6 +210,7 @@ func toBreakdown(res CastResult) CastBreakdown {
 		r.Save = &CastSave{Type: string(s.Type), Effect: string(s.Effect)}
 	}
 	r.ExtraSlots = res.ExtraSlots
+	r.Immunity = res.Immunity
 	if c := res.Consumed; c != nil {
 		r.Item = &CastItem{ItemID: c.ItemID, Name: c.Name, Remaining: c.Remaining}
 	}

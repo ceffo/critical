@@ -94,6 +94,9 @@ type WisdomRow struct {
 	BonusSpells    []int
 	SpellFailure   int
 	MagicDefence   int
+	// SpellImmunities are the catalogue ids of the spells this row adds to
+	// the immunities of the rows below it (ADR 0006 step 10.1).
+	SpellImmunities []string
 }
 
 // ConSaveBonusRow is PHB Table 9.

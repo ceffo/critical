@@ -71,6 +71,8 @@ type wisdomDTO struct {
 	BonusSpells  []int `json:"bonus_spells"`
 	SpellFailure int   `json:"spell_failure"`
 	MagicDefence int   `json:"magic_defence"`
+	// SpellImmunities is format 12's column (ADR 0021 step 19).
+	SpellImmunities []string `json:"spell_immunities"`
 }
 
 type conSaveBonusDTO struct {
@@ -234,7 +236,7 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 			return out
 		}),
 		Wisdom: mapRows(d.Wisdom, func(r wisdomDTO) ruletablesvc.WisdomRow {
-			return ruletablesvc.WisdomRow{WisMin: r.WisMin, WisMax: r.WisMax, BonusSpells: append([]int{}, r.BonusSpells...), SpellFailure: r.SpellFailure, MagicDefence: r.MagicDefence}
+			return ruletablesvc.WisdomRow{WisMin: r.WisMin, WisMax: r.WisMax, BonusSpells: append([]int{}, r.BonusSpells...), SpellFailure: r.SpellFailure, MagicDefence: r.MagicDefence, SpellImmunities: append([]string{}, r.SpellImmunities...)}
 		}),
 		ConSaveBonus:     mapRows(d.ConSaveBonus, func(r conSaveBonusDTO) ruletablesvc.ConSaveBonusRow { return ruletablesvc.ConSaveBonusRow(r) }),
 		RaceRequirements: mapRows(d.RaceRequirements, func(r raceRequirementDTO) ruletablesvc.RaceRequirementRow { return ruletablesvc.RaceRequirementRow(r) }),

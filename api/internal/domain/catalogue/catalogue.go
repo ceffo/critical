@@ -19,16 +19,20 @@ const FormatProficiencyDescriptions = 9
 // 9 plus Table 5's magical defence adjustment on each wisdom row.
 const FormatMagicDefence = 10
 
-// FormatClassDefinitions is format 11 (ADR 0021 step 18, ADR 0040 steps 1, 2,
-// 4 and 7): format 10 plus the class, group and race definitions. It is the
-// only format the API reads (step 18.3): the formats 1 to 10 are refused like
-// any unknown format, with the advice to run `just catalogue`. The definitions
-// are published and schema-checked here; the API starts reading them in the
-// next step of ADR 0040 step 11.
+// FormatClassDefinitions was format 11 (ADR 0021 step 18, ADR 0040 steps 1,
+// 2, 4 and 7): format 10 plus the class, group and race definitions,
+// published and schema-checked; the API starts reading them in the next step
+// of ADR 0040 step 11.
 const FormatClassDefinitions = 11
 
-// Formats lists the formats this API reads: format 11 only (step 18.3).
-var Formats = []int{FormatClassDefinitions}
+// FormatSpellImmunities is format 12 (ADR 0021 step 19, ADR 0006 step 10):
+// format 11 plus Table 5's spell immunities on each wisdom row. It is the
+// only format the API reads (step 19.3): the formats 1 to 11 are refused like
+// any unknown format, with the advice to run `just catalogue`.
+const FormatSpellImmunities = 12
+
+// Formats lists the formats this API reads: format 12 only (step 19.3).
+var Formats = []int{FormatSpellImmunities}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

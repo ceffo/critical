@@ -426,6 +426,7 @@ func newRules(t *testing.T) *mocks.MockRules {
 	r := mocks.NewMockRules(t)
 	withDefinitions(t, r)
 	r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
+	r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 	// A bard derives its skills (step 18), which the tests that are not
 	// about them leave empty.
@@ -466,6 +467,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			r := mocks.NewMockRules(t)
 			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
+			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 			r.EXPECT().LevelFor(tc.class, mock.Anything).Return(13, nil).Once()
 			r.EXPECT().XPThreshold(tc.class, 14).Return(1_500_000, nil).Once()
 			r.EXPECT().THAC0For(mock.Anything, 13).Return(16, nil).Once()
@@ -552,6 +554,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			r := mocks.NewMockRules(t)
 			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
+			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
 			// the budget: 20 + 15 = 35.
@@ -579,6 +582,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		r := mocks.NewMockRules(t)
 		withDefinitions(t, r)
 		r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
+		r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
 		r.EXPECT().LevelFor("thief", 0).Return(1, nil)
 		r.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
 		r.EXPECT().THAC0For("rogue", 1).Return(20, nil)

@@ -935,6 +935,64 @@ func (_c *MockRules_SpellFailureFor_Call) RunAndReturn(run func(string, int) (in
 	return _c
 }
 
+// SpellImmunitiesFor provides a mock function with given fields: wis
+func (_m *MockRules) SpellImmunitiesFor(wis int) ([]string, error) {
+	ret := _m.Called(wis)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SpellImmunitiesFor")
+	}
+
+	var r0 []string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) ([]string, error)); ok {
+		return rf(wis)
+	}
+	if rf, ok := ret.Get(0).(func(int) []string); ok {
+		r0 = rf(wis)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]string)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(wis)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_SpellImmunitiesFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SpellImmunitiesFor'
+type MockRules_SpellImmunitiesFor_Call struct {
+	*mock.Call
+}
+
+// SpellImmunitiesFor is a helper method to define mock.On call
+//   - wis int
+func (_e *MockRules_Expecter) SpellImmunitiesFor(wis interface{}) *MockRules_SpellImmunitiesFor_Call {
+	return &MockRules_SpellImmunitiesFor_Call{Call: _e.mock.On("SpellImmunitiesFor", wis)}
+}
+
+func (_c *MockRules_SpellImmunitiesFor_Call) Run(run func(wis int)) *MockRules_SpellImmunitiesFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_SpellImmunitiesFor_Call) Return(_a0 []string, _a1 error) *MockRules_SpellImmunitiesFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_SpellImmunitiesFor_Call) RunAndReturn(run func(int) ([]string, error)) *MockRules_SpellImmunitiesFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // THAC0For provides a mock function with given fields: group, level
 func (_m *MockRules) THAC0For(group string, level int) (int, error) {
 	ret := _m.Called(group, level)

@@ -1352,6 +1352,7 @@
       "xp_edit": "XP",
       "xp_remove": "XP",
       "level_up": "Level",
+      "class_switch": "Class",
       "spell_learn": "Learn",
       "turn_undead": "Turning",
       "skill_points": "Skills",
@@ -1590,6 +1591,9 @@
       "equipped": "Equipped: {{name}}",
       "unequipped": "Unequipped: {{name}}",
       "swapped": "Equipped: {{name}} (in place of {{off}})"
+    },
+    "classSwitch": {
+      "text": "Took a new class: {{to}} (left {{from}} at level {{level}} with {{xp, number}} XP)"
     },
     "acOverride": {
       "set": "AC overridden: {{value}}",
@@ -2105,6 +2109,13 @@
     "invite_not_found": "This invite is no longer pending.",
     "invite_not_pending": "This invite was cancelled or already used, so it cannot be sent again.",
     "user_not_found": "This user does not exist.",
+    "dualclass_not_allowed": "This character cannot become dual-class (multi-class, or a race that may not).",
+    "prime_requisite_too_low": "A prime requisite is too low: 15 in the current class, 17 in the new one.",
+    "level_too_low": "The current class is too low a level to leave.",
+    "class_already_left": "This class was already left: it cannot be taken again.",
+    "dualclass_same_class": "The character is already in that class.",
+    "dualclass_minimums_not_met": "The character does not meet the ability minimums of that class.",
+    "dualclass_alignment_not_allowed": "That class does not admit the character's alignment.",
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
     "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",

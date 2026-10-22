@@ -151,6 +151,10 @@ func TestTakeClass_Step1_AnAwardBeforeTheSwitchLeavesTheNewClassAlone(t *testing
 	_, err = bs.XP.Delete(ctx, id, oldID)
 	require.NoError(t, err)
 	assert.Equal(t, 500, xpOf("mage"), "removing it too")
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 500, xpOf("mage"), "undoing that removal brings the old award back, still not the mage's")
+	assert.Equal(t, 21_000, xpOf("fighter"))
 }
 
 // Step 2.2 and the new class's own conditions: each refusal is its sentinel

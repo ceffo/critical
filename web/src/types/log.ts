@@ -43,6 +43,8 @@ export type LogKind =
   | "spell_add"
   /** A cleric's turning undead roll (ADR 0030 step 16); it changes no state. */
   | "turn_undead"
+  /** A psionicist's power check (ADR 0043 steps 10 and 11); popping it gives the PSPs spent back. */
+  | "power_check"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
   /** The proficiency picks saved (ADR 0037 steps 12 and 13); popping it gives them back. */

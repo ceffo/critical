@@ -238,6 +238,36 @@
       "science": "sciences",
       "devotion": "dévotions",
       "defence_mode": "modes de défense"
+    },
+    "use": {
+      "use": "Utiliser",
+      "useNamed": "Utiliser {{name}}",
+      "title": "Utiliser {{name}}",
+      "stop": "Arrêter",
+      "stopNamed": "Arrêter le maintien de {{name}}",
+      "maintained": "maintenu",
+      "cost": "Coût initial (PFP)",
+      "maintenanceCost": "Coût de maintien (PFP)",
+      "score": "Score du pouvoir",
+      "scoreHint": "1 à {{max}}, d’après le texte du pouvoir",
+      "modifiers": "Modificateurs au score",
+      "addModifier": "Ajouter un modificateur",
+      "removeModifier": "Retirer le modificateur {{n}}",
+      "modifierValue": "Valeur du modificateur {{n}}",
+      "modifierReason": "Raison du modificateur {{n}}",
+      "reason": "Raison",
+      "rolled": "d20 {{d20}} contre {{target}}",
+      "spent": "PFP {{amount}}",
+      "keptUp": "maintenu : {{cost}} PFP tous les {{count}} tours",
+      "outcome": {
+        "success": "Réussi",
+        "failure": "Échec",
+        "power_score": "Score de pouvoir",
+        "natural_20": "20 naturel"
+      },
+      "warning": {
+        "second_power_this_round": "Un deuxième pouvoir dans le même tour de combat."
+      }
     }
   },
   "round": {
@@ -1419,7 +1449,8 @@
       "ac_override": "CA",
       "spell_add": "Grimoire",
       "psp_recovery": "Récupération de PFP",
-      "psionic_pick": "Pouvoirs connus"
+      "psionic_pick": "Pouvoirs connus",
+      "power_check": "Jet de pouvoir"
     },
     "status": {
       "active": "Actif",
@@ -1447,6 +1478,10 @@
       "endCombat": "Combat terminé : tour {{from}} → {{to}}",
       "setRound": "Tour réglé : {{from}} → {{to}}",
       "expired": "— expirés : {{names}}",
+      "maintenanceOne": "{{power}} {{cost}}",
+      "maintenance": "— maintien (PFP) : {{powers}}",
+      "powersEnded": "— pouvoirs terminés, PFP insuffisants : {{powers}}",
+      "powerStopped": "Maintien arrêté : {{power}}",
       "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}",
       "dismissVoluntary": "{{buff}} : fin par moi",
       "dismissDispelled": "{{buff}} : dissipation ou mort",
@@ -1665,7 +1700,21 @@
       "setWith": "CA forcée : {{value}} ({{label}})",
       "cleared": "CA forcée effacée"
     },
-    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}"
+    "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}",
+    "powerCheck": "Jet de pouvoir ({{power}}) : d20 {{d20}} contre {{target}}, {{verdict}}, PFP {{spent}}",
+    "powerCheckWith": "{{text}} ({{parts}})",
+    "powerParts": {
+      "ability": "{{ability}} {{score}} {{modifier}}",
+      "entered": "score {{score}} saisi",
+      "relearns_one": "+{{count}} réappris",
+      "relearns_other": "+{{count}} réappris",
+      "modifierWhy": "{{value}} {{reason}}",
+      "halfCost": "{{spent}} PFP payés sur {{cost}}",
+      "maintained": "maintenu : {{cost}} PFP tous les {{count}} tours",
+      "warning": {
+        "second_power_this_round": "deuxième pouvoir ce tour"
+      }
+    }
   },
   "critTable": {
     "title": "Table des critiques (règle maison)",
@@ -2198,6 +2247,11 @@
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
+    "power_not_known": "Le personnage ne connaît pas ce pouvoir.",
+    "needs_contact": "Ce pouvoir demande un contact, pas encore disponible.",
+    "not_enough_psp": "Pas assez de PFP pour le coût initial de ce pouvoir.",
+    "power_not_maintained": "Ce pouvoir n’est pas maintenu.",
+    "psp_recovery_while_maintaining": "Pas de récupération de PFP pendant qu’un pouvoir est maintenu : arrêtez-le d’abord.",
     "not_a_psionicist": "Ce personnage n’est pas un psioniste.",
     "psionic_allowance_exceeded": "Au-delà de ce que ce niveau permet : {{count}} choisis, {{limit}} permis.",
     "primary_discipline_exceeded": "Une discipline autre que la principale doit avoir moins de pouvoirs que celle-ci : {{count}} choisis, {{limit}} au plus.",
@@ -2237,7 +2291,9 @@
       "destroyed": "détruits",
       "destroyedTurned": "détruits, {{turned}} repoussés",
       "spellFailed": "sort raté",
-      "immune": "immunité"
+      "immune": "immunité",
+      "powerScore": "score de pouvoir",
+      "natural20": "20 naturel"
     },
     "turn": "Renvoi {{undead}}"
   },

@@ -7,7 +7,7 @@ import { I18nextProvider } from "react-i18next";
 import i18next, { type i18n } from "i18next";
 import { resources } from "@/i18n";
 import { englishSpellName } from "@/i18n/spellName";
-import { recordedNames } from "@/i18n/inventoryName";
+import { inventoryNamer } from "@/i18n/inventoryName";
 import type { LogEntry, LogKind } from "@/types/log";
 import { cardContent } from "./card";
 import { isRolledEntry, rowValue, shortResult } from "./entry";
@@ -101,16 +101,18 @@ export function describeKind(
         for (const lang of ["en", "fr"] as const) {
           const inst = await i18nFor(lang);
           const w = want[lang];
+          // No inventory: item and weapon names as recorded, recorded name maps in `lang`.
+          const names = inventoryNamer([], [], lang);
           const c = cardContent(
             { kind: "entry", entry: e, latest: true },
             inst.t,
             lang,
             englishSpellName,
-            recordedNames,
+            names,
           );
           expect(c.text, lang).toBe(w.text);
           expect(c.subtitle, lang).toBe(w.subtitle ?? "");
-          const s = shortResult(e, inst.t, englishSpellName, recordedNames);
+          const s = shortResult(e, inst.t, englishSpellName, names);
           const line = s.verdict ? `${s.what} · ${s.verdict.text}` : s.what;
           expect(line, lang).toBe(w.short ?? c.tag);
           if (w.card) {

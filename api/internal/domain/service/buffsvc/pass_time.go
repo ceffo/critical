@@ -46,22 +46,41 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 	if err != nil {
 		return nil, nil, 0, 0, EndResult{}, err
 	}
-	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
-		to := 0
-		active, expired = elapseBuffs(buffs, rounds)
-		names, spellIDs, profIDs := expiredNames(expired)
-		return change{
-			kind:    actionlog.KindTimePassed,
-			payload: logPayload{Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs},
-			buffs:   active,
-			round:   &to,
-			// Out of combat: no initiative (ADR 0013 step 5).
-			clearInitiative: true,
-			// ADR 0004 step 21: the rows that run out apply their
-			// "expired" end effects in this entry.
-			ended:    expired,
-			endCause: spelleffectsvc.EndExpired,
-		}, nil
+	var ch change
+	// The maintenance reads the PSPs: the decision runs with the
+	// transaction's ctx (apply's would read outside it).
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		var err error
+		ch, err = s.applyIn(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
+			to := 0
+			active, expired = elapseBuffs(buffs, rounds)
+			// ADR 0043 step 15: every maintenance due in the rounds, in round
+			// order; a power ends at the first charge the PSPs cannot pay.
+			m, err := s.chargeMaintenance(ctx, characterID, active, rounds)
+			if err != nil {
+				return change{}, err
+			}
+			// An unpaid power is listed once, as a power ended, not as expired.
+			names, spellIDs, profIDs := expiredNames(expired)
+			active, expired = m.kept, append(expired, m.unpaid...)
+			return change{
+				kind: actionlog.KindTimePassed,
+				payload: logPayload{
+					Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs,
+					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), PowerNames: m.powerNames(),
+				},
+				pspDelta: -m.spent,
+				buffs:    active,
+				round:    &to,
+				// Out of combat: no initiative (ADR 0013 step 5).
+				clearInitiative: true,
+				// ADR 0004 step 21: the rows that run out apply their
+				// "expired" end effects in this entry.
+				ended:    expired,
+				endCause: spelleffectsvc.EndExpired,
+			}, nil
+		})
+		return err
 	})
 	if err != nil {
 		return nil, nil, 0, 0, EndResult{}, err
@@ -70,17 +89,23 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 }
 
 // PreviewPassTime runs the PassTime rules on the current buffs and returns
-// the rounds and the buffs that would expire, writing nothing (ADR 0005
-// step 8): the time-passes form lists them before the player confirms.
-func (s *service) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []BuffEffect, error) {
+// the rounds, the buffs that would expire (the maintained powers that would
+// go unpaid among them) and the PSPs maintenance would spend, writing nothing
+// (ADR 0005 step 8, ADR 0043 step 15): the time-passes form lists them before
+// the player confirms.
+func (s *service) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []BuffEffect, int, error) {
 	rounds, err := RoundsForHours(hours)
 	if err != nil {
-		return 0, nil, err
+		return 0, nil, 0, err
 	}
 	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 	if err != nil {
-		return 0, nil, fmt.Errorf("get active buffs: %w", err)
+		return 0, nil, 0, fmt.Errorf("get active buffs: %w", err)
 	}
-	_, expiring := elapseBuffs(buffs, rounds)
-	return rounds, expiring, nil
+	active, expiring := elapseBuffs(buffs, rounds)
+	m, err := s.chargeMaintenance(ctx, characterID, active, rounds)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	return rounds, append(expiring, m.unpaid...), m.spent, nil
 }

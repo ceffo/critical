@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/buffdal"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/buffdal/queries/mocks"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
@@ -98,6 +99,7 @@ func TestActiveBuffs_RoundTrip(t *testing.T) {
 		{ID: "d", Name: "Bless", Duration: 6, SpellID: "bless", Effects: buffsvc.BuffEffects{
 			ToHit: intPtr(1), Damage: intPtr(-1), WeaponKind: buffsvc.WeaponKind("melee"),
 		}},
+		{ID: "e", Name: "Contact", PowerID: "contact", PowerName: localized.Text{"en": "Contact", "fr": "Contact"}, MaintenanceCost: 1, MaintenancePeriod: 1},
 	}
 	assert.Equal(t, buffs, read(t, stored(t, buffs)))
 	assert.JSONEq(t, `[]`, stored(t, nil), "saving no buff stores an empty list")

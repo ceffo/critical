@@ -156,6 +156,7 @@ packages:
       Items:
       Log:
       PSP:
+      Buffs:
   github.com/ceffo/critical/api/internal/domain/service/psionicsvc:
     config:
       dir: "internal/domain/service/psionicsvc/mocks"
@@ -166,6 +167,8 @@ packages:
       Log:
       Characters:
       Picks:
+      Dice:
+      Buffs:
   github.com/ceffo/critical/api/internal/domain/service/prepsvc:
     config:
       dir: "internal/domain/service/prepsvc/mocks"

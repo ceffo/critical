@@ -232,6 +232,12 @@ var mappings = []mapping{
 	// refusal's own, set in mapError) and a save for a character with no psionics.
 	{target: psionics.ErrRefused, status: http.StatusConflict, code: "psionic_refused"},
 	{target: psionicsvc.ErrNotPsionicist, status: http.StatusConflict, code: "not_a_psionicist"},
+	// ADR 0043 steps 10 and 11: a power's use refused before the roll.
+	{target: psionicsvc.ErrPowerNotKnown, status: http.StatusConflict, code: "power_not_known"},
+	{target: psionicsvc.ErrNeedsContact, status: http.StatusConflict, code: "needs_contact"},
+	{target: psionicsvc.ErrNotEnoughPSP, status: http.StatusConflict, code: "not_enough_psp"},
+	{target: psionicsvc.ErrPowerNotMaintained, status: http.StatusConflict, code: "power_not_maintained"},
+	{target: psionicsvc.ErrRecoveryWhileMaintaining, status: http.StatusConflict, code: "psp_recovery_while_maintaining"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},
 }

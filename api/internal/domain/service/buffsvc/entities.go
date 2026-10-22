@@ -3,6 +3,7 @@ package buffsvc
 import (
 	"time"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -241,6 +242,40 @@ type BuffEffect struct {
 	// it never renews nor is renewed by another buff. Stamped by the spell
 	// cast only; false for everything else.
 	OnOther bool
+	// PowerID is the catalogue id of the psionic power whose successful
+	// check put the row on (ADR 0043 step 13), stamped by the power's use
+	// only; empty for every other buff. MaintenanceCost and
+	// MaintenancePeriod are the power's maintenance: Next Round charges the
+	// cost every period rounds kept (step 14), and the row ends when the
+	// PSPs cannot pay it. A row with a cost is untimed: it lasts until
+	// stopped (step 16) or unpaid.
+	PowerID string
+	// PowerName is the power's catalogue name in every language at write
+	// time, so the log words a maintenance charge or an unpaid end with no
+	// catalogue read (ADR 0023). Stamped with PowerID.
+	PowerName         localized.Text
+	MaintenanceCost   int
+	MaintenancePeriod int
+	// RoundsKept counts the rounds a maintained row has been kept: 0 in its
+	// activation round (Add stamps it, a renewal starts again), +1 per Next
+	// Round and +n per n rounds of passing time (steps 14 and 15). 0 for
+	// every other row. Never set by the caller.
+	RoundsKept int
+}
+
+// Maintained reports whether Next Round charges maintenance for the row.
+func (b BuffEffect) Maintained() bool { return b.PowerID != "" && b.MaintenanceCost > 0 }
+
+// MaintenanceDue reports whether the Next Round ending the row's next round
+// kept charges its maintenance (ADR 0043 step 14, Q10): every period rounds
+// kept, never the activation round itself (RoundsKept 0). It reads the row's
+// own count, not the round counter, which End combat, passing time and Set
+// round move under it.
+func (b BuffEffect) MaintenanceDue() bool {
+	if !b.Maintained() || b.RoundsKept <= 0 {
+		return false
+	}
+	return b.RoundsKept%max(b.MaintenancePeriod, 1) == 0
 }
 
 // Timed reports whether Next Round counts this buff down.

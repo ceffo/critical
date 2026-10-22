@@ -138,20 +138,20 @@ func TestRoundPassTimePreview(t *testing.T) {
 	t.Run("returns the rounds and the buffs that would expire", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 1.5).Return(
-			90, []buffsvc.BuffEffect{{ID: "b", Name: "Short", Duration: 60, StartRound: 2}}, nil)
+			90, []buffsvc.BuffEffect{{ID: "b", Name: "Short", Duration: 60, StartRound: 2}}, 12, nil)
 		rec := do(h, "GET", "/api/round/pass-time/preview?hours=1.5", "")
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.JSONEq(t, `{"rounds":90,
+		assert.JSONEq(t, `{"rounds":90,"pspSpent":12,
 			"expiring":[{"id":"b","name":"Short","charges":0,"duration":60,"effects":{},"note":"","startRound":2,"chargesTotal":0}]}`,
 			rec.Body.String())
 	})
 
 	t.Run("nothing expiring is an empty list", func(t *testing.T) {
 		h, m := newRouter(t)
-		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 0.5).Return(30, []buffsvc.BuffEffect{}, nil)
+		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 0.5).Return(30, []buffsvc.BuffEffect{}, 0, nil)
 		rec := do(h, "GET", "/api/round/pass-time/preview?hours=0.5", "")
 		require.Equal(t, http.StatusOK, rec.Code)
-		assert.JSONEq(t, `{"rounds":30,"expiring":[]}`, rec.Body.String())
+		assert.JSONEq(t, `{"rounds":30,"expiring":[],"pspSpent":0}`, rec.Body.String())
 	})
 
 	for name, q := range map[string]string{"missing hours": "", "not a number": "?hours=abc"} {
@@ -166,7 +166,7 @@ func TestRoundPassTimePreview(t *testing.T) {
 	t.Run("400 with the service's message when hours give no round", func(t *testing.T) {
 		h, m := newRouter(t)
 		m.buffs.EXPECT().PreviewPassTime(mock.Anything, int64(1), 0.01).
-			Return(0, nil, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
+			Return(0, nil, 0, fmt.Errorf("%w: 0.01 hours is less than one round (1 minute)", domain.ErrInvalidInput))
 		rec := do(h, "GET", "/api/round/pass-time/preview?hours=0.01", "")
 		assert.Equal(t, http.StatusBadRequest, rec.Code)
 		assert.Contains(t, rec.Body.String(), "less than one round")

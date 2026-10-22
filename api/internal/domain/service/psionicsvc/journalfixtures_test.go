@@ -11,4 +11,5 @@ import (
 func TestJournalFixturesAreWhatIsLogged(t *testing.T) {
 	journalfixture.Matches[recoveryRecord](t, actionlog.KindPSPRecovery)
 	journalfixture.Matches[knownRecord](t, actionlog.KindPsionicPick)
+	journalfixture.Matches[CheckRecord](t, actionlog.KindPowerCheck)
 }

@@ -237,16 +237,17 @@ A minor psionic power, learned within a discipline; at least twice as many as th
 A power's target: an ability score plus or minus the power's number; the catalogue holds the pair, the roll against it is planned. [ADR 0043](docs/adr/0043-psionics.md) step 10.
 _Code_: PowerScore
 
-**Power check** (fr: test de pouvoir) _(planned)_:
-The d20 roll at or under the power score that decides whether a psionic power works. [ADR 0043](docs/adr/0043-psionics.md) step 10. _Avoid_: check (alone).
+**Power check** (fr: jet de pouvoir):
+The d20 roll at or under the power score that decides whether a psionic power works; logged as a `power_check` entry with its breakdown and the PSPs spent. [ADR 0043](docs/adr/0043-psionics.md) steps 10 and 11. _Avoid_: check (alone).
+_Code_: CheckRecord
 
 **Initial cost** (fr: coût initial):
-The PSPs a power costs when it is used; half on a failed check. The catalogue holds a number, or the word `variable` or `contact` where the book prints none; paying it is planned. [ADR 0043](docs/adr/0043-psionics.md) step 11.
+The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (refused until telepathic combat) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
 _Code_: Cost
 
 **Maintenance cost** (fr: coût de maintien):
-The PSPs a maintained power costs each round (or its period) to keep it working, charged on Next Round (planned); the catalogue holds the cost and the period. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
-_Code_: Maintenance
+The PSPs a maintained power costs each round (or its period) to keep it working. A successful check puts the power on the buff list as an untimed row with its cost and period; Next Round charges it (never in the round it started), and the row ends when the PSPs left cannot pay; stopping it is dismissing the row. The catalogue holds the cost (or `variable`, entered with the use) and the period. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
+_Code_: Maintenance, BuffEffect.MaintenanceCost
 
 **Defence mode** (fr: mode de défense) _(future)_:
 A telepathic power that defends against an attack mode in psionic combat. [ADR 0043](docs/adr/0043-psionics.md) step 20.

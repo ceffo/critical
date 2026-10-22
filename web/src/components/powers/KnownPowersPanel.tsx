@@ -11,6 +11,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { KnownPowers, PowerPick } from "@/types/character";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
+import { PowerActions } from "./PowerActions";
 
 const COUNT_KEYS = [
   "disciplines",
@@ -279,19 +280,23 @@ export function KnownPowersEditor({
                     disabled={busy}
                     onRemove={() => remove(p)}
                     action={
-                      !relearn &&
-                      (kind === "science" ||
-                        kind === "devotion" ||
-                        kind === "attack_mode") ? (
-                        <Button
-                          className="px-2"
-                          disabled={busy}
-                          title={t("powers.relearnHint")}
-                          onClick={() => add({ kind: "relearn", id: p.id })}
-                        >
-                          {t("powers.relearn")}
-                        </Button>
-                      ) : undefined
+                      !relearn && (
+                        <>
+                          {pw && <PowerActions power={pw} />}
+                          {(kind === "science" ||
+                            kind === "devotion" ||
+                            kind === "attack_mode") && (
+                            <Button
+                              className="px-2"
+                              disabled={busy}
+                              title={t("powers.relearnHint")}
+                              onClick={() => add({ kind: "relearn", id: p.id })}
+                            >
+                              {t("powers.relearn")}
+                            </Button>
+                          )}
+                        </>
+                      )
                     }
                   />
                 );
@@ -424,9 +429,9 @@ function KnownRow({
   return (
     <div
       data-testid={testId}
-      className="flex items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-body"
+      className="flex flex-wrap items-center gap-2 rounded-md bg-raised px-3 py-1.5 text-body"
     >
-      <span className="flex min-w-0 flex-1 flex-col">
+      <span className="flex min-w-40 flex-1 basis-40 flex-col">
         <span lang={i18n.language} className="min-w-0 break-words">
           {name}
           {tag && (

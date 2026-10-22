@@ -17,5 +17,45 @@
       "expiredSpellIds": ["bless", ""],
       "expiredProficiencyIds": ["", "tumbling"]
     }
+  },
+  "maintained": {
+    "pspDelta": -5,
+    "payload": {
+      "action": "next_round",
+      "fromRound": 4,
+      "toRound": 5,
+      "maintenance": [
+        {
+          "powerId": "mind_thrust",
+          "cost": 3
+        },
+        {
+          "powerId": "body_equilibrium",
+          "cost": 2
+        }
+      ]
+    }
+  },
+  "maintenanceUnpaid": {
+    "pspDelta": -2,
+    "payload": {
+      "action": "next_round",
+      "fromRound": 5,
+      "toRound": 6,
+      "maintenance": [
+        {
+          "powerId": "mind_thrust",
+          "cost": 2
+        }
+      ],
+      "maintenanceUnpaid": ["body_equilibrium"],
+      "powerNames": {
+        "mind_thrust": { "en": "Mind Thrust", "fr": "Poussée mentale" },
+        "body_equilibrium": {
+          "en": "Body Equilibrium",
+          "fr": "Équilibre corporel"
+        }
+      }
+    }
   }
 }

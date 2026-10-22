@@ -7,5 +7,21 @@
       "toRound": 0,
       "hours": 1
     }
+  },
+  "passTimeMaintained": {
+    "pspDelta": -60,
+    "payload": {
+      "action": "pass_time",
+      "rounds": 60,
+      "fromRound": 0,
+      "toRound": 0,
+      "hours": 1,
+      "maintenance": [
+        {
+          "powerId": "mind_thrust",
+          "cost": 60
+        }
+      ]
+    }
   }
 }

@@ -15,6 +15,8 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -56,6 +58,13 @@ type PSP interface {
 	NightsPSPRecovery(ctx context.Context, characterID int64) (int, error)
 }
 
+// Buffs ends the maintained powers (buffsvc, ADR 0043 step 7).
+type Buffs interface {
+	// EndMaintained takes the maintained powers' rows off inside the ctx
+	// transaction, without recording: the rest's entry records the snapshot.
+	EndMaintained(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)
+}
+
 // Log records the rest (actionlogsvc).
 type Log interface {
 	actionlog.Recorder
@@ -65,16 +74,17 @@ type service struct {
 	spells Spells
 	items  Items
 	psp    PSP
+	buffs  Buffs
 	log    Log
 	tx     domain.TxRunner
 }
 
 // New constructs the service.
-func New(spells Spells, items Items, psp PSP, log Log, tx domain.TxRunner) (SVC, error) {
-	if spells == nil || items == nil || psp == nil || log == nil || tx == nil {
+func New(spells Spells, items Items, psp PSP, buffs Buffs, log Log, tx domain.TxRunner) (SVC, error) {
+	if spells == nil || items == nil || psp == nil || buffs == nil || log == nil || tx == nil {
 		return nil, fmt.Errorf("restsvc: nil dependency")
 	}
-	return &service{spells: spells, items: items, psp: psp, log: log, tx: tx}, nil
+	return &service{spells: spells, items: items, psp: psp, buffs: buffs, log: log, tx: tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
@@ -88,12 +98,18 @@ func (s *service) Module() domain.Module { return domain.Module{Name: "restsvc"}
 type restRecord struct {
 	SlotsReset    int      `json:"slotsReset"`
 	ItemsRefilled []string `json:"itemsRefilled"`
+	// PowersEnded are the maintained powers the rest ended (ADR 0043 step
+	// 7), by catalogue id; their rows are in the entry's buff snapshot.
+	PowersEnded []string `json:"powersEnded,omitempty"`
+	// PowerNames names them by id in every language (ADR 0023).
+	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
 }
 
 // LongRest resets spell slots and per-day items atomically and logs it (ADR
-// 0008 steps 11 and 12). The entry's PSP delta is a night's sleep (ADR 0043
-// step 7); the recording path caps it at the PSPs spent (step 5), so undoing
-// the rest takes back what was applied.
+// 0008 steps 11 and 12). It ends every maintained power, their rows
+// snapshotted in the entry, and the entry's PSP delta is a night's sleep (ADR
+// 0043 step 7); the recording path caps it at the PSPs spent (step 5), so
+// undoing the rest takes back what was applied and puts the rows back.
 func (s *service) LongRest(ctx context.Context, characterID int64) (Result, error) {
 	var res Result
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -117,13 +133,25 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		if err != nil {
 			return err
 		}
-		payload, err := json.Marshal(rec)
+		// ADR 0043 step 7: no maintenance asleep; the rows come back on undo.
+		ended, buffSnap, err := s.buffs.EndMaintained(ctx, characterID)
 		if err != nil {
-			return fmt.Errorf("encode long rest payload: %w", err)
+			return fmt.Errorf("end maintained powers: %w", err)
+		}
+		for _, b := range ended {
+			rec.PowersEnded = append(rec.PowersEnded, b.PowerID)
+		}
+		rec.PowerNames = buffsvc.PowerNames(ended)
+		if len(ended) > 0 {
+			snaps = append(snaps, buffSnap)
 		}
 		psp, err := s.psp.NightsPSPRecovery(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("psp recovery: %w", err)
+		}
+		payload, err := json.Marshal(rec)
+		if err != nil {
+			return fmt.Errorf("encode long rest payload: %w", err)
 		}
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,

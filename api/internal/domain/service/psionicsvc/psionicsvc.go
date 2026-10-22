@@ -1,6 +1,6 @@
-// Package psionicsvc owns the psionicist's requests that are not a power (ADR
-// 0043): recovering PSPs over hours of an activity (step 6) and saving the
-// list of powers known (step 9). The pool itself is the action log's ledger
+// Package psionicsvc owns the psionicist's requests (ADR 0043): recovering
+// PSPs over hours of an activity (step 6), saving the list of powers known
+// (step 9) and using a power, its check and initial cost (steps 10 and 11). The pool itself is the action log's ledger
 // (step 5, actionlogsvc); this service words the recovery and leaves the
 // bounds and undo to the log. The known powers are one stored list the
 // service checks against Table 4 and logs with a snapshot.
@@ -17,8 +17,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // KnownPowersStateKey is the action-log state key of a character's known
@@ -48,6 +50,30 @@ type SVC interface {
 	// "picks" for a malformed one, ErrNotPsionicist for a character with no
 	// psionics; a refusal writes nothing.
 	SetKnownPowers(ctx context.Context, characterID int64, picks []psionics.Pick) (*charactersvc.PowerKnowledge, error)
+	// Use checks a known power (ADR 0043 steps 10 and 11): one d20, one
+	// power_check entry spending its PSPs. The refusals are Use's (use.go).
+	Use(ctx context.Context, characterID int64, powerID string, req UseRequest) (*UseResult, error)
+	// Stop ends a maintained power (ADR 0043 step 16): the dismiss of its
+	// buff row, free, logged and undoable. ErrNotPsionicist,
+	// ErrPowerNotMaintained when no row keeps the power up.
+	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
+}
+
+// Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
+// 0043 step 13).
+type Buffs interface {
+	// Add puts the row on inside the ctx transaction, without recording:
+	// the power check's entry records the snapshot.
+	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
+	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	// GetRound is the round counter (ADR 0005; 0: out of combat).
+	GetRound(ctx context.Context, characterID int64) (int, error)
+	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
+}
+
+// Dice rolls the power check's d20 (dicesvc).
+type Dice interface {
+	RollDie(sides int) int
 }
 
 // RecoveryRates is Table 6 (ruletablesvc.Tables).
@@ -60,6 +86,8 @@ type RecoveryRates interface {
 type Log interface {
 	actionlog.Recorder
 	AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error)
+	// ActiveEntries are the newest non-voided entries of kind, newest first.
+	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 }
 
 // Characters reads a character with its derived known powers (charactersvc).
@@ -79,6 +107,8 @@ type Deps struct {
 	Log        Log
 	Characters Characters
 	Picks      Picks
+	Dice       Dice
+	Buffs      Buffs
 	// Book is the powers catalogue the picks are checked against.
 	Book psionics.Book
 	Tx   domain.TxRunner
@@ -89,16 +119,18 @@ type service struct {
 	log   Log
 	chars Characters
 	picks Picks
+	dice  Dice
+	buffs Buffs
 	book  psionics.Book
 	tx    domain.TxRunner
 }
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Book == nil || d.Tx == nil {
+	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Buffs == nil || d.Book == nil || d.Tx == nil {
 		return nil, fmt.Errorf("psionicsvc: nil dependency")
 	}
-	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, book: d.Book, tx: d.Tx}, nil
+	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, buffs: d.Buffs, book: d.Book, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
@@ -215,8 +247,8 @@ type recoveryRecord struct {
 // hours × the activity's hourly rate (whole PSPs, rounded down), as one
 // psp_recovery entry; the recording path caps the gain at the PSPs spent
 // (step 5). An activity whose rate is 0 (exertion) logs the hours with no
-// PSP. Step 6's refusal while a power is maintained waits on maintenance
-// (steps 13 to 16), which does not exist yet: nothing can be maintained.
+// PSP. Refused with ErrRecoveryWhileMaintaining while a power is maintained:
+// the book recovers only in hours with no PSP spent.
 func (s *service) Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error) {
 	if math.IsNaN(hours) || math.IsInf(hours, 0) || hours <= 0 {
 		return actionlog.PSPState{}, domain.FieldErrorf("hours", "hours must be more than 0")
@@ -235,10 +267,25 @@ func (s *service) Recover(ctx context.Context, characterID int64, hours float64,
 	if err != nil {
 		return actionlog.PSPState{}, fmt.Errorf("psp recovery payload: %w", err)
 	}
-	return s.log.AppendPSP(ctx, actionlog.NewEntry{
-		CharacterID: characterID,
-		Kind:        actionlog.KindPSPRecovery,
-		Payload:     payload,
-		PSPDelta:    int(math.Floor(hours*float64(rate) + 1e-9)),
+	var out actionlog.PSPState
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		buffs, err := s.buffs.ListActive(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("list active buffs: %w", err)
+		}
+		if slices.ContainsFunc(buffs, buffsvc.BuffEffect.Maintained) {
+			return ErrRecoveryWhileMaintaining
+		}
+		out, err = s.log.AppendPSP(ctx, actionlog.NewEntry{
+			CharacterID: characterID,
+			Kind:        actionlog.KindPSPRecovery,
+			Payload:     payload,
+			PSPDelta:    int(math.Floor(hours*float64(rate) + 1e-9)),
+		})
+		return err
 	})
+	if err != nil {
+		return actionlog.PSPState{}, err
+	}
+	return out, nil
 }

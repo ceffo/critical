@@ -387,12 +387,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Cast, err); err != nil {
 		return nil, err
 	}
-	bs.Rest, err = restsvc.New(bs.Spells, bs.Items, bs.Character, logSvc, tx)
+	bs.Rest, err = restsvc.New(bs.Spells, bs.Items, bs.Character, bs.Buffs, logSvc, tx)
 	if err := bs.add(bs.Rest, err); err != nil {
 		return nil, err
 	}
 	bs.Psionics, err = psionicsvc.New(psionicsvc.Deps{
-		Rates: ruleTables, Log: logSvc, Characters: charSvc, Picks: characterDAL,
+		Rates: ruleTables, Log: logSvc, Characters: charSvc, Picks: characterDAL, Dice: dice, Buffs: bs.Buffs,
 		Book: psionics.NewBook(artifact.Disciplines, artifact.Powers), Tx: tx,
 	})
 	if err := bs.add(bs.Psionics, err); err != nil {

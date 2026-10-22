@@ -31,9 +31,26 @@ func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
 // thiefPsionicistKnowing is thiefPsionicist with the given known powers.
 func thiefPsionicistKnowing(t *testing.T, picks []psionics.Pick) (*composition.BackingServices, int64) {
 	t.Helper()
+	return thiefPsionicistRolling(t, picks, nil)
+}
+
+// thiefPsionicistRolling is thiefPsionicistKnowing with known dice (nil: the
+// crypto dice).
+func thiefPsionicistRolling(t *testing.T, picks []psionics.Pick, dice composition.Dice) (*composition.BackingServices, int64) {
+	t.Helper()
+	return thiefPsionicistOn(t, picks, dice, fixtureCatalogue)
+}
+
+// thiefPsionicistOn is thiefPsionicistRolling on the catalogue artifact at
+// path.
+func thiefPsionicistOn(t *testing.T, picks []psionics.Pick, dice composition.Dice, path string) (*composition.BackingServices, int64) {
+	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
-	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
+	cfg := fixtureConfig()
+	cfg.Catalogue = path
+	cfg.Dice = dice
+	bs, err := composition.Build(ctx, composition.MemoryStorage(m), cfg)
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id, err := m.AddCharacter(ctx, charactersvc.Character{
@@ -302,4 +319,119 @@ func TestPicks_Step9_UndoRemovesThePick(t *testing.T) {
 	c, err := bs.Character.GetCharacter(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, first, c.Derived.Powers.Picks)
+}
+
+// Step 11: a power's use spends its PSPs in its power_check entry, so one
+// undo gives them back and a redo spends them again. Psionic blast costs 10
+// against Wisdom 17 - 5 = 12: a 5 succeeds and spends 10, a 15 fails and
+// spends half, 5. The entry records the power's catalogue name.
+func TestActivate_Step11_UndoGivesThePSPBack(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5, 15}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"}, {Kind: psionics.PickPower, ID: "psionic_blast"},
+	}, dice)
+
+	res, err := bs.Psionics.Use(ctx, id, "psionic_blast", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, 12, res.Check.Target)
+	assert.Equal(t, "Souffle psionique", res.Check.Name["fr"], "the name is recorded in every language")
+	assert.Equal(t, psionics.OutcomeSuccess, res.Check.Outcome)
+	assert.Equal(t, actionlog.PSPState{Current: 171, Max: 181}, res.PSP)
+	assert.Equal(t, 171, currentPSP(t, bs, id), "the answer is the pool as read")
+	top, ok, err := bs.Log.TopID(ctx, id)
+	require.NoError(t, err)
+	require.True(t, ok)
+	assert.Equal(t, res.LogEntryID, top)
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 181, currentPSP(t, bs, id), "the undo gives the 10 back")
+	redoTop(t, bs, id)
+	assert.Equal(t, 171, currentPSP(t, bs, id), "the redo spends them again, no die rolled")
+
+	res, err = bs.Psionics.Use(ctx, id, "psionic_blast", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	assert.Equal(t, psionics.OutcomeFailure, res.Check.Outcome)
+	assert.Equal(t, 166, currentPSP(t, bs, id), "a failure spends half")
+	undoTop(t, bs, id)
+	assert.Equal(t, 171, currentPSP(t, bs, id))
+	assert.Equal(t, 2, dice.calls["die"], "one d20 per use, none on undo or redo")
+}
+
+// ADR 0043 steps 13 and 14 end to end: Aura Sight (9 PSPs, 9 a round, Wis 17
+// - 5 = 12) succeeds at round 0 and puts its row on; the Next Round of its
+// start round charges nothing, the next one charges 9; undoing that Next
+// Round gives the PSPs back and leaves the row on, undoing the check takes
+// the row off.
+func TestAdvanceRound_Step14_UndoRestoresPSPAndRows(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5, 3, 4}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "clairsentience"}, {Kind: psionics.PickPower, ID: "aura_sight"},
+	}, dice)
+	rows := func() int {
+		b, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		return len(b)
+	}
+
+	res, err := bs.Psionics.Use(ctx, id, "aura_sight", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	require.True(t, res.Check.Success)
+	require.NotEmpty(t, res.BuffID)
+	assert.Equal(t, 172, currentPSP(t, bs, id))
+	assert.Equal(t, 1, rows())
+
+	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 172, currentPSP(t, bs, id), "the start round's Next Round charges nothing")
+	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 163, currentPSP(t, bs, id), "9 to keep it from round 1")
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 172, currentPSP(t, bs, id), "the undo gives the 9 back")
+	assert.Equal(t, 1, rows())
+	undoTop(t, bs, id)
+	undoTop(t, bs, id)
+	assert.Equal(t, 181, currentPSP(t, bs, id))
+	assert.Equal(t, 0, rows(), "the check's undo takes the row off")
+}
+
+// ADR 0043 steps 6 and 7 with a maintained power: recovery is refused, the
+// long rest ends the power, and undoing the rest puts its row back (and
+// spends the night's PSPs again).
+func TestLongRest_Step7_EndsMaintainedPowersUndone(t *testing.T) {
+	ctx := context.Background()
+	dice := &attackDice{t: t, dies: []int{5}, calls: map[string]int{}}
+	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "clairsentience"}, {Kind: psionics.PickPower, ID: "aura_sight"},
+	}, dice)
+	rows := func() int {
+		b, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		return len(b)
+	}
+	res, err := bs.Psionics.Use(ctx, id, "aura_sight", psionicsvc.UseRequest{})
+	require.NoError(t, err)
+	require.True(t, res.Check.Success)
+	require.Equal(t, 1, rows())
+
+	_, err = bs.Psionics.Recover(ctx, id, 1, "resting")
+	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining)
+
+	_, err = bs.Rest.LongRest(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, 0, rows(), "no maintenance asleep")
+	assert.Equal(t, 181, currentPSP(t, bs, id), "172 + the night, capped")
+	entries, err := bs.Log.ActiveEntries(ctx, id, actionlog.KindLongRest, 1)
+	require.NoError(t, err)
+	require.Len(t, entries, 1)
+	assert.Contains(t, string(entries[0].Payload), `"powersEnded":["aura_sight"]`)
+
+	undoTop(t, bs, id)
+	assert.Equal(t, 1, rows(), "the undo puts the row back")
+	assert.Equal(t, 172, currentPSP(t, bs, id))
+	_, err = bs.Psionics.Recover(ctx, id, 1, "resting")
+	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining, "refused again: the power is kept up")
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
@@ -53,6 +54,24 @@ type logPayload struct {
 	EndEffects []endEffectPayload `json:"endEffects,omitempty"`
 	HPBefore   *int               `json:"hpBefore,omitempty"`
 	HPAfter    *int               `json:"hpAfter,omitempty"`
+	// PowerID is the row's psionic power (dismiss: a maintained power
+	// stopped, ADR 0043 step 16), so the UI names it.
+	PowerID string `json:"powerId,omitempty"`
+	// Maintenance is what Next Round charged each maintained power, in the
+	// list's order (ADR 0043 step 14); the entry's PSP delta is their sum,
+	// negated. MaintenanceUnpaid are the powers whose cost the PSPs left
+	// could not pay: they ended, and are among Expired too.
+	Maintenance       []maintenanceCharge `json:"maintenance,omitempty"`
+	MaintenanceUnpaid []string            `json:"maintenanceUnpaid,omitempty"`
+	// PowerNames names those powers (and the ones a long rest ended) by id in
+	// every language, as power_check does, so the journal words them.
+	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
+}
+
+// maintenanceCharge is one maintained power's charge on Next Round.
+type maintenanceCharge struct {
+	PowerID string `json:"powerId"`
+	Cost    int    `json:"cost"`
 }
 
 // change is what a use case decided: the new buff list, the new round when
@@ -74,6 +93,9 @@ type change struct {
 	ended    []BuffEffect
 	endCause spelleffectsvc.EndCause
 	end      EndResult
+	// pspDelta is the entry's PSP delta: maintenance charged (ADR 0043 step
+	// 14), negative.
+	pspDelta int
 }
 
 // apply runs decide on the current state and, in one transaction, records
@@ -148,6 +170,7 @@ func (s *service) applyIn(ctx context.Context, characterID int64, decide func(bu
 			CharacterID: characterID,
 			Kind:        ch.kind,
 			HPDelta:     heal,
+			PSPDelta:    ch.pspDelta,
 			Payload:     payload,
 			Snapshots:   snaps,
 		}); err != nil {

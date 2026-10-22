@@ -24,4 +24,22 @@ describeKind("round_advance", fixtures, {
     value: null,
     rolled: false,
   },
+  // ADR 0043 step 14: the maintenance each power was charged.
+  maintained: {
+    en: {
+      text: "Round 4 → 5 — maintenance (PSPs): Mind thrust 3, Body equilibrium 2",
+    },
+    fr: {
+      text: "Tour 4 → 5 — maintien (PFP) : Mind thrust 3, Body equilibrium 2",
+    },
+  },
+  // The power the PSPs left could not pay ends.
+  maintenanceUnpaid: {
+    en: {
+      text: "Round 5 → 6 — maintenance (PSPs): Mind Thrust 2 — powers ended, not enough PSPs: Body Equilibrium",
+    },
+    fr: {
+      text: "Tour 5 → 6 — maintien (PFP) : Poussée mentale 2 — pouvoirs terminés, PFP insuffisants : Équilibre corporel",
+    },
+  },
 });

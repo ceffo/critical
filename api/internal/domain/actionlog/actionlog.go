@@ -63,13 +63,18 @@ const (
 	// step 16). It changes no state and has no snapshots: popping it only
 	// removes it. It is never adjusted.
 	KindTurnUndead Kind = "turn_undead"
+	// KindPowerCheck is a psionicist's power check (psionicsvc, ADR 0043
+	// steps 10 and 11): the d20 against the power's target with its
+	// breakdown, and the PSPs spent as its PSP delta, so popping it gives
+	// them back.
+	KindPowerCheck Kind = "power_check"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result
 // card (attack, save, cast or received spell, item use, skill check, ability
-// check, spell exposure, turning undead). Only
+// check, spell exposure, turning undead, power check). Only
 // the newest of them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead}
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead, KindPowerCheck}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {

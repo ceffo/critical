@@ -43,7 +43,7 @@ type buffSvc interface {
 	ResetRound(ctx context.Context, characterID int64) (active []buffsvc.BuffEffect, round int, err error)
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []buffsvc.BuffEffect, rounds, round int, end buffsvc.EndResult, err error)
-	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, err error)
+	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, pspSpent int, err error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
 	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
@@ -323,6 +323,9 @@ func PassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 type PassTimePreviewDTO struct {
 	Rounds   int             `json:"rounds"`
 	Expiring []BuffEffectDTO `json:"expiring"`
+	// PSPSpent is what the maintained powers would be charged (ADR 0043
+	// step 15); the powers left unpaid are among Expiring.
+	PSPSpent int `json:"pspSpent"`
 }
 
 // PreviewPassTime answers what Time passes would do for ?hours= (decimal,
@@ -334,11 +337,11 @@ func PreviewPassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		if err != nil {
 			return render.BadRequestError("invalid hours")
 		}
-		rounds, expiring, err := svc.PreviewPassTime(r.Context(), charID(r), hours)
+		rounds, expiring, spent, err := svc.PreviewPassTime(r.Context(), charID(r), hours)
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, PassTimePreviewDTO{Rounds: rounds, Expiring: toDTOs(expiring)})
+		render.OK(r.Context(), w, PassTimePreviewDTO{Rounds: rounds, Expiring: toDTOs(expiring), PSPSpent: spent})
 		return nil
 	}
 }
@@ -398,8 +401,14 @@ type BuffEffectDTO struct {
 	// OnOther marks a row for a spell cast on someone else or on an area
 	// (ADR 0004 step 20.5): it only counts down and never applies. Omitted
 	// for a buff on the character. Response only, like spellId.
-	OnOther bool  `json:"onOther,omitempty"`
-	Applies *bool `json:"applies,omitempty"`
+	OnOther bool `json:"onOther,omitempty"`
+	// PowerID is the psionic power the row keeps up (ADR 0043 step 13),
+	// with the maintenance Next Round charges every maintenancePeriod
+	// rounds; omitted for any other buff. Response only, like spellId.
+	PowerID           string `json:"powerId,omitempty"`
+	MaintenanceCost   int    `json:"maintenanceCost,omitempty"`
+	MaintenancePeriod int    `json:"maintenancePeriod,omitempty"`
+	Applies           *bool  `json:"applies,omitempty"`
 	// AsksEndCause: the row's spell has end effects, so stopping it sends
 	// a cause (ADR 0004 step 21). Omitted otherwise. Response only.
 	AsksEndCause bool `json:"asksEndCause,omitempty"`
@@ -504,6 +513,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
+		PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
 	}
 }
 

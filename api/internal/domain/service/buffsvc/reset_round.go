@@ -22,7 +22,11 @@ func (s *service) SetRound(ctx context.Context, characterID int64, to int) ([]Bu
 }
 
 // moveRound logs and applies a round change that leaves buffs alone, with a
-// snapshot of the round key only.
+// snapshot of the round key only, except that moving the counter off a
+// maintained power's activation round closes that round (ADR 0043 step 14):
+// the row counts one round kept, charging nothing, so the next Next Round
+// charges it. Without such a row the buff list is neither snapshotted nor
+// written.
 func (s *service) moveRound(ctx context.Context, characterID int64, kind actionlog.Kind, action string, target func(from int) (int, error)) ([]BuffEffect, int, error) {
 	var active []BuffEffect
 	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
@@ -31,11 +35,16 @@ func (s *service) moveRound(ctx context.Context, characterID int64, kind actionl
 			return change{}, err
 		}
 		active = buffs
+		closed := false
+		if to != from {
+			active, closed = closeActivationRounds(buffs)
+		}
 		return change{
 			kind:      kind,
 			payload:   logPayload{Action: action, FromRound: &from, ToRound: &to},
 			round:     &to,
-			roundOnly: true,
+			buffs:     active,
+			roundOnly: !closed,
 			// Round 0 is out of combat: no initiative (ADR 0013 step 5). A
 			// set to another round keeps the round's initiative.
 			clearInitiative: to == 0,
@@ -45,4 +54,17 @@ func (s *service) moveRound(ctx context.Context, characterID int64, kind actionl
 		return nil, 0, err
 	}
 	return active, *ch.round, nil
+}
+
+// closeActivationRounds counts one round kept on every maintained row still
+// in its activation round (RoundsKept 0), and reports whether there was one.
+func closeActivationRounds(buffs []BuffEffect) ([]BuffEffect, bool) {
+	closed := false
+	for i, b := range buffs {
+		if b.Maintained() && b.RoundsKept == 0 {
+			buffs[i].RoundsKept = 1
+			closed = true
+		}
+	}
+	return buffs, closed
 }

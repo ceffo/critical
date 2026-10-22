@@ -598,6 +598,72 @@ func (_c *MockSVC_Edit_Call) RunAndReturn(run func(context.Context, int64, strin
 	return _c
 }
 
+// EndMaintained provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) EndMaintained(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EndMaintained")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = rf(ctx, characterID)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_EndMaintained_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EndMaintained'
+type MockSVC_EndMaintained_Call struct {
+	*mock.Call
+}
+
+// EndMaintained is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) EndMaintained(ctx interface{}, characterID interface{}) *MockSVC_EndMaintained_Call {
+	return &MockSVC_EndMaintained_Call{Call: _e.mock.On("EndMaintained", ctx, characterID)}
+}
+
+func (_c *MockSVC_EndMaintained_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_EndMaintained_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_EndMaintained_Call) Return(ended []buffsvc.BuffEffect, snap actionlog.Snapshot, err error) *MockSVC_EndMaintained_Call {
+	_c.Call.Return(ended, snap, err)
+	return _c
+}
+
+func (_c *MockSVC_EndMaintained_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)) *MockSVC_EndMaintained_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetAbilityScore provides a mock function with given fields: ctx, characterID, a
 func (_m *MockSVC) GetAbilityScore(ctx context.Context, characterID int64, a charactersvc.Ability) (buffsvc.AbilityScore, error) {
 	ret := _m.Called(ctx, characterID, a)
@@ -1247,7 +1313,7 @@ func (_c *MockSVC_PassTime_Call) RunAndReturn(run func(context.Context, int64, f
 }
 
 // PreviewPassTime provides a mock function with given fields: ctx, characterID, hours
-func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, error) {
+func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID, hours)
 
 	if len(ret) == 0 {
@@ -1256,8 +1322,9 @@ func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours
 
 	var r0 int
 	var r1 []buffsvc.BuffEffect
-	var r2 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)); ok {
+	var r2 int
+	var r3 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, int, error)); ok {
 		return rf(ctx, characterID, hours)
 	}
 	if rf, ok := ret.Get(0).(func(context.Context, int64, float64) int); ok {
@@ -1274,13 +1341,19 @@ func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours
 		}
 	}
 
-	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) error); ok {
+	if rf, ok := ret.Get(2).(func(context.Context, int64, float64) int); ok {
 		r2 = rf(ctx, characterID, hours)
 	} else {
-		r2 = ret.Error(2)
+		r2 = ret.Get(2).(int)
 	}
 
-	return r0, r1, r2
+	if rf, ok := ret.Get(3).(func(context.Context, int64, float64) error); ok {
+		r3 = rf(ctx, characterID, hours)
+	} else {
+		r3 = ret.Error(3)
+	}
+
+	return r0, r1, r2, r3
 }
 
 // MockSVC_PreviewPassTime_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewPassTime'
@@ -1303,12 +1376,12 @@ func (_c *MockSVC_PreviewPassTime_Call) Run(run func(ctx context.Context, charac
 	return _c
 }
 
-func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.BuffEffect, err error) *MockSVC_PreviewPassTime_Call {
-	_c.Call.Return(rounds, expiring, err)
+func (_c *MockSVC_PreviewPassTime_Call) Return(rounds int, expiring []buffsvc.BuffEffect, pspSpent int, err error) *MockSVC_PreviewPassTime_Call {
+	_c.Call.Return(rounds, expiring, pspSpent, err)
 	return _c
 }
 
-func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, error)) *MockSVC_PreviewPassTime_Call {
+func (_c *MockSVC_PreviewPassTime_Call) RunAndReturn(run func(context.Context, int64, float64) (int, []buffsvc.BuffEffect, int, error)) *MockSVC_PreviewPassTime_Call {
 	_c.Call.Return(run)
 	return _c
 }

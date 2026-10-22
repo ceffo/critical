@@ -65,6 +65,13 @@ export interface BuffEffect {
    */
   proficiencyId?: string;
   /**
+   * The psionic power the row keeps up (ADR 0043 step 13), with what Next Round charges every
+   * `maintenancePeriod` rounds. Absent for any other buff. Set by the server; never sent.
+   */
+  powerId?: string;
+  maintenanceCost?: number;
+  maintenancePeriod?: number;
+  /**
    * A row for a spell cast on someone else or on an area (ADR 0004 step 20.5): it only counts down
    * and never applies. Absent for a buff on the character. Set by the server; never sent.
    */

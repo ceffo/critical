@@ -7,7 +7,9 @@ Context). The shape of the definitions, the closed list of feature kinds and the
 `equipment` list, the package `domain/classes`) were accepted in review, 2026-10-21.
 Step 11.1 is built (2026-10-22, [ADR 0021](0021-spell-catalogue.md) step 18: the catalogue publishes format 11). Step 11.2
 is built for the class list, groups, races, prime requisites, ability minimums, alignments and XP rows (2026-10-22: the
-class registry, steps 5, 6, 8 and 9; see the as-built notes there). The rest is
+class registry, steps 5, 6, 8 and 9; see the as-built notes there). Step 11.3 is built for the class
+features and the spell progression (2026-10-22: every kind of step 3 but `sphere_access` is read through the
+lookup of step 5, the Go lists are gone; see the as-built notes of steps 3, 5, 8 and 11). The rest is
 not implemented: each step names the test its implementing item writes. Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
@@ -178,9 +180,29 @@ writes `Test<name>` and adds the prefix here in the same PR.
    4. The starting spellbook stays a seed keyed by class (`seeds/starting_spellbook.json`, ADR 0030
       step 20.7): seeds are data.
 
-   Tests: `Features_Step3_EveryKindParsesItsParams` (domain: each kind with its params, an unknown
-   param or a missing one refused), `Features_Step3_TheFiveClassesGrantTodaysMechanics` (seedcheck:
+   Tests: `TestFeatures_Step3_EveryKindParsesItsParams` (domain: each kind with its params, an unknown
+   param or a missing one refused), `TestFeatures_Step3_TheFiveClassesGrantTodaysMechanics` (seedcheck:
    the real artifact's five classes list exactly the kinds of the table, with its params).
+
+   _(As built, 2026-10-22: `domain/classes.Feature` holds a kind, its `from_level` and the params of its kind
+   (`Table`, `Ability`, `Spheres`, `RogueSkills`, `Spellbook`); `classes.New` refuses an unknown kind, a kind
+   twice, a `from_level` outside 1 to 20 and a missing param or one of another kind. The adapter maps the params
+   by kind and ignores keys of other kinds (the format-11 schema refuses them upstream). One test per kind, each
+   on the fixture's real tables with edited definitions (the book class with the kind struck keeps its id and
+   loses the mechanic; a test class listing the kind gets it): `TestFeatures_Step3_ExceptionalStrengthFromTheKind`,
+   `TestFeatures_Step3_WeaponSpecializationFromTheKind`, `TestFeatures_Step3_WisdomBonusSpellsFromTheKind`,
+   `TestFeatures_Step3_SpellFailureFromTheKind` (its `ability` param read), `TestFeatures_Step3_TurnUndeadFromTheKind`
+   (with `from_level`), `TestFeatures_Step3_RogueSkillsFromTheKind` (a warrior test class with the thief's set),
+   `TestFeatures_Step3_BackstabFromTheKind`, `TestFeatures_Step3_SpellbookFromTheKind` (charactersvc),
+   `TestFeatures_Step3_MeleeAttacksPerRoundFromTheKind` and `TestFeatures_Step3_TheCreationGatesReadTheKind`
+   (ruletablesvc), `TestDefinitions_Step3_TheFeatureListsMapWithTheirParams` (ruletablesadpt: the fixture's five
+   lists equal this table). The derived block carries `exceptionalStrength` (the class has the kind at its
+   level) and the creation draft says whether the form offers the 18/xx field (the kind, Strength 18 entered,
+   a race without `no_exceptional_strength`): the web has no `str === 18` rule of its own
+   (`TestDraft_Step9_TheServerOffersExceptionalStrength`). The `rogue_skills` set codes `thief` and `bard` pick
+   the skill list, base rows and check kind (3.2) in `ruletablesvc`; they are skill-set codes, not class ids, and
+   step 10's check lists them as such. **`sphere_access` is parsed and checked but not read**: the cleric's
+   spheres still come from format 6's access rows keyed by class, until a reader moves to the params.)_
 
    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both)_
 
@@ -215,14 +237,19 @@ writes `Test<name>` and adds the prefix here in the same PR.
    step 1), the attack, the cast, the creation options and the item warnings. The
    definitions and the lookup are one pure domain package (`domain/classes`, beside
    `domain/skills` and `domain/spellbook`), filled from the catalogue by the composition root.
-   Tests: `Lookup_Step5_AFeatureThroughTheClassEntry` (domain: granted from its level, not below
-   it, read with the entry's level), `Lookup_Step5_ANewClassOfKnownKindsNeedsNoCode` (domain: a
+   Tests: `TestLookup_Step5_AFeatureThroughTheClassEntry` (domain: granted from its level, not below
+   it, read with the entry's level), `TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode` (charactersvc: a
    fixture class `test_skald`, group rogue, `rogue_skills` set `bard` and `spellbook`, derives its
    skills and spellbook with no code change).
    _(As built, 2026-10-22: `domain/classes.Registry` holds the class, group and race definitions, built by the catalogue
    adapter and handed out by the rule tables (`Definitions`). It reads each class's group, prime requisites, ability
    minimums, alignments and XP rows; the features, equipment and hit dice keep their readers until step 11.3, so the
-   feature lookup proper (and its `test_skald` test) comes with them. Built so far:
+   feature lookup proper (and its `test_skald` test) comes with them. _(Built 2026-10-22 for the features:
+   `Class.Feature(kind, level)` is the feature at a realized level, `Class.Lists(kind)` whether the class lists it
+   at all (the creation options and entry checks, before a level is known); both hand out copies. The derived
+   character, the attack rate, the creation checks and options, the skill services, the item warnings' skill
+   armour and the starting spellbook read them. The `test_skald` test derives on the fixture's real tables, so it
+   lives in charactersvc.)_ Built so far:
    `Lookup_Step5_ANewClassOfKnownFieldsNeedsNoCode` and `Lookup_Step5_TheDefinitionsAreCopies` (domain/classes).
    A by-group spell effect on a character with no class group is refused ("needs the character's class group"),
    never a fallback to the default die. The THAC0 lookup, the race-and-class check and the proficiency groups
@@ -269,7 +296,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
    without a prime requisite, an unknown alignment, a class or race listed twice and XP rows that are not levels
    1 to 20 from 0 and increasing (`Import_Step8_TheRegistryRefusesBrokenDefinitions`, domain/classes); the
    adapter refuses a row keyed by an unknown class, group or race (`Import_Step8_RefusesARowForAnUnknownClass`).
-   The kinds and params come with step 11.3. `classes.New` also refuses a group without THAC0 rows for levels
+   The kinds and params come with step 11.3 _(built 2026-10-22: `classes.New` refuses an unknown kind or param, a
+   missing param and a kind listed twice; `ruletablesvc.CheckDefinitions`, run by the adapter at start, refuses a
+   `spell_progression` naming no slot table, a `table` param naming another table than its kind's and an unknown
+   `rogue_skills` set: `TestImport_Step8_TheTablesRefuseWhatTheyCannotRead` (ruletablesvc),
+   `TestImport_Step8_RefusesABrokenFeature` (ruletablesadpt))_. `classes.New` also refuses a group without THAC0 rows for levels
    1 to 20 (Table 53 is read from the group definitions, `RuleTables_Step7_RowsKeyedByClassAndGroup`) and a race
    requirement on an unknown ability or with its minimum above its maximum. The per-race tables (racial level
    limits, `race_requirements`, `thief_skill_race`): a race whose definition has ability requirements (every
@@ -326,6 +357,20 @@ writes `Test<name>` and adds the prefix here in the same PR.
     No database migration: `characters.class` and `characters.race_code` keep the same codes.
     Tests: `ClassData_Step11_2_MatchesTheGoListsItReplaces` (ruletablesadpt, deleted with the last
     list), and the existing tests named in ADR 0030 steps 2 to 22, unchanged.
+
+    _(As built for 11.3, the class features, 2026-10-22: the Go lists of Context's "feature flags" row, the skill
+    budget constants, `ThiefArmors` and `BardArmors`, and the `switch` on the class choosing the slot table are
+    deleted; each reader asks the lookup of step 5. The existing step tests were ported to read the fixture's
+    definitions where they read a Go list, and their expectations are unchanged but one: the skill points of a
+    character with no catalogue (a nil book, tests only) are 0, since the budget is the `rogue_skills` params.
+    The regression proof is `TestClasses_Golden_FeaturesDeriveWhatTheGoListsDid` (composition): its golden file
+    was written by the same test on the code before the move and passes unchanged after it (spell slots, spell
+    failure, turning, skills with their armour and budget, backstab, specialization, the spellbook's maximum
+    level and the attacks per round, for the five classes at levels 1, 7 and 13, unarmoured and in chain mail).
+    The derived block's new `exceptionalStrength` is the one addition. Left for the next items of step 11: the
+    equipment limits (`itemsvc.classRules`, `classWeaponTypes`), the hit dice, the race traits (Table 9's
+    races, `noExceptionalStrengthRaces`, Tables 10 and 11), the reader of `sphere_access`, then step 11.5's
+    `just check-no-class-ids`.)_
 
 ## Consequences
 

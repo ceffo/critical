@@ -94,6 +94,9 @@ One of the six scores; the **score in effect** has the app's effects applied.
 [ADR 0004](docs/adr/0004-buffs.md) steps 7 to 10, [ADR 0028](docs/adr/0028-ability-checks.md) step 2.
 _Code_: Ability, Abilities, AbilityMinimum
 
+**Exceptional Strength** (fr: force exceptionnelle):
+The percentile (18/01 to 18/00) a character of a class with the `exceptional_strength` feature rolls at Strength 18, unless its race has `no_exceptional_strength`. The server's derived data says when the creation form offers it. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 9 and 10, [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: 18/xx as a name (it is the notation).
+
 **Realized level** (fr: niveau acquis) and **Target level** (fr: niveau donné par l'XP):
 The level taken, and the one the XP total gives; "level" alone is the realized one; the gap is the
 **pending level-ups**. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 3 and 7.

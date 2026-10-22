@@ -552,3 +552,32 @@ func TestRealCatalogue_AreaReadingsAndPerLevelDurations(t *testing.T) {
 	t.Logf("area readings over %d spells: %v", len(spells), got)
 	assert.Equal(t, areaReadingCounts, got)
 }
+
+// ADR 0040 step 3: the real artifact's five classes list exactly the feature
+// kinds of the step's table, with its params, and the same spell progression:
+// the fixture's (whose lists the adapter test reads against the table,
+// TestDefinitions_Step3_TheFeatureListsMapWithTheirParams), class by class.
+// Skipped without the real artifact.
+func TestFeatures_Step3_TheFiveClassesGrantTodaysMechanics(t *testing.T) {
+	realCatalogue(t)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
+	require.NoError(t, err)
+	fromReal, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
+	require.NoError(t, err)
+	fromFixture, err := ruletablesadpt.Parse(fixture.RuleTables, fixture.Equipment, fixture.Languages, fixture.Definitions)
+	require.NoError(t, err)
+	rd, err := fromReal.Definitions()
+	require.NoError(t, err)
+	fd, err := fromFixture.Definitions()
+	require.NoError(t, err)
+	for _, id := range fd.ClassIDs() {
+		f, err := fd.Get(id)
+		require.NoError(t, err)
+		r, err := rd.Get(id)
+		require.NoError(t, err, "the real artifact defines %s", id)
+		assert.Equal(t, f.SpellProgression, r.SpellProgression, id)
+		assert.Equal(t, f.Features, r.Features, id)
+	}
+}

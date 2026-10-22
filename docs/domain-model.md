@@ -83,6 +83,11 @@ list, a class's group, prime requisites (the 10% XP bonus needs 16 in every one,
 ability minimums, alignments, XP rows, spell progression and class features are read from it, and
 so is a group's THAC0 (Table 53). A rule asks `Class.Feature(kind, level)` (the feature at a realized
 level) or, before a level is known (creation options, entry checks), whether the class lists the kind.
+The spell slots come from the table the spell progression names; the derived block says which panels
+apply (turning, spellbook, specialization, skills) and whether the class has **exceptional
+Strength**, and the creation draft whether the form offers the 18/xx field (the class lists the kind,
+the Strength entered is 18, the race rolls it). The `sphere_access` feature is parsed and checked
+but not read yet: the cleric's spheres still come from the class-keyed sphere rows.
 A race's **racial ability requirements** (its ability ranges) make it **restricted**: a restricted
 race has rows in every per-race table (level limits, requirements, thief skill adjustments); an
 unrestricted one (the human) may have none, and is then any class with no limit. The equipment, hit dice

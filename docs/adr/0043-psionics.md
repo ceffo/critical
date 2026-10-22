@@ -482,6 +482,36 @@ Step 8's catalogue is served; knowing and using powers are later items.
 - Tests: `PowerCatalogue_Step8_EveryPowerParses` (catalogueadpt), `Search_Step8_*`, `Get_Step8_*`, `New_Step8_*` (powersvc),
   `Powers_Step8_ServedFromTheCatalogueAsLanguageMaps` (router).
 
+## As built: known powers (2026-10-22)
+
+Step 9's backend: the rules, the store, the save with its undo and the route. The picker is the web's later item.
+
+- **The rules are a pure package**, `domain/psionics`: `Validate(book, allowance, picks)` returns what the list takes or the first rule it
+  breaks, `Count` what it takes without checking. A refusal is a `*Refusal` (the code, the power or discipline, the slot kind, the count and
+  the limit); a malformed list (an unknown kind or id, a repeat, a relearn of a power not known or not a science or devotion) is
+  `ErrInvalid`, which the service makes a field error on `picks` (verbatim message, as every field error: the web has no key for it).
+  Order of the checks: shape, discipline and prerequisites in list order, then Table 4's counts, then per discipline (ids sorted) the
+  twice rule and the primary's.
+- **Two readings of the book** the code fixes: a defence mode needs no picked discipline and counts in none (it has its own slot kind);
+  every attack mode counts as a devotion, Psionic Blast included, until the catalogue can mark it a science (step 8's note above).
+- **Table 4 is rule data** (`PowerAllowanceFor(level)`, cumulative) read at the psionics entry's realized level, not the character's total
+  level. The read serves it as `knownPowers {allowance, used, primary, picks}` beside `psp` in the derived character.
+- **Storage**: one list per character (`psionic_picks`, migration 038), set whole by `SetPsionicPicks`. A multi-class psionicist keeps one list.
+- **One entry kind, `psionic_pick`**: a save is one transaction with one entry (the picks before and after in the payload) and one
+  snapshot of the **`known_powers` family** (the stored list), which the undo and the redo write back through the same codec as the other
+  snapshot families (ADR 0018 step 8). The same list records nothing. The web's journal has a view for the kind (en, fr) and `known_powers`
+  invalidates the `character` query.
+- **`PUT /api/psionics/picks`** takes `{"picks":[{"kind","id"}]}` and answers the saved `knownPowers`. Refusals are all 409: the five
+  codes of step 9 and `not_a_psionicist` (no psionics entry). The body of a rule refusal also carries `power`, `discipline`, `slot`,
+  `count` and `limit`. `render` gives a `*psionics.Refusal` its own code instead of the sentinel's (the table row says 409 and a generic
+  code; `mapError` overrides the code when the error is a `*Refusal`, and `Code` reports it too).
+- **Wording**: the six codes have `apiError` keys (en, fr); `count` and `limit` are the only figures the web interpolates (it passes
+  numbers only), so the power, discipline and slot are for the picker to name beside the message.
+- Tests as built: `Picks_Step9_TableFourAllowance`, `_PrimaryAndRatio` and `_PrerequisitesAndRelearn` are in `domain/psionics` (the pure
+  `Validate`, where the rules live) not in `psionicsvc`, whose `SetKnownPowers_*` tests cover the save, the no-op and the refusals with
+  mocks; `Picks_Step9_UndoRemovesThePick` and `KnownPowers_Step9_SaveUndoRedoAndRefusal` are in composition;
+  `Picks_Step9_PutWireShape` and `_PutRefusals` in the router.
+
 ## Consequences
 
 - A new class of data (the psionicist and its group rows), two new feature kinds (`psionics`,

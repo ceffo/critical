@@ -211,7 +211,7 @@ A psionic power of the catalogue (format 13, 152 of them, en and fr): a name, a 
 _Code_: Power
 
 **Known powers** (fr: pouvoirs connus):
-The list of picks a psionicist holds, in his order: a discipline, a power, or a relearn of a science or devotion; the **allowance** is Table 4's cumulative count of each kind at his psionics level, and what the list takes is **used**. Stored per character and served in the derived data; editing it is planned. [ADR 0043](docs/adr/0043-psionics.md) step 9.
+The list of picks a psionicist holds, in his order: a discipline, a power, or a relearn of a science or devotion; the **allowance** is Table 4's cumulative count of each kind at his psionics level, and what the list takes is **used**. Stored per character, served in the derived data and saved whole over `PUT /api/psionics/picks` as one undoable `psionic_pick` entry; a list over the rules is refused with the rule's code. [ADR 0043](docs/adr/0043-psionics.md) step 9.
 _Code_: PowerKnowledge, Allowance, Used
 
 **Primary discipline** (fr: discipline primaire) _(planned)_:

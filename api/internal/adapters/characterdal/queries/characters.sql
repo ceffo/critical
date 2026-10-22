@@ -9,25 +9,49 @@ SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_ba
        COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
 FROM characters WHERE id = $1;
 
--- A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP.
+-- A character's class entries in the order the classes were taken (ADR 0042 step 1).
+-- name: ListClassEntries :many
+SELECT class, realized_level, starting_xp, state, left_at_level
+FROM character_classes WHERE character_id = $1 ORDER BY position;
+
+-- name: InsertClassEntry :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
+VALUES (sqlc.arg(character_id), sqlc.arg(position), sqlc.arg(class), sqlc.arg(realized_level),
+        sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level));
+
+-- A level-up roll and its undo (ADR 0030 step 7.3): the realized level and the max HP. The level
+-- is the character's first active entry's, written to its column too (the release before the
+-- class entries reads it, migration 035).
 -- name: SetRealizedLevel :execrows
 UPDATE characters SET realized_level = sqlc.arg(realized_level), hp_max = sqlc.arg(hp_max)
 WHERE id = sqlc.arg(id);
+
+-- name: SetFirstActiveEntryLevel :exec
+UPDATE character_classes SET realized_level = sqlc.arg(realized_level)
+WHERE character_classes.character_id = sqlc.arg(character_id) AND position = (
+    SELECT MIN(e.position) FROM character_classes e WHERE e.character_id = sqlc.arg(character_id) AND e.state = 'active'
+);
 
 -- A thief's skill points spent on the sheet and their undo (ADR 0030 step 17).
 -- name: SetSkillPoints :execrows
 UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);
 
--- A character's class and stored skill points, for the undo of a spend (no derivation).
+-- A character's class (its first active entry's, ADR 0042 step 1; the column for a character with no
+-- entry) and stored skill points, for the undo of a spend (no derivation).
 -- name: GetSkillSets :one
-SELECT class, skill_sets, skill_points FROM characters WHERE id = sqlc.arg(id);
+SELECT COALESCE((SELECT e.class FROM character_classes e
+                 WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
+       skill_sets, skill_points
+FROM characters WHERE id = sqlc.arg(id);
 
 -- The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 -- name: SetProficiencyPicks :execrows
 UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id = sqlc.arg(id);
 
 -- name: GetCharacterDetails :one
-SELECT class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
+SELECT COALESCE((SELECT e.class FROM character_classes e
+                 WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
+       race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages
 FROM characters WHERE id = $1;
 
 -- The details card's edit: every detail but the languages, which the Skills tab saves (ADR 0037
@@ -43,7 +67,7 @@ UPDATE characters SET languages = sqlc.arg(languages) WHERE id = sqlc.arg(id);
 
 -- name: CharactersOf :many
 -- The owner's characters they have not retired, in creation order (the service derives each level).
-SELECT id, name, class FROM characters
+SELECT id, name FROM characters
 WHERE owner_user_id = $1 AND NOT retired
 ORDER BY id;
 

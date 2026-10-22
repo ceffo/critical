@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -36,11 +37,15 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
 		SkillSets: `{}`, ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"singing","slots":1}]}`,
 	}, nil).Once()
+	q.EXPECT().ListClassEntries(ctx, int64(3)).Return([]queries.ListClassEntriesRow{
+		{Class: "bard", RealizedLevel: 6, StartingXp: 1200, State: "active"},
+	}, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 3)
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.Character{
 		ID: 3, Name: "Bard", Str: 18, Dex: 14, Con: 12, Int: 10, Wis: 9, Cha: 16,
 		HPMax: 42, RealizedLevel: 6, XPTotal: 1200, Class: "bard", Race: "half_elf",
+		Classes: []classes.Entry{classes.SingleEntry("bard", 6, 1200)},
 		// The stored level, THAC0 and saves are the sheet's figures (ADR 0030 step 24), never inputs.
 		Sheet: charactersvc.Sheet{Level: 5, THAC0: 16, Saves: charactersvc.Saves{
 			ParaPoison: 13, RodStaffWand: 14, PetriPoly: 12, Breath: 16, Spell: 15,
@@ -165,12 +170,12 @@ func TestOwners_ListAndSetCurrent(t *testing.T) {
 	owner := uuid.MustParse("11111111-1111-1111-1111-111111111111")
 
 	q.EXPECT().CharactersOf(ctx, uuid.NullUUID{UUID: owner, Valid: true}).Return([]queries.CharactersOfRow{
-		{ID: 1, Name: "Kelsen", Class: "bard"}, {ID: 4, Name: "Other", Class: "fighter"},
+		{ID: 1, Name: "Kelsen"}, {ID: 4, Name: "Other"},
 	}, nil).Once()
 	list, err := dal.CharactersOf(ctx, owner)
 	require.NoError(t, err)
 	assert.Equal(t, []charactersvc.Summary{
-		{ID: 1, Name: "Kelsen", Class: "bard"}, {ID: 4, Name: "Other", Class: "fighter"},
+		{ID: 1, Name: "Kelsen"}, {ID: 4, Name: "Other"},
 	}, list)
 
 	q.EXPECT().LockUser(ctx, owner).Return(owner, nil).Twice()
@@ -201,7 +206,10 @@ func TestCreateCharacter_TheRowThenItsStateRows(t *testing.T) {
 		OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true}, RealizedLevel: sql.NullInt64{Int64: 3, Valid: true},
 		SkillSets: `{}`, ProficiencyPicks: `{}`,
 	}).Return(int64(7), nil).Once().NotBefore(lock)
-	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(row)
+	entry := q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
+		CharacterID: 7, Class: "bard", RealizedLevel: 3, StartingXp: 2500, State: "active",
+	}).Return(nil).Once().NotBefore(row)
+	slots := q.EXPECT().CreateSpellSlots(ctx, int64(7)).Return(nil).Once().NotBefore(entry)
 	buffs := q.EXPECT().CreateActiveBuffs(ctx, int64(7)).Return(nil).Once().NotBefore(slots)
 	round := q.EXPECT().CreateRoundState(ctx, int64(7)).Return(nil).Once().NotBefore(buffs)
 	details := q.EXPECT().UpdateCharacterDetails(ctx, queries.UpdateCharacterDetailsParams{
@@ -230,6 +238,8 @@ func TestSetRealizedLevel_WritesTheLevelAndItsMaxHP(t *testing.T) {
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
 		HpMax: 91, RealizedLevel: sql.NullInt64{Int64: 16, Valid: true}, ID: 3,
 	}).Return(1, nil).Once()
+	q.EXPECT().SetFirstActiveEntryLevel(ctx, queries.SetFirstActiveEntryLevelParams{RealizedLevel: 16, CharacterID: 3}).
+		Return(nil).Once()
 	require.NoError(t, dal.SetRealizedLevel(ctx, 3, 16, 91))
 
 	q.EXPECT().SetRealizedLevel(ctx, queries.SetRealizedLevelParams{
@@ -301,6 +311,9 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 		RealizedLevel: sql.NullInt64{Int64: 1, Valid: true},
 		SkillSets:     `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
 	}).Return(int64(8), nil).Once()
+	q.EXPECT().InsertClassEntry(ctx, queries.InsertClassEntryParams{
+		CharacterID: 8, Class: "thief", RealizedLevel: 1, State: "active",
+	}).Return(nil).Once()
 	q.EXPECT().CreateSpellSlots(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateActiveBuffs(ctx, int64(8)).Return(nil).Once()
 	q.EXPECT().CreateRoundState(ctx, int64(8)).Return(nil).Once()
@@ -315,6 +328,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
 		ID: 8, Class: "thief", Languages: `[]`, SkillSets: `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
 	}, nil).Once()
+	q.EXPECT().ListClassEntries(ctx, int64(8)).Return(nil, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 8)
 	require.NoError(t, err)
 	assert.Equal(t, points, got.SkillPoints)

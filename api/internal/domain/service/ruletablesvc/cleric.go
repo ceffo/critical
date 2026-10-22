@@ -3,38 +3,17 @@ package ruletablesvc
 import (
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
-
-	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
 // The cleric's rules (ADR 0030 steps 13 to 16): the Wisdom bonus spells, the
-// low-Wisdom spell failure, the spheres of access and turning undead. The
-// numbers are the class tables' (PHB Tables 5, 24 and 61) and the sphere
-// access the catalogue's (format 6); this file says which row, column and
-// cell a cleric reads.
-
-// MinorSphereMaxLevel is the highest spell level a minor sphere opens (ADR
-// 0030 step 15.2, PHB chapter 3: minor access, spells of 1st to 3rd level).
-const MinorSphereMaxLevel = 3
-
-// Sphere access kinds (ADR 0030 step 15.1).
-const (
-	AccessMajor = "major"
-	AccessMinor = "minor"
-)
-
-// SphereAccesses are the access kinds a sphere_access row may carry.
-var SphereAccesses = []string{AccessMajor, AccessMinor}
+// low-Wisdom spell failure and turning undead. The numbers are the class
+// tables' (PHB Tables 5, 24 and 61); this file says which row, column and
+// cell a cleric reads. The spheres of access are the class's sphere_access
+// feature (classes.SphereAccess).
 
 // ErrCannotTurn means the Table 61 cell is a dash; refused before any die (ADR
 // 0030 step 16.3).
 var ErrCannotTurn = errors.New("this cleric cannot turn that undead")
-
-// ErrNoSphereAccess means the artifact carries no sphere access (a format-5
-// catalogue, ADR 0021 step 12.4).
-var ErrNoSphereAccess = errors.New("the spell catalogue carries no sphere access: run `just catalogue` to fetch a format-6 artifact")
 
 // WisdomFor is PHB Table 5's row of a Wisdom score (bonus spells and chance
 // of spell failure). A score outside the table is an error.
@@ -170,90 +149,4 @@ func (t *Tables) TurningAt(level int) ([]TurningTarget, error) {
 		out[i] = TurningTarget{Undead: r.Undead, HDMin: r.HDMin, HDMax: r.HDMax, Cell: r.ByLevel[level-1]}
 	}
 	return out, nil
-}
-
-// SphereAccessRow is one sphere a class has access to (catalogue format 6,
-// ADR 0030 step 15.1): the class code, the sphere code and the access kind.
-type SphereAccessRow struct {
-	Class, Sphere, Access string
-}
-
-// SphereAccess is the validated sphere access of the classes (format 6).
-// Built by NewSphereAccess only.
-type SphereAccess struct {
-	byClass map[string]map[string]string
-}
-
-// NewSphereAccess validates rows: known class and access codes, each class
-// and sphere once, and returns them.
-func NewSphereAccess(rows []SphereAccessRow, defs *classes.Registry) (*SphereAccess, error) {
-	if defs == nil {
-		return nil, errors.New("no class definitions")
-	}
-	out := &SphereAccess{byClass: map[string]map[string]string{}}
-	for _, r := range rows {
-		if _, ok := defs.Class(r.Class); !ok {
-			return nil, fmt.Errorf("unknown class %q", r.Class)
-		}
-		if !slices.Contains(SphereAccesses, r.Access) {
-			return nil, fmt.Errorf("%s %s: unknown access %q", r.Class, r.Sphere, r.Access)
-		}
-		if r.Sphere == "" {
-			return nil, fmt.Errorf("%s: empty sphere code", r.Class)
-		}
-		m := out.byClass[r.Class]
-		if m == nil {
-			m = map[string]string{}
-			out.byClass[r.Class] = m
-		}
-		if _, dup := m[r.Sphere]; dup {
-			return nil, fmt.Errorf("%s %s twice", r.Class, r.Sphere)
-		}
-		m[r.Sphere] = r.Access
-	}
-	return out, nil
-}
-
-// CheckSpheres refuses a sphere access row whose sphere code is on no spell
-// of known (the catalogue's spells' sphere codes): a typo would silently
-// close the sphere.
-func (a *SphereAccess) CheckSpheres(known []string) error {
-	if a == nil {
-		return nil
-	}
-	for _, class := range slices.Sorted(maps.Keys(a.byClass)) {
-		for _, sphere := range slices.Sorted(maps.Keys(a.byClass[class])) {
-			if !slices.Contains(known, sphere) {
-				return fmt.Errorf("sphere_access: %s sphere %q is on no spell of the catalogue", class, sphere)
-			}
-		}
-	}
-	return nil
-}
-
-// HasSpheres reports whether class prepares from spheres (it has a sphere
-// access row) rather than from a spellbook (ADR 0030 step 15).
-func (a *SphereAccess) HasSpheres(class string) bool {
-	return a != nil && len(a.byClass[class]) > 0
-}
-
-// Opens is ADR 0030 step 15.2: a spell of spellLevel with the sphere codes
-// spheres is open to class when one of its spheres is a major sphere of the
-// class (any level) or a minor one at levels 1 to MinorSphereMaxLevel.
-func (a *SphereAccess) Opens(class string, spellLevel int, spheres []string) bool {
-	if a == nil {
-		return false
-	}
-	access := a.byClass[class]
-	for _, s := range spheres {
-		switch access[s] {
-		case AccessMajor:
-			return true
-		case AccessMinor:
-			if spellLevel <= MinorSphereMaxLevel {
-				return true
-			}
-		}
-	}
-	return false
 }

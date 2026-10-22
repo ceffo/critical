@@ -484,12 +484,15 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     `TurnsUndead`), never a handler branch. Step 14's d100 is rolled after every refusal of the request, its effect's included (a target AC, a
     material item left or chosen, a granted-slots split), so an invalid request is a 400 whatever the die; a
     failed cast spends the slot and records only the slot snapshot, the spell and `failure` (d100,
-    chance, failed); a cast above the chance carries the roll too. Step 15 reads the sphere access and
-    each priest spell's sphere codes of catalogue format 6 ([ADR 0021](0021-spell-catalogue.md) step
-    12, decided as built; an access row whose sphere code is on no spell is refused at start-up): the domain's `spheresvc.Spheres` serves a class with a sphere access the open priest spells
+    chance, failed); a cast above the chance carries the roll too. Step 15 reads the class's `sphere_access` feature
+    ([ADR 0040](0040-classes-are-data.md) step 3: `classes.SphereAccess.Opens`, the feature granted at the
+    realized level) and each priest spell's sphere codes ([ADR 0021](0021-spell-catalogue.md) step 12; a
+    sphere code of the feature that is on no spell is refused at start-up): the domain's `spheresvc.Spheres`
+    serves a class with the feature the open priest spells
     **at the spell levels it has slots of** (a ruling, accepted by the user: a level without a slot offers
-    nothing to prepare), level then id order; on a format-5 catalogue there is no access and a cleric prepares
-    nothing. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
+    nothing to prepare), level then id order. The artifact's class-keyed `sphere_access` rows are no longer
+    read (2026-10-22; they go with a later catalogue format, ADR 0021 step 18.4 and
+    `ruletablesvc.MinorSphereMaxLevel` is gone: the cap is the feature's `minor_max_level`. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
     breakdown and the `turn_undead` entry carry the type, the level, the cell (`target` or
     `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected`, D*'s 2d4
     `more`, and `destroyed` and `turned` (how many undead each, worked out by the server so the web
@@ -497,7 +500,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     tab lists `derived.turning` as served (a dash is not offered); the result card, the journal and
     the header word the entry, and a cast's `failure` d100. Refusals: `cannot_turn_undead` (a dash), `class_cannot_turn`, an unknown type (400).
     Tests: `TestPriestSpellsPerDay_Step13_WisdomBonusSpells`, `TestSpellFailureFor_Step14_LowWisdom`,
-    `TestTurningAt_Step16_Table61`, `TestSphereAccess_Step15_TheClericsSpheres` (ruletablesadpt),
+    `TestTurningAt_Step16_Table61`, `TestSphereAccess_Step15_TheClericsSpheres` (ruletablesadpt, the fixture's cleric feature), `TestSphereAccess_Step15_Opens` (classes), `TestSpheres_Step15_TheFeatureDrivesTheSpheres` (spheresvc, a class given other spheres),
     `TestDerive_Steps13to16_TheClericsWisdomAndTurning` (charactersvc), `TestCast_Step14_SpellFailure`
     (castsvc), `TestTurn_Step16_TheCellDecidesTheDice`, `TestTurn_Step16_3_RefusalsRollNothing`
     (turnsvc), `TestCleric_Steps13to16_PrepareCastAndTurn`,

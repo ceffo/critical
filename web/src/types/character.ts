@@ -326,8 +326,8 @@ export interface Character {
   /** The sheet's starting XP (the ledger adds to it: derived.xpTotal). */
   xpTotal: number;
 
-  /** Class key (e.g. "bard"), read-only. */
-  class: string;
+  /** The class entries, in the order the classes were taken (ADR 0042 step 1). */
+  classes: ClassEntry[];
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
   derived: Derived;
@@ -385,14 +385,25 @@ export type CharacterDetails = Pick<
 
 // Mirrors api/internal/rest/handler/characterhdl (SummaryDTO, CharactersDTO, OptionsDTO, CreateBody).
 
+/** One class of a character (ADR 0042 step 1): active earns XP and levels, frozen is a dual-class's old class. */
+export interface ClassEntry {
+  /** The class code, worded by `details.classes.<code>`. */
+  class: string;
+  /** The level taken in the class (ADR 0030 step 7). */
+  level: number;
+  /** The XP entered for the class. */
+  startingXp: number;
+  state: "active" | "frozen";
+  /** The level a frozen entry was left at; 0 for an active one. */
+  leftAtLevel: number;
+}
+
 /** A character in its owner's list (ADR 0029 step 7.2). */
 export interface CharacterSummary {
   id: number;
   name: string;
-  /** The class code, worded by `details.classes.<code>`. */
-  class: string;
-  /** The level the rules derive (ADR 0030 step 3). */
-  level: number;
+  /** The class entries, each with its class code (worded by `details.classes.<code>`) and its level (ADR 0030 step 3). */
+  classes: ClassEntry[];
   /** The race code, worded by `details.races.<code>`; "" when none. */
   race?: string;
   /** The alignment and sex codes (`details.alignments.*`, `details.sexes.*`); "" while still to choose. */

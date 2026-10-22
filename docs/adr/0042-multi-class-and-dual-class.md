@@ -2,7 +2,8 @@
 
 **Status**: accepted 2026-10-21 for what the user's triage decided (quoted in Context); the
 readings where the book is silent or differs from the triage's outline (Q1 to Q16) were put to the
-user and accepted as written on 2026-10-22 ("Decided with the user"). Not implemented. Amends [ADR 0030](0030-classes-and-races.md)
+user and accepted as written on 2026-10-22 ("Decided with the user"). Step 1 (the class entries as the storage and wire shape, single-class
+characters only) is implemented as built (see "As built" under step 1); the other steps are not. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -101,9 +102,31 @@ Every warning is structured data (a code and its numbers), worded by the web.
    Today's columns become the one-entry case: `class`, `COALESCE(realized_level, level)` and
    `xp_total` give one active entry, with no change of behaviour (the implementing item's data
    migration; the storage shape is its).
-   Tests: `ClassEntries_Step1_ShapesAndRefusals` (domain: single, multi, dual accepted; each
-   refusal above), `Migrate_Step1_ACharacterBecomesOneActiveEntry` (storage, in Go without a
+   Tests: `TestClassEntries_Step1_ShapesAndRefusals` (domain: single, multi, dual accepted; each
+   refusal above), `TestMigrate_Step1_ACharacterBecomesOneActiveEntry` (storage, in Go without a
    database: today's class, level and XP give one entry, and every existing step test stays green).
+   _As built (2026-10-22)_: the entries are the table `character_classes` (migration 035:
+   `character_id`, `position`, `class`, `realized_level`, `starting_xp`, `state`, `left_at_level`;
+   one row per entry, unique per character and class, with the CHECKs of the refusals above), and
+   `classes.Entry` / `classes.ValidateEntries` in the domain. Its data step (`fillClassEntries`)
+   runs right after the migration and gives each stored character without an entry one active
+   entry (`class`, `COALESCE(realized_level, level)`, `xp_total`); a rerun changes nothing. The
+   migration is additive (ADR 0024 step 5.2): `characters.class`, `level`, `xp_total` and
+   `realized_level` stay and are written for the first active entry, so the release before keeps
+   reading during a rolling deploy; a character that release creates meanwhile has no entry and
+   the reader gives it the one its columns state. Only the default `'bard'` of `class` is gone. The
+   contract step that drops the columns is a later item's, once that release is gone, and it
+   must first backfill the entry-less characters that release created after the data step (the
+   reader's fallback covers them until then). During the one deploy window a machine still on the
+   release before writes a level-up or its undo to the columns only, so the entry of that
+   character lags its column until the next write of this release (the user is the only writer;
+   re-rolling the level fixes it); this is accepted. A negative level or XP in the columns (the
+   app writes none) is raised to 0 by the data step, so it never aborts the boot. The wire
+   serves `classes: [{class, level, startingXp, state, leftAtLevel}]` in place of `class` and
+   `level` (the summary and the character); the requests (create, change) still send `class`. The
+   derivation reads `classes.Primary` (the first active entry) until the multi-class math lands, so
+   a single-class character derives exactly as before. `scripts/class-entries-rehearsal.sh`
+   (`just class-entries-rehearsal`) proves the migration on a throwaway PostgreSQL.
 
 2. **Who may be multi-class or dual-class, and with which classes.**
    1. **Multi-class**: the book allows only demihumans, in the combinations its race lists (PHB

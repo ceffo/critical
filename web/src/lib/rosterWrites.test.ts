@@ -16,8 +16,20 @@ const identity = {
   currentHp: 8,
   maxHp: 12,
 };
-const lyra = { id: 1, name: "Lyra", class: "bard", level: 3, ...identity };
-const borin = { id: 2, name: "Borin", class: "fighter", level: 1, ...identity };
+const entry = (cls: string, level: number) => ({
+  class: cls,
+  level,
+  startingXp: 0,
+  state: "active" as const,
+  leftAtLevel: 0,
+});
+const lyra = { id: 1, name: "Lyra", classes: [entry("bard", 3)], ...identity };
+const borin = {
+  id: 2,
+  name: "Borin",
+  classes: [entry("fighter", 1)],
+  ...identity,
+};
 const list = (
   names: [string, string],
   currentId: number | null = 1,

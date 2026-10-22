@@ -413,6 +413,15 @@ equipment-rehearsal ref="":
 skill-armour-rehearsal ref="":
     scripts/skill-armour-rehearsal.sh {{ref}}
 
+# Local only: the class entries migration (035, ADR 0042 step 1) on a database written by the release
+# before (old ref, default the commit before the migration was added), in a throwaway compose PostgreSQL
+# (own project and port, never `just dev`'s): every character gets one entry, its sheet, XP ledger and
+# derived figures are compared, restarts, a column-only character of the rolling deploy. Removes the
+# compose project. Needs docker, psql, jq, go.
+# Rehearse the class entries upgrade
+class-entries-rehearsal ref="":
+    scripts/class-entries-rehearsal.sh {{ref}}
+
 # Local only: the skill sets migration (034, ADR 0040 step 3.5) on a database written by the release before (old
 # ref, default the parent of the commit that added 034), in a throwaway compose PostgreSQL (own project and
 # port, never `just dev`'s): the points move under their set, sheets compared, restarts, an old-release write

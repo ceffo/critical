@@ -3535,7 +3535,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
     if (route.request().method() !== "GET") return route.fallback();
     const res = await route.fetch();
     const body = await res.json();
-    if (body.class === "thief")
+    if (body.classes?.[0]?.class === "thief")
       body.derived.skillSets[0].warnings = [
         { code: "skill_points_total", points: 70, limit: 60 },
         {

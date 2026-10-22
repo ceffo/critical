@@ -99,9 +99,13 @@ export function Identity({
                 className="text-body text-muted-foreground"
                 data-testid="class"
               >
-                {i18n.exists(`details.classes.${character.class}`)
-                  ? t(`details.classes.${character.class}`)
-                  : character.class}
+                {character.classes
+                  .map((e) =>
+                    i18n.exists(`details.classes.${e.class}`)
+                      ? t(`details.classes.${e.class}`)
+                      : e.class,
+                  )
+                  .join(" / ")}
               </p>
               <ToSpendTag
                 toSpend={character.derived.levelUp.toSpend}

@@ -3,7 +3,7 @@
 # written by the release before is upgraded by this checkout's server, on a throwaway LOCAL compose
 # PostgreSQL, then checked through the API and SQL.
 #
-#   scripts/class-entries-rehearsal.sh [old ref]   # default: origin/main while it lacks the migration, else the commit before the one that added it
+#   scripts/class-entries-rehearsal.sh [old ref]   # default: origin/main while it lacks the migration, else the commit before the one that added it there
 #
 # 1. The old release (built from <old ref>, which must not hold 035_character_classes.sql) writes
 #    characters of several classes with a starting XP, an XP history (bonus and plain entries) and,
@@ -19,6 +19,9 @@
 # 4. The rolling deploy: a character the old release writes beside the migrated database (columns
 #    only, no entry) is read by this checkout with the one entry its columns state; a level-up of it
 #    works and invents no entry.
+# 5. A level-up of an entry other than the first (ADR 0042 step 7; the second entry added in SQL, as no
+#    release creates a multi-class character yet) moves that entry's level and the max HP, not the
+#    column or the first entry; its undo gives both back.
 #
 # Nothing touches the development database: the server is the `postgres` service of docker-compose.yml
 # under its own compose project (criticalclasses<pid>) on a free port with its own volume, removed at
@@ -36,9 +39,10 @@ mig=api/internal/storage/postgres/migrations/035_character_classes.sql
 # (the migration was first numbered 034, before the skill sets migration took that number: both names count)
 mig034="${mig/035_/034_}"
 # The release before is origin/main while it lacks the migration (it carries whatever else changed
-# the wire meanwhile); once it holds it, the commit before the one that added it.
+# the wire meanwhile); once it holds it, the commit before the one that added it on origin/main (a
+# branch's own history may hold an older commit adding it, before other wire changes main took).
 if git -C "$root" cat-file -e "origin/main:$mig" 2>/dev/null; then
-    default_ref="$(git -C "$root" log --diff-filter=A --format=%H -- "$mig" "$mig034" | tail -n 1)^"
+    default_ref="$(git -C "$root" log origin/main --diff-filter=A --format=%H -- "$mig" "$mig034" | tail -n 1)^"
 else
     default_ref="origin/main"
 fi
@@ -255,5 +259,32 @@ roll
 expect "its level-up works, the level served is 2" 2 "$(wire_level)"
 expect "its level-up invents no entry" 0 "$(sql "SELECT COUNT(*) FROM character_classes WHERE character_id = ${id[newcomer]}")"
 expect "its column took the level" 2 "$(col_level "${id[newcomer]}")"
+
+# --- 5. a level-up of an entry other than the first (ADR 0042 step 7) ---
+# (a multi-class character cannot be created yet: a second entry is added in SQL.) The thief "plain"
+# takes a fighter entry at 1 with no XP; its award is split between them (ADR 0042 step 5), the
+# fighter's half reaching Table 14's 2.
+sql "INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp)
+     VALUES (${id[plain]}, 1, 'fighter', 1, 0)" >/dev/null
+use plain
+award 4000 false
+entry_level() { sql "SELECT realized_level FROM character_classes WHERE character_id = ${id[plain]} AND class = '$1'"; }
+hp_max() { sql "SELECT hp_max FROM characters WHERE id = ${id[plain]}"; }
+expect "the fighter's level 2 is pending, named and divided by 2" '{"class":"fighter","classes":2,"level":2}' \
+    "$(call GET /api/character | jq -c '[.derived.levelUp.pending[] | select(.class == "fighter") | {class, classes, level}][0]')"
+col_before="$(col_level "${id[plain]}")" thief_before="$(entry_level thief)" hp_before="$(hp_max)"
+gain="$(call POST /api/character/levelup/roll '{"class":"fighter","level":2}' | jq -r 'select(.class == "fighter" and .classes == 2) | .gain')"
+[ -n "$gain" ] && [ "$gain" -ge 1 ] || fail "the fighter's roll answered no gain for the fighter entry"
+expect "the fighter entry took level 2" 2 "$(entry_level fighter)"
+expect "the first entry's level is unchanged" "$thief_before" "$(entry_level thief)"
+expect "the column keeps the first entry's level" "$col_before" "$(col_level "${id[plain]}")"
+expect "the max HP rose by the gain" "$((hp_before + gain))" "$(hp_max)"
+expect "the fighter's level is no longer pending" 0 \
+    "$(call GET /api/character | jq '[.derived.levelUp.pending[] | select(.class == "fighter")] | length')"
+top="$(call GET /api/log | jq -r .topId)"
+call POST /api/log/undo "{\"expectedTopId\":$top}" >/dev/null
+expect "the undo gave the fighter entry its level back" 1 "$(entry_level fighter)"
+expect "the undo gave the max HP back" "$hp_before" "$(hp_max)"
+expect "the undo left the first entry's level" "$thief_before" "$(entry_level thief)"
 stop
 echo "class-entries-rehearsal: PASS"

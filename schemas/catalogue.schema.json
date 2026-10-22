@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 12",
-  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9), the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7) and Table 5's spell immunities on the wisdom rows (step 19, ADR 0006 step 10). The API reads format 12 only: formats 3 to 11 were each the same shape without the parts added later, and are retired (steps 16.5, 17.3, 18.3 and 19.3). Shape only: the schema carries no book text.",
+  "title": "Critical! catalogue, format 13",
+  "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes and the classes' sphere access (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9), the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7) and Table 5's spell immunities on the wisdom rows (step 19, ADR 0006 step 10). and, format 13 (step 20, ADR 0043), the psionicist: its rows in the shared tables, the psionic power progression, inherent potential and PSP recovery tables, the psionic disciplines and powers. The API reads format 13 only: formats 3 to 12 were each the same shape without the parts added later, and are retired (steps 16.5, 17.3, 18.3, 19.3 and 20.3). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,13 +15,15 @@
     "proficiency_descriptions",
     "classes",
     "groups",
-    "races"
+    "races",
+    "disciplines",
+    "powers"
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 12 (ADR 0021 step 19: format 11 plus the spell immunities of each wisdom row; format 11 was step 18's: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 13 (ADR 0021 step 20: format 12 plus the psionicist's rows, three psionic tables and the psionic disciplines and powers; format 12 was step 19's: format 11 plus the spell immunities of each wisdom row; format 11 was step 18's: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        12
+        13
       ]
     },
     "version": {
@@ -71,6 +73,23 @@
       "items": {
         "$ref": "#/$defs/race_def"
       }
+    },
+    "disciplines": {
+      "description": "The six psionic disciplines of the Complete Psionics Handbook (ADR 0043 step 8, ADR 0021 step 20).",
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "$ref": "#/$defs/discipline"
+      }
+    },
+    "powers": {
+      "description": "The psionic powers: sciences, devotions and the five defence and five attack modes (ADR 0043 step 8, ADR 0021 step 20), in book order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/power"
+      }
     }
   },
   "allOf": [
@@ -106,7 +125,10 @@
             "sphere_access",
             "weapon_vs_armor",
             "initiative_item",
-            "race_languages"
+            "race_languages",
+            "psionicist_powers",
+            "inherent_potential",
+            "psp_recovery"
           ]
         },
         "spells": {
@@ -259,7 +281,7 @@
       }
     },
     "rule_tables": {
-      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table but sphere_access, format 6 every table but weapon_vs_armor and initiative_item, format 7 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them.",
+      "description": "The rule tables the engine looks values up in (ADR 0021 steps 9 and 10): numbers and language-neutral codes only, the columns the engine reads, rows in ascending order. Format 3 carries the first four tables only, format 4 every table but race_level_limits, format 5 every table but sphere_access, format 6 every table but weapon_vs_armor and initiative_item, format 7 every table. Contiguity, overlap, level order, increasing XP and completeness of the code combinations cannot be expressed here: the builder and the importer check them. Format 13 adds the psionicist's rows to saving_throws and race_level_limits and the tables psionicist_powers, inherent_potential and psp_recovery.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -309,8 +331,8 @@
         },
         "hit_dice": {
           "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
+          "minItems": 5,
+          "maxItems": 5,
           "items": {
             "$ref": "#/$defs/hit_dice_row"
           }
@@ -360,8 +382,8 @@
         },
         "race_level_limits": {
           "type": "array",
-          "minItems": 25,
-          "maxItems": 25,
+          "minItems": 30,
+          "maxItems": 30,
           "items": {
             "$ref": "#/$defs/race_level_limit_row"
           }
@@ -520,6 +542,27 @@
           "items": {
             "$ref": "#/$defs/initiative_item_row"
           }
+        },
+        "psionicist_powers": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/psionicist_powers_row"
+          }
+        },
+        "inherent_potential": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/inherent_potential_row"
+          }
+        },
+        "psp_recovery": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/psp_recovery_row"
+          }
         }
       }
     },
@@ -650,7 +693,7 @@
       }
     },
     "experience_row": {
-      "description": "PHB Tables 14 (Fighter), 20 (Mage), 23 (Cleric), 25 (Thief/Bard): the XP that reaches the level, per class.",
+      "description": "PHB Tables 14 (Fighter), 20 (Mage), 23 (Cleric), 25 (Thief/Bard): the XP that reaches the level, per class. The psionicist's column is Complete Psionics Handbook Table 2.",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -659,7 +702,8 @@
         "mage",
         "cleric",
         "thief",
-        "bard"
+        "bard",
+        "psionicist"
       ],
       "properties": {
         "level": {
@@ -686,6 +730,10 @@
         "bard": {
           "type": "integer",
           "minimum": 0
+        },
+        "psionicist": {
+          "type": "integer",
+          "minimum": 0
         }
       }
     },
@@ -705,7 +753,8 @@
             "warrior",
             "priest",
             "rogue",
-            "wizard"
+            "wizard",
+            "psionicist"
           ]
         },
         "die": {
@@ -949,7 +998,7 @@
       }
     },
     "race_level_limit_row": {
-      "description": "DMG Table 7: the highest level a race reaches in a class: max_level 1 to 20, 0 = the race cannot belong to the class (the book's dash), absent = no racial limit (the book's U). Humans have no row (no limit in any class).",
+      "description": "DMG Table 7 and, for the psionicist, CPsiH Table 1: the highest level a race reaches in a class: max_level 1 to 20, 0 = the race cannot belong to the class (the book's dash), absent = no racial limit (the book's U). Humans have no row (no limit in any class).",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -972,7 +1021,8 @@
             "mage",
             "cleric",
             "thief",
-            "bard"
+            "bard",
+            "psionicist"
           ]
         },
         "max_level": {
@@ -991,7 +1041,8 @@
         "warrior",
         "priest",
         "rogue",
-        "wizard"
+        "wizard",
+        "psionicist"
       ],
       "properties": {
         "level": {
@@ -1018,6 +1069,11 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 20
+        },
+        "psionicist": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
         }
       }
     },
@@ -1041,7 +1097,8 @@
             "warrior",
             "priest",
             "rogue",
-            "wizard"
+            "wizard",
+            "psionicist"
           ]
         },
         "level_min": {
@@ -2435,7 +2492,9 @@
             "turn_undead",
             "rogue_skills",
             "backstab",
-            "spellbook"
+            "spellbook",
+            "psionics",
+            "save_bonus"
           ]
         },
         "from_level": {
@@ -2650,6 +2709,50 @@
             "properties": {
               "params": {
                 "$ref": "#/$defs/feature_params_spellbook"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "psionics"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_psionics"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "save_bonus"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "params"
+            ],
+            "properties": {
+              "params": {
+                "$ref": "#/$defs/feature_params_save_bonus"
               }
             }
           }
@@ -3106,6 +3209,316 @@
           "items": {
             "$ref": "#/$defs/race_trait"
           }
+        }
+      }
+    },
+    "psionicist_powers_row": {
+      "description": "CPsiH Table 4: the cumulative disciplines, sciences, devotions and defence modes a psionicist knows at the level (ADR 0043 step 6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "level",
+        "disciplines",
+        "sciences",
+        "devotions",
+        "defence_modes"
+      ],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "disciplines": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sciences": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "devotions": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "defence_modes": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "inherent_potential_row": {
+      "description": "CPsiH Table 5: the base PSP score at the ability score, and the modifier the score adds (ADR 0043 step 4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "base",
+        "modifier"
+      ],
+      "properties": {
+        "score": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 25
+        },
+        "base": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "modifier": {
+          "type": "integer"
+        }
+      }
+    },
+    "psp_recovery_row": {
+      "description": "CPsiH Table 6: the PSPs recovered per hour of the activity (ADR 0043 step 6).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "activity",
+        "per_hour"
+      ],
+      "properties": {
+        "activity": {
+          "enum": [
+            "exertion",
+            "walking",
+            "resting",
+            "sleeping"
+          ]
+        },
+        "per_hour": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "power_code": {
+      "description": "A psionic power id: the English name's slug, never changed (the ledger of the books repository).",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$"
+    },
+    "discipline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/power_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        }
+      }
+    },
+    "power": {
+      "description": "A psionic power (CPsiH chapters 3 to 8; ADR 0043 step 8). score is absent where the book gives a formula in the text (Intensify, Splice). initial_cost and a maintenance cost are a number, `variable` (the text or a table gives it) or, for the initial cost, `contact`. maintenance is absent where the power cannot be maintained; its period is in rounds. min_level is a prerequisite stated as a psionicist level. Cross references (discipline, prerequisites) are checked by the builder and the importer.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "discipline",
+        "kind",
+        "initial_cost",
+        "prerequisites",
+        "range",
+        "preparation_time",
+        "area",
+        "description"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "#/$defs/power_code"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "discipline": {
+          "$ref": "#/$defs/power_code"
+        },
+        "kind": {
+          "enum": [
+            "science",
+            "devotion",
+            "defence_mode",
+            "attack_mode"
+          ]
+        },
+        "score": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ability",
+            "modifier"
+          ],
+          "properties": {
+            "ability": {
+              "$ref": "#/$defs/ability_code"
+            },
+            "modifier": {
+              "type": "integer",
+              "minimum": -20,
+              "maximum": 20
+            }
+          }
+        },
+        "initial_cost": {
+          "description": "A number, or `variable` (the text or a table gives it), or `contact` (layer 2).",
+          "if": {
+            "type": "string"
+          },
+          "then": {
+            "enum": [
+              "variable",
+              "contact"
+            ]
+          },
+          "else": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "maintenance": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "cost",
+            "period"
+          ],
+          "properties": {
+            "cost": {
+              "description": "A number, or `variable`.",
+              "if": {
+                "type": "string"
+              },
+              "then": {
+                "const": "variable"
+              },
+              "else": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "period": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "prerequisites": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/power_code"
+          }
+        },
+        "min_level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "range": {
+          "$ref": "#/$defs/localized"
+        },
+        "preparation_time": {
+          "$ref": "#/$defs/localized"
+        },
+        "area": {
+          "$ref": "#/$defs/localized"
+        },
+        "description": {
+          "$ref": "#/$defs/description"
+        },
+        "power_score_result": {
+          "$ref": "#/$defs/description"
+        },
+        "natural_20_result": {
+          "$ref": "#/$defs/description"
+        }
+      }
+    },
+    "feature_params_psionics": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "progression",
+        "psp",
+        "recovery"
+      ],
+      "properties": {
+        "progression": {
+          "$ref": "#/$defs/table_name"
+        },
+        "psp": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "base_ability",
+            "modifier_abilities",
+            "per_level",
+            "table"
+          ],
+          "properties": {
+            "base_ability": {
+              "$ref": "#/$defs/ability_code"
+            },
+            "modifier_abilities": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "$ref": "#/$defs/ability_code"
+              }
+            },
+            "per_level": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ability",
+                "plus"
+              ],
+              "properties": {
+                "ability": {
+                  "$ref": "#/$defs/ability_code"
+                },
+                "plus": {
+                  "type": "integer",
+                  "minimum": 0
+                }
+              }
+            },
+            "table": {
+              "$ref": "#/$defs/table_name"
+            }
+          }
+        },
+        "recovery": {
+          "$ref": "#/$defs/table_name"
+        }
+      }
+    },
+    "feature_params_save_bonus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "against",
+        "bonus"
+      ],
+      "properties": {
+        "against": {
+          "enum": [
+            "mind_affecting"
+          ]
+        },
+        "bonus": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5
         }
       }
     }

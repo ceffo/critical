@@ -3,14 +3,16 @@
     {"group": "warrior", "weaponInitial": 4, "weaponLevels": 3, "penalty": -2, "nonweaponInitial": 3, "nonweaponLevels": 3},
     {"group": "wizard", "weaponInitial": 1, "weaponLevels": 6, "penalty": -5, "nonweaponInitial": 4, "nonweaponLevels": 3},
     {"group": "priest", "weaponInitial": 2, "weaponLevels": 4, "penalty": -3, "nonweaponInitial": 4, "nonweaponLevels": 3},
-    {"group": "rogue", "weaponInitial": 2, "weaponLevels": 4, "penalty": -3, "nonweaponInitial": 3, "nonweaponLevels": 4}
+    {"group": "rogue", "weaponInitial": 2, "weaponLevels": 4, "penalty": -3, "nonweaponInitial": 3, "nonweaponLevels": 4},
+    {"group": "psionicist", "weaponInitial": 2, "weaponLevels": 5, "penalty": -4, "nonweaponInitial": 3, "nonweaponLevels": 3}
   ],
   "crossovers": [
     {"class": "fighter", "groups": ["warrior", "general"]},
     {"class": "mage", "groups": ["wizard", "general"]},
     {"class": "cleric", "groups": ["priest", "general"]},
     {"class": "thief", "groups": ["rogue", "general"]},
-    {"class": "bard", "groups": ["rogue", "warrior", "wizard", "general"]}
+    {"class": "bard", "groups": ["rogue", "warrior", "wizard", "general"]},
+    {"class": "psionicist", "groups": ["psionicist", "general"]}
   ],
   "nonweapon": [
     {"id": "agriculture", "ability": "int", "modifier": 0, "slots": 1, "groups": ["general"]},

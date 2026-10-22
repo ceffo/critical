@@ -174,6 +174,9 @@ func (s *service) check(n NewCharacter, blank []string, draft bool) (checked, er
 		return out, nil
 	}
 	class, classOK := defs.Class(n.Class)
+	// ADR 0040 step 8: a class listing a kind the code does not compute yet
+	// is not creatable.
+	classOK = classOK && class.Implemented()
 	out.def = class
 	switch {
 	case classOK:
@@ -490,6 +493,9 @@ func unmetMinimums(defs *classes.Registry, n NewCharacter, blank []string) []Cla
 	}
 	out := make([]ClassUnmet, 0, len(defs.Classes()))
 	for _, class := range defs.Classes() {
+		if !class.Implemented() {
+			continue
+		}
 		out = append(out, ClassUnmet{Class: class.ID, Abilities: class.UnmetMinimums(scores)})
 	}
 	return out
@@ -764,6 +770,9 @@ func (s *service) CreationOptions(_ context.Context) (CreationOptions, error) {
 		}
 	}
 	for _, def := range defs.Classes() {
+		if !def.Implemented() {
+			continue
+		}
 		class := def.ID
 		hd, err := s.rules.HitDiceFor(def.Group)
 		if err != nil {

@@ -38,13 +38,39 @@ const (
 	KindBackstab = "backstab"
 	// KindSpellbook: a spellbook (ADR 0030 step 20). Param Spellbook.
 	KindSpellbook = "spellbook"
+	// KindPsionics: the psionicist's PSPs, picks and power checks (ADR 0043
+	// steps 4 to 12). Its params (progression, psp, recovery) are checked by
+	// the catalogue schema and not read yet. Not implemented (Implemented).
+	KindPsionics = "psionics"
+	// KindSaveBonus: a bonus on a save against a kind of effect (ADR 0043
+	// step 3). Its params (against, bonus) are checked by the catalogue
+	// schema and not read yet. Not implemented (Implemented).
+	KindSaveBonus = "save_bonus"
 )
 
 // FeatureKinds is the closed list of step 3, in the ADR's order.
 var FeatureKinds = []string{
 	KindExceptionalStrength, KindMeleeAttacksPerRound, KindWeaponSpecialization,
 	KindWisdomBonusSpells, KindSpellFailure, KindSphereAccess, KindTurnUndead,
-	KindRogueSkills, KindBackstab, KindSpellbook,
+	KindRogueSkills, KindBackstab, KindSpellbook, KindPsionics, KindSaveBonus,
+}
+
+// notImplemented are the kinds of the closed list the code does not compute
+// yet: the catalogue may list them (a class is data), but a class that does
+// is not offered at creation until its kinds are built (ADR 0040 step 8).
+// A kind leaves this list when its reader lands.
+var notImplemented = []string{KindPsionics, KindSaveBonus}
+
+// Implemented reports whether the code computes every feature kind the class
+// lists: the creation gate of ADR 0040 step 8 ("passed the check = fully
+// supported"). It reads kinds, never ids.
+func (c Class) Implemented() bool {
+	for _, f := range c.Features {
+		if slices.Contains(notImplemented, f.Kind) {
+			return false
+		}
+	}
+	return true
 }
 
 // Feature is one entry of a class's feature list (ADR 0040 step 1.11): a kind,
@@ -228,7 +254,7 @@ func checkParams(f Feature) error {
 		return nil
 	}
 	switch f.Kind {
-	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells:
+	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells, KindPsionics, KindSaveBonus:
 		return want(false, false, false, false, false)
 	case KindMeleeAttacksPerRound, KindTurnUndead, KindBackstab:
 		return want(true, false, false, false, false)

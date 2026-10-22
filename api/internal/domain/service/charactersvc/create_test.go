@@ -102,6 +102,8 @@ func TestCreate_RefusesInvalidInputWithFieldErrors(t *testing.T) {
 		{"empty name", func(n *charactersvc.NewCharacter) { n.Name = "   " }, nil, "name", "empty"},
 		{"long name", func(n *charactersvc.NewCharacter) { n.Name = strings.Repeat("é", 41) }, nil, "name", "too_long"},
 		{"unknown class", func(n *charactersvc.NewCharacter) { n.Class = "paladin" }, nil, "class", "not_creatable"},
+		// ADR 0040 step 8: the fixture's psionicist lists psionics and save_bonus, which the code does not compute yet.
+		{"a class listing a kind not implemented", func(n *charactersvc.NewCharacter) { n.Class = "psionicist" }, nil, "class", "not_creatable"},
 		{"no race", func(n *charactersvc.NewCharacter) { n.Race = "" }, nil, "race", "empty"},
 		{"unknown race", func(n *charactersvc.NewCharacter) { n.Race = "orc" }, nil, "race", "unknown"},
 		{"race the class does not admit", func(n *charactersvc.NewCharacter) { n.Race = "dwarf" }, ptr(false), "race", "race_not_allowed"},
@@ -571,7 +573,7 @@ func expectOptionTables(e *env) {
 	e.rules.EXPECT().RaceAdjustmentsFor(mock.Anything).RunAndReturn(func(race string) (map[string]int, error) {
 		return map[string]int{"str": len(race)}, nil
 	}).Maybe()
-	dice := map[string]int{"rogue": 6, "warrior": 10, "wizard": 4, "priest": 8}
+	dice := map[string]int{"rogue": 6, "warrior": 10, "wizard": 4, "priest": 8, "psionicist": 6}
 	e.rules.EXPECT().HitDiceFor(mock.Anything).RunAndReturn(func(group string) (ruletablesvc.HitDiceRow, error) {
 		return ruletablesvc.HitDiceRow{Group: group, Die: dice[group]}, nil
 	}).Maybe()

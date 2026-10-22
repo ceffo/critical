@@ -37,6 +37,8 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		classes.KindRogueSkills:          {Kind: classes.KindRogueSkills, RogueSkills: rogueSkills()},
 		classes.KindBackstab:             {Kind: classes.KindBackstab, Table: "any_table"},
 		classes.KindSpellbook:            {Kind: classes.KindSpellbook, Spellbook: book},
+		classes.KindPsionics:             {Kind: classes.KindPsionics},
+		classes.KindSaveBonus:            {Kind: classes.KindSaveBonus},
 	}
 	require.Len(t, valid, len(classes.FeatureKinds), "one case per kind of the closed list")
 	for _, kind := range classes.FeatureKinds {
@@ -72,6 +74,8 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		{"rogue_skills with a negative budget", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s", Budget: classes.SkillBudget{PerLevel: -1}, Armour: rogueSkills().Armour}}}},
 		{"rogue_skills without armour", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s"}}}},
 		{"rogue_skills with an armour twice", []classes.Feature{{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{Set: "s", Armour: []classes.SkillArmour{{Code: "none"}, {Code: "none"}}}}}},
+		{"psionics with a param of another kind", []classes.Feature{{Kind: classes.KindPsionics, Table: "t"}}},
+		{"save_bonus with a param of another kind", []classes.Feature{{Kind: classes.KindSaveBonus, Ability: "wis"}}},
 		{"spellbook without params", []classes.Feature{{Kind: classes.KindSpellbook}}},
 		{"spellbook above 9th level", []classes.Feature{{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 10}}}},
 		{"spellbook under 1st level", []classes.Feature{{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{}}}},
@@ -146,4 +150,28 @@ func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
 	_, err := classes.New([]classes.Class{withFeatures(skills("set_a", 1), skills("set_a", 5))}, groups("warrior"),
 		[]classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
 	require.Error(t, err, "the same skill set twice")
+}
+
+// ADR 0040 step 8, the creation gate: a class is implemented only when every
+// kind it lists is computed. The kinds the code does not compute yet are
+// psionics and save_bonus; a class listing one of them, with others or alone,
+// is not. The gate reads kinds, never class ids.
+func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		fs   []classes.Feature
+		want bool
+	}{
+		{"no feature", nil, true},
+		{"only computed kinds", []classes.Feature{{Kind: classes.KindExceptionalStrength}, {Kind: classes.KindBackstab, Table: "t"}}, true},
+		{"psionics", []classes.Feature{{Kind: classes.KindPsionics}}, false},
+		{"save_bonus", []classes.Feature{{Kind: classes.KindSaveBonus}}, false},
+		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics}}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			c, ok := registry(t, withFeatures(tc.fs...)).Class("test_class")
+			require.True(t, ok)
+			assert.Equal(t, tc.want, c.Implemented())
+		})
+	}
 }

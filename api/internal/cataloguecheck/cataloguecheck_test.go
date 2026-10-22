@@ -197,35 +197,58 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 	}
 }
 
-// TestSchema_Step19_OnlyFormat12IsValid (ADR 0021 steps 16.5, 17.3, 18.3 and 19.3): the schema accepts
-// format 12 only; every earlier format, retired, is refused whatever it carries (the API refuses it as
-// an unknown format), and so is an artifact without a part format 12 requires.
-func TestSchema_Step19_OnlyFormat12IsValid(t *testing.T) {
+// TestSchema_Step20_OnlyFormat13IsValid (ADR 0021 steps 16.5, 17.3, 18.3, 19.3 and 20.6): the schema
+// accepts format 13 only; every earlier format, retired, is refused whatever it carries (the API refuses
+// it as an unknown format), and so is an artifact without a part format 13 requires.
+func TestSchema_Step20_OnlyFormat13IsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 12")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 13")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
 	}
-	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races"} {
+	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 12 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 13 requires %s", part)
+	}
+	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery"} {
+		a := fixtureDoc(t)
+		delete(tables(a), table)
+		assert.Error(t, sch.Validate(a), "format 13 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 12 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 13 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 12 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 13 requires the spell immunities")
 	a = fixtureDoc(t)
 	row(tables(a), "wisdom", 18)["spell_immunities"] = []any{"Charm Person"}
 	assert.Error(t, sch.Validate(a), "a spell immunity is an id")
 	a = fixtureDoc(t)
 	row(tables(a), "wisdom", 18)["spell_immunities"] = []any{"command", "command"}
 	assert.Error(t, sch.Validate(a), "a spell immunity once per row")
+	// ADR 0021 steps 20.1 and 20.3: the psionicist's grid rows and the powers.
+	power := func(a map[string]any) map[string]any { return a["powers"].([]any)[0].(map[string]any) }
+	refuseEach(t, map[string]func(a map[string]any){
+		"a power of an unknown kind":       func(a map[string]any) { power(a)["kind"] = "spell" },
+		"a cost that is a word":            func(a map[string]any) { power(a)["initial_cost"] = "many" },
+		"a power of an unknown discipline": func(a map[string]any) { power(a)["discipline"] = "Telepathy" },
+		"a psionics feature without its recovery table": func(a map[string]any) {
+			delete(feature(t, classDef(a, 5), "psionics")["params"].(map[string]any), "recovery")
+		},
+		"the psionicist's level limits lost": func(a map[string]any) {
+			tables(a)["race_level_limits"] = tables(a)["race_level_limits"].([]any)[:25]
+		},
+		"no psionicist column in the experience grid": func(a map[string]any) { delete(row(tables(a), "experience", 3), "psionicist") },
+		"no psionicist column in the THAC0 grid":      func(a map[string]any) { delete(row(tables(a), "thac0", 3), "psionicist") },
+		"no psionicist hit dice row": func(a map[string]any) {
+			tables(a)["hit_dice"] = tables(a)["hit_dice"].([]any)[:4]
+		},
+	})
 }
 
 // classDef is the i-th class of a fixture document, for a test to edit.
@@ -485,7 +508,7 @@ func TestSchema_Step14_Languages(t *testing.T) {
 
 // TestSchema_Step16_Format9ProficiencyDescriptions (ADR 0021 steps 16.1 and 16.4): the 65 rows, each
 // {id, description} with both languages in step 1's subset, and nothing else; an earlier format may
-// not carry the list (TestSchema_Step19_OnlyFormat12IsValid).
+// not carry the list (TestSchema_Step20_OnlyFormat13IsValid).
 func TestSchema_Step16_Format9ProficiencyDescriptions(t *testing.T) {
 	descs := func(a map[string]any) []any { return a["proficiency_descriptions"].([]any) }
 	desc := func(a map[string]any, i int) map[string]any {

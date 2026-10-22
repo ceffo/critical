@@ -12,7 +12,10 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
 )
@@ -20,7 +23,10 @@ import (
 func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
 	t.Helper()
 	rates, log := mocks.NewMockRecoveryRates(t), mocks.NewMockLog(t)
-	svc, err := psionicsvc.New(rates, log)
+	svc, err := psionicsvc.New(psionicsvc.Deps{
+		Rates: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t),
+		Book: psionics.NewBook(nil, nil), Tx: passTx{},
+	})
 	require.NoError(t, err)
 	return svc, rates, log
 }
@@ -90,4 +96,71 @@ func TestRecover_Step6_Refusals(t *testing.T) {
 		_, err := svc.Recover(context.Background(), 7, 1, "resting")
 		assert.True(t, errors.Is(err, actionlogsvc.ErrNoPSPPool))
 	})
+}
+
+// passTx runs the unit of work as is: the mocks stand for the store.
+type passTx struct{}
+
+func (passTx) InTx(ctx context.Context, fn func(context.Context) error) error { return fn(ctx) }
+
+func newKnownSvc(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC, *mocks.MockPicks, *mocks.MockLog) {
+	t.Helper()
+	chars, picks, log := mocks.NewMockCharacters(t), mocks.NewMockPicks(t), mocks.NewMockLog(t)
+	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(c, nil)
+	book := psionics.NewBook(
+		[]catalogue.Discipline{{ID: "telepathy"}},
+		[]catalogue.Power{{ID: "contact", Discipline: "telepathy", Kind: catalogue.KindDevotion}},
+	)
+	svc, err := psionicsvc.New(psionicsvc.Deps{
+		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: picks, Book: book, Tx: passTx{},
+	})
+	require.NoError(t, err)
+	return svc, picks, log
+}
+
+func psionicist(stored ...psionics.Pick) *charactersvc.Character {
+	return &charactersvc.Character{ID: 7, PsionicPicks: stored, Derived: charactersvc.Derived{Powers: &charactersvc.PowerKnowledge{
+		Allowance: psionics.Allowance{Disciplines: 3, Sciences: 1, Devotions: 4, DefenceModes: 1},
+	}}}
+}
+
+func TestSetKnownPowers_StoresTheListAndLogsOneEntryWithItsSnapshot(t *testing.T) {
+	svc, picks, log := newKnownSvc(t, psionicist())
+	want := []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}, {Kind: psionics.PickPower, ID: "contact"}}
+	picks.EXPECT().SetPsionicPicks(mock.Anything, int64(7), want).Return(nil).Once()
+	var got actionlog.NewEntry
+	log.EXPECT().Record(mock.Anything, mock.Anything).
+		Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(1), nil).Once()
+
+	k, err := svc.SetKnownPowers(context.Background(), 7, want)
+	require.NoError(t, err)
+	assert.Equal(t, "telepathy", k.Primary)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Devotions: 1}, k.Used)
+	assert.Equal(t, actionlog.KindPsionicPick, got.Kind)
+	require.Len(t, got.Snapshots, 1)
+	assert.Equal(t, psionicsvc.KnownPowersStateKey, got.Snapshots[0].Key)
+}
+
+func TestSetKnownPowers_TheSameListRecordsNothing(t *testing.T) {
+	same := []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}}
+	svc, _, _ := newKnownSvc(t, psionicist(same...))
+	_, err := svc.SetKnownPowers(context.Background(), 7, same)
+	require.NoError(t, err)
+}
+
+func TestSetKnownPowers_RefusalsWriteNothing(t *testing.T) {
+	svc, _, _ := newKnownSvc(t, psionicist())
+	_, err := svc.SetKnownPowers(context.Background(), 7, []psionics.Pick{{Kind: psionics.PickPower, ID: "contact"}})
+	var refusal *psionics.Refusal
+	require.ErrorAs(t, err, &refusal)
+	assert.Equal(t, psionics.CodeDisciplineNotKnown, refusal.Code)
+
+	_, err = svc.SetKnownPowers(context.Background(), 7, []psionics.Pick{{Kind: psionics.PickPower, ID: "nope"}})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "picks", fe.Field)
+
+	other, _, _ := newKnownSvc(t, &charactersvc.Character{ID: 7})
+	_, err = other.SetKnownPowers(context.Background(), 7, nil)
+	require.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
 }

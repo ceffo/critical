@@ -1,20 +1,33 @@
-// Package psionicsvc owns the psionicist's requests on the PSP pool that are
-// not a power (ADR 0043): recovering PSPs over hours of an activity (step 6).
-// The pool itself is the action log's ledger (step 5, actionlogsvc); this
-// service words the request and leaves the bounds and undo to the log.
+// Package psionicsvc owns the psionicist's requests that are not a power (ADR
+// 0043): recovering PSPs over hours of an activity (step 6) and saving the
+// list of powers known (step 9). The pool itself is the action log's ledger
+// (step 5, actionlogsvc); this service words the recovery and leaves the
+// bounds and undo to the log. The known powers are one stored list the
+// service checks against Table 4 and logs with a snapshot.
 package psionicsvc
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
+
+// KnownPowersStateKey is the action-log state key of a character's known
+// powers.
+const KnownPowersStateKey = "known_powers"
+
+// ErrNotPsionicist is the refusal of known powers for a character whose
+// classes list no psionics.
+var ErrNotPsionicist = errors.New("the character has no psionics")
 
 // MaxRecoveryHours caps one recovery as passing time caps one fast-forward
 // (ADR 0005 step 5): a typo like 8000 hours is refused.
@@ -28,6 +41,13 @@ type SVC interface {
 	// invalid hours or an unknown activity; actionlogsvc.ErrNoPSPPool for a
 	// character with no pool.
 	Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error)
+	// SetKnownPowers saves the whole list of picks (ADR 0043 step 9), checked
+	// against Table 4 at the psionics entry's level, as one psionic_pick entry
+	// with its snapshot. It returns the known powers as saved. A
+	// *psionics.Refusal for a list over the rules, a *domain.FieldError on
+	// "picks" for a malformed one, ErrNotPsionicist for a character with no
+	// psionics; a refusal writes nothing.
+	SetKnownPowers(ctx context.Context, characterID int64, picks []psionics.Pick) (*charactersvc.PowerKnowledge, error)
 }
 
 // RecoveryRates is Table 6 (ruletablesvc.Tables).
@@ -38,28 +58,147 @@ type RecoveryRates interface {
 
 // Log is the PSP ledger's writer (actionlogsvc).
 type Log interface {
+	actionlog.Recorder
 	AppendPSP(ctx context.Context, e actionlog.NewEntry) (actionlog.PSPState, error)
+}
+
+// Characters reads a character with its derived known powers (charactersvc).
+type Characters interface {
+	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+}
+
+// Picks writes the character's list of known powers; it joins the ctx
+// transaction.
+type Picks interface {
+	SetPsionicPicks(ctx context.Context, characterID int64, picks []psionics.Pick) error
+}
+
+// Deps are the service's collaborators.
+type Deps struct {
+	Rates      RecoveryRates
+	Log        Log
+	Characters Characters
+	Picks      Picks
+	// Book is the powers catalogue the picks are checked against.
+	Book psionics.Book
+	Tx   domain.TxRunner
 }
 
 type service struct {
 	rates RecoveryRates
 	log   Log
+	chars Characters
+	picks Picks
+	book  psionics.Book
+	tx    domain.TxRunner
 }
 
 // New constructs the service.
-func New(rates RecoveryRates, log Log) (SVC, error) {
-	if rates == nil || log == nil {
+func New(d Deps) (SVC, error) {
+	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Book == nil || d.Tx == nil {
 		return nil, fmt.Errorf("psionicsvc: nil dependency")
 	}
-	return &service{rates: rates, log: log}, nil
+	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, book: d.Book, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }
 func (s *service) Close(_ context.Context) error  { return nil }
 
-// Module declares no codec: a recovery has no snapshot, its PSP delta is
-// popped with the entry.
-func (s *service) Module() domain.Module { return domain.Module{Name: "psionicsvc"} }
+// Module declares the codec of the known powers' snapshot: undo writes the
+// save's "before", redo its "after" (ADR 0019), inside the undo's transaction.
+// A recovery has no snapshot, its PSP delta is popped with the entry.
+func (s *service) Module() domain.Module {
+	return domain.Module{Name: "psionicsvc", Codecs: []actionlog.Codec{
+		knownSnaps.Restorer(func(ctx context.Context, characterID int64, _ string, st knownState) error {
+			if err := s.picks.SetPsionicPicks(ctx, characterID, st.picks()); err != nil {
+				return fmt.Errorf("restore known powers: %w", err)
+			}
+			return nil
+		}, nil),
+	}}
+}
+
+// knownSnaps is the snapshotter of the known powers (ADR 0018 step 8).
+var knownSnaps = actionlog.NewSnapshotter[knownState](KnownPowersStateKey)
+
+// knownState is the JSON encoding of a "known_powers" snapshot and the before
+// and after of a psionic_pick entry: the picks in order. Entries already in
+// the log must stay decodable: add fields, never rename.
+type knownState struct {
+	Picks []psionics.Pick `json:"picks"`
+}
+
+func (k knownState) picks() []psionics.Pick { return slices.Clone(k.Picks) }
+
+func stateOf(picks []psionics.Pick) knownState {
+	return knownState{Picks: append([]psionics.Pick{}, picks...)}
+}
+
+// knownRecord is the psionic_pick entry's payload. The UI words it. Add
+// fields, never rename.
+type knownRecord struct {
+	Before knownState `json:"before"`
+	After  knownState `json:"after"`
+}
+
+// SetKnownPowers is ADR 0043 step 9: the player saves the whole list. It is
+// checked against Table 4 at the psionics entry's realized level (the
+// allowance the read derives) and refused only when it breaks a rule; the
+// list is stored and logged as one psionic_pick entry, in one transaction, so
+// one undo gives the list before back. The same list as stored records
+// nothing.
+func (s *service) SetKnownPowers(ctx context.Context, characterID int64, picks []psionics.Pick) (*charactersvc.PowerKnowledge, error) {
+	if picks == nil {
+		picks = []psionics.Pick{}
+	}
+	var out *charactersvc.PowerKnowledge
+	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return err
+		}
+		k := c.Derived.Powers
+		if k == nil {
+			return ErrNotPsionicist
+		}
+		used, err := psionics.Validate(s.book, k.Allowance, picks)
+		if err != nil {
+			if errors.Is(err, psionics.ErrInvalid) {
+				return domain.FieldErrorf("picks", "%s", err.Error())
+			}
+			return err
+		}
+		out = &charactersvc.PowerKnowledge{
+			Allowance: k.Allowance, Used: used, Primary: psionics.Primary(picks), Picks: slices.Clone(picks),
+		}
+		if slices.Equal(c.PsionicPicks, picks) {
+			return nil
+		}
+		if err := s.picks.SetPsionicPicks(ctx, characterID, picks); err != nil {
+			return fmt.Errorf("set known powers: %w", err)
+		}
+		b, a := stateOf(c.PsionicPicks), stateOf(picks)
+		payload, err := json.Marshal(knownRecord{Before: b, After: a})
+		if err != nil {
+			return fmt.Errorf("encode known powers payload: %w", err)
+		}
+		snap, err := knownSnaps.Snapshot("", &b, &a)
+		if err != nil {
+			return err
+		}
+		if _, err := s.log.Record(ctx, actionlog.NewEntry{
+			CharacterID: characterID, Kind: actionlog.KindPsionicPick, Payload: payload,
+			Snapshots: []actionlog.Snapshot{snap},
+		}); err != nil {
+			return fmt.Errorf("record known powers: %w", err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 
 // recoveryRecord is the psp_recovery entry's payload: what was asked, the
 // rate it was read at, and (when the gain was capped, step 5) what was

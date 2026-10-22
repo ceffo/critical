@@ -274,6 +274,10 @@ type DerivedDTO struct {
 	// PSP is ADR 0043 step 5: the PSP pool of a character with the psionics
 	// feature (current and max); null for the others.
 	PSP *PSPDTO `json:"psp"`
+	// KnownPowers is ADR 0043 step 9: Table 4's allowance at the psionics
+	// entry's level, what the picks take, the primary discipline and the picks
+	// in order; null for a character with no psionics feature.
+	KnownPowers *KnownPowersDTO `json:"knownPowers"`
 	// SpellFailure is ADR 0030 step 14: the percent chance a cast fails (0:
 	// no die).
 	SpellFailure int `json:"spellFailure"`
@@ -397,6 +401,28 @@ type PSPDTO struct {
 	Max     int `json:"max"`
 }
 
+// KnownPowersDTO is a psionicist's known powers (ADR 0043 step 9).
+type KnownPowersDTO struct {
+	Allowance PowerCountsDTO `json:"allowance"`
+	Used      PowerCountsDTO `json:"used"`
+	Primary   string         `json:"primary"`
+	Picks     []PowerPickDTO `json:"picks"`
+}
+
+// PowerCountsDTO counts disciplines, sciences, devotions and defence modes.
+type PowerCountsDTO struct {
+	Disciplines  int `json:"disciplines"`
+	Sciences     int `json:"sciences"`
+	Devotions    int `json:"devotions"`
+	DefenceModes int `json:"defenceModes"`
+}
+
+// PowerPickDTO is one pick: kind discipline, power or relearn, and its id.
+type PowerPickDTO struct {
+	Kind string `json:"kind"`
+	ID   string `json:"id"`
+}
+
 // LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
 // to the target, lowest first (the prompt, one per level),
 // `realizedAboveTarget` an XP correction brought the target under the
@@ -443,6 +469,16 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	}
 	if p := d.PSP; p != nil {
 		out.PSP = &PSPDTO{Current: p.Current, Max: p.Max}
+	}
+	if k := d.Powers; k != nil {
+		out.KnownPowers = &KnownPowersDTO{
+			Allowance: PowerCountsDTO{Disciplines: k.Allowance.Disciplines, Sciences: k.Allowance.Sciences, Devotions: k.Allowance.Devotions, DefenceModes: k.Allowance.DefenceModes},
+			Used:      PowerCountsDTO{Disciplines: k.Used.Disciplines, Sciences: k.Used.Sciences, Devotions: k.Used.Devotions, DefenceModes: k.Used.DefenceModes},
+			Primary:   k.Primary, Picks: make([]PowerPickDTO, len(k.Picks)),
+		}
+		for i, pk := range k.Picks {
+			out.KnownPowers.Picks[i] = PowerPickDTO{Kind: pk.Kind, ID: pk.ID}
+		}
 	}
 	if b := d.Spellbook; b != nil {
 		out.Spellbook = &SpellbookRulesDTO{

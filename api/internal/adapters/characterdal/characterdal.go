@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
@@ -60,6 +61,10 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
+	psionicPicks, err := DecodePsionicPicks(row.PsionicPicks)
+	if err != nil {
+		return nil, err
+	}
 	entries, err := d.classEntries(ctx, row)
 	if err != nil {
 		return nil, err
@@ -68,7 +73,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 		ID: row.ID, Name: row.Name,
 		Str: int(row.Str), StrExceptional: int(row.StrExceptional), Dex: int(row.Dex), Con: int(row.Con),
 		Int: int(row.Int), Wis: int(row.Wis), Cha: int(row.Cha),
-		HPMax: int(row.HpMax), PSPMax: int(row.PspMax), Race: row.RaceCode, SkillPoints: points, Proficiencies: picks,
+		HPMax: int(row.HpMax), PSPMax: int(row.PspMax), Race: row.RaceCode, SkillPoints: points, Proficiencies: picks, PsionicPicks: psionicPicks,
 		// The figures the imported sheet stated, kept as imported (ADR 0030 step 24, retired).
 		Sheet: charactersvc.Sheet{Level: int(row.Level), THAC0: int(row.Thac0Base), Saves: charactersvc.Saves{
 			ParaPoison: int(row.SaveParaPoison), RodStaffWand: int(row.SaveRodStaffWand),
@@ -260,6 +265,23 @@ func (d *DAL) SetLanguages(ctx context.Context, id int64, languages []string) er
 	n, err := d.q.SetLanguages(ctx, queries.SetLanguagesParams{Languages: string(langs), ID: id})
 	if err != nil {
 		return fmt.Errorf("set languages: %w", err)
+	}
+	if n == 0 {
+		return domain.ErrCharacterNotFound
+	}
+	return nil
+}
+
+// SetPsionicPicks implements psionicsvc's store: the character's known powers
+// (ADR 0043 step 9), or domain.ErrCharacterNotFound.
+func (d *DAL) SetPsionicPicks(ctx context.Context, id int64, picks []psionics.Pick) error {
+	raw, err := EncodePsionicPicks(picks)
+	if err != nil {
+		return err
+	}
+	n, err := d.q.SetPsionicPicks(ctx, queries.SetPsionicPicksParams{PsionicPicks: raw, ID: id})
+	if err != nil {
+		return fmt.Errorf("set psionic picks: %w", err)
 	}
 	if n == 0 {
 		return domain.ErrCharacterNotFound

@@ -6,6 +6,8 @@ export type LogKind =
   | "psp_change"
   /** PSPs recovered over hours of an activity (ADR 0043 step 6), Table 6's hourly rate. */
   | "psp_recovery"
+  /** A psionicist's known powers saved (ADR 0043 step 9): the picks before and after. */
+  | "psionic_pick"
   | "cast"
   | "buff_change"
   | "round_advance"

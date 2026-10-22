@@ -1,0 +1,25 @@
+{
+  "firstDiscipline": {
+    "payload": {
+      "before": { "picks": [] },
+      "after": { "picks": [{ "kind": "discipline", "id": "telepathy" }] }
+    }
+  },
+  "powerAndRelearn": {
+    "payload": {
+      "before": {
+        "picks": [
+          { "kind": "discipline", "id": "telepathy" },
+          { "kind": "power", "id": "contact" }
+        ]
+      },
+      "after": {
+        "picks": [
+          { "kind": "discipline", "id": "telepathy" },
+          { "kind": "power", "id": "contact" },
+          { "kind": "relearn", "id": "contact" }
+        ]
+      }
+    }
+  }
+}

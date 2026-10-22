@@ -144,6 +144,32 @@ export interface Derived {
   proficiencySlots: ProficiencySlots | null;
   /** ADR 0043 step 5: the PSP pool of a character whose class lists psionics; null for any other. */
   psp: PspPool | null;
+  /** ADR 0043 step 9: a psionicist's known powers with Table 4's allowance; null for any other. */
+  knownPowers: KnownPowers | null;
+}
+
+/** One kind of pick, each count per slot (Table 4's columns). */
+export interface PowerCounts {
+  disciplines: number;
+  sciences: number;
+  devotions: number;
+  defenceModes: number;
+}
+
+/** One entry of the list of known powers: a discipline id, a power id, or a relearn of a known
+ * science or devotion (its id). The list is saved whole; the first discipline is the primary. */
+export interface PowerPick {
+  kind: "discipline" | "power" | "relearn";
+  id: string;
+}
+
+/** ADR 0043 step 9: the allowance at the psionics entry's level, what the picks take, the primary
+ * discipline ("" when none) and the picks in order. Also the answer of `PUT /api/psionics/picks`. */
+export interface KnownPowers {
+  allowance: PowerCounts;
+  used: PowerCounts;
+  primary: string;
+  picks: PowerPick[];
 }
 
 /** A character's PSPs (ADR 0043 step 5): the current PSPs (the maximum plus the ledger) and the

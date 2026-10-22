@@ -12,6 +12,8 @@ import (
 
 	mock "github.com/stretchr/testify/mock"
 
+	psionics "github.com/ceffo/critical/api/internal/domain/psionics"
+
 	skills "github.com/ceffo/critical/api/internal/domain/skills"
 
 	uuid "github.com/google/uuid"
@@ -862,6 +864,54 @@ func (_c *MockCharacterStore_SetProficiencyPicks_Call) Return(_a0 error) *MockCh
 }
 
 func (_c *MockCharacterStore_SetProficiencyPicks_Call) RunAndReturn(run func(context.Context, int64, skills.Picks) error) *MockCharacterStore_SetProficiencyPicks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetPsionicPicks provides a mock function with given fields: ctx, characterID, picks
+func (_m *MockCharacterStore) SetPsionicPicks(ctx context.Context, characterID int64, picks []psionics.Pick) error {
+	ret := _m.Called(ctx, characterID, picks)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SetPsionicPicks")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, []psionics.Pick) error); ok {
+		r0 = rf(ctx, characterID, picks)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_SetPsionicPicks_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SetPsionicPicks'
+type MockCharacterStore_SetPsionicPicks_Call struct {
+	*mock.Call
+}
+
+// SetPsionicPicks is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - picks []psionics.Pick
+func (_e *MockCharacterStore_Expecter) SetPsionicPicks(ctx interface{}, characterID interface{}, picks interface{}) *MockCharacterStore_SetPsionicPicks_Call {
+	return &MockCharacterStore_SetPsionicPicks_Call{Call: _e.mock.On("SetPsionicPicks", ctx, characterID, picks)}
+}
+
+func (_c *MockCharacterStore_SetPsionicPicks_Call) Run(run func(ctx context.Context, characterID int64, picks []psionics.Pick)) *MockCharacterStore_SetPsionicPicks_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].([]psionics.Pick))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_SetPsionicPicks_Call) Return(_a0 error) *MockCharacterStore_SetPsionicPicks_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_SetPsionicPicks_Call) RunAndReturn(run func(context.Context, int64, []psionics.Pick) error) *MockCharacterStore_SetPsionicPicks_Call {
 	_c.Call.Return(run)
 	return _c
 }

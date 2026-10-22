@@ -14,14 +14,22 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
 // thiefPsionicist stores the party's human thief 15/psionicist 14 with 181
 // max PSPs (the sheet's: 25 + 13 x 12) and returns its id.
 func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
+	t.Helper()
+	return thiefPsionicistKnowing(t, nil)
+}
+
+// thiefPsionicistKnowing is thiefPsionicist with the given known powers.
+func thiefPsionicistKnowing(t *testing.T, picks []psionics.Pick) (*composition.BackingServices, int64) {
 	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
@@ -30,7 +38,7 @@ func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id, err := m.AddCharacter(ctx, charactersvc.Character{
 		Name: "Thief/psionicist", Race: "human", Class: "thief", RealizedLevel: 15,
-		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181,
+		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181, PsionicPicks: picks,
 		Classes: []classes.Entry{classes.SingleEntry("thief", 15, 0), classes.SingleEntry("psionicist", 14, 0)},
 	})
 	require.NoError(t, err)
@@ -192,4 +200,106 @@ func TestRecover_Step6_CappedAndUndone(t *testing.T) {
 	assert.Equal(t, 169, currentPSP(t, bs, id), "the 12 applied are taken back")
 	undoTop(t, bs, id)
 	assert.Equal(t, 151, currentPSP(t, bs, id))
+}
+
+// Step 9: a psionicist's read carries Table 4's allowance at the psionics
+// entry's own realized level (14, not the thief's 15), what the stored picks
+// take (a relearn takes the place of a devotion, a defence mode counts apart)
+// and the primary discipline; a character with no psionics entry has none.
+func TestKnownPowers_Step9_DerivedBesideThePSPPool(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicist(t)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, c.Derived.Powers)
+	assert.Equal(t, psionics.Allowance{Disciplines: 5, Sciences: 7, Devotions: 19, DefenceModes: 5}, c.Derived.Powers.Allowance)
+	assert.Equal(t, psionics.Used{}, c.Derived.Powers.Used)
+	assert.Empty(t, c.Derived.Powers.Primary)
+	assert.NotNil(t, c.Derived.Powers.Picks)
+
+	picks := []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"},
+		{Kind: psionics.PickPower, ID: "contact"},
+		{Kind: psionics.PickPower, ID: "mindlink"},
+		{Kind: psionics.PickRelearn, ID: "contact"},
+		{Kind: psionics.PickPower, ID: "mind_blank"},
+	}
+	bs, id = thiefPsionicistKnowing(t, picks)
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Sciences: 1, Devotions: 2, DefenceModes: 1}, c.Derived.Powers.Used)
+	assert.Equal(t, "telepathy", c.Derived.Powers.Primary)
+	assert.Equal(t, picks, c.Derived.Powers.Picks)
+}
+
+// Step 9: the player saves the whole list; it is one psionic_pick entry,
+// undone and redone exactly; a list over Table 4 is refused and writes
+// nothing; a character with no psionics entry is refused.
+func TestKnownPowers_Step9_SaveUndoRedoAndRefusal(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicist(t)
+	picks := []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"},
+		{Kind: psionics.PickPower, ID: "contact"},
+	}
+	k, err := bs.Psionics.SetKnownPowers(ctx, id, picks)
+	require.NoError(t, err)
+	assert.Equal(t, "telepathy", k.Primary)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Devotions: 1}, k.Used)
+	stored := func() []psionics.Pick {
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		return c.Derived.Powers.Picks
+	}
+	assert.Equal(t, picks, stored())
+
+	log, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, log, 1)
+	assert.Equal(t, actionlog.KindPsionicPick, log[0].Kind)
+
+	// Over the allowance: nothing written, nothing logged.
+	over := make([]psionics.Pick, 0, 6)
+	for _, d := range []string{"telepathy", "clairsentience", "psychokinesis", "psychometabolism", "psychoportation", "metapsionics"} {
+		over = append(over, psionics.Pick{Kind: psionics.PickDiscipline, ID: d})
+	}
+	_, err = bs.Psionics.SetKnownPowers(ctx, id, over)
+	require.Error(t, err)
+	assert.Equal(t, picks, stored())
+
+	_, err = bs.Log.Undo(ctx, id, log[0].ID)
+	require.NoError(t, err)
+	assert.Empty(t, stored())
+	redoTop(t, bs, id)
+	assert.Equal(t, picks, stored())
+
+	m := memory.New()
+	other, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, other.Close(ctx)) })
+	fid, err := m.AddCharacter(ctx, charactersvc.Character{
+		Name: "Fighter", Race: "human", Class: "fighter", RealizedLevel: 3, Str: 12, Dex: 12, Con: 12, Int: 12, Wis: 12, Cha: 12, HPMax: 20,
+		Classes: []classes.Entry{classes.SingleEntry("fighter", 3, 0)},
+	})
+	require.NoError(t, err)
+	_, err = other.Psionics.SetKnownPowers(ctx, fid, nil)
+	assert.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
+}
+
+// Step 9: undoing a save takes the picks it made away, and nothing else.
+func TestPicks_Step9_UndoRemovesThePick(t *testing.T) {
+	ctx := context.Background()
+	first := []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}}
+	bs, id := thiefPsionicistKnowing(t, first)
+	_, err := bs.Psionics.SetKnownPowers(ctx, id, append(first, psionics.Pick{Kind: psionics.PickPower, ID: "contact"}))
+	require.NoError(t, err)
+
+	log, err := bs.Log.List(ctx, id, 10)
+	require.NoError(t, err)
+	require.Len(t, log, 1)
+	_, err = bs.Log.Undo(ctx, id, log[0].ID)
+	require.NoError(t, err)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, first, c.Derived.Powers.Picks)
 }

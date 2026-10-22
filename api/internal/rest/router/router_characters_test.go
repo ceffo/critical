@@ -321,7 +321,8 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"skillSets": [],
 		"backstab": 0,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false},
-		"psp": {"current": 18, "max": 25}
+		"psp": {"current": 18, "max": 25},
+		"knownPowers": null
 	}`, string(derived))
 }
 

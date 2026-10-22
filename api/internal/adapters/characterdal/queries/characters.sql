@@ -6,7 +6,7 @@
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks, psionic_picks
 FROM characters WHERE id = $1;
 
 -- A character's class entries in the order the classes were taken (ADR 0042 step 1).
@@ -69,6 +69,10 @@ FROM characters WHERE id = sqlc.arg(id);
 -- The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
 -- name: SetProficiencyPicks :execrows
 UPDATE characters SET proficiency_picks = sqlc.arg(proficiency_picks) WHERE id = sqlc.arg(id);
+
+-- The powers a psionicist knows, saved as one list and restored by its undo (ADR 0043 step 9).
+-- name: SetPsionicPicks :execrows
+UPDATE characters SET psionic_picks = sqlc.arg(psionic_picks) WHERE id = sqlc.arg(id);
 
 -- name: GetCharacterDetails :one
 SELECT COALESCE((SELECT e.class FROM character_classes e

@@ -699,6 +699,62 @@ func (_c *MockRules_PSPRecoveryRate_Call) RunAndReturn(run func(string) (int, er
 	return _c
 }
 
+// PowerAllowanceFor provides a mock function with given fields: level
+func (_m *MockRules) PowerAllowanceFor(level int) (ruletablesvc.PowerProgressionRow, error) {
+	ret := _m.Called(level)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PowerAllowanceFor")
+	}
+
+	var r0 ruletablesvc.PowerProgressionRow
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (ruletablesvc.PowerProgressionRow, error)); ok {
+		return rf(level)
+	}
+	if rf, ok := ret.Get(0).(func(int) ruletablesvc.PowerProgressionRow); ok {
+		r0 = rf(level)
+	} else {
+		r0 = ret.Get(0).(ruletablesvc.PowerProgressionRow)
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(level)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockRules_PowerAllowanceFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PowerAllowanceFor'
+type MockRules_PowerAllowanceFor_Call struct {
+	*mock.Call
+}
+
+// PowerAllowanceFor is a helper method to define mock.On call
+//   - level int
+func (_e *MockRules_Expecter) PowerAllowanceFor(level interface{}) *MockRules_PowerAllowanceFor_Call {
+	return &MockRules_PowerAllowanceFor_Call{Call: _e.mock.On("PowerAllowanceFor", level)}
+}
+
+func (_c *MockRules_PowerAllowanceFor_Call) Run(run func(level int)) *MockRules_PowerAllowanceFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockRules_PowerAllowanceFor_Call) Return(_a0 ruletablesvc.PowerProgressionRow, _a1 error) *MockRules_PowerAllowanceFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockRules_PowerAllowanceFor_Call) RunAndReturn(run func(int) (ruletablesvc.PowerProgressionRow, error)) *MockRules_PowerAllowanceFor_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RaceAdjustmentsFor provides a mock function with given fields: race
 func (_m *MockRules) RaceAdjustmentsFor(race string) (map[string]int, error) {
 	ret := _m.Called(race)

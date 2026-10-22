@@ -9,7 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -38,4 +40,21 @@ func TestErrorMapping_Step10_OverBudget(t *testing.T) {
 	assert.Equal(t, http.StatusConflict, rec.Code)
 	assert.JSONEq(t, `{"error":"set points: skillPoints.open_locks over budget: 31 of 30","code":"over_budget","field":"skillPoints.open_locks","spent":31,"limit":30}`, rec.Body.String())
 	assert.Equal(t, "over_budget", render.Code(err))
+}
+
+// ADR 0043 step 9: a list of known powers over the rules is 409 with the code
+// of the rule it broke and the figures the web words; a save for a character
+// with no psionics is 409 not_a_psionicist.
+func TestErrorMapping_Step9_KnownPowers(t *testing.T) {
+	err := fmt.Errorf("save: %w", &psionics.Refusal{Code: psionics.CodeAllowanceExceeded, Slot: psionics.SlotScience, Count: 8, Limit: 7})
+	rec := httptest.NewRecorder()
+	render.Error(t.Context(), rec, err)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.JSONEq(t, `{"error":"save: known powers refused: psionic_allowance_exceeded (power \"\", discipline \"\", science 8 against 7)","code":"psionic_allowance_exceeded","power":"","discipline":"","slot":"science","count":8,"limit":7}`, rec.Body.String())
+	assert.Equal(t, "psionic_allowance_exceeded", render.Code(err))
+
+	rec = httptest.NewRecorder()
+	render.Error(t.Context(), rec, psionicsvc.ErrNotPsionicist)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.Equal(t, "not_a_psionicist", render.Code(psionicsvc.ErrNotPsionicist))
 }

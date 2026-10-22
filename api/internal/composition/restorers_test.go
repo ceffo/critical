@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -105,6 +106,9 @@ func undoCases() []undoCase {
 			h.Character.EXPECT().SetProficiencyPicks(mock.Anything, characterID, skills.Picks{
 				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 1}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
 			}).Return(nil).Once()
+		}},
+		{"a psionicist's known powers (ADR 0043 step 9)", "known_powers", `{"state":{"picks":[{"kind":"discipline","id":"telepathy"}]}}`, func(h *harness) {
+			h.Character.EXPECT().SetPsionicPicks(mock.Anything, characterID, []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}}).Return(nil).Once()
 		}},
 		{"the AC override cleared", "ac_override", reencoded("AC override (acsvc)"), func(h *harness) {
 			h.Character.EXPECT().SetACOverride(mock.Anything, characterID, (*acsvc.Override)(nil)).Return(nil).Once()

@@ -121,6 +121,7 @@
     "activity": {
       "act": "Agir",
       "spells": "Sorts",
+      "powers": "Pouvoirs",
       "xp": "Expérience",
       "inventory": "Inventaire"
     },
@@ -208,6 +209,35 @@
       "walking": "marche",
       "resting": "repos",
       "sleeping": "sommeil"
+    }
+  },
+  "powers": {
+    "known": "Pouvoirs connus",
+    "picker": "Choisir des pouvoirs",
+    "none": "Aucun pour l’instant.",
+    "primary": "primaire",
+    "usedOf": "{{used}} / {{allowed}}",
+    "counts": {
+      "disciplines": "Disciplines",
+      "sciences": "Sciences",
+      "devotions": "Dévotions",
+      "defenceModes": "Modes de défense"
+    },
+    "add": "Ajouter {{name}}",
+    "addShort": "Ajouter",
+    "addDiscipline": "Ajouter une discipline",
+    "remove": "Retirer {{name}}",
+    "relearn": "Réapprendre",
+    "relearnHint": "Le réapprendre : +1 à son score, une place de plus",
+    "relearned": "{{name}} (réappris)",
+    "refusedPower": "pouvoir : {{name}}",
+    "refusedDiscipline": "discipline : {{name}}",
+    "refusedSlot": "place : {{name}}",
+    "slots": {
+      "discipline": "disciplines",
+      "science": "sciences",
+      "devotion": "dévotions",
+      "defence_mode": "modes de défense"
     }
   },
   "round": {
@@ -1387,7 +1417,8 @@
       "equipment_state": "Équipement",
       "ac_override": "CA",
       "spell_add": "Grimoire",
-      "psp_recovery": "Récupération de PFP"
+      "psp_recovery": "Récupération de PFP",
+      "psionic_pick": "Pouvoirs connus"
     },
     "status": {
       "active": "Actif",
@@ -1613,6 +1644,9 @@
     "skillPoints": {
       "text": "Points de talent : {{changes}}",
       "change": "{{name}} {{from}} → {{to}}"
+    },
+    "psionicPick": {
+      "text": "Pouvoirs connus : {{from}} → {{to}} choix"
     },
     "skillArmor": {
       "text": "Armure des talents : {{from}} → {{to}}"
@@ -2160,6 +2194,12 @@
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
+    "not_a_psionicist": "Ce personnage n’est pas un psioniste.",
+    "psionic_allowance_exceeded": "Au-delà de ce que ce niveau permet : {{count}} choisis, {{limit}} permis.",
+    "primary_discipline_exceeded": "Une discipline autre que la principale doit avoir moins de pouvoirs que celle-ci : {{count}} choisis, {{limit}} au plus.",
+    "devotions_below_twice_sciences": "Une discipline demande au moins deux fois plus de dévotions que de sciences : {{count}} dévotions, {{limit}} requises.",
+    "discipline_not_known": "La discipline de ce pouvoir n’a pas été choisie.",
+    "prerequisite_not_known": "Les prérequis de ce pouvoir ne sont pas tous connus.",
     "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
     "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
     "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",

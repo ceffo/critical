@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -96,7 +97,7 @@ func (t *tables) seedCharacter(path string) (id int64, ok bool, err error) {
 	t.characters[id] = charactersvc.Character{
 		ID: id, Name: c.Name, Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax, XPTotal: c.XPTotal, Class: c.Class, Race: c.Race, SkillPoints: c.SkillPoints,
-		Proficiencies: c.Picks(),
+		Proficiencies: c.Picks(), PsionicPicks: append([]psionics.Pick{}, c.PsionicPicks...),
 		Sheet: charactersvc.Sheet{Level: c.Level, THAC0: c.Thac0Base, Saves: charactersvc.Saves{
 			ParaPoison: c.SaveParaPoison, RodStaffWand: c.SaveRodStaffWand, PetriPoly: c.SavePetriPoly,
 			Breath: c.SaveBreath, Spell: c.SaveSpell,

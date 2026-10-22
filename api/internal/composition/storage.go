@@ -46,6 +46,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/rulesetsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -88,6 +89,7 @@ type CharacterStore interface {
 	dualclasssvc.DAL
 	skillsvc.Points
 	skillsvc.Picks
+	psionicsvc.Picks
 	acsvc.Overrides
 }
 

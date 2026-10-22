@@ -121,6 +121,7 @@
     "activity": {
       "act": "Act",
       "spells": "Spells",
+      "powers": "Powers",
       "xp": "Experience",
       "inventory": "Inventory"
     },
@@ -208,6 +209,35 @@
       "walking": "walking",
       "resting": "resting",
       "sleeping": "sleeping"
+    }
+  },
+  "powers": {
+    "known": "Known powers",
+    "picker": "Pick powers",
+    "none": "None yet.",
+    "primary": "primary",
+    "usedOf": "{{used}} / {{allowed}}",
+    "counts": {
+      "disciplines": "Disciplines",
+      "sciences": "Sciences",
+      "devotions": "Devotions",
+      "defenceModes": "Defence modes"
+    },
+    "add": "Add {{name}}",
+    "addShort": "Add",
+    "addDiscipline": "Add a discipline",
+    "remove": "Remove {{name}}",
+    "relearn": "Relearn",
+    "relearnHint": "Relearn it: +1 to its score, one more slot",
+    "relearned": "{{name}} (relearned)",
+    "refusedPower": "power: {{name}}",
+    "refusedDiscipline": "discipline: {{name}}",
+    "refusedSlot": "slot: {{name}}",
+    "slots": {
+      "discipline": "disciplines",
+      "science": "sciences",
+      "devotion": "devotions",
+      "defence_mode": "defence modes"
     }
   },
   "round": {
@@ -1387,7 +1417,8 @@
       "equipment_state": "Equipment",
       "ac_override": "AC",
       "spell_add": "Spellbook",
-      "psp_recovery": "PSP recovery"
+      "psp_recovery": "PSP recovery",
+      "psionic_pick": "Known powers"
     },
     "status": {
       "active": "Active",
@@ -1613,6 +1644,9 @@
     "skillPoints": {
       "text": "Skill points: {{changes}}",
       "change": "{{name}} {{from}} → {{to}}"
+    },
+    "psionicPick": {
+      "text": "Known powers: {{from}} → {{to}} picks"
     },
     "skillArmor": {
       "text": "Skill armour: {{from}} → {{to}}"
@@ -2160,6 +2194,12 @@
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
     "no_psp_pool": "This character has no PSP pool.",
+    "not_a_psionicist": "This character is not a psionicist.",
+    "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
+    "primary_discipline_exceeded": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",
+    "devotions_below_twice_sciences": "A discipline needs at least twice as many devotions as sciences: {{count}} devotions, {{limit}} needed.",
+    "discipline_not_known": "That power's discipline has not been picked.",
+    "prerequisite_not_known": "That power's prerequisites are not all known.",
     "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
     "already_in_spellbook": "That spell is already in the spellbook.",
     "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",

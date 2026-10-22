@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/characterdal/queries/mocks"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -36,6 +37,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		Class: "bard", RaceCode: "half_elf", Alignment: "chaotic_good", Age: 31, Sex: "male",
 		HeightCm: 177.8, WeightKg: 72.6, Hair: "black", Eyes: "green", Languages: `["Common","Elvish"]`,
 		SkillSets: `{}`, ProficiencyPicks: `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"singing","slots":1}]}`,
+		PsionicPicks: `[{"kind":"discipline","id":"telepathy"}]`,
 	}, nil).Once()
 	q.EXPECT().ListClassEntries(ctx, int64(3)).Return([]queries.ListClassEntriesRow{
 		{Class: "bard", RealizedLevel: 6, StartingXp: 1200, State: "active"},
@@ -57,6 +59,7 @@ func TestGetCharacter_MapsEveryColumn(t *testing.T) {
 		Proficiencies: skills.Picks{
 			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "singing", Slots: 1}}, Weapon: []skills.WeaponPick{},
 		},
+		PsionicPicks: []psionics.Pick{{Kind: psionics.PickDiscipline, ID: "telepathy"}},
 	}, got)
 }
 
@@ -374,7 +377,7 @@ func TestThiefSkillPoints_StoredAsJSONAndReadBack(t *testing.T) {
 	require.NoError(t, err)
 
 	q.EXPECT().GetCharacter(ctx, int64(8)).Return(queries.GetCharacterRow{
-		ID: 8, Class: "thief", Languages: `[]`, SkillSets: `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`,
+		ID: 8, Class: "thief", Languages: `[]`, SkillSets: `{"thief":{"open_locks":20,"pick_pockets":15}}`, ProficiencyPicks: `{}`, PsionicPicks: `[]`,
 	}, nil).Once()
 	q.EXPECT().ListClassEntries(ctx, int64(8)).Return(nil, nil).Once()
 	got, err := characterdal.New(q).GetCharacter(ctx, 8)
@@ -492,4 +495,29 @@ func TestSetPSPMax_WritesThePSPMaximum(t *testing.T) {
 	require.NoError(t, characterdal.New(q).SetPSPMax(ctx, 3, 193))
 	q.EXPECT().SetPSPMax(ctx, queries.SetPSPMaxParams{PspMax: 1, ID: 9}).Return(0, nil).Once()
 	require.ErrorIs(t, characterdal.New(q).SetPSPMax(ctx, 9, 1), domain.ErrCharacterNotFound)
+}
+
+// ADR 0043 step 9: the known powers are stored as a JSON list in the player's
+// order (none: '[]'), written by the editor's save and read back as the same
+// list; a character that does not exist is ErrCharacterNotFound.
+func TestPsionicPicks_StoredAsJSONAndReadBack(t *testing.T) {
+	ctx := context.Background()
+	q := mocks.NewMockQuerier(t)
+	picks := []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"}, {Kind: psionics.PickPower, ID: "mind_thrust"}, {Kind: psionics.PickRelearn, ID: "mind_thrust"},
+	}
+	stored := `[{"kind":"discipline","id":"telepathy"},{"kind":"power","id":"mind_thrust"},{"kind":"relearn","id":"mind_thrust"}]`
+	q.EXPECT().SetPsionicPicks(ctx, queries.SetPsionicPicksParams{PsionicPicks: stored, ID: 4}).Return(1, nil).Once()
+	require.NoError(t, characterdal.New(q).SetPsionicPicks(ctx, 4, picks))
+	q.EXPECT().SetPsionicPicks(ctx, queries.SetPsionicPicksParams{PsionicPicks: `[]`, ID: 4}).Return(1, nil).Once()
+	require.NoError(t, characterdal.New(q).SetPsionicPicks(ctx, 4, nil))
+	q.EXPECT().SetPsionicPicks(ctx, queries.SetPsionicPicksParams{PsionicPicks: `[]`, ID: 9}).Return(0, nil).Once()
+	require.ErrorIs(t, characterdal.New(q).SetPsionicPicks(ctx, 9, nil), domain.ErrCharacterNotFound)
+
+	got, err := characterdal.DecodePsionicPicks(stored)
+	require.NoError(t, err)
+	assert.Equal(t, picks, got)
+	got, err = characterdal.DecodePsionicPicks(`[]`)
+	require.NoError(t, err)
+	assert.NotNil(t, got, "no pick is an empty list, never nil")
 }

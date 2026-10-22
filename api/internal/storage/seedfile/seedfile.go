@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -75,6 +76,11 @@ type Character struct {
 	// character when it is inserted, never reconciled afterwards (the player
 	// edits them). The catalogue check is the seedcheck's.
 	Proficiencies []SeedPick `json:"proficiencies"`
+	// PsionicPicks are the seed character's known powers (ADR 0043 step 9): the
+	// list as the character stores it, written when it is inserted and never
+	// reconciled afterwards. Optional; the powers catalogue check is not the
+	// seed's.
+	PsionicPicks []psionics.Pick `json:"psionic_picks"`
 	// WeaponProficiencies are the seed character's weapon picks (ADR 0037
 	// steps 7 and 16.2): a weapon type and its slot, the types of the seed's
 	// weapons, written and never reconciled as Proficiencies are.

@@ -12,8 +12,8 @@ SELECT COUNT(*) FROM characters;
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_sets, alignment, sex, proficiency_picks, class
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+    skill_sets, alignment, sex, proficiency_picks, class, psionic_picks
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 RETURNING id;
 
 -- The race of a character stored before races had codes (migration 007): only while it has none,

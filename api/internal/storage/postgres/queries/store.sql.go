@@ -488,8 +488,8 @@ const insertCharacter = `-- name: InsertCharacter :one
 INSERT INTO characters (
     name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, languages, race_code,
-    skill_sets, alignment, sex, proficiency_picks, class
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+    skill_sets, alignment, sex, proficiency_picks, class, psionic_picks
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 RETURNING id
 `
 
@@ -517,6 +517,7 @@ type InsertCharacterParams struct {
 	Sex              string
 	ProficiencyPicks string
 	Class            string
+	PsionicPicks     string
 }
 
 // The sheet's level, THAC0 and saves are the figures the imported sheet states (ADR 0030 step 24),
@@ -546,6 +547,7 @@ func (q *Queries) InsertCharacter(ctx context.Context, arg InsertCharacterParams
 		arg.Sex,
 		arg.ProficiencyPicks,
 		arg.Class,
+		arg.PsionicPicks,
 	)
 	var id int64
 	err := row.Scan(&id)

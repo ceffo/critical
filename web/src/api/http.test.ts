@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import i18n from "@/i18n";
 import { useSessionStore } from "@/stores/session";
 import { takeChanges } from "@/lib/stateKeys";
-import { ApiError, CHARACTER_HEADER, post, request } from "./http";
+import { ApiError, CHARACTER_HEADER, codeMessage, post, request } from "./http";
 
 function respond(status: number, body: unknown) {
   vi.stubGlobal(
@@ -219,5 +219,26 @@ describe("a write's answer, noted for the refetch", () => {
     answer(500);
     await request("/api/x").catch(() => undefined);
     expect(takeChanges()).toEqual({ known: true, keys: [] });
+  });
+});
+
+describe("known powers refusals", () => {
+  const codes = [
+    "not_a_psionicist",
+    "psionic_allowance_exceeded",
+    "primary_discipline_exceeded",
+    "devotions_below_twice_sciences",
+    "discipline_not_known",
+    "prerequisite_not_known",
+  ];
+
+  it.each(["en", "fr"])("words every refusal code in %s", async (lng) => {
+    await i18n.changeLanguage(lng);
+    for (const code of codes) {
+      expect(codeMessage(code, { count: 4, limit: 3 }), code).toBeTruthy();
+    }
+    expect(
+      codeMessage("psionic_allowance_exceeded", { count: 4, limit: 3 }),
+    ).toMatch(/4.*3/);
   });
 });

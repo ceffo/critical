@@ -197,8 +197,10 @@ From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check 
   new feature kind (an amendment of [ADR 0040](adr/0040-classes-are-data.md) step 3), never a
   branch on an id; ids live only in catalogue data, seeds, tests and fixtures. House rules are
   Ruleset settings, not edits of book data. (User rule, 2026-10-21.) Enforced by
-  `just check-no-class-ids` (part of `just validate` once the five classes are data, ADR 0040
-  step 11).
+  `just check-no-class-ids` (part of `just validate`; `scripts/test-check-no-class-ids.sh` plants
+  literals in throwaway trees; the ids come from the catalogue fixture, plus the psionicist; the few
+  allowed literals, each with a reason, are in `scripts/class-ids-allowlist.txt`: a spell list named
+  `wizard` or `priest` is not a class, and a TEMPORARY entry names what removes it).
 - **No per-language columns or fields.** A text in a human language is a key into the generic
   `localized_texts` table (one row per language); never a `name_fr`-style column, DTO field, TS property
   or catalogue key. The API serves a language map. [ADR 0023](adr/0023-localized-text.md); enforced by

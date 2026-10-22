@@ -256,7 +256,7 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 	if defs == nil {
 		return nil, errors.New("class tables: no class definitions")
 	}
-	groups, races := defs.Groups(), defs.RaceIDs()
+	groups, races := defs.Groups(), defs.Races()
 	checks := []struct {
 		table string
 		err   error
@@ -267,7 +267,7 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		{"wisdom", checkWisdom(c.Wisdom)},
 		{"con_save_bonus", checkScores(c.ConSaveBonus, func(r ConSaveBonusRow) (int, int) { return r.ConMin, r.ConMax }, false)},
 		{"race_requirements", checkRaceRequirements(c.RaceRequirements, races)},
-		{"race_adjustments", checkRaceAdjustments(c.RaceAdjustments, races)},
+		{"race_adjustments", checkRaceAdjustments(c.RaceAdjustments, defs.RaceIDs())},
 		{"thac0", levelsInOrder(c.THAC0, func(r THAC0Row) int { return r.Level })},
 		{"saving_throws", checkSaves(c.SavingThrows, groups)},
 		{"warrior_attacks", checkBands(c.WarriorAttacks, func(r AttackRateRow) (int, int) { return r.LevelMin, r.LevelMax })},
@@ -397,13 +397,18 @@ func checkWisdom(rows []WisdomRow) error {
 }
 
 // perRace: every row's race is one of races and its key one of keys, each
-// pair once, and a race with a row has a row for every key.
-func perRace[R any](rows []R, key func(R) (race, k string), races, keys []string) error {
+// pair once; a restricted race (classes.Race.Restricted) has a row for every
+// key, an unrestricted one (the human) one for every key or none.
+func perRace[R any](rows []R, key func(R) (race, k string), races []classes.Race, keys []string) error {
+	ids := make([]string, len(races))
+	for i, r := range races {
+		ids[i] = r.ID
+	}
 	seen := map[string]map[string]bool{}
 	for _, r := range rows {
 		race, k := key(r)
 		switch {
-		case !slices.Contains(races, race):
+		case !slices.Contains(ids, race):
 			return fmt.Errorf("unknown race %q", race)
 		case !slices.Contains(keys, k):
 			return fmt.Errorf("unknown %q", k)
@@ -416,19 +421,19 @@ func perRace[R any](rows []R, key func(R) (race, k string), races, keys []string
 		seen[race][k] = true
 	}
 	for _, race := range races {
-		if seen[race] == nil {
+		if seen[race.ID] == nil && !race.Restricted() {
 			continue
 		}
 		for _, k := range keys {
-			if !seen[race][k] {
-				return fmt.Errorf("missing %q", race+" "+k)
+			if !seen[race.ID][k] {
+				return fmt.Errorf("missing %q", race.ID+" "+k)
 			}
 		}
 	}
 	return nil
 }
 
-func checkRaceRequirements(rows []RaceRequirementRow, races []string) error {
+func checkRaceRequirements(rows []RaceRequirementRow, races []classes.Race) error {
 	if err := perRace(rows, func(r RaceRequirementRow) (string, string) { return r.Race, r.Ability }, races, Abilities); err != nil {
 		return err
 	}

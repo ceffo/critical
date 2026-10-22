@@ -40,16 +40,30 @@ type classExperienceDTO struct {
 }
 
 type groupDefDTO struct {
-	ID string `json:"id"`
+	ID    string          `json:"id"`
+	THAC0 []groupTHAC0DTO `json:"thac0"`
+}
+
+type groupTHAC0DTO struct {
+	Level int `json:"level"`
+	THAC0 int `json:"thac0"`
 }
 
 type raceDefDTO struct {
-	ID   string         `json:"id"`
-	Name localized.Text `json:"name"`
+	ID           string               `json:"id"`
+	Name         localized.Text       `json:"name"`
+	Requirements []raceDefRequirement `json:"requirements"`
+}
+
+type raceDefRequirement struct {
+	Ability string `json:"ability"`
+	Min     int    `json:"min"`
+	Max     int    `json:"max"`
 }
 
 // definitions maps the definitions to a validated class registry (the rules
-// are classes.New's). The experience rows must be levels 1, 2, ... in order.
+// are classes.New's). The experience and THAC0 rows must be levels 1, 2, ...
+// in order.
 func definitions(raw []byte) (*classes.Registry, error) {
 	var d definitionsDTO
 	if err := json.Unmarshal(raw, &d); err != nil {
@@ -73,13 +87,24 @@ func definitions(raw []byte) (*classes.Registry, error) {
 			AbilityMinimums: mins, Alignments: c.Alignments, Experience: xp,
 		}
 	}
-	groups := make([]string, len(d.Groups))
+	groups := make([]classes.Group, len(d.Groups))
 	for i, g := range d.Groups {
-		groups[i] = g.ID
+		thac0 := make([]int, len(g.THAC0))
+		for l, r := range g.THAC0 {
+			if r.Level != l+1 {
+				return nil, fmt.Errorf("group %q thac0: row %d: level %d expected, got %d", g.ID, l, l+1, r.Level)
+			}
+			thac0[l] = r.THAC0
+		}
+		groups[i] = classes.Group{ID: g.ID, THAC0: thac0}
 	}
 	races := make([]classes.Race, len(d.Races))
 	for i, r := range d.Races {
-		races[i] = classes.Race(r)
+		reqs := make([]classes.AbilityRange, len(r.Requirements))
+		for j, a := range r.Requirements {
+			reqs[j] = classes.AbilityRange(a)
+		}
+		races[i] = classes.Race{ID: r.ID, Name: r.Name, Requirements: reqs}
 	}
 	return classes.New(cls, groups, races)
 }

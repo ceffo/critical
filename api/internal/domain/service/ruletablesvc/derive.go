@@ -81,27 +81,14 @@ func (t *Tables) LevelFor(class string, xp int) (int, error) {
 	return c.LevelFor(xp), nil
 }
 
-// THAC0For is ADR 0030 step 5: PHB Table 53's THAC0 for group at level.
+// THAC0For is ADR 0030 step 5: PHB Table 53's THAC0 for group at level,
+// read from the group's definition (ADR 0040 step 7).
 func (t *Tables) THAC0For(group string, level int) (int, error) {
-	c, err := t.classTables()
+	d, err := t.Definitions()
 	if err != nil {
 		return 0, err
 	}
-	if level < 1 || level > len(c.THAC0) {
-		return 0, fmt.Errorf("thac0: level %d out of range 1..%d", level, len(c.THAC0))
-	}
-	r := c.THAC0[level-1]
-	switch group {
-	case "warrior":
-		return r.Warrior, nil
-	case "priest":
-		return r.Priest, nil
-	case "rogue":
-		return r.Rogue, nil
-	case "wizard":
-		return r.Wizard, nil
-	}
-	return 0, fmt.Errorf("thac0: unknown class group %q", group)
+	return d.THAC0(group, level)
 }
 
 // SavesFor is ADR 0030 step 6: PHB Table 60's row of group whose level band

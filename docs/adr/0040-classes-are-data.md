@@ -225,7 +225,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
    feature lookup proper (and its `test_skald` test) comes with them. Built so far:
    `Lookup_Step5_ANewClassOfKnownFieldsNeedsNoCode` and `Lookup_Step5_TheDefinitionsAreCopies` (domain/classes).
    A by-group spell effect on a character with no class group is refused ("needs the character's class group"),
-   never a fallback to the default die.)_
+   never a fallback to the default die. The THAC0 lookup, the race-and-class check and the proficiency groups
+   (PHB Table 37: `general` plus the definitions' groups) read the definitions, with no class, group or race id.
+   The id literals left in the derived character (the spell-slot table by class, the races with a Constitution
+   save bonus, the feature checks in the cleric, fighter and creation readers) are features and traits: they
+   move with the feature list and the race traits (step 11.3, 11.4), and step 11.5's check refuses them after.)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 12, on implementation: with several class entries, each entry grants its kinds at its own realized level (a frozen entry at the level it was left at) and each grant is read with its entry's parameters and level; a figure that is one per character (THAC0, saves, proficiency slots, hit points) combines by ADR 0042 steps 8 to 10 and 15, never by a class id)_
 
 6. **Prime requisites and the XP bonus.** A character is eligible for the 10% bonus of
@@ -265,8 +269,13 @@ writes `Test<name>` and adds the prefix here in the same PR.
    without a prime requisite, an unknown alignment, a class or race listed twice and XP rows that are not levels
    1 to 20 from 0 and increasing (`Import_Step8_TheRegistryRefusesBrokenDefinitions`, domain/classes); the
    adapter refuses a row keyed by an unknown class, group or race (`Import_Step8_RefusesARowForAnUnknownClass`).
-   The kinds and params come with step 11.3. The racial level limits: any race of the registry may have rows,
-   one for every class when it has any; a race with none (a human) has no limit. The creation options list the
+   The kinds and params come with step 11.3. `classes.New` also refuses a group without THAC0 rows for levels
+   1 to 20 (Table 53 is read from the group definitions, `RuleTables_Step7_RowsKeyedByClassAndGroup`) and a race
+   requirement on an unknown ability or with its minimum above its maximum. The per-race tables (racial level
+   limits, `race_requirements`, `thief_skill_race`): a race whose definition has ability requirements (every
+   race of the book but the human) must have a row for every key, so a race with its rows missing is refused at
+   start; a race with none (the human) may have rows or none, and with none has no level limit (it may be any
+   class) and no adjustment. The exemption is read from the data (`classes.Race.Restricted`), not an id. The creation options list the
    classes and races in catalogue order (fighter, mage, cleric, thief, bard; human last). `CreatableClasses` is
    gone.)_
 

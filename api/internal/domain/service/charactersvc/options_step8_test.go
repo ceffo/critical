@@ -28,7 +28,7 @@ func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
 		AbilityMinimums: []classes.AbilityMinimum{{Ability: "cha", Min: 14}},
 		Alignments:      []string{"chaotic_neutral", "chaotic_good"}, Experience: xp,
 	}
-	defs, err := classes.New(append(fixture.Classes(), skald), fixture.Groups(), fixture.Races())
+	defs, err := classes.New(append(fixture.Classes(), skald), fixture.GroupDefs(), fixture.Races())
 	require.NoError(t, err)
 
 	e := newEnv(t)

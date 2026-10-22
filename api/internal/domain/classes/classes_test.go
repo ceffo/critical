@@ -31,9 +31,19 @@ func skald() classes.Class {
 	}
 }
 
+// groups are class groups with a flat THAC0 table, the figures this
+// package's tests do not read.
+func groups(ids ...string) []classes.Group {
+	out := make([]classes.Group, len(ids))
+	for i, id := range ids {
+		out[i] = classes.Group{ID: id, THAC0: xp(0)}
+	}
+	return out
+}
+
 func registry(t *testing.T, cls ...classes.Class) *classes.Registry {
 	t.Helper()
-	r, err := classes.New(cls, []string{"warrior", "rogue"}, []classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+	r, err := classes.New(cls, groups("warrior", "rogue"), []classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
 	require.NoError(t, err)
 	return r
 }
@@ -120,12 +130,55 @@ func TestImport_Step8_TheRegistryRefusesBrokenDefinitions(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := classes.New(tc.cls, []string{"warrior", "rogue"}, []classes.Race{{ID: "human"}})
+			_, err := classes.New(tc.cls, groups("warrior", "rogue"), []classes.Race{{ID: "human"}})
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
-	_, err := classes.New(nil, []string{"rogue"}, []classes.Race{{ID: "human"}})
+	_, err := classes.New(nil, groups("rogue"), []classes.Race{{ID: "human"}})
 	require.ErrorContains(t, err, "needs classes, groups and races")
-	_, err = classes.New([]classes.Class{skald()}, []string{"rogue"}, []classes.Race{{ID: "elf"}, {ID: "elf"}})
+	_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf"}, {ID: "elf"}})
 	require.ErrorContains(t, err, `races: "elf" twice`)
+
+	// A group with no THAC0 rows (a new catalogue group without its Table 53
+	// column) is refused here, at start-up, not at the first Derive.
+	_, err = classes.New([]classes.Class{skald()}, []classes.Group{{ID: "rogue"}}, []classes.Race{{ID: "human"}})
+	require.ErrorContains(t, err, `group "rogue": THAC0 needs levels 1..20, got 0 rows`)
+
+	for name, req := range map[string]classes.AbilityRange{
+		`requirements: unknown ability "luck"`:             {Ability: "luck", Min: 3, Max: 18},
+		"requirements: str minimum 18 above its maximum 3": {Ability: "str", Min: 18, Max: 3},
+	} {
+		_, err = classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "elf", Requirements: []classes.AbilityRange{req}}})
+		require.ErrorContains(t, err, `race "elf": `+name)
+	}
+}
+
+// ADR 0040 step 7: a group's THAC0 is its definition's row, so a new group
+// is a definition, never a column; a race is restricted (it has racial
+// tables) when its definition carries ability requirements.
+func TestLookup_Step7_THAC0AndRacesComeFromTheDefinitions(t *testing.T) {
+	thac0 := make([]int, classes.MaxLevel)
+	for i := range thac0 {
+		thac0[i] = 21 - i
+	}
+	r, err := classes.New([]classes.Class{skald()}, []classes.Group{{ID: "rogue", THAC0: thac0}},
+		[]classes.Race{{ID: "test_dwarf", Requirements: []classes.AbilityRange{{Ability: "con", Min: 11, Max: 18}}}, {ID: "test_human"}})
+	require.NoError(t, err)
+
+	got, err := r.THAC0("rogue", 5)
+	require.NoError(t, err)
+	assert.Equal(t, 17, got)
+	_, err = r.THAC0("rogue", 21)
+	require.ErrorContains(t, err, "level 21 out of range 1..20")
+	_, err = r.THAC0("psionicist", 1)
+	require.ErrorContains(t, err, `unknown class group "psionicist"`)
+
+	dwarf, ok := r.Race("test_dwarf")
+	require.True(t, ok)
+	assert.True(t, dwarf.Restricted())
+	human, ok := r.Race("test_human")
+	require.True(t, ok)
+	assert.False(t, human.Restricted())
+	_, ok = r.Race("orc")
+	assert.False(t, ok)
 }

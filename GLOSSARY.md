@@ -81,6 +81,10 @@ The ability a class is built on; 16 or more in every one gives the 10% XP bonus.
 **Race** (fr: race):
 One of the six PHB races, catalogue data like a class. [ADR 0030](docs/adr/0030-classes-and-races.md) step 21, [ADR 0040](docs/adr/0040-classes-are-data.md) step 2.
 
+**Racial ability requirements** (fr: conditions raciales de caractéristiques):
+A race's lowest and highest score in each ability (PHB Table 7). A race with them is restricted: it has its rows in every per-race table (level limits, thief skill adjustments); the human has none and no limit. [ADR 0040](docs/adr/0040-classes-are-data.md) step 8.
+_Code_: AbilityRange
+
 **Race trait** (fr: trait racial):
 What a race brings; a computed one is typed, a trait kind with parameters (`con_save_bonus`, `no_exceptional_strength`), the others are text. [ADR 0040](docs/adr/0040-classes-are-data.md) step 4.
 

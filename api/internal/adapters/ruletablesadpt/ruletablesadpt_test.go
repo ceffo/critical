@@ -248,6 +248,17 @@ func classTablesOf(t *testing.T, mutate func(map[string]any)) (*ruletablesvc.Tab
 
 func classRows(d map[string]any, table string) []any { return d[table].([]any) }
 
+// withoutRace is table's rows less race's.
+func withoutRace(d map[string]any, table, race string) []any {
+	var out []any
+	for _, r := range classRows(d, table) {
+		if r.(map[string]any)["race"] != race {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
 func classRow(d map[string]any, table string, i int) map[string]any {
 	return classRows(d, table)[i].(map[string]any)
 }
@@ -425,10 +436,19 @@ func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
 			"race_level_limits table: unknown race \"orc\"",
 		},
 		{
-			// A race with rows has one per class; a race without any (a
-			// human) has no limit (ADR 0040 step 5).
-			"a race missing a class", func(d map[string]any) { d[levelLimits] = classRows(d, levelLimits)[1:] },
-			"race_level_limits table: missing \"dwarf fighter\"",
+			// A race with ability requirements (every race but the human)
+			// has its rows: dropping them all is refused at start-up, not at
+			// the first creation (ADR 0040 step 8).
+			"a restricted race with no rows", func(d map[string]any) { d[levelLimits] = withoutRace(d, levelLimits, "elf") },
+			"race_level_limits table: missing \"elf fighter\"",
+		},
+		{
+			"a restricted race with no requirement rows", func(d map[string]any) { d["race_requirements"] = withoutRace(d, "race_requirements", "elf") },
+			"race_requirements table: missing \"elf str\"",
+		},
+		{
+			"a restricted race with no thief skill rows", func(d map[string]any) { d["thief_skill_race"] = withoutRace(d, "thief_skill_race", "elf") },
+			"thief_skill_race table: missing \"elf pick_pockets\"",
 		},
 		{
 			"a level above 20", func(d map[string]any) { classRow(d, levelLimits, 0)["max_level"] = 21 },

@@ -55,31 +55,56 @@ type Class struct {
 	Experience []int
 }
 
+// Group is one class group definition (ADR 0040 steps 1.2 and 7).
+type Group struct {
+	ID string
+	// THAC0[l-1] is PHB Table 53's THAC0 at level l, 1..MaxLevel.
+	THAC0 []int
+}
+
 // Race is one race definition (ADR 0040 step 2); its traits and tables
 // are read by their own readers (step 11.4).
 type Race struct {
 	ID   string
 	Name localized.Text
+	// Requirements are the race's ability ranges (PHB Table 7), none for a
+	// race that has none (the human).
+	Requirements []AbilityRange
 }
+
+// AbilityRange is a race's lowest and highest score in one ability.
+type AbilityRange struct {
+	Ability  string
+	Min, Max int
+}
+
+// Restricted reports whether the race has racial ability requirements. The
+// book's races without them (the human) are the ones no racial table lists:
+// no level limit (DMG Table 7), no requirement row, no thief skill
+// adjustment (PHB Table 27). A restricted race must have its rows in each
+// of those tables; an unrestricted one may have none, and then has no limit
+// and no adjustment.
+func (r Race) Restricted() bool { return len(r.Requirements) > 0 }
 
 // Registry is the validated set of definitions, in catalogue order. Built
 // by New only.
 type Registry struct {
 	classes []Class
-	groups  []string
+	groups  []Group
 	races   []Race
 }
 
 // New validates the definitions (ADR 0040 step 8, the rules the schema
-// cannot express) and builds the registry: ids unique, every class of a
-// known group with known ability codes, minimums and prime requisites, known
-// alignments, and its experience rows levels 1..MaxLevel from 0 and strictly
-// increasing.
-func New(classes []Class, groups []string, races []Race) (*Registry, error) {
+// cannot express) and builds the registry: ids unique, every group with
+// its THAC0 at levels 1..MaxLevel, every race's requirements on known
+// abilities once each with Min <= Max, every class of a known group with
+// known ability codes, minimums and prime requisites, known alignments, and
+// its experience rows levels 1..MaxLevel from 0 and strictly increasing.
+func New(classes []Class, groups []Group, races []Race) (*Registry, error) {
 	if len(classes) == 0 || len(groups) == 0 || len(races) == 0 {
 		return nil, errors.New("classes: the catalogue needs classes, groups and races")
 	}
-	if err := unique(groups, func(g string) string { return g }); err != nil {
+	if err := unique(groups, func(g Group) string { return g.ID }); err != nil {
 		return nil, fmt.Errorf("groups: %w", err)
 	}
 	if err := unique(races, func(r Race) string { return r.ID }); err != nil {
@@ -88,9 +113,22 @@ func New(classes []Class, groups []string, races []Race) (*Registry, error) {
 	if err := unique(classes, func(c Class) string { return c.ID }); err != nil {
 		return nil, fmt.Errorf("classes: %w", err)
 	}
-	out := &Registry{groups: slices.Clone(groups), races: slices.Clone(races), classes: make([]Class, 0, len(classes))}
+	out := &Registry{groups: make([]Group, len(groups)), races: make([]Race, len(races)), classes: make([]Class, 0, len(classes))}
+	for i, g := range groups {
+		if len(g.THAC0) != MaxLevel {
+			return nil, fmt.Errorf("group %q: THAC0 needs levels 1..%d, got %d rows", g.ID, MaxLevel, len(g.THAC0))
+		}
+		out.groups[i] = Group{ID: g.ID, THAC0: slices.Clone(g.THAC0)}
+	}
+	for i, r := range races {
+		if err := checkRace(r); err != nil {
+			return nil, fmt.Errorf("race %q: %w", r.ID, err)
+		}
+		out.races[i] = r.clone()
+	}
+	ids := out.Groups()
 	for _, c := range classes {
-		v, err := checkClass(c, groups)
+		v, err := checkClass(c, ids)
 		if err != nil {
 			return nil, fmt.Errorf("class %q: %w", c.ID, err)
 		}
@@ -110,6 +148,21 @@ func unique[T any](items []T, id func(T) string) error {
 			return fmt.Errorf("%q twice", k)
 		}
 		seen[k] = true
+	}
+	return nil
+}
+
+func checkRace(r Race) error {
+	if err := unique(r.Requirements, func(a AbilityRange) string { return a.Ability }); err != nil {
+		return fmt.Errorf("requirements: %w", err)
+	}
+	for _, a := range r.Requirements {
+		switch {
+		case !slices.Contains(Abilities, a.Ability):
+			return fmt.Errorf("requirements: unknown ability %q", a.Ability)
+		case a.Min > a.Max:
+			return fmt.Errorf("requirements: %s minimum %d above its maximum %d", a.Ability, a.Min, a.Max)
+		}
 	}
 	return nil
 }
@@ -221,15 +274,62 @@ func (r *Registry) Group(class string) (string, error) {
 }
 
 // Groups are the group ids, in catalogue order.
-func (r *Registry) Groups() []string { return slices.Clone(r.groups) }
+func (r *Registry) Groups() []string {
+	out := make([]string, len(r.groups))
+	for i, g := range r.groups {
+		out[i] = g.ID
+	}
+	return out
+}
+
+// GroupDefs are the group definitions, in catalogue order (copies).
+func (r *Registry) GroupDefs() []Group {
+	out := make([]Group, len(r.groups))
+	for i, g := range r.groups {
+		out[i] = Group{ID: g.ID, THAC0: slices.Clone(g.THAC0)}
+	}
+	return out
+}
+
+// THAC0 is PHB Table 53's THAC0 of group at level (ADR 0030 step 5, read
+// from the group definition, ADR 0040 step 7).
+func (r *Registry) THAC0(group string, level int) (int, error) {
+	for _, g := range r.groups {
+		if g.ID != group {
+			continue
+		}
+		if level < 1 || level > len(g.THAC0) {
+			return 0, fmt.Errorf("thac0: level %d out of range 1..%d", level, len(g.THAC0))
+		}
+		return g.THAC0[level-1], nil
+	}
+	return 0, fmt.Errorf("thac0: unknown class group %q", group)
+}
 
 // Races are the race definitions, in catalogue order.
 func (r *Registry) Races() []Race {
 	out := make([]Race, len(r.races))
 	for i, x := range r.races {
-		out[i] = Race{ID: x.ID, Name: x.Name.Clean()}
+		out[i] = x.clone()
 	}
 	return out
+}
+
+// Race is the definition of id; false for a race the catalogue does not
+// define.
+func (r *Registry) Race(id string) (Race, bool) {
+	for _, x := range r.races {
+		if x.ID == id {
+			return x.clone(), true
+		}
+	}
+	return Race{}, false
+}
+
+func (x Race) clone() Race {
+	x.Name = x.Name.Clean()
+	x.Requirements = slices.Clone(x.Requirements)
+	return x
 }
 
 // RaceIDs are the race ids, in catalogue order.

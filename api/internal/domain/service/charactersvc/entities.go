@@ -142,15 +142,14 @@ func (c *Character) ActiveClassIDs() []string {
 	return out
 }
 
-// ProficiencyClasses are the active entries as the proficiency pools read them
-// (ADR 0042 step 15): each class at its realized level, from the derived
+// ProficiencyClasses are the entries as the proficiency pools read them (ADR
+// 0042 step 15): each class at its realized level, a dual-class's frozen ones
+// at their left-at level and Frozen (their slots are kept), from the derived
 // block (Derived must be set).
 func (c *Character) ProficiencyClasses() skills.Classes {
-	var out skills.Classes
+	out := make(skills.Classes, 0, len(c.Derived.Classes))
 	for _, e := range c.Derived.Classes {
-		if e.State == classes.EntryActive {
-			out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel})
-		}
+		out = append(out, skills.ClassLevel{Class: e.Class, Level: e.RealizedLevel, Frozen: e.State == classes.EntryFrozen})
 	}
 	return out
 }

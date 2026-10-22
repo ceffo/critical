@@ -193,7 +193,7 @@ func specializes(book Book, class string) bool {
 // nothing is judged (as itemsvc's class warnings).
 func (cls Classes) weaponTypeAllowed(book Book, weaponType string) bool {
 	limits := make([]classes.Equipment, 0, len(cls))
-	for _, c := range cls {
+	for _, c := range cls.active() {
 		def, ok := book.ClassDef(c.Class)
 		if !ok {
 			return true
@@ -268,8 +268,9 @@ func ProficiencyFigures(book Book, class string, level, intelligence int, spend 
 	return FiguresOf(book, One(class, level), intelligence, spend)
 }
 
-// FiguresOf is ProficiencyFigures for the active class entries cls (ADR 0042 step 15): the pools
-// read on the basis Classes.basis combines. ok is false when no class has a Table 34 row.
+// FiguresOf is ProficiencyFigures for the class entries cls (ADR 0042 step 15): the pools read on
+// the basis Classes.basis combines from the active entries, plus a dual-class's kept slots
+// (Classes.kept). ok is false when no active class has a Table 34 row.
 func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (ProficiencySlots, bool) {
 	picks := spend.Picks
 	b, ok := cls.basis(book)
@@ -294,6 +295,18 @@ func FiguresOf(book Book, cls Classes, intelligence int, spend Spending) (Profic
 		spent += p.Slots
 	}
 	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
+	// ADR 0042 step 15 (Q14): a dual-class keeps the slots of its old class at its left-at level
+	// (the first class's initial count) and adds the new class's gained slots at the new rate.
+	if k, ok := cls.kept(book); ok {
+		out.Weapon.Initial = k.weaponInitial
+		out.Weapon.LevelGained += k.weaponGained
+		out.Weapon.Available = out.Weapon.Initial + out.Weapon.LevelGained
+		out.Weapon.Left = out.Weapon.Available - out.Weapon.Spent
+		out.Nonweapon.Initial = k.nonweaponInitial
+		out.Nonweapon.LevelGained += k.nonweaponGained
+		out.Nonweapon.Available = out.Nonweapon.Initial + out.Nonweapon.LevelGained + out.Nonweapon.Intelligence
+		out.Nonweapon.Left = out.Nonweapon.Available - out.Nonweapon.Spent
+	}
 	return out, true
 }
 

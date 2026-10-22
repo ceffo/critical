@@ -6,15 +6,30 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-// ClassLevel is one active class entry as the proficiency pools read it: its class and its
-// realized level (ADR 0042 step 15).
+// ClassLevel is one class entry as the proficiency pools read it: its class and its realized
+// level (ADR 0042 step 15). Frozen is a dual-class's old class, at its left-at level: it keeps the
+// slots it had (Classes.kept) and takes no part in the active entries' combination.
 type ClassLevel struct {
-	Class string
-	Level int
+	Class  string
+	Level  int
+	Frozen bool
 }
 
-// Classes are a character's active class entries, in order: one for a single-class character.
+// Classes are a character's class entries, in order (a dual-class's first class first): one for
+// a single-class character.
 type Classes []ClassLevel
+
+// active are the entries that are not Frozen: what the pools' rate, penalty and groups, the weapon
+// picks and the specialization read (ADR 0042 step 15).
+func (cls Classes) active() Classes {
+	var out Classes
+	for _, c := range cls {
+		if !c.Frozen {
+			out = append(out, c)
+		}
+	}
+	return out
+}
 
 // One is the single class entry of class at level.
 func One(class string, level int) Classes { return Classes{{Class: class, Level: level}} }
@@ -23,17 +38,18 @@ func One(class string, level int) Classes { return Classes{{Class: class, Level:
 // class, "" for a multi-class character (ADR 0042 as built, PHB p.52: specialization is a
 // single-class fighter's only).
 func (cls Classes) specialist() string {
-	if len(cls) != 1 {
+	act := cls.active()
+	if len(act) != 1 {
 		return ""
 	}
-	return cls[0].Class
+	return act[0].Class
 }
 
 // groups are the Table 38 groups of every class, each once (ADR 0042 step 15, Q13: a
 // non-weapon proficiency is in-group when it is in any active class's groups).
 func (cls Classes) groups(book Book) []string {
 	var out []string
-	for _, c := range cls {
+	for _, c := range cls.active() {
 		for _, g := range book.GroupsOf(c.Class) {
 			if !slices.Contains(out, g) {
 				out = append(out, g)
@@ -58,7 +74,7 @@ type basis struct {
 func (cls Classes) basis(book Book) (basis, bool) {
 	var b basis
 	found := false
-	for _, c := range cls {
+	for _, c := range cls.active() {
 		row, ok := book.SlotRowOf(c.Class)
 		if !ok {
 			continue
@@ -81,6 +97,38 @@ func (cls Classes) basis(book Book) (basis, bool) {
 	return b, true
 }
 
+// keptSlots are the slots a dual-class's frozen entries had when left (ADR 0042 step 15, Q14):
+// the first class's initial counts, when it is frozen, and each frozen class's slots gained up
+// to its left-at level. The active entry adds its own gained slots, no second initial count.
+type keptSlots struct {
+	weaponInitial, weaponGained, nonweaponInitial, nonweaponGained int
+}
+
+// kept is the frozen entries' keptSlots; ok is false when cls has no frozen entry with a Table
+// 34 row (not a dual-class character).
+func (cls Classes) kept(book Book) (keptSlots, bool) {
+	var k keptSlots
+	found := false
+	for i, c := range cls {
+		if !c.Frozen {
+			continue
+		}
+		row, ok := book.SlotRowOf(c.Class)
+		if !ok {
+			continue
+		}
+		found = true
+		w := ruletablesvc.WeaponSlots(row, c.Level, 0)
+		n := ruletablesvc.NonweaponSlots(row, c.Level, 0, 0)
+		k.weaponGained += w.LevelGained
+		k.nonweaponGained += n.LevelGained
+		if i == 0 {
+			k.weaponInitial, k.nonweaponInitial = w.Initial, n.Initial
+		}
+	}
+	return k, found
+}
+
 // fastest is the faster of two rates (fewer levels per slot) with the level it is counted on,
 // the higher level when both rates are the same.
 func fastest(levels, level, otherLevels, otherLevel int) (int, int) {
@@ -97,7 +145,7 @@ func fastest(levels, level, otherLevels, otherLevel int) (int, int) {
 func (cls Classes) with(class string, level int) Classes {
 	out := slices.Clone(cls)
 	for i := range out {
-		if out[i].Class == class {
+		if out[i].Class == class && !out[i].Frozen {
 			out[i].Level = level
 		}
 	}

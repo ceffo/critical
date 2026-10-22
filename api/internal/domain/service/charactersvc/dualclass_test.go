@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // ADR 0042's dual-class steps on the derived sheet, on the fixture
@@ -114,4 +115,17 @@ func TestDerive_Step11_NoHitPointsUntilTheCrossover(t *testing.T) {
 		{Class: "mage", Classes: 1, Level: 9, NoHitPoints: true},
 		{Class: "mage", Classes: 1, Level: 10, Die: 4},
 	}, d.LevelUp.Pending)
+}
+
+// ADR 0042 step 15 (Q14) on the sheet: the proficiency pools read the old
+// class at its left-at level, frozen (its slots kept, its rate and penalty
+// not combined), beside the new class at its realized level
+// (skills.TestProficiencySlots_Step15_DualClassKeepsAndGains has the pools).
+func TestProficiencyClasses_Step15_TheOldClassKeptAtItsLeftAtLevel(t *testing.T) {
+	c := elf(7, 60_000)
+	c.Derived = derived(t, c)
+	assert.Equal(t, skills.Classes{
+		{Class: "fighter", Level: 9, Frozen: true},
+		{Class: "mage", Level: 7},
+	}, c.ProficiencyClasses())
 }

@@ -91,3 +91,41 @@ func TestLevelGrants_Step15_TheCombinedPoolsAtTheEntrysLevel(t *testing.T) {
 	assert.Equal(t, skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1}, skills.GrantsOf(book, cls, "fighter", 3))
 	assert.Equal(t, skills.LevelGrants{NonweaponSlots: 1}, skills.GrantsOf(book, cls, "cleric", 3))
 }
+
+// ADR 0042 step 15 (Q14): "A dual-class character keeps every pick of the old class; its slots
+// are the frozen entries' available at their `left_at_level` plus the new class's gained slots
+// (`floor(L / #Levels)`, no second initial count)." The elf, fighter left at 9 (Table 34 warrior:
+// weapon 4 + 9/3, non-weapon 3 + 9/3), now a mage (wizard: weapon every 6, non-weapon every 3):
+// the mage's levels add their gained slots only, at the mage's rate, and the penalty is the
+// active mage's. A level-up of the mage grants the mage's gained slots.
+func TestProficiencySlots_Step15_DualClassKeepsAndGains(t *testing.T) {
+	book := profBook(t)
+	elf := func(mage int) skills.Classes {
+		return skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: mage}}
+	}
+	for _, tc := range []struct {
+		name                        string
+		mage                        int
+		weaponAvail, nonweaponAvail int
+	}{
+		{"mage 1: the fighter's slots only", 1, 7, 6},
+		{"mage 7", 7, 7 + 7/6, 6 + 7/3},
+		{"mage 10", 10, 7 + 10/6, 6 + 10/3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := skills.FiguresOf(book, elf(tc.mage), 0, skills.Spending{})
+			require.True(t, ok)
+			assert.Equal(t, 4, got.Weapon.Initial, "the fighter's initial count, once")
+			assert.Equal(t, 6, got.Weapon.PerLevels, "the mage's rate")
+			assert.Equal(t, tc.weaponAvail, got.Weapon.Available)
+			assert.Equal(t, 3, got.Nonweapon.Initial)
+			assert.Equal(t, 3, got.Nonweapon.PerLevels)
+			assert.Equal(t, tc.nonweaponAvail, got.Nonweapon.Available)
+			assert.Equal(t, -5, got.Penalty, "the active mage's penalty")
+		})
+	}
+	t.Run("a level of the mage grants the mage's gained slots", func(t *testing.T) {
+		assert.Equal(t, skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 1}, skills.GrantsOf(book, elf(5), "mage", 6))
+		assert.Equal(t, skills.LevelGrants{WeaponSlots: 0, NonweaponSlots: 1}, skills.GrantsOf(book, elf(8), "mage", 9))
+	})
+}

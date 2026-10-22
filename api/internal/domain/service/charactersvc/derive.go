@@ -68,6 +68,9 @@ type Rules interface {
 	// PSPMaxFor is ADR 0043 step 4: a psionics entry's PSP maximum at its
 	// level, through the feature's PSP rule.
 	PSPMaxFor(rule classes.PSPRule, score func(ability string) int, level int) (ruletablesvc.PSPMax, error)
+	// PowerAllowanceFor is CPsiH Table 4 (ADR 0043 step 9.1) at a psionics
+	// entry's realized level.
+	PowerAllowanceFor(level int) (ruletablesvc.PowerProgressionRow, error)
 	// PSPRecoveryRate is CPsiH Table 6's hourly rate for an activity (ADR
 	// 0043 step 6).
 	PSPRecoveryRate(activity string) (int, error)

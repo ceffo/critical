@@ -82,6 +82,7 @@
       "noMaximum": false
     },
     "psp": null,
+    "knownPowers": null,
     "spellFailure": 0,
     "turning": null,
     "skillSets": [

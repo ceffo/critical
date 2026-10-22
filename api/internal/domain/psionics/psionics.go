@@ -322,4 +322,4 @@ func NewBook(disciplines []catalogue.Discipline, powers []catalogue.Power) Book 
 }
 
 func (b catalogueBook) Power(id string) (catalogue.Power, bool) { p, ok := b.powers[id]; return p, ok }
-func (b catalogueBook) HasDiscipline(id string) bool           { return b.disciplines[id] }
+func (b catalogueBook) HasDiscipline(id string) bool            { return b.disciplines[id] }

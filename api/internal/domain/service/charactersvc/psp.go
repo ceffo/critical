@@ -2,9 +2,11 @@ package charactersvc
 
 import (
 	"context"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -59,6 +61,34 @@ func (s *service) setPSP(ctx context.Context, c *Character) error {
 		return err
 	}
 	c.Derived.PSP = &PSPPool{Current: actionlog.CurrentPSP(c.PSPMax, total), Max: c.PSPMax}
+	return nil
+}
+
+// setPowers is ADR 0043 step 9 on a read of c: a character with a psionics
+// entry gets its known powers, Table 4's allowance at that entry's realized
+// level beside what the stored picks take. It reads no store; the picks come
+// with the character.
+func (s *service) setPowers(c *Character) error {
+	e, _, ok, err := psionicsEntry(c, s.rules)
+	if err != nil || !ok {
+		return err
+	}
+	row, err := s.rules.PowerAllowanceFor(e.RealizedLevel)
+	if err != nil {
+		return err
+	}
+	picks := slices.Clone(c.PsionicPicks)
+	if picks == nil {
+		picks = []psionics.Pick{}
+	}
+	c.Derived.Powers = &PowerKnowledge{
+		Allowance: psionics.Allowance{
+			Disciplines: row.Disciplines, Sciences: row.Sciences, Devotions: row.Devotions, DefenceModes: row.DefenceModes,
+		},
+		Used:    psionics.Count(s.powers, picks),
+		Primary: psionics.Primary(picks),
+		Picks:   picks,
+	}
 	return nil
 }
 

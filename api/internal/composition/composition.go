@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
@@ -326,6 +327,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		// the catalogue and is written in the creation's transaction.
 		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
 		FreeSpells: freeSpells{log: logSvc, book: spellbook}, Rulesets: bs.Rulesets,
+		Powers: psionics.NewBook(artifact.Disciplines, artifact.Powers),
 	})
 	if err := bs.add(bs.Character, err); err != nil {
 		return nil, err

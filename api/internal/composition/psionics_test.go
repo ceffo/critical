@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/storage/memory"
@@ -23,6 +24,12 @@ import (
 // max PSPs (the sheet's: 25 + 13 x 12) and returns its id.
 func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
 	t.Helper()
+	return thiefPsionicistKnowing(t, nil)
+}
+
+// thiefPsionicistKnowing is thiefPsionicist with the given known powers.
+func thiefPsionicistKnowing(t *testing.T, picks []psionics.Pick) (*composition.BackingServices, int64) {
+	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
 	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
@@ -30,7 +37,7 @@ func thiefPsionicist(t *testing.T) (*composition.BackingServices, int64) {
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id, err := m.AddCharacter(ctx, charactersvc.Character{
 		Name: "Thief/psionicist", Race: "human", Class: "thief", RealizedLevel: 15,
-		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181,
+		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181, PsionicPicks: picks,
 		Classes: []classes.Entry{classes.SingleEntry("thief", 15, 0), classes.SingleEntry("psionicist", 14, 0)},
 	})
 	require.NoError(t, err)
@@ -192,4 +199,34 @@ func TestRecover_Step6_CappedAndUndone(t *testing.T) {
 	assert.Equal(t, 169, currentPSP(t, bs, id), "the 12 applied are taken back")
 	undoTop(t, bs, id)
 	assert.Equal(t, 151, currentPSP(t, bs, id))
+}
+
+// Step 9: a psionicist's read carries Table 4's allowance at the psionics
+// entry's own realized level (14, not the thief's 15), what the stored picks
+// take (a relearn takes the place of a devotion, a defence mode counts apart)
+// and the primary discipline; a character with no psionics entry has none.
+func TestKnownPowers_Step9_DerivedBesideThePSPPool(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicist(t)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	require.NotNil(t, c.Derived.Powers)
+	assert.Equal(t, psionics.Allowance{Disciplines: 5, Sciences: 7, Devotions: 19, DefenceModes: 5}, c.Derived.Powers.Allowance)
+	assert.Equal(t, psionics.Used{}, c.Derived.Powers.Used)
+	assert.Empty(t, c.Derived.Powers.Primary)
+	assert.NotNil(t, c.Derived.Powers.Picks)
+
+	picks := []psionics.Pick{
+		{Kind: psionics.PickDiscipline, ID: "telepathy"},
+		{Kind: psionics.PickPower, ID: "contact"},
+		{Kind: psionics.PickPower, ID: "mindlink"},
+		{Kind: psionics.PickRelearn, ID: "contact"},
+		{Kind: psionics.PickPower, ID: "mind_blank"},
+	}
+	bs, id = thiefPsionicistKnowing(t, picks)
+	c, err = bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, psionics.Used{Disciplines: 1, Sciences: 1, Devotions: 2, DefenceModes: 1}, c.Derived.Powers.Used)
+	assert.Equal(t, "telepathy", c.Derived.Powers.Primary)
+	assert.Equal(t, picks, c.Derived.Powers.Picks)
 }

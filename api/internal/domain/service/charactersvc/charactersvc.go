@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -200,6 +201,9 @@ type Deps struct {
 	// Rulesets gives the ruleset a new character is created under (ADR 0041 step 3): its racial
 	// lift (ADR 0042 step 2). nil is the default ruleset.
 	Rulesets ruleset.Resolver
+	// Powers is the powers catalogue (ADR 0043 steps 8 and 9), to count the
+	// powers a character knows; nil is the empty one.
+	Powers psionics.Book
 }
 
 // defaultRulesets resolves every character to the default ruleset.
@@ -225,6 +229,8 @@ type service struct {
 	book      StartingBook
 	free      FreeSpells
 	rulesets  ruleset.Resolver
+	// powers is never nil: the empty catalogue when Deps holds none.
+	powers psionics.Book
 }
 
 // New constructs the service.
@@ -242,9 +248,13 @@ func New(d Deps) (SVC, error) {
 	if d.Rulesets == nil {
 		d.Rulesets = defaultRulesets{}
 	}
+	if d.Powers == nil {
+		d.Powers = psionics.NewBook(nil, nil)
+	}
 	return &service{
 		rulesets: d.Rulesets, reader: d.Reader, xp: d.XP, rules: d.Rules, owners: d.Owners, tx: d.Tx, sessions: d.Sessions, armour: d.Armour,
 		languages: d.Languages, profs: d.Proficiencies, hp: d.HP, spells: d.Spells, book: d.Book, free: d.FreeSpells,
+		powers: d.Powers,
 	}, nil
 }
 
@@ -309,6 +319,9 @@ func (s *service) read(ctx context.Context, id int64) (*Character, error) {
 	s.readWarnings(c, defs)
 	if err := s.setPSP(ctx, c); err != nil {
 		return nil, fmt.Errorf("character %d PSPs: %w", id, err)
+	}
+	if err := s.setPowers(c); err != nil {
+		return nil, fmt.Errorf("character %d known powers: %w", id, err)
 	}
 	if err := s.setFreeSpells(ctx, c); err != nil {
 		return nil, fmt.Errorf("character %d free spells: %w", id, err)

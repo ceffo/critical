@@ -2590,6 +2590,7 @@
     "nextHint": "Go to the next step",
     "reroll": "Reroll",
     "blocked": {
+      "answering": "Checking the classes with the server…",
       "class": "Choose a class.",
       "xp": "Type the starting XP.",
       "race": "Choose a race.",

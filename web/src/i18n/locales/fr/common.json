@@ -2590,6 +2590,7 @@
     "nextHint": "Passer à l'étape suivante",
     "reroll": "Relancer",
     "blocked": {
+      "answering": "Vérification des classes par le serveur…",
       "class": "Choisissez une classe.",
       "xp": "Saisissez les XP de départ.",
       "race": "Choisissez une race.",

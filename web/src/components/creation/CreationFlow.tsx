@@ -409,7 +409,13 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       alignment: draft.details.alignment,
       sex: draft.details.sex,
       alignments: answer.latest?.alignments ?? null,
-    }) ?? (unreadable ? "unreadable" : null);
+    }) ??
+    (unreadable ? "unreadable" : null) ??
+    // The steps after the class depend on what the server says the classes carry (the spellbook, the
+    // skill points): wait for its first answer for these classes, unless it failed.
+    (step === "class" && body !== null && answered?.cls !== classKey(draft)
+      ? "answering"
+      : null);
   const last = index === steps.length - 1;
   const lead =
     step === "race" && draft.cls && draft.kind !== "single"

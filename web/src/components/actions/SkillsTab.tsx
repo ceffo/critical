@@ -46,7 +46,7 @@ export function SkillsTab() {
   const skills = useSkillsStore((s) => s.skills);
   const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
-  const budget = useCharacterStore((s) => s.character?.derived.skillBudget);
+  const derivedSets = useCharacterStore((s) => s.character?.derived.skillSets);
   const cls = useCharacterStore((s) => s.character?.class);
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
   const race = useCharacterStore((s) => s.character?.raceCode);
@@ -56,6 +56,7 @@ export function SkillsTab() {
   const editor = useSkillsEditor((s) => s.editor);
   const openEditor = useSkillsEditor((s) => s.open);
   const closeEditor = useSkillsEditor((s) => s.close);
+  const editingSet = useSkillsEditor((s) => s.set);
   const editingPoints = editor === "skillPoints";
   const editingPicks = editor === "nonWeapon";
   const editingWeapons = editor === "weapon";
@@ -66,14 +67,18 @@ export function SkillsTab() {
   }, [refresh]);
 
   if (!skills) return null;
-  // The server sends the class skills of a thief or a bard and none for another class: no list, no
-  // section (ADR 0030 steps 17 and 18).
-  const classKind: SkillKind =
-    skills.thiefSkills.length > 0 ? "thiefSkill" : "bardSkill";
-  const classSkills =
-    classKind === "thiefSkill" ? skills.thiefSkills : skills.bardSkills;
+  // The server sends one skill set per rogue_skills feature the class grants and none for another
+  // class: no set, no section (ADR 0030 steps 17 and 18, ADR 0040 step 3.5). The points editor
+  // opened from the level-up's grants names no set: the first with points left to spend.
+  const editedSet =
+    editingSet ??
+    (
+      skills.skillSets.find((x) => (x.budget?.left ?? 0) > 0) ??
+      skills.skillSets[0]
+    )?.set;
   const rows = (
     kind: SkillKind,
+    skillSet: string | undefined,
     list: {
       id: string;
       value: ReactNode;
@@ -85,7 +90,7 @@ export function SkillsTab() {
     after?: ReactNode,
   ) => {
     const label = t(HEADINGS[kind]);
-    const id = `skills-${kind}`;
+    const id = `skills-${skillSet ?? kind}`;
     return (
       <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
         <h3 id={id} className="group-heading section-label px-2.5">
@@ -118,7 +123,7 @@ export function SkillsTab() {
                       aria-label={label}
                       title={label}
                       data-testid={`skill-${skill}`}
-                      onClick={() => void rollSkill(skill)}
+                      onClick={() => void rollSkill(skill, undefined, skillSet)}
                     >
                       {value}
                     </button>
@@ -135,7 +140,7 @@ export function SkillsTab() {
                   aria-label={label}
                   title={label}
                   data-testid={`skill-${skill}`}
-                  onClick={() => void rollSkill(skill)}
+                  onClick={() => void rollSkill(skill, undefined, skillSet)}
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="break-words">{name}</span>
@@ -184,6 +189,7 @@ export function SkillsTab() {
     >
       {rows(
         "proficiency",
+        undefined,
         skills.proficiencies.map((p) => {
           const pick = slots?.picks.find((f) => f.id === p.id);
           return {
@@ -227,86 +233,100 @@ export function SkillsTab() {
           onEdit={() => openEditor("weapon")}
         />
       )}
-      {classSkills.length > 0 && (
-        <div className="flex min-w-0 flex-col gap-2">
-          {rows(
-            classKind,
-            // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. The
-            // server says which skill cannot be rolled yet.
-            classSkills.map((s) => ({
-              id: s.id,
-              unusable: !s.usable,
-              terms: <SkillTerms skill={s} cap={skills.budget?.perSkillCap} />,
-              value: (
-                <span
-                  className="text-right font-semibold whitespace-nowrap tabular-nums"
-                  title={t("skills.thiefTerms", {
-                    base: s.base,
-                    points: s.points,
-                    race: formatSigned(s.race),
-                    dexterity: formatSigned(s.dexterity),
-                    armor: formatSigned(s.armor),
-                    max: s.maxPercent,
-                  })}
-                  data-testid={`${classKind === "thiefSkill" ? "thief" : "bard"}-percent-${s.id}`}
-                >
-                  {t("skills.percent", { value: s.percent })}
-                </span>
-              ),
-            })),
-          )}
-          {skills.budget && !editingPoints && (
-            <SkillBudgetSummary budget={skills.budget} />
-          )}
-          {budget && budget.length > 0 && (
-            <ul
-              className="flex flex-col gap-1 px-2.5 text-body text-warning"
-              data-testid="skill-budget"
-            >
-              {budget.map((w) => (
-                <li key={w.code + (w.skill ?? "")} className="break-words">
-                  {t(`skills.budget.${w.code}`, {
-                    name: w.skill ? skillName(t, w.skill) : "",
-                    points: w.points,
-                    limit: w.limit,
-                  })}
-                </li>
-              ))}
-            </ul>
-          )}
-          {skills.skillArmor && (
-            <p
-              className="px-2.5 text-body break-words text-muted-foreground"
-              title={t("skills.armorHint")}
-              data-testid="skill-armor"
-            >
-              {t("skills.armor", {
-                armor: t(`characters.armors.${skills.skillArmor}`, {
-                  defaultValue: skills.skillArmor,
-                }),
-              })}
-            </p>
-          )}
-          {editingPoints ? (
-            <ThiefPointsEditor
-              skills={classSkills}
-              budget={skills.budget}
-              onDone={closeEditor}
-            />
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              className="mx-2.5 w-fit"
-              title={t("skills.spendPointsHint")}
-              onClick={() => openEditor("skillPoints")}
-              data-testid="thief-points-edit"
-            >
-              {t("skills.spendPoints")}
-            </Button>
-          )}
-        </div>
-      )}
+      {skills.skillSets.map((skillSet) => {
+        const warnings =
+          derivedSets?.find((d) => d.set === skillSet.set)?.warnings ?? [];
+        const kindPrefix = skillSet.kind === "thiefSkill" ? "thief" : "bard";
+        const editing = editingPoints && editedSet === skillSet.set;
+        return (
+          <div
+            key={skillSet.set}
+            className="flex min-w-0 flex-col gap-2"
+            data-testid={`skill-set-${skillSet.set}`}
+          >
+            {rows(
+              skillSet.kind,
+              skillSet.set,
+              // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. The
+              // server says which skill cannot be rolled yet.
+              skillSet.skills.map((s) => ({
+                id: s.id,
+                unusable: !s.usable,
+                terms: (
+                  <SkillTerms skill={s} cap={skillSet.budget?.perSkillCap} />
+                ),
+                value: (
+                  <span
+                    className="text-right font-semibold whitespace-nowrap tabular-nums"
+                    title={t("skills.thiefTerms", {
+                      base: s.base,
+                      points: s.points,
+                      race: formatSigned(s.race),
+                      dexterity: formatSigned(s.dexterity),
+                      armor: formatSigned(s.armor),
+                      max: s.maxPercent,
+                    })}
+                    data-testid={`${kindPrefix}-percent-${s.id}`}
+                  >
+                    {t("skills.percent", { value: s.percent })}
+                  </span>
+                ),
+              })),
+            )}
+            {skillSet.budget && !editing && (
+              <SkillBudgetSummary budget={skillSet.budget} />
+            )}
+            {warnings.length > 0 && (
+              <ul
+                className="flex flex-col gap-1 px-2.5 text-body text-warning"
+                data-testid="skill-budget"
+              >
+                {warnings.map((w) => (
+                  <li key={w.code + (w.skill ?? "")} className="break-words">
+                    {t(`skills.budget.${w.code}`, {
+                      name: w.skill ? skillName(t, w.skill) : "",
+                      points: w.points,
+                      limit: w.limit,
+                    })}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {skillSet.skillArmor && (
+              <p
+                className="px-2.5 text-body break-words text-muted-foreground"
+                title={t("skills.armorHint")}
+                data-testid="skill-armor"
+              >
+                {t("skills.armor", {
+                  armor: t(`characters.armors.${skillSet.skillArmor}`, {
+                    defaultValue: skillSet.skillArmor,
+                  }),
+                })}
+              </p>
+            )}
+            {editing ? (
+              <ThiefPointsEditor
+                set={skillSet.set}
+                skills={skillSet.skills}
+                budget={skillSet.budget}
+                onDone={closeEditor}
+              />
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className="mx-2.5 w-fit"
+                title={t("skills.spendPointsHint")}
+                onClick={() => openEditor("skillPoints", skillSet.set)}
+                data-testid="thief-points-edit"
+              >
+                {t("skills.spendPoints")}
+              </Button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

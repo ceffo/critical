@@ -35,6 +35,8 @@ type tables struct {
 	Races map[int64]string
 	// SkillPoints are characters.skill_points ('{}' none, the column's default).
 	SkillPoints map[int64]string
+	// SkillSets are characters.skill_sets ('{}' none, the column's default).
+	SkillSets map[int64]string
 	// Picks are characters.proficiency_picks (absent: '{}', the column's default).
 	Picks map[int64]string
 	// Classes are characters.class (absent: 'bard', the column's default); SkillArmors
@@ -139,7 +141,7 @@ func newFakeStore() *fakeStore {
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
-		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
+		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, SkillSets: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
 
@@ -210,7 +212,8 @@ func (f *fakeStore) InsertCharacter(_ context.Context, arg storeq.InsertCharacte
 	f.t.Characters = append(f.t.Characters, id)
 	f.t.Names[id] = arg.Name
 	f.t.Races[id] = arg.RaceCode
-	f.t.SkillPoints[id] = arg.SkillPoints
+	f.t.SkillPoints[id] = "{}"
+	f.t.SkillSets[id] = arg.SkillSets
 	f.t.Picks[id] = arg.ProficiencyPicks
 	f.t.Alignments[id], f.t.Sexes[id] = arg.Alignment, arg.Sex
 	f.t.Languages[id] = arg.Languages
@@ -259,6 +262,21 @@ func (f *fakeStore) SetIdentityIfUnset(_ context.Context, arg storeq.SetIdentity
 	if f.t.Sexes[arg.ID] == "" {
 		f.t.Sexes[arg.ID] = arg.Sex
 	}
+	return nil
+}
+
+func (f *fakeStore) ListLegacySkillPoints(context.Context) ([]storeq.ListLegacySkillPointsRow, error) {
+	rows := []storeq.ListLegacySkillPointsRow{}
+	for _, id := range f.t.Characters {
+		if f.t.SkillPoints[id] != "" && f.t.SkillPoints[id] != "{}" && (f.t.SkillSets[id] == "" || f.t.SkillSets[id] == "{}") {
+			rows = append(rows, storeq.ListLegacySkillPointsRow{ID: id, Class: f.class(id), SkillPoints: f.t.SkillPoints[id]})
+		}
+	}
+	return rows, nil
+}
+
+func (f *fakeStore) SetSkillSets(_ context.Context, arg storeq.SetSkillSetsParams) error {
+	f.t.SkillSets[arg.ID] = arg.SkillSets
 	return nil
 }
 

@@ -54,7 +54,9 @@ holds the inputs, and every figure is derived from them, never entered
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
 - **Ledgers**: HP ([ADR 0007](adr/0007-hp-ledger.md)) and XP ([ADR 0015](adr/0015-experience.md)).
   Current HP is a sum over the action log; the XP total is the starting XP plus its entries.
-- **Possessions and knowledge**: items, the spellbook, the proficiency picks, the skill points.
+- **Possessions and knowledge**: items, the spellbook, the proficiency picks, the skill points (per
+  skill set: one set for each `rogue_skills` feature the classes grant, each with its own budget,
+  [ADR 0040](adr/0040-classes-are-data.md) step 3.5).
 
 Invariants:
 
@@ -212,7 +214,7 @@ for the shape). Psionic combat (attack and defence modes, contact) is later.
 | Spell immunities (`Derived.SpellImmunities`; a save or a spell received against one carries an `Immunity` and rolls nothing) | Wisdom, any class; the catalogue's Table 5 rows up to the score | [ADR 0006](adr/0006-saving-throws.md) step 10 |
 | Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md) |
 | Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md) |
-| Rogue skill percentages | skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md) |
+| Rogue skill percentages, per skill set | the set's skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md), [ADR 0040](adr/0040-classes-are-data.md) step 3.5 |
 | A roll's modifiers | the aggregate of buffs and item powers | [ADR 0004](adr/0004-buffs.md) step 11 |
 | Current HP | the action log | [ADR 0007](adr/0007-hp-ledger.md) |
 | PSP maximum, current PSPs | Wisdom, Intelligence, Constitution, the psionicist entry's level; the action log | [ADR 0043](adr/0043-psionics.md) steps 4 and 5 |

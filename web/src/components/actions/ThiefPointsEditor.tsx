@@ -9,7 +9,7 @@ import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { RogueSkill, SkillBudget } from "@/types/skills";
 import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
-import { classSkillsOf, previewDraft, typedPoints } from "./skillsPreview";
+import { previewDraft, skillSetOf, typedPoints } from "./skillsPreview";
 
 /**
  * A thief or a bard spends skill points after creation (ADR 0030 steps 17 and 18): the total
@@ -21,10 +21,13 @@ import { classSkillsOf, previewDraft, typedPoints } from "./skillsPreview";
  * under it.
  */
 export function ThiefPointsEditor({
+  set,
   skills,
   budget,
   onDone,
 }: {
+  /** The skill set whose points are spent (ADR 0040 step 3.5). */
+  set: string;
   skills: RogueSkill[];
   budget: SkillBudget | null;
   onDone: () => void;
@@ -51,12 +54,13 @@ export function ThiefPointsEditor({
   useEffect(() => {
     let current = true;
     const timer = setTimeout(() => {
-      void previewDraft(values, skills).then((p) => {
+      void previewDraft(set, values, skills).then((p) => {
         if (!current) return;
         if (p.ok) {
+          const answered = skillSetOf(p.skills, set);
           setShown({
-            skills: classSkillsOf(p.skills),
-            budget: p.skills.budget,
+            skills: answered?.skills ?? [],
+            budget: answered?.budget ?? null,
           });
           setStale(false);
           setPreviewError(null);
@@ -72,7 +76,7 @@ export function ThiefPointsEditor({
       current = false;
       clearTimeout(timer);
     };
-  }, [values, skills]);
+  }, [set, values, skills]);
   const maxPoints = skills[0]?.maxPoints ?? 0;
   const range = { min: 0, max: maxPoints };
   // A refusal's wording: an over-budget one is the server code's, with its figures (the error's
@@ -97,7 +101,7 @@ export function ThiefPointsEditor({
       });
       return;
     }
-    const rejected = await savePoints(points);
+    const rejected = await savePoints(set, points);
     if (!rejected) {
       onDone();
       return;

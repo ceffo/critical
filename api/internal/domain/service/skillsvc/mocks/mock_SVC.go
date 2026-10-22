@@ -342,9 +342,9 @@ func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_M
 	return _c
 }
 
-// PreviewPoints provides a mock function with given fields: ctx, characterID, points
-func (_m *MockSVC) PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*skillsvc.Skills, error) {
-	ret := _m.Called(ctx, characterID, points)
+// PreviewPoints provides a mock function with given fields: ctx, characterID, set, points
+func (_m *MockSVC) PreviewPoints(ctx context.Context, characterID int64, set string, points map[string]int) (*skillsvc.Skills, error) {
+	ret := _m.Called(ctx, characterID, set, points)
 
 	if len(ret) == 0 {
 		panic("no return value specified for PreviewPoints")
@@ -352,19 +352,19 @@ func (_m *MockSVC) PreviewPoints(ctx context.Context, characterID int64, points 
 
 	var r0 *skillsvc.Skills
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) (*skillsvc.Skills, error)); ok {
-		return rf(ctx, characterID, points)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, map[string]int) (*skillsvc.Skills, error)); ok {
+		return rf(ctx, characterID, set, points)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) *skillsvc.Skills); ok {
-		r0 = rf(ctx, characterID, points)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, map[string]int) *skillsvc.Skills); ok {
+		r0 = rf(ctx, characterID, set, points)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*skillsvc.Skills)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, map[string]int) error); ok {
-		r1 = rf(ctx, characterID, points)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, map[string]int) error); ok {
+		r1 = rf(ctx, characterID, set, points)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -380,14 +380,15 @@ type MockSVC_PreviewPoints_Call struct {
 // PreviewPoints is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
+//   - set string
 //   - points map[string]int
-func (_e *MockSVC_Expecter) PreviewPoints(ctx interface{}, characterID interface{}, points interface{}) *MockSVC_PreviewPoints_Call {
-	return &MockSVC_PreviewPoints_Call{Call: _e.mock.On("PreviewPoints", ctx, characterID, points)}
+func (_e *MockSVC_Expecter) PreviewPoints(ctx interface{}, characterID interface{}, set interface{}, points interface{}) *MockSVC_PreviewPoints_Call {
+	return &MockSVC_PreviewPoints_Call{Call: _e.mock.On("PreviewPoints", ctx, characterID, set, points)}
 }
 
-func (_c *MockSVC_PreviewPoints_Call) Run(run func(ctx context.Context, characterID int64, points map[string]int)) *MockSVC_PreviewPoints_Call {
+func (_c *MockSVC_PreviewPoints_Call) Run(run func(ctx context.Context, characterID int64, set string, points map[string]int)) *MockSVC_PreviewPoints_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(map[string]int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(map[string]int))
 	})
 	return _c
 }
@@ -397,7 +398,7 @@ func (_c *MockSVC_PreviewPoints_Call) Return(_a0 *skillsvc.Skills, _a1 error) *M
 	return _c
 }
 
-func (_c *MockSVC_PreviewPoints_Call) RunAndReturn(run func(context.Context, int64, map[string]int) (*skillsvc.Skills, error)) *MockSVC_PreviewPoints_Call {
+func (_c *MockSVC_PreviewPoints_Call) RunAndReturn(run func(context.Context, int64, string, map[string]int) (*skillsvc.Skills, error)) *MockSVC_PreviewPoints_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -583,9 +584,71 @@ func (_c *MockSVC_RollAbility_Call) RunAndReturn(run func(context.Context, int64
 	return _c
 }
 
-// SetPoints provides a mock function with given fields: ctx, characterID, points
-func (_m *MockSVC) SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error) {
-	ret := _m.Called(ctx, characterID, points)
+// RollInSet provides a mock function with given fields: ctx, characterID, set, id, adj
+func (_m *MockSVC) RollInSet(ctx context.Context, characterID int64, set string, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error) {
+	ret := _m.Called(ctx, characterID, set, id, adj)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RollInSet")
+	}
+
+	var r0 *skillsvc.CheckResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string, skillsvc.Adjustment) (*skillsvc.CheckResult, error)); ok {
+		return rf(ctx, characterID, set, id, adj)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string, skillsvc.Adjustment) *skillsvc.CheckResult); ok {
+		r0 = rf(ctx, characterID, set, id, adj)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*skillsvc.CheckResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, string, skillsvc.Adjustment) error); ok {
+		r1 = rf(ctx, characterID, set, id, adj)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RollInSet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RollInSet'
+type MockSVC_RollInSet_Call struct {
+	*mock.Call
+}
+
+// RollInSet is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - set string
+//   - id string
+//   - adj skillsvc.Adjustment
+func (_e *MockSVC_Expecter) RollInSet(ctx interface{}, characterID interface{}, set interface{}, id interface{}, adj interface{}) *MockSVC_RollInSet_Call {
+	return &MockSVC_RollInSet_Call{Call: _e.mock.On("RollInSet", ctx, characterID, set, id, adj)}
+}
+
+func (_c *MockSVC_RollInSet_Call) Run(run func(ctx context.Context, characterID int64, set string, id string, adj skillsvc.Adjustment)) *MockSVC_RollInSet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(string), args[4].(skillsvc.Adjustment))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RollInSet_Call) Return(_a0 *skillsvc.CheckResult, _a1 error) *MockSVC_RollInSet_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RollInSet_Call) RunAndReturn(run func(context.Context, int64, string, string, skillsvc.Adjustment) (*skillsvc.CheckResult, error)) *MockSVC_RollInSet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// SetPoints provides a mock function with given fields: ctx, characterID, set, points
+func (_m *MockSVC) SetPoints(ctx context.Context, characterID int64, set string, points map[string]int) (map[string]int, error) {
+	ret := _m.Called(ctx, characterID, set, points)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SetPoints")
@@ -593,19 +656,19 @@ func (_m *MockSVC) SetPoints(ctx context.Context, characterID int64, points map[
 
 	var r0 map[string]int
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) (map[string]int, error)); ok {
-		return rf(ctx, characterID, points)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, map[string]int) (map[string]int, error)); ok {
+		return rf(ctx, characterID, set, points)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, map[string]int) map[string]int); ok {
-		r0 = rf(ctx, characterID, points)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, map[string]int) map[string]int); ok {
+		r0 = rf(ctx, characterID, set, points)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(map[string]int)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, map[string]int) error); ok {
-		r1 = rf(ctx, characterID, points)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, map[string]int) error); ok {
+		r1 = rf(ctx, characterID, set, points)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -621,14 +684,15 @@ type MockSVC_SetPoints_Call struct {
 // SetPoints is a helper method to define mock.On call
 //   - ctx context.Context
 //   - characterID int64
+//   - set string
 //   - points map[string]int
-func (_e *MockSVC_Expecter) SetPoints(ctx interface{}, characterID interface{}, points interface{}) *MockSVC_SetPoints_Call {
-	return &MockSVC_SetPoints_Call{Call: _e.mock.On("SetPoints", ctx, characterID, points)}
+func (_e *MockSVC_Expecter) SetPoints(ctx interface{}, characterID interface{}, set interface{}, points interface{}) *MockSVC_SetPoints_Call {
+	return &MockSVC_SetPoints_Call{Call: _e.mock.On("SetPoints", ctx, characterID, set, points)}
 }
 
-func (_c *MockSVC_SetPoints_Call) Run(run func(ctx context.Context, characterID int64, points map[string]int)) *MockSVC_SetPoints_Call {
+func (_c *MockSVC_SetPoints_Call) Run(run func(ctx context.Context, characterID int64, set string, points map[string]int)) *MockSVC_SetPoints_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(map[string]int))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(map[string]int))
 	})
 	return _c
 }
@@ -638,7 +702,7 @@ func (_c *MockSVC_SetPoints_Call) Return(_a0 map[string]int, _a1 error) *MockSVC
 	return _c
 }
 
-func (_c *MockSVC_SetPoints_Call) RunAndReturn(run func(context.Context, int64, map[string]int) (map[string]int, error)) *MockSVC_SetPoints_Call {
+func (_c *MockSVC_SetPoints_Call) RunAndReturn(run func(context.Context, int64, string, map[string]int) (map[string]int, error)) *MockSVC_SetPoints_Call {
 	_c.Call.Return(run)
 	return _c
 }

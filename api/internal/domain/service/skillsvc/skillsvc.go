@@ -42,6 +42,9 @@ type SVC interface {
 	// out of range or a too long reason domain.ErrInvalidInput; nothing is
 	// rolled then.
 	Roll(ctx context.Context, characterID int64, id string, adj Adjustment) (*CheckResult, error)
+	// RollInSet is Roll for a skill of the skill set set ("": the first set
+	// that holds the skill), as two skill sets can share a skill.
+	RollInSet(ctx context.Context, characterID int64, set, id string, adj Adjustment) (*CheckResult, error)
 	// Adjust sets the adjustment of the latest roll, which must be the skill
 	// check entryID, replacing the one in effect (0 removes it), and
 	// recomputes the verdict from the stored roll. It is an audited amend,
@@ -64,13 +67,14 @@ type SVC interface {
 	// terms and the budget, for the editor to show while the player types.
 	// It writes and logs nothing; the points are refused as SetPoints
 	// refuses them (a *domain.FieldError, or a *domain.BudgetError).
-	PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error)
-	// SetPoints sets a thief's or a bard's skill points per skill, logged
+	PreviewPoints(ctx context.Context, characterID int64, set string, points map[string]int) (*Skills, error)
+	// SetPoints sets the skill points per skill of the skill set set ("": the
+	// class's only set), logged
 	// and undoable (ADR 0030 steps 17 and 18). A *domain.FieldError for
 	// points refused (or any point of a class without skill points), a
 	// *domain.BudgetError for a spend that grows an overspend (ADR 0037
 	// step 10); nothing is written or logged then.
-	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
+	SetPoints(ctx context.Context, characterID int64, set string, points map[string]int) (map[string]int, error)
 	// PreviewProficiencies is the pools as they would read after the edit
 	// (ADR 0037 step 12), writing and logging nothing; refused as
 	// SetProficiencies refuses.

@@ -55,7 +55,7 @@ type fixture struct {
 func bard() *charactersvc.Character {
 	c := &charactersvc.Character{
 		ID: charID, Class: "bard", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
-		Derived: charactersvc.Derived{BardSkills: bardSkills},
+		Derived: charactersvc.Derived{SkillSets: []skills.SkillSet{{Set: "bard", Skills: bardSkills}}},
 	}
 	slots := skills.ProficiencySlots{Picks: append([]skills.PickFigures{}, catalog...)}
 	slots.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
@@ -324,10 +324,12 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 			{ID: "riding_land", Ability: skillsvc.AbilityWis, AbilityScore: 8, Modifier: 3, Target: 11},
 			{ID: "acrobatics", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: 5, Target: 22},
 		},
-		BardSkills: []skillsvc.BardSkill{
-			{SkillPercent: bardSkills[0], Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
-			{SkillPercent: bardSkills[1]},
-		},
-		ThiefSkills: []skillsvc.ThiefSkill{},
+		SkillSets: []skillsvc.SkillSet{{
+			Set: "bard", Kind: skillsvc.KindBardSkill,
+			Skills: []skillsvc.SetSkill{
+				{SkillPercent: bardSkills[0], Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
+				{SkillPercent: bardSkills[1]},
+			},
+		}},
 	}, got)
 }

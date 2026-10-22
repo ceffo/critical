@@ -32,7 +32,7 @@ func TestCharacter_Golden_DerivedBlockUnchanged(t *testing.T) {
 	thief, err := m.AddCharacterOf(context.Background(), annID, charactersvc.Character{
 		Name: "Ilse", Class: "thief", Race: "elf", Str: 10, Dex: 17, Con: 12, Int: 9, Wis: 10, Cha: 11,
 		HPMax: 6, XPTotal: 2600, RealizedLevel: 1,
-		SkillPoints: map[string]int{"pick_pockets": 30, "open_locks": 20, "climb_walls": 15},
+		SkillPoints: skills.SetPoints{"thief": {"pick_pockets": 30, "open_locks": 20, "climb_walls": 15}},
 		Details:     charactersvc.Details{Alignment: "neutral", Sex: "female", Languages: []string{"elvish", "common", "dwarvish", "gnomish", "orcish"}},
 		Proficiencies: skills.Picks{
 			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "appraising", Slots: 1}},

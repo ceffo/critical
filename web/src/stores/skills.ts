@@ -10,10 +10,13 @@ interface SkillsStore {
   skills: Skills | null;
   /** Throws on failure: read it through the action module's refresh. */
   fetchSkills: () => Promise<void>;
-  /** Sets a thief's points per skill (ADR 0030 step 17), a move on the action stack run by the
-   * action module. Null on success, or the ApiError naming the rejected field; other failures go
-   * to the action module's error notice. */
-  savePoints: (points: Record<string, number>) => Promise<ApiError | null>;
+  /** Sets the points per skill of the skill set `set` (ADR 0030 step 17, ADR 0040 step 3.5), a
+   * move on the action stack run by the action module. Null on success, or the ApiError naming
+   * the rejected field; other failures go to the action module's error notice. */
+  savePoints: (
+    set: string,
+    points: Record<string, number>,
+  ) => Promise<ApiError | null>;
   /** Saves the non-weapon picks (ADR 0037 step 12), a move on the action stack; the skills and
    * the sheet are read again as the server names them. Null on success, or the ApiError naming
    * the refused field (nonweapon.<id>, or nonweapon for an over-budget save). */
@@ -25,12 +28,13 @@ export const useSkillsStore = create<SkillsStore>((set) => ({
   skills: null,
   fetchSkills: async () => set({ skills: await fetchSkills() }),
   // The answer is the skills: they are not read again.
-  savePoints: (points) =>
+  savePoints: (skillSet, points) =>
     useTableStore
       .getState()
-      .submit(async () => set({ skills: await setSkillPoints(points) }), {
-        fresh: ["skills"],
-      }),
+      .submit(
+        async () => set({ skills: await setSkillPoints(skillSet, points) }),
+        { fresh: ["skills"] },
+      ),
   saveProficiencies: (picks) =>
     useTableStore.getState().submit(() => setProficiencies(picks)),
 }));

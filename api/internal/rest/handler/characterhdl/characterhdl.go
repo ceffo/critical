@@ -14,7 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/render"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -250,23 +250,10 @@ type DerivedDTO struct {
 	// Turning is ADR 0030 step 16: PHB Table 61 at the realized level, the
 	// book's rows in order; null for a class that does not turn undead.
 	Turning []TurningTargetDTO `json:"turning"`
-	// ThiefSkills is ADR 0030 step 17: each thieving skill with its terms
-	// and percentage; null for a class without them.
-	ThiefSkills []ThiefSkillDTO `json:"thiefSkills"`
-	// BardSkills is ADR 0030 step 18: each bard skill with its terms and
-	// percentage; null for a class without them.
-	BardSkills []ThiefSkillDTO `json:"bardSkills"`
-	// SkillArmor is the skill armour the thief's or the bard's skills read
-	// (ADR 0033 step 14: from the worn body armour's Table 29 column; none,
-	// leather, padded_studded_leather, elven_chain or metal), "" for a class
-	// without them.
-	SkillArmor string `json:"skillArmor"`
-	// SkillBudget is step 17's or 18's warnings on the entered points,
-	// never null.
-	SkillBudget []BudgetWarningDTO `json:"skillBudget"`
-	// SkillPoints is step 17's or 18's budget with the terms of its formula
-	// (GET /api/skills' `budget`), null for a class without skill points.
-	SkillPoints *wire.SkillPointsBudgetDTO `json:"skillPoints"`
+	// SkillSets is ADR 0030 steps 17 and 18 (ADR 0040 step 3.5): one set
+	// per rogue_skills feature the class grants at the realized level, each
+	// with its own budget; empty for a class without skill sets.
+	SkillSets []SkillSetDTO `json:"skillSets"`
 	// Backstab is ADR 0030 step 19: PHB Table 30's damage multiplier at the
 	// realized level, 0 for a class without the backstab option.
 	Backstab int `json:"backstab"`
@@ -276,22 +263,42 @@ type DerivedDTO struct {
 	ProficiencySlots *wire.ProficiencySlotsDTO `json:"proficiencySlots"`
 }
 
-// skillDTOs maps a class's skills; nil stays nil (no such skills).
-func skillDTOs(skills []ruletablesvc.SkillPercent) []ThiefSkillDTO {
-	if skills == nil {
-		return nil
-	}
-	out := make([]ThiefSkillDTO, len(skills))
-	for i, s := range skills {
-		out[i] = ThiefSkillDTO(s)
+// SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.5): set the rogue_skills set code,
+// skillArmor the skill armour it reads (ADR 0033 step 14: from the worn body armour's Table 29
+// column; none, leather, padded_studded_leather, elven_chain or metal), skills each of its skills
+// with its terms and percentage, warnings the entered points' breach of its budget (never null) and
+// budget the budget with the terms of its formula (GET /api/skills' set `budget`), null before
+// the level its points start.
+type SkillSetDTO struct {
+	Set        string                     `json:"set"`
+	SkillArmor string                     `json:"skillArmor"`
+	Skills     []SkillTermsDTO            `json:"skills"`
+	Warnings   []BudgetWarningDTO         `json:"warnings"`
+	Budget     *wire.SkillPointsBudgetDTO `json:"budget"`
+}
+
+// skillSetDTOs maps a character's skill sets; none is an empty list.
+func skillSetDTOs(sets []skills.SkillSet) []SkillSetDTO {
+	out := make([]SkillSetDTO, 0, len(sets))
+	for _, set := range sets {
+		dto := SkillSetDTO{
+			Set: set.Set, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Points),
+			Skills: make([]SkillTermsDTO, len(set.Skills)), Warnings: make([]BudgetWarningDTO, len(set.Budget)),
+		}
+		for i, sk := range set.Skills {
+			dto.Skills[i] = SkillTermsDTO(sk)
+		}
+		for i, w := range set.Budget {
+			dto.Warnings[i] = BudgetWarningDTO(w)
+		}
+		out = append(out, dto)
 	}
 	return out
 }
 
-// ThiefSkillDTO is one thieving skill (ADR 0030 step 17) or bard skill (step
-// 18): percent = base + points + race + dexterity + armor, capped at 95 and
+// SkillTermsDTO is one skill of a skill set (ADR 0030 steps 17 and 18): percent = base + points + race + dexterity + armor, capped at 95 and
 // floored at 0.
-type ThiefSkillDTO struct {
+type SkillTermsDTO struct {
 	Skill     string `json:"skill"`
 	Base      int    `json:"base"`
 	Points    int    `json:"points"`
@@ -363,12 +370,8 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 			ToSpend: wire.GrantsDTO(d.LevelUp.ToSpend, d.LevelUp.FreeSpellsOwed),
 		},
 		Specializes: d.Specializes, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure,
-		SkillBudget: make([]BudgetWarningDTO, 0, len(d.SkillBudget)), Backstab: d.Backstab, SkillArmor: d.SkillArmor,
-		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies), SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints),
-	}
-	out.ThiefSkills, out.BardSkills = skillDTOs(d.ThiefSkills), skillDTOs(d.BardSkills)
-	for _, w := range d.SkillBudget {
-		out.SkillBudget = append(out.SkillBudget, BudgetWarningDTO(w))
+		SkillSets: skillSetDTOs(d.SkillSets), Backstab: d.Backstab,
+		ProficiencySlots: wire.ProficiencySlotsToDTO(d.Proficiencies),
 	}
 	if d.Turning != nil {
 		out.Turning = make([]TurningTargetDTO, len(d.Turning))

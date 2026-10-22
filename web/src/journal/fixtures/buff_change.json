@@ -30,7 +30,10 @@
     "payload": {
       "action": "dismiss",
       "buff": "Mind Thrust",
-      "powerId": "mind_thrust"
+      "powerId": "mind_thrust",
+      "powerNames": {
+        "mind_thrust": { "en": "Mind Thrust", "fr": "Poussée mentale" }
+      }
     }
   }
 }

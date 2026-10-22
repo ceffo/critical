@@ -36,10 +36,10 @@ describeKind("round_advance", fixtures, {
   // The power the PSPs left could not pay ends.
   maintenanceUnpaid: {
     en: {
-      text: "Round 5 → 6 — expired: Body Equilibrium — maintenance (PSPs): Mind thrust 2 — powers ended, not enough PSPs: Body equilibrium",
+      text: "Round 5 → 6 — maintenance (PSPs): Mind Thrust 2 — powers ended, not enough PSPs: Body Equilibrium",
     },
     fr: {
-      text: "Tour 5 → 6 — expirés : Body Equilibrium — maintien (PFP) : Mind thrust 2 — pouvoirs terminés, PFP insuffisants : Body equilibrium",
+      text: "Tour 5 → 6 — maintien (PFP) : Poussée mentale 2 — pouvoirs terminés, PFP insuffisants : Équilibre corporel",
     },
   },
 });

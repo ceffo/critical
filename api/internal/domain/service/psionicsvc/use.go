@@ -172,7 +172,7 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		var buffID string
 		if rec.Success && rec.MaintenanceCost > 0 {
 			row, snap, err := s.buffs.Add(ctx, characterID, buffsvc.BuffEffect{
-				Name: rowName(p), PowerID: p.ID, MaintenanceCost: rec.MaintenanceCost, MaintenancePeriod: rec.MaintenancePeriod,
+				Name: rowName(p), PowerID: p.ID, PowerName: p.Name, MaintenanceCost: rec.MaintenanceCost, MaintenancePeriod: rec.MaintenancePeriod,
 			})
 			if err != nil {
 				return fmt.Errorf("maintain power: %w", err)

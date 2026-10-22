@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
@@ -29,13 +30,14 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 			if err != nil {
 				return change{}, err
 			}
-			active, expired = m.kept, append(expired, m.unpaid...)
+			// An unpaid power is listed once, as a power ended, not as expired.
 			names, spellIDs, profIDs := expiredNames(expired)
+			active, expired = m.kept, append(expired, m.unpaid...)
 			return change{
 				kind: actionlog.KindRoundAdvance,
 				payload: logPayload{
 					Action: "next_round", FromRound: &r, ToRound: &next, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs,
-					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(),
+					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), PowerNames: m.powerNames(),
 				},
 				pspDelta: -m.spent,
 				buffs:    active,
@@ -74,6 +76,28 @@ type maintenance struct {
 	unpaid  []BuffEffect
 	charges []maintenanceCharge
 	spent   int
+}
+
+// powerNames is the localized name of every power that paid or ended, by id;
+// nil when none has a name.
+func (m maintenance) powerNames() map[string]localized.Text {
+	return PowerNames(append(slices.Clone(m.kept), m.unpaid...))
+}
+
+// PowerNames maps the maintained rows' power ids to their names in every
+// language; nil when no row has one.
+func PowerNames(rows []BuffEffect) map[string]localized.Text {
+	var out map[string]localized.Text
+	for _, b := range rows {
+		if b.PowerID == "" || len(b.PowerName) == 0 {
+			continue
+		}
+		if out == nil {
+			out = map[string]localized.Text{}
+		}
+		out[b.PowerID] = b.PowerName
+	}
+	return out
 }
 
 func (m maintenance) unpaidIDs() []string {

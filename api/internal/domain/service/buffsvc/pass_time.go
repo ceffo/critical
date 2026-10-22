@@ -60,13 +60,14 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 			if err != nil {
 				return change{}, err
 			}
-			active, expired = m.kept, append(expired, m.unpaid...)
+			// An unpaid power is listed once, as a power ended, not as expired.
 			names, spellIDs, profIDs := expiredNames(expired)
+			active, expired = m.kept, append(expired, m.unpaid...)
 			return change{
 				kind: actionlog.KindTimePassed,
 				payload: logPayload{
 					Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs,
-					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(),
+					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), PowerNames: m.powerNames(),
 				},
 				pspDelta: -m.spent,
 				buffs:    active,

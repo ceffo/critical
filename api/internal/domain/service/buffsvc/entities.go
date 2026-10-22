@@ -3,6 +3,7 @@ package buffsvc
 import (
 	"time"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -248,7 +249,11 @@ type BuffEffect struct {
 	// cost every period rounds kept (step 14), and the row ends when the
 	// PSPs cannot pay it. A row with a cost is untimed: it lasts until
 	// stopped (step 16) or unpaid.
-	PowerID           string
+	PowerID string
+	// PowerName is the power's catalogue name in every language at write
+	// time, so the log words a maintenance charge or an unpaid end with no
+	// catalogue read (ADR 0023). Stamped with PowerID.
+	PowerName         localized.Text
 	MaintenanceCost   int
 	MaintenancePeriod int
 	// RoundsKept counts the rounds a maintained row has been kept: 0 in its

@@ -163,7 +163,7 @@ func TestLongRest_Step7_RecoversANightsSleep(t *testing.T) {
 // back, and names the powers in the payload.
 func TestLongRest_Step7_EndsMaintainedPowers(t *testing.T) {
 	f := newFixture(t)
-	f.maintained = []buffsvc.BuffEffect{{ID: "r", Name: "Levitation", PowerID: "levitation", MaintenanceCost: 2}}
+	f.maintained = []buffsvc.BuffEffect{{ID: "r", Name: "Levitation", PowerID: "levitation", PowerName: localized.Text{"en": "Levitation", "fr": "Lévitation"}, MaintenanceCost: 2}}
 	f.buffSnap = actionlog.Snapshot{Key: "buffs", Before: []byte(`[1]`), After: []byte(`[]`)}
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
 	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
@@ -177,5 +177,5 @@ func TestLongRest_Step7_EndsMaintainedPowers(t *testing.T) {
 	require.Len(t, f.entries, 1)
 	e := f.entries[0]
 	assert.Contains(t, e.Snapshots, f.buffSnap)
-	assert.JSONEq(t, `{"slotsReset":0,"itemsRefilled":[],"powersEnded":["levitation"]}`, string(e.Payload))
+	assert.JSONEq(t, `{"slotsReset":0,"itemsRefilled":[],"powersEnded":["levitation"],"powerNames":{"levitation":{"en":"Levitation","fr":"Lévitation"}}}`, string(e.Payload))
 }

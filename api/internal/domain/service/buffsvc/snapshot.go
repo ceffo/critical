@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // snapBuff is buffsvc's own JSON encoding of a buff inside action-log
@@ -37,9 +38,11 @@ type snapBuff struct {
 	// PowerID, MaintenanceCost and MaintenancePeriod are absent from entries
 	// recorded before they existed and for a row not from a maintained
 	// power: they restore empty (ADR 0043 step 13).
-	PowerID           string `json:"power_id,omitempty"`
-	MaintenanceCost   int    `json:"maintenance_cost,omitempty"`
-	MaintenancePeriod int    `json:"maintenance_period,omitempty"`
+	PowerID string `json:"power_id,omitempty"`
+	// PowerName is absent from entries recorded before it existed.
+	PowerName         localized.Text `json:"power_name,omitempty"`
+	MaintenanceCost   int            `json:"maintenance_cost,omitempty"`
+	MaintenancePeriod int            `json:"maintenance_period,omitempty"`
 	// RoundsKept is absent for a row not from a maintained power and for
 	// one in its activation round: it restores 0 (ADR 0043 step 14).
 	RoundsKept int `json:"rounds_kept,omitempty"`
@@ -90,7 +93,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
-			PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept,
+			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept,
 		}
 	}
 	return out
@@ -103,7 +106,7 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 			ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
-			PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept,
+			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept,
 		}
 	}
 	return out

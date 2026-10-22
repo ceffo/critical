@@ -32,6 +32,6 @@ describeKind("buff_change", fixtures, {
   // ADR 0043 step 16: stopping a maintained power.
   powerStopped: {
     en: { text: "Stopped maintaining Mind Thrust" },
-    fr: { text: "Maintien arrêté : Mind Thrust" },
+    fr: { text: "Maintien arrêté : Poussée mentale" },
   },
 });

@@ -3,6 +3,8 @@
 import type { TFunction } from "i18next";
 import { Clock, Hourglass, Sparkle, type Icon } from "@phosphor-icons/react";
 import { buffName, type SpellNamer } from "@/i18n/spellName";
+import type { InventoryNamer } from "@/i18n/inventoryName";
+import type { LocalizedText } from "@/types/localized";
 import type { EndCause, EndEffectRoll } from "@/types/buffs";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
@@ -55,6 +57,8 @@ export interface BuffLogPayload {
   maintenance?: { powerId: string; cost: number }[];
   /** next_round / pass_time: the powers the PSPs left could not pay; they ended. */
   maintenanceUnpaid?: string[];
+  /** The powers above (and a dismissed one) by id, named in every language when logged. */
+  powerNames?: Record<string, LocalizedText>;
 }
 
 /** A power named from its id when the entry has no name: "mind_thrust" is "Mind thrust". */
@@ -119,7 +123,11 @@ function buffText(
   t: TFunction,
   spellName: SpellNamer,
   e: LogEntry,
+  names: InventoryNamer,
 ): string {
+  // The name the entry recorded, in the player's language; the id prettified for an older entry.
+  const power = (id: string, fallback = powerLabel(id)) =>
+    names.text(p.powerNames?.[id], fallback);
   const buff = buffName(
     spellName,
     {
@@ -163,7 +171,7 @@ function buffText(
   const kept = (p.maintenance ?? [])
     .map((m) =>
       t("log.buff.maintenanceOne", {
-        power: powerLabel(m.powerId),
+        power: power(m.powerId),
         cost: m.cost,
       }),
     )
@@ -176,7 +184,7 @@ function buffText(
     if (kept) out = `${out} ${t("log.buff.maintenance", { powers: kept })}`;
     if (p.maintenanceUnpaid?.length) {
       out = `${out} ${t("log.buff.powersEnded", {
-        powers: p.maintenanceUnpaid.map(powerLabel).join(", "),
+        powers: p.maintenanceUnpaid.map((id) => power(id)).join(", "),
       })}`;
     }
     return endOfMany
@@ -219,7 +227,8 @@ function buffText(
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
-      if (p.powerId) return t("log.buff.powerStopped", { power: buff });
+      if (p.powerId)
+        return t("log.buff.powerStopped", { power: power(p.powerId, buff) });
       return withEnded(
         p.cause === "voluntary"
           ? t("log.buff.dismissVoluntary", { buff })
@@ -262,7 +271,7 @@ function buffKind(icon: Icon): KindView<BuffLogPayload> {
   return {
     decode: decodeBuff,
     icon,
-    text: (p, w, e) => buffText(p, w.t, w.spellName, e),
+    text: (p, w, e) => buffText(p, w.t, w.spellName, e, w.names),
   };
 }
 

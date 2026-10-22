@@ -42,15 +42,20 @@
       "action": "next_round",
       "fromRound": 5,
       "toRound": 6,
-      "expired": ["Body Equilibrium"],
-      "expiredSpellIds": [""],
       "maintenance": [
         {
           "powerId": "mind_thrust",
           "cost": 2
         }
       ],
-      "maintenanceUnpaid": ["body_equilibrium"]
+      "maintenanceUnpaid": ["body_equilibrium"],
+      "powerNames": {
+        "mind_thrust": { "en": "Mind Thrust", "fr": "Poussée mentale" },
+        "body_equilibrium": {
+          "en": "Body Equilibrium",
+          "fr": "Équilibre corporel"
+        }
+      }
     }
   }
 }

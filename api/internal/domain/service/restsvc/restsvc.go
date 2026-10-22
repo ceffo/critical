@@ -15,6 +15,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -100,6 +101,8 @@ type restRecord struct {
 	// PowersEnded are the maintained powers the rest ended (ADR 0043 step
 	// 7), by catalogue id; their rows are in the entry's buff snapshot.
 	PowersEnded []string `json:"powersEnded,omitempty"`
+	// PowerNames names them by id in every language (ADR 0023).
+	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
 }
 
 // LongRest resets spell slots and per-day items atomically and logs it (ADR
@@ -138,6 +141,7 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 		for _, b := range ended {
 			rec.PowersEnded = append(rec.PowersEnded, b.PowerID)
 		}
+		rec.PowerNames = buffsvc.PowerNames(ended)
 		if len(ended) > 0 {
 			snaps = append(snaps, buffSnap)
 		}

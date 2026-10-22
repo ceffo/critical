@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
@@ -17,7 +18,7 @@ import (
 // kept rounds already (0: its activation round).
 func maintained(id, power string, cost, period, kept int) buffsvc.BuffEffect {
 	return buffsvc.BuffEffect{
-		ID: id, Name: power, PowerID: power, MaintenanceCost: cost, MaintenancePeriod: period, RoundsKept: kept,
+		ID: id, Name: power, PowerID: power, PowerName: localized.Text{"en": "En " + power, "fr": "Fr " + power}, MaintenanceCost: cost, MaintenancePeriod: period, RoundsKept: kept,
 	}
 }
 
@@ -61,7 +62,8 @@ func TestAdvanceRound_Step14_ChargesEachMaintainedPower(t *testing.T) {
 	assert.Empty(t, expired)
 	assert.Equal(t, -4, e.PSPDelta, "1 + 3")
 	assert.JSONEq(t, `{"action":"next_round","fromRound":4,"toRound":5,
-		"maintenance":[{"powerId":"ballistic_attack","cost":1},{"powerId":"levitation","cost":3}]}`, string(e.Payload))
+		"maintenance":[{"powerId":"ballistic_attack","cost":1},{"powerId":"levitation","cost":3}],
+		"powerNames":{"ballistic_attack":{"en":"En ballistic_attack","fr":"Fr ballistic_attack"},"levitation":{"en":"En levitation","fr":"Fr levitation"}}}`, string(e.Payload))
 }
 
 func TestAdvanceRound_Step14_TheStartRoundChargesNothing(t *testing.T) {
@@ -85,8 +87,8 @@ func TestAdvanceRound_Step14_UnpaidMaintenanceEnds(t *testing.T) {
 	assert.Equal(t, []buffsvc.BuffEffect{keptMore(b, 1)}, active, "the 1-PSP power after it still pays")
 	assert.Equal(t, []buffsvc.BuffEffect{a}, expired)
 	assert.Equal(t, -1, e.PSPDelta, "0 spent on the unpaid power")
-	assert.JSONEq(t, `{"action":"next_round","fromRound":3,"toRound":4,"expired":["levitation"],
-		"maintenance":[{"powerId":"ballistic_attack","cost":1}],"maintenanceUnpaid":["levitation"]}`, string(e.Payload))
+	assert.JSONEq(t, `{"action":"next_round","fromRound":3,"toRound":4,"maintenance":[{"powerId":"ballistic_attack","cost":1}],"maintenanceUnpaid":["levitation"],
+		"powerNames":{"ballistic_attack":{"en":"En ballistic_attack","fr":"Fr ballistic_attack"},"levitation":{"en":"En levitation","fr":"Fr levitation"}}}`, string(e.Payload))
 }
 
 func TestAdvanceRound_Step14_PeriodOfTenChargesEveryTenthRound(t *testing.T) {
@@ -146,7 +148,7 @@ func TestDismiss_Step16_StoppingIsFreeAndUndoable(t *testing.T) {
 	require.Len(t, f.entries, 1, "one logged entry")
 	e := f.entries[0]
 	assert.Zero(t, e.PSPDelta, "stopping is free")
-	assert.JSONEq(t, `{"action":"dismiss","buff":"levitation","powerId":"levitation"}`, string(e.Payload))
+	assert.JSONEq(t, `{"action":"dismiss","buff":"levitation","powerId":"levitation","powerNames":{"levitation":{"en":"En levitation","fr":"Fr levitation"}}}`, string(e.Payload))
 	require.Equal(t, []string{buffsvc.StateKeyBuffs}, snapKeys(e), "undo restores the row")
 	before := decodeSnap(t, e.Snapshots[0].Before)
 	require.Len(t, before, 1)
@@ -184,8 +186,8 @@ func TestPassTime_Step15_ChargesMaintenanceForTheRounds(t *testing.T) {
 	assert.Equal(t, []buffsvc.BuffEffect{a}, expired)
 	assert.Equal(t, -40, e.PSPDelta)
 	assert.JSONEq(t, `{"action":"pass_time","hours":1,"rounds":60,"fromRound":0,"toRound":0,
-		"expired":["ballistic_attack"],
-		"maintenance":[{"powerId":"ballistic_attack","cost":40}],"maintenanceUnpaid":["ballistic_attack"]}`, string(e.Payload))
+		"maintenance":[{"powerId":"ballistic_attack","cost":40}],"maintenanceUnpaid":["ballistic_attack"],
+		"powerNames":{"ballistic_attack":{"en":"En ballistic_attack","fr":"Fr ballistic_attack"}}}`, string(e.Payload))
 }
 
 // The charges go round by round, not row by row: a 5-PSP power every 10

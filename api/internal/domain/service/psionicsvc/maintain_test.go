@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
@@ -36,7 +37,7 @@ func TestActivate_Step13_AMaintainedPowerIsAnUntimedRow(t *testing.T) {
 
 	res, err := svc.Use(context.Background(), 7, "lift", psionicsvc.UseRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, buffsvc.BuffEffect{Name: "Lift", PowerID: "lift", MaintenanceCost: 3, MaintenancePeriod: 1}, row)
+	assert.Equal(t, buffsvc.BuffEffect{Name: "Lift", PowerID: "lift", PowerName: localized.Text{"en": "Lift", "fr": "Soulever"}, MaintenanceCost: 3, MaintenancePeriod: 1}, row)
 	assert.False(t, row.Timed(), "until stopped")
 	assert.Equal(t, "row-1", res.BuffID)
 	assert.Equal(t, -5, got.PSPDelta)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
@@ -62,6 +63,9 @@ type logPayload struct {
 	// could not pay: they ended, and are among Expired too.
 	Maintenance       []maintenanceCharge `json:"maintenance,omitempty"`
 	MaintenanceUnpaid []string            `json:"maintenanceUnpaid,omitempty"`
+	// PowerNames names those powers (and the ones a long rest ended) by id in
+	// every language, as power_check does, so the journal words them.
+	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
 }
 
 // maintenanceCharge is one maintained power's charge on Next Round.

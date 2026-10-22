@@ -3,8 +3,8 @@
 -- inserted; an amend, a void (pop) or a redo is a new action_corrections row.
 
 -- name: InsertAction :one
-INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO action_log (character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id;
 
 -- name: StartActionTransaction :exec
@@ -20,12 +20,12 @@ INSERT INTO action_corrections (action_id, kind, hp_delta, summary, payload, not
 VALUES ($1, $2, $3, $4, $5, $6, $7);
 
 -- name: GetAction :one
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1 AND id = $2;
 
 -- name: ListActions :many
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = sqlc.arg(character_id)
 ORDER BY id DESC
@@ -36,7 +36,7 @@ LIMIT sqlc.arg('limit')::bigint;
 -- rows, as many as the adapter needs to skip the popped ones.
 
 -- name: ListActionsByKind :many
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = sqlc.arg(character_id) AND kind = sqlc.arg(kind)
 ORDER BY id DESC
@@ -81,7 +81,7 @@ ORDER BY id DESC
 LIMIT 1;
 
 -- name: ListTransactionActions :many
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1 AND transaction_id = $2
 ORDER BY id DESC;
@@ -92,6 +92,16 @@ ORDER BY id DESC;
 
 -- name: ListHPDeltas :many
 SELECT id, hp_delta
+FROM action_log
+WHERE character_id = $1
+ORDER BY id;
+
+-- ListPSPDeltas reads every entry's own PSP delta; the adapter adds the
+-- corrections and sums the effective deltas in Go (actionlog.PSPTotal, ADR
+-- 0043 step 5).
+
+-- name: ListPSPDeltas :many
+SELECT id, psp_delta
 FROM action_log
 WHERE character_id = $1
 ORDER BY id;

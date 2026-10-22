@@ -64,6 +64,19 @@ type featureParamsDTO struct {
 	Armour        []rogueArmourDTO `json:"armour"`
 	MaxSpellLevel int              `json:"max_spell_level"`
 	FreeSpell     *bool            `json:"free_spell_per_new_spell_level"`
+	Progression   string           `json:"progression"`
+	PSP           *pspRuleDTO      `json:"psp"`
+	Recovery      string           `json:"recovery"`
+}
+
+type pspRuleDTO struct {
+	BaseAbility       string   `json:"base_ability"`
+	ModifierAbilities []string `json:"modifier_abilities"`
+	PerLevel          struct {
+		Ability string `json:"ability"`
+		Plus    int    `json:"plus"`
+	} `json:"per_level"`
+	Table string `json:"table"`
 }
 
 type rogueBudgetDTO struct {
@@ -107,6 +120,15 @@ func (f featureDTO) feature() (classes.Feature, error) {
 		out.RogueSkills = r
 	case classes.KindSpellbook:
 		out.Spellbook = &classes.Spellbook{MaxSpellLevel: p.MaxSpellLevel, FreeSpellPerNewSpellLevel: p.FreeSpell != nil && *p.FreeSpell}
+	case classes.KindPsionics:
+		ps := &classes.Psionics{Progression: p.Progression, Recovery: p.Recovery}
+		if p.PSP != nil {
+			ps.PSP = classes.PSPRule{
+				BaseAbility: p.PSP.BaseAbility, ModifierAbilities: p.PSP.ModifierAbilities,
+				PerLevel: classes.PSPPerLevel(p.PSP.PerLevel), Table: p.PSP.Table,
+			}
+		}
+		out.Psionics = ps
 	}
 	return out, nil
 }

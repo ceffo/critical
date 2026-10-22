@@ -12,7 +12,7 @@ import (
 )
 
 const getAction = `-- name: GetAction :one
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1 AND id = $2
 `
@@ -29,6 +29,7 @@ type GetActionRow struct {
 	Kind          string
 	Summary       string
 	HpDelta       int64
+	PspDelta      int64
 	Payload       string
 	TransactionID sql.NullInt64
 	CreatedAt     time.Time
@@ -44,6 +45,7 @@ func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (GetAction
 		&i.Kind,
 		&i.Summary,
 		&i.HpDelta,
+		&i.PspDelta,
 		&i.Payload,
 		&i.TransactionID,
 		&i.CreatedAt,
@@ -53,8 +55,8 @@ func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (GetAction
 
 const insertAction = `-- name: InsertAction :one
 
-INSERT INTO action_log (character_id, round, kind, summary, hp_delta, payload, transaction_id)
-VALUES ($1, $2, $3, $4, $5, $6, $7)
+INSERT INTO action_log (character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 RETURNING id
 `
 
@@ -64,6 +66,7 @@ type InsertActionParams struct {
 	Kind          string
 	Summary       string
 	HpDelta       int64
+	PspDelta      int64
 	Payload       string
 	TransactionID sql.NullInt64
 }
@@ -78,6 +81,7 @@ func (q *Queries) InsertAction(ctx context.Context, arg InsertActionParams) (int
 		arg.Kind,
 		arg.Summary,
 		arg.HpDelta,
+		arg.PspDelta,
 		arg.Payload,
 		arg.TransactionID,
 	)
@@ -193,7 +197,7 @@ func (q *Queries) ListActionIDs(ctx context.Context, arg ListActionIDsParams) ([
 }
 
 const listActions = `-- name: ListActions :many
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1
 ORDER BY id DESC
@@ -212,6 +216,7 @@ type ListActionsRow struct {
 	Kind          string
 	Summary       string
 	HpDelta       int64
+	PspDelta      int64
 	Payload       string
 	TransactionID sql.NullInt64
 	CreatedAt     time.Time
@@ -233,6 +238,7 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]Lis
 			&i.Kind,
 			&i.Summary,
 			&i.HpDelta,
+			&i.PspDelta,
 			&i.Payload,
 			&i.TransactionID,
 			&i.CreatedAt,
@@ -252,7 +258,7 @@ func (q *Queries) ListActions(ctx context.Context, arg ListActionsParams) ([]Lis
 
 const listActionsByKind = `-- name: ListActionsByKind :many
 
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1 AND kind = $2
 ORDER BY id DESC
@@ -272,6 +278,7 @@ type ListActionsByKindRow struct {
 	Kind          string
 	Summary       string
 	HpDelta       int64
+	PspDelta      int64
 	Payload       string
 	TransactionID sql.NullInt64
 	CreatedAt     time.Time
@@ -296,6 +303,7 @@ func (q *Queries) ListActionsByKind(ctx context.Context, arg ListActionsByKindPa
 			&i.Kind,
 			&i.Summary,
 			&i.HpDelta,
+			&i.PspDelta,
 			&i.Payload,
 			&i.TransactionID,
 			&i.CreatedAt,
@@ -412,6 +420,45 @@ func (q *Queries) ListHPDeltas(ctx context.Context, characterID int64) ([]ListHP
 	return items, nil
 }
 
+const listPSPDeltas = `-- name: ListPSPDeltas :many
+
+SELECT id, psp_delta
+FROM action_log
+WHERE character_id = $1
+ORDER BY id
+`
+
+type ListPSPDeltasRow struct {
+	ID       int64
+	PspDelta int64
+}
+
+// ListPSPDeltas reads every entry's own PSP delta; the adapter adds the
+// corrections and sums the effective deltas in Go (actionlog.PSPTotal, ADR
+// 0043 step 5).
+func (q *Queries) ListPSPDeltas(ctx context.Context, characterID int64) ([]ListPSPDeltasRow, error) {
+	rows, err := q.db.QueryContext(ctx, listPSPDeltas, characterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPSPDeltasRow{}
+	for rows.Next() {
+		var i ListPSPDeltasRow
+		if err := rows.Scan(&i.ID, &i.PspDelta); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listPopCorrections = `-- name: ListPopCorrections :many
 SELECT action_corrections.id, action_corrections.action_id, action_corrections.kind
 FROM action_corrections
@@ -501,7 +548,7 @@ func (q *Queries) ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromPa
 }
 
 const listTransactionActions = `-- name: ListTransactionActions :many
-SELECT id, character_id, round, kind, summary, hp_delta, payload, transaction_id, created_at
+SELECT id, character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id, created_at
 FROM action_log
 WHERE character_id = $1 AND transaction_id = $2
 ORDER BY id DESC
@@ -519,6 +566,7 @@ type ListTransactionActionsRow struct {
 	Kind          string
 	Summary       string
 	HpDelta       int64
+	PspDelta      int64
 	Payload       string
 	TransactionID sql.NullInt64
 	CreatedAt     time.Time
@@ -540,6 +588,7 @@ func (q *Queries) ListTransactionActions(ctx context.Context, arg ListTransactio
 			&i.Kind,
 			&i.Summary,
 			&i.HpDelta,
+			&i.PspDelta,
 			&i.Payload,
 			&i.TransactionID,
 			&i.CreatedAt,

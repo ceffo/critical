@@ -49,6 +49,7 @@ func (d *DAL) InsertEntry(ctx context.Context, e actionlog.NewEntry, transaction
 		Kind:          string(e.Kind),
 		Summary:       e.Summary,
 		HpDelta:       int64(e.HPDelta),
+		PspDelta:      int64(e.PSPDelta),
 		Payload:       payload,
 		TransactionID: nullInt(transactionID, transactionID != 0),
 	})
@@ -260,6 +261,28 @@ func (d *DAL) HPTotal(ctx context.Context, characterID int64) (int, error) {
 	return actionlog.HPTotal(entries), nil
 }
 
+// PSPTotal returns the sum of the effective PSP deltas of every entry of the
+// character, worked out by the domain rule (actionlog.PSPTotal, ADR 0043
+// step 5) over the entries' own deltas and their corrections; 0 when the log
+// is empty.
+func (d *DAL) PSPTotal(ctx context.Context, characterID int64) (int, error) {
+	rows, err := d.q.ListPSPDeltas(ctx, characterID)
+	if err != nil {
+		return 0, fmt.Errorf("list action_log psp: %w", err)
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	entries := make([]actionlog.Entry, len(rows))
+	for i, r := range rows {
+		entries[i] = actionlog.Entry{ID: r.ID, CharacterID: characterID, PSPDelta: int(r.PspDelta)}
+	}
+	if err := d.attachCorrections(ctx, characterID, entries, entries[0].ID); err != nil {
+		return 0, err
+	}
+	return actionlog.PSPTotal(entries), nil
+}
+
 // attach loads snapshots and corrections for entries (any order) in two
 // queries bounded below by the smallest id.
 func (d *DAL) attach(ctx context.Context, characterID int64, entries []actionlog.Entry) error {
@@ -353,7 +376,7 @@ func (d *DAL) attachCorrections(ctx context.Context, characterID int64, entries 
 func toEntry(f queries.GetActionRow) actionlog.Entry {
 	return actionlog.Entry{
 		ID: f.ID, TransactionID: ownTransaction(f.ID, f.TransactionID), CharacterID: f.CharacterID, Round: int(f.Round), Kind: actionlog.Kind(f.Kind),
-		Summary: f.Summary, HPDelta: int(f.HpDelta), Payload: json.RawMessage(f.Payload), CreatedAt: storedTime(f.CreatedAt),
+		Summary: f.Summary, HPDelta: int(f.HpDelta), PSPDelta: int(f.PspDelta), Payload: json.RawMessage(f.Payload), CreatedAt: storedTime(f.CreatedAt),
 	}
 }
 

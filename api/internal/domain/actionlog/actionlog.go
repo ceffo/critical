@@ -281,6 +281,8 @@ type Snapshot struct {
 
 // NewEntry is what a service records. Round 0 means "stamp the current round".
 // HPDelta is the entry's contribution to current HP (0 for most kinds).
+// PSPDelta is its contribution to current PSPs (ADR 0043 step 5: any kind may
+// carry one; 0 for every kind that is not psionic).
 // Payload is the structured record of what happened (for example a full
 // attack breakdown); the UI words it in the player's language. Summary is
 // only free text the player typed (an HP change's source): the backend never
@@ -291,6 +293,7 @@ type NewEntry struct {
 	Kind        Kind
 	Summary     string
 	HPDelta     int
+	PSPDelta    int
 	Payload     json.RawMessage
 	Snapshots   []Snapshot
 }
@@ -434,6 +437,7 @@ type Entry struct {
 	Kind          Kind
 	Summary       string
 	HPDelta       int
+	PSPDelta      int
 	Payload       json.RawMessage
 	Snapshots     []Snapshot
 	CreatedAt     time.Time

@@ -42,6 +42,9 @@ type SVC interface {
 	TopID(ctx context.Context, characterID int64) (id int64, ok bool, err error)
 	// HPTotal is the SUM of effective HP deltas (actionlog.HPTotal over the log).
 	HPTotal(ctx context.Context, characterID int64) (int, error)
+	// PSPTotal is the SUM of effective PSP deltas (actionlog.PSPTotal over
+	// the log, ADR 0043 step 5).
+	PSPTotal(ctx context.Context, characterID int64) (int, error)
 	// ActiveEntries returns the newest non-voided entries of kind.
 	ActiveEntries(ctx context.Context, characterID int64, kind actionlog.Kind, limit int) ([]actionlog.Entry, error)
 	// GetHPState is the HP read model: max HP, current HP (max plus the log's
@@ -89,6 +92,9 @@ type DAL interface {
 	// HPTotal returns the sum of the effective HP deltas of every entry, by
 	// the domain rule actionlog.HPTotal over the entries and their corrections.
 	HPTotal(ctx context.Context, characterID int64) (int, error)
+	// PSPTotal returns the sum of the effective PSP deltas of every entry,
+	// by the domain rule actionlog.PSPTotal (ADR 0043 step 5).
+	PSPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Rounds supplies the current round number used to stamp new entries. It is

@@ -28,6 +28,10 @@ type Querier interface {
 	// corrections and sums the effective deltas in Go (actionlog.HPTotal, ADR
 	// 0007 step 2).
 	ListHPDeltas(ctx context.Context, characterID int64) ([]ListHPDeltasRow, error)
+	// ListPSPDeltas reads every entry's own PSP delta; the adapter adds the
+	// corrections and sums the effective deltas in Go (actionlog.PSPTotal, ADR
+	// 0043 step 5).
+	ListPSPDeltas(ctx context.Context, characterID int64) ([]ListPSPDeltasRow, error)
 	ListPopCorrections(ctx context.Context, characterID int64) ([]ListPopCorrectionsRow, error)
 	ListSnapshotsFrom(ctx context.Context, arg ListSnapshotsFromParams) ([]ListSnapshotsFromRow, error)
 	ListTransactionActions(ctx context.Context, arg ListTransactionActionsParams) ([]ListTransactionActionsRow, error)

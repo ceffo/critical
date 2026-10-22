@@ -39,8 +39,8 @@ const (
 	// KindSpellbook: a spellbook (ADR 0030 step 20). Param Spellbook.
 	KindSpellbook = "spellbook"
 	// KindPsionics: the psionicist's PSPs, picks and power checks (ADR 0043
-	// steps 4 to 12). Its params (progression, psp, recovery) are checked by
-	// the catalogue schema and not read yet. Not implemented (Implemented).
+	// steps 2 and 4 to 12). Param Psionics. Not implemented (Implemented)
+	// until its picks and checks are built.
 	KindPsionics = "psionics"
 	// KindSaveBonus: a bonus on a save against a kind of effect (ADR 0043
 	// step 3). Its params (against, bonus) are checked by the catalogue
@@ -92,6 +92,38 @@ type Feature struct {
 	RogueSkills *RogueSkills
 	// Spellbook is spellbook's params.
 	Spellbook *Spellbook
+	// Psionics is psionics' params.
+	Psionics *Psionics
+}
+
+// Psionics are the params of psionics (ADR 0043 step 2): the power
+// progression table, the PSP rule and the PSP recovery table.
+type Psionics struct {
+	// Progression names the power progression table (step 2.1).
+	Progression string
+	// PSP is the PSP maximum's rule (steps 2.2 and 4).
+	PSP PSPRule
+	// Recovery names the PSP recovery table (steps 2.3 and 6).
+	Recovery string
+}
+
+// PSPRule is the psp param of psionics (ADR 0043 steps 2.2 and 4): at level
+// 1 the Table base score at BaseAbility plus the Table modifiers at
+// ModifierAbilities; each later level the Table modifier at PerLevel's
+// ability plus PerLevel.Plus.
+type PSPRule struct {
+	BaseAbility       string
+	ModifierAbilities []string
+	PerLevel          PSPPerLevel
+	// Table names the inherent potential table (Table 5).
+	Table string
+}
+
+// PSPPerLevel is a psionics level's PSP gain from level 2 (ADR 0043 step
+// 4.2): the Table modifier at Ability plus Plus.
+type PSPPerLevel struct {
+	Ability string
+	Plus    int
 }
 
 // SphereAccess are the params of sphere_access (ADR 0030 step 15): the
@@ -237,6 +269,11 @@ func (f Feature) clone() Feature {
 		b := *f.Spellbook
 		f.Spellbook = &b
 	}
+	if f.Psionics != nil {
+		p := *f.Psionics
+		p.PSP.ModifierAbilities = slices.Clone(p.PSP.ModifierAbilities)
+		f.Psionics = &p
+	}
 	return f
 }
 
@@ -267,6 +304,9 @@ func checkFeatures(fs []Feature) ([]Feature, error) {
 // kind.
 func checkParams(f Feature) error {
 	table, ability, spheres, rogue, book := f.Table != "", f.Ability != "", f.Spheres != nil, f.RogueSkills != nil, f.Spellbook != nil
+	if f.Kind != KindPsionics && f.Psionics != nil {
+		return errors.New("a missing or unexpected parameter")
+	}
 	want := func(t, a, s, r, b bool) error {
 		if table != t || ability != a || spheres != s || rogue != r || book != b {
 			return errors.New("a missing or unexpected parameter")
@@ -274,8 +314,16 @@ func checkParams(f Feature) error {
 		return nil
 	}
 	switch f.Kind {
-	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells, KindPsionics, KindSaveBonus:
+	case KindExceptionalStrength, KindWeaponSpecialization, KindWisdomBonusSpells, KindSaveBonus:
 		return want(false, false, false, false, false)
+	case KindPsionics:
+		if err := want(false, false, false, false, false); err != nil {
+			return err
+		}
+		if f.Psionics == nil {
+			return errors.New("a missing or unexpected parameter")
+		}
+		return checkPsionics(*f.Psionics)
 	case KindMeleeAttacksPerRound, KindTurnUndead, KindBackstab:
 		return want(true, false, false, false, false)
 	case KindSpellFailure:
@@ -309,6 +357,22 @@ func checkParams(f Feature) error {
 		return nil
 	}
 	return fmt.Errorf("unknown feature kind %q", f.Kind)
+}
+
+// checkPsionics refuses a psionics feature with a table not named or an
+// unknown ability (ADR 0040 step 8); that the named tables exist is the rule
+// tables' check at start.
+func checkPsionics(p Psionics) error {
+	if p.Progression == "" || p.Recovery == "" || p.PSP.Table == "" {
+		return errors.New("a table not named")
+	}
+	abilities := append([]string{p.PSP.BaseAbility, p.PSP.PerLevel.Ability}, p.PSP.ModifierAbilities...)
+	for _, a := range abilities {
+		if !slices.Contains(Abilities, a) {
+			return fmt.Errorf("unknown ability %q", a)
+		}
+	}
+	return nil
 }
 
 func checkRogueSkills(r RogueSkills) error {

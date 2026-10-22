@@ -3,7 +3,7 @@
 -- realized_level is the level the character has taken (ADR 0030 step 7); NULL is the sheet's level
 -- (step 7.5), which stays the imported figure step 24 compares.
 -- name: GetCharacter :one
-SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
        COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks
@@ -99,12 +99,12 @@ WHERE users.id = sqlc.arg(user_id) AND EXISTS (
 -- its max HP for it (step 7.5). Its details start empty.
 -- name: CreateCharacter :one
 INSERT INTO characters (
-    name, str, str_exceptional, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total,
+    name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
     save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
     class, race_code, owner_user_id, realized_level, skill_sets, proficiency_picks
 ) VALUES (
     sqlc.arg(name), sqlc.arg(str), sqlc.arg(str_exceptional), sqlc.arg(dex), sqlc.arg(con), sqlc.arg(int), sqlc.arg(wis),
-    sqlc.arg(cha), sqlc.arg(hp_max), sqlc.arg(thac0_base), sqlc.arg(level), sqlc.arg(xp_total),
+    sqlc.arg(cha), sqlc.arg(hp_max), sqlc.arg(psp_max), sqlc.arg(thac0_base), sqlc.arg(level), sqlc.arg(xp_total),
     sqlc.arg(save_para_poison), sqlc.arg(save_rod_staff_wand), sqlc.arg(save_petri_poly),
     sqlc.arg(save_breath), sqlc.arg(save_spell), sqlc.arg(class), sqlc.arg(race_code),
     sqlc.arg(owner_user_id), sqlc.arg(realized_level), sqlc.arg(skill_sets), sqlc.arg(proficiency_picks)

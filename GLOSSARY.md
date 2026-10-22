@@ -58,6 +58,9 @@ _Avoid_: dual (for this).
 Leaving one class for a new one, the old one frozen; its abilities are used without penalty again once the new class's level passes it (the **crossover**). The user also says "serial". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 _Avoid_: serial, multi (for this).
 
+**Crossover** (fr: dépassement):
+The moment a dual-class character's new class level passes the frozen old class's level; from then on the old class's abilities work again without penalty. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
+
 **Class feature** (fr: aptitude de classe) _(planned)_:
 One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
 
@@ -107,7 +110,7 @@ To Hit Armour Class 0; the armour class, descending. [ADR 0002](docs/adr/0002-at
 **Saving throw** (fr: jet de sauvegarde), or **save**:
 A d20 at or above the target of one of the five categories. [ADR 0006](docs/adr/0006-saving-throws.md).
 _Avoid_: jet de protection.
-_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, Saves, SaveType
+_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, SaveOptions, Saves, SaveType
 
 **Mind-affecting** (fr: contre l'esprit):
 A flag on a saving-throw request: the save is against mind-affecting magic, so Wisdom's magical

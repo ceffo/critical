@@ -566,6 +566,7 @@
     "classWizard": "Magicien",
     "classPriest": "Prêtre",
     "classAll": "Tous",
+    "classPowers": "Pouvoirs",
     "levelsLabel": "Niveaux de sort",
     "levelShort": "Niv. {{level}}",
     "levelLabel": "Niveau {{level}}",
@@ -1043,6 +1044,43 @@
       "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)",
       "free": "Sort gratuit du niveau {{level}}",
       "addFreeTitle": "Écrire ce sort dans le grimoire comme sort gratuit du niveau {{level}}, sans jet"
+    },
+    "powers": {
+      "search": "Rechercher des pouvoirs...",
+      "disciplineLabel": "Discipline",
+      "kindLabel": "Type",
+      "kinds": {
+        "science": "Science",
+        "devotion": "Dévotion",
+        "defence_mode": "Mode de défense",
+        "attack_mode": "Mode d'attaque"
+      },
+      "count_one": "{{count}} pouvoir",
+      "count_other": "{{count}} pouvoirs",
+      "results": "Pouvoirs",
+      "noMatch": "Aucun pouvoir ne correspond",
+      "detail": "Détail du pouvoir",
+      "noSelection": "Choisissez un pouvoir pour l'afficher ici.",
+      "initialCost": "Coût initial",
+      "maintenance": "Maintien",
+      "score": "Score de pouvoir",
+      "range": "Portée",
+      "preparationTime": "Préparation",
+      "area": "Zone",
+      "psp_one": "{{count}} PFP",
+      "psp_other": "{{count}} PFP",
+      "costWords": {
+        "variable": "Variable",
+        "contact": "Au contact"
+      },
+      "maintenanceValue_one": "{{cost}} par tour",
+      "maintenanceValue_other": "{{cost}} tous les {{count}} tours",
+      "noMaintenance": "Ne peut pas être maintenu",
+      "scoreInText": "Donné dans le texte",
+      "prerequisites": "Prérequis :",
+      "minLevel": "Niveau {{level}} et plus",
+      "powerScoreResult": "Selon le score de pouvoir",
+      "natural20Result": "Sur un 20 naturel"
     }
   },
   "result": {

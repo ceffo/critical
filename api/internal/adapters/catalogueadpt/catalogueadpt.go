@@ -78,6 +78,12 @@ type Artifact struct {
 	// groups and races lists as written (ADR 0021 step 18); ruletablesadpt
 	// reads it into the class registry (ADR 0040 step 11.2).
 	Definitions json.RawMessage
+	// Disciplines and Powers are the format-13 artifact's psionic catalogue
+	// (ADR 0021 step 20.3, ADR 0043 step 8), in book order. Like the rule
+	// tables they are read at every start and never imported: powersvc
+	// serves them from memory.
+	Disciplines []catalogue.Discipline
+	Powers      []catalogue.Power
 }
 
 // Load reads and validates the artifact at path and returns its spells.
@@ -140,10 +146,74 @@ type artifactDTO struct {
 	Groups  json.RawMessage `json:"groups"`
 	Races   json.RawMessage `json:"races"`
 	// Disciplines and Powers (format 13, step 20) are the psionic catalogue
-	// the psionics item (ADR 0043) reads; they are schema-checked and not
-	// imported yet.
-	Disciplines json.RawMessage `json:"disciplines"`
-	Powers      json.RawMessage `json:"powers"`
+	// (ADR 0043 step 8).
+	Disciplines []disciplineDTO `json:"disciplines"`
+	Powers      []powerDTO      `json:"powers"`
+}
+
+type disciplineDTO struct {
+	ID   string         `json:"id"`
+	Name localized.Text `json:"name"`
+}
+
+// costDTO reads a cost that is a number or one of the words `variable` and
+// `contact` (the schema admits nothing else).
+type costDTO catalogue.Cost
+
+func (c *costDTO) UnmarshalJSON(b []byte) error {
+	var word string
+	if err := json.Unmarshal(b, &word); err == nil {
+		*c = costDTO{Kind: word}
+		return nil
+	}
+	var n int
+	if err := json.Unmarshal(b, &n); err != nil {
+		return fmt.Errorf("a cost is a number, variable or contact: %w", err)
+	}
+	*c = costDTO{Amount: n}
+	return nil
+}
+
+type powerDTO struct {
+	ID         string         `json:"id"`
+	Name       localized.Text `json:"name"`
+	Discipline string         `json:"discipline"`
+	Kind       string         `json:"kind"`
+	Score      *struct {
+		Ability  string `json:"ability"`
+		Modifier int    `json:"modifier"`
+	} `json:"score"`
+	InitialCost costDTO `json:"initial_cost"`
+	Maintenance *struct {
+		Cost   costDTO `json:"cost"`
+		Period int     `json:"period"`
+	} `json:"maintenance"`
+	Prerequisites    []string       `json:"prerequisites"`
+	MinLevel         int            `json:"min_level"`
+	Range            localized.Text `json:"range"`
+	PreparationTime  localized.Text `json:"preparation_time"`
+	Area             localized.Text `json:"area"`
+	Description      localized.Text `json:"description"`
+	PowerScoreResult localized.Text `json:"power_score_result"`
+	Natural20Result  localized.Text `json:"natural_20_result"`
+}
+
+func (p powerDTO) power() catalogue.Power {
+	out := catalogue.Power{
+		ID: p.ID, Name: p.Name.Clean(), Discipline: p.Discipline, Kind: p.Kind,
+		InitialCost:   catalogue.Cost(p.InitialCost),
+		Prerequisites: append([]string{}, p.Prerequisites...), MinLevel: p.MinLevel,
+		Range: p.Range.Clean(), PreparationTime: p.PreparationTime.Clean(), Area: p.Area.Clean(),
+		Description:      p.Description.Clean(),
+		PowerScoreResult: p.PowerScoreResult.Clean(), Natural20Result: p.Natural20Result.Clean(),
+	}
+	if p.Score != nil {
+		out.Score = &catalogue.PowerScore{Ability: p.Score.Ability, Modifier: p.Score.Modifier}
+	}
+	if p.Maintenance != nil {
+		out.Maintenance = &catalogue.Maintenance{Cost: catalogue.Cost(p.Maintenance.Cost), Period: p.Maintenance.Period}
+	}
+	return out
 }
 
 type proficiencyDescriptionDTO struct {
@@ -237,7 +307,21 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	if err != nil {
 		return Artifact{}, fmt.Errorf("definitions: %w", err)
 	}
-	return Artifact{Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages, Definitions: defs}, nil
+	disciplines := make([]catalogue.Discipline, 0, len(a.Disciplines))
+	for _, d := range a.Disciplines {
+		disciplines = append(disciplines, catalogue.Discipline{ID: d.ID, Name: d.Name.Clean()})
+	}
+	powers := make([]catalogue.Power, 0, len(a.Powers))
+	for _, p := range a.Powers {
+		powers = append(powers, p.power())
+	}
+	if err := catalogue.CheckPowers(disciplines, powers); err != nil {
+		return Artifact{}, err
+	}
+	return Artifact{
+		Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages, Definitions: defs,
+		Disciplines: disciplines, Powers: powers,
+	}, nil
 }
 
 // knownFormat reports whether the raw format value is one this API reads,

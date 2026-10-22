@@ -1,7 +1,7 @@
 # ADR 0015: Experience
 
 **Status**: accepted, 2026-10-15 (critical-kiv.13). Step 4 amended by
-[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation; step 3 implemented 2026-10-18 (`L` is the level ADR 0030 step 3 derives from the total, so it never exceeds 20 and reaching a threshold raises it; `T` is the character's class table, e.g. Table 20 for a mage), step 2 not yet (still the bard's rule).
+[ADR 0018](0018-transactions-and-undo.md) step 7, 2026-10-15. Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (bonus by class, level from XP), on its implementation; step 3 implemented 2026-10-18 (`L` is the level ADR 0030 step 3 derives from the total, so it never exceeds 20 and reaching a threshold raises it; `T` is the character's class table, e.g. Table 20 for a mage), step 2 not yet (still the bard's rule). Steps 1 to 3 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 5 to 7 (multi-class and dual-class), on implementation.
 
 ## Context
 
@@ -27,6 +27,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    ledger's `total`, and previews an entry before it is added (`GET /api/xp/preview`).
    Tests: `TestEntryAmount_TenPercentBonusRoundedHalfUp`, `TestLedgerTotal_OpeningPlusEveryEntry`,
    `TestPreview_IsStep1AndValidatesTheBase`, `TestGet_TotalsEntriesOverTheSheetAndReportsEligibility`.
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 5, on implementation: the ledger stays one list per character; each award's amount goes in equal shares to a multi-class character's active class entries (even one at its level limit), wholly to a dual-class's active entry; a class entry's XP is its starting XP plus its shares, derived on read)_
 2. **Bonus eligibility from Dexterity and Charisma both at least 16.** Read from the sheet's
    scores (not the effective ones under buffs) and returned as `bonusEligible`; the client uses it
    only as the default of the add form's +10% checkbox. The flag stored on each entry is what
@@ -36,6 +37,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 6, on implementation: eligible when every prime
    requisite of the character's class is 16 or more, read from the class definition; Dexterity and
    Charisma are the bard's, not every class's.)_
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 6, on implementation: with several class entries, eligible when every prime requisite of every active entry's class is 16 or more; a frozen entry's class does not count)_
 3. **Progress to the next level from PHB Table 25.** The thresholds are rules data in the
    catalogue artifact's `rule_tables` ([ADR 0021](0021-spell-catalogue.md) step 9;
    `bard_experience`, levels 1 to 20, validated at startup: from 0, strictly increasing). With
@@ -50,6 +52,7 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    `current`, `next`, `ahead`).
    Tests: `TestComputeProgress_FromTheClassTable`, `TestBardXPThreshold` (ruletablesadpt, against the
    PHB page), `TestParse_Step9_3_RejectsBrokenTables` (ruletablesadpt).
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 7, on implementation: the progress is per active class entry, on the entry's XP and its class's table; a frozen entry shows none)_
 4. **The ledger is on the action stack.** Adding, editing (base, bonus, reason, session) and
    deleting an entry each write the `xp_entries` table and record one action-log entry in the same
    transaction ([ADR 0018](0018-transactions-and-undo.md) steps 1 and 7): `xp_add`, `xp_edit`,
@@ -74,4 +77,4 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
   (step 4 as amended by ADR 0018; the ledger was first outside the stack).
 - Migration 018 drops the never-written `xp_events` table from migration 002.
 - Not covered: levelling up (HP, THAC0, saves, slots and the level itself), multi-class and dual-class
-  XP, XP for other classes, negative awards (level drain is out of scope).
+  XP _(now [ADR 0042](0042-multi-class-and-dual-class.md) steps 5 to 7)_, XP for other classes, negative awards (level drain is out of scope).

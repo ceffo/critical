@@ -48,15 +48,18 @@ _Avoid_: class table (a rule table is something else).
 Warrior, wizard, priest or rogue: the grouping the tables are read by; a field of the class definition. [ADR 0030](docs/adr/0030-classes-and-races.md) step 2, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.2.
 
 **Class entry** (fr: classe du personnage) _(planned)_:
-One class of a character with its own level and XP; the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5. _Avoid_: "class" for the entry.
+One class of a character with its own realized level and XP, **active** (it earns XP and levels) or **frozen** (a dual-class's old class, with the level it was left at); the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 1. _Avoid_: "class" for the entry.
 
 **Multi-class** (fr: multi-classé):
-Several classes from the start, levelled together, the XP split between them. The user also says "dual". PHB p.43.
+Several classes from the start (two or three active class entries), each levelling on its own, the XP split evenly between them. The user also says "dual". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 _Avoid_: dual (for this).
 
 **Dual-class** (fr: classes successives):
-Leaving one class for a new one, the old one frozen. The user also says "serial". PHB p.43.
+Leaving one class for a new one, the old one frozen; its abilities are used without penalty again once the new class's level passes it (the **crossover**). The user also says "serial". PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 _Avoid_: serial, multi (for this).
+
+**Crossover** (fr: dépassement):
+The moment a dual-class character's new class level passes the frozen old class's level; from then on the old class's abilities work again without penalty. PHB p.43, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md).
 
 **Class feature** (fr: aptitude de classe) _(planned)_:
 One ability a class grants from a level, as data: a feature kind with its parameters (turning, backstab, a skill set). [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: power (that is a psionic word), flag.
@@ -107,7 +110,7 @@ To Hit Armour Class 0; the armour class, descending. [ADR 0002](docs/adr/0002-at
 **Saving throw** (fr: jet de sauvegarde), or **save**:
 A d20 at or above the target of one of the five categories. [ADR 0006](docs/adr/0006-saving-throws.md).
 _Avoid_: jet de protection.
-_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, Saves, SaveType
+_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, SaveOptions, Saves, SaveType
 
 **Mind-affecting** (fr: contre l'esprit):
 A flag on a saving-throw request: the save is against mind-affecting magic, so Wisdom's magical

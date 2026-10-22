@@ -213,6 +213,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    it, read with the entry's level), `Lookup_Step5_ANewClassOfKnownKindsNeedsNoCode` (domain: a
    fixture class `test_skald`, group rogue, `rogue_skills` set `bard` and `spellbook`, derives its
    skills and spellbook with no code change).
+   _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 12, on implementation: with several class entries, each entry grants its kinds at its own realized level (a frozen entry at the level it was left at) and each grant is read with its entry's parameters and level; a figure that is one per character (THAC0, saves, proficiency slots, hit points) combines by ADR 0042 steps 8 to 10 and 15, never by a class id)_
 
 6. **Prime requisites and the XP bonus.** A character is eligible for the 10% bonus of
    [ADR 0015](0015-experience.md) step 1 when **every** prime requisite of its class is 16 or more

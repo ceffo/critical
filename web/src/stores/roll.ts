@@ -30,8 +30,8 @@ interface RollStore {
   rolling: boolean;
   /** Resolves true when the attack was rolled (and logged). */
   rollAttack: (req: AttackRequest) => Promise<boolean>;
-  /** mindAffecting: the magic attacks the mind (ADR 0006 step 9.3). */
-  rollSave: (category: SaveCategory, mindAffecting?: boolean) => Promise<void>;
+  /** mindAffecting: the magic attacks the mind (ADR 0006 step 9.3). Resolves true when the save was rolled (and logged). */
+  rollSave: (category: SaveCategory, mindAffecting?: boolean) => Promise<boolean>;
   /**
    * Sets the adjustment of the latest save (log entry id; the server refuses any other); resolves
    * true on success. The recomputed save becomes the last roll.
@@ -111,12 +111,11 @@ export const useRollStore = create<RollStore>((set) => {
       })),
     rollExposure: (req) =>
       roll(async () => ({ kind: "exposure", result: await postExposure(req) })),
-    rollSave: async (category, mindAffecting = false) => {
-      await roll(async () => ({
+    rollSave: (category, mindAffecting = false) =>
+      roll(async () => ({
         kind: "save",
         result: await rollSavingThrow(category, mindAffecting),
-      }));
-    },
+      })),
     adjustLastAttack: (id, targetAc) =>
       roll(async () => ({
         kind: "attack",

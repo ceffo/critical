@@ -25,7 +25,8 @@ const TARGET_FIELD: Record<SaveCategory, keyof SaveNumbers> = {
  * (the newest logged save in that category, with the server's verdict). A click rolls it through
  * the save endpoint; the result card shows the breakdown. "Against the mind" flags the next save as
  * against magic that attacks the mind (ADR 0006 step 9.3): the server adds the Wisdom modifier. It
- * is the player's call for one save, so it clears once that save is rolled.
+ * is the player's call for one save, so it clears once that save is rolled (not when
+ * the request fails).
  */
 export function Saves() {
   const { t } = useTranslation();
@@ -34,8 +35,8 @@ export function Saves() {
   const last = lastSaves(useLogStore((s) => s.entries));
   const [mindAffecting, setMindAffecting] = useState(false);
   const rollOne = async (cat: SaveCategory) => {
-    await rollSave(cat, mindAffecting);
-    setMindAffecting(false);
+    // Kept on a refused request, so the player doesn't have to tick it again.
+    if (await rollSave(cat, mindAffecting)) setMindAffecting(false);
   };
 
   return (

@@ -11,7 +11,7 @@ Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; t
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
 Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
-Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; the API reads format 10 only) is **on implementation**, 2026-10-21:
+Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; the API reads format 10 only) is **decided as built**, 2026-10-21:
 the column is decided by [ADR 0006](0006-saving-throws.md) step 9.1 (user triage of 2026-10-21) and step 1's rule makes it a format.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
@@ -660,7 +660,7 @@ is only ever appended to by play.
     (domain/catalogue), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` and `TestStartup_Step16_RefusesADescriptionIdMismatch`
     (composition), `TestRealCatalogue_Step16_EveryDescriptionPresentInBothLanguages` (seedcheck; skipped without a format-9 `.catalogue/catalogue.json`);
     in `critical-rulebooks`: `Build_Step16_RefusesAMissingLanguageUnknownIdOrBadText` and `Extract_Step16_OverridesAreApplied`.
-17. **The magical defence adjustment, format 10** (_on implementation_, 2026-10-21; [ADR 0006](0006-saving-throws.md) step 9.1 decided the column,
+17. **The magical defence adjustment, format 10** (**decided as built** 2026-10-21; [ADR 0006](0006-saving-throws.md) step 9.1 decided the column,
     step 1 makes a new column a new format). Format 10 is format 9 plus one column.
     1. **`magic_defence` on every `wisdom` row** of `rule_tables` (PHB Table 5's Magical Defense Adjustment column), required, an integer from -6
        to +4 (the book's range: -6 at Wisdom 1, +4 from 18). Nothing else changes; format 9 may not carry it (the schema accepts format 10 only).

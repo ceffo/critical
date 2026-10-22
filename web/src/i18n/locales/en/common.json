@@ -2513,6 +2513,7 @@
       "weapon_not_allowed": "Not for {{who}}",
       "hands": "Two-handed weapon with a shield",
       "weapon_type_missing": "No weapon type: weapon proficiency not checked",
+      "dual_class_old_ability": "Your old class’s: the DM may cost you experience",
       "title": "Class warnings",
       "who": {
         "bard": "a bard",

@@ -91,10 +91,15 @@ export type ItemState = "carried" | "worn" | "wielded";
 /**
  * A class warning (ADR 0033 step 20, itemsvc.Warn*): the code the web words; nothing is refused.
  * weapon_type_missing: a wielded weapon with no weapon type, so no proficiency is judged (ADR 0037
- * step 8).
+ * step 8). dual_class_old_ability: a piece only a dual-class's old class allows, before the new class
+ * passes it (ADR 0042 step 13).
  */
 export type ClassWarningCode =
-  "armour_not_allowed" | "weapon_not_allowed" | "hands" | "weapon_type_missing";
+  | "armour_not_allowed"
+  | "weapon_not_allowed"
+  | "hands"
+  | "weapon_type_missing"
+  | "dual_class_old_ability";
 
 /** Why a piece is on the review list (ADR 0033 step 27, itemsvc.Reason*). */
 export type ReviewReason =

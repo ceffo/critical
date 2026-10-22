@@ -2513,6 +2513,7 @@
       "weapon_not_allowed": "Pas pour {{who}}",
       "hands": "Arme à deux mains avec un bouclier",
       "weapon_type_missing": "Sans type d'arme : compétence martiale non vérifiée",
+      "dual_class_old_ability": "De votre ancienne classe : le MD peut vous retirer de l’expérience",
       "title": "Avertissements de classe",
       "who": {
         "bard": "un barde",

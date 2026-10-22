@@ -22,6 +22,9 @@ Tests live in `api/internal/domain/service/buffsvc/` unless named otherwise.
    **ends** (recorded before the counter moves).
    Tests: `TestAdvanceRound` (the three cases, the order `record`, `save buffs`, `save round`,
    one transaction, the snapshots).
+
+   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 14, on implementation: in the same transaction each maintained psionic power whose period falls due charges its maintenance cost as the entry's PSP delta; a power the PSPs left cannot pay ends, named with the expired buffs)_
+
 2. **End combat.** The counter goes to 0 and the buffs are left alone (they keep their rounds:
    a spell outlives the fight). It is logged even at round 0.
    Tests: `TestRoundMoves` ("End combat resets to 0", "End combat at round 0 still logs": no
@@ -48,11 +51,17 @@ Tests live in `api/internal/domain/service/buffsvc/` unless named otherwise.
    Tests: `TestPassTime` ("1.5 h: 100 rounds keeps 10, 60 expires, charge-only and untimed
    untouched", "exactly the rounds left expires (edge at 0)", "a timed buff with charges…",
    "no buffs").
+
+   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 15, on implementation: passing time also charges each maintained psionic power for every period due in the rounds passed, ending it at the first charge it cannot pay)_
+
 7. **Buffs and the round only.** Passing time is one `time_passed` entry, with buffs and round
    snapshots, stamped with the round it leaves; voiding it brings back the buffs and the round.
    It changes no other state: daily items and spell slots are refilled by a long rest only.
    Tests: `TestPassTime` (the entry, its snapshots, payload; the service holds no slot or item port, so it
    cannot refill either).
+
+   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 15, on implementation: the PSP spent on maintenance is the one other state passing time changes; it recovers no PSP)_
+
 8. **Preview.** Before confirming, the player sees what passing a time would do: the server applies
    steps 5 and 6 to the current buffs and returns the rounds and the buffs that would expire,
    writing and logging nothing (`GET /api/round/pass-time/preview?hours=`). Invalid hours are

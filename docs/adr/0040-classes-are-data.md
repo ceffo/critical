@@ -178,6 +178,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    param or a missing one refused), `Features_Step3_TheFiveClassesGrantTodaysMechanics` (seedcheck:
    the real artifact's five classes list exactly the kinds of the table, with its params).
 
+   _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both)_
+
 4. **The closed list of race trait kinds:**
 
    | Kind | Params | Computed by | Races |

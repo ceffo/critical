@@ -166,19 +166,24 @@ log sits above it is open.
 
 ```mermaid
 erDiagram
-    PSIONICIST ||--|| PSP_BUDGET : spends
-    PSIONICIST }o--o{ DISCIPLINE : "learns in"
-    DISCIPLINE ||--o{ SCIENCE : holds
-    DISCIPLINE ||--o{ DEVOTION : holds
-    SCIENCE ||--|| POWER_CHECK : "rolled by"
-    DEVOTION ||--|| POWER_CHECK : "rolled by"
+    CLASS_ENTRY ||--o| PSP_POOL : "psionics kind grants"
+    CLASS_ENTRY ||--o{ PSIONIC_PICK : "picks within Table 4"
+    PSIONIC_PICK }o--|| DISCIPLINE : "a discipline, or a power of one"
+    DISCIPLINE ||--o{ POWER : holds
+    POWER ||--o{ POWER_CHECK : "rolled by"
+    POWER_CHECK ||--o| MAINTAINED_POWER : "a success of a maintainable power puts"
+    PSP_POOL ||--o{ ACTION_ENTRY : "psp_delta on any entry"
 ```
 
-A **psionicist** is a class whose powers cost **PSP**. A power is a **science** or a
-**devotion** within a **discipline**; using it is a **power check**, a roll with a breakdown like
-any other ([ADR 0014](adr/0014-skill-checks.md) for the shape). The French words are from the
-Manuel complet des psioniques, which is not in the rulebooks clone yet: the glossary marks them
-_to confirm_.
+A **psionicist** ([ADR 0043](adr/0043-psionics.md)) is a class definition whose `psionics`
+feature kind grants, on its class entry, a **PSP** pool and **picks**: disciplines (the first is
+the **primary discipline**), powers (a **science** or a **devotion** of a discipline) and relearns,
+within the entry's Table 4 allowance. The pool is a maximum plus the PSP deltas of the action log,
+as HP is: a **power check** spends the **initial cost** (half on a failure), a maintained power is
+a buff row whose **maintenance cost** Next Round and passing time charge, and recovery and the long
+rest give PSPs back, capped at the maximum. A power's effect is buff data of the existing kinds or
+text. The check is a roll with a breakdown like any other ([ADR 0014](adr/0014-skill-checks.md)
+for the shape). Psionic combat (attack and defence modes, contact) is later.
 
 ## What computes what
 
@@ -192,6 +197,8 @@ _to confirm_.
 | Rogue skill percentages | skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md) |
 | A roll's modifiers | the aggregate of buffs and item powers | [ADR 0004](adr/0004-buffs.md) step 11 |
 | Current HP | the action log | [ADR 0007](adr/0007-hp-ledger.md) |
+| PSP maximum, current PSPs | Wisdom, Intelligence, Constitution, the psionicist entry's level; the action log | [ADR 0043](adr/0043-psionics.md) steps 4 and 5 |
+| Power score | the power's ability and modifier, relearns, adjustments | [ADR 0043](adr/0043-psionics.md) step 10 |
 
 ## Ambiguities resolved
 

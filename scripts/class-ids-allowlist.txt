@@ -1,0 +1,41 @@
+# Literals check-no-class-ids.sh lets through: "<file>:<id>  <reason>", one per line.
+# A permanent entry says why the literal is not a class, group or race id. A TEMPORARY entry names
+# the item that removes the literal and the entry with it.
+
+# Spell lists: a spell's `class` value and the lookup's toggle name a spell list (Wizard, Priest), not a
+# character class (the bard reads the wizard list through "mine").
+api/internal/domain/service/spellsvc/keys.go:wizard    spell list of a catalogue spell
+api/internal/rest/handler/spellhdl/spellhdl.go:wizard  spell list filter of GET /api/spells
+api/internal/rest/handler/spellhdl/spellhdl.go:priest  spell list filter of GET /api/spells
+web/src/api/spells_db.ts:wizard                        spell list toggle type
+web/src/api/spells_db.ts:priest                        spell list toggle type
+web/src/components/actions/LookupPanel.tsx:wizard      spell list toggle and spell class
+web/src/components/actions/LookupPanel.tsx:priest      spell list toggle and spell class
+web/src/stores/lookup.ts:wizard                        spell list toggle default
+web/src/stores/lookup.ts:priest                        spell list toggle
+web/src/components/actions/lookupClasses.ts:wizard    spell list toggle and its default
+web/src/components/actions/lookupClasses.ts:priest    spell list toggle
+
+# The migration of the free-text languages stored before they were codes (ADR 0032 step 8.1): spellings of
+# a language ("dwarf", "elf", "gnome", "halfling" for dwarvish...), not races.
+api/internal/storage/postgres/languages.go:dwarf
+api/internal/storage/postgres/languages.go:elf
+api/internal/storage/postgres/languages.go:gnome
+api/internal/storage/postgres/languages.go:halfling
+
+# TEMPORARY: the skill-set codes of the rogue_skills `set` param (thief, bard), removed by the skill-set
+# work (the rogue_skills set moves to data).
+api/internal/domain/service/ruletablesvc/bard.go:thief
+api/internal/domain/service/ruletablesvc/bard.go:bard
+web/src/components/actions/SkillsTab.tsx:thief
+web/src/components/actions/SkillsTab.tsx:bard
+
+# TEMPORARY, no item yet: the group literals left once the class entries
+# are data. HitDieGain gives warriors the bracketed Constitution hit point value (needs a group field in
+# the catalogue); the spell effect validator lists the groups its by_group keys may use (needs the groups
+# of the catalogue).
+api/internal/domain/service/ruletablesvc/creation.go:warrior
+api/internal/domain/service/spelleffectsvc/validate.go:warrior
+api/internal/domain/service/spelleffectsvc/validate.go:priest
+api/internal/domain/service/spelleffectsvc/validate.go:rogue
+api/internal/domain/service/spelleffectsvc/validate.go:wizard

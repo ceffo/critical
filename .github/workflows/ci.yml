@@ -113,27 +113,49 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium
         working-directory: web
-      # The apt packages (fonts, xvfb, libnss3...) are downloaded from the runner's Ubuntu mirror, which
-      # sometimes throttles to ~40 kB/s: one run spent 10 of its 15 minutes there and was cancelled before
-      # the suite finished. The downloaded .debs are cached, so a run only reaches the mirror when the
-      # runner image or Playwright changes; the step is bounded so a slow mirror fails fast and loudly.
-      - name: Read the runner image version
-        id: image
-        run: echo "version=${ImageVersion:-unknown}" >> "$GITHUB_OUTPUT"
-      - name: Cache apt packages for Chromium
-        uses: actions/cache@v6
+      # The apt packages (fonts, xvfb, libnss3...) come from the runner's Ubuntu mirror, which sometimes
+      # throttles to ~40 kB/s. Two defences, so the job does not depend on a fast mirror:
+      # 1. The downloaded .debs are cached under a key WITHOUT the runner image version (images roll
+      #    often and each one used to start cold). The key is bucketed by ISO week so the debs are
+      #    refreshed as the mirror moves on; restore-keys falls back to the previous bucket, which still
+      #    covers most packages.
+      # 2. A cold or stale cache downloads with bounded, retried attempts. Debs fetched by a timed-out
+      #    attempt stay in /var/cache/apt/archives, so each retry resumes where the last stopped, and the
+      #    cache is saved even when the step fails, so the next run starts warmer.
+      - name: Pick the apt cache bucket
+        id: apt-week
+        run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      - name: Restore apt packages for Chromium
+        id: apt-cache
+        uses: actions/cache/restore@v6
         with:
           path: ~/apt-debs
-          key: apt-chromium-${{ runner.os }}-${{ steps.image.outputs.version }}-${{ steps.pw.outputs.version }}
+          key: apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
+          restore-keys: |
+            apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-
+            apt-chromium-${{ runner.os }}-
       - name: Install Chromium system dependencies
-        timeout-minutes: 4
+        timeout-minutes: 8
         run: |
           mkdir -p "$HOME/apt-debs"
           sudo cp -n "$HOME"/apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
-          npx playwright install-deps chromium
+          # Fail a stalled connection fast and let apt retry it.
+          printf 'Acquire::Retries "5";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
+            | sudo tee /etc/apt/apt.conf.d/99-ci-network >/dev/null
+          for attempt in 1 2 3; do
+            if timeout 150 npx playwright install-deps chromium; then ok=1; break; fi
+            echo "install-deps attempt $attempt did not finish; retrying (downloaded debs are kept)"
+          done
           sudo cp -n /var/cache/apt/archives/*.deb "$HOME/apt-debs/" 2>/dev/null || true
           sudo chown -R "$USER" "$HOME/apt-debs"
+          [ "${ok:-0}" = 1 ]
         working-directory: web
+      - name: Save apt packages for Chromium
+        if: ${{ !cancelled() && steps.apt-cache.outputs.cache-hit != 'true' }}
+        uses: actions/cache/save@v6
+        with:
+          path: ~/apt-debs
+          key: apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
       - name: Run the e2e suite
         # The suite's budget is 5 minutes (docs/agent-workflow.md); 6 here makes a regression fail on this
         # step instead of the job timeout hiding which step was slow.

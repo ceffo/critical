@@ -146,3 +146,34 @@ func TestSphereAccess_Step15_TheClericsSpheres(t *testing.T) {
 	assert.True(t, access.Opens("cleric", 5, []string{"elemental_fire", "combat"}), "Elemental (Fire) and Combat: open through Combat")
 	assert.False(t, access.Opens("mage", 1, []string{"all"}), "no access, no spell")
 }
+
+// ADR 0006 step 10.1: Table 5's spell immunities, cumulative from the lowest
+// row up to the score: none at Wisdom 18, charm person but not hold person at
+// 19, hold person (both spells of the name) at 20, every row's at 25; a score
+// outside the table is refused.
+func TestSpellImmunitiesFor_Step10_Cumulative(t *testing.T) {
+	tbl := phb(t)
+	at := func(wis int) []string {
+		got, err := tbl.SpellImmunitiesFor(wis)
+		require.NoError(t, err, "Wisdom %d", wis)
+		return got
+	}
+	for _, wis := range []int{1, 12, 18} {
+		assert.Empty(t, at(wis), "Wisdom %d", wis)
+	}
+	assert.Equal(t, []string{"charm_person", "command", "friends", "hypnotism"}, at(19))
+	assert.NotContains(t, at(19), "hold_person")
+	assert.Equal(t, []string{
+		"charm_person", "command", "friends", "hypnotism",
+		"forget", "hold_person", "hold_person_priest", "ray_of_enfeeblement", "scare",
+	}, at(20))
+	all := at(25)
+	assert.Len(t, all, 26)
+	for _, id := range []string{"charm_person", "hold_person", "fear", "confusion_priest", "quest", "geas", "mass_charm"} {
+		assert.Contains(t, all, id)
+	}
+	for _, wis := range []int{0, 26} {
+		_, err := tbl.SpellImmunitiesFor(wis)
+		assert.Error(t, err, "Wisdom %d", wis)
+	}
+}

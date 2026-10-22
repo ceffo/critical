@@ -71,6 +71,7 @@ const (
 	TextOnlyUtility       TextOnly = "utility"        // nothing the engine tracks numerically
 	TextOnlyNotOnSelf     TextOnly = "not_on_self"    // a buff on somebody else
 	TextOnlyByHand        TextOnly = "by_hand"        // sets an ability for one body part only (Fist of Stone)
+	TextOnlyImmune        TextOnly = "immune"         // received by a character immune to it (ADR 0006 step 10.3)
 )
 
 // DieRoll is one die thrown.
@@ -200,6 +201,9 @@ type CastResult struct {
 	// 14). A failed spell spends its slot and applies nothing: the result
 	// then carries only the spell, the slot and the roll.
 	Failure *SpellFailure
+	// Immunity is why a spell received applied and rolled nothing (ADR 0006
+	// step 10.3; nil: the character is not immune).
+	Immunity *combatsvc.Immunity
 }
 
 // SpellFailure is one d100 against the caster's chance of spell failure

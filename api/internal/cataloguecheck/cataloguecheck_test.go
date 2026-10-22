@@ -202,8 +202,8 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 // unknown format), and so is an artifact without a part format 11 requires.
 func TestSchema_Step18_OnlyFormat11IsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 11")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 12")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -211,11 +211,21 @@ func TestSchema_Step18_OnlyFormat11IsValid(t *testing.T) {
 	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 11 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 12 requires %s", part)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 11 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 12 requires the magical defence adjustment")
+	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
+	a = fixtureDoc(t)
+	delete(row(tables(a), "wisdom", 7), "spell_immunities")
+	assert.Error(t, sch.Validate(a), "format 12 requires the spell immunities")
+	a = fixtureDoc(t)
+	row(tables(a), "wisdom", 18)["spell_immunities"] = []any{"Charm Person"}
+	assert.Error(t, sch.Validate(a), "a spell immunity is an id")
+	a = fixtureDoc(t)
+	row(tables(a), "wisdom", 18)["spell_immunities"] = []any{"command", "command"}
+	assert.Error(t, sch.Validate(a), "a spell immunity once per row")
 }
 
 // classDef is the i-th class of a fixture document, for a test to edit.

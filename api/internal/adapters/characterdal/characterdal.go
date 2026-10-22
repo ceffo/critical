@@ -51,7 +51,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
-	points, err := decodeSkillPoints(row.SkillPoints)
+	points, err := decodeSkillPoints(row.SkillSets)
 	if err != nil {
 		return nil, err
 	}
@@ -93,15 +93,15 @@ func (d *DAL) SetRealizedLevel(ctx context.Context, id int64, realizedLevel, hpM
 	return nil
 }
 
-// SetSkillPoints implements skillsvc.Points: a thief's points per skill,
+// SetSkillPoints implements skillsvc.Points: a character's points per skill set,
 // nil for none (ADR 0030 step 17). domain.ErrCharacterNotFound when the row
 // is missing.
-func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]int) error {
+func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points skills.SetPoints) error {
 	raw, err := encodeSkillPoints(points)
 	if err != nil {
 		return err
 	}
-	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillPoints: raw, ID: id})
+	n, err := d.q.SetSkillPoints(ctx, queries.SetSkillPointsParams{SkillSets: raw, ID: id})
 	if err != nil {
 		return fmt.Errorf("set skill points: %w", err)
 	}
@@ -109,6 +109,23 @@ func (d *DAL) SetSkillPoints(ctx context.Context, id int64, points map[string]in
 		return domain.ErrCharacterNotFound
 	}
 	return nil
+}
+
+// SkillPoints implements skillsvc.Points: the class and the stored points of every skill set.
+// domain.ErrCharacterNotFound when the row is missing.
+func (d *DAL) SkillPoints(ctx context.Context, id int64) (string, skills.SetPoints, error) {
+	row, err := d.q.GetSkillSets(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", nil, domain.ErrCharacterNotFound
+	}
+	if err != nil {
+		return "", nil, fmt.Errorf("get skill points: %w", err)
+	}
+	points, err := decodeSkillPoints(row.SkillSets)
+	if err != nil {
+		return "", nil, err
+	}
+	return row.Class, points, nil
 }
 
 // SetLanguages implements skillsvc.Picks: the character's languages (ADR 0032 step 4, saved by
@@ -235,7 +252,7 @@ func (d *DAL) CreateCharacter(ctx context.Context, owner uuid.UUID, c characters
 		SaveSpell: int64(c.Sheet.Saves.Spell), Class: c.Class, RaceCode: c.Race,
 		OwnerUserID:   uuid.NullUUID{UUID: owner, Valid: true},
 		RealizedLevel: sql.NullInt64{Int64: int64(c.RealizedLevel), Valid: true},
-		SkillPoints:   points, ProficiencyPicks: picks,
+		SkillSets:     points, ProficiencyPicks: picks,
 	})
 	if err != nil {
 		return 0, fmt.Errorf("create character: %w", err)
@@ -333,10 +350,10 @@ func (d *DAL) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, err
 	return id, nil
 }
 
-// decodeSkillPoints reads characters.skill_points (a JSON object from skill
-// code to points); '{}' is none (nil).
-func decodeSkillPoints(raw string) (map[string]int, error) {
-	var out map[string]int
+// decodeSkillPoints reads characters.skill_sets (a JSON object from skill set code to an object
+// from skill code to points); '{}' is none (nil).
+func decodeSkillPoints(raw string) (skills.SetPoints, error) {
+	var out skills.SetPoints
 	if err := json.Unmarshal([]byte(raw), &out); err != nil {
 		return nil, fmt.Errorf("decode skill points: %w", err)
 	}
@@ -346,10 +363,10 @@ func decodeSkillPoints(raw string) (map[string]int, error) {
 	return out, nil
 }
 
-// encodeSkillPoints writes characters.skill_points; nil is '{}'.
-func encodeSkillPoints(points map[string]int) (string, error) {
+// encodeSkillPoints writes characters.skill_sets; nil is '{}'.
+func encodeSkillPoints(points skills.SetPoints) (string, error) {
 	if points == nil {
-		points = map[string]int{}
+		points = skills.SetPoints{}
 	}
 	raw, err := json.Marshal(points)
 	if err != nil {

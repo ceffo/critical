@@ -25,7 +25,7 @@ func TestSkillCheck_Step20_EntryCarriesBuffSnapshots(t *testing.T) {
 		Effects: buffsvc.BuffEffects{AC: &ac},
 	}
 	h, m := newRouter(t)
-	m.skills.EXPECT().Roll(mock.Anything, int64(1), "tumbling", skillsvc.Adjustment{}).Return(&skillsvc.CheckResult{
+	m.skills.EXPECT().RollInSet(mock.Anything, int64(1), "", "tumbling", skillsvc.Adjustment{}).Return(&skillsvc.CheckResult{
 		ID: "tumbling", Kind: skillsvc.KindProficiency, Die: 20, Roll: 12, Target: 17, AdjustedTarget: 17,
 		Success: true, RolledSuccess: true, Ability: skillsvc.AbilityDex, AbilityScore: 17, LogEntryID: 12,
 		Buff: &skillsvc.AppliedBuff{Buff: tumbling, Renewed: true},

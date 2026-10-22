@@ -133,13 +133,20 @@ func checkRange(k Kind, value int) error {
 // so undoing the check takes the buff off. An unknown id or an invalid
 // adjustment is refused before anything is rolled.
 func (s *service) Roll(ctx context.Context, characterID int64, id string, adj Adjustment) (*CheckResult, error) {
+	return s.RollInSet(ctx, characterID, "", id, adj)
+}
+
+// RollInSet is Roll for the skill id of the skill set set (ADR 0040 step 3.4: two sets can share
+// a skill, each with its own percentage and kind); "" is the first set that holds the skill. A
+// set the character has not, or a skill the set has not, wraps domain.ErrNotFound.
+func (s *service) RollInSet(ctx context.Context, characterID int64, set, id string, adj Adjustment) (*CheckResult, error) {
 	adj, err := normalize(adj)
 	if err != nil {
 		return nil, err
 	}
 	var res *CheckResult
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
-		rec, err := s.check(ctx, characterID, id, adj)
+		rec, err := s.check(ctx, characterID, set, id, adj)
 		if err != nil {
 			return err
 		}
@@ -239,8 +246,8 @@ func (s *service) amendCheck(ctx context.Context, characterID int64, e actionlog
 
 // check finds the skill, checks the adjustment's range for its kind and
 // rolls its die.
-func (s *service) check(ctx context.Context, characterID int64, id string, adj Adjustment) (checkRecord, error) {
-	rec, err := s.find(ctx, characterID, id)
+func (s *service) check(ctx context.Context, characterID int64, set, id string, adj Adjustment) (checkRecord, error) {
+	rec, err := s.find(ctx, characterID, set, id)
 	if err != nil {
 		return checkRecord{}, err
 	}
@@ -277,8 +284,8 @@ func checkable(char *charactersvc.Character) []skills.PickFigures {
 	return out
 }
 
-// find is the unrolled check of skill id: its kind, die and target.
-func (s *service) find(ctx context.Context, characterID int64, id string) (checkRecord, error) {
+// find is the unrolled check of skill id (of the skill set set, "" for the first that holds it): its kind, die and target.
+func (s *service) find(ctx context.Context, characterID int64, set, id string) (checkRecord, error) {
 	char, err := s.chars.GetCharacter(ctx, characterID)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("get character: %w", err)
@@ -302,14 +309,18 @@ func (s *service) find(ctx context.Context, characterID int64, id string) (check
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
 	// a bard skill's target is the percentage the character service derives
 	// (its terms are on the character).
-	for _, b := range char.Derived.BardSkills {
-		if b.Skill == id {
-			return checkRecord{ID: b.Skill, Kind: KindBardSkill, Die: BardSkillDie, Target: b.Percent}, nil
+	for _, ss := range char.Derived.SkillSets {
+		if set != "" && ss.Set != set {
+			continue
 		}
-	}
-	for _, t := range char.Derived.ThiefSkills {
-		if t.Skill == id {
-			return checkRecord{ID: t.Skill, Kind: KindThiefSkill, Die: ThiefSkillDie, Target: t.Percent}, nil
+		kind, ok := KindOfSet(ss.Set)
+		if !ok {
+			continue
+		}
+		for _, sk := range ss.Skills {
+			if sk.Skill == id {
+				return checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent}, nil
+			}
 		}
 	}
 	return checkRecord{}, fmt.Errorf("%w: unknown skill %q", domain.ErrNotFound, id)
@@ -322,39 +333,50 @@ func (s *service) List(ctx context.Context, characterID int64) (*Skills, error) 
 	return s.skills(ctx, characterID, nil)
 }
 
-// PreviewPoints reads the skills with the character's points replaced by
-// points, refused as SetPoints refuses them (skills.ValidSkillPoints, then the
-// budget, ADR 0037 step 10); the percentages and the budget are the skills
-// module's figures of the draft (skills.PointsFiguresOf), nothing is written.
-func (s *service) PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*Skills, error) {
-	return s.skills(ctx, characterID, &points)
+// PreviewPoints reads the skills with the points of skill set set replaced by points ("": the
+// character's only set), refused as SetPoints refuses them (skills.ValidSkillPoints, then the
+// budget, ADR 0037 step 10); the percentages and the budget are the skills module's figures of
+// the draft (skills.SkillSetsOf), nothing is written.
+func (s *service) PreviewPoints(ctx context.Context, characterID int64, set string, points map[string]int) (*Skills, error) {
+	return s.skills(ctx, characterID, &draft{set: set, points: points})
+}
+
+// draft is the points of a skill set to read in place of the stored ones.
+type draft struct {
+	set    string
+	points map[string]int
 }
 
 // withPoints is char derived with the draft points in place of its stored
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
-func (s *service) withPoints(char *charactersvc.Character, draft map[string]int) error {
+func (s *service) withPoints(char *charactersvc.Character, d draft) error {
 	def, err := s.classDef(char.Class)
 	if err != nil {
 		return err
 	}
-	next, err := skills.ValidSkillPoints(def, draft)
+	set, err := soleSet(def, d.set)
 	if err != nil {
 		return err
 	}
-	if err := skills.SkillPointsWithinBudget(def, char.Derived.RealizedLevel, char.SkillPoints, next); err != nil {
+	next, err := skills.ValidSkillPoints(def, set, d.points)
+	if err != nil {
 		return err
 	}
-	if err := char.Derived.SetSkillFigures(s.tables, def, char, next); err != nil {
+	if err := skills.SkillPointsWithinBudget(def, set, char.Derived.RealizedLevel, char.SkillPoints.Of(set), next); err != nil {
+		return err
+	}
+	all := char.SkillPoints.With(set, next)
+	if err := char.Derived.SetSkillFigures(s.tables, def, char, all); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
-	char.SkillPoints = next
+	char.SkillPoints = all
 	return nil
 }
 
 // skills builds the tab; draft, when set, is the skill points to read in
 // place of the stored ones.
-func (s *service) skills(ctx context.Context, characterID int64, draft *map[string]int) (*Skills, error) {
+func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		char, err := s.chars.GetCharacter(ctx, characterID)
@@ -371,13 +393,14 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 			return err
 		}
 		profs := checkable(char)
-		out = &Skills{
-			Proficiencies: make([]Proficiency, 0, len(profs)), BardSkills: make([]BardSkill, 0, len(char.Derived.BardSkills)),
-			ThiefSkills: make([]ThiefSkill, 0, len(char.Derived.ThiefSkills)), SkillArmor: char.Derived.SkillArmor,
-			Budget: char.Derived.SkillPoints,
-		}
-		for _, t := range char.Derived.ThiefSkills {
-			out.ThiefSkills = append(out.ThiefSkills, ThiefSkill{SkillPercent: t, Last: last[t.Skill]})
+		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.Derived.SkillSets))}
+		for _, ss := range char.Derived.SkillSets {
+			kind, _ := KindOfSet(ss.Set)
+			set := SkillSet{Set: ss.Set, Kind: kind, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
+			for _, sk := range ss.Skills {
+				set.Skills = append(set.Skills, SetSkill{SkillPercent: sk, Last: last[lastKey(kind, sk.Skill)]})
+			}
+			out.SkillSets = append(out.SkillSets, set)
 		}
 		for _, p := range profs {
 			score, err := abilityScore(char, Ability(p.Ability))
@@ -386,11 +409,8 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
 				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
-				Target: p.Target, Last: last[p.ID],
+				Target: p.Target, Last: last[lastKey(KindProficiency, p.ID)],
 			})
-		}
-		for _, b := range char.Derived.BardSkills {
-			out.BardSkills = append(out.BardSkills, BardSkill{SkillPercent: b, Last: last[b.Skill]})
 		}
 		return nil
 	})
@@ -399,6 +419,10 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *map[stri
 	}
 	return out, nil
 }
+
+// lastKey keys a skill's last check: two skill sets can hold the same skill, each with its own
+// kind, so the id alone is not enough.
+func lastKey(kind Kind, id string) string { return string(kind) + ":" + id }
 
 // lastChecks maps each skill id to its newest non-voided check.
 func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string]*LastCheck, error) {
@@ -412,10 +436,11 @@ func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string
 		if err != nil {
 			return nil, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
 		}
-		if _, seen := last[rec.ID]; seen || rec.ID == "" {
+		key := lastKey(rec.Kind, rec.ID)
+		if _, seen := last[key]; seen || rec.ID == "" {
 			continue
 		}
-		last[rec.ID] = &LastCheck{
+		last[key] = &LastCheck{
 			EntryID: e.ID, Roll: rec.Roll, Target: rec.Target,
 			Adjustment: rec.Adjustment, AdjustmentReason: rec.AdjustmentReason, AdjustedTarget: rec.AdjustedTarget,
 			Success: rec.Success,

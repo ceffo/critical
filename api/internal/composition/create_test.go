@@ -430,9 +430,12 @@ func TestCharacters_Step14_SkillArmourIsNoEntry(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, tb.call(bob, "PATCH", "/api/characters/"+itoa(id), `{"skillArmor":"elven_chain"}`, nil))
 	var shown struct {
 		Derived struct {
-			SkillArmor string `json:"skillArmor"`
+			SkillSets []struct {
+				SkillArmor string `json:"skillArmor"`
+			} `json:"skillSets"`
 		} `json:"derived"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/character", "", &shown))
-	assert.Equal(t, "none", shown.Derived.SkillArmor, "a new bard wears nothing")
+	require.Len(t, shown.Derived.SkillSets, 1)
+	assert.Equal(t, "none", shown.Derived.SkillSets[0].SkillArmor, "a new bard wears nothing")
 }

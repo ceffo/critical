@@ -49,8 +49,21 @@ func TestToSpend_Step15_LeftCountsNeverNegative(t *testing.T) {
 		Nonweapon: ruletablesvc.NonweaponPool{Left: 2}, Weapon: ruletablesvc.WeaponPool{Left: -1},
 	}
 	b := &ruletablesvc.SkillPointsBudget{Left: 15}
-	assert.Equal(t, skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 15}, skills.ToSpend(f, b))
+	sets := []skills.SkillSet{{Set: "thief", Points: b}}
+	assert.Equal(t, skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 15}, skills.ToSpend(f, sets))
 	f.Nonweapon.Left, b.Left = 0, -5
-	assert.Equal(t, skills.LevelGrants{}, skills.ToSpend(f, b))
+	assert.Equal(t, skills.LevelGrants{}, skills.ToSpend(f, sets))
 	assert.Equal(t, skills.LevelGrants{}, skills.ToSpend(nil, nil), "no pool, no points")
+}
+
+// ADR 0040 step 3.4: each skill set has its own budget, so what is left to spend adds the sets'
+// left points, and a set over budget leaves 0 without eating into the other's.
+func TestToSpend_Step3_4_SkillSetsKeepSeparateBudgets(t *testing.T) {
+	sets := []skills.SkillSet{
+		{Set: "thief", Points: &ruletablesvc.SkillPointsBudget{Left: 20}},
+		{Set: "bard", Points: &ruletablesvc.SkillPointsBudget{Left: -7}},
+	}
+	assert.Equal(t, 20, skills.ToSpend(nil, sets).SkillPoints, "the over-spent set leaves 0, not -7 off the other")
+	sets[1].Points.Left = 5
+	assert.Equal(t, 25, skills.ToSpend(nil, sets).SkillPoints)
 }

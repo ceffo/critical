@@ -63,10 +63,10 @@ type Character struct {
 	SaveSpell        int      `json:"save_spell"`
 	Slots            []any    `json:"slots"`
 	Languages        []string `json:"languages"`
-	// SkillPoints are the imported bard's skill points (ADR 0030 step 18),
+	// SkillPoints are the imported character's skill points per skill set (ADR 0030 steps 17 and 18, ADR 0040 step 3.4),
 	// by skill code: the points that give the sheet's percentages (step
 	// 24), checked as a bard's entered points are.
-	SkillPoints map[string]int `json:"skill_points"`
+	SkillPoints skills.SetPoints `json:"skill_points"`
 	// Proficiencies are the seed character's non-weapon picks (ADR 0037
 	// steps 12 and 16): catalogue id and slots spent, written with the
 	// character when it is inserted, never reconciled afterwards (the player
@@ -128,7 +128,12 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 	// The points are checked against the class's rogue_skills by
 	// CheckDefinitions (ADR 0040 step 3: the class's features are the
 	// catalogue's); a zero is no point.
-	maps.DeleteFunc(c.SkillPoints, func(_ string, v int) bool { return v == 0 })
+	for set, points := range c.SkillPoints {
+		maps.DeleteFunc(points, func(_ string, v int) bool { return v == 0 })
+		if len(points) == 0 {
+			delete(c.SkillPoints, set)
+		}
+	}
 	if len(c.SkillPoints) == 0 {
 		c.SkillPoints = nil
 	}
@@ -168,8 +173,10 @@ func (c Character) CheckDefinitions(defs *classes.Registry) error {
 	if !ok {
 		return fmt.Errorf("character.json: class %q is not one of %v", c.Class, defs.ClassIDs())
 	}
-	if _, err := skills.ValidSkillPoints(def, c.SkillPoints); err != nil {
-		return fmt.Errorf("character.json: skill points: %w", err)
+	for _, set := range slices.Sorted(maps.Keys(c.SkillPoints)) {
+		if _, err := skills.ValidSkillPoints(def, set, c.SkillPoints[set]); err != nil {
+			return fmt.Errorf("character.json: skill points of set %q: %w", set, err)
+		}
 	}
 	if !slices.Contains(defs.RaceIDs(), c.Race) {
 		return fmt.Errorf("character.json: race %q is not one of %v", c.Race, defs.RaceIDs())

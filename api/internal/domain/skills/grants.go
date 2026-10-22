@@ -20,21 +20,26 @@ func GrantsAt(book Book, class string, level int) LevelGrants {
 		g.WeaponSlots, g.NonweaponSlots = ruletablesvc.SlotsGainedAt(row, level)
 	}
 	if def, ok := book.ClassDef(class); ok {
-		g.SkillPoints = ruletablesvc.SkillPointsGainedAt(RogueSkillsAt(def, level), level)
+		for _, rs := range RogueSetsAt(def, level) {
+			g.SkillPoints += ruletablesvc.SkillPointsGainedAt(&rs, level)
+		}
 	}
 	return g
 }
 
-// ToSpend is what the pools f and the skill points b leave to spend at the realized level (ADR
-// 0037 step 15's reminder): the pools' left slots and the skill points left, each 0 when none
-// (nil) or over budget.
-func ToSpend(f *ProficiencySlots, b *ruletablesvc.SkillPointsBudget) LevelGrants {
+// ToSpend is what the pools f and the skill sets leave to spend at the realized level (ADR
+// 0037 step 15's reminder): the pools' left slots and the skill points left in all the sets
+// (each set's budget is its own: a set over budget leaves 0, it does not eat into another's),
+// each 0 when none (nil) or over budget.
+func ToSpend(f *ProficiencySlots, sets []SkillSet) LevelGrants {
 	var g LevelGrants
 	if f != nil {
 		g.WeaponSlots, g.NonweaponSlots = max(f.Weapon.Left, 0), max(f.Nonweapon.Left, 0)
 	}
-	if b != nil {
-		g.SkillPoints = max(b.Left, 0)
+	for _, set := range sets {
+		if set.Points != nil {
+			g.SkillPoints += max(set.Points.Left, 0)
+		}
 	}
 	return g
 }

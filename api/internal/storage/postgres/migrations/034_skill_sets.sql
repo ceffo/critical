@@ -1,0 +1,12 @@
+-- A character's skill points per skill set (ADR 0040 step 3.4): characters.skill_sets is a JSON
+-- object from a skill set code to its points, an object from skill code to points, e.g.
+-- {"thief": {"open_locks": 30}}. A class may grant several skill sets (a thief/bard), each with its
+-- own budget, and two sets can share a skill, so the flat characters.skill_points cannot hold them.
+--
+-- This file is the schema only (ADR 0025 step 2.1). Its data step, run right after it
+-- (carrySkillSets), copies each character's skill_points under the skill set its class grants.
+-- skill_points stays as the legacy column the copy reads: nothing reads or writes it afterwards.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the release before this one reads and writes
+-- skill_points only, which is left as it is.
+ALTER TABLE characters ADD COLUMN skill_sets TEXT NOT NULL DEFAULT '{}';

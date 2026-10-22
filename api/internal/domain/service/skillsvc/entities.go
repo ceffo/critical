@@ -62,31 +62,30 @@ type Proficiency struct {
 	Last         *LastCheck
 }
 
-// BardSkill is a bard skill (ADR 0030 step 18): its percentage, derived by
-// the character service with its terms, and the last check rolled for it.
-type BardSkill struct {
+// SetSkill is a skill of a skill set (ADR 0030 steps 17 and 18): its percentage, derived by the
+// character service with its terms, and the last check rolled for it in that set.
+type SetSkill struct {
 	ruletablesvc.SkillPercent
 	Last *LastCheck
 }
 
-// ThiefSkill is a thieving skill (ADR 0030 step 17): its percentage, derived
-// by the character service with its terms, and the last check rolled for it.
-type ThiefSkill struct {
-	ruletablesvc.SkillPercent
-	Last *LastCheck
+// SkillSet is one skill set of the Skills tab (ADR 0040 step 3.4): its code, the check kind it
+// logs (ADR 0040 step 3.2), the skill armour it reads (ADR 0033 step 14), its budget with the
+// terms of its formula (nil below the feature's level of first points, ADR 0030 steps 17 and 18)
+// and its skills.
+type SkillSet struct {
+	Set    string
+	Kind   Kind
+	Armor  string
+	Budget *ruletablesvc.SkillPointsBudget
+	Skills []SetSkill
 }
 
-// Skills is the whole Compétences tab.
+// Skills is the whole Compétences tab: the proficiencies and one skill set per rogue_skills
+// feature the character's class grants.
 type Skills struct {
 	Proficiencies []Proficiency
-	BardSkills    []BardSkill
-	ThiefSkills   []ThiefSkill
-	// SkillArmor is the skill armour the bard or thief skills read (ADR
-	// 0033 step 14: from the worn body armour), "" for another class.
-	SkillArmor string
-	// Budget is the skill point budget with the terms of its formula, nil
-	// for a class without skill points (ADR 0030 steps 17 and 18).
-	Budget *ruletablesvc.SkillPointsBudget
+	SkillSets     []SkillSet
 }
 
 // Adjustment is the DM's adjustment of one check (ADR 0014 steps 5 to 7):

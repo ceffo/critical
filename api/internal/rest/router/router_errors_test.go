@@ -148,7 +148,7 @@ var endpoints = []endpoint{
 		m.skills.On("List", anyArgs(2)...).Return(nil, err)
 	}},
 	{"POST roll/skill", "POST", "/api/roll/skill/tumbling", "", func(m *mocksSet, err error) {
-		m.skills.On("Roll", anyArgs(4)...).Return(nil, err)
+		m.skills.On("RollInSet", anyArgs(5)...).Return(nil, err)
 	}},
 	{"POST roll/skill/{id}/adjust", "POST", "/api/roll/skill/7/adjust", `{"adjustment":2}`, func(m *mocksSet, err error) {
 		m.skills.On("Adjust", anyArgs(4)...).Return(nil, err)

@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	domainskills "github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The feature-kind tests of ADR 0040 step 3: the derived character reads a
@@ -228,30 +229,31 @@ func TestFeatures_Step3_RogueSkillsFromTheKind(t *testing.T) {
 	}(t)
 	runFeatureCases(t, []featureCase{
 		{"the thief has skills and a budget", keep, "thief", 1, nil, func(t *testing.T, d charactersvc.Derived) {
-			assert.NotEmpty(t, d.ThiefSkills)
-			require.NotNil(t, d.SkillPoints)
-			assert.Equal(t, 60, d.SkillPoints.Total)
+			require.Len(t, d.SkillSets, 1)
+			assert.Equal(t, "thief", d.SkillSets[0].Set)
+			assert.NotEmpty(t, d.SkillSets[0].Skills)
+			require.NotNil(t, d.SkillSets[0].Points)
+			assert.Equal(t, 60, d.SkillSets[0].Points.Total)
 		}},
-		{"a thief without the kind has neither", strike("thief", classes.KindRogueSkills), "thief", 1, nil, func(t *testing.T, d charactersvc.Derived) {
-			assert.Nil(t, d.ThiefSkills)
-			assert.Nil(t, d.BardSkills)
-			assert.Nil(t, d.SkillPoints)
+		{"a thief without the kind has no set", strike("thief", classes.KindRogueSkills), "thief", 1, nil, func(t *testing.T, d charactersvc.Derived) {
+			assert.Empty(t, d.SkillSets)
 		}},
 		{"a sixth test class, a warrior with the thief's set, has them", add("test_scout", "fighter", "", thiefSkills), "test_scout", 1, nil, func(t *testing.T, d charactersvc.Derived) {
-			assert.NotEmpty(t, d.ThiefSkills)
-			assert.Nil(t, d.BardSkills)
-			require.NotNil(t, d.SkillPoints)
-			assert.Equal(t, 60, d.SkillPoints.Total)
-			assert.Equal(t, 30, d.SkillPoints.PerSkill)
+			require.Len(t, d.SkillSets, 1)
+			assert.Equal(t, "thief", d.SkillSets[0].Set)
+			assert.NotEmpty(t, d.SkillSets[0].Skills)
+			require.NotNil(t, d.SkillSets[0].Points)
+			assert.Equal(t, 60, d.SkillSets[0].Points.Total)
+			assert.Equal(t, 30, d.SkillSets[0].Points.PerSkill)
 		}},
 		{"from_level: no skills nor budget below it", lateSkills(thiefSkills), "test_latescout", 2, nil, func(t *testing.T, d charactersvc.Derived) {
-			assert.Nil(t, d.ThiefSkills)
-			assert.Nil(t, d.SkillPoints)
+			assert.Empty(t, d.SkillSets)
 		}},
 		{"from_level: skills and the level's budget from it", lateSkills(thiefSkills), "test_latescout", 3, nil, func(t *testing.T, d charactersvc.Derived) {
-			assert.NotEmpty(t, d.ThiefSkills)
-			require.NotNil(t, d.SkillPoints)
-			assert.Equal(t, 60+2*30, d.SkillPoints.Total)
+			require.Len(t, d.SkillSets, 1)
+			assert.NotEmpty(t, d.SkillSets[0].Skills)
+			require.NotNil(t, d.SkillSets[0].Points)
+			assert.Equal(t, 60+2*30, d.SkillSets[0].Points.Total)
 		}},
 	})
 }
@@ -335,15 +337,74 @@ func TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode(t *testing.T) {
 	runFeatureCases(t, []featureCase{
 		{"the skald", skald, "test_skald", 3, nil, func(t *testing.T, d charactersvc.Derived) {
 			assert.Equal(t, "rogue", d.Group)
-			assert.NotEmpty(t, d.BardSkills)
-			assert.Nil(t, d.ThiefSkills)
-			require.NotNil(t, d.SkillPoints)
-			assert.Equal(t, 25+2*10, d.SkillPoints.Total, "its own budget at level 3")
+			require.Len(t, d.SkillSets, 1)
+			assert.Equal(t, "bard", d.SkillSets[0].Set)
+			assert.NotEmpty(t, d.SkillSets[0].Skills)
+			require.NotNil(t, d.SkillSets[0].Points)
+			assert.Equal(t, 25+2*10, d.SkillSets[0].Points.Total, "its own budget at level 3")
 			require.NotNil(t, d.Spellbook)
 			assert.Equal(t, 3, d.Spellbook.ClassMaxSpellLevel)
 			assert.Zero(t, d.Backstab)
 			assert.Nil(t, d.Turning)
 			assert.Empty(t, d.SpellSlots, "no spell_progression")
+		}},
+	})
+}
+
+// ADR 0040 step 3.4: a class lists rogue_skills once per skill set, and the character has one
+// skill set for each, with its own budget and its own points, even for a skill the two sets
+// share (pick_pockets). test_swashbuckler, a warrior granting the thief's and the bard's sets
+// (the bard's from level 3), derives two sets at level 3 and the thief's alone at level 1.
+func TestFeatures_Step3_4_ASkillSetPerRogueSkillsFeature(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	listed := func(class string) classes.Feature {
+		def, ok := defs.Class(class)
+		require.True(t, ok)
+		f, ok := def.Lists(classes.KindRogueSkills)
+		require.True(t, ok)
+		return f
+	}
+	thief, bard := listed("thief"), listed("bard")
+	both := func(bardFrom int) func([]classes.Class) []classes.Class {
+		late := bard
+		late.FromLevel = bardFrom
+		return add("test_swashbuckler", "fighter", "", thief, late)
+	}
+	points := domainskills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5, "climb_walls": 10}}
+	percent := func(set *domainskills.SkillSet, skill string) ruletablesvc.SkillPercent {
+		for _, sk := range set.Skills {
+			if sk.Skill == skill {
+				return sk
+			}
+		}
+		require.Failf(t, "skill not in set", "%s in %s", skill, set.Set)
+		return ruletablesvc.SkillPercent{}
+	}
+	runFeatureCases(t, []featureCase{
+		{
+			"two sets at level 3, each with its own budget", both(3), "test_swashbuckler", 3,
+			func(c *charactersvc.Character) { c.SkillPoints = points },
+			func(t *testing.T, d charactersvc.Derived) {
+				require.Len(t, d.SkillSets, 2)
+				th, ba := skillSetOf(d, "thief"), skillSetOf(d, "bard")
+				require.NotNil(t, th)
+				require.NotNil(t, ba)
+				assert.Equal(t, "thief", d.SkillSets[0].Set, "in the class's order")
+				require.NotNil(t, th.Points)
+				require.NotNil(t, ba.Points)
+				assert.Equal(t, 60+2*30, th.Points.Total)
+				assert.Equal(t, 20+2*15, ba.Points.Total)
+				assert.Equal(t, 20, th.Points.Spent, "the thief's points are its own")
+				assert.Equal(t, 15, ba.Points.Spent, "the bard's points are its own")
+				assert.Equal(t, 20, percent(th, "pick_pockets").Points)
+				assert.Equal(t, 5, percent(ba, "pick_pockets").Points, "a shared skill keeps each set's points")
+				assert.Len(t, th.Skills, len(ruletablesvc.ThiefSkills))
+				assert.Len(t, ba.Skills, len(ruletablesvc.BardSkills))
+			},
+		},
+		{"the second set starts at its own level", both(3), "test_swashbuckler", 1, nil, func(t *testing.T, d charactersvc.Derived) {
+			require.Len(t, d.SkillSets, 1)
+			assert.Equal(t, "thief", d.SkillSets[0].Set)
 		}},
 	})
 }

@@ -2,8 +2,8 @@
 // (the proficiencies and bard skills with their targets and last checks),
 // POST /api/roll/skill/{id} (one check, rolled and logged on the server, with
 // an optional DM adjustment) and POST /api/roll/skill/{id}/adjust (the
-// adjustment of the latest check, after the roll), PUT /api/skills/points (a
-// thief's or a bard's skill points, ADR 0030 steps 17 and 18), PUT /api/proficiencies and POST
+// adjustment of the latest check, after the roll), PUT /api/skills/points (the
+// points of a skill set, ADR 0030 steps 17 and 18), PUT /api/proficiencies and POST
 // /api/proficiencies/preview (the proficiency picks, ADR 0037 step 12); and the plain ability
 // checks (ADR 0028): POST /api/roll/ability/{ability} and POST
 // /api/roll/ability/{entryId}/adjust.
@@ -40,12 +40,12 @@ type CharacterIDFunc func(r *http.Request) int64
 
 type skillSvc interface {
 	List(ctx context.Context, characterID int64) (*skillsvc.Skills, error)
-	Roll(ctx context.Context, characterID int64, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
+	RollInSet(ctx context.Context, characterID int64, set, id string, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
 	Adjust(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.CheckResult, error)
 	RollAbility(ctx context.Context, characterID int64, ability string) (*skillsvc.AbilityCheckResult, error)
 	AdjustAbility(ctx context.Context, characterID, entryID int64, adj skillsvc.Adjustment) (*skillsvc.AbilityCheckResult, error)
-	SetPoints(ctx context.Context, characterID int64, points map[string]int) (map[string]int, error)
-	PreviewPoints(ctx context.Context, characterID int64, points map[string]int) (*skillsvc.Skills, error)
+	SetPoints(ctx context.Context, characterID int64, set string, points map[string]int) (map[string]int, error)
+	PreviewPoints(ctx context.Context, characterID int64, set string, points map[string]int) (*skillsvc.Skills, error)
 }
 
 // RegisterRoutes wires the skill endpoints onto r.
@@ -124,15 +124,22 @@ type RogueSkillDTO struct {
 // SkillsDTO is the GET /api/skills answer.
 type SkillsDTO struct {
 	Proficiencies []ProficiencyDTO `json:"proficiencies"`
-	BardSkills    []RogueSkillDTO  `json:"bardSkills"`
-	ThiefSkills   []RogueSkillDTO  `json:"thiefSkills"`
-	// SkillArmor is the skill armour the bard or thief skills read (ADR
-	// 0033 step 14, from the worn body armour: none, leather,
-	// padded_studded_leather, elven_chain or metal), "" for another class.
-	SkillArmor string `json:"skillArmor"`
-	// Budget is the skill point budget with the terms of its formula; null
-	// for a class without skill points.
-	Budget *BudgetDTO `json:"budget"`
+	// SkillSets is one set per rogue_skills feature the class grants (ADR 0040
+	// step 3.4), empty for a class without skill sets.
+	SkillSets []SkillSetDTO `json:"skillSets"`
+}
+
+// SkillSetDTO is one skill set of the tab: set the rogue_skills set code, kind the check kind
+// its rolls are logged as (thiefSkill or bardSkill, ADR 0040 step 3.2), skillArmor the skill
+// armour it reads (ADR 0033 step 14, from the worn body armour: none, leather,
+// padded_studded_leather, elven_chain or metal), budget its skill point budget with the terms of
+// its formula (null before the level its points start) and skills its skills.
+type SkillSetDTO struct {
+	Set        string          `json:"set"`
+	Kind       string          `json:"kind"`
+	SkillArmor string          `json:"skillArmor"`
+	Budget     *BudgetDTO      `json:"budget"`
+	Skills     []RogueSkillDTO `json:"skills"`
 }
 
 // BudgetDTO is a thief's or a bard's skill point budget (wire.SkillPointsBudgetDTO, shared with
@@ -194,13 +201,7 @@ func lastDTO(l *skillsvc.LastCheck) *LastDTO {
 func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	out := SkillsDTO{
 		Proficiencies: make([]ProficiencyDTO, 0, len(s.Proficiencies)),
-		BardSkills:    make([]RogueSkillDTO, 0, len(s.BardSkills)),
-		ThiefSkills:   make([]RogueSkillDTO, 0, len(s.ThiefSkills)),
-		SkillArmor:    s.SkillArmor,
-	}
-	out.Budget = wire.SkillPointsBudgetToDTO(s.Budget)
-	for _, t := range s.ThiefSkills {
-		out.ThiefSkills = append(out.ThiefSkills, rogueSkillDTO(skillsvc.KindThiefSkill, t.SkillPercent, t.Last))
+		SkillSets:     make([]SkillSetDTO, 0, len(s.SkillSets)),
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
@@ -208,8 +209,15 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 			Target: p.Target, Last: lastDTO(p.Last),
 		})
 	}
-	for _, b := range s.BardSkills {
-		out.BardSkills = append(out.BardSkills, rogueSkillDTO(skillsvc.KindBardSkill, b.SkillPercent, b.Last))
+	for _, set := range s.SkillSets {
+		dto := SkillSetDTO{
+			Set: set.Set, Kind: string(set.Kind), SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Budget),
+			Skills: make([]RogueSkillDTO, 0, len(set.Skills)),
+		}
+		for _, sk := range set.Skills {
+			dto.Skills = append(dto.Skills, rogueSkillDTO(set.Kind, sk.SkillPercent, sk.Last))
+		}
+		out.SkillSets = append(out.SkillSets, dto)
 	}
 	return out
 }
@@ -253,9 +261,11 @@ func List(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 	}
 }
 
-// PointsDTO is the body of PUT /api/skills/points: a thief's total points
-// per skill code; a skill left out has 0.
+// PointsDTO is the body of PUT /api/skills/points and of its preview: the total points per skill
+// code of the skill set set (a skill left out has 0). set may be left out for a class with one
+// skill set; with several it is required (refused as `set` empty).
 type PointsDTO struct {
+	Set    string         `json:"set"`
 	Points map[string]int `json:"points"`
 }
 
@@ -270,7 +280,7 @@ func SetPoints(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 		if err := dec.Decode(&req); err != nil || req.Points == nil {
 			return render.BadRequestError("invalid request body")
 		}
-		if _, err := svc.SetPoints(r.Context(), charID(r), req.Points); err != nil {
+		if _, err := svc.SetPoints(r.Context(), charID(r), req.Set, req.Points); err != nil {
 			return err
 		}
 		s, err := svc.List(r.Context(), charID(r))
@@ -294,7 +304,7 @@ func PreviewPoints(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 		if err := dec.Decode(&req); err != nil || req.Points == nil {
 			return render.BadRequestError("invalid request body")
 		}
-		s, err := svc.PreviewPoints(r.Context(), charID(r), req.Points)
+		s, err := svc.PreviewPoints(r.Context(), charID(r), req.Set, req.Points)
 		if err != nil {
 			return err
 		}
@@ -315,7 +325,8 @@ func Roll(charID CharacterIDFunc, svc skillSvc) render.HandlerFunc {
 		if req.Adjustment != nil {
 			adj.Value = *req.Adjustment
 		}
-		c, err := svc.Roll(r.Context(), charID(r), chi.URLParam(r, "id"), adj)
+		// ?set= names the skill set when two of the character's sets share the skill.
+		c, err := svc.RollInSet(r.Context(), charID(r), r.URL.Query().Get("set"), chi.URLParam(r, "id"), adj)
 		if err != nil {
 			return err
 		}

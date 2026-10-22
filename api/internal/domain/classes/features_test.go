@@ -118,3 +118,32 @@ func TestLookup_Step5_AFeatureThroughTheClassEntry(t *testing.T) {
 	got, _ := again.Lists(classes.KindRogueSkills)
 	assert.Equal(t, rogueSkills(), got.RogueSkills, "the registry's params are untouched")
 }
+
+// ADR 0040 step 3.4: rogue_skills is listed once per skill set, so a class may grant two sets;
+// the same set twice is refused. FeaturesAt answers every set granted at a level, in the class's
+// order, ListsAll every set listed.
+func TestFeatures_Step3_4_ARogueSkillsPerSkillSet(t *testing.T) {
+	skills := func(set string, from int) classes.Feature {
+		rs := rogueSkills()
+		rs.Set = set
+		return classes.Feature{Kind: classes.KindRogueSkills, FromLevel: from, RogueSkills: rs}
+	}
+	r := registry(t, withFeatures(skills("set_a", 1), skills("set_b", 3)))
+	c, ok := r.Class("test_class")
+	require.True(t, ok)
+	sets := func(fs []classes.Feature) []string {
+		var out []string
+		for _, f := range fs {
+			out = append(out, f.RogueSkills.Set)
+		}
+		return out
+	}
+	assert.Equal(t, []string{"set_a"}, sets(c.FeaturesAt(classes.KindRogueSkills, 2)), "the second set starts at its level")
+	assert.Equal(t, []string{"set_a", "set_b"}, sets(c.FeaturesAt(classes.KindRogueSkills, 3)))
+	assert.Equal(t, []string{"set_a", "set_b"}, sets(c.ListsAll(classes.KindRogueSkills)))
+	assert.Empty(t, c.FeaturesAt(classes.KindBackstab, 20))
+
+	_, err := classes.New([]classes.Class{withFeatures(skills("set_a", 1), skills("set_a", 5))}, groups("warrior"),
+		[]classes.Race{{ID: "human", Name: localized.Text{"en": "Human"}}})
+	require.Error(t, err, "the same skill set twice")
+}

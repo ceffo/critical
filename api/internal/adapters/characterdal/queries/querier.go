@@ -34,6 +34,8 @@ type Querier interface {
 	// (step 7.5), which stays the imported figure step 24 compares.
 	GetCharacter(ctx context.Context, id int64) (GetCharacterRow, error)
 	GetCharacterDetails(ctx context.Context, id int64) (GetCharacterDetailsRow, error)
+	// A character's class and stored skill points, for the undo of a spend (no derivation).
+	GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, error)
 	// Serialises the writes that move a user's current character (switch, create, retire): the
 	// later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).
 	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)

@@ -91,7 +91,8 @@ func undoCases() []undoCase {
 			h.XP.EXPECT().Delete(mock.Anything, characterID, int64(12)).Return(nil).Once()
 		}},
 		{"a thief's skill points", "skill_points", reencoded("skill points (skillsvc)"), func(h *harness) {
-			h.Character.EXPECT().SetSkillPoints(mock.Anything, characterID, map[string]int{"climb_walls": 80}).Return(nil).Once()
+			h.Character.EXPECT().SkillPoints(mock.Anything, characterID).Return("bard", nil, nil).Once()
+			h.Character.EXPECT().SetSkillPoints(mock.Anything, characterID, skills.SetPoints{"bard": {"climb_walls": 80}}).Return(nil).Once()
 		}},
 		// Recorded with the codec's envelope from the start: no older encoding to re-encode.
 		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]}}`, func(h *harness) {

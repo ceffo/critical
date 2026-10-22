@@ -654,7 +654,7 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by step 18 and step 19: `TestSchema_Step19_OnlyFormat12IsValid`) and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by steps 18 to 20: `TestSchema_Step20_OnlyFormat13IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
     `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
@@ -674,7 +674,7 @@ is only ever appended to by play.
     4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
        `charactersvc.Derived.MagicDefence`.
     Tests: `TestParse_Step17_ReadsTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
-    `TestSchema_Step19_OnlyFormat12IsValid` (cataloguecheck, step 17.3 renamed by steps 18 and 19), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    `TestSchema_Step20_OnlyFormat13IsValid` (cataloguecheck, step 17.3 renamed by steps 18, 19 and 20), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
     the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
 
 18. **The class, group and race definitions, format 11** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) steps 1, 2, 4 and 7
@@ -709,7 +709,7 @@ is only ever appended to by play.
        neither imports nor reads the definitions yet (ADR 0040 step 11.2 does). Merge order: the builder publishing format 11 first (its own PR in
        `critical-rulebooks`), then the API change immediately, with no other main merge between (Release pairs main's API with the rulebooks
        catalogue); a dev checkout runs `just catalogue` once after both are merged.
-    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (was `Schema_Step18_OnlyFormat11IsValid`), `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
+    Tests: `Schema_Step19_OnlyFormat12IsValid` (renamed by step 19, now step 20's; was `Schema_Step18_OnlyFormat11IsValid`), `TestSchema_Step18_ClassGroupAndRaceDefinitions` (cataloguecheck),
     `TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s `check_class_defs` (the definitions equal
     the tables of formats 3 to 10 they repeat, spot values from the PHB, fault injection for each refusal of step 18.5).
 
@@ -726,8 +726,8 @@ is only ever appended to by play.
     3. **Rollout, as step 18.6.** The API reads **format 12 only**: a format-11 artifact (or any older one) is refused at start as an unknown
        format, naming `this API reads format 12` and `just catalogue`. Merge order: the builder publishing format 12 first, then the API change
        immediately; a dev checkout runs `just catalogue` once after both are merged.
-    Tests: `TestSchema_Step19_OnlyFormat12IsValid` (renamed by step 20; cataloguecheck: format 12 only, the column required, an id in capitals and an id twice
-    refused), `TestParse_Step19_ReadsFormat12AndRefusesFormat11` (catalogueadpt); the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative`
+    Tests: `Schema_Step19_OnlyFormat12IsValid` (renamed by step 20; cataloguecheck: format 12 only, the column required, an id in capitals and an id twice
+    refused), `Parse_Step19_ReadsFormat12AndRefusesFormat11` (renamed by step 20) (catalogueadpt); the rules adapter's `TestSpellImmunitiesFor_Step10_Cumulative`
     (the column read); in `critical-rulebooks`: `scripts/check`'s spot values and fault injections for the column.
 
 20. **The psionicist and the psionic powers, format 13** (**decided as built** 2026-10-22; [ADR 0043](0043-psionics.md) steps 1, 2, 4, 6 and 8 decided the data).

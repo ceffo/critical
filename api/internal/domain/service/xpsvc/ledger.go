@@ -87,12 +87,12 @@ func (s *service) Preview(ctx context.Context, characterID int64, base int, bonu
 	if err := validateBase(base); err != nil {
 		return Amount{}, err
 	}
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	entries, err := s.chars.ClassEntries(ctx, characterID)
 	if err != nil {
 		return Amount{}, err
 	}
 	a := EntryAmount(base, bonus)
-	a.Split = splitAmount(c.Entries(), a.Total)
+	a.Split = splitAmount(entries, a.Total)
 	return a, nil
 }
 

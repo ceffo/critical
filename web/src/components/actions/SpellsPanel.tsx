@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSpellStore } from "@/stores/spells";
+import { useSpellStore, validEntry } from "@/stores/spells";
 import { useClassName } from "@/lib/useClassName";
 import { useTableStore } from "@/stores/table";
 import { spellId, useSpellName } from "@/i18n/spellName";
@@ -224,7 +224,7 @@ export function SpellsPanel() {
   const entries = [
     ...new Set(slots.flatMap((s) => (s.class ? [s.class] : []))),
   ];
-  const current = entry || entries[0] || "";
+  const current = validEntry(slots, entry) || entries[0] || "";
 
   // "Préparer" turns the tab into the editor, in the same space (ADR 0027 step 11.1).
   if (editing)

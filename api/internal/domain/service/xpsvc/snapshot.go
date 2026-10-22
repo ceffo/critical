@@ -138,11 +138,10 @@ func (s *service) logChange(ctx context.Context, characterID int64, kind actionl
 	if err != nil {
 		return err
 	}
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	entries, err := s.chars.ClassEntries(ctx, characterID)
 	if err != nil {
 		return err
 	}
-	entries := c.Entries()
 	var rec changeRecord
 	switch {
 	case after != nil:

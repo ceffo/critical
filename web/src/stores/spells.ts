@@ -31,6 +31,14 @@ interface SpellStore {
   prepare: (spells: string[]) => Promise<void>;
 }
 
+/**
+ * The picked entry when the slots still have it, else "" (the first one): the pick belongs to the
+ * character that was read, so slots of another character, or of one class, never prepare it.
+ */
+export function validEntry(slots: SpellSlot[], entry: string): string {
+  return entry && slots.some((s) => s.class === entry) ? entry : "";
+}
+
 export const useSpellStore = create<SpellStore>((set, get) => ({
   slots: [],
   info: { spellbook: [], limits: [] },
@@ -40,14 +48,23 @@ export const useSpellStore = create<SpellStore>((set, get) => ({
   fetchSlots: async () => {
     set({ loading: true });
     try {
-      set({ slots: (await api.fetchSpellSlots()) ?? [] });
+      const slots = (await api.fetchSpellSlots()) ?? [];
+      // A pick the slots no longer have is dropped with the spellbook read for it.
+      const kept = validEntry(slots, get().entry);
+      set(
+        kept === get().entry
+          ? { slots }
+          : { slots, entry: "", infoLoaded: false },
+      );
     } finally {
       set({ loading: false });
     }
   },
   fetchInfo: async () => {
     set({
-      info: await api.fetchPreparationInfo(get().entry || undefined),
+      info: await api.fetchPreparationInfo(
+        validEntry(get().slots, get().entry) || undefined,
+      ),
       infoLoaded: true,
     });
   },
@@ -73,8 +90,7 @@ export const useSpellStore = create<SpellStore>((set, get) => ({
     set({ slots: (await api.resetSpellSlots()) ?? [] });
   },
   prepare: async (spells) => {
-    set({
-      slots: (await api.prepareSpells(spells, get().entry || undefined)) ?? [],
-    });
+    const entry = validEntry(get().slots, get().entry);
+    set({ slots: (await api.prepareSpells(spells, entry || undefined)) ?? [] });
   },
 }));

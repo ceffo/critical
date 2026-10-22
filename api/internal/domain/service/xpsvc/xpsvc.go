@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
@@ -60,6 +61,9 @@ type DAL interface {
 // requisites.
 type Characters interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	// ClassEntries are the stored class entries, without the derivation: the
+	// award's split and the journal's payload need no more.
+	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)
 }
 
 // Log is the slice of the action log XP changes are recorded into.

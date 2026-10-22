@@ -49,7 +49,8 @@
       "dismissTitle": "Close what the level grants",
       "dieErrors": {
         "out_of_range": "Enter a die from 1 to {{die}}.",
-        "fixed_gain": "This level has a fixed gain, no die."
+        "fixed_gain": "This level has a fixed gain, no die.",
+        "dual_class_no_hit_points": "This level gains no hit points until the new class passes the old one."
       }
     }
   },

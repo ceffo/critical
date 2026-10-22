@@ -458,7 +458,11 @@ type PendingLevel struct {
 	Level     int
 	Die       int
 	FixedGain int
-	Grants    skills.LevelGrants
+	// NoHitPoints is a dual-class's level not above its old class's (ADR
+	// 0042 step 11): taken with its other benefits, it gains no hit points
+	// (Die and FixedGain 0).
+	NoHitPoints bool
+	Grants      skills.LevelGrants
 	// FreeSpells are the free spells the level grants a mage (ADR 0030 step
 	// 20.8): one per spell level it opens, none above the Intelligence's
 	// maximum. Set by the service; nil for none.

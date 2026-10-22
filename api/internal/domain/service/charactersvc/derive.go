@@ -254,7 +254,7 @@ func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error)
 			// (ADR 0042 steps 5.2 and 7).
 			ed.RealizedLevel = e.Level()
 			ed.LevelUp = LevelUp{Pending: []PendingLevel{}}
-		} else if err := ed.setLevels(e, shares, rules); err != nil {
+		} else if err := ed.setLevels(e, shares, classes.MaxLeftAt(entries), rules); err != nil {
 			return nil, err
 		}
 		// Step 8 per entry: the slot table the class's spell_progression
@@ -269,8 +269,10 @@ func deriveEntries(c *Character, awards []int, rules Rules) ([]entryCalc, error)
 
 // setLevels sets an active entry's target and realized levels, its next
 // threshold and its pending levels; shares is the number of active entries
-// (the hit point divisor, ADR 0042 step 10.2).
-func (ed *EntryDerived) setLevels(e classes.Entry, shares int, rules Rules) error {
+// (the hit point divisor, ADR 0042 step 10.2) and leftAt the highest frozen
+// entry's left-at level (0 for none: the levels up to it gain no hit points,
+// ADR 0042 step 11).
+func (ed *EntryDerived) setLevels(e classes.Entry, shares, leftAt int, rules Rules) error {
 	target, err := rules.LevelFor(e.Class, ed.XP)
 	if err != nil {
 		return fmt.Errorf("derive %s level: %w", e.Class, err)
@@ -289,7 +291,7 @@ func (ed *EntryDerived) setLevels(e classes.Entry, shares int, rules Rules) erro
 		}
 		ed.NextLevelXP = &next
 	}
-	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, rules)
+	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, leftAt, rules)
 	return err
 }
 
@@ -376,9 +378,12 @@ func spellbookRules(c *Character, g classes.Grant, rules Rules) (*SpellbookRules
 // pending for each level above the realized one up to the target, rolled
 // lowest first; each is the group's hit die up to its name level (step 7.1),
 // the fixed gain above it (step 7.2), divided by shares, the character's
-// number of classes, when it is rolled (ADR 0042 step 10). A target under the
-// realized level (an XP correction, step 7.4) removes nothing: it is flagged.
-func levelUp(class, group string, realized, target, shares int, rules Rules) (LevelUp, error) {
+// number of classes, when it is rolled (ADR 0042 step 10). A dual-class's
+// level up to leftAt, the highest frozen entry's left-at level, gains no hit
+// points (ADR 0042 step 11: no die, no fixed gain); the first level above it
+// is step 7.1 or 7.2 for the new class. A target under the realized level (an
+// XP correction, step 7.4) removes nothing: it is flagged.
+func levelUp(class, group string, realized, target, shares, leftAt int, rules Rules) (LevelUp, error) {
 	l := LevelUp{Pending: []PendingLevel{}, RealizedAboveTarget: realized > target}
 	if realized >= target {
 		return l, nil
@@ -390,7 +395,9 @@ func levelUp(class, group string, realized, target, shares int, rules Rules) (Le
 	// Step 7.5: level 1's hit points are entered, never rolled.
 	for n := max(realized+1, 2); n <= target; n++ {
 		p := PendingLevel{Class: class, Level: n, Classes: shares}
-		if n <= hd.NameLevel {
+		if n <= leftAt {
+			p.NoHitPoints = true
+		} else if n <= hd.NameLevel {
 			p.Die = hd.Die
 		} else {
 			p.FixedGain = hd.GainAfter

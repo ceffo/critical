@@ -46,6 +46,9 @@ type record struct {
 	Manual        bool   `json:"manual"`
 	HPMaxBefore   int    `json:"hpMaxBefore"`
 	HPMaxAfter    int    `json:"hpMaxAfter"`
+	// Reason is why the gain is 0 (ADR 0042 step 11:
+	// dual_class_no_hit_points); absent otherwise.
+	Reason string `json:"reason,omitempty"`
 }
 
 // record writes the level_up entry with the realized level's snapshot, inside the
@@ -56,7 +59,7 @@ func (s *service) record(ctx context.Context, characterID int64, r Result, befor
 	rec := record{
 		Level: r.Level, HitDie: r.HitDie, Rolled: r.Rolled, Counted: r.Counted,
 		ConAdjustment: r.ConAdjustment, Gain: r.Gain, Fixed: r.Fixed, Manual: r.Manual,
-		HPMaxBefore: r.HPMaxBefore, HPMaxAfter: r.HPMaxAfter,
+		HPMaxBefore: r.HPMaxBefore, HPMaxAfter: r.HPMaxAfter, Reason: r.Reason,
 	}
 	if r.Classes > 1 {
 		// A single-class record stays as it was written before the entries.

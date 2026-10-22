@@ -101,3 +101,17 @@ func TestParty_Step17_TheDualClassElf(t *testing.T) {
 		assert.Equal(t, 7, d.CasterLevel())
 	})
 }
+
+// ADR 0042 step 11 on the pending levels: "While the active entry's level is
+// not above every frozen entry's left_at_level, a level-up of it gains no hit
+// points [...]. From the first level above it, ADR 0030 step 7.1 and 7.2 for
+// the new class." The elf's mage at 7 with mage 10's XP owes 8 and 9 without
+// hit points (no die, no fixed gain) and 10 with the wizard's d4.
+func TestDerive_Step11_NoHitPointsUntilTheCrossover(t *testing.T) {
+	d := derived(t, elf(7, 250_000))
+	assert.Equal(t, []charactersvc.PendingLevel{
+		{Class: "mage", Classes: 1, Level: 8, NoHitPoints: true},
+		{Class: "mage", Classes: 1, Level: 9, NoHitPoints: true},
+		{Class: "mage", Classes: 1, Level: 10, Die: 4},
+	}, d.LevelUp.Pending)
+}

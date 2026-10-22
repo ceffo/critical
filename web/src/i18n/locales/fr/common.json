@@ -49,7 +49,8 @@
       "dismissTitle": "Fermer ce que le niveau apporte",
       "dieErrors": {
         "out_of_range": "Saisissez un dé de 1 à {{die}}.",
-        "fixed_gain": "Ce niveau a un gain fixe, sans dé."
+        "fixed_gain": "Ce niveau a un gain fixe, sans dé.",
+        "dual_class_no_hit_points": "Ce niveau ne donne aucun point de vie tant que la nouvelle classe ne dépasse pas l'ancienne."
       }
     }
   },

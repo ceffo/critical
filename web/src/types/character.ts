@@ -25,6 +25,9 @@ export interface PendingLevel {
   level: number;
   die: number;
   fixedGain: number;
+  /** ADR 0042 step 11: a dual-class's level not above its old class's gains no hit points (no die,
+   * no fixed gain); absent otherwise. */
+  noHitPoints?: boolean;
   /** ADR 0037 step 15: what the level grants beyond hit points. */
   grants: LevelGrants;
 }
@@ -79,6 +82,8 @@ export interface LevelUpRecord {
   manual: boolean;
   hpMaxBefore: number;
   hpMaxAfter: number;
+  /** ADR 0042 step 11: why the gain is 0 (`dual_class_no_hit_points`); absent otherwise. */
+  reason?: "dual_class_no_hit_points";
 }
 
 export interface LevelUpResult extends LevelUpRecord {

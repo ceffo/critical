@@ -2,6 +2,8 @@
 
 export type LogKind =
   | "hp_change"
+  /** A PSP change entered by hand (ADR 0043 step 5), bounded by the pool; popping it gives them back. */
+  | "psp_change"
   | "cast"
   | "buff_change"
   | "round_advance"
@@ -97,6 +99,9 @@ export interface LogEntry {
   hpDelta: number;
   /** After amends; 0 when voided. */
   effectiveHpDelta: number;
+  /** PSP delta as recorded (ADR 0043 step 5): any entry may carry one, never amended. Absent from an
+   * API older than the PSP ledger. */
+  pspDelta?: number;
   effectiveSummary: string;
   /** The latest note amend's note; "" when none. */
   note: string;
@@ -115,6 +120,13 @@ export interface LogEntry {
 export interface HpBreakdown {
   hpRequested: number;
   hpApplied: number;
+}
+
+/** Merged by the server into the payload of an entry whose PSP delta it cut (ADR 0043 step 5): a gain
+ * by the maximum, a loss at 0. */
+export interface PspBreakdown {
+  pspRequested: number;
+  pspApplied: number;
 }
 
 export interface LogResponse {

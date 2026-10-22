@@ -1316,6 +1316,8 @@
     "current": "en cours",
     "hpDamage": "Dégâts {{amount}}",
     "hpHeal": "Soins {{amount}}",
+    "pspSpent": "PFP dépensés {{amount}}",
+    "pspRecovered": "PFP récupérés {{amount}}",
     "nothingThisRound": "Rien d'enregistré ce tour.",
     "exposure": {
       "onMe": "{{spell}}, exposition au tour {{round}} : {{total}} dégâts ({{type}}) sur moi",
@@ -1323,6 +1325,7 @@
     },
     "kinds": {
       "hp_change": "PV",
+      "psp_change": "PFP",
       "cast": "Sort",
       "buff_change": "Effet",
       "round_advance": "Tour",
@@ -1369,6 +1372,8 @@
     "was": "était {{delta}}",
     "capped": "{{requested}} demandés, plafonnés aux PV max",
     "floored": "{{requested}} demandés, arrêtés au plancher de PV",
+    "pspCapped": "{{requested}} demandés, plafonnés aux PFP max",
+    "pspFloored": "{{requested}} demandés, arrêtés à 0 PFP",
     "buff": {
       "activate": "Effet activé : {{buff}} ({{counters}})",
       "edit": "{{buff}} : {{from}} → {{to}}",
@@ -2107,6 +2112,7 @@
     "user_not_found": "Cet utilisateur n'existe pas.",
     "level_up_not_pending": "Ce niveau n'est plus à lancer : la feuille de personnage se met à jour.",
     "no_spellbook": "Cette classe n'a pas de grimoire.",
+    "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
     "not_a_wizard_spell": "Seul un sort de magicien s'inscrit au grimoire.",
     "already_in_spellbook": "Ce sort est déjà dans le grimoire.",
     "spell_level_above_intelligence": "Niveau de sort trop élevé pour l'Intelligence du personnage.",
@@ -2125,6 +2131,8 @@
     "save": "Sauvegarde {{name}}",
     "damage": "Dégâts",
     "heal": "Soins",
+    "pspSpent": "PFP dépensés",
+    "pspRecovered": "PFP récupérés",
     "initiative": "Initiative",
     "verdict": {
       "hit": "touché",

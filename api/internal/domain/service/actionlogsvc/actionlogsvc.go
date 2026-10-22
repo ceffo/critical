@@ -54,6 +54,11 @@ type SVC interface {
 	// AppendHPEvent logs an hp_change entry (delta signed, source optional)
 	// and returns the new HP state. The cap and floor apply as in Record.
 	AppendHPEvent(ctx context.Context, characterID int64, delta int, source string) (*actionlog.HPState, error)
+	// AppendPSPChange logs a psp_change entry (delta signed and not 0,
+	// source optional) and returns the pool after it (ADR 0043 step 5). The
+	// bounds apply as in Record; a character with no PSP maximum has no pool
+	// and is refused.
+	AppendPSPChange(ctx context.Context, characterID int64, delta int, source string) (actionlog.PSPState, error)
 
 	// Register binds a service's module: its codecs, so voiding an entry
 	// with a snapshot under one of their families writes the "before" state

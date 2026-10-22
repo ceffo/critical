@@ -1316,6 +1316,8 @@
     "current": "current",
     "hpDamage": "Damage {{amount}}",
     "hpHeal": "Healing {{amount}}",
+    "pspSpent": "PSPs spent {{amount}}",
+    "pspRecovered": "PSPs recovered {{amount}}",
     "nothingThisRound": "Nothing recorded this round yet.",
     "exposure": {
       "onMe": "{{spell}} exposure, round {{round}}: {{total}} {{type}} damage to me",
@@ -1323,6 +1325,7 @@
     },
     "kinds": {
       "hp_change": "HP",
+      "psp_change": "PSPs",
       "cast": "Cast",
       "buff_change": "Effect",
       "round_advance": "Round",
@@ -1369,6 +1372,8 @@
     "was": "was {{delta}}",
     "capped": "{{requested}} requested, capped at max HP",
     "floored": "{{requested}} requested, stopped at the HP floor",
+    "pspCapped": "{{requested}} requested, capped at max PSPs",
+    "pspFloored": "{{requested}} requested, stopped at 0 PSPs",
     "buff": {
       "activate": "Activated {{buff}} ({{counters}})",
       "edit": "{{buff}}: {{from}} → {{to}}",
@@ -2107,6 +2112,7 @@
     "user_not_found": "This user does not exist.",
     "level_up_not_pending": "That level is no longer to roll: the sheet refreshes.",
     "no_spellbook": "This class has no spellbook.",
+    "no_psp_pool": "This character has no PSP pool.",
     "not_a_wizard_spell": "Only a wizard spell goes in the spellbook.",
     "already_in_spellbook": "That spell is already in the spellbook.",
     "spell_level_above_intelligence": "Spell level too high for the character's Intelligence.",
@@ -2125,6 +2131,8 @@
     "save": "{{name}} save",
     "damage": "Damage",
     "heal": "Healing",
+    "pspSpent": "PSPs spent",
+    "pspRecovered": "PSPs recovered",
     "initiative": "Initiative",
     "verdict": {
       "hit": "hit",

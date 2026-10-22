@@ -209,6 +209,8 @@ var mappings = []mapping{
 	{target: actionlogsvc.ErrRedoChanged, status: http.StatusConflict, code: "log_redo_changed"},
 	{target: actionlogsvc.ErrNothingToRedo, status: http.StatusConflict, code: "nothing_to_redo"},
 	{target: actionlogsvc.ErrSnapshotNotReencoded, status: http.StatusConflict, code: "snapshot_not_reencoded"},
+	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
+	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},
 }
 
 // Code is the stable error code of err, as Error would render it (the login

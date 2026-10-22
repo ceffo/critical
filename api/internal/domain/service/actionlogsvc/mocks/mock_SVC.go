@@ -271,6 +271,65 @@ func (_c *MockSVC_AppendHPEvent_Call) RunAndReturn(run func(context.Context, int
 	return _c
 }
 
+// AppendPSPChange provides a mock function with given fields: ctx, characterID, delta, source
+func (_m *MockSVC) AppendPSPChange(ctx context.Context, characterID int64, delta int, source string) (actionlog.PSPState, error) {
+	ret := _m.Called(ctx, characterID, delta, source)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AppendPSPChange")
+	}
+
+	var r0 actionlog.PSPState
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, string) (actionlog.PSPState, error)); ok {
+		return rf(ctx, characterID, delta, source)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int, string) actionlog.PSPState); ok {
+		r0 = rf(ctx, characterID, delta, source)
+	} else {
+		r0 = ret.Get(0).(actionlog.PSPState)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int, string) error); ok {
+		r1 = rf(ctx, characterID, delta, source)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AppendPSPChange_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AppendPSPChange'
+type MockSVC_AppendPSPChange_Call struct {
+	*mock.Call
+}
+
+// AppendPSPChange is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - delta int
+//   - source string
+func (_e *MockSVC_Expecter) AppendPSPChange(ctx interface{}, characterID interface{}, delta interface{}, source interface{}) *MockSVC_AppendPSPChange_Call {
+	return &MockSVC_AppendPSPChange_Call{Call: _e.mock.On("AppendPSPChange", ctx, characterID, delta, source)}
+}
+
+func (_c *MockSVC_AppendPSPChange_Call) Run(run func(ctx context.Context, characterID int64, delta int, source string)) *MockSVC_AppendPSPChange_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AppendPSPChange_Call) Return(_a0 actionlog.PSPState, _a1 error) *MockSVC_AppendPSPChange_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AppendPSPChange_Call) RunAndReturn(run func(context.Context, int64, int, string) (actionlog.PSPState, error)) *MockSVC_AppendPSPChange_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

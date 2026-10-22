@@ -80,3 +80,10 @@ func WithPSPBreakdown(payload json.RawMessage, b PSPBreakdown) (json.RawMessage,
 	}
 	return out, nil
 }
+
+// PSPState is a character's PSP pool after a change (ADR 0043 step 5): the
+// current PSPs (CurrentPSP) and the stored maximum.
+type PSPState struct {
+	Current int
+	Max     int
+}

@@ -23,7 +23,11 @@ type Kind string
 // are recorded today; the others are reserved for the services that plug
 // into the log.
 const (
-	KindHPChange     Kind = "hp_change"
+	KindHPChange Kind = "hp_change"
+	// KindPSPChange is a PSP change entered by hand (actionlogsvc, ADR 0043
+	// step 5), like hp_change for HP: its PSP delta is bounded by the pool and
+	// popping it gives the PSPs back.
+	KindPSPChange    Kind = "psp_change"
 	KindCast         Kind = "cast"
 	KindBuffChange   Kind = "buff_change"
 	KindRoundAdvance Kind = "round_advance"

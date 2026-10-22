@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 )
 
 // ADR 0043 step 5 in the recording path: a PSP delta is bounded when the
@@ -112,5 +113,63 @@ func TestRecord_Step5_PSPReads(t *testing.T) {
 			CharacterID: 1, Round: 2, Kind: pspKind, Summary: "rest", PSPDelta: 4, Payload: json.RawMessage(`[1]`),
 		})
 		require.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+}
+
+// The hand edit, a psp_change entry (step 5): recorded through Record, so it
+// is bounded like any PSP delta, and answered with the pool after it. A delta
+// of 0 and a character with no PSP maximum are refused with nothing written
+// (the mocks fail on an unexpected insert).
+func TestAppendPSPChange_Step5_ThroughRecord(t *testing.T) {
+	ctx := context.Background()
+	t.Run("a gain capped at the maximum", func(t *testing.T) {
+		svc, dal, rounds, _, maxima := newSvcMaxHP(t)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+		maxima.EXPECT().GetMaxPSP(mock.Anything, int64(1)).Return(25, nil).Times(2)
+		dal.EXPECT().PSPTotal(mock.Anything, int64(1)).Return(-4, nil).Once()
+		var stored actionlog.NewEntry
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).
+			Run(func(_ context.Context, e actionlog.NewEntry, _ int64) { stored = e }).Return(42, nil).Once()
+		dal.EXPECT().PSPTotal(mock.Anything, int64(1)).Return(0, nil).Once()
+		state, err := svc.AppendPSPChange(ctx, 1, 9, "  ")
+		require.NoError(t, err)
+		assert.Equal(t, actionlog.PSPState{Current: 25, Max: 25}, state)
+		assert.Equal(t, actionlog.KindPSPChange, stored.Kind)
+		assert.Equal(t, 3, stored.Round)
+		assert.Equal(t, 4, stored.PSPDelta)
+		assert.Empty(t, stored.Summary)
+		assert.JSONEq(t, `{"pspRequested":9,"pspApplied":4}`, string(stored.Payload))
+	})
+	t.Run("the source is the summary", func(t *testing.T) {
+		svc, dal, rounds, _, maxima := newSvcMaxHP(t)
+		rounds.EXPECT().GetRound(mock.Anything, int64(1)).Return(3, nil).Once()
+		maxima.EXPECT().GetMaxPSP(mock.Anything, int64(1)).Return(25, nil).Times(2)
+		dal.EXPECT().PSPTotal(mock.Anything, int64(1)).Return(0, nil).Once()
+		var stored actionlog.NewEntry
+		dal.EXPECT().InsertEntry(mock.Anything, mock.Anything, int64(0)).
+			Run(func(_ context.Context, e actionlog.NewEntry, _ int64) { stored = e }).Return(42, nil).Once()
+		dal.EXPECT().PSPTotal(mock.Anything, int64(1)).Return(-7, nil).Once()
+		state, err := svc.AppendPSPChange(ctx, 1, -7, " mind thrust ")
+		require.NoError(t, err)
+		assert.Equal(t, actionlog.PSPState{Current: 18, Max: 25}, state)
+		assert.Equal(t, "mind thrust", stored.Summary)
+		assert.Equal(t, -7, stored.PSPDelta)
+	})
+	t.Run("a delta of 0 is refused", func(t *testing.T) {
+		svc, _, _, _, _ := newSvcMaxHP(t)
+		_, err := svc.AppendPSPChange(ctx, 1, 0, "")
+		require.ErrorIs(t, err, domain.ErrInvalidInput)
+	})
+	t.Run("no PSP maximum, no pool", func(t *testing.T) {
+		svc, _, _, _, maxima := newSvcMaxHP(t)
+		maxima.EXPECT().GetMaxPSP(mock.Anything, int64(1)).Return(0, nil).Once()
+		_, err := svc.AppendPSPChange(ctx, 1, 5, "")
+		require.ErrorIs(t, err, actionlogsvc.ErrNoPSPPool)
+	})
+	t.Run("a failing maximum read", func(t *testing.T) {
+		svc, _, _, _, maxima := newSvcMaxHP(t)
+		maxima.EXPECT().GetMaxPSP(mock.Anything, int64(1)).Return(0, errBoom).Once()
+		_, err := svc.AppendPSPChange(ctx, 1, 5, "")
+		require.ErrorIs(t, err, errBoom)
 	})
 }

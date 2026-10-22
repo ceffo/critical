@@ -155,6 +155,12 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Damage",
     fr: "Dégâts",
   },
+  psp_change: {
+    e: entry("psp_change", null, { pspDelta: 12 }),
+    value: "+12",
+    en: "PSPs recovered",
+    fr: "PFP récupérés",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

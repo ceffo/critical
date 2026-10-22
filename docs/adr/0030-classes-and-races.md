@@ -491,7 +491,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     serves a class with the feature the open priest spells
     **at the spell levels it has slots of** (a ruling, accepted by the user: a level without a slot offers
     nothing to prepare), level then id order. The artifact's class-keyed `sphere_access` rows are no longer
-    read (2026-10-22; they go with a later catalogue format, ADR 0021 step 18.4 and
+    read (2026-10-22; format 14 dropped them, ADR 0021 step 21, and
     `ruletablesvc.MinorSphereMaxLevel` is gone: the cap is the feature's `minor_max_level`. Step 16 is `POST /api/character/turn-undead` `{undead}` (a Table 61 row code); the
     breakdown and the `turn_undead` entry carry the type, the level, the cell (`target` or
     `outcome`), the d20, `success`, `effect` (turn or destroy), the 2d6 `affected`, D*'s 2d4

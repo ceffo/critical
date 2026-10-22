@@ -827,6 +827,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     catalogue data (class codes and numbers); the trait texts are localized catalogue text (step
     23). _(proposed: a level above the limit, or a class the race does not allow, is a warning on
     the card: code, class, level and limit.)_
+    _(Amended 2026-10-21, [ADR 0041](0041-ruleset.md) step 5: a level above the limit is a warning
+    because the ruleset's `level_limits` is `warn`, never a refusal; the refusal below stays for a
+    single-class character, and the ruleset's racial lift waives it for multi-class and
+    dual-class, [ADR 0041](0041-ruleset.md) step 2.2.)_
     _(As built for creation, 2026-10-18; amends "without enforcing" for the classes a race allows)_ A
     **new character** whose race DMG Table 7 marks with a dash in its class (a race the class does not
     admit: a bard is a human or a half-elf) is **refused** (`race_not_allowed` on the race); humans may

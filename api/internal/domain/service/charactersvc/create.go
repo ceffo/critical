@@ -752,7 +752,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
-			level, err := s.rules.LevelFor(n.Class, n.XP)
+			level, err := s.skillsLevel(k)
 			if err != nil {
 				return nil, fmt.Errorf("draft: %w", err)
 			}

@@ -6,8 +6,9 @@ user and accepted as written on 2026-10-22 ("Decided with the user"). Step 1 (th
 characters only) is implemented as built (see "As built" under step 1). The multi-class steps (5 to 10,
 12, 14 to 17) are built 2026-10-22 (CRI-169, see each step's "As built"); the dual-class
 computation (steps 8, 9, 11, 13, the dual-class slots of 15, the old class's spells and equipment
-of 14 and 16, the elf of 17) is built 2026-10-22 (CRI-170, each step's "As built"). Creation and
-entering a multi-class character (steps 2 and 4) and taking a new class (step 3) are not. Amends [ADR 0030](0030-classes-and-races.md)
+of 14 and 16, the elf of 17) is built 2026-10-22 (CRI-170, each step's "As built"). Creating and
+entering a multi-class or dual-class character (steps 2 and 4) is built 2026-10-22 (CRI-171, each step's "As built");
+taking a new class (step 3) is not. Amends [ADR 0030](0030-classes-and-races.md)
 steps 1, 3, 5, 6, 7 and 8, [ADR 0015](0015-experience.md) steps 1 to 3,
 [ADR 0037](0037-proficiencies.md) steps 3, 7 and 8 and [ADR 0040](0040-classes-are-data.md)
 step 5, each in place (dated 2026-10-21) and each on implementation. Builds on the class
@@ -154,6 +155,21 @@ Every warning is structured data (a code and its numbers), worded by the web.
    either way), `DualClass_Step2_2_PrimeRequisitesAndLevel` (an elf fighter to mage accepted with
    the lift; Str 14 or Int 16 refused; level 1 refused; back to a frozen class refused).
 
+   _(As built, 2026-10-22, at creation: the body takes `classes: [{class, xp, level, leftAtLevel}]`
+   in place of `class` and `xp` (both is a 400); a refusal names `classes` or
+   `classes.<i>.<class|xp|level|leftAtLevel>`; the one-class body keeps its flat fields. The racial
+   lift is read from the ruleset resolver (`Deps.Rulesets`, the default ruleset when nil). **The book's
+   per-race combination table is not enforced**: the catalogue has no rows for it, so with the lift off a
+   multi-class character needs a restricted race (demihuman) and no more, and a dual-class one a
+   race that is not restricted; with the lift on DMG Table 7's dash is waived too. The prime
+   requisites are checked at creation on the scores entered, 15 in the class left and 17 in the new
+   one. The creation options carry `maxClasses`, `minLeftAtLevel`, `multiclassAnyRace`,
+   `dualclassAnyRace`, `restrictedRaces`, `dualClassOldPrime` and `dualClassNewPrime`, so the client
+   words the limits without a rule of its own. Tests, in charactersvc and, end to end with the
+   party, in composition: `TestCreate_MultiClass_Step2_1_TheLiftDecidesTheRaceLimit`,
+   `TestCreate_DualClass_Step2_2_PrimeRequisitesLevelAndNoReturn`,
+   `TestCreate_Step1_TheShapeOfTheEntries`.)_
+
 3. **Taking a new class (becoming dual-class).** A request names the new class. In one transaction
    on the action stack ([ADR 0018](0018-transactions-and-undo.md)): the active entry becomes
    frozen with `left_at_level` its realized level and its XP fixed; a new active entry starts at
@@ -173,6 +189,17 @@ Every warning is structured data (a code and its numbers), worded by the web.
    entry's level comes from its share.
    Tests: `Create_Step4_EntersLevelAndXPPerEntry` (charactersvc: the party's three non-bard
    characters entered as on their sheets, levels and XP kept, max HP kept).
+
+   _(As built, 2026-10-22: a level left out is the level the entry's XP reaches; a level entered above
+   it is kept (the character is then above its target, no level-up pending); a class left with no XP
+   entered takes the XP that reaches its left-at level. The skill points go to the first entry whose
+   class lists rogue skills, the exceptional strength to any active entry that grants it, and the
+   alignments are those every active class admits. Tests:
+   `TestCreate_Step4_EntersLevelAndXPPerEntry` (charactersvc and composition),
+   `TestCreate_ThePartyThroughTheDraftAndTheCreation` (composition: the elf and the half-elf
+   fighter/cleric). The human thief/psionicist cannot be created yet: the psionicist lists
+   psionics, which is not computed (ADR 0043), so it is refused as not creatable
+   (`TestCreate_ThePartyThiefPsionicistWaitsForPsionics`).)_
 
 ### Experience and levels
 
@@ -295,7 +322,9 @@ bard 15 never).)_
     one class is exactly ADR 0030 step 7.1 and a negative share never takes hit points away (decided by
     the supervisor on implementation, 2026-10-22). The `level_up` payload adds `class`, `classes`,
     `dieShare` and `conShare` for a multi-class character only; a single-class one is unchanged. Step
-    10.1 (creation) is not built: it is the multi-class creation item's.)_
+    10.1 (creation) does not apply to a character entered from a sheet: its max HP is kept as entered
+    (step 4), so creation rolls nothing; the roll of ADR 0032 step 7 at creation stays the creation
+    rolls' own.)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 4.4, on implementation: a psionicist entry's PSP gain at its level-up is not divided by the number of classes)_
 

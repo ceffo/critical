@@ -487,6 +487,19 @@ export interface ProficiencyOption {
 /** What the creation form offers (`GET /api/characters/options`): the creatable classes and their races. */
 export interface CreationOptions {
   /** The 18/xx is not here: the draft answers it (`CreationDraft.exceptionalStrength`). */
+  /** The most active classes of a multi-class character, and the lowest level a class can be left
+   * at (ADR 0042 step 1). Absent from a release that predates them. */
+  maxClasses?: number;
+  minLeftAtLevel?: number;
+  /** The racial lift (ADR 0041 step 2.2): any race may be multi-class / dual-class; with it off
+   * the multi-class races are `restrictedRaces`. */
+  multiclassAnyRace?: boolean;
+  dualclassAnyRace?: boolean;
+  restrictedRaces?: string[];
+  /** The prime requisite score a dual-class character needs in a class it left, and in its new
+   * class (ADR 0042 step 2.2). */
+  dualClassOldPrime?: number;
+  dualClassNewPrime?: number;
   classes: {
     class: string;
     races: string[];
@@ -750,4 +763,22 @@ export type NewCharacter = {
   /** A mage's or a bard's starting spellbook (ADR 0030 step 20.7): the catalogue ids, in order,
    * written without a roll; absent for none. A refused spell's field is `spellbook.<id>`. */
   spellbook?: string[];
+  /**
+   * The class entries of a multi-class or dual-class character (ADR 0042 steps 1 and 4), which the
+   * server reads in place of `class` and `xp` (sending both is refused); a refusal's field is
+   * `classes` or `classes.<i>.<class|xp|level|leftAtLevel>`.
+   */
+  classes?: NewClassEntry[];
 } & Record<AbilityCode, number | null>;
+
+/** One class of a new character (ADR 0042 steps 1 and 4). */
+export type NewClassEntry = {
+  class: string;
+  /** The XP entered for the class; null while blank (the draft lists `classes.<i>.xp` missing),
+   * optional for a class left (the XP that reaches its left-at level). */
+  xp: number | null;
+  /** The level taken, absent for the level its XP reaches. */
+  level?: number;
+  /** The level a class the character left was left at (2 to 20); absent for a class it advances in. */
+  leftAtLevel?: number;
+};

@@ -157,7 +157,7 @@ func Validate(book Book, a Allowance, picks []Pick) (Used, error) {
 	// Pass 2: the powers' disciplines and prerequisites, the slots taken.
 	type perDiscipline struct{ sciences, devotions int }
 	by := map[string]*perDiscipline{}
-	take := func(pw catalogue.Power) {
+	take := func(pw catalogue.Power, relearn bool) {
 		slot := SlotOf(pw)
 		switch slot {
 		case SlotScience:
@@ -167,6 +167,9 @@ func Validate(book Book, a Allowance, picks []Pick) (Used, error) {
 		case SlotDefenceMode:
 			used.DefenceModes++
 			return // not counted in a discipline (the book, defence modes)
+		}
+		if relearn {
+			return // a relearn takes a slot (9.1) but is not another power of its discipline (9.2, 9.3)
 		}
 		d := by[pw.Discipline]
 		if d == nil {
@@ -193,7 +196,7 @@ func Validate(book Book, a Allowance, picks []Pick) (Used, error) {
 					return Used{}, &Refusal{Code: CodePrerequisiteNotKnown, Power: pw.ID, Discipline: pw.Discipline}
 				}
 			}
-			take(pw)
+			take(pw, false)
 		case PickRelearn:
 			pw, ok := known[p.ID]
 			if !ok {
@@ -202,7 +205,7 @@ func Validate(book Book, a Allowance, picks []Pick) (Used, error) {
 			if s := SlotOf(pw); s != SlotScience && s != SlotDevotion {
 				return Used{}, invalid(i, "relearn of %q, which is neither a science nor a devotion", p.ID)
 			}
-			take(pw)
+			take(pw, true)
 		}
 	}
 	if err := within(a, used); err != nil {
@@ -229,10 +232,10 @@ func Validate(book Book, a Allowance, picks []Pick) (Used, error) {
 		}
 		// Never as many as the primary's, unless there are none to compare.
 		if d.sciences > 0 && d.sciences >= p.sciences {
-			return Used{}, &Refusal{Code: CodePrimaryExceeded, Discipline: id, Slot: SlotScience, Count: d.sciences, Limit: p.sciences - 1}
+			return Used{}, &Refusal{Code: CodePrimaryExceeded, Discipline: id, Slot: SlotScience, Count: d.sciences, Limit: max(0, p.sciences-1)}
 		}
 		if d.devotions > 0 && d.devotions >= p.devotions {
-			return Used{}, &Refusal{Code: CodePrimaryExceeded, Discipline: id, Slot: SlotDevotion, Count: d.devotions, Limit: p.devotions - 1}
+			return Used{}, &Refusal{Code: CodePrimaryExceeded, Discipline: id, Slot: SlotDevotion, Count: d.devotions, Limit: max(0, p.devotions-1)}
 		}
 	}
 	return used, nil

@@ -149,3 +149,34 @@ func TestPicks_Step9_PrerequisitesAndRelearn(t *testing.T) {
 		assert.ErrorIs(t, err, psionics.ErrInvalid)
 	}
 }
+
+// A relearn takes a slot of the allowance (9.1) and nothing more: it is not
+// another science or devotion of its discipline for steps 9.2 and 9.3.
+func TestPicks_Step9_RelearnCountsInAllowanceOnly(t *testing.T) {
+	a := psionics.Allowance{Disciplines: 2, Sciences: 4, Devotions: 8, DefenceModes: 1}
+	both := disc("telepathy", "clairsentience")
+
+	// The primary's one science, relearned, is still one: the other
+	// discipline's one science equals it and is refused.
+	list := join(both, pow("s1", "d1", "d2", "c_s1", "c_d1", "c_d2"), picks(psionics.PickRelearn, "s1"))
+	_, err := psionics.Validate(book(), a, list)
+	r := refusal(t, err)
+	assert.Equal(t, psionics.CodePrimaryExceeded, r.Code)
+	assert.Equal(t, "clairsentience", r.Discipline)
+	assert.Equal(t, psionics.SlotScience, r.Slot)
+
+	// A science relearned with exactly two devotions in its discipline stays
+	// accepted, and takes a science slot.
+	used, err := psionics.Validate(book(), a, join(disc("telepathy"), pow("s1", "d1", "d2"), picks(psionics.PickRelearn, "s1")))
+	require.NoError(t, err)
+	assert.Equal(t, 2, used.Sciences)
+}
+
+// A primary with nothing to compare: the refusal's limit is 0, never -1.
+func TestPicks_Step9_PrimaryLimitNotNegative(t *testing.T) {
+	a := psionics.Allowance{Disciplines: 2, Sciences: 3, Devotions: 8, DefenceModes: 1}
+	_, err := psionics.Validate(book(), a, join(disc("telepathy", "clairsentience"), pow("c_s1", "c_d1", "c_d2")))
+	r := refusal(t, err)
+	assert.Equal(t, psionics.CodePrimaryExceeded, r.Code)
+	assert.Equal(t, 0, r.Limit)
+}

@@ -125,10 +125,23 @@ export function KnownPowersPanel() {
   const isPicked = (kind: PowerPick["kind"], id: string) =>
     picks.some((p) => p.kind === kind && p.id === id);
   const add = (pick: PowerPick) => void change([...picks, pick]);
-  const remove = (pick: PowerPick) =>
+  // Removing a power takes its relearns with it (a relearn of a power not known is malformed);
+  // removing a relearn takes that one only, the first of its power.
+  const remove = (pick: PowerPick) => {
+    if (pick.kind === "relearn") {
+      const at = picks.findIndex(
+        (p) => p.kind === "relearn" && p.id === pick.id,
+      );
+      void change(picks.filter((_, i) => i !== at));
+      return;
+    }
     void change(
-      picks.filter((p) => !(p.kind === pick.kind && p.id === pick.id)),
+      picks.filter(
+        (p) =>
+          !(p.id === pick.id && (p.kind === pick.kind || p.kind === "relearn")),
+      ),
     );
+  };
 
   const cost = (c: PowerCost) =>
     typeof c === "number"
@@ -242,7 +255,9 @@ export function KnownPowersPanel() {
                     onRemove={() => remove(p)}
                     action={
                       !relearn &&
-                      (kind === "science" || kind === "devotion") ? (
+                      (kind === "science" ||
+                        kind === "devotion" ||
+                        kind === "attack_mode") ? (
                         <Button
                           className="px-2"
                           disabled={busy}

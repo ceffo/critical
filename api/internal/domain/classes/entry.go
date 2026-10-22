@@ -184,6 +184,11 @@ func MaxLeftAt(entries []Entry) int {
 	return m
 }
 
+// WarnOldAbility is ADR 0042 step 13's warning: an action used a dormant
+// entry's feature, spells or equipment allowance. Never a refusal; the XP
+// cost the book puts on it is the DM's (Q9).
+const WarnOldAbility = "dual_class_old_ability"
+
 // Dormant is a frozen entry before the crossover (ADR 0042 step 13): its
 // features, spells and equipment allowance may be used, each use warning
 // dual_class_old_ability.

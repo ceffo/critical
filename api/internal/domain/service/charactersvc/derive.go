@@ -108,14 +108,11 @@ func Derive(c *Character, awards []int, armour string, rules Rules) (Derived, er
 	}
 	// ADR 0042 step 14: each spellcasting entry has its own slots and caster
 	// level (EntryDerived); the character's slots are the first active
-	// spellcasting entry's (Derived.CasterLevel() is its level), the first
-	// active entry's when none casts.
+	// spellcasting entry's (Derived.CasterLevel() is its level), else a
+	// dual-class's frozen one's, the first active entry's when none casts.
 	d.SpellSlots = primary.out.SpellSlots
-	for _, e := range entries {
-		if e.entry.State == classes.EntryActive && e.out.Casts {
-			d.SpellSlots = e.out.SpellSlots
-			break
-		}
+	if e, ok := d.CasterEntry(""); ok {
+		d.SpellSlots = e.SpellSlots
 	}
 	// ADR 0006 step 9: Table 5's magical defence adjustment at the sheet's
 	// Wisdom, an ability rule every class and race gets (step 9.2).

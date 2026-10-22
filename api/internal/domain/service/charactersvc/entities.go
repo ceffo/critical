@@ -309,10 +309,8 @@ type EntryDerived struct {
 // entry with a spell progression, the one whose slots SpellSlots are; the
 // realized level when no entry casts (a single-class character's).
 func (d *Derived) CasterLevel() int {
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts {
-			return e.RealizedLevel
-		}
+	if e, ok := d.CasterEntry(""); ok {
+		return e.RealizedLevel
 	}
 	return d.RealizedLevel
 }
@@ -376,28 +374,38 @@ func (d *Derived) FeatureClass(kind, fallback string) string {
 }
 
 // CasterEntry is the entry whose slots, preparation and caster level a
-// spell uses (ADR 0042 step 14): the active spellcasting entry of class, or
-// the first one when class is empty. False when there is none (a character
+// spell uses (ADR 0042 step 14): the spellcasting entry of class, or the
+// first one when class is empty (an active one before a frozen one). False when there is none (a character
 // with no derived entries: the caller falls back to the character's level).
 func (d *Derived) CasterEntry(class string) (EntryDerived, bool) {
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts && (class == "" || e.Class == class) {
+	for _, e := range d.casterEntries() {
+		if class == "" || e.Class == class {
 			return e, true
 		}
 	}
 	return EntryDerived{}, false
 }
 
-// Casters is the number of active spellcasting entries: above one, each
-// prepared slot names its entry (ADR 0042 step 14).
+// Casters is the number of spellcasting entries, a dual-class's frozen ones
+// included: above one, each prepared slot names its entry (ADR 0042 step 14).
 func (d *Derived) Casters() int {
-	n := 0
-	for _, e := range d.Classes {
-		if e.State == classes.EntryActive && e.Casts {
-			n++
+	return len(d.casterEntries())
+}
+
+// casterEntries are the spellcasting entries, the active ones first, then a
+// dual-class's frozen ones: a frozen entry keeps its spells at its left-at
+// level (ADR 0042 step 14) and casts them, with the warning
+// dual_class_old_ability while it is Dormant (step 13).
+func (d *Derived) casterEntries() []EntryDerived {
+	var out []EntryDerived
+	for _, state := range []classes.EntryState{classes.EntryActive, classes.EntryFrozen} {
+		for _, e := range d.Classes {
+			if e.State == state && e.Casts {
+				out = append(out, e)
+			}
 		}
 	}
-	return n
+	return out
 }
 
 // Groups are the class groups of the active entries, in entry order without

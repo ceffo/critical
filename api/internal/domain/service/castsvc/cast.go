@@ -8,6 +8,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -42,7 +43,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		// ADR 0042 step 14: the slot's entry casts, at its own level.
 		who := casterOf(c, slot)
 		casterLevel := who.level
-		if warnings, err = s.castWarnings(ctx, c, who.noArmour); err != nil {
+		if warnings, err = s.castWarnings(ctx, c, who); err != nil {
 			return err
 		}
 		after := append([]spellsvc.SpellSlot(nil), before...)
@@ -90,7 +91,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 			}
 			res = CastResult{
 				Source: SourceCast, SpellID: id, Name: name, Level: slot.Level, CasterLevel: casterLevel,
-				SlotIndex: &slotIndex, Slots: after, Failure: failure,
+				SlotIndex: &slotIndex, Slots: after, Failure: failure, Class: who.class, Warnings: warnings,
 			}
 			res.EntryID, err = s.record(ctx, characterID, res, []actionlog.Snapshot{slotSnap})
 			if err != nil {
@@ -126,6 +127,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		}
 		res.SlotIndex = &slotIndex
 		res.Failure = failure
+		res.Class, res.Warnings = who.class, warnings
 		res.ExtraSlots = extra
 		res.Slots = after
 		res.EntryID, err = s.record(ctx, characterID, res, append([]actionlog.Snapshot{slotSnap}, snaps...))
@@ -137,47 +139,61 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 	if err != nil {
 		return CastResult{}, err
 	}
-	res.Warnings = warnings
 	return res, nil
 }
 
 // caster is the spellcasting entry a cast reads (ADR 0042 step 14): its
-// realized level, whether its class allows no body armour (step 16.2) and
-// its chance of spell failure (ADR 0030 step 14 per entry).
+// realized level, whether its class allows no body armour (step 16.2), its
+// chance of spell failure (ADR 0030 step 14 per entry), and, on a character
+// of several class entries, its class and whether it is a dual-class's
+// dormant old class (step 13).
 type caster struct {
 	level, failure int
 	noArmour       bool
+	class          string
+	dormant        bool
 }
 
 // casterOf is ADR 0042 step 14 on a slot: the spellcasting entry it names
-// (an untagged slot: the first active one); the character's caster level and
-// spell failure, and no armour limit, when no entry is derived.
+// (an untagged slot: the first one, an active one before a dual-class's
+// frozen one); the character's caster level and spell failure, and no armour
+// limit, when no entry is derived.
 func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) caster {
-	if e, ok := c.Derived.CasterEntry(slot.Class); ok {
-		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
+	e, ok := c.Derived.CasterEntry(slot.Class)
+	if !ok {
+		e, ok = c.Derived.CasterEntry("")
 	}
-	if e, ok := c.Derived.CasterEntry(""); ok {
-		return caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour}
+	if !ok {
+		return caster{level: c.Derived.CasterLevel(), failure: c.Derived.SpellFailure}
 	}
-	return caster{level: c.Derived.CasterLevel(), failure: c.Derived.SpellFailure}
+	out := caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour, dormant: e.Dormant}
+	if len(c.Derived.Classes) > 1 {
+		out.class = e.Class
+	}
+	return out
 }
 
-// castWarnings is ADR 0042 step 16.2 on a cast: the casting entry's class
-// (casterOf) allows no body armour, so its spells warn spell_in_armour while
-// body armour is worn, whatever the character's other classes allow. Only
-// such a class reads the pieces.
-func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, noArmour bool) ([]string, error) {
-	if !noArmour {
-		return nil, nil
+// castWarnings are a cast's class warnings, never a refusal: ADR 0042 step
+// 13's dual_class_old_ability when the casting entry is a dual-class's
+// dormant old class, and step 16.2's spell_in_armour when its class allows
+// no body armour and body armour is worn, whatever the character's other
+// classes allow. Only such a class reads the pieces.
+func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, who caster) ([]string, error) {
+	var out []string
+	if who.dormant {
+		out = append(out, classes.WarnOldAbility)
+	}
+	if !who.noArmour {
+		return out, nil
 	}
 	pieces, err := s.Items.List(ctx, c.ID)
 	if err != nil {
 		return nil, fmt.Errorf("list items: %w", err)
 	}
 	if itemsvc.SpellInArmour(c.Race, pieces) {
-		return []string{itemsvc.WarnSpellInArmour}, nil
+		out = append(out, itemsvc.WarnSpellInArmour)
 	}
-	return nil, nil
+	return out, nil
 }
 
 // correctInitiative is ADR 0035 item 6.2 for a cast: the round's

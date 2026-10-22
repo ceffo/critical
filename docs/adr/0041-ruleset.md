@@ -1,7 +1,7 @@
 # ADR 0041: The ruleset: which book data and which house rules a game is played with
 
 **Status**: accepted 2026-10-21 (the user's triage of 2026-10-21; the details beyond the triage
-are the agent's and are marked _(proposed)_ until the user's OK in review). Not implemented. Amends
+accepted 2026-10-21 by the supervisor and the user). Not implemented. Amends
 [ADR 0001](0001-critical-hits.md) step 4, [ADR 0030](0030-classes-and-races.md) step 21 and
 [ADR 0037](0037-proficiencies.md) step 20.6, each in place and dated 2026-10-21. Builds on
 [ADR 0036](0036-vocabulary.md) (the terms) and `docs/domain-model.md` ("Ruleset and house rules").
@@ -75,7 +75,7 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
    behaviour of steps 20.1 to 20.8 is unchanged. Test needed: with the Tumbling row removed from
    the ruleset a successful Tumbling check adds no buff; with it, the buff of step 20.1; no code
    names Tumbling.
-7. **Who edits, and the audit.** _(proposed)_ Only an admin edits a ruleset
+7. **Who edits, and the audit.** Only an admin edits a ruleset
    ([ADR 0029](0029-users-login-and-access.md) step 1; a player reads). An edit is not a
    character action: it is not on any action stack, has no undo and appears in no character's
    journal, because it changes the table's rules, not a character's state. It is audited instead:
@@ -87,10 +87,10 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
    rules included, as structured data ([ADR 0023](0023-localized-text.md): no per-language
    fields; names of proficiencies and effects are keys the UI words). Edits are admin-only
    requests under `/api/ruleset/`, one per rule (crit table, the two lifts, the success effects;
-   the level limits mode is read-only while it has one value). `/api/crit-table` is removed and
-   its callers move in the same change. The crit table editor leaves the Attack panel for a
-   **Ruleset** screen in the cog menu, visible to admins to edit and to players to read (_proposed_:
-   read-only for players); the Attack panel keeps only the roll. New refusals get a row in
+   the level limits mode is read-only while it has one value). `/api/crit-table` is removed outright, with
+   no alias, and its callers move in the same change. The crit table editor leaves the Attack panel for a
+   **Ruleset** screen in the cog menu, visible to admins to edit and to players to read (read-only
+   for players); the Attack panel keeps only the roll. New refusals get a row in
    `internal/render` and an `apiError.<code>` key in both locales. Test needed: an e2e-free API
    test per refusal; one Playwright flow (an admin edits a crit row on the Ruleset screen and the
    next attack uses it), the rest in Go.

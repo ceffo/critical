@@ -168,7 +168,9 @@ func (s *Spheres) SpellKeys(ctx context.Context, characterID int64) ([]string, e
 	if c.Derived.Casters() > 1 {
 		entries = entries[:0]
 		for _, e := range c.Derived.Classes {
-			if e.State == classes.EntryActive && e.Casts {
+			// ADR 0042 steps 13 and 14: a dual-class's frozen caster
+			// entry casts too, so its spells are the character's.
+			if e.Casts {
 				entries = append(entries, e.Class)
 			}
 		}

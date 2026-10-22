@@ -106,6 +106,8 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	// new too; the multi-class tests cover them.
 	delete(m, "Classes")
 	delete(m, "Features")
+	// The PSP pool (ADR 0043 step 5) is new; the PSP tests cover it.
+	delete(m, "PSP")
 
 	return m
 }

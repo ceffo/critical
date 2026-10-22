@@ -11,6 +11,7 @@
 *Result  # Technical: service input, request, patch and result DTOs
 DAL  # Technical: port, service or wiring type (clean architecture plumbing)
 SVC  # Technical: port, service or wiring type (clean architecture plumbing)
+Maxima  # Technical: port, service or wiring type (clean architecture plumbing)
 Deps  # Technical: port, service or wiring type (clean architecture plumbing)
 Config  # Technical: port, service or wiring type (clean architecture plumbing)
 Module  # Technical: port, service or wiring type (clean architecture plumbing)

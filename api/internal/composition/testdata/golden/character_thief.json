@@ -77,6 +77,7 @@
     "specializes": false,
     "exceptionalStrength": false,
     "spellbook": null,
+    "psp": null,
     "spellFailure": 0,
     "turning": null,
     "skillSets": [

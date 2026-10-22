@@ -65,6 +65,9 @@ type Rules interface {
 	RogueSkills(rs classes.RogueSkills, race string, dex int, armor string, points map[string]int) ([]ruletablesvc.SkillPercent, error)
 	// BackstabFor is PHB Table 30 at a level (step 19).
 	BackstabFor(level int) (int, error)
+	// PSPMaxFor is ADR 0043 step 4: a psionics entry's PSP maximum at its
+	// level, through the feature's PSP rule.
+	PSPMaxFor(rule classes.PSPRule, score func(ability string) int, level int) (ruletablesvc.PSPMax, error)
 }
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,

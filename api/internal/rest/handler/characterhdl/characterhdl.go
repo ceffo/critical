@@ -271,6 +271,9 @@ type DerivedDTO struct {
 	// Spellbook is ADR 0030 step 20.1: the learning rules of a class with a
 	// spellbook (mage, bard); null for the others.
 	Spellbook *SpellbookRulesDTO `json:"spellbook"`
+	// PSP is ADR 0043 step 5: the PSP pool of a character with the psionics
+	// feature (current and max); null for the others.
+	PSP *PSPDTO `json:"psp"`
 	// SpellFailure is ADR 0030 step 14: the percent chance a cast fails (0:
 	// no die).
 	SpellFailure int `json:"spellFailure"`
@@ -387,6 +390,13 @@ type SpellbookRulesDTO struct {
 	NoMaximum          bool `json:"noMaximum"`
 }
 
+// PSPDTO is a character's PSPs (ADR 0043 step 5): the current PSPs (the
+// stored maximum plus the ledger's total) and the maximum.
+type PSPDTO struct {
+	Current int `json:"current"`
+	Max     int `json:"max"`
+}
+
 // LevelUpDTO is ADR 0030 step 7: `pending` the levels from the realized one
 // to the target, lowest first (the prompt, one per level),
 // `realizedAboveTarget` an XP correction brought the target under the
@@ -430,6 +440,9 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		for i, r := range d.Turning {
 			out.Turning[i] = TurningTargetDTO{Undead: r.Undead, HDMin: r.HDMin, HDMax: r.HDMax, Roll: r.Cell.Roll, Outcome: r.Cell.Outcome}
 		}
+	}
+	if p := d.PSP; p != nil {
+		out.PSP = &PSPDTO{Current: p.Current, Max: p.Max}
 	}
 	if b := d.Spellbook; b != nil {
 		out.Spellbook = &SpellbookRulesDTO{

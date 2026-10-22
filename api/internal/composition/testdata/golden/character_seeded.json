@@ -81,6 +81,7 @@
       "maxSpellsPerLevel": 9,
       "noMaximum": false
     },
+    "psp": null,
     "spellFailure": 0,
     "turning": null,
     "skillSets": [

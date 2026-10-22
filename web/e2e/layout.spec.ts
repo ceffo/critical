@@ -2950,6 +2950,66 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
   }
 });
 
+// ADR 0030 step 9 through the class's features (ADR 0040 step 3), on the creation route's "Points
+// de vie et talents" step at 1920x1080 and 2560x1440: a human fighter of Strength 18 is offered the
+// 18/xx field, a human mage of Strength 18 is not. The form has no rule of its own: the field
+// follows the draft's exceptionalStrength (the cases are Go's, composition draft_exceptional_test).
+test("creation extras: the 18/xx field follows the server, fighter and mage, 1920 and 2560", async ({
+  page,
+}) => {
+  page.on("dialog", (d) => void d.accept());
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const step = page.getByTestId("creation-step");
+  const next = () =>
+    step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
+  for (const [cls, name, offered] of [
+    ["Guerrier", "fighter", true],
+    ["Magicien", "mage", false],
+  ] as const) {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.goto("/create");
+    await step.getByRole("radio", { name: cls, exact: true }).click();
+    await next();
+    await step.getByRole("radio", { name: "Humain", exact: true }).click();
+    await next();
+    await step.getByRole("radio", { name: "Saisir" }).click();
+    for (const [ability, score] of Object.entries({
+      FOR: "18",
+      DEX: "14",
+      CON: "15",
+      INT: "15",
+      SAG: "10",
+      CHA: "9",
+    }))
+      await step.getByLabel(ability, { exact: true }).fill(score);
+    await next();
+    // The draft answered for the entries with Strength 18: the field is there or not from then on.
+    const answered = page.waitForResponse(
+      (r) => r.url().endsWith("/api/characters/draft") && r.ok(),
+    );
+    await step.getByLabel("PV max").fill("8");
+    const draft = (await (await answered).json()) as {
+      exceptionalStrength: boolean;
+    };
+    expect(draft.exceptionalStrength, name).toBe(offered);
+    const field = step.getByLabel("Pourcentage (18/xx)");
+    await expect(field).toHaveCount(offered ? 1 : 0);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${name} extras, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(step, where);
+      await snap(
+        page,
+        `creation-extras-exceptional-${name}-fr-${vp.width}x${vp.height}`,
+      );
+    }
+  }
+});
+
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type

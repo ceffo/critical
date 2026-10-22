@@ -75,6 +75,9 @@ const (
 	// book's limit for, CodeDualClassNotAllowed a dual-class one.
 	CodeMultiClassNotAllowed = "multiclass_not_allowed"
 	CodeDualClassNotAllowed  = "dualclass_not_allowed"
+	// CodeMultiClassClassNotAllowed is a class of a multi-class character that the catalogue marks as
+	// never part of one (`multiclass: false`, the bard).
+	CodeMultiClassClassNotAllowed = "multiclass_class_not_allowed"
 	// CodePrimeRequisiteTooLow is a dual-class character with a prime requisite under 15 in a class
 	// it left or under 17 in its new class.
 	CodePrimeRequisiteTooLow = "prime_requisite_too_low"
@@ -283,6 +286,31 @@ func classShape(n NewCharacter) []error {
 	return out
 }
 
+// multiClassClassRefusals are ADR 0042 step 2.1's refusal of a class the catalogue marks as never
+// one of a multi-class character's classes (`multiclass: false`): each such active entry of a
+// character with more than one active entry. A class left (dual-class) is not concerned.
+func multiClassClassRefusals(n NewCharacter, defs *classes.Registry) []error {
+	active := 0
+	for _, e := range n.Classes {
+		if !e.frozen() {
+			active++
+		}
+	}
+	if active < 2 {
+		return nil
+	}
+	var out []error
+	for i, e := range n.Classes {
+		if e.frozen() {
+			continue
+		}
+		if def, ok := defs.Class(e.Class); ok && def.NoMultiClass {
+			out = append(out, &domain.FieldError{Field: n.field(i, "class"), Message: CodeMultiClassClassNotAllowed})
+		}
+	}
+	return out
+}
+
 // racesRefusals are ADR 0042 step 2's refusals of the race for the entries: the book's limit on a
 // multi-class or a dual-class race (waived by the ruleset's racial lift, ADR 0041 step 2.2, which
 // also waives DMG Table 7's dash for these characters) and the dash otherwise. The book's
@@ -437,6 +465,11 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 	if classOK {
 		// ADR 0042 step 1: the entries as a whole.
 		for _, err := range classShape(n) {
+			refuse(err)
+			classOK = false
+		}
+		// ADR 0042 step 2.1: a class the catalogue marks as never part of a multi-class.
+		for _, err := range multiClassClassRefusals(n, defs) {
 			refuse(err)
 			classOK = false
 		}
@@ -1183,6 +1216,10 @@ type CreationOptions struct {
 	// the only multi-class ones with the lift off.
 	MulticlassAnyRace, DualclassAnyRace bool
 	RestrictedRaces                     []string
+	// NoMultiClass are the classes never part of a multi-class character (ADR 0042 step 2.1, the
+	// catalogue's `multiclass: false`), in catalogue order: the form leaves them out of a second or
+	// third class.
+	NoMultiClass []string
 	// DualClassOldPrime and DualClassNewPrime are the prime requisite scores of a dual-class
 	// character in the class it left and in its new class (step 2.2).
 	DualClassOldPrime, DualClassNewPrime int
@@ -1246,12 +1283,17 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 	out := CreationOptions{
 		MaxClasses: classes.MaxMultiClasses, MinLeftAtLevel: classes.MinLeftAtLevel,
 		MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace,
-		RestrictedRaces: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
+		RestrictedRaces: []string{}, NoMultiClass: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
 		MaxSkillPoints: MaxSkillPoints, MaxNameLen: MaxNameLen, Sexes: slices.Clone(Sexes), Classes: make([]ClassOption, 0, len(defs.Classes())),
 		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(races)),
+	}
+	for _, def := range defs.Classes() {
+		if def.NoMultiClass {
+			out.NoMultiClass = append(out.NoMultiClass, def.ID)
+		}
 	}
 	for _, race := range races {
 		if raceOf(defs, race).Restricted() {

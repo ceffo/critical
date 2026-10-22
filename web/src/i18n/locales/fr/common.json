@@ -2737,6 +2737,7 @@
       },
       "errors": {
         "multiclass_not_allowed": "Cette race ne peut pas être multiclassée avec ce jeu de règles.",
+        "multiclass_class_not_allowed": "Cette classe ne fait jamais partie d'un personnage multiclassé.",
         "dualclass_not_allowed": "Cette race ne peut pas être double classée avec ce jeu de règles.",
         "prime_requisite_too_low": "Un personnage double classé a besoin de {{old}} dans la caractéristique principale de la classe quittée et de {{new}} dans la nouvelle.",
         "level_too_low": "Une classe se quitte au niveau {{min}} ou plus.",

@@ -117,12 +117,14 @@ type OptionsDTO struct {
 	// level a class can be left at (ADR 0042 step 1). The racial lift (ADR 0041 step 2.2) lets any
 	// race be multi-class (`multiclassAnyRace`) or dual-class (`dualclassAnyRace`); with it off the
 	// multi-class races are the `restrictedRaces`. A dual-class character needs `dualClassOldPrime` in
-	// every prime requisite of a class it left and `dualClassNewPrime` in its new class's. Additive.
+	// every prime requisite of a class it left and `dualClassNewPrime` in its new class's. The
+	// `noMultiClass` classes are never part of a multi-class character (ADR 0042 step 2.1). Additive.
 	MaxClasses        int      `json:"maxClasses"`
 	MinLeftAtLevel    int      `json:"minLeftAtLevel"`
 	MulticlassAnyRace bool     `json:"multiclassAnyRace"`
 	DualclassAnyRace  bool     `json:"dualclassAnyRace"`
 	RestrictedRaces   []string `json:"restrictedRaces"`
+	NoMultiClass      []string `json:"noMultiClass"`
 	DualClassOldPrime int      `json:"dualClassOldPrime"`
 	DualClassNewPrime int      `json:"dualClassNewPrime"`
 	// Sexes are the sex codes (ADR 0032 step 3).
@@ -261,7 +263,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			SkillPoints:    RangeDTO{Min: 0, Max: o.MaxSkillPoints},
 			MaxNameLen:     o.MaxNameLen,
 			MaxClasses:     o.MaxClasses, MinLeftAtLevel: o.MinLeftAtLevel, MulticlassAnyRace: o.MulticlassAnyRace,
-			DualclassAnyRace: o.DualclassAnyRace, RestrictedRaces: o.RestrictedRaces,
+			DualclassAnyRace: o.DualclassAnyRace, RestrictedRaces: o.RestrictedRaces, NoMultiClass: o.NoMultiClass,
 			DualClassOldPrime: o.DualClassOldPrime, DualClassNewPrime: o.DualClassNewPrime,
 			Sexes:             o.Sexes,
 			Languages:         make([]LanguageDTO, 0, len(o.Languages)),

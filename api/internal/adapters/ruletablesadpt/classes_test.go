@@ -219,3 +219,12 @@ func TestClassCatalogue_Step20_PsionicistGridsEqualItsClassAndGroupEntries(t *te
 		assert.Equal(t, want, got, "THAC0 at level %d: the grid column equals the group's row", level+1)
 	}
 }
+
+// ADR 0021 step 24.1 and ADR 0042 step 2.1: the definitions read a class's `multiclass: false` as
+// NoMultiClass; an absent flag lets the class be one of a multi-class character's classes.
+func TestDefinitions_Step24_TheMultiClassFlag(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	for _, c := range defs.Classes() {
+		assert.Equal(t, c.ID == "bard", c.NoMultiClass, c.ID)
+	}
+}

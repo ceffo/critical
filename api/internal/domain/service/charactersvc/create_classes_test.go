@@ -75,6 +75,35 @@ func TestCreate_MultiClass_Step2_1_TheLiftDecidesTheRaceLimit(t *testing.T) {
 	assert.ErrorContains(t, err, charactersvc.CodeMultiClassNotAllowed)
 }
 
+// ADR 0042 step 2.1 (amended 2026-10-22): a class the catalogue marks `multiclass: false` (the
+// bard) is never one of a multi-class character's classes, refused at its own entry, lift or not;
+// the same class stays allowed alone and as either class of a dual-class character.
+func TestCreate_MultiClass_Step2_1_TheCatalogueBarsTheBard(t *testing.T) {
+	thiefBard := entered("half_elf", charactersvc.NewClass{Class: "thief", XP: 9_000}, charactersvc.NewClass{Class: "bard", XP: 9_000})
+	thiefBard.Cha = 15
+	bardThiefMage := entered("half_elf", charactersvc.NewClass{Class: "bard", XP: 9_000},
+		charactersvc.NewClass{Class: "fighter", XP: 9_000}, charactersvc.NewClass{Class: "mage", XP: 9_000})
+	bardThiefMage.Cha = 15
+	bardAlone := entered("half_elf", charactersvc.NewClass{Class: "bard", XP: 9_000})
+	bardAlone.Cha = 15
+	intoBard := entered("human", charactersvc.NewClass{Class: "fighter", LeftAtLevel: 9}, charactersvc.NewClass{Class: "bard"})
+	intoBard.Dex, intoBard.Cha = 17, 17
+	outOfBard := entered("human", charactersvc.NewClass{Class: "bard", LeftAtLevel: 9}, charactersvc.NewClass{Class: "fighter"})
+	outOfBard.Dex, outOfBard.Cha, outOfBard.Str = 15, 15, 17
+
+	for _, lift := range []ruleset.RacialLift{{MulticlassAnyRace: true, DualclassAnyRace: true}, {}} {
+		e := classesEnv(t, lift)
+		assert.Equal(t, []string{"classes.1.class: " + charactersvc.CodeMultiClassClassNotAllowed}, refused(t, e, thiefBard))
+		assert.Equal(t, []string{"classes.0.class: " + charactersvc.CodeMultiClassClassNotAllowed}, refused(t, e, bardThiefMage))
+		assert.Empty(t, refused(t, e, bardAlone))
+		_, err := e.svc.Create(context.Background(), ownerID, thiefBard)
+		assert.ErrorContains(t, err, charactersvc.CodeMultiClassClassNotAllowed)
+	}
+	dual := classesEnv(t, ruleset.RacialLift{MulticlassAnyRace: true, DualclassAnyRace: true})
+	assert.Empty(t, refused(t, dual, intoBard), "a dual-class character may enter the bard")
+	assert.Empty(t, refused(t, dual, outOfBard), "a dual-class character may leave the bard")
+}
+
 // ADR 0042 step 2.2: an elf fighter to mage is accepted with the lift; Strength 14 (under 15 in
 // the fighter) and Intelligence 16 (under 17 in the mage) are each refused; the class left at
 // level 1 is refused; so is going back to a class left.

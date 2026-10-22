@@ -2724,6 +2724,9 @@
       "half_elf",
       "halfling"
     ],
+    "NoMultiClass": [
+      "bard"
+    ],
     "DualClassOldPrime": 15,
     "DualClassNewPrime": 17
   },

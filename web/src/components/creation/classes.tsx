@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { StepProps } from "./flow";
+import { classesFor, type StepProps } from "./flow";
 import { Group } from "./kit";
 
 /** A refusal under a field, worded; same look as the class step's. */
@@ -113,7 +113,7 @@ export function ClassRows({
                   onChange={(e) => setRow(i, { cls: e.target.value })}
                 >
                   <option value="">{t("creation.classes.choose")}</option>
-                  {options.classes.map((c) => (
+                  {classesFor(options, draft.kind).map((c) => (
                     <option key={c.class} value={c.class}>
                       {t(`details.classes.${c.class}`, {
                         defaultValue: c.class,

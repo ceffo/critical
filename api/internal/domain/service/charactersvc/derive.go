@@ -21,12 +21,8 @@ type Rules interface {
 	Class(class string) (classes.Class, error)
 	// ClassGroup is the class's group (ADR 0040 step 1.2).
 	ClassGroup(class string) (string, error)
-	// LevelFor is the class's level at xp (ADR 0030 step 3).
-	LevelFor(class string, xp int) (int, error)
 	// XPThreshold is the XP that reaches level in the class's table.
 	XPThreshold(class string, level int) (int, error)
-	// THAC0For is PHB Table 53 for the group at level (step 5).
-	THAC0For(group string, level int) (int, error)
 	// SavesFor is the PHB Table 60 row of the group at level (step 6).
 	SavesFor(group string, level int) (ruletablesvc.SavingThrowRow, error)
 	// ConSaveBonusFor is PHB Table 9 (step 22.1).
@@ -294,7 +290,7 @@ func deriveEntries(c *Character, awards []Award, rules Rules) ([]entryCalc, erro
 			// (ADR 0042 steps 5.2 and 7).
 			ed.RealizedLevel = e.Level()
 			ed.LevelUp = LevelUp{Pending: []PendingLevel{}}
-		} else if err := ed.setLevels(e, shares, classes.MaxLeftAt(entries), rules); err != nil {
+		} else if err := ed.setLevels(e, def, shares, classes.MaxLeftAt(entries), rules); err != nil {
 			return nil, err
 		}
 		// Step 8 per entry: the slot table the class's spell_progression
@@ -312,11 +308,9 @@ func deriveEntries(c *Character, awards []Award, rules Rules) ([]entryCalc, erro
 // (the hit point divisor, ADR 0042 step 10.2) and leftAt the highest frozen
 // entry's left-at level (0 for none: the levels up to it gain no hit points,
 // ADR 0042 step 11).
-func (ed *EntryDerived) setLevels(e classes.Entry, shares, leftAt int, rules Rules) error {
-	target, err := rules.LevelFor(e.Class, ed.XP)
-	if err != nil {
-		return fmt.Errorf("derive %s level: %w", e.Class, err)
-	}
+func (ed *EntryDerived) setLevels(e classes.Entry, def classes.Class, shares, leftAt int, rules Rules) error {
+	// ADR 0030 step 3, read from the class definition the entry holds.
+	target := def.LevelFor(ed.XP)
 	// Step 7.5: no realized level yet (a character being created) is the
 	// target level, the one the entered max HP is for.
 	realized := e.RealizedLevel
@@ -331,6 +325,7 @@ func (ed *EntryDerived) setLevels(e classes.Entry, shares, leftAt int, rules Rul
 		}
 		ed.NextLevelXP = &next
 	}
+	var err error
 	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, leftAt, rules)
 	return err
 }
@@ -475,7 +470,11 @@ type core struct {
 
 func coreAt(class, group string, level int, rules Rules) (core, error) {
 	// Step 5: Table 53 for the group at that level.
-	thac0, err := rules.THAC0For(group, level)
+	defs, err := rules.Definitions()
+	if err != nil {
+		return core{}, fmt.Errorf("derive %s THAC0: %w", class, err)
+	}
+	thac0, err := defs.THAC0(group, level)
 	if err != nil {
 		return core{}, fmt.Errorf("derive %s THAC0: %w", class, err)
 	}

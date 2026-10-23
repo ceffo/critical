@@ -344,3 +344,40 @@ func TestEntryXP_Step5_ACutOffEntryIgnoresTheOlderAwards(t *testing.T) {
 	aw[0].Amount = 9_999 // an older award edited
 	assert.Equal(t, 700, charactersvc.EntryXP(mage, aw, 1), "an older award edited leaves it alone")
 }
+
+// ADR 0042 step 5 (the level is read from each entry's XP): a fighter/cleric
+// whose entries share an award reads each target level from its own class's
+// table in the registry, not the first entry's. 13,000 XP is the cleric's 5
+// (Table 23) and the fighter's 4 (Table 14: 5 starts at 16,000), so a lookup
+// through the first class alone would give both the same level.
+func TestDerive_Step5_TargetLevelFromEachEntrysRegistryClass(t *testing.T) {
+	defs, err := cataloguetest.Tables(t).Definitions()
+	require.NoError(t, err)
+	cleric, ok := defs.Class("cleric")
+	require.True(t, ok)
+	fighter, ok := defs.Class("fighter")
+	require.True(t, ok)
+	require.Equal(t, 5, cleric.LevelFor(13_000))
+	require.Equal(t, 4, fighter.LevelFor(13_000))
+
+	d := derived(t, multi("half_elf", entry("cleric", 1, 13_000), entry("fighter", 1, 13_000)))
+	assert.Equal(t, cleric.LevelFor(13_000), entryOf(t, d, "cleric").TargetLevel)
+	assert.Equal(t, fighter.LevelFor(13_000), entryOf(t, d, "fighter").TargetLevel)
+}
+
+// ADR 0042 step 8 (the THAC0 lookup): each active entry's THAC0 is its
+// group's Table 53 row in the registry at its realized level; the character
+// takes the best. A mage 9/fighter 9 reads the wizard and the
+// warrior rows, and the fighter's is lower.
+func TestTHAC0_Step8_EachEntryReadsItsGroupInTheRegistry(t *testing.T) {
+	defs, err := cataloguetest.Tables(t).Definitions()
+	require.NoError(t, err)
+	mage, err := defs.THAC0("wizard", 9)
+	require.NoError(t, err)
+	warrior, err := defs.THAC0("warrior", 9)
+	require.NoError(t, err)
+	require.Greater(t, mage, warrior, "the groups' rows differ at level 9")
+
+	c := multi("half_elf", entry("mage", 9, 250_000), entry("fighter", 9, 250_000))
+	assert.Equal(t, warrior, derived(t, c).THAC0)
+}

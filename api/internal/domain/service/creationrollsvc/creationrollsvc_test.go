@@ -237,10 +237,17 @@ var (
 	}
 )
 
-// hp expects the tables of a class at level and runs the roll.
-func (f fixture) hp(t *testing.T, class, group string, score, xp, level int) *creationrollsvc.HPResult {
+// xpAt is the XP at which the fixture catalogue's class reaches level.
+func xpAt(t *testing.T, class string, level int) int {
 	t.Helper()
-	f.rules.EXPECT().LevelFor(class, xp).Return(level, nil).Once()
+	xp, err := cataloguetest.Tables(t).XPThreshold(class, level)
+	require.NoError(t, err)
+	return xp
+}
+
+// hp expects the tables of a class at xp and runs the roll; the class definition gives the level.
+func (f fixture) hp(t *testing.T, class, group string, score, xp int) *creationrollsvc.HPResult {
+	t.Helper()
 	f.rules.EXPECT().HitDiceFor(group).Return(hitDice[group], nil).Once()
 	f.rules.EXPECT().ConstitutionFor(score).Return(con[score], nil).Once()
 	res, err := f.svc.HP(context.Background(), creationrollsvc.HPInput{Class: class, Con: score, XP: xp})
@@ -254,7 +261,7 @@ func ptr(v int) *int { return &v }
 func TestHP_Step7_ALevel1MageDrawsOneD4(t *testing.T) {
 	f := newFixture(t)
 	f.dice.EXPECT().RollDie(4).Return(3).Once()
-	res := f.hp(t, "mage", "wizard", 16, 0, 1)
+	res := f.hp(t, "mage", "wizard", 16, 0)
 	assert.Equal(t, []creationrollsvc.HPLevel{
 		{Level: 1, HitDie: 4, Rolled: ptr(3), Counted: ptr(3), ConAdjustment: 2, Gain: 5},
 	}, res.Levels)
@@ -269,7 +276,7 @@ func TestHP_Step7_ALevel3FighterDrawsThreeD10WithTheBracketedBonus(t *testing.T)
 	f.dice.EXPECT().RollDie(10).Return(7).Once()
 	f.dice.EXPECT().RollDie(10).Return(2).Once()
 	f.dice.EXPECT().RollDie(10).Return(9).Once()
-	res := f.hp(t, "fighter", "warrior", 18, 4000, 3)
+	res := f.hp(t, "fighter", "warrior", 18, 4000)
 	assert.Equal(t, []creationrollsvc.HPLevel{
 		{Level: 1, HitDie: 10, Rolled: ptr(7), Counted: ptr(7), ConAdjustment: 4, Gain: 11},
 		{Level: 2, HitDie: 10, Rolled: ptr(2), Counted: ptr(2), ConAdjustment: 4, Gain: 6},
@@ -284,7 +291,7 @@ func TestHP_Step7_ALevel3FighterDrawsThreeD10WithTheBracketedBonus(t *testing.T)
 func TestHP_Step7_ALevel12BardTenDiceThenTwoFixedGains(t *testing.T) {
 	f := newFixture(t)
 	f.distinctD6(10, 101)
-	res := f.hp(t, "bard", "rogue", 16, 1_000_000, 12)
+	res := f.hp(t, "bard", "rogue", 16, xpAt(t, "bard", 12))
 	require.Len(t, res.Levels, 12)
 	total := 0
 	for i, l := range res.Levels[:10] {
@@ -308,7 +315,7 @@ func TestHP_Step7_TheGainIsAtLeast1(t *testing.T) {
 	f := newFixture(t)
 	f.dice.EXPECT().RollDie(8).Return(1).Once()
 	f.dice.EXPECT().RollDie(8).Return(4).Once()
-	res := f.hp(t, "cleric", "priest", 3, 1500, 2)
+	res := f.hp(t, "cleric", "priest", 3, 1500)
 	assert.Equal(t, []int{1, 2}, []int{res.Levels[0].Gain, res.Levels[1].Gain})
 	assert.Equal(t, -2, res.Levels[0].ConAdjustment)
 	assert.Equal(t, 3, res.Total)
@@ -319,7 +326,6 @@ func TestHP_Step7_TheGainIsAtLeast1(t *testing.T) {
 // with Constitution 21); the row the roll reads is the character's.
 func TestHP_Step7_TheCountedDieFollowsTheConstitutionRow(t *testing.T) {
 	f := newFixture(t)
-	f.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
 	f.rules.EXPECT().HitDiceFor("rogue").Return(hitDice["rogue"], nil).Once()
 	f.rules.EXPECT().ConstitutionFor(19).Return(ruletablesvc.ConstitutionRow{ConMin: 19, ConMax: 19, HP: 2, HPWarrior: 5, LowDieMin: 3}, nil).Once()
 	f.dice.EXPECT().RollDie(6).Return(1).Once()

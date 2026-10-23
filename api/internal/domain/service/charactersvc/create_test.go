@@ -41,9 +41,7 @@ var rogue1to4Saves = charactersvc.Saves{ParaPoison: 13, RodStaffWand: 14, PetriP
 // expectLevel1Bard answers the derivation of a level 1 bard at 0 XP (PHB
 // Tables 25, 53, 60 and 32).
 func expectLevel1Bard(e *env) {
-	e.rules.EXPECT().LevelFor("bard", 0).Return(1, nil).Once()
 	e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Once()
-	e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Once()
 }
@@ -196,9 +194,7 @@ func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 		t.Run(fmt.Sprintf("stored %d", exc), func(t *testing.T) {
 			e := newEnv(t)
 			e.rules.EXPECT().RaceAllows("human", "fighter").Return(true, nil).Once()
-			e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
 			e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
-			e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
 			e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{Group: "warrior"}, nil).Once()
 			e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
 				return c.Class == "fighter" && c.Str == 18 && c.StrExceptional == exc
@@ -255,9 +251,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 	t.Run("stored", func(t *testing.T) {
 		e := newEnv(t)
 		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
-		e.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Once()
 		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
-		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
 		want := map[string]int{"open_locks": 30, "pick_pockets": 25}
@@ -347,9 +341,7 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 		return n
 	}
 	expectLevel1Thief := func(e *env, points map[string]int, times int) {
-		e.rules.EXPECT().LevelFor("thief", 0).Return(1, nil).Times(times)
 		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Times(times)
-		e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Times(times)
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Times(times)
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Times(times)
 		e.rules.EXPECT().RogueSkills(skillSet("thief"), "halfling", 17, "none", points).Return(nil, nil).Times(times)
@@ -465,9 +457,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 				ID: 5, Class: tc.class, Race: "human", Dex: 12, RealizedLevel: 1,
 			}, nil).Once()
 			e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
-			e.rules.EXPECT().LevelFor(tc.class, 0).Return(1, nil).Once()
 			e.rules.EXPECT().XPThreshold(tc.class, 2).Return(1_250, nil).Once()
-			e.rules.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 			e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 			skills := []ruletablesvc.SkillPercent{{Skill: "climb_walls", Percent: 60}}
 			if tc.class == "thief" {
@@ -490,9 +480,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			ID: 5, Class: "fighter", Race: "human", Str: 12, RealizedLevel: 1,
 		}, nil).Once()
 		e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
-		e.rules.EXPECT().LevelFor("fighter", 0).Return(1, nil).Once()
 		e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
-		e.rules.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
 		e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		got, err := e.svc.GetCharacter(context.Background(), 5)
 		require.NoError(t, err)

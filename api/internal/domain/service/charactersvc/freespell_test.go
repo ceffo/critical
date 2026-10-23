@@ -68,9 +68,7 @@ func TestGetCharacter_Step20_8_ABardReadsNoFreeSpells(t *testing.T) {
 // expectMageRules answers a mage's lookups at level (target and realized),
 // Table 21 from table21.
 func expectMageRules(r *mocks.MockRules, level int) {
-	r.EXPECT().LevelFor("mage", mock.Anything).Return(level, nil).Once()
 	r.EXPECT().XPThreshold("mage", level+1).Return(20_000, nil).Once()
-	r.EXPECT().THAC0For("wizard", level).Return(20, nil).Once()
 	r.EXPECT().SavesFor("wizard", level).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("mage"), mock.Anything, mock.Anything).RunAndReturn(func(_ classes.Class, l, _ int) (map[int]int, error) {
 		return table21[l], nil

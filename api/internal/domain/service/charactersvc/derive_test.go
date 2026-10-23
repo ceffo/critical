@@ -40,9 +40,7 @@ var level15Slots = map[int]int{1: 3, 2: 3, 3: 3, 4: 3, 5: 2}
 // expectKelsenRules answers the lookups of a level 15 bard: Table 25 at xp
 // is level, then the book's numbers for level 15 (Tables 25, 53, 60 and 32).
 func expectKelsenRules(r *mocks.MockRules, xp, level int) {
-	r.EXPECT().LevelFor("bard", xp).Return(level, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
-	r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
 }
@@ -107,10 +105,8 @@ func TestDerive_KelsenMatchesHisSheet(t *testing.T) {
 func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 	t.Run("starting XP plus the ledger", func(t *testing.T) {
 		r := newRules(t)
-		r.EXPECT().LevelFor("bard", 1_293_418+26_582).Return(16, nil).Once()
 		r.EXPECT().XPThreshold("bard", 17).Return(1_540_000, nil).Once()
 		// The benefits are the realized level's (15), not the target's.
-		r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 		r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
@@ -127,8 +123,6 @@ func TestDerive_Step3_LevelFromTheClassTableAtTheXPTotal(t *testing.T) {
 		c := kelsen()
 		c.XPTotal, c.RealizedLevel, c.Sheet = 3_000_000, 20, charactersvc.Sheet{Level: 20, THAC0: 11, Saves: kelsenSaves}
 		r := newRules(t)
-		r.EXPECT().LevelFor("bard", 3_000_000).Return(20, nil).Once()
-		r.EXPECT().THAC0For("rogue", 20).Return(11, nil).Once()
 		r.EXPECT().SavesFor("rogue", 20).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 20, mock.Anything).Return(map[int]int{1: 4}, nil).Once()
 
@@ -147,9 +141,7 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 			c := kelsen()
 			c.Class, c.XPTotal, c.RealizedLevel, c.Sheet = class, 0, 1, charactersvc.Sheet{Level: 1, THAC0: 20}
 			r := newRules(t)
-			r.EXPECT().LevelFor(class, 0).Return(1, nil).Once()
 			r.EXPECT().XPThreshold(class, 2).Return(1_250, nil).Once()
-			r.EXPECT().THAC0For(group, 1).Return(20, nil).Once()
 			r.EXPECT().SavesFor(group, 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 			if class == "bard" {
 				r.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Once()
@@ -171,17 +163,17 @@ func TestDerive_Step2_TheClassGroupPicksTheRows(t *testing.T) {
 }
 
 // ADR 0030 step 5: the THAC0 is PHB Table 53's for the group at the derived
-// level (Table 53 answers 12 here, not the sheet's 13: the derived one wins).
+// level (Table 53 answers 13 here, not the sheet's 14: the derived one wins).
 func TestDerive_Step5_THAC0FromTable53(t *testing.T) {
+	c := kelsen()
+	c.Sheet.THAC0 = 14
 	r := newRules(t)
-	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
-	r.EXPECT().THAC0For("rogue", 15).Return(12, nil).Once()
 	r.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
-	got, err := charactersvc.Derive(kelsen(), nil, "", r)
+	got, err := charactersvc.Derive(c, nil, "", r)
 	require.NoError(t, err)
-	assert.Equal(t, 12, got.THAC0)
+	assert.Equal(t, 13, got.THAC0)
 }
 
 // ADR 0030 step 6: the five targets are the Table 60 row of the group's level
@@ -190,9 +182,7 @@ func TestDerive_Step5_THAC0FromTable53(t *testing.T) {
 func TestDerive_Step6_SavesFromTable60(t *testing.T) {
 	row := ruletablesvc.SavingThrowRow{Group: "rogue", LevelMin: 13, LevelMax: 16, ParaPoison: 1, RodStaffWand: 2, PetriPoly: 3, Breath: 4, Spell: 5}
 	r := newRules(t)
-	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
-	r.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	r.EXPECT().SavesFor("rogue", 15).Return(row, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
 	got, err := charactersvc.Derive(kelsen(), nil, "", r)
@@ -214,11 +204,9 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	for _, class := range []string{"fighter", "thief"} {
 		t.Run(class+": none", func(t *testing.T) {
 			c := kelsen()
-			c.Class, c.RealizedLevel = class, 14
+			c.Class, c.RealizedLevel, c.XPTotal = class, 14, xpAt(t, class, 14)
 			r := newRules(t)
-			r.EXPECT().LevelFor(class, 1_293_418).Return(14, nil).Once()
 			r.EXPECT().XPThreshold(class, 15).Return(1_500_000, nil).Once()
-			r.EXPECT().THAC0For(ruleGroup(t, class), 14).Return(7, nil).Once()
 			r.EXPECT().SavesFor(ruleGroup(t, class), 14).Return(rogue13to16, nil).Once()
 			if class == "thief" {
 				r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
@@ -231,11 +219,9 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	}
 	t.Run("mage: Table 21", func(t *testing.T) {
 		c := kelsen()
-		c.Class, c.RealizedLevel = "mage", 13
+		c.Class, c.RealizedLevel, c.XPTotal = "mage", 13, xpAt(t, "mage", 13)
 		r := newRules(t)
-		r.EXPECT().LevelFor("mage", 1_293_418).Return(13, nil).Once()
 		r.EXPECT().XPThreshold("mage", 14).Return(1_500_000, nil).Once()
-		r.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
 		r.EXPECT().SavesFor("wizard", 13).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5, 6: 2}, nil).Once()
 		got, err := charactersvc.Derive(c, nil, "", r)
@@ -244,7 +230,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	})
 	t.Run("cleric: Table 24 with the bonus spells at the sheet's Wisdom", func(t *testing.T) {
 		c := kelsen()
-		c.Class, c.RealizedLevel, c.Wis = "cleric", 13, 16
+		c.Class, c.RealizedLevel, c.Wis, c.XPTotal = "cleric", 13, 16, xpAt(t, "cleric", 13)
 		r := clericRules(t, 13)
 		r.EXPECT().SpellsPerDay(classDef("cleric"), 13, 16).Return(map[int]int{1: 8, 5: 2}, nil).Once()
 		r.EXPECT().SpellFailureFor(16).Return(0, nil).Once()
@@ -259,9 +245,7 @@ func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 func clericRules(t *testing.T, lvl int) *mocks.MockRules {
 	t.Helper()
 	r := newRules(t)
-	r.EXPECT().LevelFor("cleric", 1_293_418).Return(lvl, nil).Once()
 	r.EXPECT().XPThreshold("cleric", lvl+1).Return(1_350_000, nil).Once()
-	r.EXPECT().THAC0For("priest", lvl).Return(12, nil).Once()
 	r.EXPECT().SavesFor("priest", lvl).Return(rogue13to16, nil).Once()
 	return r
 }
@@ -272,7 +256,7 @@ func clericRules(t *testing.T, lvl int) *mocks.MockRules {
 func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 	turning := []ruletablesvc.TurningTarget{{Undead: "skeleton", HDMin: 1, HDMax: 1, Cell: ruletablesvc.TurningCell{Roll: 7}}}
 	c := kelsen()
-	c.Class, c.RealizedLevel, c.Wis = "cleric", 2, 9
+	c.Class, c.RealizedLevel, c.Wis, c.XPTotal = "cleric", 2, 9, xpAt(t, "cleric", 2)
 	r := clericRules(t, 2)
 	r.EXPECT().SpellsPerDay(classDef("cleric"), 2, 9).Return(map[int]int{1: 2}, nil).Once()
 	r.EXPECT().SpellFailureFor(9).Return(20, nil).Once()
@@ -285,15 +269,23 @@ func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 	m := kelsen()
 	m.Class, m.RealizedLevel = "mage", 13
 	rm := newRules(t)
-	rm.EXPECT().LevelFor("mage", 1_293_418).Return(13, nil).Once()
 	rm.EXPECT().XPThreshold("mage", 14).Return(1_500_000, nil).Once()
-	rm.EXPECT().THAC0For("wizard", 13).Return(16, nil).Once()
 	rm.EXPECT().SavesFor("wizard", 13).Return(rogue13to16, nil).Once()
 	rm.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5}, nil).Once()
 	got, err = charactersvc.Derive(m, nil, "", rm)
 	require.NoError(t, err)
 	assert.Zero(t, got.SpellFailure, "a mage has no spell failure")
 	assert.Nil(t, got.Turning, "a mage does not turn undead")
+}
+
+// xpAt is the XP at which the fixture catalogue's class reaches level (its
+// experience table's threshold, ADR 0030 step 3): the derivation reads the
+// level from the class definition, so a test sets the XP, not the level.
+func xpAt(t *testing.T, class string, level int) int {
+	t.Helper()
+	xp, err := cataloguetest.Tables(t).XPThreshold(class, level)
+	require.NoError(t, err)
+	return xp
 }
 
 func ruleGroup(t *testing.T, class string) string {
@@ -360,11 +352,9 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 	// name level), +2 for 11 and 12.
 	t.Run("hit die through the name level, fixed gain after", func(t *testing.T) {
 		c := kelsen()
-		c.RealizedLevel, c.XPTotal, c.Sheet = 9, 500_000, charactersvc.Sheet{Level: 9, THAC0: 16, Saves: kelsenSaves}
+		c.RealizedLevel, c.XPTotal, c.Sheet = 9, xpAt(t, "bard", 12)-250_000, charactersvc.Sheet{Level: 9, THAC0: 16, Saves: kelsenSaves}
 		r := newRules(t)
-		r.EXPECT().LevelFor("bard", 500_000+250_000).Return(12, nil).Once()
 		r.EXPECT().XPThreshold("bard", 13).Return(880_000, nil).Once()
-		r.EXPECT().THAC0For("rogue", 9).Return(16, nil).Once()
 		r.EXPECT().SavesFor("rogue", 9).Return(rogue13to16, nil).Once()
 		r.EXPECT().SpellsPerDay(classDef("bard"), 9, mock.Anything).Return(map[int]int{1: 3}, nil).Once()
 		r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
@@ -380,10 +370,8 @@ func TestDerive_Step7_PendingLevelUps(t *testing.T) {
 		c := kelsen()
 		c.Class, c.RealizedLevel, c.XPTotal, c.Sheet = "fighter", 1, 2_000, charactersvc.Sheet{Level: 2, THAC0: 19}
 		r := newRules(t)
-		r.EXPECT().LevelFor("fighter", 2_000).Return(2, nil).Once()
 		r.EXPECT().XPThreshold("fighter", 3).Return(4_000, nil).Once()
 		// The benefits are level 1's.
-		r.EXPECT().THAC0For("warrior", 1).Return(20, nil).Once()
 		r.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		r.EXPECT().HitDiceFor("warrior").Return(ruletablesvc.HitDiceRow{Group: "warrior", Die: 10, NameLevel: 9, GainAfter: 3}, nil).Once()
 		got, err := charactersvc.Derive(c, nil, "", r)
@@ -420,9 +408,7 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 	c := kelsen()
 	c.RealizedLevel = 16
 	r := newRules(t)
-	r.EXPECT().LevelFor("bard", 1_293_418).Return(15, nil).Once()
 	r.EXPECT().XPThreshold("bard", 16).Return(1_320_000, nil).Once()
-	r.EXPECT().THAC0For("rogue", 16).Return(12, nil).Once()
 	r.EXPECT().SavesFor("rogue", 16).Return(rogue13to16, nil).Once()
 	r.EXPECT().SpellsPerDay(classDef("bard"), 16, mock.Anything).Return(map[int]int{1: 4}, nil).Once()
 	got, err := charactersvc.Derive(c, nil, "", r)
@@ -430,7 +416,7 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 	assert.Equal(t, charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}, RealizedAboveTarget: true}, got.LevelUp)
 	assert.Equal(t, 15, got.TargetLevel)
 	assert.Equal(t, 16, got.RealizedLevel)
-	assert.Equal(t, 12, got.THAC0, "the realized level's THAC0")
+	assert.Equal(t, 13, got.THAC0, "the realized level's THAC0 (rogues share 13 at 15 and 16)")
 	assert.Equal(t, map[int]int{1: 4}, got.SpellSlots, "the realized level's slots")
 }
 
@@ -438,7 +424,7 @@ func TestDerive_Step7_4_ATargetUnderTheRealizedLevelIsFlagged(t *testing.T) {
 func TestDerive_ATableErrorIsAnError(t *testing.T) {
 	r := newRules(t)
 	boom := errors.New("boom")
-	r.EXPECT().LevelFor("bard", 1_293_418).Return(0, boom).Once()
+	r.EXPECT().XPThreshold("bard", 16).Return(0, boom).Once()
 	_, err := charactersvc.Derive(kelsen(), nil, "", r)
 	require.ErrorIs(t, err, boom)
 }
@@ -506,14 +492,12 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 	} {
 		t.Run(tc.class, func(t *testing.T) {
 			c := kelsen()
-			c.Class, c.Int, c.RealizedLevel = tc.class, tc.score, 13
+			c.Class, c.Int, c.RealizedLevel, c.XPTotal = tc.class, tc.score, 13, xpAt(t, tc.class, 13)
 			r := mocks.NewMockRules(t)
 			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
-			r.EXPECT().LevelFor(tc.class, mock.Anything).Return(13, nil).Once()
 			r.EXPECT().XPThreshold(tc.class, 14).Return(1_500_000, nil).Once()
-			r.EXPECT().THAC0For(mock.Anything, 13).Return(16, nil).Once()
 			r.EXPECT().SavesFor(mock.Anything, 13).Return(rogue13to16, nil).Once()
 			r.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5}, nil).Maybe()
 			r.EXPECT().SpellsPerDay(classDef("bard"), 13, mock.Anything).Return(map[int]int{1: 3}, nil).Maybe()
@@ -543,17 +527,14 @@ func TestDerive_Steps17_19_TheThiefsSkillsBudgetAndBackstab(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := kelsen()
-			c.Class, c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "thief", "elf", 17, 0, 1
+			c.Class, c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "thief", "elf", 17, xpAt(t, "thief", 8)-40_000, 1
 			c.SkillPoints = domainskills.SetPoints{"thief": {"open_locks": 70}}
 			c.Sheet = charactersvc.Sheet{}
 			r := newRules(t)
 			// 40,000 XP is level 8 in Table 25: two levels pending; the
 			// realized level 1 gives the backstab and the budget.
-			r.EXPECT().LevelFor("thief", 40_000).Return(8, nil).Once()
 			r.EXPECT().XPThreshold("thief", 9).Return(70_000, nil).Once()
-			r.EXPECT().THAC0For("rogue", 1).Return(20, nil).Once()
 			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)
-			r.EXPECT().THAC0For("rogue", mock.Anything).Return(20, nil).Maybe()
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
 			r.EXPECT().RogueSkills(skillSet("thief"), "elf", 17, tc.asked, map[string]int{"open_locks": 70}).Return(skills, nil).Once()
 			r.EXPECT().BackstabFor(1).Return(2, nil).Once()
@@ -594,7 +575,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c := kelsen()
-			c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "human", 16, 0, 2
+			c.Race, c.Dex, c.XPTotal, c.RealizedLevel = "human", 16, xpAt(t, "bard", 7)-40_000, 2
 			c.SkillPoints = domainskills.SetPoints{"bard": {"climb_walls": 40}}
 			c.Sheet = charactersvc.Sheet{}
 			r := mocks.NewMockRules(t)
@@ -604,9 +585,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
 			// the budget: 20 + 15 = 35.
-			r.EXPECT().LevelFor("bard", 40_000).Return(7, nil).Once()
 			r.EXPECT().XPThreshold("bard", 8).Return(70_000, nil).Once()
-			r.EXPECT().THAC0For("rogue", mock.Anything).Return(20, nil)
 			r.EXPECT().SavesFor("rogue", mock.Anything).Return(ruletablesvc.SavingThrowRow{}, nil)
 			r.EXPECT().SpellsPerDay(classDef("bard"), mock.Anything, mock.Anything).Return(map[int]int{}, nil)
 			r.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
@@ -632,9 +611,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		withDefinitions(t, r)
 		r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 		r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
-		r.EXPECT().LevelFor("thief", 0).Return(1, nil)
 		r.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
-		r.EXPECT().THAC0For("rogue", 1).Return(20, nil)
 		r.EXPECT().SavesFor("rogue", 1).Return(ruletablesvc.SavingThrowRow{}, nil)
 		r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()
 		r.EXPECT().BackstabFor(1).Return(2, nil).Once()

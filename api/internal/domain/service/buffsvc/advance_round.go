@@ -166,7 +166,7 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 				if ended[i] || !b.Maintained() || b.ContactRow() != contacts {
 					continue
 				}
-				if b.MaintenanceDue() && !(contacts && freeContact(*b)) {
+				if b.MaintenanceDue() && (!contacts || !freeContact(*b)) {
 					if b.MaintenanceCost > left {
 						ended[i] = true
 						continue

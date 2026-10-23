@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -48,7 +49,7 @@ func TestKelsen_Step16_WeaponPicksAreHisWeaponTypes(t *testing.T) {
 			require.NoError(t, err, "the editor accepts the seed's picks")
 			f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, skills.Spending{Picks: picks})
 			require.True(t, ok)
-			assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 5, Left: 0}, f.Weapon)
+			assert.Equal(t, slots.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 5, Left: 0}, f.Weapon)
 			for _, w := range skills.SlotWarnings(f) {
 				assert.NotEqual(t, skills.PoolWeapon, w.Pool, "no weapon warning: %+v", w)
 			}

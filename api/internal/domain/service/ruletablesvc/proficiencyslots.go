@@ -4,17 +4,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
-	"github.com/ceffo/critical/api/internal/domain/slots"
 )
-
-// NonweaponPool is ADR 0037 step 3's non-weapon pool, owned by slots (ADR 0046 step 4.1).
-type NonweaponPool = slots.NonweaponPool
-
-// NonweaponSlots is slots.Nonweapon with Table 4's "# of Lang." for the sheet's intelligence
-// (ADR 0037 step 3, ADR 0046 step 4.1).
-func NonweaponSlots(row SlotRow, level, intelligence, spent int) NonweaponPool {
-	return slots.Nonweapon(row, level, LanguageLimit(intelligence), spent)
-}
 
 // NonweaponCost is ADR 0037 step 4: Table 37's slots when one of the
 // proficiency's groups is among the class's Table 38 groups, one more
@@ -27,15 +17,6 @@ func NonweaponCost(p Proficiency, classGroups []string) int {
 	}
 	return p.Slots + 1
 }
-
-// ExtraSlots is slots.Extra (ADR 0037 step 5, ADR 0046 step 4.1).
-func ExtraSlots(n, cost int) int { return slots.Extra(n, cost) }
-
-// WeaponPool is ADR 0037 step 3's weapon pool, owned by slots (ADR 0046 step 4.1).
-type WeaponPool = slots.WeaponPool
-
-// WeaponSlots is slots.Weapon (ADR 0037 step 3, ADR 0046 step 4.1).
-func WeaponSlots(row SlotRow, level, spent int) WeaponPool { return slots.Weapon(row, level, spent) }
 
 // WeaponTypes is every weapon type code of ADR 0030 step 23, in display order, and the one owner
 // of the list: itemsvc's weapon pieces and the weapon proficiency picks (ADR 0037 step 7) read

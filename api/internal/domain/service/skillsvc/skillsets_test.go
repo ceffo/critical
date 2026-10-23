@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // swashbuckler is a test class granting the thief's and the bard's skill sets, which share
@@ -48,11 +49,11 @@ func dualFixture(t *testing.T) *fixture {
 	for _, c := range reg.ClassIDs() {
 		cross = append(cross, ruletablesvc.Crossover{Class: c, Groups: []string{"general"}})
 	}
-	var slots []ruletablesvc.SlotRow
+	var rows []slots.Row
 	for _, g := range reg.Groups() {
-		slots = append(slots, ruletablesvc.SlotRow{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
+		rows = append(rows, slots.Row{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
 	}
-	book, err := ruletablesvc.NewProficiencies(nil, cross, slots, reg)
+	book, err := ruletablesvc.NewProficiencies(nil, cross, rows, reg)
 	require.NoError(t, err)
 
 	f := &fixture{

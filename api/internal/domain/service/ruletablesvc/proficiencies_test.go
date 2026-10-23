@@ -8,6 +8,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 func okCrossovers(t *testing.T) []ruletablesvc.Crossover {
@@ -28,7 +29,7 @@ func TestNewProficiencies_RefusesWhatTheSchemaCannotSay(t *testing.T) {
 	cases := map[string]struct {
 		list  []ruletablesvc.Proficiency
 		cross []ruletablesvc.Crossover
-		slots []ruletablesvc.SlotRow
+		slots []slots.Row
 		want  string
 	}{
 		"no id":             {row(func(p *ruletablesvc.Proficiency) { p.ID = "" }), nil, nil, "no id"},
@@ -40,9 +41,9 @@ func TestNewProficiencies_RefusesWhatTheSchemaCannotSay(t *testing.T) {
 		"group twice":       {row(func(p *ruletablesvc.Proficiency) { p.Groups = []string{"general", "general"} }), nil, nil, "twice"},
 		"unknown class":     {nil, []ruletablesvc.Crossover{{Class: "paladin", Groups: []string{"general"}}}, nil, "unknown class"},
 		"class missing":     {nil, okCrossovers(t)[:4], nil, "missing"},
-		"slot group":        {nil, nil, []ruletablesvc.SlotRow{{Group: "druid", WeaponLevels: 1, NonweaponLevels: 1}}, "unknown group"},
-		"slot levels":       {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 1}}, "#Levels"},
-		"slot group gone":   {nil, nil, []ruletablesvc.SlotRow{{Group: "rogue", WeaponLevels: 4, NonweaponLevels: 4}}, "missing"},
+		"slot group":        {nil, nil, []slots.Row{{Group: "druid", WeaponLevels: 1, NonweaponLevels: 1}}, "unknown group"},
+		"slot levels":       {nil, nil, []slots.Row{{Group: "rogue", WeaponLevels: 1}}, "#Levels"},
+		"slot group gone":   {nil, nil, []slots.Row{{Group: "rogue", WeaponLevels: 4, NonweaponLevels: 4}}, "missing"},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // The skills fixtures the service's tests share with the skills package's (domain/skills).
@@ -33,7 +34,7 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{Class: "thief", Groups: []string{"rogue", "general"}},
 		{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}},
 		{Class: "psionicist", Groups: []string{"psionicist", "general"}},
-	}, []ruletablesvc.SlotRow{
+	}, []slots.Row{
 		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},

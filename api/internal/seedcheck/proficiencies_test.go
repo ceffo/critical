@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -124,7 +125,7 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 				assert.Zero(t, got.Extra, s.id)
 				assert.Equal(t, s.target, got.Target, "%s: the target his sheet gave", s.id)
 			}
-			assert.Equal(t, ruletablesvc.NonweaponPool{
+			assert.Equal(t, slots.NonweaponPool{
 				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8 + tc.langs, Left: 2 - tc.langs, Languages: tc.langs,
 			}, f.Nonweapon)
 			w := skills.SlotWarnings(f)
@@ -174,7 +175,7 @@ func TestNonweaponCatalogue_Step2_EveryIdHasAnEnAndFrName(t *testing.T) {
 func TestProficiencyTables_Step1_Table34AndTable38(t *testing.T) {
 	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
-	assert.Equal(t, []ruletablesvc.SlotRow{
+	assert.Equal(t, []slots.Row{
 		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},

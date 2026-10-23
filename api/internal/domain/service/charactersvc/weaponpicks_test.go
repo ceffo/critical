@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // ADR 0037 step 3 on the read: the weapon pool follows the realized level, never the target
@@ -31,7 +32,7 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 		got, err := e.svc.GetCharacter(context.Background(), 3)
 		require.NoError(t, err)
 		require.NotNil(t, got.Derived.Proficiencies)
-		assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 4, Left: 1},
+		assert.Equal(t, slots.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 4, Left: 1},
 			got.Derived.Proficiencies.Weapon, "target %d", target)
 		one := 1
 		assert.Contains(t, got.Warnings, charactersvc.Warning{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &one})
@@ -101,7 +102,7 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, got.Character)
 		require.NotNil(t, got.Character.Derived.Proficiencies)
-		assert.Equal(t, ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1}, got.Character.Derived.Proficiencies.Weapon)
+		assert.Equal(t, slots.WeaponPool{Initial: 2, PerLevels: 4, Available: 2, Spent: 1, Left: 1}, got.Character.Derived.Proficiencies.Weapon)
 	})
 }
 

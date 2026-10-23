@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // ADR 0037 step 15: "the weapon and non-weapon slots gained (available at the level minus
@@ -47,7 +48,7 @@ func TestGrantsAt_Step15_GrantsSlotsAndPoints(t *testing.T) {
 // or over budget (a negative left is the over-budget warning's, never "to spend").
 func TestToSpend_Step15_LeftCountsNeverNegative(t *testing.T) {
 	f := &skills.ProficiencySlots{
-		Nonweapon: ruletablesvc.NonweaponPool{Left: 2}, Weapon: ruletablesvc.WeaponPool{Left: -1},
+		Nonweapon: slots.NonweaponPool{Left: 2}, Weapon: slots.WeaponPool{Left: -1},
 	}
 	b := &ruletablesvc.SkillPointsBudget{Left: 15}
 	sets := []skills.SkillSet{{Set: "thief", Points: b}}

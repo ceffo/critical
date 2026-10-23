@@ -51,8 +51,10 @@ environment production critical-hit "$custom"
 # policy <environment> <branch|tag> <name>: the one rule that environment accepts deployments from. It is
 # added first, then every other rule of the environment is deleted, so no moment accepts nothing.
 policy() {
-    local url="repos/$repo/environments/$1/deployment-branch-policies" id
-    if ! gh api "$url" --jq ".branch_policies[] | select(.type == \"$2\" and .name == \"$3\") | .id" | grep -q .; then
+    local url="repos/$repo/environments/$1/deployment-branch-policies" id existing
+    # Captured, not piped into grep -q: an early exit would SIGPIPE gh and pipefail would call the rule missing.
+    existing="$(gh api "$url" --jq ".branch_policies[] | select(.type == \"$2\" and .name == \"$3\") | .id")"
+    if [ -z "$existing" ]; then
         gh api -X POST "$url" -f name="$3" -f type="$2" >/dev/null
     fi
     for id in $(gh api "$url" --jq ".branch_policies[] | select(.type != \"$2\" or .name != \"$3\") | .id"); do

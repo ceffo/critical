@@ -30,4 +30,16 @@ expect reject stale_allowlist "$src" '**Spell slot**:' 'Gone  # no longer a type
 expect accept grouped $'package sub\ntype (\n\tFoo struct{}\n\tbar int\n)' '**Foo**:' ''
 expect reject grouped_missing $'package sub\ntype (\n\tFoo struct{}\n)' '**Bar**:' ''
 expect accept unexported_only $'package sub\ntype spellSlot struct{}' '' ''
+
+# A long type list with the allowlisted names first: grep -q finds them while a piped producer is still
+# writing, which made a present name look stale (a timing race, so repeated).
+pad=$(printf 'X%.0s' $(seq 1 120))
+big=$'package sub\ntype (\n\tAaFirst struct{}\n\tAbSecond struct{}'
+for i in $(seq 1 700); do big+=$'\n\tFiller'$i$pad' struct{}'; done
+big+=$'\n)'
+terms='**Aa first**:'$'\n''**Ab second**:'
+for i in $(seq 1 700); do terms+=$'\n**Filler'$i$pad'**:'; done
+for i in 1 2 3; do
+    expect accept "big_allowlist_$i" "$big" "$terms" $'AaFirst  # a\nAbSecond  # b'
+done
 exit $status

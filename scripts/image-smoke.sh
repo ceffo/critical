@@ -51,7 +51,8 @@ docker run -d --name "$name" --network "$name" -p 127.0.0.1::8080 \
     -v "$root/api/testdata/seeds:/fixture-seeds:ro" -e CRITICAL_SEEDS_DIR=/fixture-seeds \
     -e CRITICAL_ENV=dev \
     "$image" >/dev/null
-port="$(docker port "$name" 8080/tcp | head -n1 | sed 's/.*://')"
+# sed -n 1p, not head -n1: head exits on the first line and docker's next write would SIGPIPE under pipefail.
+port="$(docker port "$name" 8080/tcp | sed -n '1s/.*://p')"
 base="http://127.0.0.1:$port"
 
 for _ in $(seq 1 120); do

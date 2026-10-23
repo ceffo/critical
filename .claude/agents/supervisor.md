@@ -374,6 +374,8 @@ most.
 
 A catalogue format bump lands in two repos: once the rulebooks half merges, every open app PR fails CI until the app half lands, and after it lands `gh run rerun` is useless (it reuses the old merge sha): run `gh pr update-branch` on each open PR instead, and send a developer to the ones it reports as conflicting (sup-72).
 After the app half of a format bump merges, the rulebooks `ref/MANIFEST` re-pin is mechanical and yours: in the rulebooks worktree, `git switch -c chore/repin-... origin/main`, `scripts/fetch-ref --from <main> --rev origin/main`, `scripts/check`, commit, ship with `CRITICAL_MAIN`, land on green (sup-77: three calls, no developer).
+A format bump's first round is one repo and one layer: the app reader and fixture, then the rule-table checks, then the rulebooks builder, each its own round (sup-81: one Opus round on both repos ended at 131k with nothing committed; split into three Sonnet rounds it finished at 73k-102k each). Its brief says the app fixture carries the book's numbers copied from rulebooks dist/, never placeholders (ADR 0021; sup-81's reviewer caught invented contact costs).
+A docs-only PR that is part of a larger item names the item only in words, never its id: Linear links any id in the body and moves the item to In Review, which the ready queue then flags as stalled (sup-81, the psionic combat ADR PR).
 A developer that commits anything after its gate (even "script-only") reruns `just validate` before reporting: a comment added after the gate broke CI on the tracker-id check (sup-72). Say so in every rework brief.
 
 Notes from practice: when a parent PR squash-merges, GitHub's native stack restacks the child and

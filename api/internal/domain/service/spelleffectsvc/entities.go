@@ -4,6 +4,7 @@ import (
 	"errors"
 	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/slots"
 	"github.com/ceffo/critical/api/pkg/formula"
 )
 
@@ -253,22 +254,10 @@ func (e Entry) AddsBuff() bool {
 }
 
 // SlotSplits lists every way the caster may split g.Levels spell levels into
-// extra slots: each split is ascending, and the first is all level 1 slots
-// (the default). 3 levels: [1 1 1], [1 2], [3].
+// extra slots, the owner's slots.Splits (ADR 0008 step 9, ADR 0046 step 4.3):
+// each split is ascending, and the first is all level 1 slots (the default).
 func (g GrantSlots) SlotSplits() [][]int {
-	var out [][]int
-	var walk func(left, lowest int, acc []int)
-	walk = func(left, lowest int, acc []int) {
-		if left == 0 {
-			out = append(out, append([]int(nil), acc...))
-			return
-		}
-		for l := lowest; l <= left; l++ {
-			walk(left-l, l, append(acc, l))
-		}
-	}
-	walk(g.Levels, 1, nil)
-	return out
+	return slots.Splits(g.Levels)
 }
 
 // String describes the duration for error messages and logs.

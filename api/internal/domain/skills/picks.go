@@ -6,6 +6,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // Proficiency picks against their slots (ADR 0037 steps 3 to 5, 7, 10, 11 and 12: the
@@ -123,8 +124,8 @@ type WeaponTypeFigure struct {
 // ProficiencySlots are the pools (step 3) and each pick's figures: Picks the non-weapon picks,
 // WeaponPicks the weapon picks.
 type ProficiencySlots struct {
-	Nonweapon   ruletablesvc.NonweaponPool
-	Weapon      ruletablesvc.WeaponPool
+	Nonweapon   slots.NonweaponPool
+	Weapon      slots.WeaponPool
 	Picks       []PickFigures
 	WeaponPicks []WeaponPickFigures
 	// WeaponTypes are the types the character may pick (step 16.1: Classes.weaponTypeAllowed, the
@@ -308,7 +309,7 @@ func pickFigures(book Book, groups []string, p Pick) PickFigures {
 	}
 	cost := ruletablesvc.NonweaponCost(row, groups)
 	return PickFigures{
-		ID: p.ID, Slots: p.Slots, Cost: cost, Extra: ruletablesvc.ExtraSlots(p.Slots, cost),
+		ID: p.ID, Slots: p.Slots, Cost: cost, Extra: slots.Extra(p.Slots, cost),
 		Ability: row.Ability, Modifier: row.Modifier, Known: true,
 	}
 }
@@ -350,7 +351,7 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		out.Picks = append(out.Picks, f)
 		spent += p.Slots
 	}
-	out.Nonweapon = ruletablesvc.NonweaponSlots(b.row, b.nonweaponLevel, intelligence, spent+spend.Languages)
+	out.Nonweapon = slots.Nonweapon(b.row, b.nonweaponLevel, ruletablesvc.LanguageLimit(intelligence), spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages
 	out.WeaponPicks = make([]WeaponPickFigures, 0, len(picks.Weapon))
 	spent = 0
@@ -360,7 +361,7 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		})
 		spent += p.Slots
 	}
-	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
+	out.Weapon = slots.Weapon(b.row, b.weaponLevel, spent)
 	out.WeaponTypes = make([]WeaponTypeFigure, 0, len(ruletablesvc.WeaponTypes))
 	specialistDef, specialist := book.ClassDef(cls.specialist())
 	specialist = specialist && ruletablesvc.Specializes(specialistDef)

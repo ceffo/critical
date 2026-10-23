@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // The non-weapon proficiency catalogue and PHB Table 38's crossovers (ADR 0037
@@ -38,17 +39,8 @@ type Crossover struct {
 	Groups []string
 }
 
-// SlotRow is one row of PHB Table 34 (ADR 0037 step 1): a class group's
-// weapon and non-weapon slots. A pool's slots are Initial plus one at every
-// level divisible by its Levels (step 3).
-type SlotRow struct {
-	Group            string
-	WeaponInitial    int
-	WeaponLevels     int
-	Penalty          int
-	NonweaponInitial int
-	NonweaponLevels  int
-}
+// SlotRow is one row of PHB Table 34 (ADR 0037 step 1), owned by slots (ADR 0046 step 4.1).
+type SlotRow = slots.Row
 
 // Proficiencies is the validated catalogue. The zero value and nil are the
 // empty catalogue.

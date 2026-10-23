@@ -36,7 +36,15 @@ while sleep "${CI_WATCH_INTERVAL:-120}"; do
     done_prs=$(comm -23 <(printf '%s\n' "$seen" | sed '/^$/d') <(printf '%s\n' "$running" | sed '/^$/d'))
     seen=$(printf '%s\n%s\n' "$seen" "$running" | sed '/^$/d' | sort -u)
     [ -z "$done_prs" ] && [ -z "$found" ] && continue
-    [ -n "$done_prs" ] && echo "PR(s) no longer running: $(tr '\n' ' ' <<<"$done_prs")"
+    # One verdict line per PR whose checks stopped, so the supervisor acts without a second call
+    # (sup-84 retro): GREEN = land it (land.sh re-checks), RED = rework, else merged/closed.
+    for n in $done_prs; do
+      st=$(gh pr view "$n" --json state -q .state 2>/dev/null)
+      if [ "$st" != OPEN ]; then echo "${st:-UNKNOWN} PR #$n"
+      elif gh pr checks "$n" >/dev/null 2>&1; then echo "GREEN PR #$n: ready to land"
+      else echo "RED PR #$n: $(gh pr checks "$n" 2>/dev/null | awk -F'\t' '$2=="fail"{printf "%s; ", $1}')"
+      fi
+    done
   fi
   [ -n "$found" ] && echo "$found"
   echo "$now"; echo "exit=$rc"; exit 0

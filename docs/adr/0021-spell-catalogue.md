@@ -654,7 +654,7 @@ is only ever appended to by play.
        clone's `dist/catalogue.json` at `CATALOGUE_REF` (default the checked-out branch), so nothing in this repo is pinned: once the
        builder's format 9 artifact is on the rulebooks default branch, `just catalogue` then `just dev` import the descriptions (the recorded
        format and version differ, so the import runs). A format-8 `.catalogue/catalogue.json` is refused at start with the `just catalogue` advice.
-    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by steps 18 to 20: `TestSchema_Step24_OnlyFormat17IsValid`) and
+    Tests: `TestSchema_Step16_Format9ProficiencyDescriptions`, `Schema_Step16_OnlyFormat9IsValid` (replaced by step 17, then by steps 18 to 20: `TestSchema_Step25_OnlyFormat18IsValid`) and
     `TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId` (cataloguecheck: the 65 rows, both languages, the lint, no other format),
     `TestParse_Step16_ReadsTheProficiencyDescriptions`, `TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice` (catalogueadpt),
     `TestImportCatalogue_Step16_DescriptionsInLocalizedTexts`, `TestImportCatalogue_Step16_ReimportChangesNothing`,
@@ -674,7 +674,7 @@ is only ever appended to by play.
     4. **Read as rules data** (ADR 0006 step 9.1): `ruletablesvc.Tables.MagicDefenceFor`, derived for every character as
        `charactersvc.Derived.MagicDefence`.
     Tests: `TestParse_Step17_ReadsTheMagicDefence`, `TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice` (catalogueadpt),
-    `TestSchema_Step24_OnlyFormat17IsValid` (cataloguecheck, step 17.3 renamed by steps 18 to 21), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
+    `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck, step 17.3 renamed by steps 18 to 21), `TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue` (composition, formats 3 to 9),
     the rules adapter's `TestWisdomFor_Step9_MagicDefence` (ADR 0006 step 9); in `critical-rulebooks`: `scripts/check`'s Table 5 spot checks.
 
 18. **The class, group and race definitions, format 11** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) steps 1, 2, 4 and 7
@@ -779,8 +779,8 @@ is only ever appended to by play.
     2. **Rollout, as step 18.6.** The API reads **format 14 only** (a format-13 artifact is refused at start, naming `just catalogue`). Merge order:
        the builder publishing format 14 first, then the API change (the schema `schemas/catalogue.schema.json`, `catalogueadpt`, the fixture
        `testdata/catalogue.json`) immediately.
-    Tests: `TestSchema_Step24_OnlyFormat17IsValid` (cataloguecheck: format 14 only, a `sphere_access` table refused),
-    `TestParse_Step24_ReadsFormat17AndRefusesFormat16` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s format-14 schema rules and the
+    Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck: format 14 only, a `sphere_access` table refused),
+    `TestParse_Step25_ReadsFormat18AndRefusesFormat17` (catalogueadpt); in `critical-rulebooks`: `scripts/check`'s format-14 schema rules and the
     cleric's feature against the sphere vocabulary.
 
 22. **Format 15: a class's Constitution column is a boolean** (**decided as built** 2026-10-22; [ADR 0040](0040-classes-are-data.md) step 1.8). The
@@ -791,7 +791,7 @@ is only ever appended to by play.
     1. **`hit_dice.constitution` is gone** from the schema; `bracketed_constitution` is required. Nothing else changes.
     2. **Rollout, as step 18.6.** The API reads **format 15 only** (a format-14 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 15 first, then the API change immediately.
-    Tests: `TestSchema_Step24_OnlyFormat17IsValid` (cataloguecheck) and `TestParse_Step24_ReadsFormat17AndRefusesFormat16` (catalogueadpt) took over the format checks of step 22 and step 23 (format 16 replaced 15),
+    Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck) and `TestParse_Step25_ReadsFormat18AndRefusesFormat17` (catalogueadpt) took over the format checks of step 22 and step 23 (format 16 replaced 15),
     `TestHitDieGain_Step7_1_RaisedDieWarriorBonusAndFloor` (ruletablesvc), the level-up and creation roll tests; in `critical-rulebooks`:
     `scripts/check`'s hit dice cases.
 
@@ -802,7 +802,7 @@ is only ever appended to by play.
     1. **`slot` is optional** on a power and absent where the kind says the slot; the builder sets `science` on Psionic Blast. Nothing else changes.
     2. **Rollout, as step 18.6.** The API reads **format 16 only** (a format-15 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 16 first, then the API change immediately.
-    Tests: `TestSchema_Step24_OnlyFormat17IsValid` (cataloguecheck, step 23's schema case kept on format 17), `TestParse_Step23_APowerReadsItsSlot` (catalogueadpt),
+    Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck, step 23's schema case kept on format 17), `TestParse_Step23_APowerReadsItsSlot` (catalogueadpt),
     `TestPicks_Step9_AnAttackModeTakesTheSlotTheCatalogueNames` (psionics); in `critical-rulebooks`: `scripts/check`'s psionic power cases.
 
 24. **Format 17: a class says it is never part of a multi-class character** (**decided as built** 2026-10-22; [ADR 0042](0042-multi-class-and-dual-class.md)
@@ -811,8 +811,15 @@ is only ever appended to by play.
     1. **`multiclass` is optional** on a class; absent means true. The builder sets `false` on the bard. Nothing else changes.
     2. **Rollout, as step 18.6.** The API reads **format 17 only** (a format-16 artifact is refused at start, naming `just catalogue`). Merge
        order: the builder publishing format 17 first, then the API change immediately.
-    Tests: `TestSchema_Step24_OnlyFormat17IsValid` (cataloguecheck), `TestParse_Step24_ReadsFormat17AndRefusesFormat16` (catalogueadpt),
+    Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck), `TestParse_Step25_ReadsFormat18AndRefusesFormat17` (catalogueadpt),
     `TestDefinitions_Step24_TheMultiClassFlag` (ruletablesadpt); in `critical-rulebooks`: `scripts/check`'s class cases.
+25. **Format 18: the psionic combat tables and two cost shapes** (**decided as built** 2026-10-22; [ADR 0044](0044-psionic-combat.md) step 1).
+    1. `rule_tables` gains `attack_versus_defence`, `contact_cost` and `contact_modifiers`, each required (shapes in ADR 0044 step 1.1 to 1.3).
+    2. A power's `initial_cost` also takes `{table: "contact_cost"}` (the contact power; the reader makes it a variable cost naming its
+       table, so the entered-cost path is unchanged) and `{kind: "contact", "plus": n}` (contact made first, then `n` PSPs: Switch Personality).
+    3. **Rollout, as step 18.6.** The API reads **format 18 only**; the builder publishes format 18 first.
+    Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck), `TestParse_Step25_ReadsFormat18AndRefusesFormat17`,
+    `TestPowerCatalogue_Step25_ReadsTheTableAndPlusCosts` and `TestRuleTables_Step25_ReadsTheCombatTables` (catalogueadpt).
 
 ## Consequences
 

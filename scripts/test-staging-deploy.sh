@@ -37,6 +37,11 @@ echo "fly \$*" >> "$calls"
 case "\$1 \$2" in
     "ips list") cat "$tmp/ips" ;;
     "machine list") cat "$tmp/machines" ;;
+    "deploy "*) # deploy-seq: one "exit code|output" per call, first line first; empty: succeeds
+        if [ -s "$tmp/deploy-seq" ]; then
+            line=\$(head -n1 "$tmp/deploy-seq"); sed -i 1d "$tmp/deploy-seq"
+            echo "\${line#*|}"; exit "\${line%%|*}"
+        fi ;;
     "releases --image") echo "v7 complete registry.fly.io/critical-hit-staging:previous" ;;
 esac
 STUB
@@ -169,6 +174,23 @@ printf '1\n' > "$tmp/gate-seq"
 run_deploy A=1
 [ "$status" != 0 ] && ! grep -q '^fly deploy' "$calls" || fail "an app that answers without the gate was deployed over"
 echo "$private" > "$tmp/ips"; : > "$tmp/gate-seq"
+
+# --- a fly API transient during `fly deploy` is retried, bounded; any other failure is not ---
+api_err='Error: failed to update machine m1: failed to get VM m1: Get "https://api.machines.dev/v1/apps/x/machines/m1": net/http: request canceled'
+printf '1|%s\n1|%s\n' "$api_err" "$api_err" > "$tmp/deploy-seq"
+run_deploy A=1 DEPLOY_RETRY_SLEEP=0
+[ "$status" = 0 ] || fail "two API transients then success: exit $status: $out"
+[ "$(grep -c '^fly deploy' "$calls")" = 3 ] || fail "API transient: want 3 deploy calls, got $(grep -c '^fly deploy' "$calls")"
+[[ "$out" == *"retrying the deploy"* ]] || fail "API transient: no retry line: $out"
+[ "$gh_out" = "digest=$digest" ] || fail "API transient: output is '$gh_out'"
+printf '1|%s\n1|%s\n1|%s\n1|%s\n' "$api_err" "$api_err" "$api_err" "$api_err" > "$tmp/deploy-seq"
+run_deploy A=1 DEPLOY_RETRY_SLEEP=0
+[ "$status" != 0 ] || fail "API transient on every attempt: the run passed"
+[ "$(grep -c '^fly deploy' "$calls")" = 3 ] || fail "API transient: the retries are not bounded at 3, got $(grep -c '^fly deploy' "$calls")"
+printf '1|%s\n' 'Error: error creating app: image is not valid' > "$tmp/deploy-seq"
+run_deploy A=1 DEPLOY_RETRY_SLEEP=0
+[ "$status" != 0 ] && [ "$(grep -c '^fly deploy' "$calls")" = 1 ] || fail "a non-transient deploy error was retried (or passed): $(cat "$calls")"
+: > "$tmp/deploy-seq"
 
 # --- machines on two digests are not one release ---
 echo "$split" > "$tmp/machines"

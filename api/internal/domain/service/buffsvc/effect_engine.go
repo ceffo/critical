@@ -300,11 +300,17 @@ func advanceRoundBuffs(buffs []BuffEffect) (active, expired []BuffEffect) {
 
 // elapseBuffs counts timed buffs down by rounds and partitions into
 // (still-active, just-expired); an expired buff's Duration is 0. Untimed
-// buffs (charge-only, until dismissed) pass through unchanged.
+// buffs (charge-only, until dismissed) pass through unchanged. A defence
+// mode raised for the round expires whatever its rounds (ADR 0044 step 4).
 func elapseBuffs(buffs []BuffEffect, rounds int) (active, expired []BuffEffect) {
 	active = []BuffEffect{}
 	expired = []BuffEffect{}
 	for _, b := range buffs {
+		if b.Defence == DefenceRaised {
+			b.Duration = 0
+			expired = append(expired, b)
+			continue
+		}
 		if !b.Timed() {
 			active = append(active, b)
 			continue

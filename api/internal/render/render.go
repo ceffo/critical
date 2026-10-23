@@ -237,6 +237,10 @@ var mappings = []mapping{
 	{target: psionicsvc.ErrNeedsContact, status: http.StatusConflict, code: "needs_contact"},
 	{target: psionicsvc.ErrNotEnoughPSP, status: http.StatusConflict, code: "not_enough_psp"},
 	{target: psionicsvc.ErrPowerNotMaintained, status: http.StatusConflict, code: "power_not_maintained"},
+	// ADR 0044 steps 4 and 8: a defence mode's raise and use refused.
+	{target: psionicsvc.ErrNotInCombat, status: http.StatusConflict, code: "not_in_combat"},
+	{target: psionicsvc.ErrNotADefenceMode, status: http.StatusConflict, code: "not_a_defence_mode"},
+	{target: psionicsvc.ErrDefenceModeIsRaised, status: http.StatusConflict, code: "defence_mode_is_raised"},
 	{target: psionicsvc.ErrRecoveryWhileMaintaining, status: http.StatusConflict, code: "psp_recovery_while_maintaining"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},

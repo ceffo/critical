@@ -68,6 +68,9 @@ type jsonBuff struct {
 	// RoundsKept is absent from rows not from a maintained power and from a
 	// row in its activation round: they read 0 (ADR 0043 step 14).
 	RoundsKept int `json:"rounds_kept,omitempty"`
+	// Defence is absent from rows not of a defence mode (ADR 0044 steps 4
+	// and 5).
+	Defence buffsvc.DefenceKind `json:"defence,omitempty"`
 }
 
 type jsonEffects struct {
@@ -96,7 +99,7 @@ func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 		ID: j.ID, Name: j.Name, Charges: j.Charges, Duration: j.Duration,
 		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound, ChargesTotal: j.ChargesTotal,
 		SpellID: j.SpellID, ProficiencyID: j.ProficiencyID, OnOther: j.OnOther,
-		PowerID: j.PowerID, PowerName: j.PowerName, MaintenanceCost: j.MaintenanceCost, MaintenancePeriod: j.MaintenancePeriod, RoundsKept: j.RoundsKept,
+		PowerID: j.PowerID, PowerName: j.PowerName, MaintenanceCost: j.MaintenanceCost, MaintenancePeriod: j.MaintenancePeriod, RoundsKept: j.RoundsKept, Defence: j.Defence,
 	}
 }
 
@@ -105,7 +108,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 		ID: b.ID, Name: b.Name, Charges: b.Charges, Duration: b.Duration,
 		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
-		PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept,
+		PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
 	}
 }
 

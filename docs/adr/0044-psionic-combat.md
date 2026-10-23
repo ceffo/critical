@@ -139,18 +139,23 @@ two power ids in its row of data.
    `not_in_combat` with the round counter at 0 _(Q3)_. The mode is the character's **raised
    defence** for the round it is raised in: a row that ends at the next move of the round counter
    (Next Round, End combat, Set round, passing time). One a round: raising another replaces it and
-   pays again _(Q2)_. It does not count toward ADR 0043 step 12 (already built).
+   pays again _(Q2)_. A standing mode (step 5, cost 0) is exempt from `not_in_combat`: it is
+   raised in or out of combat. **Stop** (ADR 0043's stop) dismisses any defence row, raised or
+   standing, though a zero-cost row is not "maintained". It does not count toward ADR 0043 step 12
+   (already built).
    Tests: `RaiseDefence_Step4_PaysTheCostNoRoll` (psionicsvc, dice mock called 0 times),
-   `RaiseDefence_Step4_LastsTheRound` (buffsvc), `RaiseDefence_Step4_ASecondReplacesTheFirst`,
+   `TestRaiseDefence_Step4_LastsTheRound` (buffsvc), `TestRaiseDefence_Step4_ASecondReplacesTheFirst`,
    `RaiseDefence_Step4_RefusedOutOfCombat`.
 
 5. **A standing defence: a defence mode kept at no cost** (mind blank; amends ADR 0043 steps 6 and
-   7). A `defence_mode` power whose catalogue `maintenance` costs 0 is raised as step 4 says but
-   its row is untimed (ADR 0043 step 13) and stays across rounds _(Q4)_. A maintained row whose
+   7). A `defence_mode` power whose catalogue `maintenance` costs 0 is raised as step 4 says
+   (except that it needs no combat round, _Q3_) but its row is untimed (ADR 0043 step 13) and stays across rounds _(Q4)_. A maintained row whose
    cost is 0 neither refuses PSP recovery (ADR 0043 step 6's `psp_recovery_while_maintaining`)
    nor ends at the long rest (step 7): the book recovers PSPs under mind blank and keeps it asleep.
    The character's **current defence** is the mode raised this round, else the standing one, else
-   none. A rule on the cost, never on the power's id.
+   none. A rule on the cost, never on the power's id. A standing row counts as **kept** (the +1 of
+   step 8) when its `defence_raised` entry is not in this round: the app reads the character's
+   last 20 log entries for it, and a raise beyond that lookback counts as kept too.
    Tests: `Recover_Step5_AZeroCostRowAllowsRecovery` (psionicsvc), `LongRest_Step5_KeepsAZeroCostRow`
    (restsvc), `CurrentDefence_Step5_ARaisedModeOverTheStandingOne` (psionicsvc).
 
@@ -163,9 +168,9 @@ two power ids in its row of data.
    score and a failed roll that counts as a success of 1 (Maintained Powers). ADR 0043 step 10's
    outcomes hold: a natural 20 fails, a natural 1 succeeds (as a roll of 1), a roll equal to the
    score succeeds (its text shown).
-   Tests: `Contest_Step6_HigherSuccessWins` (the book's example: an attack at 15 against a defence
+   Tests: `TestContest_Step6_HigherSuccessWins` (the book's example: an attack at 15 against a defence
    at 12; 14 against 9 wins, 9 against 11 loses, 8 against 8 the defender, both failing the
-   defender), `Contest_Step6_AKeptPowerPlusOneAndFailedIsOne`.
+   defender), `TestContest_Step6_AKeptPowerPlusOneAndFailedIsOne`.
 
 ### Attacking
 
@@ -206,8 +211,9 @@ two power ids in its row of data.
    (step 5) the app rolls one check per incoming roll (the defence's score, +1 and a failure as 1
    when the defence is the standing row raised in an earlier round, step 6), decides each contest
    and logs a `psionic_defence` entry with no PSP delta (the cost was paid at the raise). The
-   player may **keep** a roll: the next contests of that defence in the same round take it with no
-   die, read from the round's earlier `psionic_defence` entries (as ADR 0043 step 12 reads the
+   player may **keep** a roll: `keep` is the index of a contest of the request, and a second keep in
+   the same round is refused (the field error "a check is already kept this round"). The next
+   contests of that defence in the same round take it with no die, read from the round's earlier `psionic_defence` entries (as ADR 0043 step 12 reads the
    round's checks: no stored column). With no current defence nothing is rolled and the
    attacker's successes win. The answer names, per contest, the winner; a lost contest is a
    tangent the DM keeps: the character's sheet tracks no opponent's tangents _(Q7)_. Table 14's
@@ -281,8 +287,9 @@ the app must make; the step is written with the default.
    bars a second defence only beside mind blank. Default: one raised defence a round; raising
    another replaces it and pays again. Other reading: several defences, the defender choosing per
    attack.
-3. **Q3, defence modes out of combat** (step 4). Default: refused with the round counter at 0 (a
-   round-scoped power needs a round). Other reading: allowed, lasting until the next round move.
+3. **Q3, defence modes out of combat** (step 4). Default: a raised mode is refused with the round
+   counter at 0 (a round-scoped power needs a round); a standing mode (cost 0, step 5) is not, as
+   it is untimed. Other reading: allowed, lasting until the next round move.
 4. **Q4, mind blank always up** (step 5). The book: known, it is nearly always active, down only
    when the player says so. Default: raised once by the player (free, no roll), up until dismissed,
    across rests. Other reading: up from the moment it is known, with an off switch.

@@ -217,7 +217,10 @@ as HP is: a **power check** spends the **initial cost** (half on a failure), a m
 a buff row whose **maintenance cost** Next Round and passing time charge, and recovery and the long
 rest give PSPs back, capped at the maximum. A power's effect is buff data of the existing kinds or
 text. The check is a roll with a breakdown like any other ([ADR 0014](adr/0014-skill-checks.md)
-for the shape). Psionic combat (attack and defence modes, contact) is later.
+for the shape). Psionic combat ([ADR 0044](adr/0044-psionic-combat.md)): a defence mode is a buff
+row too, a **raised defence** for the round or a **standing defence** kept at no cost, and the
+**current defence** is the raised one, else the standing one; a **psychic contest** decides an
+attack mode's check against a defence mode's. Attack modes, tangents and contact are later rounds.
 
 ## What computes what
 

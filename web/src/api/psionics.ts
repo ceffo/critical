@@ -51,3 +51,51 @@ export function invokePower(
 export function stopPower(id: string): Promise<{ powerId: string }> {
   return post(`/api/psionics/powers/${encodeURIComponent(id)}/stop`, {});
 }
+
+/** POST /api/psionics/powers/{id}/raise: raises a known defence mode, no roll (ADR 0044 steps 4 and 5). */
+export function raisePower(id: string): Promise<{
+  raise: { power: string; defence: "raised" | "standing"; cost: number };
+  psp: PspPool;
+  logEntryId: number;
+  buffId: string;
+}> {
+  return post(`/api/psionics/powers/${encodeURIComponent(id)}/raise`, {});
+}
+
+/** One roll of the DM's, as sent and as the server decides it. */
+export interface IncomingRoll {
+  roll: number;
+  success: boolean;
+}
+
+/** One contest of a defend: the DM's roll, the defence's check (none without a defence), the winner. */
+export interface ContestResult {
+  attack: IncomingRoll;
+  check?: { target: number; d20: number; outcome: string; kept?: boolean };
+  fromKept?: boolean;
+  winner: "attacker" | "defender";
+}
+
+/** The answer of a defend (the psionic_defence entry's payload, as far as the form shows it). */
+export interface DefendResult {
+  attack: string;
+  defence?: string;
+  defenceKind?: "raised" | "standing";
+  score?: number;
+  kept?: boolean;
+  /** Table 14's cell for the attack against the defence, for the DM's own score. */
+  modifier?: number;
+  contests: ContestResult[];
+  /** The check the round's next contests of this defence take with no die. */
+  keptCheck?: { target: number; d20: number; outcome: string; kept?: boolean };
+}
+
+/** POST /api/psionics/defend: decides the DM's one or two rolls of an attack mode against the current defence (step 8). */
+export function defend(req: {
+  attack: string;
+  rolls: IncomingRoll[];
+  /** Index of the roll whose check the round's next contests keep. */
+  keep?: number;
+}): Promise<{ defence: DefendResult; logEntryId: number }> {
+  return post("/api/psionics/defend", req);
+}

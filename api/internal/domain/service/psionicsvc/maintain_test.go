@@ -118,6 +118,16 @@ func TestStop_Step16_DismissesThePowersRow(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []buffsvc.BuffEffect{other}, got)
 	})
+	t.Run("a standing defence of cost 0 is dismissed", func(t *testing.T) {
+		blank := buffsvc.BuffEffect{ID: "m", PowerID: "mind_blank", Defence: buffsvc.DefenceStanding, MaintenancePeriod: 1}
+		svc, _, _, buffs := newUseSvcWithBuffs(t, user(30, false))
+		buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return([]buffsvc.BuffEffect{other, blank}, nil).Once()
+		buffs.EXPECT().Dismiss(mock.Anything, int64(7), "m", mock.Anything).
+			Return([]buffsvc.BuffEffect{other}, buffsvc.EndResult{}, nil).Once()
+
+		_, err := svc.Stop(context.Background(), 7, "mind_blank")
+		require.NoError(t, err)
+	})
 	t.Run("a power not maintained is refused", func(t *testing.T) {
 		svc, _, _, buffs := newUseSvcWithBuffs(t, user(30, false))
 		buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return([]buffsvc.BuffEffect{other}, nil).Once()

@@ -163,7 +163,7 @@ packages:
       outpkg: "mocks"
     interfaces:
       SVC:
-      RecoveryRates:
+      Tables:
       Log:
       Characters:
       Picks:

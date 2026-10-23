@@ -268,6 +268,35 @@
       "warning": {
         "second_power_this_round": "A second power in the same combat round."
       }
+    },
+    "defence": {
+      "current": "Current defence",
+      "none": "None",
+      "kind": {
+        "raised": "raised this round",
+        "standing": "standing"
+      },
+      "raise": "Raise",
+      "raiseNamed": "Raise {{name}}",
+      "defend": "Defend",
+      "title": "Defend against an attack",
+      "attack": "Attack mode",
+      "chooseAttack": "Choose the attack mode…",
+      "twoChecks": "Two checks",
+      "rolls": "The DM’s rolls",
+      "rollN": "Roll {{n}}",
+      "succeeded": "Check {{n}} succeeded",
+      "keep": "Keep a check for the round",
+      "keepNone": "Keep none",
+      "keepRoll": "Keep the check against roll {{n}}",
+      "against": "Against {{name}}",
+      "noDefence": "No defence: the attacker’s successes win",
+      "tableModifier": "Table 14: {{modifier}} to the attack",
+      "contest": "Contest {{n}} (roll {{roll}})",
+      "fromKept": "kept for the round, no die",
+      "keptPlusOne": "+1 kept",
+      "failureAsOne": "a failure counts as 1",
+      "keptForRound": "check kept for the round (d20 {{d20}} vs {{target}})"
     }
   },
   "round": {
@@ -1450,7 +1479,9 @@
       "spell_add": "Spellbook",
       "psp_recovery": "PSP recovery",
       "psionic_pick": "Known powers",
-      "power_check": "Power check"
+      "power_check": "Power check",
+      "defence_raised": "Defence raised",
+      "psionic_defence": "Psychic contest"
     },
     "status": {
       "active": "Active",
@@ -1701,6 +1732,16 @@
       "cleared": "AC override cleared"
     },
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
+    "defenceRaised": "Defence raised ({{power}}): PSPs {{spent}}",
+    "defenceRaisedStanding": "Defence raised ({{power}}, standing): PSPs {{spent}}",
+    "psionicDefence": "Psychic contest ({{attack}} against {{defence}}): {{results}}",
+    "psionicDefenceNone": "Psychic contest ({{attack}}, no defence): {{results}}",
+    "contest": {
+      "attackerWon": "attacker won",
+      "checkWon": "{{check}}: {{won}}",
+      "andThen": "{{first}}; {{next}}",
+      "defended": "defended"
+    },
     "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}",
     "powerCheckWith": "{{text}} ({{parts}})",
     "powerParts": {
@@ -2251,6 +2292,9 @@
     "needs_contact": "This power needs contact, which is not available yet.",
     "not_enough_psp": "Not enough PSPs for this power's initial cost.",
     "power_not_maintained": "This power is not maintained.",
+    "not_in_combat": "This defence mode is raised for a combat round: no round is running.",
+    "not_a_defence_mode": "This power is not a defence mode.",
+    "defence_mode_is_raised": "A defence mode is raised, not used.",
     "psp_recovery_while_maintaining": "No PSP recovery while a power is maintained: stop it first.",
     "not_a_psionicist": "This character is not a psionicist.",
     "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",

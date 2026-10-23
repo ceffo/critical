@@ -68,6 +68,14 @@ const (
 	// breakdown, and the PSPs spent as its PSP delta, so popping it gives
 	// them back.
 	KindPowerCheck Kind = "power_check"
+	// KindDefenceRaised is a psionicist's defence mode raised (psionicsvc,
+	// ADR 0044 steps 4 and 5): no roll, the initial cost as its PSP delta and
+	// the mode's buff row in its snapshot, so popping it gives both back.
+	KindDefenceRaised Kind = "defence_raised"
+	// KindPsionicDefence is a psychic contest against the character
+	// (psionicsvc, ADR 0044 step 8): the defence's checks against the DM's
+	// rolls. No PSP delta and no snapshots: popping it only removes it.
+	KindPsionicDefence Kind = "psionic_defence"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result

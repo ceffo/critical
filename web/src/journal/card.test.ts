@@ -200,6 +200,19 @@ const KINDS: [LogKind, unknown, string, Partial<LogEntry>?][] = [
     { itemId: "arrows", name: "Arrows", type: "arrow", added: 2, count: 12 },
     "info",
   ],
+  [
+    "defence_raised",
+    { power: "mind_blank", defence: "raised", cost: 1 },
+    "info",
+  ],
+  [
+    "psionic_defence",
+    {
+      attack: "psionic_blast",
+      contests: [{ attack: { roll: 9, success: true }, winner: "attacker" }],
+    },
+    "info",
+  ],
   ["item_add", { name: "Rope", count: 1 }, "info"],
   [
     "item_edit",
@@ -238,7 +251,7 @@ describe("cardContent: every log kind renders from its payload", () => {
   it("covers every kind", () => {
     const kinds = new Set(KINDS.map(([k]) => k));
     expect(kinds.size).toBe(KINDS.length);
-    expect(kinds.size).toBe(24);
+    expect(kinds.size).toBe(26);
   });
 
   it.each(KINDS)("%s → %s", async (kind, payload, layout, over) => {

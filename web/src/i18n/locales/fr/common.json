@@ -268,6 +268,35 @@
       "warning": {
         "second_power_this_round": "Un deuxième pouvoir dans le même tour de combat."
       }
+    },
+    "defence": {
+      "current": "Défense actuelle",
+      "none": "Aucune",
+      "kind": {
+        "raised": "dressée ce tour",
+        "standing": "permanente"
+      },
+      "raise": "Dresser",
+      "raiseNamed": "Dresser {{name}}",
+      "defend": "Défendre",
+      "title": "Se défendre d’une attaque",
+      "attack": "Mode d’attaque",
+      "chooseAttack": "Choisir le mode d’attaque…",
+      "twoChecks": "Deux jets",
+      "rolls": "Les jets du MJ",
+      "rollN": "Jet {{n}}",
+      "succeeded": "Jet {{n}} réussi",
+      "keep": "Garder un jet pour le tour",
+      "keepNone": "N’en garder aucun",
+      "keepRoll": "Garder le jet contre le jet {{n}}",
+      "against": "Contre {{name}}",
+      "noDefence": "Aucune défense : les réussites de l’attaquant l’emportent",
+      "tableModifier": "Table 14 : {{modifier}} à l’attaque",
+      "contest": "Duel {{n}} (jet {{roll}})",
+      "fromKept": "gardé pour le tour, pas de dé",
+      "keptPlusOne": "+1 gardé",
+      "failureAsOne": "un échec compte pour 1",
+      "keptForRound": "jet gardé pour le tour (d20 {{d20}} contre {{target}})"
     }
   },
   "round": {
@@ -1450,7 +1479,9 @@
       "spell_add": "Grimoire",
       "psp_recovery": "Récupération de PFP",
       "psionic_pick": "Pouvoirs connus",
-      "power_check": "Jet de pouvoir"
+      "power_check": "Jet de pouvoir",
+      "defence_raised": "Défense dressée",
+      "psionic_defence": "Duel psychique"
     },
     "status": {
       "active": "Actif",
@@ -1701,6 +1732,16 @@
       "cleared": "CA forcée effacée"
     },
     "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}",
+    "defenceRaised": "Défense dressée ({{power}}) : PFP {{spent}}",
+    "defenceRaisedStanding": "Défense dressée ({{power}}, permanente) : PFP {{spent}}",
+    "psionicDefence": "Duel psychique ({{attack}} contre {{defence}}) : {{results}}",
+    "psionicDefenceNone": "Duel psychique ({{attack}}, sans défense) : {{results}}",
+    "contest": {
+      "attackerWon": "l’attaquant l’emporte",
+      "checkWon": "{{check}} : {{won}}",
+      "andThen": "{{first}} ; {{next}}",
+      "defended": "défendu"
+    },
     "powerCheck": "Jet de pouvoir ({{power}}) : d20 {{d20}} contre {{target}}, {{verdict}}, PFP {{spent}}",
     "powerCheckWith": "{{text}} ({{parts}})",
     "powerParts": {
@@ -2251,6 +2292,9 @@
     "needs_contact": "Ce pouvoir demande un contact, pas encore disponible.",
     "not_enough_psp": "Pas assez de PFP pour le coût initial de ce pouvoir.",
     "power_not_maintained": "Ce pouvoir n’est pas maintenu.",
+    "not_in_combat": "Ce mode de défense se dresse pour un tour de combat : aucun tour n’est en cours.",
+    "not_a_defence_mode": "Ce pouvoir n’est pas un mode de défense.",
+    "defence_mode_is_raised": "Un mode de défense se dresse, il ne s’utilise pas.",
     "psp_recovery_while_maintaining": "Pas de récupération de PFP pendant qu’un pouvoir est maintenu : arrêtez-le d’abord.",
     "not_a_psionicist": "Ce personnage n’est pas un psioniste.",
     "psionic_allowance_exceeded": "Au-delà de ce que ce niveau permet : {{count}} choisis, {{limit}} permis.",

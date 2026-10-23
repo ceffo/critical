@@ -408,7 +408,11 @@ type BuffEffectDTO struct {
 	PowerID           string `json:"powerId,omitempty"`
 	MaintenanceCost   int    `json:"maintenanceCost,omitempty"`
 	MaintenancePeriod int    `json:"maintenancePeriod,omitempty"`
-	Applies           *bool  `json:"applies,omitempty"`
+	// Defence marks a defence mode's row (ADR 0044 steps 4 and 5): raised
+	// for the round, or standing until dismissed; omitted for any other buff.
+	// Response only, like powerId.
+	Defence buffsvc.DefenceKind `json:"defence,omitempty"`
+	Applies *bool               `json:"applies,omitempty"`
 	// AsksEndCause: the row's spell has end effects, so stopping it sends
 	// a cause (ADR 0004 step 21). Omitted otherwise. Response only.
 	AsksEndCause bool `json:"asksEndCause,omitempty"`
@@ -514,6 +518,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
+		Defence: b.Defence,
 	}
 }
 

@@ -1,0 +1,53 @@
+import { describe, expect, it } from "vitest";
+import type { BuffEffect } from "@/types/buffs";
+import { currentDefence, defendRequest } from "./defend";
+
+const row = (id: string, defence?: "raised" | "standing") =>
+  ({ id, defence }) as BuffEffect;
+
+describe("currentDefence", () => {
+  it("prefers the mode raised this round over the standing one", () => {
+    const rows = [row("a"), row("s", "standing"), row("r", "raised")];
+    expect(currentDefence(rows)?.id).toBe("r");
+    expect(currentDefence(rows.slice(0, 2))?.id).toBe("s");
+  });
+  it("is none without a defence row", () => {
+    expect(currentDefence([row("a")])).toBeNull();
+  });
+});
+
+describe("defendRequest", () => {
+  const base = {
+    attack: "ego_whip",
+    rolls: [{ roll: "14", success: true }],
+    keep: null,
+  };
+  it("sends one or two rolls and the kept index", () => {
+    expect(defendRequest(base)).toEqual({
+      attack: "ego_whip",
+      rolls: [{ roll: 14, success: true }],
+    });
+    const two = {
+      ...base,
+      rolls: [...base.rolls, { roll: "9", success: false }],
+      keep: 1,
+    };
+    expect(defendRequest(two)).toEqual({
+      attack: "ego_whip",
+      rolls: [
+        { roll: 14, success: true },
+        { roll: 9, success: false },
+      ],
+      keep: 1,
+    });
+  });
+  it("waits for an attack and for rolls of 1 to 20", () => {
+    expect(defendRequest({ ...base, attack: "" })).toBeNull();
+    expect(
+      defendRequest({ ...base, rolls: [{ roll: "21", success: true }] }),
+    ).toBeNull();
+    expect(
+      defendRequest({ ...base, rolls: [{ roll: "", success: true }] }),
+    ).toBeNull();
+  });
+});

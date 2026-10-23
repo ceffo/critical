@@ -78,6 +78,66 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// Defend provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Defend")
+	}
+
+	var r0 *psionicsvc.DefendResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.DefendRequest) *psionicsvc.DefendResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.DefendResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, psionicsvc.DefendRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Defend_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Defend'
+type MockSVC_Defend_Call struct {
+	*mock.Call
+}
+
+// Defend is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req psionicsvc.DefendRequest
+func (_e *MockSVC_Expecter) Defend(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_Defend_Call {
+	return &MockSVC_Defend_Call{Call: _e.mock.On("Defend", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_Defend_Call) Run(run func(ctx context.Context, characterID int64, req psionicsvc.DefendRequest)) *MockSVC_Defend_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(psionicsvc.DefendRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Defend_Call) Return(_a0 *psionicsvc.DefendResult, _a1 error) *MockSVC_Defend_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Defend_Call) RunAndReturn(run func(context.Context, int64, psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)) *MockSVC_Defend_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Health provides a mock function with given fields: ctx
 func (_m *MockSVC) Health(ctx context.Context) error {
 	ret := _m.Called(ctx)
@@ -165,6 +225,66 @@ func (_c *MockSVC_Module_Call) Return(_a0 domain.Module) *MockSVC_Module_Call {
 }
 
 func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_Module_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RaiseDefence provides a mock function with given fields: ctx, characterID, powerID
+func (_m *MockSVC) RaiseDefence(ctx context.Context, characterID int64, powerID string) (*psionicsvc.RaiseResult, error) {
+	ret := _m.Called(ctx, characterID, powerID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for RaiseDefence")
+	}
+
+	var r0 *psionicsvc.RaiseResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (*psionicsvc.RaiseResult, error)); ok {
+		return rf(ctx, characterID, powerID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) *psionicsvc.RaiseResult); ok {
+		r0 = rf(ctx, characterID, powerID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.RaiseResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) error); ok {
+		r1 = rf(ctx, characterID, powerID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_RaiseDefence_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'RaiseDefence'
+type MockSVC_RaiseDefence_Call struct {
+	*mock.Call
+}
+
+// RaiseDefence is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - powerID string
+func (_e *MockSVC_Expecter) RaiseDefence(ctx interface{}, characterID interface{}, powerID interface{}) *MockSVC_RaiseDefence_Call {
+	return &MockSVC_RaiseDefence_Call{Call: _e.mock.On("RaiseDefence", ctx, characterID, powerID)}
+}
+
+func (_c *MockSVC_RaiseDefence_Call) Run(run func(ctx context.Context, characterID int64, powerID string)) *MockSVC_RaiseDefence_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_RaiseDefence_Call) Return(_a0 *psionicsvc.RaiseResult, _a1 error) *MockSVC_RaiseDefence_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_RaiseDefence_Call) RunAndReturn(run func(context.Context, int64, string) (*psionicsvc.RaiseResult, error)) *MockSVC_RaiseDefence_Call {
 	_c.Call.Return(run)
 	return _c
 }

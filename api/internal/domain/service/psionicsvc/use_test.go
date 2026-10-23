@@ -89,7 +89,7 @@ func newUseSvcWithBuffs(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC
 	// Out of combat unless a test says otherwise: step 12 warns nothing.
 	buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(0, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
+		Tables: mocks.NewMockTables(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
 		Dice: dice, Buffs: buffs, Book: useBook(), Tx: passTx{},
 	})
 	require.NoError(t, err)
@@ -307,7 +307,6 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 		{"a check stamped with another round does not count", "thrust", 3, []actionlog.Entry{check(9, 1, "lift")}, false, nil},
 		{"a defence mode before it does not count", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(4, 2, "lift")}, false, nil},
 		{"a defence mode after a power counts the power", "thrust", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(8, 3, "lift")}, true, nil},
-		{"a defence mode itself does not warn", "mind_blank", 3, []actionlog.Entry{check(9, 3, "lift")}, false, nil},
 		{"out of combat nothing warns", "thrust", 0, []actionlog.Entry{check(9, 0, "lift")}, false, nil},
 		{
 			"a check before a Set round back to its round does not count", "thrust", 3,
@@ -329,7 +328,7 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 			var got actionlog.NewEntry
 			expectRecord(log, &got)
 			svc, err := psionicsvc.New(psionicsvc.Deps{
-				Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
+				Tables: mocks.NewMockTables(t), Log: log, Characters: chars, Picks: mocks.NewMockPicks(t),
 				Dice: dice, Buffs: buffs, Book: useBook(), Tx: passTx{},
 			})
 			require.NoError(t, err)

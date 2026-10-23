@@ -49,7 +49,7 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	for _, b := range before {
 		// ADR 0043 step 13: a power activated again renews its row.
 		samePower := buff.PowerID != "" && b.PowerID == buff.PowerID
-		if !samePower && (stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name)) {
+		if !samePower && !replacesDefence(buff, b) && (stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name)) {
 			after = append(after, b)
 		}
 	}
@@ -62,6 +62,19 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 		return BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("save active buffs: %w", err)
 	}
 	return buff, snaps[0], nil
+}
+
+// replacesDefence reports whether the defence mode's row buff, put on,
+// replaces row b (ADR 0044 steps 4 and 5): any raised defence goes (one a
+// round, Q2), and a standing one replaces the standing one.
+func replacesDefence(buff, b BuffEffect) bool {
+	switch buff.Defence {
+	case DefenceRaised:
+		return b.Defence == DefenceRaised
+	case DefenceStanding:
+		return b.Defence == DefenceRaised || b.Defence == DefenceStanding
+	}
+	return false
 }
 
 // Remove takes buff buffID off the active list and puts putBack in its

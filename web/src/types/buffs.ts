@@ -71,6 +71,8 @@ export interface BuffEffect {
   powerId?: string;
   maintenanceCost?: number;
   maintenancePeriod?: number;
+  /** A defence mode's row (ADR 0044 steps 4 and 5): raised for the round, or standing until dismissed. */
+  defence?: "raised" | "standing";
   /**
    * A row for a spell cast on someone else or on an area (ADR 0004 step 20.5): it only counts down
    * and never applies. Absent for a buff on the character. Set by the server; never sent.

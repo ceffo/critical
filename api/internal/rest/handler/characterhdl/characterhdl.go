@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -437,7 +438,9 @@ type LevelUpDTO struct {
 	ToSpend             wire.LevelGrantsDTO    `json:"toSpend"`
 }
 
-func savesDTO(s charactersvc.Saves) SavesDTO {
+// savesDTO maps the saves owner's type field by field (ADR 0046 steps 3.4
+// and 6.2).
+func savesDTO(s saves.Saves) SavesDTO {
 	return SavesDTO{ParaPoison: s.ParaPoison, RodStaffWand: s.RodStaffWand, PetriPoly: s.PetriPoly, Breath: s.Breath, Spell: s.Spell}
 }
 

@@ -26,6 +26,10 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    may be negative), against the target of the category on the character sheet: Paralyze/Poison,
    Rod/Staff/Wand, Petrify/Polymorph, Breath Weapon, Spells. Each buff is its own modifier, named
    after the buff. Any other category is refused (400) before anything is rolled.
+   _(The target and the terms other than the buffs' come from `domain/saves`, the saves owner:
+   `saves.Check` refuses the category, `saves.Target` reads the target, `saves.Terms` builds the
+   race, Wisdom and class terms; `combatsvc` adds the buffs, rolls and settles. [ADR
+   0046](0046-derived-figures.md) step 3, implemented 2026-10-23.)_
    Tests: `TestResolveSavingThrow` (one case per category), `TestResolveSavingThrow_OneModifierPerBuff`,
    `TestResolveSavingThrow_Errors` ("unknown category").
 2. **Verdict.** The roll total is `d20 + buff bonuses`; the adjusted target is `target -
@@ -125,7 +129,9 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
       so step 5's recompute keeps it and step 8's view needs nothing new. The flag is fixed at
       the roll: a save rolled without it is corrected by the DM's adjustment (step 5) or undone
       and rolled again.
-   6. **As built.** The value is derived for every character as `charactersvc.Derived.MagicDefence`
+   6. **As built.** _(The modifier is built by `saves.Terms`, from the `MagicDefence` and Wisdom of
+      the view's `saves.Figure` and the request's `mindAffecting` flag: [ADR 0046](0046-derived-figures.md)
+      step 3.3.)_ The value is derived for every character as `charactersvc.Derived.MagicDefence`
       (`ruletablesvc.Tables.MagicDefenceFor`, the catalogue's `magic_defence` column, format 10); the
       request flag is `combatsvc.SaveOptions.MindAffecting`; the modifier's kind is `wisdom`, its detail the
       Wisdom score. The web's "Against the mind" checkbox (fr "Contre l'esprit") sits on the saving throws'

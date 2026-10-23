@@ -1,0 +1,1370 @@
+[
+  {
+    "name": "dwarf con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "dwarf con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "elf con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "gnome con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "half_elf con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 1,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 1
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 2,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 2
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 3,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 3
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 4,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 4
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "halfling con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 5,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 5
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 3",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 4",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 6",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 7",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 10",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 11",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 13",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 14",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 17",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 18",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 19",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  },
+  {
+    "name": "human con 20",
+    "saves": {
+      "ParaPoison": 14,
+      "RodStaffWand": 16,
+      "PetriPoly": 15,
+      "Breath": 17,
+      "Spell": 17
+    },
+    "raceBonus": {
+      "ParaPoison": 0,
+      "RodStaffWand": 0,
+      "PetriPoly": 0,
+      "Breath": 0,
+      "Spell": 0
+    },
+    "magicDefence": 0,
+    "classBonuses": null
+  }
+]

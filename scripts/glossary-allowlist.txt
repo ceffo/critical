@@ -76,6 +76,7 @@ Conversion  # Technical: generic helper or envelope with no domain meaning of it
 Derived  # Technical: generic helper or envelope with no domain meaning of its own
 Case  # Technical: generic helper or envelope with no domain meaning of its own
 Inputs  # Technical: generic helper or envelope with no domain meaning of its own
+Flags  # Technical: saves.Flags, the request flags a save's terms read (mind-affecting); a generic name that must not name a concept
 Untracked  # Technical: generic helper or envelope with no domain meaning of its own
 Condition  # Technical: generic helper or envelope with no domain meaning of its own
 Confidence  # Technical: generic helper or envelope with no domain meaning of its own

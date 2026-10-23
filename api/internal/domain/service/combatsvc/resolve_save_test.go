@@ -24,7 +24,7 @@ import (
 func rollSave(t *testing.T, f *fixture, d20, saveBonus int) *actionlog.Entry {
 	t.Helper()
 	f.withChar(bard())
-	f.dice.EXPECT().RollD20().Return(d20)
+	f.dice.EXPECT().RollD20().Return(d20).Once()
 	mods := strMods(12)
 	if saveBonus != 0 {
 		mods.SaveBonus = saveBonus
@@ -215,7 +215,7 @@ func TestAdjustSave_Rejections(t *testing.T) {
 func TestResolveSavingThrow_OneModifierPerBuff(t *testing.T) {
 	f := newFixture(t)
 	f.withChar(bard())
-	f.dice.EXPECT().RollD20().Return(10)
+	f.dice.EXPECT().RollD20().Return(10).Once()
 	mods := strMods(12)
 	mods.SaveBonus = 3
 	mods.SaveBonusFrom = []buffsvc.Contribution{{Buff: "Gaia", Value: 4}, {Buff: "Curse", Value: -1}}

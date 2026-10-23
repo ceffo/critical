@@ -1,7 +1,7 @@
 # ADR 0046: Derived figures: one owner each for AC, saves, slots and levels
 
 **Status**: accepted 2026-10-23 (the user accepted every open question's default: "defaults") (design step; the user's goal, 2026-10-21: "a logical rule engine
-with locality"; triage 2026-10-22). Shape A below is the chosen shape. Step 2 (AC) implemented 2026-10-23; the others not. Builds on
+with locality"; triage 2026-10-22). Shape A below is the chosen shape. Steps 2 (AC) and 3 (saves) implemented 2026-10-23; the others not. Builds on
 [ADR 0045](0045-character-view.md) (the character view) and respects
 [ADR 0038](0038-domain-and-wire.md) (no transport tags in the domain). Amends, each on
 implementation: [ADR 0002](0002-attack-resolution.md) step 5, [ADR 0006](0006-saving-throws.md)
@@ -149,30 +149,37 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       assert the attack's Dexterity modifier for the same scores; `Derive_Step2_TheDexterityTableIsReadOnce`
       counts one `DexMods` call per derivation (`acsvc` and `combatsvc` have no table to read). The existing
       `acsvc` derive tests and the composition tests run unchanged.
-3. **Saves (second).** Owner: a new package `domain/saves`, which takes over from `charactersvc`:
+3. **Saves (second).** Owner: a new package `domain/saves`, which takes over from `charactersvc`. Implemented 2026-10-23 (3.1 to 3.5 as amended below; 3.2 amended in place after review):
    1. *The type.* `saves.Saves` (the five numbers) with `Of(category)` and the category list (the
-      one list, `classes.SaveCategories` re-exported by the owner), so no package re-types the
-      switch. `charactersvc.Saves` becomes an alias for it for one item, then goes.
+      one list, `classes.SaveCategories` re-exported by the owner as `saves.Categories`), so no package
+      re-types the switch. `itemsvc.SaveCategories`, a third copy of the list that the ADR's context
+      did not name, folded into it: item validation reads `saves.Categories`. `charactersvc.Saves` becomes an alias for it for one item, then goes.
    2. *The derivation.* The best-of across entries (ADR 0042 step 9), the race's Constitution
-      bonus (ADR 0030 step 22.1), the class `save_bonus` grants (ADR 0043 step 3) and the magical
-      defence move from `charactersvc/derive.go` into `saves`; `charactersvc.Derive` calls them with the
-      table rows it already holds. The tables stay in `ruletablesvc`; `SavesFor` is called by
-      `charactersvc` only.
-   3. *The roll's terms.* `saves.Target(figure, category)` and `saves.Terms(figure, category, flags)`
+      bonus (ADR 0030 step 22.1) and the class `save_bonus` grants (ADR 0043 step 3) are computed by
+      `charactersvc.Derive` with the table rows it already holds, and reach `saves` only through
+      `saves.Inputs`. The magical defence stays a table read in `charactersvc.Derive`, and so does the
+      crossover and dormant-entry filtering (ADR 0042 step 9): it did not move into `saves`. The
+      tables stay in `ruletablesvc`; `SavesFor` is called by `charactersvc` only.
+   3. *The roll's terms.* `saves.Check(category)` (an unknown category is invalid input, so
+      `combatsvc` refuses it before its transaction and rolls nothing), `saves.Target(inputs, category)`
+      and `saves.Terms(inputs, category, flags)`
       build the save's target and its ordered named modifiers (race, Wisdom if mind-affecting,
-      class bonuses) from the view's figure and the player's flags; `combatsvc` adds the buffs' contributions it
+      class bonuses) from the view's `saves.Inputs` (`View.SaveInputs()`, the owner's input, not the step 1.3 `Figure` it returns) and the player's flags; `combatsvc` adds the buffs' contributions it
       reads from `buffsvc`, draws the d20, settles the verdict and records it.
    4. *Removes:* `combatsvc.savesByCategory` and `saveCategories`; `charactersvc.saveField`;
-      `characterhdl.savesDTO`'s own switch (it maps field by field from the owner's type);
+      `characterhdl.savesDTO`'s own copy of the five fields (it never held a switch; it now takes
+      `saves.Saves` and maps it field by field);
       the modifier assembly in `ResolveSavingThrow` (the race, Wisdom and class blocks).
-   5. *Tests proving the figure unchanged.* `Saves_Step3_GoldenRows` computes every group and
+   5. *Tests proving the figure unchanged.* `TestSaves_Step3_GoldenRows` computes every group and
       level band for a single class and the best-of for the party's multi-class and dual-class
       fixtures, and compares them with the values the old code gave (a committed table, taken from
-      the old code before it is removed); `Saves_Step3_RaceBonusPerCategory` for each race trait;
-      `ResolveSavingThrow_Step3_ModifiersInOrder` with dice that give every roll a distinct value and
+      the old code before it is removed); `TestSaves_Step3_RaceBonusPerCategory` for each race trait;
+      `TestResolveSavingThrow_Step3_ModifiersInOrder` with dice that give every roll a distinct value and
       exact call counts, asserting the same modifiers, target and verdict as before for a race
       bonus, a mind-affecting save with a class bonus and a buff; the existing `ResolveSavingThrow`
-      tests and the web `Saves` rendering run unchanged.
+      tests and the web `Saves` rendering run unchanged. The owner's own tests are
+      `TestTarget_TheCategorysValue`, `TestTarget_UnknownCategoryRefused`,
+      `TestSaves_Step3_TermsWisdomOnlyWhenFlagged` and `TestTerms_ZeroValuesDropped`.
 4. **Slots (third).** Owner: a new package `domain/slots`.
    1. *Proficiency pools* (ADR 0037 step 3). `NonweaponSlots`, `WeaponSlots`, `ExtraSlots` and the
       pool types move from `ruletablesvc/proficiencyslots.go` into `slots`, taking the `SlotRow`
@@ -220,8 +227,8 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       `SaveBreakdown` is the log's payload record (it carries its tags where it is written); it is
       filled from the owner's terms by `combatsvc`, so the tag lives on the record and the owner does not
       see it.
-   4. `Figures_Step6_OwnersCarryNoTransportTags` reflects over the exported types of `saves` and `slots`
-      and fails on any struct tag with a `json` key; `achdl`'s and `characterhdl`'s existing mapping
+   4. `TestFigures_Step6_OwnersCarryNoTransportTags` parses the sources of `saves` (and, at step 4,
+      `slots`) with `go/ast`, since reflection cannot list a package's types, and fails on any struct tag with a `json` key; `achdl`'s and `characterhdl`'s existing mapping
       tests keep the wire shape (the golden JSON of the sheet and of `GET /api/ac`).
 7. **How each step proves "unchanged".** Before an old path is removed, a test computes the figure
    through both paths for the same fixtures and compares them; the old path is then removed and

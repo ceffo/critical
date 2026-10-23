@@ -2,6 +2,7 @@ package combatsvc
 
 import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -9,7 +10,8 @@ import (
 // the player's language from the kind and the detail.
 type ModifierKind string
 
-// Modifier kinds.
+// Modifier kinds. A save's race, wisdom and class kinds are the saves
+// owner's term codes (ADR 0046 step 3.3).
 const (
 	ModStrength    ModifierKind = "strength"     // PHB Table 1, Detail = effective STR
 	ModDexterity   ModifierKind = "dexterity"    // PHB Table 2 missile adj., Detail = DEX
@@ -18,13 +20,13 @@ const (
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name, ItemID = the ammo item
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
-	ModRace        ModifierKind = "race"         // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
+	ModRace        ModifierKind = saves.TermRace // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
 	// ModWisdom is PHB Table 5's magical defence adjustment (ADR 0006 step 9.4) on a save flagged
 	// as against magic that attacks the mind; Detail is the Wisdom score.
-	ModWisdom ModifierKind = "wisdom"
+	ModWisdom ModifierKind = saves.TermWisdom
 	// ModClass is a class's save_bonus (ADR 0043 step 3) on a save whose request carries the
 	// bonus's effect tag; Detail is the class code.
-	ModClass ModifierKind = "class"
+	ModClass ModifierKind = saves.TermClass
 	ModCrit  ModifierKind = "crit" // house crit multiplier; the range is the roll's CritFrom..CritTo
 	// ModSpecialization is weapon specialization (ADR 0030 step 12): +1 to hit and +2 damage with a
 	// melee or thrown weapon, not magical; Detail is empty.

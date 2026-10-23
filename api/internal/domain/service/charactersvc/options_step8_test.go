@@ -57,5 +57,5 @@ func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
 	assert.Equal(t, []classes.AbilityMinimum{{Ability: "cha", Min: 14}}, opt.Minimums)
 	assert.Equal(t, []string{"chaotic_good", "chaotic_neutral"}, opt.Alignments)
 	assert.Equal(t, []string{"elf", "human"}, opt.Races, "the races the rules admit, in catalogue order")
-	assert.Equal(t, 2*1000+len("test_skald"), opt.LevelXP[1].XP, "its level 2 read from the rules (expectOptionTables)")
+	assert.Equal(t, 900, opt.LevelXP[1].XP, "its level 2 read from its own definition's experience table")
 }

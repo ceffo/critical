@@ -253,7 +253,8 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(def),
 		}
 		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
-			xp, err := s.rules.XPThreshold(class, level)
+			// ADR 0046 step 5.1: the threshold is the class definition's.
+			xp, err := def.XPThreshold(level)
 			if err != nil {
 				return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 			}

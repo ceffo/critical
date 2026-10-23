@@ -1227,63 +1227,6 @@ func (_c *MockRules_TurningAt_Call) RunAndReturn(run func(int) ([]ruletablesvc.T
 	return _c
 }
 
-// XPThreshold provides a mock function with given fields: class, level
-func (_m *MockRules) XPThreshold(class string, level int) (int, error) {
-	ret := _m.Called(class, level)
-
-	if len(ret) == 0 {
-		panic("no return value specified for XPThreshold")
-	}
-
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (int, error)); ok {
-		return rf(class, level)
-	}
-	if rf, ok := ret.Get(0).(func(string, int) int); ok {
-		r0 = rf(class, level)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(class, level)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_XPThreshold_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'XPThreshold'
-type MockRules_XPThreshold_Call struct {
-	*mock.Call
-}
-
-// XPThreshold is a helper method to define mock.On call
-//   - class string
-//   - level int
-func (_e *MockRules_Expecter) XPThreshold(class interface{}, level interface{}) *MockRules_XPThreshold_Call {
-	return &MockRules_XPThreshold_Call{Call: _e.mock.On("XPThreshold", class, level)}
-}
-
-func (_c *MockRules_XPThreshold_Call) Run(run func(class string, level int)) *MockRules_XPThreshold_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_XPThreshold_Call) Return(_a0 int, _a1 error) *MockRules_XPThreshold_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_XPThreshold_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_XPThreshold_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // NewMockRules creates a new instance of MockRules. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockRules(t interface {

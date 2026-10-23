@@ -1,0 +1,131 @@
+{
+  "tangent": {
+    "payload": {
+      "power": "ego_whip",
+      "name": {
+        "en": "Ego Whip",
+        "fr": "Cinglement de l'ego"
+      },
+      "ability": "wis",
+      "abilityScore": 16,
+      "powerModifier": -3,
+      "score": 13,
+      "target": "Orc",
+      "mind": "closed",
+      "defence": "thought_shield",
+      "defenceName": {
+        "en": "Thought Shield",
+        "fr": "Bouclier de la pensée"
+      },
+      "attackVersusDefence": 0,
+      "checks": [
+        {
+          "check": {
+            "target": 13,
+            "d20": 12,
+            "outcome": "success"
+          },
+          "defence": {
+            "roll": 10,
+            "success": true
+          },
+          "winner": "attacker"
+        },
+        {
+          "check": {
+            "target": 13,
+            "d20": 2,
+            "outcome": "success"
+          },
+          "defence": {
+            "roll": 3,
+            "success": true
+          },
+          "winner": "defender"
+        }
+      ],
+      "cost": 4,
+      "spent": 4,
+      "tangentsBefore": 1,
+      "tangentsAfter": 2
+    },
+    "roll": false
+  },
+  "contact": {
+    "payload": {
+      "power": "mind_thrust",
+      "name": {
+        "en": "Mind Thrust",
+        "fr": "Pression mentale"
+      },
+      "ability": "wis",
+      "abilityScore": 16,
+      "powerModifier": -2,
+      "modifiers": [
+        {
+          "value": -2,
+          "reason": "medium range"
+        }
+      ],
+      "score": 12,
+      "target": "Goblin shaman",
+      "mind": "closed",
+      "checks": [
+        {
+          "check": {
+            "target": 12,
+            "d20": 7,
+            "outcome": "success"
+          },
+          "winner": "attacker"
+        }
+      ],
+      "cost": 2,
+      "spent": 2,
+      "tangentsBefore": 2,
+      "tangentsAfter": 3,
+      "contact": true,
+      "warnings": ["second_power_this_round"]
+    },
+    "roll": false
+  },
+  "openMindBothFail": {
+    "payload": {
+      "power": "ego_whip",
+      "name": {
+        "en": "Ego Whip",
+        "fr": "Cinglement de l'ego"
+      },
+      "ability": "wis",
+      "abilityScore": 16,
+      "powerModifier": -3,
+      "score": 13,
+      "target": "Peasant",
+      "mind": "open",
+      "checks": [
+        {
+          "check": {
+            "target": 13,
+            "d20": 19,
+            "outcome": "failure"
+          },
+          "winner": "defender"
+        },
+        {
+          "check": {
+            "target": 13,
+            "d20": 20,
+            "outcome": "natural_20"
+          },
+          "winner": "defender"
+        }
+      ],
+      "cost": 4,
+      "spent": 2,
+      "tangentsBefore": 0,
+      "tangentsAfter": 0,
+      "broken": "Orc"
+    },
+    "roll": false
+  }
+}

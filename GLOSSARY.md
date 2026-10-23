@@ -257,6 +257,10 @@ _Code_: Opponent
 A step into a closed mind, made by an attack that wins its contest; a buff row holds one or two on one mind at a time, at 1 PSP a round. The third is **contact** (fr: contact): full contact with that mind, a row per target at 1 PSP a round. An attack on another mind breaks the tangents; an unpaid charge or letting go ends either row. [ADR 0044](docs/adr/0044-psionic-combat.md) step 3.
 _Code_: TangentsChange
 
+**Psionic attack** (fr: attaque psionique):
+An attack mode's use on an opponent: one cost for two power checks, each a psychic contest against the opponent's defence (Table 14's cell on the score), half the cost when both fail; won contests are tangents on a closed mind, the mode's effect on an open or contacted one. Logged as a `psionic_attack` entry. [ADR 0044](docs/adr/0044-psionic-combat.md) step 7.
+_Code_: AttackRecord, AttackCheck
+
 **Initial cost** (fr: coût initial):
 The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (refused until telepathic combat) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
 _Code_: Cost

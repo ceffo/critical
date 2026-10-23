@@ -32,6 +32,66 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// Attack provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) Attack(ctx context.Context, characterID int64, req psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Attack")
+	}
+
+	var r0 *psionicsvc.AttackResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.AttackRequest) *psionicsvc.AttackResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.AttackResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, psionicsvc.AttackRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Attack_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Attack'
+type MockSVC_Attack_Call struct {
+	*mock.Call
+}
+
+// Attack is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req psionicsvc.AttackRequest
+func (_e *MockSVC_Expecter) Attack(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_Attack_Call {
+	return &MockSVC_Attack_Call{Call: _e.mock.On("Attack", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_Attack_Call) Run(run func(ctx context.Context, characterID int64, req psionicsvc.AttackRequest)) *MockSVC_Attack_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(psionicsvc.AttackRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Attack_Call) Return(_a0 *psionicsvc.AttackResult, _a1 error) *MockSVC_Attack_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Attack_Call) RunAndReturn(run func(context.Context, int64, psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)) *MockSVC_Attack_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

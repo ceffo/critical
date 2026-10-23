@@ -37,6 +37,7 @@ import { pspRecoveryKind } from "./kinds/pspRecovery";
 import { powerCheckKind } from "./kinds/powerCheck";
 import { defenceRaisedKind } from "./kinds/defenceRaised";
 import { psionicDefenceKind } from "./kinds/psionicDefence";
+import { psionicAttackKind } from "./kinds/psionicAttack";
 import { initiativeCorrectKind, initiativeKind } from "./kinds/initiative";
 import {
   equipmentStateKind,
@@ -91,6 +92,7 @@ export const KIND_VIEWS: Record<LogKind, AnyKindView> = {
   power_check: powerCheckKind,
   defence_raised: defenceRaisedKind,
   psionic_defence: psionicDefenceKind,
+  psionic_attack: psionicAttackKind,
   ac_override: acOverrideKind,
   spell_prep: spellPrepKind,
   long_rest: longRestKind,

@@ -130,3 +130,15 @@ func linkRow(target string, round int) BuffEffect {
 		MaintenanceCost: LinkMaintenanceCost, MaintenancePeriod: 1,
 	}
 }
+
+// TangentsOn is the tangents rows hold on target (ADR 0044 step 3): 0 with
+// no row holding it, MaxTangents+1 when a contact row does. target is
+// compared as given: trim it first (psionics.NormalizeTarget).
+func TangentsOn(rows []BuffEffect, target string) int {
+	for _, b := range rows {
+		if b.linkRow() && b.Target == target {
+			return held(b)
+		}
+	}
+	return 0
+}

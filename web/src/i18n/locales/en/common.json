@@ -1481,7 +1481,8 @@
       "psionic_pick": "Known powers",
       "power_check": "Power check",
       "defence_raised": "Defence raised",
-      "psionic_defence": "Psychic contest"
+      "psionic_defence": "Psychic contest",
+      "psionic_attack": "Psionic attack"
     },
     "status": {
       "active": "Active",
@@ -1734,6 +1735,7 @@
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
     "defenceRaised": "Defence raised ({{power}}): PSPs {{spent}}",
     "defenceRaisedStanding": "Defence raised ({{power}}, standing): PSPs {{spent}}",
+    "psionicAttack": "Psionic attack ({{attack}} on {{target}}): {{results}}",
     "psionicDefence": "Psychic contest ({{attack}} against {{defence}}): {{results}}",
     "psionicDefenceNone": "Psychic contest ({{attack}}, no defence): {{results}}",
     "contest": {

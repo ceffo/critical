@@ -49,6 +49,8 @@ export type LogKind =
   | "defence_raised"
   /** A psychic contest against the character (ADR 0044 step 8); it changes no state. */
   | "psionic_defence"
+  /** A psionicist's attack mode used (ADR 0044 step 7); popping it gives the PSPs and the tangent rows back. */
+  | "psionic_attack"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
   /** The proficiency picks saved (ADR 0037 steps 12 and 13); popping it gives them back. */

@@ -1481,7 +1481,8 @@
       "psionic_pick": "Pouvoirs connus",
       "power_check": "Jet de pouvoir",
       "defence_raised": "Défense dressée",
-      "psionic_defence": "Duel psychique"
+      "psionic_defence": "Duel psychique",
+      "psionic_attack": "Attaque psionique"
     },
     "status": {
       "active": "Actif",
@@ -1734,6 +1735,7 @@
     "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}",
     "defenceRaised": "Défense dressée ({{power}}) : PFP {{spent}}",
     "defenceRaisedStanding": "Défense dressée ({{power}}, permanente) : PFP {{spent}}",
+    "psionicAttack": "Attaque psionique ({{attack}} sur {{target}}) : {{results}}",
     "psionicDefence": "Duel psychique ({{attack}} contre {{defence}}) : {{results}}",
     "psionicDefenceNone": "Duel psychique ({{attack}}, sans défense) : {{results}}",
     "contest": {

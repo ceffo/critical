@@ -65,6 +65,10 @@ type SVC interface {
 	// check of the current defence per incoming roll, one psionic_defence
 	// entry. The refusals are Defend's (defence.go).
 	Defend(ctx context.Context, characterID int64, req DefendRequest) (*DefendResult, error)
+	// Attack uses a known attack mode on the request's opponent (ADR 0044
+	// step 7): two checks for one cost, one psionic_attack entry. The
+	// refusals are Attack's (attack.go).
+	Attack(ctx context.Context, characterID int64, req AttackRequest) (*AttackResult, error)
 }
 
 // Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
@@ -77,6 +81,10 @@ type Buffs interface {
 	// GetRound is the round counter (ADR 0005; 0: out of combat).
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
+	// AddTangents is an attack's one change to the tangent and contact rows
+	// (ADR 0044 step 3), inside the ctx transaction, without recording: the
+	// attack's entry records the snapshot (zero when nothing changed).
+	AddTangents(ctx context.Context, characterID int64, target string, won int) (buffsvc.TangentsChange, actionlog.Snapshot, error)
 }
 
 // Dice rolls the power check's d20 (dicesvc).

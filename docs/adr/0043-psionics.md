@@ -399,7 +399,7 @@ Every warning and refusal is structured data (a code and its numbers), worded by
 
 ### Layer 2, later (not decided)
 
-The psionic combat of ch. 2 is a later ADR, which will amend this one. What it will need:
+The psionic combat of ch. 2 is [ADR 0044](0044-psionic-combat.md) (proposed 2026-10-22), which replaces steps 20 to 22 below and amends steps 6, 7, 10 and 11 on implementation. What this ADR named it would need:
 
 20. **Defence modes in use** (ch. 1, `09-defense-modes.md`; ch. 2, `08-telepathic-defense-modes.md`):
     the five modes are known by step 9's column; activating one is a power with its cost that

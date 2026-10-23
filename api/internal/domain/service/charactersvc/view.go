@@ -55,6 +55,9 @@ type View struct {
 	SkillColumn      string
 	SkillSets        []skills.SkillSet
 	Backstab         int
+	// LevelUp is the character's pending levels across its entries (Derived.LevelUp,
+	// with the grants and free spells each level carries); EntryView.LevelUp is one entry's.
+	LevelUp LevelUp
 	// ExceptionalStrength is the exceptional_strength feature granted (ADR 0030
 	// steps 9 and 10): the warrior's scale above 18.
 	ExceptionalStrength bool
@@ -143,7 +146,7 @@ func buildView(c Character, d Derived) View {
 		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, MagicDefence: d.MagicDefence,
 		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
-		SkillSets: d.SkillSets, Backstab: d.Backstab, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
+		SkillSets: d.SkillSets, Backstab: d.Backstab, LevelUp: d.LevelUp, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
 		Features:    d.Features,
 		SkillPoints: c.SkillPoints, ProficiencyPicks: c.Proficiencies, PsionicPicks: c.PsionicPicks,
 	}

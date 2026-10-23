@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 )
 
@@ -28,33 +28,31 @@ type owing struct {
 
 // multi is a character of Constitution con and max HP hpMax with the
 // entries es, in order: the first one is the mirror's class.
-func multi(con, hpMax int, es ...owing) *charactersvc.Character {
+func multi(con, hpMax int, es ...owing) charactersvc.View {
 	active := 0
+	opts := []viewtest.Option{viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(10, 10, con, 10, 10, 10)}
 	for _, e := range es {
-		if !e.frozen {
+		if e.frozen {
+			opts = append(opts, viewtest.WithFrozen(e.class, e.level))
+		} else {
 			active++
+			opts = append(opts, viewtest.WithEntry(e.class, e.level))
 		}
 	}
-	c := &charactersvc.Character{ID: charID, Class: es[0].class, Con: con, HPMax: hpMax, RealizedLevel: es[0].level}
+	v := viewtest.Multi(opts...)
+	v.HPMax = hpMax
 	all := []charactersvc.PendingLevel{}
-	for _, e := range es {
-		ed := charactersvc.EntryDerived{
-			Class: e.class, Group: groupOf[e.class], State: classes.EntryActive, RealizedLevel: e.level,
-			LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
-		}
-		if e.frozen {
-			ed.State = classes.EntryFrozen
-		}
+	for i, e := range es {
+		v.Entries[i].Group = groupOf[e.class]
+		v.Entries[i].LevelUp = charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}}
 		for _, p := range e.pending {
 			p.Class, p.Classes = e.class, active
-			ed.LevelUp.Pending = append(ed.LevelUp.Pending, p)
+			v.Entries[i].LevelUp.Pending = append(v.Entries[i].LevelUp.Pending, p)
 			all = append(all, p)
 		}
-		c.Derived.Classes = append(c.Derived.Classes, ed)
 	}
-	c.Derived.RealizedLevel, c.Derived.Group = es[0].level, groupOf[es[0].class]
-	c.Derived.LevelUp = charactersvc.LevelUp{Pending: all}
-	return c
+	v.LevelUp = charactersvc.LevelUp{Pending: all}
+	return v
 }
 
 // fixed is a pending level above the name level with the group's gain.
@@ -77,7 +75,7 @@ func TestRoll_Step7_TheRequestNamesTheEntry(t *testing.T) {
 	fighter := owing{class: "fighter", level: 4, pending: []charactersvc.PendingLevel{d10(5)}}
 	t.Run("the named entry's level is rolled and written to it", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(multi(14, 30, cleric, fighter), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(multi(14, 30, cleric, fighter), nil).Once()
 		f.dice.EXPECT().RollDie(10).Return(7).Once()
 		f.rules.EXPECT().ConstitutionFor(14).Return(con(0, 0, 0), nil).Once()
 		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, "fighter", 5, 33).Return(nil).Once()
@@ -97,7 +95,7 @@ func TestRoll_Step7_TheRequestNamesTheEntry(t *testing.T) {
 	})
 	for _, tc := range []struct {
 		name  string
-		c     *charactersvc.Character
+		c     charactersvc.View
 		class string
 	}{
 		{"another entry's level", multi(14, 30, cleric, fighter), "cleric"},
@@ -107,7 +105,7 @@ func TestRoll_Step7_TheRequestNamesTheEntry(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t) // no dice, DAL or log call expected
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.c, nil).Once()
 			_, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Class: tc.class, Level: 5})
 			require.ErrorIs(t, err, levelupsvc.ErrNotPending)
 		})
@@ -155,7 +153,7 @@ func TestRoll_Step10_2_DieDividedByTheClasses(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			c := multi(tc.con, 30, tc.es...)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Once()
 			f.dice.EXPECT().RollDie(tc.die).Return(tc.rolled).Once()
 			f.rules.EXPECT().ConstitutionFor(tc.con).Return(con(tc.adj, tc.warrior, 0), nil).Once()
 			f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, tc.class, 6, 30+tc.gain).Return(nil).Once()
@@ -192,7 +190,7 @@ func TestRoll_Step10_3_FixedGainAboveTheNameLevel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t) // no dice or Table 3 call expected
 			lvl := tc.es[len(tc.es)-1].pending[0].Level
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(multi(18, 60, tc.es...), nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(multi(18, 60, tc.es...), nil).Once()
 			class := tc.class
 			if len(tc.es) == 1 {
 				class = "" // a single-class write names no class

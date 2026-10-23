@@ -22,16 +22,16 @@ import (
 
 // owingMage is a level 5 mage at Intelligence 14 who owes the free spells
 // owed.
-func owingMage(owed ...spellbook.FreeSpell) *charactersvc.Character {
+func owingMage(owed ...spellbook.FreeSpell) charactersvc.View {
 	c := mage(5, &int14Mage)
-	c.Derived.LevelUp.FreeSpellsOwed = owed
+	c.LevelUp.FreeSpellsOwed = owed
 	return c
 }
 
 func TestAdd_Step20_8_ClaimingStoresTheLevelGrantOrigin(t *testing.T) {
 	f := newFixture(t)
 	f.catalogue(map[string]learnsvc.Spell{"web": {Level: 2, Wizard: true}})
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).
+	f.chars.EXPECT().View(mock.Anything, charID).
 		Return(owingMage(spellbook.FreeSpell{Level: 3, SpellLevel: 2}, spellbook.FreeSpell{Level: 5, SpellLevel: 3}), nil).Once()
 	f.book.EXPECT().Keys(mock.Anything, charID).Return(nil, nil)
 	f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
@@ -59,7 +59,7 @@ func TestAdd_Step20_8_RefusedWhenNotOwed(t *testing.T) {
 	third := spellbook.FreeSpell{Level: 3, SpellLevel: 2}
 	for _, tc := range []struct {
 		code       string
-		c          *charactersvc.Character
+		c          charactersvc.View
 		spell      string
 		grantLevel int
 		want       error
@@ -71,7 +71,7 @@ func TestAdd_Step20_8_RefusedWhenNotOwed(t *testing.T) {
 		t.Run(tc.code, func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(cat)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.c, nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(nil, nil)
 			_, err := f.svc.AddFreeSpell(context.Background(), charID, tc.spell, tc.grantLevel)
 			require.ErrorIs(t, err, tc.want)
@@ -80,7 +80,7 @@ func TestAdd_Step20_8_RefusedWhenNotOwed(t *testing.T) {
 	t.Run("the limits of 20.1 come first", func(t *testing.T) {
 		f := newFixture(t)
 		f.catalogue(cat)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(owingMage(third), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(owingMage(third), nil).Once()
 		f.book.EXPECT().Keys(mock.Anything, charID).Return([]string{"web"}, nil)
 		_, err := f.svc.AddFreeSpell(context.Background(), charID, "web", 3)
 		require.ErrorIs(t, err, learnsvc.ErrAlreadyKnown)
@@ -97,7 +97,7 @@ func TestAdd_Step20_8_RefusedWhenNotOwed(t *testing.T) {
 		}
 		f := newFixture(t)
 		f.catalogue(full)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(owingMage(third), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(owingMage(third), nil).Once()
 		f.book.EXPECT().Keys(mock.Anything, charID).Return(book, nil)
 		_, err := f.svc.AddFreeSpell(context.Background(), charID, "web", 3)
 		require.ErrorIs(t, err, learnsvc.ErrLevelFull)

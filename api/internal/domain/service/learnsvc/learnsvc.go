@@ -141,10 +141,10 @@ type DAL interface {
 	DeleteLearnFailure(ctx context.Context, characterID int64, spellKey string) error
 }
 
-// Characters reads the character with its derived block (the spellbook
+// Characters reads the character view (ADR 0045): the spellbook
 // rules and the realized level).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Dice is the dice port.
@@ -190,7 +190,7 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 		if err != nil {
 			return err
 		}
-		level := c.Derived.FeatureLevel(classes.KindSpellbook) // ADR 0042 step 12: the spellbook entry's level
+		level := c.FeatureLevel(classes.KindSpellbook) // ADR 0042 step 12: the spellbook entry's level
 		// The failure's block of step 20.2.
 		failedAt, failed, err := s.d.DAL.LearnFailure(ctx, c.ID, spellID)
 		if err != nil {
@@ -199,7 +199,7 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 		if failed && level <= failedAt {
 			return ErrFailedAtLevel
 		}
-		rules := c.Derived.Spellbook
+		rules := c.Spellbook
 		// Step 20.2: one d100 against Table 4's chance to learn.
 		roll := s.d.Dice.RollD100()
 		res = &Result{
@@ -254,7 +254,7 @@ func (s *service) add(ctx context.Context, characterID int64, spellID string, gr
 		}
 		res = &Added{SpellID: spellID, SpellLevel: sp.Level, Origin: spellbook.OriginGiven}
 		if grantLevel > 0 {
-			if err := owes(c.Derived.LevelUp.FreeSpellsOwed, grantLevel, sp.Level); err != nil {
+			if err := owes(c.LevelUp.FreeSpellsOwed, grantLevel, sp.Level); err != nil {
 				return err
 			}
 			res.Origin, res.GrantLevel = spellbook.OriginLevelGrant, grantLevel
@@ -295,21 +295,21 @@ func owes(owed []spellbook.FreeSpell, grantLevel, spellLevel int) error {
 // refusal (spellbook.Check, the class's highest spell level as the class's
 // table has it), the reason the spell may not be written in his spellbook (by
 // a roll or not), nil when it may.
-func (s *service) writable(ctx context.Context, characterID int64, spellID string) (*charactersvc.Character, Spell, error) {
-	c, err := s.d.Characters.GetCharacter(ctx, characterID)
+func (s *service) writable(ctx context.Context, characterID int64, spellID string) (charactersvc.View, Spell, error) {
+	c, err := s.d.Characters.View(ctx, characterID)
 	if err != nil {
-		return nil, Spell{}, err
+		return charactersvc.View{}, Spell{}, err
 	}
-	rules := c.Derived.Spellbook
+	rules := c.Spellbook
 	if rules == nil {
-		return nil, Spell{}, ErrNoSpellbook
+		return charactersvc.View{}, Spell{}, ErrNoSpellbook
 	}
 	sp, found := s.d.Spells.Spell(spellID)
 	inBook, sameLevel := false, 0
 	if found && sp.Wizard {
 		keys, err := s.d.Book.Keys(ctx, c.ID)
 		if err != nil {
-			return nil, Spell{}, fmt.Errorf("read spellbook: %w", err)
+			return charactersvc.View{}, Spell{}, fmt.Errorf("read spellbook: %w", err)
 		}
 		for _, k := range keys {
 			if k == spellID {
@@ -327,16 +327,16 @@ func (s *service) writable(ctx context.Context, characterID int64, spellID strin
 	case spellbook.Fits:
 		return c, sp, nil
 	case spellbook.RefusedUnknown:
-		return nil, Spell{}, fmt.Errorf("spell %q: %w", spellID, domain.ErrNotFound)
+		return charactersvc.View{}, Spell{}, fmt.Errorf("spell %q: %w", spellID, domain.ErrNotFound)
 	case spellbook.RefusedNotWizard:
-		return nil, Spell{}, ErrNotAWizardSpell
+		return charactersvc.View{}, Spell{}, ErrNotAWizardSpell
 	case spellbook.RefusedAlreadyIn:
-		return nil, Spell{}, ErrAlreadyKnown
+		return charactersvc.View{}, Spell{}, ErrAlreadyKnown
 	case spellbook.RefusedAboveClass:
-		return nil, Spell{}, ErrAboveClass
+		return charactersvc.View{}, Spell{}, ErrAboveClass
 	case spellbook.RefusedAboveIntelligence:
-		return nil, Spell{}, ErrAboveIntelligence
+		return charactersvc.View{}, Spell{}, ErrAboveIntelligence
 	default: // spellbook.RefusedLevelFull
-		return nil, Spell{}, ErrLevelFull
+		return charactersvc.View{}, Spell{}, ErrLevelFull
 	}
 }

@@ -217,6 +217,7 @@ while it prints anything. The ledger never holds a "not dispatchable" list: a bl
 service, "serial", a chain) is not a blocker unless it is a Linear relation or a real file overlap you checked
 (sup-70: a carried-over list kept two ready items idle for 10 hours). An item you hold on purpose is a
 question to the user: `<id> <reason>` in `<wt>/supervisor/held` and in the ledger's pending questions.
+**Linear is watched at all times** (user, 2026-10-23), idle or not: keep `.claude/scripts/queue-watch.sh` running (`run_in_background`, one at a time); it exits with the queue's lines when an item turns READY, STACK or STALLED (the user moving an item to Todo included), and the Stop hook refuses a turn without it. Re-arm it after acting and at takeover.
 Never wait in the foreground on a PR's checks: arm `ci-watch.sh` (it now reports a check running over 45
 minutes as `STUCK`, red) and keep dispatching.
 - Eligible: ready/unblocked per the tracker, not labelled needs-info, not claimed by someone else. An
@@ -500,7 +501,7 @@ must lose nothing, so state lives outside the conversation:
    wins: re-check each of the ledger's pending questions against it (a PR the user merged, an item
    they moved) and drop the settled ones before restating any (sup-58 re-asked a merged PR's merge).
    Read fresh reports you haven't acted on. Then run `ready-queue.sh` and dispatch what it prints before anything else.
-2. **Re-arm every wait** (agent waits, PR watchers) with `run_in_background`; background waits die
+2. **Re-arm every wait** (agent waits, PR watchers, `queue-watch.sh`) with `run_in_background`; background waits die
    with the session that started them.
 3. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),
    rewrite the ledger, and carry on.

@@ -112,6 +112,38 @@ split:
 Either way, the rule that the root is the *only* place a concrete adapter meets
 a service constructor must hold.
 
+### 3.2 No service is wired with a late-bound dependency
+
+Every service is constructed with all its ports already built; the root never
+assigns a dependency after the fact (no shim holding a nil field that is filled
+once another service exists). A cycle between two services means a seam is
+missing, and the fix is in the domain, not in the root.
+
+Two seams were compared for the items/buffs cycle (buffsvc reads the carried
+items' powers; using a magic item corrects the round's initiative, which
+buffsvc owns):
+
+```mermaid
+flowchart LR
+    DAL["initiative store + log"] --> C["InitiativeCorrector"]
+    C --> I["itemsvc"]
+    C --> B["buffsvc"]
+    I -->|"ItemPowers"| B
+```
+
+- **Chosen: the part both need is built first.** The correction reads and
+  writes only the initiative store, the round counter and the log, so it is a
+  small component (`buffsvc.InitiativeCorrector`, built by
+  `NewInitiativeCorrector`) that depends on those ports alone. The root builds
+  it, then the items (which take it), then the buffs (which take the items);
+  `buffsvc`'s own `CorrectInitiative` is the same code. The correction still
+  runs inside the item use's transaction, as that transaction's last entry.
+- **Rejected: invert the port.** The items would only report the term of the
+  use, and a caller (REST handler or a coordinator) would pass it to buffsvc.
+  That moves the "last entry of the use's transaction" rule out of the service
+  that owns the transaction, so a second caller could forget it or order it
+  wrong, and it adds a coordinator for no gain.
+
 ## 4. Anatomy of one service package
 
 A service package (`internal/domain/service/<svc>`) has roughly these files:

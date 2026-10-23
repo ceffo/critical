@@ -338,55 +338,9 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 	return out, nil
 }
 
-// CorrectInitiative is ADR 0035 item 6.2: a spell cast or a magic item used
-// in a round replaces that round's initiative by the same d10 plus the
-// cause's term (SpellInitiative, ItemInitiative) and the effects recorded at
-// the roll; the weapon term, or an earlier correction's cause, goes. No die
-// is rolled. It records an initiative_correct entry stamped with the round,
-// whose snapshot keeps the replaced initiative as "before" (undo gives it
-// back), and stores the new one with that entry's id. It runs inside the
-// caller's transaction (ctx) and must be the last entry the caller records,
-// so a reroll stays allowed right after it. Out of combat or with no
-// initiative it does nothing and returns nil.
+// CorrectInitiative is the service's face of the correction: the same
+// InitiativeCorrector the items are given, over this service's own store and
+// log, so the two can never differ.
 func (s *service) CorrectInitiative(ctx context.Context, characterID int64, cause InitiativeModifier) (*Initiative, error) {
-	if cause.Source != InitiativeSpell && cause.Source != InitiativeItem {
-		return nil, fmt.Errorf("%w: an initiative correction comes from a spell or an item, not %q", domain.ErrInvalidInput, cause.Source)
-	}
-	round, err := s.dal.GetRoundNumber(ctx, characterID)
-	if err != nil {
-		return nil, fmt.Errorf("get round: %w", err)
-	}
-	current, err := s.dal.GetInitiative(ctx, characterID)
-	if err != nil {
-		return nil, fmt.Errorf("get initiative: %w", err)
-	}
-	if current == nil || round == 0 {
-		return nil, nil
-	}
-	next := Initiative{D10: current.D10, Modifiers: append([]InitiativeModifier{cause}, effectModifiers(current.Modifiers)...)}
-	snap, err := initiativeSnapshot(current, &next)
-	if err != nil {
-		return nil, err
-	}
-	payload, err := json.Marshal(initiativeCorrectPayload{
-		Round: round, D10: next.D10, Before: current.Total(), After: next.Total(),
-		Modifiers: toTerms(next.Modifiers), Cause: toTerm(cause),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("encode payload: %w", err)
-	}
-	next.LogEntryID, err = s.log.Record(ctx, actionlog.NewEntry{
-		CharacterID: characterID,
-		Round:       round,
-		Kind:        actionlog.KindInitiativeCorrect,
-		Payload:     payload,
-		Snapshots:   []actionlog.Snapshot{snap},
-	})
-	if err != nil {
-		return nil, fmt.Errorf("record %s: %w", actionlog.KindInitiativeCorrect, err)
-	}
-	if err := s.dal.SaveInitiative(ctx, characterID, &next); err != nil {
-		return nil, fmt.Errorf("save initiative: %w", err)
-	}
-	return &next, nil
+	return corrector{dal: s.dal, log: s.log}.CorrectInitiative(ctx, characterID, cause)
 }

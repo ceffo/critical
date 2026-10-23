@@ -60,7 +60,7 @@ type DAL interface {
 // Characters reads the sheet: the starting XP, the level and the prime
 // requisites.
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 	// ClassEntries are the stored class entries, without the derivation: the
 	// award's split and the journal's payload need no more.
 	ClassEntries(ctx context.Context, id int64) ([]classes.Entry, error)

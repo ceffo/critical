@@ -7,7 +7,6 @@ import {
   schoolLabel,
   sphereLabel,
   spheresLabel,
-  translateValue,
 } from "./lookupLabels";
 
 async function tFor(lng: "en" | "fr") {
@@ -27,29 +26,6 @@ describe("lookupLabels", () => {
     expect(labelKey("Neg.")).toBe("neg_");
   });
 
-  it("translates a listed value, ignoring case and surrounding spaces", async () => {
-    const t = await tFor("fr");
-    expect(translateValue(t, "duration", "Instantaneous")).toBe("Instantanée");
-    expect(translateValue(t, "duration", "  instantaneous ")).toBe(
-      "Instantanée",
-    );
-    expect(translateValue(t, "area", "The caster")).toBe("Le lanceur");
-    expect(translateValue(t, "range", "Touch")).toBe("Contact");
-    expect(translateValue(t, "save", "None")).toBe("Aucune");
-  });
-
-  it("leaves unlisted and typed values exactly as scraped", async () => {
-    const t = await tFor("fr");
-    expect(translateValue(t, "range", "210 yd")).toBe("210 yd");
-    expect(translateValue(t, "range", "10 yds./level")).toBe("10 yds./level");
-    expect(translateValue(t, "duration", "Whenever Needed")).toBe(
-      "Whenever Needed",
-    );
-    expect(translateValue(t, "area", "")).toBe("");
-    // a value listed for another stat only is not borrowed
-    expect(translateValue(t, "range", "Permanent")).toBe("Permanent");
-  });
-
   it("translates classes and spheres, one sphere name at a time", async () => {
     const t = await tFor("fr");
     expect(classLabel(t, "Wizard")).toBe("Magicien");
@@ -62,27 +38,16 @@ describe("lookupLabels", () => {
 
   it("shows the English text in English", async () => {
     const t = await tFor("en");
-    expect(translateValue(t, "duration", "Instantaneous")).toBe(
-      "Instantaneous",
-    );
     expect(classLabel(t, "Priest")).toBe("Priest");
     expect(sphereLabel(t, "Elemental Fire")).toBe("Elemental Fire");
   });
 });
 
 describe("lookupLabels in French, as the lookup shows them", () => {
-  it("translates the Priest values and the sphere a spell lists", async () => {
+  it("translates the sphere a spell lists", async () => {
     const t = await tFor("fr");
-    expect(translateValue(t, "castingTime", "Special")).toBe("Spécial");
-    expect(translateValue(t, "range", "Touch")).toBe("Contact");
     expect(spheresLabel(t, "Sun")).toBe("Soleil");
     expect(classLabel(t, "Wizard")).toBe("Magicien");
-  });
-
-  it("leaves text with no entry as scraped", async () => {
-    const t = await tFor("fr");
-    expect(translateValue(t, "range", "Sight line")).toBe("Sight line");
-    expect(translateValue(t, "area", "A weird zone")).toBe("A weird zone");
   });
 });
 

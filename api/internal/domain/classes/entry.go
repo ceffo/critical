@@ -56,8 +56,28 @@ func SingleEntry(class string, realizedLevel, startingXP int) Entry {
 // single-class character's only entry; the single-class rules read it until
 // the multi-class math lands.
 func Primary(entries []Entry) (Entry, bool) {
-	for _, e := range entries {
+	if i := PrimaryIndex(entries); i >= 0 {
+		return entries[i], true
+	}
+	return Entry{}, false
+}
+
+// PrimaryIndex is the index of the first active entry, -1 when there is none:
+// the one rule "which entry is the primary one" (ADR 0045 step 3.1) that
+// Primary and the derivation's own entry slices share.
+func PrimaryIndex(entries []Entry) int {
+	for i, e := range entries {
 		if e.State == EntryActive {
+			return i
+		}
+	}
+	return -1
+}
+
+// Find is the entry of class, ok false when there is none.
+func Find(entries []Entry, class string) (Entry, bool) {
+	for _, e := range entries {
+		if e.Class == class {
 			return e, true
 		}
 	}

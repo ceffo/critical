@@ -842,10 +842,8 @@ func (s *service) startingPicks(c Character, picks []psionics.Pick) ([]psionics.
 // entryLevel is the level of c's entry of class (the realized level, or the left-at level of a
 // class left); c's realized level for a class it has none of.
 func entryLevel(c *Character, class string) int {
-	for _, e := range c.Entries() {
-		if e.Class == class {
-			return e.Level()
-		}
+	if e, ok := classes.Find(c.Entries(), class); ok {
+		return e.Level()
 	}
 	return c.RealizedLevel
 }

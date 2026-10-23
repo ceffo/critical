@@ -11,7 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc/mocks"
@@ -43,9 +43,9 @@ func newEnv(t *testing.T, turning []ruletablesvc.TurningTarget) *env {
 	t.Helper()
 	e := &env{dice: mocks.NewMockDice(t)}
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 4, Turning: turning},
-	}, nil).Once()
+	v := viewtest.Single("cleric", 4)
+	v.Turning = turning
+	chars.EXPECT().View(mock.Anything, charID).Return(v, nil).Once()
 	log := mocks.NewMockLog(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(func(_ context.Context, n actionlog.NewEntry) (int64, error) {
 		e.entries = append(e.entries, n)

@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -59,16 +60,13 @@ func dualFixture(t *testing.T) *fixture {
 	}
 	f.svc, err = skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: book, Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
-	c := &charactersvc.Character{
-		ID: charID, Class: swashbuckler, Dex: 16, RealizedLevel: 5,
-		SkillPoints: skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}},
-	}
-	c.Derived.RealizedLevel = 5
-	c.Derived.SkillSets = []skills.SkillSet{
+	c := viewtest.Single(swashbuckler, 5, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 16, 0, 0, 0, 0))
+	c.SkillPoints = skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}}
+	c.SkillSets = []skills.SkillSet{
 		{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 15, Points: 20, Percent: 35}}},
 		{Set: "bard", Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 10, Points: 5, Percent: 15}}},
 	}
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Maybe()
 	return f
 }
 
@@ -196,13 +194,12 @@ func TestSetPoints_Step3_5_ALegacyEntryResolvesPointsFiledUnderNoSet(t *testing.
 func TestSetPoints_Step12_EachGrantSpendsItsOwnSet(t *testing.T) {
 	f := pointsFixture(t, "thief", nil)
 	f.chars.ExpectedCalls = nil
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: "thief", RealizedLevel: 9,
-		Derived: charactersvc.Derived{RealizedLevel: 9, Features: []charactersvc.FeatureGrant{
-			{Kind: classes.KindRogueSkills, Class: "thief", Level: 9},
-			{Kind: classes.KindRogueSkills, Class: "bard", Level: 4},
-		}},
-	}, nil)
+	both := viewtest.Single("thief", 9, viewtest.WithIdentity(charID, "Test", ""))
+	both.Features = []charactersvc.FeatureGrant{
+		{Kind: classes.KindRogueSkills, Class: "thief", Level: 9},
+		{Kind: classes.KindRogueSkills, Class: "bard", Level: 4},
+	}
+	f.chars.EXPECT().View(mock.Anything, charID).Return(both, nil)
 	f.records()
 	f.points.EXPECT().SetSkillPoints(mock.Anything, charID, skills.SetPoints{"bard": {"climb_walls": 65}}).Return(nil).Once()
 

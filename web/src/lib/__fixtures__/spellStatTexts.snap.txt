@@ -1,0 +1,552 @@
+en	alarm	casting_time	1 rd.
+en	alarm	range	10 yds.
+en	alarm	duration	4 hrs. + 1/2 hr./level
+en	alarm	area_of_effect	Up to 20-ft. cube
+en	alarm	components	V, S, M
+en	alarm	saving_throw	None
+en	armor	casting_time	1 rd.
+en	armor	range	Touch
+en	armor	duration	Special
+en	armor	area_of_effect	1 creature
+en	armor	components	V, S, M
+en	armor	saving_throw	None
+en	burning_hands	casting_time	1
+en	burning_hands	range	0
+en	burning_hands	duration	Instantaneous
+en	burning_hands	area_of_effect	The caster
+en	burning_hands	components	V, S
+en	burning_hands	saving_throw	1/2
+en	chromatic_orb	casting_time	1
+en	chromatic_orb	range	0
+en	chromatic_orb	duration	Special
+en	chromatic_orb	area_of_effect	One creature
+en	chromatic_orb	components	V, S, M
+en	chromatic_orb	saving_throw	Neg.
+en	enlarge	casting_time	1
+en	enlarge	range	5 yds./level
+en	enlarge	duration	5 rds./level
+en	enlarge	area_of_effect	1 creature or object
+en	enlarge	components	V, S, M
+en	enlarge	saving_throw	Neg.
+en	fist_of_stone	casting_time	1
+en	fist_of_stone	range	0
+en	fist_of_stone	duration	1 round/level
+en	fist_of_stone	area_of_effect	The caster's hand
+en	fist_of_stone	components	V, S
+en	fist_of_stone	saving_throw	None
+en	identify	casting_time	Special
+en	identify	range	0
+en	identify	duration	1 rd./level
+en	identify	area_of_effect	1 item/level
+en	identify	components	V, S, M
+en	identify	saving_throw	None
+en	light	casting_time	1
+en	light	range	60 yds.
+en	light	duration	1 turn/level
+en	light	area_of_effect	20-ft. radius
+en	light	components	V, M
+en	light	saving_throw	Special
+en	magic_missile	casting_time	1
+en	magic_missile	range	60 yds. + 10 yds./level
+en	magic_missile	duration	Instantaneous
+en	magic_missile	area_of_effect	1-5 targets
+en	magic_missile	components	V, S
+en	magic_missile	saving_throw	None
+en	sleep	casting_time	1
+en	sleep	range	30 yds.
+en	sleep	duration	5 rds./level
+en	sleep	area_of_effect	Special
+en	sleep	components	V, S, M
+en	sleep	saving_throw	None
+en	melfs_acid_arrow	casting_time	2
+en	melfs_acid_arrow	range	180 yds.
+en	melfs_acid_arrow	duration	Special
+en	melfs_acid_arrow	area_of_effect	1 target
+en	melfs_acid_arrow	components	V, S, M
+en	melfs_acid_arrow	saving_throw	Special
+en	mirror_image	casting_time	2
+en	mirror_image	range	0
+en	mirror_image	duration	3 rds./level
+en	mirror_image	area_of_effect	6-ft. radius
+en	mirror_image	components	V, S
+en	mirror_image	saving_throw	None
+en	strength	casting_time	1 turn
+en	strength	range	Touch
+en	strength	duration	1 hr./level
+en	strength	area_of_effect	Person touched
+en	strength	components	V, S, M
+en	strength	saving_throw	None
+en	tashas_uncontrollable_hideous_laughter	casting_time	2
+en	tashas_uncontrollable_hideous_laughter	range	60 yds.
+en	tashas_uncontrollable_hideous_laughter	duration	1 rd./level
+en	tashas_uncontrollable_hideous_laughter	area_of_effect	1 or more creatures in a 30-ft. cube
+en	tashas_uncontrollable_hideous_laughter	components	V, S, M
+en	tashas_uncontrollable_hideous_laughter	saving_throw	Neg.
+en	dispel_magic	casting_time	3
+en	dispel_magic	range	120 yds.
+en	dispel_magic	duration	Instantaneous
+en	dispel_magic	area_of_effect	30-ft. cube
+en	dispel_magic	components	V, S
+en	dispel_magic	saving_throw	None
+en	fireball	casting_time	3
+en	fireball	range	10 yds. + 10 yds./level
+en	fireball	duration	Instantaneous
+en	fireball	area_of_effect	20-ft. radius
+en	fireball	components	V, S, M
+en	fireball	saving_throw	1/2
+en	haste	casting_time	3
+en	haste	range	60 yds.
+en	haste	duration	3 rds. + 1 rd./level
+en	haste	area_of_effect	40-ft. cube, 1 creature/level
+en	haste	components	V, S, M
+en	haste	saving_throw	None
+en	slow	casting_time	3
+en	slow	range	90 yds. + 10 yds./level
+en	slow	duration	3 rds. + 1 rd./level
+en	slow	area_of_effect	40-ft. cube, 1 creature/level
+en	slow	components	V, S, M
+en	slow	saving_throw	Neg.
+en	lightning_bolt	casting_time	3
+en	lightning_bolt	range	40 yds. + 10 yds./level
+en	lightning_bolt	duration	Instantaneous
+en	lightning_bolt	area_of_effect	40 yds. x 10 ft.
+en	lightning_bolt	components	V, S, M
+en	lightning_bolt	saving_throw	1/2
+en	improved_strength	casting_time	4
+en	improved_strength	range	Touch
+en	improved_strength	duration	1 rd./level
+en	improved_strength	area_of_effect	Creature touched
+en	improved_strength	components	V, S, M
+en	improved_strength	saving_throw	None
+en	stoneskin	casting_time	1
+en	stoneskin	range	Touch
+en	stoneskin	duration	Special
+en	stoneskin	area_of_effect	1 creature
+en	stoneskin	components	V, S, M
+en	stoneskin	saving_throw	None
+en	polymorph_self	casting_time	4
+en	polymorph_self	range	0
+en	polymorph_self	duration	2 turns/level
+en	polymorph_self	area_of_effect	The caster
+en	polymorph_self	components	V
+en	polymorph_self	saving_throw	None
+en	wall_of_ice	casting_time	4
+en	wall_of_ice	range	10 yds./level
+en	wall_of_ice	duration	1 turn/level
+en	wall_of_ice	area_of_effect	Special
+en	wall_of_ice	components	V, S, M
+en	wall_of_ice	saving_throw	None
+en	ice_storm	casting_time	4
+en	ice_storm	range	10 yds./level
+en	ice_storm	duration	Special
+en	ice_storm	area_of_effect	20 or 40 ft. radius
+en	ice_storm	components	V, S, M
+en	ice_storm	saving_throw	None
+en	wall_of_fire	casting_time	4
+en	wall_of_fire	range	60 yds.
+en	wall_of_fire	duration	Special
+en	wall_of_fire	area_of_effect	Special
+en	wall_of_fire	components	V, S, M
+en	wall_of_fire	saving_throw	None
+en	mordenkainens_force_missiles	casting_time	4
+en	mordenkainens_force_missiles	range	30 yds. + 10 yds./level
+en	mordenkainens_force_missiles	duration	Instantaneous
+en	mordenkainens_force_missiles	area_of_effect	1-7 targets
+en	mordenkainens_force_missiles	components	V, S
+en	mordenkainens_force_missiles	saving_throw	Special
+en	rarys_mnemonic_enhancer	casting_time	1 turn
+en	rarys_mnemonic_enhancer	range	0
+en	rarys_mnemonic_enhancer	duration	1 day
+en	rarys_mnemonic_enhancer	area_of_effect	The caster
+en	rarys_mnemonic_enhancer	components	V, S, M
+en	rarys_mnemonic_enhancer	saving_throw	None
+en	vitriolic_sphere	casting_time	4
+en	vitriolic_sphere	range	150 yds.
+en	vitriolic_sphere	duration	Special
+en	vitriolic_sphere	area_of_effect	5-ft. radius
+en	vitriolic_sphere	components	V, S, M
+en	vitriolic_sphere	saving_throw	1/2
+en	magic_jar	casting_time	1 rd.
+en	magic_jar	range	10 yds./level
+en	magic_jar	duration	Special
+en	magic_jar	area_of_effect	1 creature
+en	magic_jar	components	V, S, M
+en	magic_jar	saving_throw	Special
+en	cloudkill	casting_time	5
+en	cloudkill	range	10 yds.
+en	cloudkill	duration	1 rd./level
+en	cloudkill	area_of_effect	40 x 20 x 20 ft. cloud
+en	cloudkill	components	V, S
+en	cloudkill	saving_throw	None
+en	chain_lightning	casting_time	5
+en	chain_lightning	range	40 yds. + 5 yds./level
+en	chain_lightning	duration	Instantaneous
+en	chain_lightning	area_of_effect	Special
+en	chain_lightning	components	V, S, M
+en	chain_lightning	saving_throw	1/2
+en	death_fog	casting_time	6
+en	death_fog	range	30 yds.
+en	death_fog	duration	1d4 rds. + 1/level
+en	death_fog	area_of_effect	Two 10-ft. cubes/level
+en	death_fog	components	V, S, M
+en	death_fog	saving_throw	None
+en	incendiary_cloud	casting_time	2
+en	incendiary_cloud	range	30 yds.
+en	incendiary_cloud	duration	4 rds. + 1d6 rounds
+en	incendiary_cloud	area_of_effect	Special
+en	incendiary_cloud	components	V, S, M
+en	incendiary_cloud	saving_throw	1/2
+en	meteor_swarm	casting_time	9
+en	meteor_swarm	range	40 yds. + 10 yds./level
+en	meteor_swarm	duration	Instantaneous
+en	meteor_swarm	area_of_effect	Special
+en	meteor_swarm	components	V, S
+en	meteor_swarm	saving_throw	1/2
+en	detect_magic	casting_time	1
+en	detect_magic	range	0
+en	detect_magic	duration	2 rds./level
+en	detect_magic	area_of_effect	10 x 60 ft.
+en	detect_magic	components	V, S
+en	detect_magic	saving_throw	None
+en	detect_magic_priest	casting_time	1 rd.
+en	detect_magic_priest	range	0
+en	detect_magic_priest	duration	1 turn
+en	detect_magic_priest	area_of_effect	10 x 30 yds.
+en	detect_magic_priest	components	V, S, M
+en	detect_magic_priest	saving_throw	None
+en	bless	casting_time	1 rd.
+en	bless	range	60 yds.
+en	bless	duration	6 rds.
+en	bless	area_of_effect	50-ft. cube
+en	bless	components	V, S, M
+en	bless	saving_throw	None
+en	cure_light_wounds	casting_time	5
+en	cure_light_wounds	range	Touch
+en	cure_light_wounds	duration	Permanent
+en	cure_light_wounds	area_of_effect	Creature touched
+en	cure_light_wounds	components	V, S
+en	cure_light_wounds	saving_throw	None
+en	command	casting_time	1
+en	command	range	30 yds.
+en	command	duration	1 rd.
+en	command	area_of_effect	1 creature
+en	command	components	V
+en	command	saving_throw	None
+en	produce_flame	casting_time	5
+en	produce_flame	range	0
+en	produce_flame	duration	1 rd./level
+en	produce_flame	area_of_effect	Special
+en	produce_flame	components	V, S
+en	produce_flame	saving_throw	None
+en	chant	casting_time	2 rds.
+en	chant	range	0
+en	chant	duration	Time of chanting
+en	chant	area_of_effect	30-ft. radius
+en	chant	components	V, S
+en	chant	saving_throw	None
+en	flame_strike	casting_time	8
+en	flame_strike	range	60 yds.
+en	flame_strike	duration	Instantaneous
+en	flame_strike	area_of_effect	5 ft. radius x 30 ft. column
+en	flame_strike	components	V, S, M
+en	flame_strike	saving_throw	1/2
+en	flame_walk	casting_time	7
+en	flame_walk	range	40 yds.
+en	flame_walk	duration	1 rd.
+en	flame_walk	area_of_effect	12-ft. sq.
+en	flame_walk	components	V, S, M
+en	flame_walk	saving_throw	None
+en	animal_friendship	casting_time	1 hr.
+en	animal_friendship	range	10 yds.
+en	animal_friendship	duration	Permanent
+en	animal_friendship	area_of_effect	1 animal
+en	animal_friendship	components	V, S, M
+en	animal_friendship	saving_throw	Neg.
+en	thought_capture	casting_time	3
+en	thought_capture	range	0
+en	thought_capture	duration	Instantaneous
+en	thought_capture	area_of_effect	10 yards
+en	thought_capture	components	V, S
+en	thought_capture	saving_throw	None
+en	create_water	casting_time	1 rd.
+en	create_water	range	30 yds.
+en	create_water	duration	Permanent
+en	create_water	area_of_effect	Up to 27 cu. ft.
+en	create_water	components	V, S, M
+en	create_water	saving_throw	None
+fr	alarm	casting_time	1 tour
+fr	alarm	range	10 m
+fr	alarm	duration	4 heures + 0,5 heure/niveau
+fr	alarm	area_of_effect	cube de 6 m maximum
+fr	alarm	components	V, S, M
+fr	alarm	saving_throw	Aucune
+fr	armor	casting_time	1 tour
+fr	armor	range	Contact
+fr	armor	duration	Spéciale
+fr	armor	area_of_effect	1 créature
+fr	armor	components	V, S, M
+fr	armor	saving_throw	Aucune
+fr	burning_hands	casting_time	1 segment
+fr	burning_hands	range	0
+fr	burning_hands	duration	Instantanée
+fr	burning_hands	area_of_effect	Le lanceur
+fr	burning_hands	components	V, S
+fr	burning_hands	saving_throw	½
+fr	chromatic_orb	casting_time	1 segment
+fr	chromatic_orb	range	0
+fr	chromatic_orb	duration	Spéciale
+fr	chromatic_orb	area_of_effect	1 créature
+fr	chromatic_orb	components	V, S, M
+fr	chromatic_orb	saving_throw	Annule
+fr	enlarge	casting_time	1 segment
+fr	enlarge	range	5 m/niveau
+fr	enlarge	duration	5 tours/niveau
+fr	enlarge	area_of_effect	1 créature ou 1 objet
+fr	enlarge	components	V, S, M
+fr	enlarge	saving_throw	Annule
+fr	fist_of_stone	casting_time	1 segment
+fr	fist_of_stone	range	0
+fr	fist_of_stone	duration	1 tour/niveau
+fr	fist_of_stone	area_of_effect	La main du lanceur
+fr	fist_of_stone	components	V, S
+fr	fist_of_stone	saving_throw	Aucune
+fr	identify	casting_time	Spécial
+fr	identify	range	0
+fr	identify	duration	1 tour/niveau
+fr	identify	area_of_effect	1 objet/niveau
+fr	identify	components	V, S, M
+fr	identify	saving_throw	Aucune
+fr	light	casting_time	1 segment
+fr	light	range	60 m
+fr	light	duration	10 tours/niveau
+fr	light	area_of_effect	rayon de 6 m
+fr	light	components	V, M
+fr	light	saving_throw	Spéciale
+fr	magic_missile	casting_time	1 segment
+fr	magic_missile	range	60 m + 10 m/niveau
+fr	magic_missile	duration	Instantanée
+fr	magic_missile	area_of_effect	1-5 cibles
+fr	magic_missile	components	V, S
+fr	magic_missile	saving_throw	Aucune
+fr	sleep	casting_time	1 segment
+fr	sleep	range	30 m
+fr	sleep	duration	5 tours/niveau
+fr	sleep	area_of_effect	Spéciale
+fr	sleep	components	V, S, M
+fr	sleep	saving_throw	Aucune
+fr	melfs_acid_arrow	casting_time	2 segments
+fr	melfs_acid_arrow	range	180 m
+fr	melfs_acid_arrow	duration	Spéciale
+fr	melfs_acid_arrow	area_of_effect	1 cible
+fr	melfs_acid_arrow	components	V, S, M
+fr	melfs_acid_arrow	saving_throw	Spéciale
+fr	mirror_image	casting_time	2 segments
+fr	mirror_image	range	0
+fr	mirror_image	duration	3 tours/niveau
+fr	mirror_image	area_of_effect	rayon de 1,8 m
+fr	mirror_image	components	V, S
+fr	mirror_image	saving_throw	Aucune
+fr	strength	casting_time	10 tours
+fr	strength	range	Contact
+fr	strength	duration	1 heure/niveau
+fr	strength	area_of_effect	Personne touchée
+fr	strength	components	V, S, M
+fr	strength	saving_throw	Aucune
+fr	tashas_uncontrollable_hideous_laughter	casting_time	2 segments
+fr	tashas_uncontrollable_hideous_laughter	range	60 m
+fr	tashas_uncontrollable_hideous_laughter	duration	1 tour/niveau
+fr	tashas_uncontrollable_hideous_laughter	area_of_effect	cube de 9 m, 1 créature ou plus
+fr	tashas_uncontrollable_hideous_laughter	components	V, S, M
+fr	tashas_uncontrollable_hideous_laughter	saving_throw	Annule
+fr	dispel_magic	casting_time	3 segments
+fr	dispel_magic	range	120 m
+fr	dispel_magic	duration	Instantanée
+fr	dispel_magic	area_of_effect	cube de 9 m
+fr	dispel_magic	components	V, S
+fr	dispel_magic	saving_throw	Aucune
+fr	fireball	casting_time	3 segments
+fr	fireball	range	10 m + 10 m/niveau
+fr	fireball	duration	Instantanée
+fr	fireball	area_of_effect	rayon de 6 m
+fr	fireball	components	V, S, M
+fr	fireball	saving_throw	½
+fr	haste	casting_time	3 segments
+fr	haste	range	60 m
+fr	haste	duration	3 tours + 1 tour/niveau
+fr	haste	area_of_effect	cube de 12 m, 1 créature/niveau
+fr	haste	components	V, S, M
+fr	haste	saving_throw	Aucune
+fr	slow	casting_time	3 segments
+fr	slow	range	90 m + 10 m/niveau
+fr	slow	duration	3 tours + 1 tour/niveau
+fr	slow	area_of_effect	cube de 12 m, 1 créature/niveau
+fr	slow	components	V, S, M
+fr	slow	saving_throw	Annule
+fr	lightning_bolt	casting_time	3 segments
+fr	lightning_bolt	range	40 m + 10 m/niveau
+fr	lightning_bolt	duration	Instantanée
+fr	lightning_bolt	area_of_effect	40 m × 3 m
+fr	lightning_bolt	components	V, S, M
+fr	lightning_bolt	saving_throw	½
+fr	improved_strength	casting_time	4 segments
+fr	improved_strength	range	Contact
+fr	improved_strength	duration	1 tour/niveau
+fr	improved_strength	area_of_effect	Créature touchée
+fr	improved_strength	components	V, S, M
+fr	improved_strength	saving_throw	Aucune
+fr	stoneskin	casting_time	1 segment
+fr	stoneskin	range	Contact
+fr	stoneskin	duration	Spéciale
+fr	stoneskin	area_of_effect	1 créature
+fr	stoneskin	components	V, S, M
+fr	stoneskin	saving_throw	Aucune
+fr	polymorph_self	casting_time	4 segments
+fr	polymorph_self	range	0
+fr	polymorph_self	duration	20 tours/niveau
+fr	polymorph_self	area_of_effect	Le lanceur
+fr	polymorph_self	components	V
+fr	polymorph_self	saving_throw	Aucune
+fr	wall_of_ice	casting_time	4 segments
+fr	wall_of_ice	range	10 m/niveau
+fr	wall_of_ice	duration	10 tours/niveau
+fr	wall_of_ice	area_of_effect	Spéciale
+fr	wall_of_ice	components	V, S, M
+fr	wall_of_ice	saving_throw	Aucune
+fr	ice_storm	casting_time	4 segments
+fr	ice_storm	range	10 m/niveau
+fr	ice_storm	duration	Spéciale
+fr	ice_storm	area_of_effect	rayon de 6 m ou rayon de 12 m
+fr	ice_storm	components	V, S, M
+fr	ice_storm	saving_throw	Aucune
+fr	wall_of_fire	casting_time	4 segments
+fr	wall_of_fire	range	60 m
+fr	wall_of_fire	duration	Spéciale
+fr	wall_of_fire	area_of_effect	Spéciale
+fr	wall_of_fire	components	V, S, M
+fr	wall_of_fire	saving_throw	Aucune
+fr	mordenkainens_force_missiles	casting_time	4 segments
+fr	mordenkainens_force_missiles	range	30 m + 10 m/niveau
+fr	mordenkainens_force_missiles	duration	Instantanée
+fr	mordenkainens_force_missiles	area_of_effect	1-7 cibles
+fr	mordenkainens_force_missiles	components	V, S
+fr	mordenkainens_force_missiles	saving_throw	Spéciale
+fr	rarys_mnemonic_enhancer	casting_time	10 tours
+fr	rarys_mnemonic_enhancer	range	0
+fr	rarys_mnemonic_enhancer	duration	1 jour
+fr	rarys_mnemonic_enhancer	area_of_effect	Le lanceur
+fr	rarys_mnemonic_enhancer	components	V, S, M
+fr	rarys_mnemonic_enhancer	saving_throw	Aucune
+fr	vitriolic_sphere	casting_time	4 segments
+fr	vitriolic_sphere	range	150 m
+fr	vitriolic_sphere	duration	Spéciale
+fr	vitriolic_sphere	area_of_effect	rayon de 1,5 m
+fr	vitriolic_sphere	components	V, S, M
+fr	vitriolic_sphere	saving_throw	½
+fr	magic_jar	casting_time	1 tour
+fr	magic_jar	range	10 m/niveau
+fr	magic_jar	duration	Spéciale
+fr	magic_jar	area_of_effect	1 créature
+fr	magic_jar	components	V, S, M
+fr	magic_jar	saving_throw	Spéciale
+fr	cloudkill	casting_time	5 segments
+fr	cloudkill	range	10 m
+fr	cloudkill	duration	1 tour/niveau
+fr	cloudkill	area_of_effect	nuage de 12 m × 6 m × 6 m
+fr	cloudkill	components	V, S
+fr	cloudkill	saving_throw	Aucune
+fr	chain_lightning	casting_time	5 segments
+fr	chain_lightning	range	40 m + 5 m/niveau
+fr	chain_lightning	duration	Instantanée
+fr	chain_lightning	area_of_effect	Spéciale
+fr	chain_lightning	components	V, S, M
+fr	chain_lightning	saving_throw	½
+fr	death_fog	casting_time	6 segments
+fr	death_fog	range	30 m
+fr	death_fog	duration	1d4 tours + 1 tour/niveau
+fr	death_fog	area_of_effect	2 cubes de 3 m/niveau
+fr	death_fog	components	V, S, M
+fr	death_fog	saving_throw	Aucune
+fr	incendiary_cloud	casting_time	2 segments
+fr	incendiary_cloud	range	30 m
+fr	incendiary_cloud	duration	4 tours + 1d6 tours
+fr	incendiary_cloud	area_of_effect	Spéciale
+fr	incendiary_cloud	components	V, S, M
+fr	incendiary_cloud	saving_throw	½
+fr	meteor_swarm	casting_time	9 segments
+fr	meteor_swarm	range	40 m + 10 m/niveau
+fr	meteor_swarm	duration	Instantanée
+fr	meteor_swarm	area_of_effect	Spéciale
+fr	meteor_swarm	components	V, S
+fr	meteor_swarm	saving_throw	½
+fr	detect_magic	casting_time	1 segment
+fr	detect_magic	range	0
+fr	detect_magic	duration	2 tours/niveau
+fr	detect_magic	area_of_effect	3 m × 18 m
+fr	detect_magic	components	V, S
+fr	detect_magic	saving_throw	Aucune
+fr	detect_magic_priest	casting_time	1 tour
+fr	detect_magic_priest	range	0
+fr	detect_magic_priest	duration	10 tours
+fr	detect_magic_priest	area_of_effect	10 m × 30 m
+fr	detect_magic_priest	components	V, S, M
+fr	detect_magic_priest	saving_throw	Aucune
+fr	bless	casting_time	1 tour
+fr	bless	range	60 m
+fr	bless	duration	6 tours
+fr	bless	area_of_effect	cube de 15 m
+fr	bless	components	V, S, M
+fr	bless	saving_throw	Aucune
+fr	cure_light_wounds	casting_time	5 segments
+fr	cure_light_wounds	range	Contact
+fr	cure_light_wounds	duration	Permanente
+fr	cure_light_wounds	area_of_effect	Créature touchée
+fr	cure_light_wounds	components	V, S
+fr	cure_light_wounds	saving_throw	Aucune
+fr	command	casting_time	1 segment
+fr	command	range	30 m
+fr	command	duration	1 tour
+fr	command	area_of_effect	1 créature
+fr	command	components	V
+fr	command	saving_throw	Aucune
+fr	produce_flame	casting_time	5 segments
+fr	produce_flame	range	0
+fr	produce_flame	duration	1 tour/niveau
+fr	produce_flame	area_of_effect	Spéciale
+fr	produce_flame	components	V, S
+fr	produce_flame	saving_throw	Aucune
+fr	chant	casting_time	2 tours
+fr	chant	range	0
+fr	chant	duration	Time of chanting
+fr	chant	area_of_effect	rayon de 9 m
+fr	chant	components	V, S
+fr	chant	saving_throw	Aucune
+fr	flame_strike	casting_time	8 segments
+fr	flame_strike	range	60 m
+fr	flame_strike	duration	Instantanée
+fr	flame_strike	area_of_effect	colonne de 1,5 m de rayon sur 9 m
+fr	flame_strike	components	V, S, M
+fr	flame_strike	saving_throw	½
+fr	flame_walk	casting_time	7 segments
+fr	flame_walk	range	40 m
+fr	flame_walk	duration	1 tour
+fr	flame_walk	area_of_effect	carré de 3,6 m
+fr	flame_walk	components	V, S, M
+fr	flame_walk	saving_throw	Aucune
+fr	animal_friendship	casting_time	1 heure
+fr	animal_friendship	range	10 m
+fr	animal_friendship	duration	Permanente
+fr	animal_friendship	area_of_effect	1 animal
+fr	animal_friendship	components	V, S, M
+fr	animal_friendship	saving_throw	Annule
+fr	thought_capture	casting_time	3 segments
+fr	thought_capture	range	0
+fr	thought_capture	duration	Instantanée
+fr	thought_capture	area_of_effect	10 m
+fr	thought_capture	components	V, S
+fr	thought_capture	saving_throw	Aucune
+fr	create_water	casting_time	1 tour
+fr	create_water	range	30 m
+fr	create_water	duration	Permanente
+fr	create_water	area_of_effect	729 litres maximum
+fr	create_water	components	V, S, M
+fr	create_water	saving_throw	Aucune

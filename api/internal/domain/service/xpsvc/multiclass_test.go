@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
@@ -34,10 +35,7 @@ func TestBonusEligible_Step6_EveryActiveClassesPrimeRequisites(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
-				ID: 1, Class: "mage", Str: tc.str, Int: tc.int, Classes: tc.entries,
-				Derived: charactersvc.Derived{TargetLevel: 3},
-			}, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(tc.entries, viewtest.WithScores(tc.str, 0, 0, tc.int, 0, 0)), nil).Once()
 			f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil).Once()
 			got, err := f.svc.Get(context.Background(), 1)
 			require.NoError(t, err)
@@ -53,9 +51,7 @@ func TestEntrySplit_Step5_1_ThePreviewAndTheLedgerCarryTheShares(t *testing.T) {
 	f := newFixture(t)
 	two := []classes.Entry{classes.SingleEntry("mage", 1, 0), classes.SingleEntry("cleric", 1, 0)}
 	f.chars.EXPECT().ClassEntries(mock.Anything, int64(1)).Return(two, nil).Once()
-	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
-		ID: 1, Class: "mage", Derived: charactersvc.Derived{TargetLevel: 1}, Classes: two,
-	}, nil)
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(two), nil)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{ID: 3, Base: 1001}}, nil)
 	want := []xpsvc.ClassAmount{{Class: "mage", Amount: 500}, {Class: "cleric", Amount: 500}}
 
@@ -94,7 +90,7 @@ func TestLoggedPayload_Step5_1_CarriesTheSplitOnEntryAndBefore(t *testing.T) {
 	two := []classes.Entry{classes.SingleEntry("mage", 1, 0), classes.SingleEntry("cleric", 1, 0)}
 	stored := xpsvc.Entry{ID: 3, Date: "2026-10-10", Reason: "ogre", Base: 1001}
 	list := func(f fixture) {
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{ID: 1, Class: "mage", Classes: two, Derived: charactersvc.Derived{TargetLevel: 1}}, nil)
+		f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(two), nil)
 		f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	}
 
@@ -147,4 +143,80 @@ func TestAdd_AFailingEntriesReadFailsTheWriteAndLogsNothing(t *testing.T) {
 	_, err := f.svc.Add(context.Background(), 1, xpsvc.EntryInput{Base: 100})
 	require.ErrorIs(t, err, boom)
 	assert.Equal(t, 1, f.tx.n) // the failure happened inside the one unit of work; no Record (the mock would fail)
+}
+
+// viewOf is a view with the stored entries es, each at its realized level and
+// its target level 3 (the first one's, the primary's, is the level read).
+func viewOf(es []classes.Entry, opts ...viewtest.Option) charactersvc.View {
+	var all []viewtest.Option
+	for _, e := range es {
+		if e.State == classes.EntryFrozen {
+			all = append(all, viewtest.WithFrozen(e.Class, e.LeftAtLevel))
+		} else {
+			all = append(all, viewtest.WithEntry(e.Class, e.RealizedLevel))
+		}
+	}
+	v := viewtest.Multi(append(all, opts...)...)
+	return v
+}
+
+// ADR 0042 step 5: a dual-class that crossed over in play ignores the awards up
+// to its cut-off. The new mage starts at 0 XP, so the ledger total, the
+// progress and the per-entry split count only the award after the cut-off.
+func TestGet_Step5_ADualClassCrossedInPlayIgnoresTheEarlierAwards(t *testing.T) {
+	f := newFixture(t)
+	v := viewtest.Multi(
+		viewtest.WithFrozen("fighter", 4), viewtest.WithEntry("mage", 2), viewtest.WithIgnoredAwards("mage", 5),
+	)
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(v, nil)
+	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{
+		{ID: 7, Base: 3000}, {ID: 3, Base: 9000},
+	}, nil)
+
+	got, err := f.svc.Get(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, 3000, got.Total, "only the award after the cut-off counts")
+	assert.Equal(t, 2500, got.CurrentFloor)
+	assert.Equal(t, 3000, got.Entries[0].Total)
+	assert.Nil(t, got.Entries[0].Split, "one active entry: no split")
+}
+
+// The same cut-off keeps an ignoring entry out of a multi-class split.
+func TestGet_Step5_1_AnEntryIgnoringAnAwardIsOutOfItsSplit(t *testing.T) {
+	f := newFixture(t)
+	v := viewtest.Multi(
+		viewtest.WithEntry("mage", 1), viewtest.WithEntry("cleric", 1), viewtest.WithIgnoredAwards("cleric", 5),
+	)
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(v, nil)
+	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{ID: 7, Base: 1000}, {ID: 3, Base: 1000}}, nil)
+
+	got, err := f.svc.Get(context.Background(), 1)
+	require.NoError(t, err)
+	assert.Equal(t, []xpsvc.ClassAmount{{Class: "mage", Amount: 500}, {Class: "cleric", Amount: 500}}, got.Entries[0].Split)
+	assert.Equal(t, []xpsvc.ClassAmount{{Class: "mage", Amount: 500}}, got.Entries[1].Split)
+}
+
+// Opening is the primary entry's starting XP, for a single, a multi and a
+// dual-class character (what the stored XP total was).
+func TestGet_Opening_IsThePrimaryEntrysStartingXP(t *testing.T) {
+	withXP := func(v charactersvc.View, xp ...int) charactersvc.View {
+		for i, x := range xp {
+			v.Entries[i].StartingXP = x
+		}
+		return v
+	}
+	for name, v := range map[string]charactersvc.View{
+		"single": withXP(viewtest.Single("mage", 2), 2600),
+		"multi":  withXP(viewtest.Multi(viewtest.WithEntry("mage", 2), viewtest.WithEntry("cleric", 2)), 2600, 2600),
+		"dual":   withXP(viewtest.Multi(viewtest.WithFrozen("fighter", 4), viewtest.WithEntry("mage", 2), viewtest.WithDormant()), 9000, 2600),
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t)
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(v, nil)
+			f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+			got, err := f.svc.Get(context.Background(), 1)
+			require.NoError(t, err)
+			assert.Equal(t, 2600, got.Opening)
+		})
+	}
 }

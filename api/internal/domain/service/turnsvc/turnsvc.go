@@ -46,7 +46,7 @@ type SVC interface {
 // Characters reads the character with its derived Table 61 row
 // (charactersvc.SVC).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Dice is the dice port.
@@ -120,17 +120,17 @@ func (s *service) Module() domain.Module { return domain.Module{Name: "turnsvc"}
 // destroyed; D* destroys the 2d6 and turns 2d4 more (16.4).
 // One turn_undead roll entry, no snapshot (16.5).
 func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*Result, error) {
-	c, err := s.Characters.GetCharacter(ctx, characterID)
+	c, err := s.Characters.View(ctx, characterID)
 	if err != nil {
 		return nil, fmt.Errorf("get character: %w", err)
 	}
-	if c.Derived.Turning == nil {
-		return nil, fmt.Errorf("%w: %s", ErrClassCannotTurn, c.Class)
+	if c.Turning == nil {
+		return nil, fmt.Errorf("%w: %s", ErrClassCannotTurn, c.Primary().Class)
 	}
 	var row *ruletablesvc.TurningTarget
-	for i := range c.Derived.Turning {
-		if c.Derived.Turning[i].Undead == undead {
-			row = &c.Derived.Turning[i]
+	for i := range c.Turning {
+		if c.Turning[i].Undead == undead {
+			row = &c.Turning[i]
 			break
 		}
 	}
@@ -139,7 +139,7 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 	}
 	// ADR 0042 step 12: the turning row is read at the level of the entry
 	// granting turn_undead.
-	level := c.Derived.FeatureLevel(classes.KindTurnUndead)
+	level := c.FeatureLevel(classes.KindTurnUndead)
 	if row.Cell.Outcome == ruletablesvc.TurningCannot {
 		return nil, fmt.Errorf("%w: %s at level %d", ruletablesvc.ErrCannotTurn, undead, level)
 	}
@@ -148,7 +148,7 @@ func (s *service) Turn(ctx context.Context, characterID int64, undead string) (*
 	}
 	// ADR 0042 step 13: a dual-class's old class turns before the
 	// crossover, allowed and warned.
-	if g, ok := c.Derived.Grant(classes.KindTurnUndead); ok && g.Dormant {
+	if g, ok := c.Grant(classes.KindTurnUndead); ok && g.Dormant {
 		res.Warnings = []string{classes.WarnOldAbility}
 	}
 	switch row.Cell.Outcome {

@@ -16,7 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -59,7 +59,7 @@ func newFixture(t *testing.T) *fixture {
 // reads expects the reads of one Get: a Dexterity 17 character in chain
 // mail with Protection from Evil on.
 func (f *fixture) reads() {
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Dex: 17}, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0)), nil).Once()
 	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
 	f.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{armour("chain", 5, itemsvc.StateWorn)}, nil).Once()
 	f.items.EXPECT().Warnings(mock.Anything, charID, mock.Anything).Return(nil, nil).Once()
@@ -188,7 +188,7 @@ func TestAC_Step13_RestorerWritesTheSnapshotBack(t *testing.T) {
 // as the item service computes them from the class's equipment (ADR 0040 step 1.6).
 func TestAC_Step20_TheCardCarriesTheWornArmourWarningsOnly(t *testing.T) {
 	f := newFixture(t)
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Dex: 17}, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0)), nil).Once()
 	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
 	items := []itemsvc.Item{armour("chain", 5, itemsvc.StateWorn), {ID: "sword", Category: itemsvc.CategoryWeapon, State: itemsvc.StateWielded}}
 	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil).Once()

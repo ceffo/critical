@@ -46,7 +46,7 @@ type Effects interface {
 
 // Characters reads the sheet's Dexterity.
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Tables is PHB Table 2 (ruletablesvc.Lookup's DexMods): the defensive
@@ -106,7 +106,7 @@ func (s *service) Close(_ context.Context) error  { return nil }
 // Get reads the inputs and derives the AC (ADR 0033 step 10); the override
 // rides along (step 13), the derived AC and its breakdown stay beside it.
 func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}

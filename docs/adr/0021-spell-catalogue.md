@@ -822,7 +822,7 @@ is only ever appended to by play.
     Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck), `TestParse_Step25_ReadsFormat18AndRefusesFormat17`,
     `TestPowerCatalogue_Step25_ReadsTheTableAndPlusCosts` and `TestRuleTables_Step25_ReadsTheCombatTables` (catalogueadpt).
 
-26. **The six spell stats are typed once, by the importer; the rest reads the typed value** (_proposed_, design only; no code and no format change in this
+26. **The six spell stats are typed once, by the importer; the rest reads the typed value** (accepted 2026-10-23, design only; no code and no format change in this
     step; user triage 2026-10-22, "file 7"). The amendment of step 8 (typed stats) and step 5.6 (import rules). What it fixes is a
     reading of the code, not a new mechanism: the importer already types the six stats of every spell and stores them (`spells.stats`, JSON,
     `spellstats.Parse`), and a start on the recorded version types them again when the parser reads them differently (the notes of step 8).

@@ -19,7 +19,8 @@ norm() { tr 'A-Z' 'a-z' | tr -cd 'a-z0-9\n'; }
     { grep -oE '^\*\*[^*]+\*\*' "$glossary" || true; } | tr -d '*'
     { grep -E '^_Code_:' "$glossary" || true; } | sed 's/^_Code_://' | tr ',' '\n'
 } | norm | sort -u >"${TMPDIR:-/tmp}/glossary-terms.$$"
-trap 'rm -f "${TMPDIR:-/tmp}/glossary-terms.$$"' EXIT
+types_file="${TMPDIR:-/tmp}/glossary-types.$$"
+trap 'rm -f "${TMPDIR:-/tmp}/glossary-terms.$$" "$types_file"' EXIT
 
 # Allowlist names (patterns kept as written).
 allowed=$(sed -e 's/#.*//' -e 's/[[:space:]]*$//' -e 's/^[[:space:]]*//' "$allowlist" | grep -v '^$' || true)
@@ -31,6 +32,10 @@ types=$(find "$domain" -name '*.go' ! -name '*_test.go' ! -path '*/mocks/*' -pri
     block && match($0, /^\t[A-Z][A-Za-z0-9_]*/) { print substr($0, 2, RLENGTH - 1); next }
     /^type [A-Z]/ { name = $2; sub(/\[.*/, "", name); print name }
 ' | sort -u)
+
+# Membership is tested against a file: `printf ... | grep -q` under pipefail reports a name that is
+# present as absent when grep exits on the match before printf has finished writing (SIGPIPE).
+printf '%s\n' "$types" >"$types_file"
 
 missing=()
 for t in $types; do
@@ -50,7 +55,7 @@ stale=()
 while IFS= read -r a; do
     [ -z "$a" ] && continue
     case "$a" in *'*'*) continue ;; esac
-    printf '%s\n' "$types" | grep -qxF "$a" || stale+=("$a")
+    grep -qxF "$a" "$types_file" || stale+=("$a")
 done <<<"$allowed"
 if [ ${#stale[@]} -gt 0 ]; then
     printf '%s\n' "${stale[@]}"

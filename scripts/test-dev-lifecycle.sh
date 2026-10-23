@@ -86,7 +86,9 @@ wait "$pgid" 2>/dev/null && code=0 || code=$?
 pgid=""
 [ "$code" = 0 ] || [ "$code" = 130 ] || fail "Ctrl-C: just dev exited $code"
 # just itself ends a Ctrl-C'd recipe with this one line (exit 130); anything else is noise.
-grep -v '^error: interrupted by SIGINT$' "$work/dev.log" | grep -qi 'terminated by signal\|^error\|recipe .* failed' && fail "Ctrl-C printed errors"
+# (filtered into a file: grep -q exiting early would SIGPIPE the producer, and pipefail then hides the match)
+grep -v '^error: interrupted by SIGINT$' "$work/dev.log" >"$work/dev.log.filtered" || true
+! grep -qi 'terminated by signal\|^error\|recipe .* failed' "$work/dev.log.filtered" || fail "Ctrl-C printed errors"
 grep -q 'shutdown requested' "$work/dev.log" || fail "the API was not shut down gracefully"
 assert_clean stopped
 ok "Ctrl-C: exit 0, no error output"

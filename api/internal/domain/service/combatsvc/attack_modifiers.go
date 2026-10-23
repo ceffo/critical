@@ -107,8 +107,8 @@ func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *i
 		out.strDmg = dmg
 		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: float64(dmg)})
 	}
-	// ADR 0002 step 5 and ADR 0046 step 2.1: Dexterity missile attack adjustment (PHB Table 2, read from the view) for
-	// every missile attack with a hand-held weapon, bow or hurled.
+	// ADR 0002 step 5: Dexterity missile adjustment (Table 2, from the view) for every
+	// missile attack, bow or hurled.
 	if weapon.Kind == WeaponMissile {
 		add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: char.DexMissile})
 	}

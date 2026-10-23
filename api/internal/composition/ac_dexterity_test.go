@@ -73,9 +73,7 @@ func TestDerive_Step2_DexterityOutsideTheTableRefusesTheRead(t *testing.T) {
 	bs, m := dexTable(t)
 	for _, dex := range []int{0, 26} {
 		id, err := m.AddCharacter(ctx, dexCharacter(dex))
-		if err != nil {
-			continue // the store refused it at write: the case is unreachable
-		}
+		require.NoError(t, err, "the store must accept the score so the read is what refuses it")
 		_, err = bs.Character.View(ctx, id)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), fmt.Sprintf("dexterity %d", dex))
@@ -85,13 +83,17 @@ func TestDerive_Step2_DexterityOutsideTheTableRefusesTheRead(t *testing.T) {
 	}
 }
 
-// ADR 0046 step 2.3: acsvc is built with no table and still gives the figure.
-func TestDerive_Step2_NoSecondTableRead(t *testing.T) {
+// ADR 0046 step 2.3: acsvc has no rule table, so the AC of Dexterity 17 is
+// the view's column and nothing else (the one-read count is
+// charactersvc's TestDerive_Step2_TheDexterityTableIsReadOnce).
+func TestDerive_Step2_TheACTakesTheViewsColumn(t *testing.T) {
 	ctx := context.Background()
 	bs, m := dexTable(t)
 	id, err := m.AddCharacter(ctx, dexCharacter(17))
 	require.NoError(t, err)
+	v, err := bs.Character.View(ctx, id)
+	require.NoError(t, err)
 	ac, err := bs.AC.Get(ctx, id)
 	require.NoError(t, err)
-	assert.Equal(t, 7, ac.Value)
+	assert.Equal(t, 10+v.DexDefence, ac.Value)
 }

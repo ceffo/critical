@@ -667,3 +667,26 @@ func TestRaceTraits_Step4_ConSaveBonusFromTheTrait(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0046 step 2.1: PHB Table 2 is read once per derivation, whatever is
+// asked of the view afterwards (the AC and the attack take the two columns
+// from it).
+func TestDerive_Step2_TheDexterityTableIsReadOnce(t *testing.T) {
+	c := kelsen()
+	c.Dex = 17
+	r := mocks.NewMockRules(t)
+	withDefinitions(t, r)
+	r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
+	r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
+	r.EXPECT().XPThreshold(mock.Anything, mock.Anything).Return(1_500_000, nil).Maybe()
+	r.EXPECT().SavesFor(mock.Anything, mock.Anything).Return(rogue13to16, nil).Maybe()
+	r.EXPECT().SpellsPerDay(mock.Anything, mock.Anything, mock.Anything).Return(map[int]int{1: 5}, nil).Maybe()
+	r.EXPECT().RogueSkills(mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	r.EXPECT().DexMods(17).Return(2, -3, nil).Once()
+
+	got, err := charactersvc.Derive(c, nil, "", r)
+	require.NoError(t, err)
+	assert.Equal(t, 2, got.DexMissile)
+	assert.Equal(t, -3, got.DexDefence)
+}

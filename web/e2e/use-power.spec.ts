@@ -58,11 +58,8 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   const panel = step.getByTestId("known-powers");
   await panel.getByRole("button", { name: /^Ajouter Métapsionisme/ }).click();
   await panel.getByRole("searchbox").fill("intensification");
-  await panel
-    .getByTestId("pick-row")
-    .first()
-    .getByRole("button", { name: /^Ajouter/ })
-    .click();
+  // By name, not the first row: until the search answers, the first row is the unfiltered list's.
+  await panel.getByRole("button", { name: /^Ajouter Intensification/ }).click();
   await expect(panel.getByTestId("known-power")).toHaveCount(1);
   await next();
   await step.getByLabel("Nom", { exact: true }).fill("Aria");

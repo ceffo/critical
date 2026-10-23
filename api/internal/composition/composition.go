@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/adapters/bridgeadpt"
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/diceadpt"
 	"github.com/ceffo/critical/api/internal/adapters/googleadpt"
@@ -16,9 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
@@ -46,7 +45,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
-	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 	"github.com/ceffo/critical/api/internal/storage/postgres"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
@@ -176,7 +174,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// The PHB rule tables: spell preparation takes Table 32, attacks look
 	// STR/DEX adjustments up in Tables 1-2, the XP ledger Table 25. A gap in a table is a startup
 	// error.
-	ruleTables, err := loadRuleTables(artifact, cfg)
+	ruleTables, err := ruletablesadpt.FromArtifact(artifact, cfg.Catalogue)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +296,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// action-log transaction, so whatever a request records is popped by one
 	// undo (ADR 0018 steps 1 and 2).
 	tx := actionlogsvc.Transactions(db)
-	bs.Log, err = actionlogsvc.New(logDAL, tx, roundReader{buffDAL}, hpDAL)
+	bs.Log, err = actionlogsvc.New(logDAL, tx, bridgeadpt.RoundReader{DAL: buffDAL}, hpDAL)
 	if err := bs.add(bs.Log, err); err != nil {
 		return nil, err
 	}
@@ -313,7 +311,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// The ruleset (ADR 0041): the default one, read by the rules services
 	// through its resolver. The catalogue version this server loaded is
 	// recorded on it.
-	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: proficiencyIDs{proficiencies}, Tx: tx})
+	bs.Rulesets, err = rulesetsvc.New(rulesetsvc.Deps{DAL: st.Rulesets, Proficiencies: bridgeadpt.ProficiencyIDs{Book: proficiencies}, Tx: tx})
 	if err := bs.add(bs.Rulesets, err); err != nil {
 		return nil, err
 	}
@@ -323,11 +321,11 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	languages, _ := ruleTables.Languages()
 	bs.Character, err = charactersvc.New(charactersvc.Deps{
 		Reader: characterDAL, XP: xpsvc.Totals{DAL: st.XP}, Rules: ruleTables,
-		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: wornArmour{itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
+		Owners: characterDAL, Tx: tx, Sessions: bs.Auth, Armour: bridgeadpt.WornArmour{DAL: itemDAL}, Languages: languages, Proficiencies: proficiencies, HP: logSvc,
 		// A new mage's or bard's starting spellbook (ADR 0030 step 20.7) reads
 		// the catalogue and is written in the creation's transaction.
 		Spells: spellbookadpt.NewCreation(cat, startingSeed), Book: st.Spellbook,
-		FreeSpells: freeSpells{log: logSvc, book: spellbook}, Rulesets: bs.Rulesets,
+		FreeSpells: bridgeadpt.FreeSpells{Log: logSvc, Book: spellbook}, Rulesets: bs.Rulesets,
 		Powers: psionics.NewBook(artifact.Disciplines, artifact.Powers),
 	})
 	if err := bs.add(bs.Character, err); err != nil {
@@ -357,7 +355,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// to the initiative (ADR 0035 item 6): the attack form's weapon, read
 	// from its store and the weapon pieces.
 	weapons := combatsvc.ItemWeapons(bs.Items)
-	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items, weaponInHand{forms: st.Forms, weapons: weapons}, effects)
+	bs.Buffs, err = buffsvc.New(buffDAL, tx, logSvc, charSvc, dice, bs.Items, bridgeadpt.WeaponInHand{Forms: st.Forms, Weapons: weapons}, effects)
 	if err := bs.add(bs.Buffs, err); err != nil {
 		return nil, err
 	}
@@ -559,20 +557,6 @@ func (b *BackingServices) Close(ctx context.Context) error {
 	return firstErr
 }
 
-// roundReader satisfies actionlogsvc.Rounds from buffdal. It runs inside the
-// recording transaction (buffdal follows the ctx transaction).
-type roundReader struct{ dal BuffStore }
-
-func (r roundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
-	return r.dal.GetRoundNumber(ctx, characterID)
-}
-
-// wornArmour satisfies charactersvc.Armour from the equipment's store (the
-// item service reads the characters, so the character service reads the
-// pieces through their DAL): the worn body armour's Table 29 column (ADR 0033
-// step 14). It follows the ctx transaction.
-type wornArmour struct{ dal itemsvc.DAL }
-
 // lateInitiative is itemsvc's Initiative port, bound to buffsvc once it is
 // built (buffsvc reads the items' powers, so the items come first).
 type lateInitiative struct{ buffs buffsvc.SVC }
@@ -582,93 +566,6 @@ func (l *lateInitiative) CorrectInitiative(ctx context.Context, characterID int6
 		return nil, errors.New("initiative: buffsvc not bound")
 	}
 	return l.buffs.CorrectInitiative(ctx, characterID, cause)
-}
-
-// weaponInHand is buffsvc's Weapons port: the attack form's weapon in hand
-// (combatsvc.InHand), as the initiative reads it (ADR 0035 item 6).
-type weaponInHand struct {
-	forms   combatsvc.FormStore
-	weapons combatsvc.Weapons
-}
-
-func (w weaponInHand) WeaponInHand(ctx context.Context, characterID int64) (buffsvc.HeldWeapon, bool, error) {
-	held, ok, err := combatsvc.InHand(ctx, w.forms, w.weapons, characterID)
-	if err != nil || !ok {
-		return buffsvc.HeldWeapon{}, false, err
-	}
-	return buffsvc.HeldWeapon{
-		ItemID: held.ID, Name: held.Name.Any(), Kind: buffsvc.WeaponKind(held.Kind),
-		Speed: held.Speed, MagicToHit: held.MagicToHit, MagicDamage: held.MagicDamage,
-	}, true, nil
-}
-
-// freeSpells satisfies charactersvc.FreeSpells (ADR 0030 step 20.8): the
-// levels taken are the active level_up entries of the log (an undone roll's
-// is voided, a redone one's active again), the claims the spellbook's
-// level_grant entries. Both follow the ctx transaction.
-type freeSpells struct {
-	log  actionlogsvc.SVC
-	book *spellbookadpt.Book
-}
-
-func (f freeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]charactersvc.TakenLevel, error) {
-	// One entry per level taken at most: the class tables' levels of a
-	// multi-class character's classes bound them (ADR 0042 step 7).
-	entries, err := f.log.ActiveEntries(ctx, characterID, actionlog.KindLevelUp, classes.MaxMultiClasses*ruletablesvc.MaxLevel)
-	if err != nil {
-		return nil, err
-	}
-	levels := make([]charactersvc.TakenLevel, 0, len(entries))
-	for _, e := range entries {
-		class, level, err := levelupsvc.LevelReached(e.Payload)
-		if err != nil {
-			return nil, fmt.Errorf("level_up entry %d: %w", e.ID, err)
-		}
-		levels = append(levels, charactersvc.TakenLevel{Class: class, Level: level})
-	}
-	return levels, nil
-}
-
-func (f freeSpells) Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error) {
-	return f.book.Claimed(ctx, characterID)
-}
-
-func (a wornArmour) WornSkillColumn(ctx context.Context, characterID int64) (string, error) {
-	pieces, err := a.dal.List(ctx, characterID)
-	if err != nil {
-		return "", err
-	}
-	return itemsvc.WornSkillColumn(pieces), nil
-}
-
-// loadRuleTables parses the PHB rule tables the artifact carries (ADR 0021
-// step 9.4), and a format-4 artifact's class and race tables (step 10, which
-// the server needs: a format-3 artifact refuses the start), with
-// the table rules of steps 9.3 and 10.3 (a missing or broken table refuses
-// the start, naming it), at every start, whatever catalogue version the
-// database recorded (step 9.5).
-// The seeds hold no rule tables (step 9.6.3).
-func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.Tables, error) {
-	t, err := ruletablesadpt.Parse(artifact.RuleTables, artifact.Equipment, artifact.Languages, artifact.Definitions)
-	if err != nil {
-		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
-	}
-	// The class, group and race definitions (ADR 0040 step 8): every class is
-	// read from them, so an artifact without them cannot serve a character.
-	if _, err := t.Definitions(); err != nil {
-		return nil, fmt.Errorf("spell catalogue %s: %w", cfg.Catalogue, err)
-	}
-	// Every character's level, THAC0 and saves come from the class tables
-	// (ADR 0030 steps 3 to 6): an artifact without them cannot serve one.
-	if _, ok := t.Classes(); !ok {
-		return nil, fmt.Errorf("spell catalogue %s: %w", cfg.Catalogue, ruletablesvc.ErrNoClassTables)
-	}
-	// ADR 0044 step 1.1: Table 14 names attack and defence modes only, and
-	// every mode has its cells; a devotion where a mode belongs refuses the start.
-	if err := t.CheckPowerKinds(artifact.Powers); err != nil {
-		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
-	}
-	return t, nil
 }
 
 // seedSpellRefs are the spell ids the seeds refer to: a catalogue import may
@@ -682,12 +579,4 @@ func seedSpellRefs(spellbook []string, effects *spelleffectsadpt.Catalog) []cata
 		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spell effects seed"})
 	}
 	return refs
-}
-
-// proficiencyIDs tells rulesetsvc which proficiency ids the book knows.
-type proficiencyIDs struct{ book *ruletablesvc.Proficiencies }
-
-func (p proficiencyIDs) Has(id string) bool {
-	_, ok := p.book.Get(id)
-	return ok
 }

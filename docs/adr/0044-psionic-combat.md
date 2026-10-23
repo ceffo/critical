@@ -244,7 +244,7 @@ two power ids in its row of data.
    3). Refused `mind_closed` against a closed mind (the book: the power never works on one) and
    `level_out_of_table` for a level Table 29 has no row for _(Q15)_. The book's optional
    language rule is not taken _(Q16)_.
-   Tests: `Contact_Step9_CostByTheTargetsLevel` (level 7: 5, or 3 on a failure),
+   Tests: `Contact_Step9_CostByTheTargetsLevel` (level 7: 8, or 4 on a failure),
    `Contact_Step9_DistanceLifeOrderAndResistance` (a bird at 10 miles resisting: -3, -3, -2),
    `Contact_Step9_AClosedMindRefused`, `Contact_Step9_ASuccessPutsTheContactRow`.
 
@@ -257,9 +257,9 @@ two power ids in its row of data.
     free while another telepathic power uses it). When the contact row ends (dismissed or unpaid),
     the rows that use it end in the same transaction _(Q12)_.
     Tests: `ContactPower_Step10_NeedsContactFromAnEarlierRound` (psionicsvc: contact made this
-    round refused, last round accepted), `ContactPower_Step10_ThePlusAmount`,
-    `ContactPower_Step10_ContactFreeWhileAPowerUsesIt` (buffsvc: Daydream at 3 on a contacted
-    target charges 3 a round, not 4), `ContactPower_Step10_EndingContactEndsItsPowers`.
+    round refused, last round accepted), `ContactPower_Step10_ThePlusAmount` (switch personality: 30),
+    `ContactPower_Step10_ContactFreeWhileAPowerUsesIt` (buffsvc: inflict pain at 2 on a contacted
+    target charges 2 a round, not 3), `ContactPower_Step10_EndingContactEndsItsPowers`.
 
 ### The screen and the journal
 

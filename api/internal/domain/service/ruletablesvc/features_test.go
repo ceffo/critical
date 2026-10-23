@@ -201,3 +201,45 @@ func TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait(t *testing.T) {
 	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, barred, 18))
 	assert.True(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, free, 18), "the id decides nothing, the trait does")
 }
+
+// ADR 0040 step 13: the slots a specialization costs and the Table 35 column it reads are the
+// class's weapon_specialization params, whatever its id. A test class with other params spends
+// and reads other figures than the book fighter on the same weapons.
+func TestWeaponSpecialization_Step13_ParamsDecideSlotsAndColumns(t *testing.T) {
+	melee := classes.Feature{Kind: classes.KindMeleeAttacksPerRound, Table: ruletablesvc.TableWarriorAttacks}
+	reg := editedDefs(t, addClass("test_specialist", "fighter", "", melee, classes.Feature{
+		Kind: classes.KindWeaponSpecialization,
+		Specialization: &classes.WeaponSpecialization{
+			DefaultSlots: 3, MeleeColumn: "melee", MissileColumn: "other_missile",
+			Types: []classes.SpecializationType{
+				{WeaponTypes: []string{"long_bow"}, Slots: 2, Column: "thrown_dart"},
+				{WeaponTypes: []string{"light_crossbow"}, Slots: 4, Column: "other_missile"},
+			},
+		},
+	}))
+	tables := cataloguetest.Tables(t).WithDefinitions(reg)
+	fighter, odd := classOf(t, reg, "fighter"), classOf(t, reg, "test_specialist")
+
+	for _, tc := range []struct {
+		weaponType     string
+		fighter, other int
+	}{{"long_bow", 3, 2}, {"long_sword", 2, 3}, {"light_crossbow", 2, 4}} {
+		assert.Equal(t, tc.fighter, ruletablesvc.SpecializationSlots(fighter, tc.weaponType), "fighter, %s", tc.weaponType)
+		assert.Equal(t, tc.other, ruletablesvc.SpecializationSlots(odd, tc.weaponType), "test class, %s", tc.weaponType)
+	}
+	assert.Zero(t, ruletablesvc.SpecializationSlots(classOf(t, reg, "mage"), "long_sword"), "a class that does not specialize")
+
+	rate := func(class, kind, weaponType string) ruletablesvc.AttackRate {
+		t.Helper()
+		got, ok, err := tables.AttackRateFor(class, 7, kind, weaponType, true)
+		require.NoError(t, err)
+		require.True(t, ok)
+		return got
+	}
+	// The crossbow: the fighter reads its own column, the test class other_missile (the fighter's sling).
+	assert.Equal(t, rate("fighter", "missile", "sling"), rate("test_specialist", "missile", "light_crossbow"))
+	assert.NotEqual(t, rate("fighter", "missile", "light_crossbow"), rate("test_specialist", "missile", "light_crossbow"))
+	// The bow: the fighter keeps the rate of fire, the test class reads a column.
+	assert.Equal(t, rate("fighter", "missile", "dart"), rate("test_specialist", "missile", "long_bow"))
+	assert.NotEqual(t, rate("fighter", "missile", "long_bow"), rate("test_specialist", "missile", "long_bow"))
+}

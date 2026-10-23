@@ -222,3 +222,11 @@ func TestPicksEqual_Step13_OrderDoesNotCount(t *testing.T) {
 		})
 	}
 }
+
+// fighterSlots is what the fixture's fighter spends on a specialization in weaponType.
+func fighterSlots(t *testing.T, book *ruletablesvc.Proficiencies, weaponType string) int {
+	t.Helper()
+	def, ok := book.ClassDef("fighter")
+	require.True(t, ok)
+	return ruletablesvc.SpecializationSlots(def, weaponType)
+}

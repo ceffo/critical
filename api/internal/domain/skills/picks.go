@@ -246,11 +246,21 @@ func (cls Classes) weaponTypeAllowed(book Book, lifted bool, weaponType string) 
 	return allowed
 }
 
-// IsSpecialization reports whether p is a specialization pick (ADR 0037 step 9): a weapon type
-// with the slots its specialization costs. A plain pick spends WeaponPickSlots.
-func (p WeaponPick) IsSpecialization() bool {
+// IsSpecializationOf reports whether p is a specialization pick of a class def (ADR 0037 step 9,
+// ADR 0040 step 13): a weapon type with the slots def's weapon_specialization params give it. A
+// plain pick spends WeaponPickSlots.
+func (p WeaponPick) IsSpecializationOf(def classes.Class) bool {
 	return p.Slots > WeaponPickSlots && slices.Contains(ruletablesvc.WeaponTypes, p.Type) &&
-		p.Slots == ruletablesvc.SpecializationSlots(p.Type)
+		p.Slots == ruletablesvc.SpecializationSlots(def, p.Type)
+}
+
+// isSpecialization reports whether p is a specialization pick of any class entry of cls, a
+// dual-class's old (frozen) ones included.
+func (cls Classes) isSpecialization(book Book, p WeaponPick) bool {
+	return slices.ContainsFunc(cls, func(c ClassLevel) bool {
+		def, ok := book.ClassDef(c.Class)
+		return ok && p.IsSpecializationOf(def)
+	})
 }
 
 // SpecializedType is ADR 0037 step 9 amending ADR 0030 step 12: the weapon type a character of
@@ -258,11 +268,12 @@ func (p WeaponPick) IsSpecialization() bool {
 // (ruletablesvc.Specializes), else "". It needs no derived figure, so a read of the character
 // row alone gives it.
 func SpecializedType(book Book, class string, picks Picks) string {
-	if !specializes(book, class) {
+	def, ok := book.ClassDef(class)
+	if !ok || !ruletablesvc.Specializes(def) {
 		return ""
 	}
 	for _, p := range picks.Weapon {
-		if p.IsSpecialization() {
+		if p.IsSpecializationOf(def) {
 			return p.Type
 		}
 	}
@@ -345,14 +356,15 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 	}
 	out.Weapon = ruletablesvc.WeaponSlots(b.row, b.weaponLevel, spent)
 	out.WeaponTypes = make([]WeaponTypeFigure, 0, len(ruletablesvc.WeaponTypes))
-	specialist := specializes(book, cls.specialist())
+	specialistDef, specialist := book.ClassDef(cls.specialist())
+	specialist = specialist && ruletablesvc.Specializes(specialistDef)
 	for _, t := range ruletablesvc.WeaponTypes {
 		if !cls.weaponTypeAllowed(book, lifted, t) {
 			continue
 		}
 		f := WeaponTypeFigure{Type: t}
 		if specialist {
-			f.SpecializationSlots = ruletablesvc.SpecializationSlots(t)
+			f.SpecializationSlots = ruletablesvc.SpecializationSlots(specialistDef, t)
 		}
 		out.WeaponTypes = append(out.WeaponTypes, f)
 	}
@@ -447,7 +459,7 @@ func validWeaponPicks(book Book, cls Classes, lifted bool, picks, before []Weapo
 		had[p.Type] = true
 		// ADR 0042 step 15: a dual-class keeps its old class's picks, its
 		// specialization too when that class specializes.
-		kept[p.Type] = p.IsSpecialization() && cls.oldSpecialist(book)
+		kept[p.Type] = cls.isSpecialization(book, p) && cls.oldSpecialist(book)
 	}
 	seen := map[string]bool{}
 	out := make([]WeaponPick, 0, len(picks))
@@ -460,14 +472,14 @@ func validWeaponPicks(book Book, cls Classes, lifted bool, picks, before []Weapo
 			return nil, &domain.FieldError{Field: field, Message: CodeUnknown}
 		case seen[p.Type]:
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
-		case p.Slots != WeaponPickSlots && !p.IsSpecialization():
+		case p.Slots != WeaponPickSlots && !cls.isSpecialization(book, p):
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		case !had[p.Type] && !cls.weaponTypeAllowed(book, lifted, p.Type):
 			return nil, &domain.FieldError{Field: field, Message: CodeWeaponNotAllowed}
-		case p.IsSpecialization() && ((!specializes(book, class) && !kept[p.Type]) || specialized):
+		case cls.isSpecialization(book, p) && ((!specializes(book, class) && !kept[p.Type]) || specialized):
 			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
 		}
-		specialized = specialized || p.IsSpecialization()
+		specialized = specialized || cls.isSpecialization(book, p)
 		seen[p.Type] = true
 		out = append(out, p)
 	}

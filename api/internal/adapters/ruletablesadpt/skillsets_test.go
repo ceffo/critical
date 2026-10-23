@@ -112,3 +112,41 @@ func TestSkillDexterity_Step12_RowsKeyedBySkill(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []int{0, 0, -15, 0}, dexterities(bard), "the bard's four skills, Dexterity on pick pockets only")
 }
+
+// specParams is the fixture fighter's weapon_specialization params in d.
+func specParams(d map[string]any) map[string]any {
+	for _, c := range d["classes"].([]any) {
+		if m := c.(map[string]any); m["id"] == "fighter" {
+			for _, f := range m["features"].([]any) {
+				if fm := f.(map[string]any); fm["kind"] == "weapon_specialization" {
+					return fm["params"].(map[string]any)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// ADR 0040 step 13: the start-up refuses a column that is no Table 35 weapon, a weapon type in two
+// rows, a rate_of_fire type with no Table 45 row, and a count under 1.
+func TestImport_Step13_RefusesBrokenSpecializationParams(t *testing.T) {
+	row := func(d map[string]any, i int) map[string]any {
+		return specParams(d)["types"].([]any)[i].(map[string]any)
+	}
+	for name, tc := range map[string]struct {
+		change func(d map[string]any)
+		want   string
+	}{
+		"unknown column":     {func(d map[string]any) { specParams(d)["melee_column"] = "test_column" }, `column "test_column"`},
+		"unknown row":        {func(d map[string]any) { row(d, 1)["column"] = "test_column" }, `column "test_column"`},
+		"a type twice":       {func(d map[string]any) { row(d, 1)["weapon_types"] = []any{"long_bow"} }, `"long_bow" listed twice`},
+		"no rate row":        {func(d map[string]any) { row(d, 0)["weapon_types"] = []any{"long_bow", "test_type"} }, `"test_type" keeps its rate of fire`},
+		"default under 1":    {func(d map[string]any) { specParams(d)["default_slots"] = 0 }, "default_slots 0 under 1"},
+		"type slots under 1": {func(d map[string]any) { row(d, 2)["slots"] = 0 }, "slots 0 under 1"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := parseWithDefinitions(t, tc.change)
+			require.ErrorContains(t, err, tc.want)
+		})
+	}
+}

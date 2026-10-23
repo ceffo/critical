@@ -90,8 +90,9 @@ func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
 		{"a bow, 2 slots", "fighter", picks(spec("long_bow", 2)), refused("weapon.long_bow", "out_of_range")},
 		{"a melee weapon, 3 slots", "fighter", picks(spec("long_sword", 3)), refused("weapon.long_sword", "out_of_range")},
 		{"4 slots", "fighter", picks(spec("long_sword", 4)), refused("weapon.long_sword", "out_of_range")},
-		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
-		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "not_allowed")},
+		// A class that does not specialize has no specialization cost (ADR 0040 step 13): the count is no pick of its.
+		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "out_of_range")},
+		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "out_of_range")},
 		{"a second type refused", "fighter", picks(spec("long_sword", 2), spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
 	}
 	twoSlots := []string{
@@ -321,7 +322,7 @@ func TestWeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks(t *testing.T) {
 // takes it.
 func TestWeaponPick_Step15_OnlyASingleClassFighterSpecializes(t *testing.T) {
 	book := profBook(t)
-	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: fighterSlots(t, book, "long_sword")}}}
 	fighterThief := skills.Classes{{Class: "fighter", Level: 3}, {Class: "thief", Level: 3}}
 
 	_, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighterThief, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})

@@ -529,6 +529,15 @@ flowchart LR
     `WeaponSpecialization_Step13_TheFighterKeepsTodaysNumbers` (composition: the same golden file,
     specialization part, unchanged), `Import_Step13_RefusesBrokenSpecializationParams`
     (ruletablesadpt: unknown column, type twice, bow without a rate row, slots under 1).
+    _(As built: `classes.WeaponSpecialization.SlotsFor` and `ColumnFor` answer from the params;
+    `ruletablesvc.SpecializationSlots` now takes the class definition (0 for a class that does not
+    specialize) and `AttackRateFor` reads the class's params, so the four constants are gone. A pick is a
+    specialization when its slots equal the cost its class gives that type (`WeaponPick.IsSpecializationOf`;
+    in `skills`, any class entry of the character, a dual-class's old class included). Consequence: a
+    class that does not specialize has no specialization cost, so a mage's two-slot weapon pick is
+    `out_of_range` where it was `not_allowed`. The start-up check sits in `ruletablesadpt/classtables.go`;
+    it also refuses a type's `column` that is no Table 35 weapon and a type's `slots` under 1. The "fighter
+    keeps today's numbers" proof is the existing composition golden, unchanged.)_
 
 14. **The catalogue format.** Steps 12 and 13 change the artifact, so the catalogue **bumps to the next
     format number** (the supervisor allots it; the API then reads that format only, as

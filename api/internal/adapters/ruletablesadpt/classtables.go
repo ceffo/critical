@@ -2,6 +2,7 @@ package ruletablesadpt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -247,6 +248,9 @@ func (d classDTO) classes(defs *classes.Registry, sets []catalogue.SkillSet) (*r
 	if m := d.missing(); len(m) > 0 {
 		return nil, fmt.Errorf("the artifact needs the class and race tables, missing: %s", strings.Join(m, ", "))
 	}
+	if err := d.checkSpecialization(defs); err != nil {
+		return nil, err
+	}
 	turning := make([]ruletablesvc.TurningRow, len(d.TurningUndead))
 	for i, r := range d.TurningUndead {
 		if len(r.ByLevel) != ruletablesvc.MaxLevel {
@@ -321,4 +325,59 @@ func mapRows[D, R any](in []D, f func(D) R) []R {
 		out[i] = f(d)
 	}
 	return out
+}
+
+// checkSpecialization is ADR 0040 step 13's start-up check on every weapon_specialization the
+// classes list: a slot count of at least 1, a column that is a Table 35 weapon, a weapon type in
+// one row only, and a rate_of_fire type that has a Table 45 row.
+func (d classDTO) checkSpecialization(defs *classes.Registry) error {
+	weapons := map[string]bool{}
+	for _, r := range d.SpecialistAttacks {
+		weapons[r.Weapon] = true
+	}
+	rated := map[string]bool{}
+	for _, r := range d.RateOfFire {
+		rated[r.WeaponType] = true
+	}
+	for _, c := range defs.Classes() {
+		for _, f := range c.ListsAll(classes.KindWeaponSpecialization) {
+			if err := checkSpecializationParams(f.Specialization, weapons, rated); err != nil {
+				return fmt.Errorf("class %q: weapon_specialization: %w", c.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+func checkSpecializationParams(w *classes.WeaponSpecialization, weapons, rated map[string]bool) error {
+	if w == nil {
+		return errors.New("the parameters are missing")
+	}
+	if w.DefaultSlots < 1 {
+		return fmt.Errorf("default_slots %d under 1", w.DefaultSlots)
+	}
+	for _, column := range []string{w.MeleeColumn, w.MissileColumn} {
+		if !weapons[column] {
+			return fmt.Errorf("column %q is no specialist_attacks weapon", column)
+		}
+	}
+	seen := map[string]bool{}
+	for _, t := range w.Types {
+		if t.Slots < 1 {
+			return fmt.Errorf("types %v: slots %d under 1", t.WeaponTypes, t.Slots)
+		}
+		if t.Column != "" && !weapons[t.Column] {
+			return fmt.Errorf("types %v: column %q is no specialist_attacks weapon", t.WeaponTypes, t.Column)
+		}
+		for _, wt := range t.WeaponTypes {
+			if seen[wt] {
+				return fmt.Errorf("weapon type %q listed twice", wt)
+			}
+			seen[wt] = true
+			if t.RateOfFire && !rated[wt] {
+				return fmt.Errorf("weapon type %q keeps its rate of fire but has no rate_of_fire row", wt)
+			}
+		}
+	}
+	return nil
 }

@@ -107,9 +107,8 @@ type Feature struct {
 	Psionics *Psionics
 	// SaveBonus is save_bonus's params.
 	SaveBonus *SaveBonus
-	// Specialization is weapon_specialization's params (ADR 0040 step 13),
-	// read from format 19 on; nothing reads them until the specialization
-	// rules move to them.
+	// Specialization is weapon_specialization's params (ADR 0040 step 13):
+	// what a specialization costs and which Table 35 column it reads.
 	Specialization *WeaponSpecialization
 }
 
@@ -122,6 +121,44 @@ type WeaponSpecialization struct {
 	MeleeColumn   string
 	MissileColumn string
 	Types         []SpecializationType
+}
+
+// row is the Types row naming weaponType, nil for none.
+func (w *WeaponSpecialization) row(weaponType string) *SpecializationType {
+	for i := range w.Types {
+		if slices.Contains(w.Types[i].WeaponTypes, weaponType) {
+			return &w.Types[i]
+		}
+	}
+	return nil
+}
+
+// SlotsFor is what a specialization in weaponType costs in all: its row's
+// Slots, else DefaultSlots.
+func (w *WeaponSpecialization) SlotsFor(weaponType string) int {
+	if r := w.row(weaponType); r != nil {
+		return r.Slots
+	}
+	return w.DefaultSlots
+}
+
+// ColumnFor is the Table 35 column a specialist of a weapon of weaponType
+// reads: MeleeColumn for a melee weapon, else the type's row Column or
+// MissileColumn. keepsRate is true when the row says RateOfFire: the
+// specialist keeps the type's Table 45 rate, and column is empty.
+func (w *WeaponSpecialization) ColumnFor(melee bool, weaponType string) (column string, keepsRate bool) {
+	if melee {
+		return w.MeleeColumn, false
+	}
+	if r := w.row(weaponType); r != nil {
+		if r.RateOfFire {
+			return "", true
+		}
+		if r.Column != "" {
+			return r.Column, false
+		}
+	}
+	return w.MissileColumn, false
 }
 
 // SpecializationType is one kind of missile weapon that differs: its weapon

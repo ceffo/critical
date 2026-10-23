@@ -28,7 +28,7 @@ func TestUpdateAttackForm_Step8_PickingACarriedWeaponWieldsIt(t *testing.T) {
 		Return(nil).Once().NotBefore(wield)
 	f.weapons.EXPECT().List(mock.Anything, charID).Return([]combatsvc.Weapon{longsword, shortbow}, nil).Once().NotBefore(put)
 	f.items.EXPECT().List(mock.Anything, charID).Return(nil, nil).Maybe()
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(bard(), nil).Maybe()
 	f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil).Maybe()
 
 	v, err := f.svc.UpdateAttackForm(t.Context(), charID, combatsvc.AttackFormPatch{WeaponID: strPtr("shortbow")})

@@ -92,7 +92,7 @@ func advanceWith(f *fixture, buffs []buffsvc.BuffEffect, powers []buffsvc.ItemPo
 	f.dal.EXPECT().SaveActiveBuffs(mock.Anything, charID, mock.Anything).Return(nil).Once()
 	f.dal.EXPECT().SaveRoundNumber(mock.Anything, charID, 6).Return(nil).Once()
 	f.initiativeIs(nil) // the advance: no initiative to end
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 12}, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: 12}, nil).Once()
 	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(powers, nil).Once()
 	if held != nil {
 		f.weapons.EXPECT().WeaponInHand(mock.Anything, charID).Return(*held, true, nil).Once()

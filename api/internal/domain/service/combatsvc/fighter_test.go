@@ -12,17 +12,18 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
 // fighter is a level 13 fighter with Strength 18/50 and Dexterity 17 (the
 // THAC0 is set, not derived: combat reads Derived.THAC0).
-func fighter() *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Str: 18, StrExceptional: 50, Dex: 17, Class: "fighter", Race: "human",
-		Derived: charactersvc.Derived{RealizedLevel: 13, Group: "warrior", THAC0: 8, Specializes: true, ExceptionalStrength: true},
-	}
+func fighter() charactersvc.View {
+	v := viewtest.Single("fighter", 13, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(18, 17, 0, 0, 0, 0))
+	v.Entries[0].Group = "warrior"
+	v.StrExceptional, v.THAC0, v.Specializes, v.ExceptionalStrength = 50, 8, true, true
+	return v
 }
 
 var (
@@ -192,7 +193,7 @@ func TestRollSpellToHit_Step9_Reads18xx(t *testing.T) {
 func TestGetAttackForm_Step11_AttackRateAndPointBlank(t *testing.T) {
 	cases := []struct {
 		name      string
-		char      *charactersvc.Character
+		char      charactersvc.View
 		weapon    combatsvc.Weapon
 		round     int
 		wantRate  *combatsvc.AttackRateView
@@ -200,7 +201,7 @@ func TestGetAttackForm_Step11_AttackRateAndPointBlank(t *testing.T) {
 	}{
 		{"specialized long sword", fighter(), specSword, 3, &combatsvc.AttackRateView{Attacks: 5, Rounds: 2, ThisRound: 2}, false},
 		{"specialized heavy crossbow", fighter(), specCrossbow, 4, &combatsvc.AttackRateView{Attacks: 3, Rounds: 2, ThisRound: 2}, true},
-		{"a level outside the tables logs and shows no rate", func() *charactersvc.Character { c := fighter(); c.Derived.RealizedLevel = 0; return c }(), specSword, 0, nil, false},
+		{"a level outside the tables logs and shows no rate", func() charactersvc.View { c := fighter(); c.Entries[0].RealizedLevel = 0; return c }(), specSword, 0, nil, false},
 		{"bard", bard(), combatsvc.Weapon{Wielded: true, ID: "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12", Kind: combatsvc.WeaponMelee, Type: "long_sword"}, 0, nil, false},
 	}
 	for _, c := range cases {

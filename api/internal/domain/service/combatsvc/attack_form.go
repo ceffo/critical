@@ -301,9 +301,9 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 		}
 	}
 
-	char, err := s.chars.GetCharacter(ctx, characterID)
+	char, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return nil, fmt.Errorf("get character: %w", err)
+		return nil, fmt.Errorf("get character view: %w", err)
 	}
 	preview, err := s.preview(ctx, char, *held, ammo, view.Form)
 	if err != nil {
@@ -321,7 +321,7 @@ func (s *service) formView(ctx context.Context, characterID int64, form AttackFo
 // A weapon that allows the point-blank option (ADR 0030 step 12) also gets
 // the preview with it, in PointBlank; a character with the backstab and a
 // melee weapon (step 19, BackstabAllowed) the preview with it, in Backstab.
-func (s *service) preview(ctx context.Context, char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
+func (s *service) preview(ctx context.Context, char charactersvc.View, weapon Weapon, ammo *itemsvc.Item, form AttackForm) (*AttackPreview, error) {
 	mods, err := s.buffs.Aggregate(ctx, char.ID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 	if err != nil {
 		return nil, fmt.Errorf("aggregate buffs: %w", err)
@@ -343,7 +343,7 @@ func (s *service) preview(ctx context.Context, char *charactersvc.Character, wea
 	return p, nil
 }
 
-func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, form AttackForm, opt attackOptions) (*AttackPreview, error) {
+func (s *service) previewWith(char charactersvc.View, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, form AttackForm, opt attackOptions) (*AttackPreview, error) {
 	// Trimmed like ResolveAttack does, so the preview lists the same modifier.
 	sit := Situational{Value: form.Situational.Value, Label: strings.TrimSpace(form.Situational.Label)}
 	am, err := s.attackModifiers(char, weapon, ammo, mods, &sit, opt)
@@ -351,9 +351,9 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 		return nil, err
 	}
 	toHit := am.toHit()
-	eff := char.Derived.THAC0 - toHit
+	eff := char.THAC0 - toHit
 	p := &AttackPreview{
-		BaseThac0:      char.Derived.THAC0,
+		BaseThac0:      char.THAC0,
 		Modifiers:      am.modifiers,
 		EffectiveThac0: eff,
 		ToHit:          toHit,
@@ -372,12 +372,12 @@ func (s *service) previewWith(char *charactersvc.Character, weapon Weapon, ammo 
 // round of ADR 0005; nil when the weapon shows no rate. The rate is
 // display-only: a class or level the tables cannot read is logged and shows
 // no rate rather than failing the form.
-func (s *service) attackRate(ctx context.Context, char *charactersvc.Character, weapon Weapon) (*AttackRateView, error) {
+func (s *service) attackRate(ctx context.Context, char charactersvc.View, weapon Weapon) (*AttackRateView, error) {
 	// ADR 0042 step 12: the entry granting the attacks per round, at its
 	// level. Step 13: before the crossover a dual-class's old class adds no
 	// rate (ActiveGrant); the active class's own applies.
-	class, level := char.Class, char.Derived.RealizedLevel
-	if g, ok := char.Derived.ActiveGrant(classes.KindMeleeAttacksPerRound); ok {
+	class, level := char.Primary().Class, char.Primary().RealizedLevel
+	if g, ok := char.ActiveGrant(classes.KindMeleeAttacksPerRound); ok {
 		class, level = g.Class, g.Level
 	}
 	rate, ok, err := s.rules.AttackRateFor(class, level, string(weapon.Kind), weapon.Type, weapon.Specialized)

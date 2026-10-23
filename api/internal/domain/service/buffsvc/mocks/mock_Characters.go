@@ -82,6 +82,63 @@ func (_c *MockCharacters_GetCharacter_Call) RunAndReturn(run func(context.Contex
 	return _c
 }
 
+// View provides a mock function with given fields: ctx, id
+func (_m *MockCharacters) View(ctx context.Context, id int64) (charactersvc.View, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for View")
+	}
+
+	var r0 charactersvc.View
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (charactersvc.View, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) charactersvc.View); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(charactersvc.View)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacters_View_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'View'
+type MockCharacters_View_Call struct {
+	*mock.Call
+}
+
+// View is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockCharacters_Expecter) View(ctx interface{}, id interface{}) *MockCharacters_View_Call {
+	return &MockCharacters_View_Call{Call: _e.mock.On("View", ctx, id)}
+}
+
+func (_c *MockCharacters_View_Call) Run(run func(ctx context.Context, id int64)) *MockCharacters_View_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockCharacters_View_Call) Return(_a0 charactersvc.View, _a1 error) *MockCharacters_View_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacters_View_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.View, error)) *MockCharacters_View_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockCharacters creates a new instance of MockCharacters. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockCharacters(t interface {

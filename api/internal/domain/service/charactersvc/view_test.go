@@ -56,6 +56,8 @@ func TestView_Step6_ProjectsTheDerivedBlock(t *testing.T) {
 			assert.Equal(t, d.SkillColumn, v.SkillColumn)
 			assert.Equal(t, d.SkillSets, v.SkillSets)
 			assert.Equal(t, d.Backstab, v.Backstab)
+			assert.Equal(t, d.ExceptionalStrength, v.ExceptionalStrength)
+			assert.Equal(t, d.SpellFailure, v.SpellFailure)
 			assert.Equal(t, d.Proficiencies, v.Proficiencies)
 			assert.Equal(t, d.PSP, v.PSP)
 			assert.Equal(t, d.Powers, v.Powers)

@@ -50,9 +50,9 @@ type SVC interface {
 	UpdateAttackForm(ctx context.Context, characterID int64, p AttackFormPatch) (*AttackFormView, error)
 }
 
-// Characters is the narrow inter-service port (just the read we need).
+// Characters is the narrow inter-service port (the character view, ADR 0045).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Buffs is the narrow inter-service port. Aggregate takes the sheet's STR

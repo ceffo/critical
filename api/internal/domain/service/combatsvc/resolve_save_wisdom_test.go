@@ -18,10 +18,10 @@ import (
 // withWisdom is the test bard as a character of class with Wisdom wis and
 // Table 5's magical defence adjustment md at that Wisdom (derived by
 // charactersvc, ADR 0006 step 9.1). Targets: Spells 14, Rod/Staff/Wand 13.
-func withWisdom(class string, wis, md int) *charactersvc.Character {
+func withWisdom(class string, wis, md int) charactersvc.View {
 	c := bard()
-	c.Class, c.Wis = class, wis
-	c.Derived.MagicDefence = md
+	c.Entries[0].Class, c.Wis = class, wis
+	c.MagicDefence = md
 	return c
 }
 
@@ -37,7 +37,7 @@ func TestResolveSavingThrow_Step9_WisdomMagicDefence(t *testing.T) {
 	}
 	cases := []struct {
 		name          string
-		char          *charactersvc.Character
+		char          charactersvc.View
 		category      combatsvc.SaveCategory
 		mindAffecting bool
 		d20, buff     int
@@ -168,8 +168,8 @@ func TestAdjustSave_Step9_TheWisdomModifierIsKept(t *testing.T) {
 }
 
 // savesOf keys the character's derived targets by save category.
-func savesOf(c *charactersvc.Character) map[combatsvc.SaveCategory]int {
-	s := c.Derived.Saves
+func savesOf(c charactersvc.View) map[combatsvc.SaveCategory]int {
+	s := c.Saves
 	return map[combatsvc.SaveCategory]int{
 		combatsvc.SaveParaPoison: s.ParaPoison, combatsvc.SaveRodStaffWand: s.RodStaffWand,
 		combatsvc.SavePetriPoly: s.PetriPoly, combatsvc.SaveBreath: s.Breath, combatsvc.SaveSpell: s.Spell,

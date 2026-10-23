@@ -77,9 +77,9 @@ func (s *service) effectSources(ctx context.Context, characterID int64) ([]BuffE
 
 // GetEffectiveStr returns the sheet's STR and the STR with active buffs.
 func (s *service) GetEffectiveStr(ctx context.Context, characterID int64) (Strength, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return Strength{}, fmt.Errorf("get character: %w", err)
+		return Strength{}, fmt.Errorf("get character view: %w", err)
 	}
 	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
 	if err != nil {
@@ -97,9 +97,9 @@ func (s *service) GetEffectiveStr(ctx context.Context, characterID int64) (Stren
 // effect (ADR 0028 step 2): the effects on that ability raise it the way
 // effectiveScore says, with no case per caller.
 func (s *service) GetAbilityScore(ctx context.Context, characterID int64, a charactersvc.Ability) (AbilityScore, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return AbilityScore{}, fmt.Errorf("get character: %w", err)
+		return AbilityScore{}, fmt.Errorf("get character view: %w", err)
 	}
 	base, ok := c.Score(a)
 	if !ok {
@@ -113,9 +113,9 @@ func (s *service) GetAbilityScore(ctx context.Context, characterID int64, a char
 }
 
 func (s *service) baseStr(ctx context.Context, characterID int64) (int, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return 0, fmt.Errorf("get character: %w", err)
+		return 0, fmt.Errorf("get character view: %w", err)
 	}
 	return c.Str, nil
 }

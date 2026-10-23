@@ -11,21 +11,22 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
 // multiOf is a multi-class character whose entries are given in order; the
 // character's Group is the first entry's, as Derive sets it.
-func multiOf(entries ...charactersvc.EntryDerived) *charactersvc.Character {
-	return &charactersvc.Character{ID: charID, Class: entries[0].Class, Str: 12, Derived: charactersvc.Derived{
-		RealizedLevel: entries[0].RealizedLevel, Group: entries[0].Group, Classes: entries,
-	}}
+func multiOf(entries ...charactersvc.EntryView) charactersvc.View {
+	v := viewtest.Multi(viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(12, 0, 0, 0, 0, 0))
+	v.Entries = entries
+	return v
 }
 
 // active is an active entry as Derive gives it; a wizard wears no body armour
 // (the fixture's mage equipment, EntryDerived.NoArmour).
-func active(class, group string, level int, casts bool) charactersvc.EntryDerived {
-	return charactersvc.EntryDerived{
+func active(class, group string, level int, casts bool) charactersvc.EntryView {
+	return charactersvc.EntryView{
 		Class: class, Group: group, State: classes.EntryActive, RealizedLevel: level, Casts: casts, NoArmour: group == "wizard",
 	}
 }
@@ -40,7 +41,7 @@ func active(class, group string, level int, casts bool) charactersvc.EntryDerive
 func TestEffects_Step14_ByGroupGainTakesTheBestDie(t *testing.T) {
 	chars := []struct {
 		name     string
-		c        *charactersvc.Character
+		c        charactersvc.View
 		die      int
 		sides    int
 		wantCap  int
@@ -96,7 +97,7 @@ func TestEffects_Step14_ByGroupGainTakesTheBestDie(t *testing.T) {
 // is warned spell_in_armour (step 16.2: the mage's spells); from an untagged
 // slot (the first spellcasting entry's, the cleric's) at 5 and unwarned.
 func TestCast_Step14_TheSlotNamesItsEntry(t *testing.T) {
-	clericMage := func() *charactersvc.Character {
+	clericMage := func() charactersvc.View {
 		return multiOf(active("cleric", "priest", 5, true), active("mage", "wizard", 9, true))
 	}
 	chain := []itemsvc.Item{{ID: "a", Category: itemsvc.CategoryArmour, State: itemsvc.StateWorn, SkillColumn: "metal"}}
@@ -147,7 +148,7 @@ func TestCast_Step14_SpellFailureIsTheCastingEntrys(t *testing.T) {
 			cleric := active("cleric", "priest", 5, true)
 			cleric.SpellFailure = 20
 			c := multiOf(cleric, active("mage", "wizard", 9, true))
-			c.Wis, c.Derived.SpellFailure = 9, 20
+			c.Wis, c.SpellFailure = 9, 20
 			f := newFixtureOf(t, catalog(t), c, tt.dice...)
 			s := slot("stoneskin", "Stoneskin", 4)
 			s.Class = tt.class

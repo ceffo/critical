@@ -7,10 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
 // ADR 0042 step 14: each spellcasting entry has "its own caster level, the
@@ -19,13 +17,9 @@ import (
 // caster level 6 and the charges are 1d4 + 6/2 (one die, 4: 7 charges, where
 // level 13 would give 10).
 func TestCast_Step14_CasterLevelIsTheEntrysLevel(t *testing.T) {
-	caster := &charactersvc.Character{ID: charID, Class: "fighter", Str: 17, Derived: charactersvc.Derived{
-		RealizedLevel: 13, Group: "warrior",
-		Classes: []charactersvc.EntryDerived{
-			{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 13},
-			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 6, Casts: true},
-		},
-	}}
+	caster := multiOf(active("fighter", "warrior", 13, false), active("mage", "wizard", 6, true))
+	caster.Entries[1].NoArmour = false
+	caster.Str = 17
 	f := newFixtureOf(t, catalog(t), caster, 4)
 	f.prepared(slot("stoneskin", "Stoneskin", 4))
 

@@ -18,6 +18,7 @@ import (
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -32,13 +33,12 @@ const charID = int64(1)
 // bard is the campaign Bard: derived THAC0 13 (ADR 0030 step 5), sheet STR
 // 12, DEX 17, and distinct derived save targets (step 6). Combat reads the
 // effective STR from the buffs port, never from the sheet.
-func bard() *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "half_elf",
-		Derived: charactersvc.Derived{RealizedLevel: 15, Group: "rogue", THAC0: 13, Saves: charactersvc.Saves{
-			ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14,
-		}},
-	}
+func bard() charactersvc.View {
+	v := viewtest.Single("bard", 15, viewtest.WithIdentity(charID, "Test", "half_elf"), viewtest.WithScores(12, 17, 0, 0, 0, 0))
+	v.Entries[0].Group = "rogue"
+	v.THAC0 = 13
+	v.Saves = charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14}
+	return v
 }
 
 // str12 is the test bard's sheet Strength as Aggregate receives it.
@@ -100,8 +100,8 @@ func newFixture(t *testing.T) *fixture {
 	return f
 }
 
-func (f *fixture) withChar(c *charactersvc.Character) {
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
+func (f *fixture) withChar(c charactersvc.View) {
+	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil)
 }
 
 // d100s expects exactly two d100 rolls per attack, in order: the crit check
@@ -197,10 +197,10 @@ func TestResolveSavingThrow(t *testing.T) {
 // as detail): it moves the roll, never the target. A category the race gets
 // no bonus in has no race modifier.
 func TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier(t *testing.T) {
-	dwarf := func() *charactersvc.Character {
+	dwarf := func() charactersvc.View {
 		c := bard()
 		c.Race = "dwarf"
-		c.Derived.RaceSaveBonus = charactersvc.Saves{RodStaffWand: 4, Spell: 5}
+		c.RaceSaveBonus = charactersvc.Saves{RodStaffWand: 4, Spell: 5}
 		return c
 	}
 	t.Run("rod/staff/wand", func(t *testing.T) {
@@ -284,7 +284,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 
 	t.Run("character error", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(nil, domain.ErrCharacterNotFound)
+		f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{}, domain.ErrCharacterNotFound)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
 		assert.Nil(t, res)

@@ -55,6 +55,12 @@ type View struct {
 	SkillColumn      string
 	SkillSets        []skills.SkillSet
 	Backstab         int
+	// ExceptionalStrength is the exceptional_strength feature granted (ADR 0030
+	// steps 9 and 10): the warrior's scale above 18.
+	ExceptionalStrength bool
+	// SpellFailure is the first granting entry's chance (ADR 0030 step 14), the
+	// one the sheet shows; EntryView.SpellFailure is each entry's own.
+	SpellFailure int
 	// Proficiencies are the derived non-weapon pool and the weapon figures
 	// (Derived.Proficiencies); ProficiencyPicks are the picks themselves.
 	Proficiencies *skills.ProficiencySlots
@@ -137,7 +143,7 @@ func buildView(c Character, d Derived) View {
 		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, MagicDefence: d.MagicDefence,
 		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
-		SkillSets: d.SkillSets, Backstab: d.Backstab, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
+		SkillSets: d.SkillSets, Backstab: d.Backstab, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
 		Features:    d.Features,
 		SkillPoints: c.SkillPoints, ProficiencyPicks: c.Proficiencies, PsionicPicks: c.PsionicPicks,
 	}

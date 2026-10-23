@@ -289,8 +289,8 @@ attack mode's check against a defence mode's. The **opponent** is the request's 
 | THAC0, saves | class group, level; the best of the class entries | [ADR 0002](adr/0002-attack-resolution.md), [ADR 0006](adr/0006-saving-throws.md), [ADR 0042](adr/0042-multi-class-and-dual-class.md) steps 8 and 9; owner `domain/saves`, [ADR 0046](adr/0046-derived-figures.md) step 3 |
 | Magical defence adjustment (a mind-affecting save's `wisdom` modifier) | Wisdom, any class | [ADR 0006](adr/0006-saving-throws.md) step 9 |
 | Spell immunities (`Derived.SpellImmunities`; a save or a spell received against one carries an `Immunity` and rolls nothing) | Wisdom, any class; the catalogue's Table 5 rows up to the score | [ADR 0006](adr/0006-saving-throws.md) step 10 |
-| Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md) |
-| Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md) |
+| Spell slots | class, level, Wisdom or Intelligence | [ADR 0008](adr/0008-spell-slots-and-long-rest.md); the extra slots a spell grants are split by `domain/slots`, [ADR 0046](adr/0046-derived-figures.md) step 4 |
+| Proficiency budget | class group, level, Intelligence | [ADR 0037](adr/0037-proficiencies.md); owner `domain/slots`, [ADR 0046](adr/0046-derived-figures.md) step 4 |
 | Rogue skill percentages, per skill set | the set's skill points, race, Dexterity, skill armour | [ADR 0014](adr/0014-skill-checks.md), [ADR 0030](adr/0030-classes-and-races.md), [ADR 0040](adr/0040-classes-are-data.md) step 3.5 |
 | A roll's modifiers | the aggregate of buffs and item powers | [ADR 0004](adr/0004-buffs.md) step 11 |
 | Current HP | the action log | [ADR 0007](adr/0007-hp-ledger.md) |

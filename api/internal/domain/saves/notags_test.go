@@ -21,7 +21,7 @@ import (
 // later and an anonymous one included, with no list of types to keep up.
 // Each owner package is one directory, relative to this one.
 func TestFigures_Step6_OwnersCarryNoTransportTags(t *testing.T) {
-	owners := []string{"."} // saves
+	owners := []string{".", "../slots"} // saves, slots (step 4)
 	for _, dir := range owners {
 		files, err := filepath.Glob(filepath.Join(dir, "*.go"))
 		require.NoError(t, err)

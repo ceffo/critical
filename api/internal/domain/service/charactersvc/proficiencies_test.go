@@ -10,8 +10,8 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // expectKelsenAt answers the lookups of Kelsen's read at the realized level 15 with an XP total
@@ -46,7 +46,7 @@ func TestDerive_Step3_SlotsFollowTheRealizedLevel(t *testing.T) {
 			got, err := e.svc.GetCharacter(context.Background(), 3)
 			require.NoError(t, err)
 			require.NotNil(t, got.Derived.Proficiencies)
-			assert.Equal(t, ruletablesvc.NonweaponPool{
+			assert.Equal(t, slots.NonweaponPool{
 				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8, Left: 2,
 			}, got.Derived.Proficiencies.Nonweapon)
 			two := 2
@@ -136,9 +136,9 @@ func TestCreate_Step14_PicksCheckedAsTheEditor(t *testing.T) {
 		got, err := e.svc.Draft(context.Background(), withPicks(picks(p("tumbling", 2))), nil)
 		require.NoError(t, err)
 		require.NotNil(t, got.Character)
-		slots := got.Character.Derived.Proficiencies
-		require.NotNil(t, slots)
-		assert.Equal(t, ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 4, Available: 7, Spent: 2, Left: 5}, slots.Nonweapon)
-		assert.Equal(t, 16, slots.Picks[0].Target, "Dex 15 + 1 extra slot")
+		pools := got.Character.Derived.Proficiencies
+		require.NotNil(t, pools)
+		assert.Equal(t, slots.NonweaponPool{Initial: 3, PerLevels: 4, Intelligence: 4, Available: 7, Spent: 2, Left: 5}, pools.Nonweapon)
+		assert.Equal(t, 16, pools.Picks[0].Target, "Dex 15 + 1 extra slot")
 	})
 }

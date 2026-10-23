@@ -10,9 +10,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // picked are a level 15 bard's pools with Intelligence 14, two non-weapon picks (Tumbling with
@@ -22,8 +22,8 @@ func picked() *skillsvc.Proficiencies {
 	seven, three := 7, 3
 	return &skillsvc.Proficiencies{
 		Slots: &skills.ProficiencySlots{
-			Nonweapon: ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 3, Left: 7},
-			Weapon:    ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 2, Left: 3},
+			Nonweapon: slots.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 3, Left: 7},
+			Weapon:    slots.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: 3, Available: 5, Spent: 2, Left: 3},
 			Picks: []skills.PickFigures{
 				{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 18, HasCheck: true},
 				{ID: "old_skill", Slots: 1, Cost: 1},

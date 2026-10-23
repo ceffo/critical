@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // The bounds of the details' fields. The one validation of the details: the
@@ -99,7 +100,7 @@ type ProficiencyBook interface {
 	// (ADR 0037 steps 3 to 5).
 	Get(id string) (ruletablesvc.Proficiency, bool)
 	GroupsOf(class string) []string
-	SlotRowOf(class string) (ruletablesvc.SlotRow, bool)
+	SlotRowOf(class string) (slots.Row, bool)
 	// ClassDef is the class's definition (ADR 0040 step 5), for the
 	// features the picks and grants read.
 	ClassDef(class string) (classes.Class, bool)

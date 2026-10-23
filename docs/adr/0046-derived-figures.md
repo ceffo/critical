@@ -1,7 +1,7 @@
 # ADR 0046: Derived figures: one owner each for AC, saves, slots and levels
 
 **Status**: accepted 2026-10-23 (the user accepted every open question's default: "defaults") (design step; the user's goal, 2026-10-21: "a logical rule engine
-with locality"; triage 2026-10-22). Shape A below is the chosen shape. Steps 2 (AC) and 3 (saves) implemented 2026-10-23; the others not. Builds on
+with locality"; triage 2026-10-22). Shape A below is the chosen shape. Steps 2 (AC), 3 (saves) and 4 (slots) implemented 2026-10-23; the others not. Builds on
 [ADR 0045](0045-character-view.md) (the character view) and respects
 [ADR 0038](0038-domain-and-wire.md) (no transport tags in the domain). Amends, each on
 implementation: [ADR 0002](0002-attack-resolution.md) step 5, [ADR 0006](0006-saving-throws.md)
@@ -180,27 +180,34 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       tests and the web `Saves` rendering run unchanged. The owner's own tests are
       `TestTarget_TheCategorysValue`, `TestTarget_UnknownCategoryRefused`,
       `TestSaves_Step3_TermsWisdomOnlyWhenFlagged` and `TestTerms_ZeroValuesDropped`.
-4. **Slots (third).** Owner: a new package `domain/slots`.
+4. **Slots (third).** Owner: a new package `domain/slots`. Implemented 2026-10-23 (4.1 to 4.6 as amended below).
    1. *Proficiency pools* (ADR 0037 step 3). `NonweaponSlots`, `WeaponSlots`, `ExtraSlots` and the
       pool types move from `ruletablesvc/proficiencyslots.go` into `slots`, taking the `SlotRow`
-      value (Table 34's row, a plain type) as input; `skills` imports `slots` and no longer a
-      service package.
+      value (Table 34's row, a plain type) as input; `skills` imports `slots` for them. _(As built: they are named `slots.Nonweapon`, `slots.Weapon`, `slots.Extra` and `slots.Row`;
+      only the slot formulas left `skills`' reads of a service package; it still reads the rest of
+      `ruletablesvc` (languages, skill points, specialization). `TestSlots_Step4_SkillsReadsNoPoolFromAService`
+      pins it: no selector into a service import names a `slots` export or a removed pool name.)_
    2. *What a level grants* (ADR 0037 step 15). One rule: the pools at the entry's new level minus the
       pools at the level below, over the character's entries. `skills.GrantsAt` becomes
-      `GrantsOf` over a single entry and `ruletablesvc.SlotsGainedAt` goes.
+      `GrantsOf` over a single entry and `ruletablesvc.SlotsGainedAt` goes. _(As built: `GrantsAt`
+      is gone, every caller reads `skills.GrantsOf`; the cited `TestGrantsAt_Step15_GrantsSlotsAndPoints`
+      keeps its name and now reads `GrantsOf` for one entry.)_
    3. *Extra slots a spell grants* (ADR 0008 step 9). `GrantSlots.SlotSplits` moves to `slots.Splits(levels)`;
-      `GrantSlots` keeps the data and calls it. `castsvc` and `prepsvc` call the owner; nothing else
-      enumerates splits.
+      `GrantSlots` keeps the data and calls it. _(As built: `GrantSlots.SlotSplits()` is a one-line call
+      to `slots.Splits`, and `castsvc` and `prepsvc` call that method, so the owner is the only
+      code that enumerates splits.)_
    4. *Not moved.* Spell slots per day stay derived in `charactersvc` and reach `prepsvc`/`spheresvc`
       through the view (already one owner); the stored list (`spellsvc`, the `used` flags) is state and
       `SlotsSnapshot` is its codec. The web keeps `slotSplit.ts` (it only words the server's splits).
    5. *Removes:* `ruletablesvc.NonweaponSlots`, `WeaponSlots`, `SlotsGainedAt`, `ExtraSlots` and the
       pool types; `skills.GrantsAt`'s separate path; `spelleffectsvc.GrantSlots.SlotSplits`'s body.
-   6. *Tests proving the figure unchanged.* `Slots_Step4_PoolsMatchTable34` over every class row and
+   6. *Tests proving the figure unchanged.* `TestSlots_Step4_PoolsMatchTable34` over every class row and
       level 1..20 and every Intelligence score, against the old values (a committed table);
-      `Slots_Step4_GrantsAtEqualsGrantsOfForOneEntry`, which fails while two paths exist and
-      differ; `Slots_Step4_SplitsOfThreeLevels` (the existing `TestGrantSlots_SlotSplits` moves
-      with the function and keeps its cases: [1 1 1], [1 2], [3]); the existing skill-check, picks,
+      `TestSlots_Step4_GrantsAtEqualsGrantsOfForOneEntry` (in `skills`: once `GrantsAt` was gone it
+      runs `GrantsOf` alone over the golden committed from the old code, which is unchanged);
+      `TestSlots_Step4_SplitsOfThreeLevels` (in `slots`: the cases [1 1 1], [1 2], [3]) with
+      `TestSlots_Step4_SplitsMatchGolden`; `TestGrantSlots_SlotSplits` stays in `spelleffectsvc`
+      beside it and checks that `GrantSlots` returns the owner's splits; the existing skill-check, picks,
       level-up grant and cast tests run unchanged.
 5. **Levels (fourth).** Owner: `classes.Class` (`LevelFor`, `XPThreshold`), unchanged.
    1. *Every level and threshold read goes through the entry's class definition.* The next threshold

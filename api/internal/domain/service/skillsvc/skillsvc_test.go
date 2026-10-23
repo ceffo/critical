@@ -23,6 +23,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 const charID int64 = 1
@@ -83,16 +84,16 @@ func testBook(t *testing.T) *ruletablesvc.Proficiencies {
 		cross = append(cross, ruletablesvc.Crossover{Class: c, Groups: []string{"general"}})
 	}
 	cross[slices.Index(cataloguetest.Definitions(t).ClassIDs(), "bard")] = ruletablesvc.Crossover{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}}
-	var slots []ruletablesvc.SlotRow
+	var rows []slots.Row
 	for _, g := range cataloguetest.Definitions(t).Groups() {
-		slots = append(slots, ruletablesvc.SlotRow{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
+		rows = append(rows, slots.Row{Group: g, WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4})
 	}
 	b, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
 		{ID: "tumbling", Ability: "dex", Slots: 1, Groups: []string{"rogue"}},
 		{ID: "tracking", Ability: "wis", Slots: 2, Groups: []string{"warrior"}},
 		{ID: "healing", Ability: "wis", Modifier: -2, Slots: 2, Groups: []string{"priest"}},
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
-	}, cross, slots, cataloguetest.Definitions(t))
+	}, cross, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	return b
 }

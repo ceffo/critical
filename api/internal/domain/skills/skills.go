@@ -9,6 +9,7 @@ package skills
 import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // Book is the non-weapon catalogue and PHB Table 34 the picks are read against (ADR 0037 steps 1
@@ -16,7 +17,7 @@ import (
 type Book interface {
 	Get(id string) (ruletablesvc.Proficiency, bool)
 	GroupsOf(class string) []string
-	SlotRowOf(class string) (ruletablesvc.SlotRow, bool)
+	SlotRowOf(class string) (slots.Row, bool)
 	// ClassDef is the class's definition (ADR 0040 step 5: its features), false for a class the
 	// catalogue does not define.
 	ClassDef(class string) (classes.Class, bool)

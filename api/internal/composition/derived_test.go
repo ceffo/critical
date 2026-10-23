@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -46,12 +47,12 @@ func kelsenPicks(level int) *skills.ProficiencySlots {
 	pick := func(id, ability string, modifier, target int) skills.PickFigures {
 		return skills.PickFigures{ID: id, Slots: 1, Cost: 1, Ability: ability, Modifier: modifier, Known: true, Target: target, HasCheck: true}
 	}
-	pool := ruletablesvc.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: level / 4, Intelligence: 4, Spent: 8}
+	pool := slots.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: level / 4, Intelligence: 4, Spent: 8}
 	pool.Available = 3 + level/4 + 4
 	pool.Left = pool.Available - 8
 	// ADR 0037 step 3, weapon pool: 2 + one slot every 4 realized levels; the seed's five weapon
 	// types spend 5.
-	weapon := ruletablesvc.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: level / 4, Available: 2 + level/4, Spent: 5}
+	weapon := slots.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: level / 4, Available: 2 + level/4, Spent: 5}
 	weapon.Left = weapon.Available - 5
 	wpick := func(t string) skills.WeaponPickFigures {
 		return skills.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}

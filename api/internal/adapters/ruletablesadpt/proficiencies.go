@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // ProficienciesFile is the seed file of the non-weapon catalogue and PHB
@@ -72,9 +73,9 @@ func ParseProficiencies(raw []byte, defs *classes.Registry) (*ruletablesvc.Profi
 	for i, c := range f.Crossovers {
 		cross[i] = ruletablesvc.Crossover(c)
 	}
-	slots := make([]ruletablesvc.SlotRow, len(f.Slots))
+	rows := make([]slots.Row, len(f.Slots))
 	for i, r := range f.Slots {
-		slots[i] = ruletablesvc.SlotRow(r)
+		rows[i] = slots.Row(r)
 	}
-	return ruletablesvc.NewProficiencies(list, cross, slots, defs)
+	return ruletablesvc.NewProficiencies(list, cross, rows, defs)
 }

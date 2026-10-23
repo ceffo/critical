@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // ADR 0037 step 15: "the weapon and non-weapon slots gained (available at the level minus
@@ -34,11 +35,12 @@ func TestGrantsAt_Step15_GrantsSlotsAndPoints(t *testing.T) {
 		{"thief", 1, skills.LevelGrants{}},
 		{"fighter", 0, skills.LevelGrants{}},
 	} {
-		assert.Equal(t, tc.want, skills.GrantsAt(book, tc.class, tc.level), "%s level %d", tc.class, tc.level)
+		one := skills.Classes{{Class: tc.class, Level: tc.level}}
+		assert.Equal(t, tc.want, skills.GrantsOf(book, one, tc.class, tc.level), "%s level %d", tc.class, tc.level)
 	}
 	// ADR 0040 step 3: the points are the class's rogue_skills budget, read from the catalogue's
 	// definitions like Table 34: without a catalogue, nothing.
-	assert.Equal(t, skills.LevelGrants{}, skills.GrantsAt((*ruletablesvc.Proficiencies)(nil), "thief", 4),
+	assert.Equal(t, skills.LevelGrants{}, skills.GrantsOf((*ruletablesvc.Proficiencies)(nil), skills.Classes{{Class: "thief", Level: 4}}, "thief", 4),
 		"without the catalogue neither the slots nor the points")
 }
 
@@ -46,7 +48,7 @@ func TestGrantsAt_Step15_GrantsSlotsAndPoints(t *testing.T) {
 // or over budget (a negative left is the over-budget warning's, never "to spend").
 func TestToSpend_Step15_LeftCountsNeverNegative(t *testing.T) {
 	f := &skills.ProficiencySlots{
-		Nonweapon: ruletablesvc.NonweaponPool{Left: 2}, Weapon: ruletablesvc.WeaponPool{Left: -1},
+		Nonweapon: slots.NonweaponPool{Left: 2}, Weapon: slots.WeaponPool{Left: -1},
 	}
 	b := &ruletablesvc.SkillPointsBudget{Left: 15}
 	sets := []skills.SkillSet{{Set: "thief", Points: b}}

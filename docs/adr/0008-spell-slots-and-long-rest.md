@@ -70,6 +70,10 @@ named otherwise.
    is refused). A new preparation keeps the extra slots; voiding the cast removes them and frees
    the granting spell's slot; a long rest removes them (user ruling 2026-10-15; the spell's
    duration is not tracked). The mechanic is data, never a branch on a spell id.
+   _(The split list is `slots.Splits`, in `domain/slots`, the slots owner; `GrantSlots.SlotSplits()`
+   calls it and `castsvc` and `prepsvc` call that: [ADR 0046](0046-derived-figures.md) step 4.3,
+   implemented 2026-10-23. `TestGrantSlots_SlotSplits` stays in `spelleffectsvc`;
+   `TestSlots_Step4_SplitsOfThreeLevels` is the owner's.)_
    Tests: `TestGrantSlots_SlotSplits`, `TestCast_GrantSlots_AddsTheChosenSlots`,
    `TestCast_GrantSlots_RejectsAWrongSplit`, `TestCast_ExtraSlot_PicksTheSpell`,
    `TestPrepare_KeepsExtraSlots`, `TestResetSlots_DropsExtraSlots`.

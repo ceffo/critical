@@ -3,7 +3,7 @@ package skills
 import (
 	"slices"
 
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // ClassLevel is one class entry as the proficiency pools read it: its class and its realized
@@ -75,7 +75,7 @@ func (cls Classes) groups(book Book) []string {
 
 // basis is what the pools are read on: one Table 34 row and the level each pool counts.
 type basis struct {
-	row                         ruletablesvc.SlotRow
+	row                         slots.Row
 	weaponLevel, nonweaponLevel int
 	groups                      []string
 }
@@ -132,8 +132,8 @@ func (cls Classes) kept(book Book) (keptSlots, bool) {
 			continue
 		}
 		found = true
-		w := ruletablesvc.WeaponSlots(row, c.Level, 0)
-		n := ruletablesvc.NonweaponSlots(row, c.Level, 0, 0)
+		w := slots.Weapon(row, c.Level, 0)
+		n := slots.Nonweapon(row, c.Level, 0, 0)
 		k.weaponGained += w.LevelGained
 		k.nonweaponGained += n.LevelGained
 		if i == 0 {

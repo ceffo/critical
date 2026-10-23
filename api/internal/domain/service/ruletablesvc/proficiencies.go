@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/slots"
 )
 
 // The non-weapon proficiency catalogue and PHB Table 38's crossovers (ADR 0037
@@ -38,24 +39,12 @@ type Crossover struct {
 	Groups []string
 }
 
-// SlotRow is one row of PHB Table 34 (ADR 0037 step 1): a class group's
-// weapon and non-weapon slots. A pool's slots are Initial plus one at every
-// level divisible by its Levels (step 3).
-type SlotRow struct {
-	Group            string
-	WeaponInitial    int
-	WeaponLevels     int
-	Penalty          int
-	NonweaponInitial int
-	NonweaponLevels  int
-}
-
 // Proficiencies is the validated catalogue. The zero value and nil are the
 // empty catalogue.
 type Proficiencies struct {
 	list       []Proficiency
 	crossovers []Crossover
-	slots      []SlotRow
+	slots      []slots.Row
 	// groupOf is each defined class's group (ADR 0040 step 1.2).
 	groupOf map[string]string
 	// defs are the class definitions (ADR 0040 step 5), read for a class's
@@ -89,18 +78,18 @@ func (p *Proficiencies) SpecializationCostedAt(weaponType string, slots int) boo
 // known groups; the slot rows (Table 34) cover each of Groups exactly once,
 // with initial slots of 0 or more, #Levels of 1 or more and a penalty of 0 or
 // less.
-func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRow, defs *classes.Registry) (*Proficiencies, error) {
+func NewProficiencies(list []Proficiency, crossovers []Crossover, rows []slots.Row, defs *classes.Registry) (*Proficiencies, error) {
 	if defs == nil {
 		return nil, errors.New("proficiencies: no class definitions")
 	}
 	classIDs, groups := defs.ClassIDs(), defs.Groups()
 	profGroups := append([]string{GeneralProficiencyGroup}, groups...)
 	seen := make(map[string]bool, len(list))
-	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(slots), groupOf: map[string]string{}, defs: defs}
+	out := &Proficiencies{list: make([]Proficiency, len(list)), crossovers: make([]Crossover, len(crossovers)), slots: slices.Clone(rows), groupOf: map[string]string{}, defs: defs}
 	for _, c := range defs.Classes() {
 		out.groupOf[c.ID] = c.Group
 	}
-	if err := checkSlotRows(slots, groups); err != nil {
+	if err := checkSlotRows(rows, groups); err != nil {
 		return nil, err
 	}
 	for i, p := range list {
@@ -146,7 +135,7 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, slots []SlotRo
 	return out, nil
 }
 
-func checkSlotRows(rows []SlotRow, groups []string) error {
+func checkSlotRows(rows []slots.Row, groups []string) error {
 	have := map[string]bool{}
 	for _, r := range rows {
 		switch {
@@ -215,7 +204,7 @@ func (p *Proficiencies) Crossovers() []Crossover {
 }
 
 // SlotRows are Table 34's rows, in the file's order.
-func (p *Proficiencies) SlotRows() []SlotRow {
+func (p *Proficiencies) SlotRows() []slots.Row {
 	if p == nil {
 		return nil
 	}
@@ -224,20 +213,20 @@ func (p *Proficiencies) SlotRows() []SlotRow {
 
 // SlotRowOf is Table 34's row for class's group; false for an unknown class
 // or a catalogue without the table.
-func (p *Proficiencies) SlotRowOf(class string) (SlotRow, bool) {
+func (p *Proficiencies) SlotRowOf(class string) (slots.Row, bool) {
 	if p == nil {
-		return SlotRow{}, false
+		return slots.Row{}, false
 	}
 	group, ok := p.groupOf[class]
 	if !ok {
-		return SlotRow{}, false
+		return slots.Row{}, false
 	}
 	for _, r := range p.slots {
 		if r.Group == group {
 			return r, true
 		}
 	}
-	return SlotRow{}, false
+	return slots.Row{}, false
 }
 
 // Get is the catalogue row of id; false when the catalogue has none.

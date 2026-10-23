@@ -546,7 +546,9 @@ bard 15 never).)_
     grants; the penalty and the in-group cost of Q12 and Q13 are on the pools. Tests in the skills package
     with the code: `ProficiencySlots_Step15_LargestInitialFastestRate`,
     `NonproficientPenalty_Step15_SmallestOfTheGroups`, `NonweaponCost_Step15_AnyActiveClassesGroups`,
-    `LevelGrants_Step15_TheCombinedPoolsAtTheEntrysLevel`. The attack's penalty
+    `LevelGrants_Step15_TheCombinedPoolsAtTheEntrysLevel`. Since 2026-10-23 Table 34's per-column
+    rows and pools are `domain/slots`'s and `skills.GrantsOf` is the one path of what a level
+    grants ([ADR 0046](0046-derived-figures.md) step 4). The attack's penalty
     (`skills.WeaponProficiencyOf`, read from the stored row's active entries) is the same smallest
     one: `WeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses` (a mage/fighter takes -2, a
     mage/thief -3). The dual-class slots are not built.)_

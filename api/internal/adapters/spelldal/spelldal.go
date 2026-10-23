@@ -106,9 +106,6 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 	ids := make([]int64, 0, 3*len(rows))
 	for _, r := range rows {
 		ids = appendIDs(ids, r.Name, r.School, r.Sphere)
-		if _, ok := storedStats(r); !ok {
-			ids = appendIDs(ids, statColumns(r)...) // re-parsed from the raw texts
-		}
 	}
 	texts, err := d.texts(ctx, ids)
 	if err != nil {
@@ -120,7 +117,9 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 			ID: r.Key.String, Class: r.Class, Level: int(r.Level), Source: r.Source.String,
 			Name: texts.of(r.Name), School: texts.of(r.School), Sphere: texts.of(r.Sphere),
 		}
-		sp.Stats = stats(r, texts)
+		if sp.Stats, err = storedStats(r); err != nil {
+			return nil, err
+		}
 		spells = append(spells, sp)
 	}
 	slices.SortStableFunc(spells, func(a, b spellsvc.Spell) int {
@@ -154,7 +153,11 @@ func (d *DAL) Details(ctx context.Context, ids []string) ([]spellsvc.Spell, erro
 	out := make([]spellsvc.Spell, 0, len(ids))
 	for _, id := range ids {
 		if r, ok := byKey[id]; ok {
-			out = append(out, toSpell(r, texts))
+			sp, err := toSpell(r, texts)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, sp)
 		}
 	}
 	return out, nil
@@ -222,28 +225,25 @@ func statColumns(r queries.Spell) []sql.NullInt64 {
 	return []sql.NullInt64{r.CastingTime, r.Range, r.Duration, r.AreaOfEffect, r.Components, r.SavingThrow}
 }
 
-// storedStats decodes the stats filled at import.
-func storedStats(r queries.Spell) (spellstats.Stats, bool) {
+// storedStats decodes the typed stats the importer wrote (ADR 0021 step 26.3). The reader never
+// parses a text: a row without them, or with unreadable JSON, is an error naming the spell, and
+// the start's re-typing pass rewrites it.
+func storedStats(r queries.Spell) (spellstats.Stats, error) {
 	var st spellstats.Stats
-	blob := r.Stats.String
-	return st, blob != "" && json.Unmarshal([]byte(blob), &st) == nil
-}
-
-// stats is the stored typed stats; a row without them, or with unreadable
-// JSON, is parsed again from its fallback-language stat texts (texts must
-// hold them).
-func stats(r queries.Spell, texts textsByID) spellstats.Stats {
-	if st, ok := storedStats(r); ok {
-		return st
+	if r.Stats.String == "" {
+		return st, fmt.Errorf("spell %q has no stored stats", r.Key.String)
 	}
-	return spellstats.Parse(spellstats.Raw{
-		CastingTime: texts.of(r.CastingTime).Default(), Range: texts.of(r.Range).Default(),
-		Duration: texts.of(r.Duration).Default(), AreaOfEffect: texts.of(r.AreaOfEffect).Default(),
-		Components: texts.of(r.Components).Default(), SavingThrow: texts.of(r.SavingThrow).Default(),
-	})
+	if err := json.Unmarshal([]byte(r.Stats.String), &st); err != nil {
+		return st, fmt.Errorf("spell %q has unreadable stored stats: %w", r.Key.String, err)
+	}
+	return st, nil
 }
 
-func toSpell(r queries.Spell, texts textsByID) spellsvc.Spell {
+func toSpell(r queries.Spell, texts textsByID) (spellsvc.Spell, error) {
+	st, err := storedStats(r)
+	if err != nil {
+		return spellsvc.Spell{}, err
+	}
 	return spellsvc.Spell{
 		ID: r.Key.String, Class: r.Class, Level: int(r.Level), Source: r.Source.String,
 		Name:         texts.of(r.Name),
@@ -256,6 +256,6 @@ func toSpell(r queries.Spell, texts textsByID) spellsvc.Spell {
 		Components:   texts.of(r.Components),
 		SavingThrow:  texts.of(r.SavingThrow),
 		Description:  texts.of(r.Description),
-		Stats:        stats(r, texts),
-	}
+		Stats:        st,
+	}, nil
 }

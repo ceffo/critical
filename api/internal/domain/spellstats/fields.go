@@ -20,11 +20,13 @@ type CastingTime struct {
 	Raw  string   `json:"raw"`
 	Kind string   `json:"kind"` // timed | special
 	Time Quantity `json:"time"`
+	// Label is the common value the text is (step 26.4), "" otherwise.
+	Label string `json:"label,omitempty"`
 }
 
 // ParseCastingTime reads a PHB casting time. Bare numbers are segments.
 func ParseCastingTime(raw string) CastingTime {
-	c := CastingTime{Raw: raw, Kind: KindSpecial}
+	c := CastingTime{Raw: raw, Kind: KindSpecial, Label: labelOf(castingTimeLabels, raw)}
 	if q, err := parseQuantity(normText(raw), "segment"); err == nil {
 		c.Kind, c.Time = KindTimed, q
 	} else if q, ok := specialDetail(raw, "segment"); ok {
@@ -56,13 +58,15 @@ type Range struct {
 	Distance Quantity `json:"distance"`
 	// Radius is set for "10-ft. radius" style ranges.
 	Radius bool `json:"radius,omitempty"`
+	// Label is the common value the text is (step 26.4), "" otherwise.
+	Label string `json:"label,omitempty"`
 }
 
 var radiusRe = regexp.MustCompile(`(?i)[\s-]*radius$`)
 
 // ParseRange reads a PHB range. "0" is self.
 func ParseRange(raw string) Range {
-	r := Range{Raw: raw, Kind: KindSpecial}
+	r := Range{Raw: raw, Kind: KindSpecial, Label: labelOf(rangeLabels, raw)}
 	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
 	switch strings.ToLower(s) {
 	case "0", "self", "the caster":
@@ -111,13 +115,15 @@ type Duration struct {
 	Time Quantity `json:"time"`
 	// Condition is the text after "Until" / "Permanent until".
 	Condition string `json:"condition,omitempty"`
+	// Label is the common value the text is (step 26.4), "" otherwise.
+	Label string `json:"label,omitempty"`
 }
 
 var untilRe = regexp.MustCompile(`(?i)^(?:permanent\s+)?until\s+(.+)$`)
 
 // ParseDuration reads a PHB duration.
 func ParseDuration(raw string) Duration {
-	d := Duration{Raw: raw, Kind: KindSpecial}
+	d := Duration{Raw: raw, Kind: KindSpecial, Label: labelOf(durationLabels, raw)}
 	s := normText(strings.TrimSpace(strings.TrimRight(strings.TrimSpace(raw), ". ")))
 	switch strings.ToLower(s) {
 	case "instantaneous":
@@ -169,13 +175,15 @@ const (
 type Save struct {
 	Raw   string   `json:"raw"`
 	Kinds []string `json:"kinds"`
+	// Label is the common value the text is (step 26.4), "" otherwise.
+	Label string `json:"label,omitempty"`
 }
 
 var saveWordRe = regexp.MustCompile(`(?i)[a-z0-9/.]+`)
 
 // ParseSave reads a PHB saving throw. Anything unreadable is [special].
 func ParseSave(raw string) Save {
-	sv := Save{Raw: raw}
+	sv := Save{Raw: raw, Label: labelOf(saveLabels, raw)}
 	s := strings.ToLower(strings.TrimSpace(raw))
 	for _, w := range saveWordRe.FindAllString(s, -1) {
 		switch strings.TrimRight(w, ".") {
@@ -189,7 +197,7 @@ func ParseSave(raw string) Save {
 			sv.Kinds = append(sv.Kinds, SaveSpecial)
 		case "or":
 		default:
-			return Save{Raw: raw, Kinds: []string{SaveSpecial}}
+			return Save{Raw: raw, Kinds: []string{SaveSpecial}, Label: sv.Label}
 		}
 	}
 	if len(sv.Kinds) == 0 {

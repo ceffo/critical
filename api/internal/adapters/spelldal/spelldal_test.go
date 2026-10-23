@@ -291,33 +291,37 @@ func TestDescribe(t *testing.T) {
 	require.ErrorIs(t, err, errBoom)
 }
 
-// A row without stats JSON (or with garbage) is typed from its
-// fallback-language stat texts, which Search then reads too; Details types
-// it the same way.
-func TestSearch_RowWithoutStatsIsParsedFromRawText(t *testing.T) {
+// ADR 0021 step 26.3: the reader never parses a stat text. A row without stored stats, or with
+// unreadable JSON, is an error that names the spell, on every read path; its raw texts are not
+// even asked for.
+func TestSpellDAL_Step26_3_ARowWithoutStatsIsAnErrorNotAParse(t *testing.T) {
 	ctx := context.Background()
-	a := queries.Spell{ID: 1, Key: str("a"), Class: "wizard", Level: 1, Name: id(1), Range: id(2), SavingThrow: id(3)}
-	b := queries.Spell{ID: 2, Key: str("b"), Class: "wizard", Level: 2, Name: id(4), Range: id(5), SavingThrow: id(6), Stats: str("{not json")}
-	stored := map[int64]localized.Text{
-		1: localized.Of("A"), 2: localized.Of("10 yds./level"), 3: localized.Of("1/2"),
-		4: localized.Of("B"), 5: localized.Of("20 yds."), 6: localized.Of("Neg."),
-	}
-	dal, q := mocked(t)
-	q.EXPECT().SearchSpells(ctx, mock.Anything).Return([]queries.Spell{a, b}, nil).Once()
-	x := &texts{stored: stored}
-	x.expect(q)
-	got, err := dal.Search(ctx, spellsvc.Filter{})
-	require.NoError(t, err)
-	require.Len(t, got, 2)
-	assert.Equal(t, 150.0, got[0].Stats.At(15).Range.Amount)
-	assert.Equal(t, []string{"half"}, got[0].Stats.Save.Kinds)
-	assert.Equal(t, []string{"negates"}, got[1].Stats.Save.Kinds)
-	assert.ElementsMatch(t, []int64{1, 2, 3, 4, 5, 6}, x.all())
+	for name, stats := range map[string]sql.NullString{
+		"null":    {},
+		"empty":   str(""),
+		"garbage": str("{not json"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			row := queries.Spell{ID: 1, Key: str("fireball"), Class: "wizard", Level: 3, Name: id(1), Range: id(2), SavingThrow: id(3), Stats: stats}
+			x := &texts{stored: map[int64]localized.Text{1: localized.Of("Fireball"), 2: localized.Of("10 yds."), 3: localized.Of("1/2")}}
 
-	q.EXPECT().SpellsByKey(ctx, []string{"a"}).Return([]queries.Spell{a}, nil).Once()
-	details, err := dal.Details(ctx, []string{"a"})
-	require.NoError(t, err)
-	assert.Equal(t, got[0].Stats, details[0].Stats)
+			dal, q := mocked(t)
+			q.EXPECT().SearchSpells(ctx, mock.Anything).Return([]queries.Spell{row}, nil).Once()
+			x.expect(q)
+			_, err := dal.Search(ctx, spellsvc.Filter{})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), `"fireball"`)
+			assert.NotContains(t, x.all(), int64(2), "the raw range text is not read to parse it")
+
+			q.EXPECT().SpellsByKey(ctx, []string{"fireball"}).Return([]queries.Spell{row}, nil).Twice()
+			_, err = dal.Details(ctx, []string{"fireball"})
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), `"fireball"`)
+			_, _, err = dal.Describe(ctx, "fireball")
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), `"fireball"`)
+		})
+	}
 }
 
 // The stored typed stats are served as stored.

@@ -1,6 +1,6 @@
 # ADR 0045: The character view: one read model for the services
 
-**Status**: proposed 2026-10-23 (design step; the user's goal, 2026-10-21: "a logical rule engine
+**Status**: accepted 2026-10-23 (the user accepted every open question's default: "ok with all") (design step; the user's goal, 2026-10-21: "a logical rule engine
 with locality"; triage 2026-10-22). The shape (Shape B below) is the recommendation; the user rules
 in review. Not implemented. Amends [ADR 0030](0030-classes-and-races.md) (the sentence of steps 3
 to 8 that every reader of a character gets the derived values) and

@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-api check-web
+validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-api check-web
     @echo "--- Project Validation Successful ---"
     @scripts/gate-stamp.sh write
 
@@ -58,6 +58,10 @@ check-linear-queue:
 # The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
 check-ci-skip:
     scripts/test-ci-skip-slow.sh
+
+# The e2e job's Chromium apt install retries (scripts/test-ci-install-chromium-deps.sh): a timed-out attempt must not keep the apt lock.
+check-ci-install-deps:
+    scripts/test-ci-install-chromium-deps.sh
 
 # The release version's, the release build's, the staging deploy's and the promotion's scripts (ADR 0024
 # steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the

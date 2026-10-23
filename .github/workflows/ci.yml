@@ -142,13 +142,14 @@ jobs:
           # Fail a stalled connection fast and let apt retry it.
           printf 'Acquire::Retries "5";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-ci-network >/dev/null
-          for attempt in 1 2 3; do
-            if timeout 150 npx playwright install-deps chromium; then ok=1; break; fi
-            echo "install-deps attempt $attempt did not finish; retrying (downloaded debs are kept)"
-          done
+          # Bounded attempts; a timed-out one has its leftover apt-get stopped before the next starts, so it
+          # does not hold the apt lock (scripts/ci-install-chromium-deps.sh).
+          ok=0
+          scripts_dir="$(git rev-parse --show-toplevel)/scripts"
+          "$scripts_dir/ci-install-chromium-deps.sh" && ok=1
           sudo cp -n /var/cache/apt/archives/*.deb "$HOME/apt-debs/" 2>/dev/null || true
           sudo chown -R "$USER" "$HOME/apt-debs"
-          [ "${ok:-0}" = 1 ]
+          [ "$ok" = 1 ]
         working-directory: web
       - name: Save apt packages for Chromium
         if: ${{ !cancelled() && steps.apt-cache.outputs.cache-hit != 'true' }}

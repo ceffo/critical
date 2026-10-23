@@ -23,7 +23,7 @@ import type {
   WeaponPool,
 } from "@/types/character";
 import type { SkillKind } from "@/types/skills";
-import { primaryClass } from "@/lib/classEntries";
+import { primaryEntry } from "@/lib/classEntries";
 
 const HEADINGS: Record<SkillKind, string> = {
   proficiency: "skills.proficiencies",
@@ -48,7 +48,9 @@ export function SkillsTab() {
   const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
   const derivedSets = useCharacterStore((s) => s.character?.derived.skillSets);
-  const cls = useCharacterStore((s) => primaryClass(s.character?.classes));
+  const cls = useCharacterStore(
+    (s) => primaryEntry(s.character?.classes)?.class ?? "",
+  );
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
   const race = useCharacterStore((s) => s.character?.raceCode);
   const languages = useCharacterStore((s) => s.character?.languages);

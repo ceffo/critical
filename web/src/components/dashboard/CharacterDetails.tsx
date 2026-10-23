@@ -32,7 +32,7 @@ import {
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
-import { primaryClass } from "@/lib/classEntries";
+import { primaryEntry } from "@/lib/classEntries";
 import { TakeClassDialog } from "@/components/dashboard/TakeClassDialog";
 
 /**
@@ -137,7 +137,8 @@ function DetailsView({
   const none = (
     <span className="text-muted-foreground">{t("details.none")}</span>
   );
-  const classKey = `details.classes.${primaryClass(c.classes)}`;
+  const primary = primaryEntry(c.classes)?.class ?? "";
+  const classKey = `details.classes.${primary}`;
   const text = (v: string) => (v === "" ? none : v);
   // ADR 0032 step 8.2: a required value the character lacks is asked for, not shown as "not set".
   const toPick = (
@@ -179,7 +180,7 @@ function DetailsView({
       <dl className="flex flex-col gap-2">
         <Row label={t("characters.name")}>{c.name}</Row>
         <Row label={t("details.class")}>
-          {i18n.exists(classKey) ? t(classKey) : primaryClass(c.classes)}
+          {i18n.exists(classKey) ? t(classKey) : primary}
         </Row>
         <Row label={t("details.level")}>{c.derived.realizedLevel}</Row>
         <Row label={t("details.raceCode")}>
@@ -197,9 +198,7 @@ function DetailsView({
                   data-testid="details-alignment-warning"
                 >
                   {t("details.warnings.alignment_not_allowed", {
-                    className: i18n.exists(classKey)
-                      ? t(classKey)
-                      : primaryClass(c.classes),
+                    className: i18n.exists(classKey) ? t(classKey) : primary,
                   })}
                 </span>
               )}
@@ -280,12 +279,12 @@ function DetailsForm({
     null,
   );
   const [busy, setBusy] = useState(false);
+  const primary = primaryEntry(character.classes)?.class ?? "";
   // The lists the picks are made from come from the server (ADR 0032 conventions): the class's
   // admitted alignments and the sexes.
   const { options, failed: optionsFailed, retry } = useCreationOptions(true);
   const alignments =
-    options?.classes.find((c) => c.class === primaryClass(character.classes))
-      ?.alignments ?? [];
+    options?.classes.find((c) => c.class === primary)?.alignments ?? [];
   const sexes = options?.sexes ?? [];
   const set = (k: Exclude<keyof Draft, "languages">) => (v: string) =>
     setDraft((d) => ({ ...d, [k]: v }));
@@ -334,11 +333,9 @@ function DetailsForm({
       <span role="alert" className="text-label text-danger">
         {i18n.exists(key)
           ? t(key, {
-              className: i18n.exists(
-                `details.classes.${primaryClass(character.classes)}`,
-              )
-                ? t(`details.classes.${primaryClass(character.classes)}`)
-                : primaryClass(character.classes),
+              className: i18n.exists(`details.classes.${primary}`)
+                ? t(`details.classes.${primary}`)
+                : primary,
             })
           : error.code}
       </span>

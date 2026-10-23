@@ -198,6 +198,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    threshold raises the target level only; THAC0, saves and slots change with the level-up rolls,
    and the undo brings them back).
    _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 7, on implementation: the thresholds are rows keyed by class, not a column per class (`experienceColumns` goes))_
+   _(Amended 2026-10-23 by [ADR 0046](0046-derived-figures.md) step 5: the threshold is read from the
+   class definition only (`classes.Class.XPThreshold`; no `Tables`, `charactersvc` or `xpsvc` port
+   serves it), so `TestXPThreshold_ByClass` reads the definition, and
+   `xpsvc.ComputeProgress(def, level, total)` takes the definition.)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 7: the target level and the pending level-ups are per active class entry, from the entry's XP (its share of the awards, ADR 0042 step 5) and its class's thresholds; a frozen entry has none; the level-up request names the entry, on implementation)_
 4. **XP bonus by prime requisites.** A character earns the 10% bonus of [ADR 0015](0015-experience.md)
    step 1 when every prime requisite of the class is 16 or more (PHB chapter 3, each class's
@@ -223,7 +227,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    ADR 0006 step 1 ("the target of the category on the character sheet"). _(The best-of across
    entries and the target of a category are `domain/saves`'s, the saves owner: [ADR
    0046](0046-derived-figures.md) step 3, implemented 2026-10-23; the Table 60 row is still read by
-   `ruletablesvc`.)_
+   `ruletablesvc`. The levels owner is `classes.Class`, ADR 0046 step 5, also implemented 2026-10-23.)_
 
    Tests: `TestSavesFor_Step6_Table60` (ruletablesadpt), `TestDerive_Step6_SavesFromTable60`
    (charactersvc), `TestResolveSavingThrow` (combatsvc, on the derived targets).

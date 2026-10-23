@@ -1,7 +1,7 @@
 # ADR 0046: Derived figures: one owner each for AC, saves, slots and levels
 
 **Status**: accepted 2026-10-23 (the user accepted every open question's default: "defaults") (design step; the user's goal, 2026-10-21: "a logical rule engine
-with locality"; triage 2026-10-22). Shape A below is the chosen shape. Steps 2 (AC), 3 (saves) and 4 (slots) implemented 2026-10-23; the others not. Builds on
+with locality"; triage 2026-10-22). Shape A below is the chosen shape. Steps 2 (AC), 3 (saves), 4 (slots) and 5 (levels) implemented 2026-10-23; the others not. Builds on
 [ADR 0045](0045-character-view.md) (the character view) and respects
 [ADR 0038](0038-domain-and-wire.md) (no transport tags in the domain). Amends, each on
 implementation: [ADR 0002](0002-attack-resolution.md) step 5, [ADR 0006](0006-saving-throws.md)
@@ -58,7 +58,7 @@ it is not a copy and stays.
 4. *The `skills.ProficiencySlots` value* (pools, picks, warnings) is the figure and its breakdown;
    `charactersvc` and `skillsvc` reach it through `skills.FiguresOf`. One owner already.
 
-**Levels.** XP to level lives in `classes.Class` (`LevelFor`, `XPThreshold`): `charactersvc.setLevels`,
+**Levels.** _(Before step 5, implemented 2026-10-23; the copies below are gone.)_ XP to level lives in `classes.Class` (`LevelFor`, `XPThreshold`): `charactersvc.setLevels`,
 the creation draft (`create.go`) and `creationrollsvc` call it. The copy is the table path next to it:
 `ruletablesvc.Tables.XPThreshold` wraps the same method, and two ports declare it again
 (`charactersvc.Rules.XPThreshold`, `xpsvc.Thresholds`) so that `charactersvc`, the creation
@@ -218,11 +218,21 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       [ADR 0045](0045-character-view.md) step 3.2 and 3.7, listed here only so the two ADRs close the
       same copies. `BardXPThreshold` is kept until the importer's tests are moved off it (it reads the
       raw bard column, not a class definition).
-   3. *Tests proving the figure unchanged.* `Levels_Step5_ThresholdsEqualTheTable` walks every class
+      _(As built, 2026-10-23: `Tables.XPThreshold`, `charactersvc.Rules.XPThreshold` and `xpsvc.Thresholds`
+      (with `Deps.Thresholds` and their mocks) are gone; the callers call `classes.Class.XPThreshold`.
+      `xpsvc.ComputeProgress(def classes.Class, level, total)` takes the definition, and the ledger
+      reads definitions through its `Rules` port, `Definitions()`, and each active entry's prime
+      requisites from `def.PrimeRequisites`. `TestXPThreshold_ByClass` (ruletablesadpt) keeps its name
+      and now reads the definition. `BardXPThreshold` stays as said.)_
+   3. *Tests proving the figure unchanged.* `TestLevels_Step5_ThresholdsEqualTheTable` walks every class
       of the fixture catalogue, levels 1 to the maximum, comparing `LevelFor(XPThreshold(l))` with `l` and
-      the old table's value; `Progress_Step5_ReadsTheClassDefinition` asserts `xpsvc`'s floor, ceiling and
+      the old table's value; `TestProgress_Step5_ReadsTheClassDefinition` asserts `xpsvc`'s floor, ceiling and
       cells equal the old output for the party's fixtures; the existing level-up and creation
-      tests run unchanged.
+      tests run unchanged. _(As built: the two goldens are committed rows captured from the old code
+      before the move and are frozen, with no `-update` flag; the levels golden checks the class
+      definition against them. `TestLevels_Step5_NoThresholdOutsideClasses` (an `go/ast` walk of
+      `internal/**` non-test sources, mocks included) fails if a function, method, interface method
+      or type named `XPThreshold` or `Thresholds` is declared outside `classes`.)_
 6. **A figure's breakdown reaches the wire without a tag in the domain** ([ADR 0038](0038-domain-and-wire.md)).
    1. The owners (`saves`, `slots`, `acsvc.Derive`, `classes`) have no `json` tag on any type. An
       owner's `Figure` is a domain value.

@@ -754,7 +754,7 @@ parser reads them at every start into `ruletablesvc.ClassTables` (`Tables.Classe
 artifact), validated by `ruletablesvc.NewClassTables`: a missing table, a gap in a level band or in the
 scores, XP not increasing or a code twice is a startup error naming the table; an artifact without them
 (format 3) refuses the start (`ErrNoClassTables`). `Tables` looks them up for the derived values
-(`derive.go`): `XPThreshold(class, level)`, `SavesFor(group, level)`, `ConSaveBonusFor(con)` and `WizardSpellsPerDay(level)`, plus `ClassGroup(class)`. The level at an XP and THAC0 are not `Tables` lookups: the
+(`derive.go`): `SavesFor(group, level)`, `ConSaveBonusFor(con)` and `WizardSpellsPerDay(level)`, plus `ClassGroup(class)`. The level at an XP and THAC0 are not `Tables` lookups: the
 consumers read `classes.Class.LevelFor` and `classes.Registry.THAC0` from the definitions they hold.
 `charactersvc.Derive` combines them into the character's derived block (ADR 0030 steps 2 to 8, 22.1 and
 24), from the XP total that `xpsvc.Totals` reads from the ledger; the skills (steps 17 and 18) are a later

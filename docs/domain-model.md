@@ -69,6 +69,15 @@ Invariants:
 - Nothing a rule derives (THAC0, saves, slots, skill percentages) is stored on the character.
 - Every change goes through the action log, so it can be undone ([ADR 0018](adr/0018-transactions-and-undo.md)).
 
+### The character view (proposed)
+
+The services do not read the stored character: they read a **character view**, a read-only
+projection that `charactersvc` builds in one place after the derivation ([ADR 0045](adr/0045-character-view.md);
+proposed, not built). It holds the identity, the scores, the class entries with their derived
+figures and the character's derived figures; it asks "the primary entry" and "the entry of this
+class" through one helper each. It is neither the entity (which also holds warnings, details and the
+stored mirror) nor the wire (the DTO is the handler's own mapping, [ADR 0038](adr/0038-domain-and-wire.md)).
+
 ## Class (five classes, read from the catalogue's definitions)
 
 A class belongs to one **class group** (warrior, wizard, priest, rogue); the THAC0, saves,

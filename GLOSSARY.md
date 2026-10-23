@@ -28,6 +28,10 @@ A player character, owned by one user. [ADR 0029](docs/adr/0029-users-login-and-
 The record the app keeps and shows during play. [ADR 0030](docs/adr/0030-classes-and-races.md).
 _Avoid_: fiche, "the sheet" for the Google import (not part of the domain).
 
+**Character view** (fr: vue du personnage):
+The read-only projection of a character the services depend on, built in one place from the stored character and its derived figures, with one way to ask for its primary or a given class entry; not the entity and not the wire. [ADR 0045](docs/adr/0045-character-view.md) (proposed).
+_Code_: View
+
 **Player** (fr: joueur):
 The person at the table playing the character; also the ordinary user role (`player`).
 

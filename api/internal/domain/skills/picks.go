@@ -254,6 +254,12 @@ func (p WeaponPick) IsSpecializationOf(def classes.Class) bool {
 		p.Slots == ruletablesvc.SpecializationSlots(def, p.Type)
 }
 
+// anySpecializes reports whether a class entry of cls, a dual-class's old (frozen) ones included,
+// lists weapon_specialization.
+func (cls Classes) anySpecializes(book Book) bool {
+	return slices.ContainsFunc(cls, func(c ClassLevel) bool { return specializes(book, c.Class) })
+}
+
 // isSpecialization reports whether p is a specialization pick of any class entry of cls, a
 // dual-class's old (frozen) ones included.
 func (cls Classes) isSpecialization(book Book, p WeaponPick) bool {
@@ -472,6 +478,10 @@ func validWeaponPicks(book Book, cls Classes, lifted bool, picks, before []Weapo
 			return nil, &domain.FieldError{Field: field, Message: CodeUnknown}
 		case seen[p.Type]:
 			return nil, &domain.FieldError{Field: field, Message: CodeDuplicate}
+		case p.Slots > WeaponPickSlots && !cls.isSpecialization(book, p) && !cls.anySpecializes(book) &&
+			book.SpecializationCostedAt(p.Type, p.Slots):
+			// A specialization's cost, asked of a class none of whose entries specializes.
+			return nil, &domain.FieldError{Field: field, Message: CodeNotAllowed}
 		case p.Slots != WeaponPickSlots && !cls.isSpecialization(book, p):
 			return nil, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		case !had[p.Type] && !cls.weaponTypeAllowed(book, lifted, p.Type):

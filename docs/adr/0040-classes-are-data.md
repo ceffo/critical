@@ -533,11 +533,11 @@ flowchart LR
     `ruletablesvc.SpecializationSlots` now takes the class definition (0 for a class that does not
     specialize) and `AttackRateFor` reads the class's params, so the four constants are gone. A pick is a
     specialization when its slots equal the cost its class gives that type (`WeaponPick.IsSpecializationOf`;
-    in `skills`, any class entry of the character, a dual-class's old class included). Consequence: a
-    class that does not specialize has no specialization cost, so a mage's two-slot weapon pick is
-    `out_of_range` where it was `not_allowed`. The start-up check sits in `ruletablesadpt/classtables.go`;
-    it also refuses a type's `column` that is no Table 35 weapon and a type's `slots` under 1. The "fighter
-    keeps today's numbers" proof is the existing composition golden, unchanged.)_
+    in `skills`, any class entry of the character, a dual-class's old class included). A
+    two-slot pick by a class none of whose entries specializes (a mage) stays `not_allowed`, as before
+    (`Proficiencies.SpecializationCostedAt`: some catalogue class costs that type at that count). The start-up check sits in `ruletablesadpt/classtables.go`;
+    it also refuses a type's `column` that is no Table 35 weapon and a type's `slots` under 1. `WeaponSpecialization_Step13_TheFighterKeepsTodaysNumbers` asserts the fighter's slots and rates; the
+    composition golden is unchanged.)_
 
 14. **The catalogue format.** Steps 12 and 13 change the artifact, so the catalogue **bumps to the next
     format number** (the supervisor allots it; the API then reads that format only, as

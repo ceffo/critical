@@ -103,6 +103,7 @@ type ProficiencyBook interface {
 	// ClassDef is the class's definition (ADR 0040 step 5), for the
 	// features the picks and grants read.
 	ClassDef(class string) (classes.Class, bool)
+	SpecializationCostedAt(weaponType string, slots int) bool
 }
 
 // Kind is the class and race code of the character whose details are checked:

@@ -90,9 +90,8 @@ func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
 		{"a bow, 2 slots", "fighter", picks(spec("long_bow", 2)), refused("weapon.long_bow", "out_of_range")},
 		{"a melee weapon, 3 slots", "fighter", picks(spec("long_sword", 3)), refused("weapon.long_sword", "out_of_range")},
 		{"4 slots", "fighter", picks(spec("long_sword", 4)), refused("weapon.long_sword", "out_of_range")},
-		// A class that does not specialize has no specialization cost (ADR 0040 step 13): the count is no pick of its.
-		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "out_of_range")},
-		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "out_of_range")},
+		{"a mage refused", "mage", picks(spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
+		{"a bard refused", "bard", picks(spec("long_sword", 2)), refused("weapon.long_sword", "not_allowed")},
 		{"a second type refused", "fighter", picks(spec("long_sword", 2), spec("dagger", 2)), refused("weapon.dagger", "not_allowed")},
 	}
 	twoSlots := []string{

@@ -539,7 +539,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: ruletablesvc.ThiefSkills,
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"},
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 			{

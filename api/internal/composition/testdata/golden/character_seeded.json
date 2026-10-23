@@ -88,6 +88,10 @@
     "skillSets": [
       {
         "set": "bard",
+        "name": {
+          "en": "Bard skills",
+          "fr": "Talents de barde"
+        },
         "skillArmor": "leather",
         "skills": [
           {

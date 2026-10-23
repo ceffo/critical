@@ -83,7 +83,8 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 
 	check, err := bs.Skills.Roll(ctx, id, "open_locks", skillsvc.Adjustment{Value: 10, Reason: "old lock"})
 	require.NoError(t, err)
-	assert.Equal(t, skillsvc.KindThiefSkill, check.Kind)
+	assert.Equal(t, skillsvc.KindRogueSkill, check.Kind)
+	assert.Equal(t, "thief", check.Set)
 	assert.Equal(t, 65, check.AdjustedTarget)
 	assert.True(t, check.Success, "60 at or under 55 + 10")
 

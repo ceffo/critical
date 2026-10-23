@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/levelupsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -107,7 +108,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		// The seed bard wears the Leather armour none entered gave (ADR 0033 step 14).
 		SkillColumn: ruletablesvc.ColumnLeather,
 		SkillSets: []skills.SkillSet{{
-			Set: "bard", Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		}},
 		Proficiencies: kelsenPicks(15),
@@ -149,7 +150,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		Spellbook:   at15.Spellbook,
 		SkillColumn: ruletablesvc.ColumnLeather,
 		SkillSets: []skills.SkillSet{{
-			Set: "bard", Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
 		}},
 		Proficiencies: kelsenPicks(17),

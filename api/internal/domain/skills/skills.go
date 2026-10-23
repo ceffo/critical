@@ -20,6 +20,9 @@ type Book interface {
 	// ClassDef is the class's definition (ADR 0040 step 5: its features), false for a class the
 	// catalogue does not define.
 	ClassDef(class string) (classes.Class, bool)
+	// SpecializationCostedAt reports whether some catalogue class spends slots in all on a
+	// specialization in weaponType.
+	SpecializationCostedAt(weaponType string, slots int) bool
 }
 
 // LanguageBook is the language catalogue the languages are checked against (ADR 0032 step 4);

@@ -130,8 +130,8 @@ func TestBardSkillPointBudget_Step18(t *testing.T) {
 	assert.Equal(t, []ruletablesvc.BudgetWarning{{Code: ruletablesvc.BudgetTotal, Points: 51, Limit: 50}},
 		ruletablesvc.SkillBudgetOf(bard, 3, map[string]int{"detect_noise": 50, "read_languages": 1}))
 	assert.Empty(t, ruletablesvc.SkillBudgetOf(rogueOf(t, "fighter"), 1, map[string]int{"climb_walls": 99}))
-	assert.Equal(t, ruletablesvc.SkillSetBard, bard.Set)
-	assert.Equal(t, ruletablesvc.SkillSetThief, rogueOf(t, "thief").Set)
+	assert.Equal(t, "bard", bard.Set)
+	assert.Equal(t, "thief", rogueOf(t, "thief").Set)
 	for _, class := range []string{"fighter", "mage", "cleric"} {
 		assert.Nil(t, rogueOf(t, class), class)
 	}

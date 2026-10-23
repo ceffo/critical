@@ -322,7 +322,8 @@ func TestDraft_Step10_SkillPointsBelowTheFromLevelAreRefused(t *testing.T) {
 func TestLookup_Step5_ANewClassOfKnownKindsNeedsNoCode(t *testing.T) {
 	skald := add("test_skald", "thief", "",
 		classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-			Set: ruletablesvc.SkillSetBard, Budget: classes.SkillBudget{First: 25, PerLevel: 10},
+			Set: "bard", Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
+			Budget: classes.SkillBudget{First: 25, PerLevel: 10},
 			Armour: []classes.SkillArmour{
 				{Code: "none", Column: "none"},
 				{Code: "leather"},
@@ -398,8 +399,8 @@ func TestFeatures_Step3_5_ASkillSetPerRogueSkillsFeature(t *testing.T) {
 				assert.Equal(t, 15, ba.Points.Spent, "the bard's points are its own")
 				assert.Equal(t, 20, percent(th, "pick_pockets").Points)
 				assert.Equal(t, 5, percent(ba, "pick_pockets").Points, "a shared skill keeps each set's points")
-				assert.Len(t, th.Skills, len(ruletablesvc.ThiefSkills))
-				assert.Len(t, ba.Skills, len(ruletablesvc.BardSkills))
+				assert.Len(t, th.Skills, 8)
+				assert.Len(t, ba.Skills, 4)
 			},
 		},
 		{"the second set starts at its own level", both(3), "test_swashbuckler", 1, nil, func(t *testing.T, d charactersvc.Derived) {
@@ -432,5 +433,16 @@ func TestDerive_Step16_2_NoArmourComesFromTheEquipment(t *testing.T) {
 		{"the mage wears none", keep, "mage", 1, nil, noArmour(true)},
 		{"the fighter wears any", keep, "fighter", 1, nil, noArmour(false)},
 		{"a mage listing leather may wear it", leather, "mage", 1, nil, noArmour(false)},
+	})
+}
+
+// ADR 0040 step 15: the derived block names each skill set from the catalogue,
+// by language; the client holds no heading of its own.
+func TestSkillSets_Step15_TheDerivedBlockNamesEachSet(t *testing.T) {
+	runFeatureCases(t, []featureCase{
+		{"the thief's set is served with its name", keep, "thief", 1, nil, func(t *testing.T, d charactersvc.Derived) {
+			require.Len(t, d.SkillSets, 1)
+			assert.NotEmpty(t, d.SkillSets[0].Name["en"])
+		}},
 	})
 }

@@ -84,6 +84,10 @@
     "skillSets": [
       {
         "set": "thief",
+        "name": {
+          "en": "Thief skills",
+          "fr": "Talents de voleur"
+        },
         "skillArmor": "none",
         "skills": [
           {

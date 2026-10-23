@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -235,7 +236,7 @@ type PointsSheet struct {
 
 // ArmourBlocks is ADR 0042 step 16.3: a multi-class character wearing body armour of Table 29
 // column column that its skill class's equipment (ADR 0040 step 1.6) does not allow uses only
-// ruletablesvc.ArmourFreeSkills of the set. A single-class thief or bard is unchanged (its armour
+// the set's armour-free skills (RogueSkills.ArmourFree). A single-class thief or bard is unchanged (its armour
 // outside the list is ADR 0033 step 20's warning), and no body armour never blocks.
 func (s PointsSheet) ArmourBlocks() bool {
 	column := s.ArmorColumn
@@ -247,11 +248,15 @@ func (s PointsSheet) ArmourBlocks() bool {
 // terms, the skill armour the set reads, the budget's warnings and the budget as figures at the
 // realized level. Each set has its own budget.
 type SkillSet struct {
-	Set    string
-	Skills []ruletablesvc.SkillPercent
-	Armor  string
-	Budget []ruletablesvc.BudgetWarning
-	Points *ruletablesvc.SkillPointsBudget
+	Set string
+	// Name is the set's heading and MinPercent the least percentage a skill of it is used at
+	// (ADR 0040 step 15), from its rogue_skills params.
+	Name       localized.Text
+	MinPercent int
+	Skills     []ruletablesvc.SkillPercent
+	Armor      string
+	Budget     []ruletablesvc.BudgetWarning
+	Points     *ruletablesvc.SkillPointsBudget
 	// Dormant: the set is a dual-class's old class's before the crossover
 	// (ADR 0042 step 13): rolled, warning dual_class_old_ability. Set by the
 	// character's derivation from its grant. Domain only, not on the wire.
@@ -261,12 +266,12 @@ type SkillSet struct {
 // SkillSetsOf is ADR 0030 steps 17 and 18 on s: for each skill set the class grants at s.Level
 // (ADR 0040 step 3.5), the percentages from the tables, the budget and its warnings, through
 // that set's rogue_skills params. nil for a class without rogue_skills. When the armour blocks
-// the set (PointsSheet.ArmourBlocks, ADR 0042 step 16.3), ruletablesvc.ArmourFreeSkills take the
+// the set (PointsSheet.ArmourBlocks, ADR 0042 step 16.3), the set's armour-free skills take the
 // no-armour percentage (Q16) and every other skill is Blocked.
 func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 	var out []SkillSet
 	for _, rs := range RogueSetsAt(s.Class, s.Level) {
-		set := SkillSet{Set: rs.Set, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
+		set := SkillSet{Set: rs.Set, Name: rs.Name, MinPercent: rs.MinPercent, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
 		points := s.Points.Of(rs.Set)
 		var err error
 		if set.Skills, err = t.RogueSkills(rs, s.Race, s.Dex, set.Armor, points); err != nil {
@@ -287,7 +292,7 @@ func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 }
 
 // blockSkills is ADR 0042 step 16.3 on the percentages skills of set rs read in armour that
-// blocks it: ruletablesvc.ArmourFreeSkills take their no-armour percentage (Q16), every other
+// blocks it: the set's armour-free skills take their no-armour percentage (Q16), every other
 // skill is Blocked.
 func blockSkills(t SkillTables, s PointsSheet, rs classes.RogueSkills, points map[string]int, skills []ruletablesvc.SkillPercent) error {
 	free, err := t.RogueSkills(rs, s.Race, s.Dex, ruletablesvc.SkillArmorFor(&rs, ruletablesvc.ColumnNone), points)
@@ -295,7 +300,7 @@ func blockSkills(t SkillTables, s PointsSheet, rs classes.RogueSkills, points ma
 		return fmt.Errorf("%s skills (%s) without armour: %w", s.Class.ID, rs.Set, err)
 	}
 	for i := range skills {
-		if !slices.Contains(ruletablesvc.ArmourFreeSkills, skills[i].Skill) {
+		if !slices.Contains(rs.ArmourFree, skills[i].Skill) {
 			skills[i].Blocked = true
 			continue
 		}

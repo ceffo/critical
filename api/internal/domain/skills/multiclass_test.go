@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -174,7 +173,7 @@ func TestWeaponPick_Step16_1_TheOldClassAllowsThePicks(t *testing.T) {
 // refused it not_allowed, the mage not specializing).
 func TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover(t *testing.T) {
 	book := profBook(t)
-	spec := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	spec := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: fighterSlots(t, book, "long_sword")}}}
 	elf := func(mage int) skills.Classes {
 		return skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: mage}}
 	}

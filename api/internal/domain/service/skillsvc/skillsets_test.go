@@ -2,6 +2,7 @@ package skillsvc_test
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,7 +64,7 @@ func dualFixture(t *testing.T) *fixture {
 	c := viewtest.Single(swashbuckler, 5, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 16, 0, 0, 0, 0))
 	c.SkillPoints = skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}}
 	c.SkillSets = []skills.SkillSet{
-		{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 15, Points: 20, Percent: 35}}},
+		{Set: "thief", MinPercent: 1, Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 15, Points: 20, Percent: 35}}},
 		{Set: "bard", Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 10, Points: 5, Percent: 15}}},
 	}
 	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Maybe()
@@ -82,27 +83,25 @@ func TestList_Step3_5_EachSkillSetHasItsOwnLastCheck(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, got.SkillSets, 2)
 	assert.Equal(t, "thief", got.SkillSets[0].Set)
-	assert.Equal(t, skillsvc.KindThiefSkill, got.SkillSets[0].Kind)
 	assert.Equal(t, 35, got.SkillSets[0].Skills[0].Percent)
 	assert.Nil(t, got.SkillSets[0].Skills[0].Last, "the bard's check is not the thief's")
-	assert.Equal(t, skillsvc.KindBardSkill, got.SkillSets[1].Kind)
 	assert.Equal(t, 15, got.SkillSets[1].Skills[0].Percent)
 	require.NotNil(t, got.SkillSets[1].Skills[0].Last)
 	assert.Equal(t, int64(7), got.SkillSets[1].Skills[0].Last.EntryID)
 }
 
 // ADR 0040 steps 3.2 and 3.5: a roll names the skill set when two share the skill, and is judged
-// against that set's percentage and logged as that set's kind; without one it is the first set
+// against that set's percentage and logged as a rogueSkill check of that set; without one it is the first set
 // that holds the skill.
 func TestRoll_Step3_5_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
 	for _, tt := range []struct {
 		name, set string
-		kind      skillsvc.Kind
+		wantSet   string
 		target    int
 	}{
-		{"the bard's", "bard", skillsvc.KindBardSkill, 15},
-		{"the thief's", "thief", skillsvc.KindThiefSkill, 35},
-		{"the first set without a name", "", skillsvc.KindThiefSkill, 35},
+		{"the bard's", "bard", "bard", 15},
+		{"the thief's", "thief", "thief", 35},
+		{"the first set without a name", "", "thief", 35},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			f := dualFixture(t)
@@ -110,7 +109,8 @@ func TestRoll_Step3_5_TheSkillSetPicksThePercentAndTheKind(t *testing.T) {
 			f.dice.EXPECT().RollDie(100).Return(20).Once()
 			got, err := f.svc.RollInSet(context.Background(), charID, tt.set, "pick_pockets", skillsvc.Adjustment{})
 			require.NoError(t, err)
-			assert.Equal(t, tt.kind, got.Kind)
+			assert.Equal(t, skillsvc.KindRogueSkill, got.Kind)
+			assert.Equal(t, tt.wantSet, got.Set)
 			assert.Equal(t, tt.target, got.Target)
 		})
 	}
@@ -213,4 +213,31 @@ func TestSetPoints_Step12_EachGrantSpendsItsOwnSet(t *testing.T) {
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, skills.FieldSet, fe.Field)
+}
+
+// ADR 0040 step 15 (Q1): an entry stored under a per-set kind still reads. It replays against its
+// d100 when adjusted, answers with the set it stood for, and is the last check of that set's skill
+// only.
+func TestRollSkill_Step15_ALegacyKindStillReads(t *testing.T) {
+	f := dualFixture(t)
+	e := &actionlog.Entry{ID: 100, Kind: actionlog.KindSkillCheck, Payload: json.RawMessage(
+		`{"id":"pick_pockets","kind":"thiefSkill","die":100,"roll":40,"target":35,"success":false,"modifier":0}`)}
+	f.amends(e, nil)
+	r, err := f.svc.Adjust(context.Background(), charID, 100, skillsvc.Adjustment{Value: 5})
+	require.NoError(t, err)
+	assert.Equal(t, skillsvc.KindThiefSkill, r.Kind, "the stored kind is kept")
+	assert.Equal(t, "thief", r.Set)
+	assert.True(t, r.Success, "40 against 35 + 5 on a d100")
+
+	f = dualFixture(t)
+	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return([]actionlog.Entry{
+		checkEntry(t, 7, `{"id":"pick_pockets","kind":"thiefSkill","die":100,"roll":9,"target":35,"adjustedTarget":35,"success":true}`),
+		checkEntry(t, 6, `{"id":"pick_pockets","kind":"rogueSkill","set":"bard","die":100,"roll":9,"target":15,"adjustedTarget":15,"success":true}`),
+	}, nil)
+	got, err := f.svc.List(context.Background(), charID)
+	require.NoError(t, err)
+	require.NotNil(t, got.SkillSets[0].Skills[0].Last)
+	assert.Equal(t, int64(7), got.SkillSets[0].Skills[0].Last.EntryID, "the legacy thief entry")
+	require.NotNil(t, got.SkillSets[1].Skills[0].Last)
+	assert.Equal(t, int64(6), got.SkillSets[1].Skills[0].Last.EntryID, "the new bard entry")
 }

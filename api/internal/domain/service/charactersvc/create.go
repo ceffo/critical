@@ -1150,7 +1150,7 @@ func ClassWeaponTypeOptions(def classes.Class) []WeaponTypeOption {
 		}
 		o := WeaponTypeOption{Type: t}
 		if ruletablesvc.Specializes(def) {
-			o.SpecializationSlots = ruletablesvc.SpecializationSlots(t)
+			o.SpecializationSlots = ruletablesvc.SpecializationSlots(def, t)
 		}
 		out = append(out, o)
 	}

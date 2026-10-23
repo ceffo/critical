@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -64,7 +65,7 @@ func kelsenDerived() charactersvc.Derived {
 		// Nothing worn in these tests: the none column (ADR 0033 step 14).
 		SkillColumn: "none",
 		SkillSets: []domainskills.SkillSet{{
-			Set: "bard", Armor: "none", Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Armor: "none", Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Left: 230},
 		}},
 	}

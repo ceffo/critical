@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -116,7 +117,7 @@ type RogueSkillDTO struct {
 	RawPercent int `json:"rawPercent"`
 	MaxPercent int `json:"maxPercent"`
 	MaxPoints  int `json:"maxPoints"`
-	// Usable is false while the skill cannot be rolled (a thieving skill under 1%, PHB p.39, or
+	// Usable is false while the skill cannot be rolled (under its set's least percentage, PHB p.39, or
 	// one the worn armour blocks).
 	Usable bool `json:"usable"`
 	// Blocked: the worn body armour blocks the skill (ADR 0042 step 16.3, its roll refused with
@@ -133,14 +134,14 @@ type SkillsDTO struct {
 	SkillSets []SkillSetDTO `json:"skillSets"`
 }
 
-// SkillSetDTO is one skill set of the tab: set the rogue_skills set code, kind the check kind
-// its rolls are logged as (thiefSkill or bardSkill, ADR 0040 step 3.2), skillArmor the skill
+// SkillSetDTO is one skill set of the tab: set the rogue_skills set code, name its heading (a
+// language map, ADR 0040 step 15; its rolls are logged as rogueSkill with the set), skillArmor the skill
 // armour it reads (ADR 0033 step 14, from the worn body armour: none, leather,
 // padded_studded_leather, elven_chain or metal), budget its skill point budget with the terms of
 // its formula (null before the level its points start) and skills its skills.
 type SkillSetDTO struct {
 	Set        string          `json:"set"`
-	Kind       string          `json:"kind"`
+	Name       localized.Text  `json:"name"`
 	SkillArmor string          `json:"skillArmor"`
 	Budget     *BudgetDTO      `json:"budget"`
 	Skills     []RogueSkillDTO `json:"skills"`
@@ -155,8 +156,10 @@ type BudgetDTO = wire.SkillPointsBudgetDTO
 // effect and rolledSuccess the verdict as rolled. ability, abilityScore and
 // modifier are set for a proficiency only.
 type CheckDTO struct {
-	ID               string `json:"id"`
-	Kind             string `json:"kind"`
+	ID   string `json:"id"`
+	Kind string `json:"kind"`
+	// Set is the skill set of a rogueSkill check; omitted for a proficiency.
+	Set              string `json:"set,omitempty"`
 	Die              int    `json:"die"`
 	Roll             int    `json:"roll"`
 	Target           int    `json:"target"`
@@ -218,29 +221,29 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	}
 	for _, set := range s.SkillSets {
 		dto := SkillSetDTO{
-			Set: set.Set, Kind: string(set.Kind), SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Budget),
+			Set: set.Set, Name: set.Name, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Budget),
 			Skills: make([]RogueSkillDTO, 0, len(set.Skills)),
 		}
 		for _, sk := range set.Skills {
-			dto.Skills = append(dto.Skills, rogueSkillDTO(set.Kind, sk.SkillPercent, sk.Last))
+			dto.Skills = append(dto.Skills, rogueSkillDTO(set.MinPercent, sk.SkillPercent, sk.Last))
 		}
 		out.SkillSets = append(out.SkillSets, dto)
 	}
 	return out
 }
 
-func rogueSkillDTO(kind skillsvc.Kind, p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
+func rogueSkillDTO(minPercent int, p ruletablesvc.SkillPercent, last *skillsvc.LastCheck) RogueSkillDTO {
 	return RogueSkillDTO{
 		ID: p.Skill, Base: p.Base, Points: p.Points, Race: p.Race, Dexterity: p.Dexterity, Armor: p.Armor,
 		Percent: p.Percent, RawPercent: p.Raw, MaxPercent: ruletablesvc.MaxSkillPercent, MaxPoints: charactersvc.MaxSkillPoints,
-		Usable: skillsvc.SkillUsable(kind, p.Percent) && !p.Blocked, Blocked: p.Blocked, Last: lastDTO(last),
+		Usable: skillsvc.SkillUsable(minPercent, p.Percent) && !p.Blocked, Blocked: p.Blocked, Last: lastDTO(last),
 	}
 }
 
 // CheckToDTO maps a check to its wire shape.
 func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	out := CheckDTO{
-		ID: c.ID, Kind: string(c.Kind), Die: c.Die, Roll: c.Roll, Target: c.Target,
+		ID: c.ID, Kind: string(c.Kind), Set: c.Set, Die: c.Die, Roll: c.Roll, Target: c.Target,
 		Adjustment: c.Adjustment, AdjustmentReason: c.AdjustmentReason, AdjustedTarget: c.AdjustedTarget,
 		Success: c.Success, RolledSuccess: c.RolledSuccess, LogEntryID: c.LogEntryID, Warnings: c.Warnings,
 	}

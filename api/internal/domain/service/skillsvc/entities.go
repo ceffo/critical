@@ -1,6 +1,7 @@
 package skillsvc
 
 import (
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -18,23 +19,25 @@ const (
 	AbilityCha = charactersvc.AbilityCha
 )
 
-// Kind tells a proficiency check from a bard or thief skill check.
+// Kind tells a proficiency check from a skill set check.
 type Kind string
 
 // Check kinds.
 const (
 	KindProficiency Kind = "proficiency"
-	KindBardSkill   Kind = "bardSkill"
-	// KindThiefSkill is a thieving skill (ADR 0030 step 17): a d100 at or
-	// under the derived percentage, as a bard skill (ADR 0014 step 3).
+	// KindRogueSkill is a skill of a skill set (ADR 0040 step 15): a d100 at or under the derived
+	// percentage (ADR 0014 step 3); the set is in the check's payload.
+	KindRogueSkill Kind = "rogueSkill"
+	// KindBardSkill and KindThiefSkill are the per-set kinds entries stored before KindRogueSkill
+	// carry. Read, never logged (ADR 0040 step 15, Q1).
+	KindBardSkill  Kind = "bardSkill"
 	KindThiefSkill Kind = "thiefSkill"
 )
 
 // Dice of each kind (ADR 0014 steps 1 and 3).
 const (
 	ProficiencyDie = 20
-	BardSkillDie   = 100
-	ThiefSkillDie  = 100
+	RogueSkillDie  = 100
 )
 
 // LastCheck is the newest non-voided check of a skill, with the adjustment
@@ -69,16 +72,17 @@ type SetSkill struct {
 	Last *LastCheck
 }
 
-// SkillSet is one skill set of the Skills tab (ADR 0040 step 3.5): its code, the check kind it
-// logs (ADR 0040 step 3.2), the skill armour it reads (ADR 0033 step 14), its budget with the
-// terms of its formula (nil below the feature's level of first points, ADR 0030 steps 17 and 18)
-// and its skills.
+// SkillSet is one skill set of the Skills tab (ADR 0040 steps 3.5 and 15): its code, its name,
+// the least percentage a skill of it is used at, the skill armour it reads (ADR 0033 step 14),
+// its budget with the terms of its formula (nil below the feature's level of first points, ADR
+// 0030 steps 17 and 18) and its skills.
 type SkillSet struct {
-	Set    string
-	Kind   Kind
-	Armor  string
-	Budget *ruletablesvc.SkillPointsBudget
-	Skills []SetSkill
+	Set        string
+	Name       localized.Text
+	MinPercent int
+	Armor      string
+	Budget     *ruletablesvc.SkillPointsBudget
+	Skills     []SetSkill
 }
 
 // Skills is the whole Compétences tab: the proficiencies and one skill set per rogue_skills
@@ -102,8 +106,11 @@ type Adjustment struct {
 // as rolled (with the adjustment set before the roll). Ability, AbilityScore
 // and Modifier are set for a proficiency only.
 type CheckResult struct {
-	ID               string
-	Kind             Kind
+	ID   string
+	Kind Kind
+	// Set is the skill set of a rogueSkill check; "" for a proficiency, and for an entry stored
+	// under a per-set kind (setOf).
+	Set              string
 	Die              int
 	Roll             int
 	Target           int

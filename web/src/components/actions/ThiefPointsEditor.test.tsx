@@ -79,9 +79,7 @@ describe("previewDraft", () => {
   it("asks the server for the typed points, zeros left out, and returns its answer", async () => {
     const answer = {
       proficiencies: [],
-      skillSets: [
-        { set: "thief", kind: "thiefSkill", skillArmor: "", budget, skills },
-      ],
+      skillSets: [{ set: "thief", name: {}, skillArmor: "", budget, skills }],
     } as unknown as Skills;
     const fetchPreview = vi.fn().mockResolvedValue(answer);
     const got = await previewDraft(

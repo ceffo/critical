@@ -30,6 +30,22 @@
     "roll": true,
     "status": "amended"
   },
+  "rogueSkill": {
+    "payload": {
+      "id": "open_locks",
+      "kind": "rogueSkill",
+      "set": "thief",
+      "die": 100,
+      "roll": 31,
+      "target": 55,
+      "adjustment": 0,
+      "adjustedTarget": 55,
+      "success": true,
+      "rolledSuccess": true,
+      "modifier": 0
+    },
+    "roll": true
+  },
   "proficiency": {
     "payload": {
       "id": "musical_instrument",

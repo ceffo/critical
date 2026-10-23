@@ -24,11 +24,9 @@ api/internal/storage/postgres/languages.go:gnome
 api/internal/storage/postgres/languages.go:halfling
 
 # TEMPORARY: the skill-set codes of the rogue_skills `set` param (thief, bard), removed by the skill-set
-# work (the rogue_skills set moves to data).
-api/internal/domain/service/ruletablesvc/bard.go:thief
-api/internal/domain/service/ruletablesvc/bard.go:bard
-web/src/components/actions/SkillsTab.tsx:thief
-web/src/components/actions/SkillsTab.tsx:bard
+# work. skillsvc/rules.go keeps its two until the entries stored under thiefSkill and bardSkill need no reading (ADR 0040 step 15, Q1).
+api/internal/domain/service/skillsvc/rules.go:thief
+api/internal/domain/service/skillsvc/rules.go:bard
 
 # TEMPORARY, removed by the armour-spellcasting race trait work (the elf's elven chain moves to data): SpellInArmour lets an elf's
 # no-armour caster cast in elven chain (ADR 0042 step 16.2) by the race id until the trait carries it.

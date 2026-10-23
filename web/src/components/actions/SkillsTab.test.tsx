@@ -43,15 +43,22 @@ const base: Skills = {
   skillSets: [],
 };
 
-/** A skill set of the answer, as the server serves it: the thief's or the bard's. */
+const NAMES: Record<string, SkillSet["name"]> = {
+  thief: { en: "Thief skills", fr: "Talents de voleur" },
+  bard: { en: "Bard skills", fr: "Talents de barde" },
+  // A set this client has never heard of: only the served name and code can show it.
+  scout: { en: "Scout talents" },
+};
+
+/** A skill set of the answer, as the server serves it: its code, its name by language. */
 function skillSet(
-  kind: SkillSet["kind"],
+  set: string,
   skills: RogueSkill[],
   over: Partial<SkillSet> = {},
 ): SkillSet {
   return {
-    set: kind === "thiefSkill" ? "thief" : "bard",
-    kind,
+    set,
+    name: NAMES[set] ?? {},
     skillArmor: "",
     budget: null,
     skills,
@@ -90,7 +97,7 @@ describe("SkillsTab class skills section", () => {
   it("shows the bard skills for a bard", async () => {
     const html = await render({
       ...base,
-      skillSets: [skillSet("bardSkill", [rogueSkill])],
+      skillSets: [skillSet("bard", [rogueSkill])],
     });
     expect(html).toContain("Bard skills");
     expect(html).not.toContain("Thief skills");
@@ -100,13 +107,39 @@ describe("SkillsTab class skills section", () => {
   it("shows the thief skills for a thief", async () => {
     const html = await render({
       ...base,
-      skillSets: [
-        skillSet("thiefSkill", [rogueSkill], { skillArmor: "leather" }),
-      ],
+      skillSets: [skillSet("thief", [rogueSkill], { skillArmor: "leather" })],
     });
     expect(html).toContain("Thief skills");
     expect(html).not.toContain("Bard skills");
     expect(html).toContain("skill-armor");
+  });
+});
+
+// ADR 0040 step 15: a section is named by what the server served and keyed by the set's code, so a
+// set the client has never heard of renders like the two of the books.
+describe("SkillsTab sections follow the served sets", () => {
+  it("renders two sections named by the server, one of them an unknown set", async () => {
+    const html = await render({
+      ...base,
+      skillSets: [
+        skillSet("thief", [rogueSkill]),
+        skillSet("scout", [{ ...rogueSkill, percent: 33 }]),
+      ],
+    });
+    expect(html).toContain("Thief skills");
+    expect(html).toContain("Scout talents");
+    expect(html).toContain('data-testid="skill-set-scout"');
+    expect(html).toContain('data-testid="scout-percent-hide_in_shadows"');
+    expect(html).toContain('data-testid="thief-percent-hide_in_shadows"');
+    expect(html).toContain('id="skills-scout"');
+  });
+
+  it("falls back to the set's code for a name in no language", async () => {
+    const html = await render({
+      ...base,
+      skillSets: [skillSet("scout", [rogueSkill], { name: {} })],
+    });
+    expect(html).toContain(">scout</h3>");
   });
 });
 
@@ -128,8 +161,8 @@ describe("SkillsTab with two skill sets", () => {
     const html = await render({
       ...base,
       skillSets: [
-        skillSet("thiefSkill", [rogueSkill], { budget: budget(150, 10) }),
-        skillSet("bardSkill", [{ ...rogueSkill, percent: 7 }], {
+        skillSet("thief", [rogueSkill], { budget: budget(150, 10) }),
+        skillSet("bard", [{ ...rogueSkill, percent: 7 }], {
           budget: budget(50, 20),
         }),
       ],
@@ -161,9 +194,7 @@ describe("SkillsTab budget and terms", () => {
   it("shows the available points with their formula, spent, left and the thief's cap", async () => {
     const html = await render({
       ...base,
-      skillSets: [
-        skillSet("thiefSkill", [rogueSkill], { budget: thiefBudget }),
-      ],
+      skillSets: [skillSet("thief", [rogueSkill], { budget: thiefBudget })],
     });
     expect(html).toContain("Available: 60 + 30 × 1 = 90 (level 2)");
     expect(html).toContain("Spent 5, left 85");
@@ -175,7 +206,7 @@ describe("SkillsTab budget and terms", () => {
     const html = await render({
       ...base,
       skillSets: [
-        skillSet("bardSkill", [rogueSkill], {
+        skillSet("bard", [rogueSkill], {
           budget: {
             ...thiefBudget,
             first: 20,
@@ -197,7 +228,7 @@ describe("SkillsTab budget and terms", () => {
     const html = await render({
       ...base,
       skillSets: [
-        skillSet("thiefSkill", [
+        skillSet("thief", [
           { ...rogueSkill, race: 5, dexterity: -5, armor: 0 },
           { ...rogueSkill, id: "climb_walls", rawPercent: 112, percent: 95 },
           { ...rogueSkill, id: "read_languages", rawPercent: -5, percent: 0 },
@@ -218,7 +249,7 @@ describe("SkillsTab proficiency row", () => {
   it("has a name button and a roll button side by side", async () => {
     const html = await render({
       ...base,
-      skillSets: [skillSet("bardSkill", [rogueSkill])],
+      skillSets: [skillSet("bard", [rogueSkill])],
     });
     const row = /data-testid="skill-row-swimming">(.*?)<\/li>/.exec(html)?.[1];
     expect(row).toBeDefined();

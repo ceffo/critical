@@ -2,7 +2,6 @@ package ruletablesvc
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
@@ -38,35 +37,25 @@ const (
 	weaponMissile = "missile"
 )
 
-// bowTypes are the weapon types whose specialist gains no attacks (PHB "bow
-// specialists do not gain any additional attacks", ADR 0030 step 11.2).
-var bowTypes = []string{"long_bow", "short_bow"}
-
-// Specialization's cost in weapon slots, in all (ADR 0037 step 9, PHB p.53, "Cost of
-// Specialization"): a bow's specialist spends 3, any other type's 2 (melee weapons and
-// crossbows by the book; darts, slings and the other thrown and missile types by the step's
-// proposed reading).
-const (
-	specializationSlots    = 2
-	bowSpecializationSlots = 3
-)
-
-// SpecializationSlots is what a specialization pick of weaponType spends in all (ADR 0037 step
-// 9): 3 slots for a bow, 2 for any other weapon type.
-func SpecializationSlots(weaponType string) int {
-	if slices.Contains(bowTypes, weaponType) {
-		return bowSpecializationSlots
+// specialization is the weapon_specialization params of def, nil when it does not list the kind
+// (ADR 0040 step 13: a class's costs and columns are its own parameters, never a constant).
+func specialization(def classes.Class) *classes.WeaponSpecialization {
+	f, ok := def.Lists(classes.KindWeaponSpecialization)
+	if !ok {
+		return nil
 	}
-	return specializationSlots
+	return f.Specialization
 }
 
-// specialistColumns maps a missile weapon type to its PHB Table 35 column;
-// every other non-bow missile type reads "other_missile" (ADR 0030 step 11.2).
-var specialistColumns = map[string]string{
-	"light_crossbow": "light_crossbow",
-	"heavy_crossbow": "heavy_crossbow",
-	"dagger":         "thrown_dagger",
-	"dart":           "thrown_dart",
+// SpecializationSlots is what a specialization pick of weaponType spends in all for a character of
+// class def (ADR 0037 step 9, ADR 0040 step 13): the cost its weapon_specialization params give
+// the type (PHB p.53, "Cost of Specialization"), 0 when the class does not specialize.
+func SpecializationSlots(def classes.Class, weaponType string) int {
+	w := specialization(def)
+	if w == nil {
+		return 0
+	}
+	return w.SlotsFor(weaponType)
 }
 
 // AttackRate is a number of attacks per number of rounds (3/2: three
@@ -98,8 +87,9 @@ func (r AttackRate) InRound(round int) int {
 //
 //  1. Melee: Table 15 by level; specialized, Table 35's melee column.
 //  2. Missile: the type's rate of fire (Table 45) whatever the level;
-//     specialized in a non-bow missile, Table 35's column for it by level; a
-//     bow specialist keeps the rate of fire.
+//     specialized, the Table 35 column the class's weapon_specialization
+//     params name for the type, by level; a type whose row says rate_of_fire
+//     (the bows) keeps the rate of fire.
 func (t *Tables) AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (AttackRate, bool, error) {
 	def, err := t.Class(class)
 	if err != nil {
@@ -112,10 +102,15 @@ func (t *Tables) AttackRateFor(class string, level int, kind, weaponType string,
 	if err != nil {
 		return AttackRate{}, false, err
 	}
+	spec := specialization(def)
+	if !specialized || spec == nil {
+		spec = nil // a class that does not specialize has no specialist rate
+	}
 	switch kind {
 	case weaponMelee:
-		if specialized {
-			return specialistRate(c, "melee", level)
+		if spec != nil {
+			column, _ := spec.ColumnFor(true, weaponType)
+			return specialistRate(c, column, level)
 		}
 		for _, r := range c.WarriorAttacks {
 			if level >= r.LevelMin && level <= r.LevelMax {
@@ -124,12 +119,10 @@ func (t *Tables) AttackRateFor(class string, level int, kind, weaponType string,
 		}
 		return AttackRate{}, false, fmt.Errorf("warrior attacks: level %d outside the table", level)
 	case weaponMissile:
-		if specialized && !slices.Contains(bowTypes, weaponType) {
-			column, ok := specialistColumns[weaponType]
-			if !ok {
-				column = "other_missile"
+		if spec != nil {
+			if column, keeps := spec.ColumnFor(false, weaponType); !keeps {
+				return specialistRate(c, column, level)
 			}
-			return specialistRate(c, column, level)
 		}
 		for _, r := range c.RateOfFire {
 			if r.WeaponType == weaponType {

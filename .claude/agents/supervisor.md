@@ -400,7 +400,7 @@ Every CI run the project has is the supervisor's: main's CI, Release and Promote
 every open PR (yours and Dependabot's). A developer may watch its own branch's CI, but that never
 replaces yours. `.claude/scripts/ci-state.sh` prints everything that isn't green; `.claude/scripts/ci-watch.sh`
 (with `run_in_background`, as a plain command: a `sleep N;` prefix hides it from the guard hook; one at a time, a new one replaces the old, so never `pkill -f ci-watch.sh` first: the pattern matches your own shell and kills the call, exit 144, sup-63) exits on red, on everything
-green, or on one of our PRs going green; pending-to-pending moves (CI -> Release) keep it waiting.
+green, or on one of our PRs going green (a `GREEN PR #n` / `RED PR #n: <checks>` line per PR whose checks stopped: on GREEN call `land.sh` straight away, it re-checks CI itself, no `gh pr checks` first); pending-to-pending moves (CI -> Release) keep it waiting.
 GitHub security alerts (Dependabot, code scanning, secret scanning) come from `.claude/scripts/security-alerts.sh`, which `ci-watch.sh` runs on every poll: each new open alert is filed as an Urgent Linear item (`Security alert: <kind> #<n> …`, dedupe on that title) and reported as a `FILED` line, and a failure of the check as an `ERROR security-alerts` line; dispatch the filed item like any other urgent one.
 A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →

@@ -217,6 +217,21 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Psychic contest · defended",
     fr: "Duel psychique · défendu",
   },
+  psionic_attack: {
+    e: entry("psionic_attack", {
+      power: "ego_whip",
+      target: "Orc",
+      checks: [
+        {
+          check: { target: 13, d20: 12, outcome: "success" },
+          winner: "attacker",
+        },
+      ],
+    }),
+    value: null,
+    en: "Psionic attack · attacker won",
+    fr: "Attaque psionique · l’attaquant l’emporte",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

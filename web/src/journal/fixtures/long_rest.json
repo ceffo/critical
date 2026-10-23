@@ -4,5 +4,19 @@
       "slotsReset": 9,
       "itemsRefilled": ["holy_water"]
     }
+  },
+  "psionicsEnded": {
+    "payload": {
+      "slotsReset": 0,
+      "itemsRefilled": [],
+      "powersEnded": ["mind_blank"],
+      "powerNames": {
+        "mind_blank": {
+          "en": "Mind Blank",
+          "fr": "Néant spirituel"
+        }
+      },
+      "targetsEnded": ["Orc"]
+    }
   }
 }

@@ -49,6 +49,10 @@ type snapBuff struct {
 	// Defence is absent for a row not of a defence mode: it restores ""
 	// (ADR 0044 steps 4 and 5).
 	Defence DefenceKind `json:"defence,omitempty"`
+	// Target and Tangents are absent for a row not holding a mind: they
+	// restore "" and 0 (ADR 0044 step 3).
+	Target   string `json:"target,omitempty"`
+	Tangents int    `json:"tangents,omitempty"`
 }
 
 type snapEffects struct {
@@ -97,6 +101,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
+			Target: b.Target, Tangents: b.Tangents,
 		}
 	}
 	return out
@@ -110,6 +115,7 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
+			Target: b.Target, Tangents: b.Tangents,
 		}
 	}
 	return out

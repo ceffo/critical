@@ -109,8 +109,11 @@ two power ids in its row of data.
    Resistance), its `level` (levels or hit dice, for the contact cost), the `defence` it raised
    (a `defence_mode` power id, or none) and the DM's rolls for that defence (step 7). Nothing of the
    opponent is stored but the rows of step 3.
-   Test: `Attack_Step2_TheOpponentIsTheRequests` (psionicsvc: two attacks naming two targets
-   read no opponent store).
+   The shape is `psionics.Opponent` (`domain/psionics`), checked against the catalogue: the
+   label trimmed, `mind`, `level` 0 or more (0: not given), `defence` a `defence_mode`, and the
+   DM's rolls given only with a defence, one per check of the attack (two).
+   Tests: `TestOpponent_Step2_TheRequestsOpponentIsValidated`, `Attack_Step2_TheOpponentIsTheRequests`
+   (psionicsvc: two attacks naming two targets read no opponent store).
 
 3. **Tangents and contact are buff rows** (amends [ADR 0004](0004-buffs.md) step 17 as ADR 0043
    step 13 did; the buff list is where maintained psionics already live). A row gains `target`
@@ -127,8 +130,15 @@ two power ids in its row of data.
       used on another target ends the tangent row in the attack's transaction (contact rows stay);
       an incapacitated attacker is the player's dismiss. An opponent's ejection is the DM's word,
       the player's dismiss (Ejection stays a layer-1 power with its text).
-   Tests: `Tangents_Step3_ARowPerTargetChargedOnePSP` (buffsvc), `Tangents_Step3_AnotherTargetBreaksThem`
-   (psionicsvc), `Tangents_Step3_UnpaidBreaks` (buffsvc), `Tangents_Step3_UndoRestoresTheRow` (composition).
+   4. **The rows' shape**: a row with a `target` and no power id is a tangent row (`tangents` 1
+      or 2) or a contact row (`tangents` absent); a row with both a power id and a `target` is
+      step 10's. The row's name is the label; no buff of that name renews it. The fields live in
+      the buff list's JSON like `defence` (no migration). buffsvc's `AddTangents` is the
+      attack's one call (it breaks another mind's tangent row, then adds the won tangents) and
+      gives the attack's entry one snapshot. Maintenance, unpaid and dismiss entries name the
+      row's `target`; a long rest's entry lists its `targetsEnded`.
+   Tests: `TestTangents_Step3_ARowPerTargetChargedOnePSP` (buffsvc), `TestTangents_Step3_AnotherTargetBreaksThem`
+   (buffsvc, the rule the attack calls), `TestTangents_Step3_UnpaidBreaks` (buffsvc), `TestTangents_Step3_UndoRestoresTheRow` (composition).
 
 ### Defence
 
@@ -350,7 +360,7 @@ e2e. The order follows the data each step needs.
 
 - A catalogue format 18 (three rule tables and a cost that names a table), built first in
   `critical-rulebooks`, read only by the API after it.
-- Buff rows gain `target` and `tangents` (a migration, reviewed as risky); no opponent table.
+- Buff rows gain `target` and `tangents` (in the buff list's JSON, no migration); no opponent table.
 - New entries `defence_raised`, `psionic_attack`, `psionic_defence`; new refusals `not_in_combat`,
   `mind_closed`, `no_contact`, `level_out_of_table`; `needs_contact` retired with step 10. Each
   with its render row and `apiError` / journal key (en, fr).

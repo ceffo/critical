@@ -71,6 +71,10 @@ type jsonBuff struct {
 	// Defence is absent from rows not of a defence mode (ADR 0044 steps 4
 	// and 5).
 	Defence buffsvc.DefenceKind `json:"defence,omitempty"`
+	// Target and Tangents are absent from rows not holding a mind (ADR 0044
+	// step 3).
+	Target   string `json:"target,omitempty"`
+	Tangents int    `json:"tangents,omitempty"`
 }
 
 type jsonEffects struct {
@@ -100,6 +104,7 @@ func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound, ChargesTotal: j.ChargesTotal,
 		SpellID: j.SpellID, ProficiencyID: j.ProficiencyID, OnOther: j.OnOther,
 		PowerID: j.PowerID, PowerName: j.PowerName, MaintenanceCost: j.MaintenanceCost, MaintenancePeriod: j.MaintenancePeriod, RoundsKept: j.RoundsKept, Defence: j.Defence,
+		Target: j.Target, Tangents: j.Tangents,
 	}
 }
 
@@ -109,6 +114,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
+		Target: b.Target, Tangents: b.Tangents,
 	}
 }
 

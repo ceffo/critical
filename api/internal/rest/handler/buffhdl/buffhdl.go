@@ -412,7 +412,12 @@ type BuffEffectDTO struct {
 	// for the round, or standing until dismissed; omitted for any other buff.
 	// Response only, like powerId.
 	Defence buffsvc.DefenceKind `json:"defence,omitempty"`
-	Applies *bool               `json:"applies,omitempty"`
+	// Target is the opponent mind a tangent or contact row holds, and
+	// Tangents a tangent row's count (ADR 0044 step 3); omitted for any other
+	// buff. Response only, like powerId.
+	Target   string `json:"target,omitempty"`
+	Tangents int    `json:"tangents,omitempty"`
+	Applies  *bool  `json:"applies,omitempty"`
 	// AsksEndCause: the row's spell has end effects, so stopping it sends
 	// a cause (ADR 0004 step 21). Omitted otherwise. Response only.
 	AsksEndCause bool `json:"asksEndCause,omitempty"`
@@ -518,7 +523,7 @@ func toDTO(b buffsvc.BuffEffect) BuffEffectDTO {
 		Effects: wire.BuffEffectsDTO(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		PowerID: b.PowerID, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod,
-		Defence: b.Defence,
+		Defence: b.Defence, Target: b.Target, Tangents: b.Tangents,
 	}
 }
 

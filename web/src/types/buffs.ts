@@ -71,6 +71,13 @@ export interface BuffEffect {
   powerId?: string;
   maintenanceCost?: number;
   maintenancePeriod?: number;
+  /**
+   * The opponent mind a tangent or contact row holds (ADR 0044 step 3), by the player's label, with
+   * a tangent row's count (1 or 2; absent on a contact row). Absent for any other buff. Set by the
+   * server; never sent. Such a row has no `powerId`.
+   */
+  target?: string;
+  tangents?: number;
   /** A defence mode's row (ADR 0044 steps 4 and 5): raised for the round, or standing until dismissed. */
   defence?: "raised" | "standing";
   /**

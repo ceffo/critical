@@ -354,7 +354,8 @@ var roundMoves = []actionlog.Kind{
 
 // secondPowerThisRound is step 12: in combat (the round counter above 0) a
 // power that is not a defence mode is the round's second when a power check
-// of one that is not a defence mode is logged in the same round, after the
+// of one that is not a defence mode, or an attack mode's use (ADR 0044 step
+// 7.1), is logged in the same round, after the
 // round's start (its Next Round, or the End combat, Set round or passing
 // time that last moved the counter). Out of combat it is never.
 func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p catalogue.Power) (bool, error) {
@@ -368,13 +369,21 @@ func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p
 	if round < 1 {
 		return false, nil
 	}
-	checks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPowerCheck, powerCheckLookback)
-	if err != nil {
-		return false, fmt.Errorf("power checks: %w", err)
-	}
 	since, err := s.roundStart(ctx, characterID)
 	if err != nil {
 		return false, err
+	}
+	// An attack mode's use counts (ADR 0044 step 7.1).
+	attacks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPsionicAttack, 1)
+	if err != nil {
+		return false, fmt.Errorf("psionic attacks: %w", err)
+	}
+	if len(attacks) > 0 && attacks[0].ID > since && attacks[0].Round == round {
+		return true, nil
+	}
+	checks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPowerCheck, powerCheckLookback)
+	if err != nil {
+		return false, fmt.Errorf("power checks: %w", err)
 	}
 	for _, e := range checks {
 		if e.ID <= since || e.Round != round {

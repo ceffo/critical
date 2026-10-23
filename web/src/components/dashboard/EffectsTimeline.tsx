@@ -422,6 +422,11 @@ function EffectRow({
 function buffEffectsText(t: TFunction, b: BuffEffect): string | null {
   if (b.applies === false) return null;
   const parts = [
+    // A mind link (ADR 0044 step 3): the row's name is the opponent; say what is held on it.
+    b.target &&
+      (b.tangents
+        ? t("buffs.tangentsHeld", { count: b.tangents })
+        : t("buffs.contactHeld")),
     b.effects.weapon_buff !== undefined &&
       t("buffs.effWeapon", { n: b.effects.weapon_buff }),
     b.effects.multiplier !== undefined &&

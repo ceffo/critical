@@ -155,6 +155,72 @@ func (_c *MockSVC_Add_Call) RunAndReturn(run func(context.Context, int64, buffsv
 	return _c
 }
 
+// AddTangents provides a mock function with given fields: ctx, characterID, target, won
+func (_m *MockSVC) AddTangents(ctx context.Context, characterID int64, target string, won int) (buffsvc.TangentsChange, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID, target, won)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AddTangents")
+	}
+
+	var r0 buffsvc.TangentsChange
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) (buffsvc.TangentsChange, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID, target, won)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, int) buffsvc.TangentsChange); ok {
+		r0 = rf(ctx, characterID, target, won)
+	} else {
+		r0 = ret.Get(0).(buffsvc.TangentsChange)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, int) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID, target, won)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, string, int) error); ok {
+		r2 = rf(ctx, characterID, target, won)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_AddTangents_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddTangents'
+type MockSVC_AddTangents_Call struct {
+	*mock.Call
+}
+
+// AddTangents is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - target string
+//   - won int
+func (_e *MockSVC_Expecter) AddTangents(ctx interface{}, characterID interface{}, target interface{}, won interface{}) *MockSVC_AddTangents_Call {
+	return &MockSVC_AddTangents_Call{Call: _e.mock.On("AddTangents", ctx, characterID, target, won)}
+}
+
+func (_c *MockSVC_AddTangents_Call) Run(run func(ctx context.Context, characterID int64, target string, won int)) *MockSVC_AddTangents_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AddTangents_Call) Return(_a0 buffsvc.TangentsChange, _a1 actionlog.Snapshot, _a2 error) *MockSVC_AddTangents_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockSVC_AddTangents_Call) RunAndReturn(run func(context.Context, int64, string, int) (buffsvc.TangentsChange, actionlog.Snapshot, error)) *MockSVC_AddTangents_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // AdvanceRound provides a mock function with given fields: ctx, characterID
 func (_m *MockSVC) AdvanceRound(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, []buffsvc.BuffEffect, int, buffsvc.Initiative, buffsvc.EndResult, error) {
 	ret := _m.Called(ctx, characterID)

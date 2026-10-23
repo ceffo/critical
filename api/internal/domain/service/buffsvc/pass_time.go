@@ -67,7 +67,7 @@ func (s *service) PassTime(ctx context.Context, characterID int64, hours float64
 				kind: actionlog.KindTimePassed,
 				payload: logPayload{
 					Action: "pass_time", Hours: hours, Rounds: rounds, FromRound: &from, ToRound: &to, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs,
-					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), PowerNames: m.powerNames(),
+					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), UnpaidTargets: m.unpaidTargets(), PowerNames: m.powerNames(),
 				},
 				pspDelta: -m.spent,
 				buffs:    active,

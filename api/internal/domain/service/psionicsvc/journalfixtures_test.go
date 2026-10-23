@@ -14,4 +14,5 @@ func TestJournalFixturesAreWhatIsLogged(t *testing.T) {
 	journalfixture.Matches[CheckRecord](t, actionlog.KindPowerCheck)
 	journalfixture.Matches[RaiseRecord](t, actionlog.KindDefenceRaised)
 	journalfixture.Matches[DefenceRecord](t, actionlog.KindPsionicDefence)
+	journalfixture.Matches[AttackRecord](t, actionlog.KindPsionicAttack)
 }

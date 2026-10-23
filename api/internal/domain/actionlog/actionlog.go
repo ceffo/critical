@@ -76,6 +76,11 @@ const (
 	// (psionicsvc, ADR 0044 step 8): the defence's checks against the DM's
 	// rolls. No PSP delta and no snapshots: popping it only removes it.
 	KindPsionicDefence Kind = "psionic_defence"
+	// KindPsionicAttack is an attack mode's use (psionicsvc, ADR 0044 step
+	// 7): its two checks against the opponent's defence, the PSPs spent as
+	// its PSP delta and, when it moved them, the tangent and contact rows in
+	// its snapshot, so popping it gives both back.
+	KindPsionicAttack Kind = "psionic_attack"
 )
 
 // RollKinds are the entries whose result replaces the dashboard's result

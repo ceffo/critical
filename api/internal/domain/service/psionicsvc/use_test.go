@@ -320,6 +320,7 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 			chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(user(20, false), nil)
 			buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(c.round, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).Return(c.checks, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPsionicAttack, 1).Return(nil, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).Return(advance, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundSet, 1).Return(c.set, nil).Maybe()
 			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundReset, 1).Return(nil, nil).Maybe()

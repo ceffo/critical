@@ -13,4 +13,14 @@ describeKind("long_rest", fixtures, {
     value: null,
     rolled: false,
   },
+  psionicsEnded: {
+    en: {
+      text: "Long rest: 0 spell slots and 0 items refilled — powers ended: Mind Blank — holds ended: Orc",
+    },
+    fr: {
+      text: "Repos long : 0 emplacements de sort et 0 objets rechargés — pouvoirs terminés : Néant spirituel — emprises terminées : Orc",
+    },
+    value: null,
+    rolled: false,
+  },
 });

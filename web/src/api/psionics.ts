@@ -99,3 +99,50 @@ export function defend(req: {
 }): Promise<{ defence: DefendResult; logEntryId: number }> {
   return post("/api/psionics/defend", req);
 }
+
+/** One check of an attack as the server logged it: the die, the defence's roll if any, the winner. */
+export interface AttackCheckResult {
+  check: { target: number; d20: number; outcome: string; kept?: boolean };
+  defence?: IncomingRoll;
+  winner: "attacker" | "defender";
+  /** A won contest against an open mind: the mode's effect, for the DM to apply. */
+  effect?: boolean;
+}
+
+/** The answer of an attack (the psionic_attack entry's payload, as far as the form shows it). */
+export interface AttackResult {
+  power: string;
+  score: number;
+  target: string;
+  mind: "open" | "closed";
+  defence?: string;
+  /** Table 14's cell for the mode against the defence. */
+  attackVersusDefence?: number;
+  checks: AttackCheckResult[];
+  cost: number;
+  spent: number;
+  tangentsBefore: number;
+  tangentsAfter: number;
+  contact?: boolean;
+  /** The opponent whose tangents the new ones replaced. */
+  broken?: string;
+  warnings?: string[];
+}
+
+/** What an attack sends: the opponent, the DM's rolls against its defence, the labelled modifiers. */
+export interface AttackRequest {
+  target: string;
+  mind: "open" | "closed";
+  level: number;
+  defence?: string;
+  rolls?: IncomingRoll[];
+  modifiers: PowerModifier[];
+}
+
+/** POST /api/psionics/powers/{id}/attack: uses a known attack mode on an opponent (ADR 0044 step 7). */
+export function attackPower(
+  id: string,
+  req: AttackRequest,
+): Promise<{ attack: AttackResult; psp: PspPool; logEntryId: number }> {
+  return post(`/api/psionics/powers/${encodeURIComponent(id)}/attack`, req);
+}

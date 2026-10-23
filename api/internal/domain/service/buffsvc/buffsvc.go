@@ -43,6 +43,12 @@ type SVC interface {
 	// snapshot, inside the transaction ctx carries. ended is empty, and
 	// nothing is written, when no power is maintained.
 	EndMaintained(ctx context.Context, characterID int64) (ended []BuffEffect, snap actionlog.Snapshot, err error)
+	// AddTangents is an attack mode's use on target (ADR 0044 step 3): it
+	// ends another mind's tangent row and adds won tangents to target's row,
+	// the third making a contact row, without recording: the caller records
+	// the snapshot (zero when nothing changed), inside the transaction ctx
+	// carries.
+	AddTangents(ctx context.Context, characterID int64, target string, won int) (TangentsChange, actionlog.Snapshot, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	// Dismiss stops a row; cause is how it ended when its spell has end
 	// effects (ADR 0004 step 21), and end what they did.

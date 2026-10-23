@@ -220,7 +220,7 @@ text. The check is a roll with a breakdown like any other ([ADR 0014](adr/0014-s
 for the shape). Psionic combat ([ADR 0044](adr/0044-psionic-combat.md)): a defence mode is a buff
 row too, a **raised defence** for the round or a **standing defence** kept at no cost, and the
 **current defence** is the raised one, else the standing one; a **psychic contest** decides an
-attack mode's check against a defence mode's. Attack modes, tangents and contact are later rounds.
+attack mode's check against a defence mode's. The **opponent** is the request's (a target label and what the DM tells), never stored; won contests against a closed mind make **tangents**, and the third **contact**, buff rows keyed by the target and charged 1 PSP a round. Attack modes and the contact power are later rounds.
 
 ## What computes what
 

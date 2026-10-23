@@ -103,6 +103,9 @@ type restRecord struct {
 	PowersEnded []string `json:"powersEnded,omitempty"`
 	// PowerNames names them by id in every language (ADR 0023).
 	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
+	// TargetsEnded are the minds whose tangent or contact row the rest
+	// ended (ADR 0044 step 3), by the player's label.
+	TargetsEnded []string `json:"targetsEnded,omitempty"`
 }
 
 // LongRest resets spell slots and per-day items atomically and logs it (ADR
@@ -139,7 +142,12 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 			return fmt.Errorf("end maintained powers: %w", err)
 		}
 		for _, b := range ended {
-			rec.PowersEnded = append(rec.PowersEnded, b.PowerID)
+			switch {
+			case b.PowerID != "":
+				rec.PowersEnded = append(rec.PowersEnded, b.PowerID)
+			case b.Target != "":
+				rec.TargetsEnded = append(rec.TargetsEnded, b.Target)
+			}
 		}
 		rec.PowerNames = buffsvc.PowerNames(ended)
 		if len(ended) > 0 {

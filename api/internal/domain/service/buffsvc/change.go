@@ -57,20 +57,29 @@ type logPayload struct {
 	// PowerID is the row's psionic power (dismiss: a maintained power
 	// stopped, ADR 0043 step 16), so the UI names it.
 	PowerID string `json:"powerId,omitempty"`
+	// Target is the mind a dismissed tangent or contact row held (ADR 0044
+	// step 3.3: letting go).
+	Target string `json:"target,omitempty"`
 	// Maintenance is what Next Round charged each maintained power, in the
 	// list's order (ADR 0043 step 14); the entry's PSP delta is their sum,
 	// negated. MaintenanceUnpaid are the powers whose cost the PSPs left
 	// could not pay: they ended, and are among Expired too.
 	Maintenance       []maintenanceCharge `json:"maintenance,omitempty"`
 	MaintenanceUnpaid []string            `json:"maintenanceUnpaid,omitempty"`
+	// UnpaidTargets are the minds whose tangent or contact row the PSPs left
+	// could not pay (ADR 0044 step 3.3): they ended, and are among Expired
+	// too. MaintenanceUnpaid lists powers only.
+	UnpaidTargets []string `json:"unpaidTargets,omitempty"`
 	// PowerNames names those powers (and the ones a long rest ended) by id in
 	// every language, as power_check does, so the journal words them.
 	PowerNames map[string]localized.Text `json:"powerNames,omitempty"`
 }
 
-// maintenanceCharge is one maintained power's charge on Next Round.
+// maintenanceCharge is one maintained row's charge on Next Round: a power's
+// (PowerID), or a tangent or contact row's (Target, ADR 0044 step 3).
 type maintenanceCharge struct {
 	PowerID string `json:"powerId"`
+	Target  string `json:"target,omitempty"`
 	Cost    int    `json:"cost"`
 }
 

@@ -269,6 +269,20 @@
         "second_power_this_round": "A second power in the same combat round."
       }
     },
+    "attack": {
+      "title": "Attack with {{name}}",
+      "attack": "Attack",
+      "attackNamed": "Attack with {{name}}",
+      "target": "Opponent",
+      "mind": "Mind",
+      "closed": "Closed",
+      "open": "Open",
+      "level": "Level",
+      "defence": "Defence",
+      "noDefence": "No defence raised",
+      "check": "Check {{n}}",
+      "tangents": "{{target}}: tangents {{from}} → {{to}}"
+    },
     "defence": {
       "current": "Current defence",
       "none": "None",
@@ -357,6 +371,9 @@
     "power": "{{name}}: item power"
   },
   "buffs": {
+    "tangentsHeld_one": "{{count}} tangent",
+    "tangentsHeld_other": "{{count}} tangents",
+    "contactHeld": "contact",
     "charges": "{{count}} ch",
     "rounds": "{{count}} rd",
     "untilDismissed": "until dismissed",
@@ -1481,7 +1498,8 @@
       "psionic_pick": "Known powers",
       "power_check": "Power check",
       "defence_raised": "Defence raised",
-      "psionic_defence": "Psychic contest"
+      "psionic_defence": "Psychic contest",
+      "psionic_attack": "Psionic attack"
     },
     "status": {
       "active": "Active",
@@ -1512,6 +1530,8 @@
       "maintenanceOne": "{{power}} {{cost}}",
       "maintenance": "— maintenance (PSPs): {{powers}}",
       "powersEnded": "— powers ended, not enough PSPs: {{powers}}",
+      "targetsEnded": "— holds ended, not enough PSPs: {{targets}}",
+      "letGo": "Let go of {{target}}",
       "powerStopped": "Stopped maintaining {{power}}",
       "passTime": "Time passed: {{hours, number}} h ({{rounds}}), round {{from}} → {{to}}",
       "dismissVoluntary": "Ended {{buff}}",
@@ -1608,6 +1628,10 @@
     "initiativeWith": "Initiative {{value}} for round {{round}} ({{breakdown}})",
     "initiativeCorrect": "Round {{round}} initiative corrected: {{before}} → {{after}} ({{cause}})",
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
+    "rest_ended": {
+      "powers": "— powers ended: {{powers}}",
+      "targets": "— holds ended: {{targets}}"
+    },
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",
     "saveThrow": {
@@ -1734,10 +1758,19 @@
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
     "defenceRaised": "Defence raised ({{power}}): PSPs {{spent}}",
     "defenceRaisedStanding": "Defence raised ({{power}}, standing): PSPs {{spent}}",
+    "psionicAttack": "Psionic attack ({{attack}} on {{target}}): {{results}}",
+    "psionicAttackWith": "{{text}} ({{parts}})",
+    "attackParts": {
+      "tangents": "tangents {{from}} → {{to}}",
+      "contact": "contact made",
+      "broken": "tangents on {{target}} ended",
+      "cost": "PSPs {{spent}}"
+    },
     "psionicDefence": "Psychic contest ({{attack}} against {{defence}}): {{results}}",
     "psionicDefenceNone": "Psychic contest ({{attack}}, no defence): {{results}}",
     "contest": {
       "attackerWon": "attacker won",
+      "attackerWonEffect": "attacker won, effect to apply",
       "checkWon": "{{check}}: {{won}}",
       "andThen": "{{first}}; {{next}}",
       "defended": "defended"
@@ -2294,6 +2327,7 @@
     "power_not_maintained": "This power is not maintained.",
     "not_in_combat": "This defence mode is raised for a combat round: no round is running.",
     "not_a_defence_mode": "This power is not a defence mode.",
+    "not_an_attack_mode": "This power is not an attack mode.",
     "defence_mode_is_raised": "A defence mode is raised, not used.",
     "psp_recovery_while_maintaining": "No PSP recovery while a power is maintained: stop it first.",
     "not_a_psionicist": "This character is not a psionicist.",

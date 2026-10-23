@@ -3,11 +3,17 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ApiError } from "@/api/http";
-import { stopPower, invokePower, raisePower } from "@/api/psionics";
+import {
+  stopPower,
+  invokePower,
+  raisePower,
+  attackPower,
+} from "@/api/psionics";
 import { localized } from "@/i18n/localized";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import type { Power } from "@/types/powers";
+import { AttackForm } from "./AttackForm";
 import { UsePowerForm } from "./UsePowerForm";
 
 /**
@@ -24,8 +30,14 @@ export function PowerActions({ power }: { power: Power }) {
   // as maintained.
   const row = useBuffsStore((s) => s.buffs.find((b) => b.powerId === power.id));
   const maintained = !!row;
+  // The minds already held in a tangent or contact row, offered as the attack's targets.
+  const held = useBuffsStore((s) => s.buffs);
+  const targets = [
+    ...new Set(held.flatMap((b) => (b.target ? [b.target] : []))),
+  ];
   const name = localized(i18n.language, power.name);
   const defence = power.kind === "defence_mode";
+  const attackMode = power.kind === "attack_mode";
   const [refusal, setRefusal] = useState<string | null>(null);
 
   // A defence mode is raised, not used (ADR 0044 step 4): no roll, the cost paid. A refusal (out of
@@ -64,6 +76,25 @@ export function PowerActions({ power }: { power: Power }) {
     return check ? { check } : { refused: refused ?? "" };
   }
 
+  // An attack mode is used on an opponent (ADR 0044 step 7): the server decides the contests.
+  async function attack(req: Parameters<typeof attackPower>[1]) {
+    let result = null as
+      Awaited<ReturnType<typeof attackPower>>["attack"] | null;
+    let refused = "";
+    await useTableStore.getState().submit(async () => {
+      try {
+        result = (await attackPower(power.id, req)).attack;
+      } catch (e) {
+        if (e instanceof ApiError && e.status < 500) {
+          refused = e.message;
+          return;
+        }
+        throw e;
+      }
+    });
+    return result ? { result } : { refused };
+  }
+
   return (
     <>
       {maintained && (
@@ -99,10 +130,14 @@ export function PowerActions({ power }: { power: Power }) {
         <Button
           className="px-2"
           disabled={busy}
-          aria-label={t("powers.use.useNamed", { name })}
+          aria-label={
+            attackMode
+              ? t("powers.attack.attackNamed", { name })
+              : t("powers.use.useNamed", { name })
+          }
           onClick={() => setOpen(true)}
         >
-          {t("powers.use.use")}
+          {attackMode ? t("powers.attack.attack") : t("powers.use.use")}
         </Button>
       )}
       {refusal && (
@@ -117,14 +152,25 @@ export function PowerActions({ power }: { power: Power }) {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogTitle className="section-label mb-3">
-            {t("powers.use.title", { name })}
+            {attackMode
+              ? t("powers.attack.title", { name })
+              : t("powers.use.title", { name })}
           </DialogTitle>
-          <UsePowerForm
-            power={power}
-            powerName={name}
-            busy={busy}
-            onUse={use}
-          />
+          {attackMode ? (
+            <AttackForm
+              busy={busy}
+              powerName={name}
+              targets={targets}
+              onAttack={attack}
+            />
+          ) : (
+            <UsePowerForm
+              power={power}
+              powerName={name}
+              busy={busy}
+              onUse={use}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

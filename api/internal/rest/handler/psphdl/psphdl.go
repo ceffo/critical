@@ -54,6 +54,7 @@ type user interface {
 type defender interface {
 	RaiseDefence(ctx context.Context, characterID int64, powerID string) (*psionicsvc.RaiseResult, error)
 	Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)
+	Attack(ctx context.Context, characterID int64, req psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)
 }
 
 // CharacterIDFunc resolves the active character ID from the request context.
@@ -68,6 +69,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec re
 	r.Post("/api/psionics/powers/{id}/stop", render.Handle(Stop(charID, use)))
 	r.Post("/api/psionics/powers/{id}/raise", render.Handle(Raise(charID, def)))
 	r.Post("/api/psionics/defend", render.Handle(Defend(charID, def)))
+	r.Post("/api/psionics/powers/{id}/attack", render.Handle(Attack(charID, def)))
 }
 
 // RaiseDTO is a defence mode's raise as logged: the payload of the
@@ -125,6 +127,51 @@ func Defend(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, DefendDTO{Defence: res.Defence, LogEntryID: res.LogEntryID})
+		return nil
+	}
+}
+
+type attackBody struct {
+	Target    string                 `json:"target"`
+	Mind      string                 `json:"mind"`
+	Level     int                    `json:"level"`
+	Defence   string                 `json:"defence"`
+	Rolls     []psionics.ContestSide `json:"rolls"`
+	Modifiers []psionicsvc.Modifier  `json:"modifiers"`
+}
+
+// AttackDTO is an attack as logged: the psionic_attack entry's payload, the
+// pool after the cost and the entry's id.
+type AttackDTO struct {
+	Attack     psionicsvc.AttackRecord `json:"attack"`
+	PSP        StateDTO                `json:"psp"`
+	LogEntryID int64                   `json:"logEntryId"`
+}
+
+// Attack uses the known attack mode {id} on the opponent the body names: two
+// checks for one cost (ADR 0044 step 7). 400 on a bad opponent or modifier;
+// 409 not_an_attack_mode, needs_contact, not_enough_psp, power_not_known,
+// not_a_psionicist.
+func Attack(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body attackBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.Attack(r.Context(), charID(r), psionicsvc.AttackRequest{
+			Mode: chi.URLParam(r, "id"),
+			Opponent: psionics.Opponent{
+				Target: body.Target, Mind: body.Mind, Level: body.Level,
+				Defence: body.Defence, Rolls: body.Rolls,
+			},
+			Modifiers: body.Modifiers,
+		})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, AttackDTO{
+			Attack: res.Attack, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max}, LogEntryID: res.LogEntryID,
+		})
 		return nil
 	}
 }

@@ -22,7 +22,7 @@ func (s *service) Dismiss(ctx context.Context, characterID int64, buffID string,
 		}
 		c := change{
 			kind:    actionlog.KindBuffChange,
-			payload: logPayload{Action: "dismiss", Buff: buffs[i].Name, SpellID: buffs[i].SpellID, ProficiencyID: buffs[i].ProficiencyID, PowerID: buffs[i].PowerID, PowerNames: PowerNames(buffs[i : i+1])},
+			payload: logPayload{Action: "dismiss", Buff: buffs[i].Name, SpellID: buffs[i].SpellID, ProficiencyID: buffs[i].ProficiencyID, PowerID: buffs[i].PowerID, Target: buffs[i].Target, PowerNames: PowerNames(buffs[i : i+1])},
 			buffs:   without(buffs, i),
 		}
 		if s.asksEndCause(buffs[i]) {

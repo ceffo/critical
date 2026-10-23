@@ -319,10 +319,6 @@ func draftPSP(out *Draft, c *Character, entered *int, rules Rules) error {
 	return nil
 }
 
-
-
-
-
 // Change renames and retires in one transaction, outside the action log
 // (managing one's characters is no move of the game). Retiring picks the
 // owner's next current character in the same transaction (ADR 0029 step 7.2,
@@ -362,8 +358,3 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 	}
 	return current, nil
 }
-
-
-
-
-

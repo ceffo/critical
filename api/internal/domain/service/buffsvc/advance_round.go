@@ -37,7 +37,7 @@ func (s *service) AdvanceRound(ctx context.Context, characterID int64) (active, 
 				kind: actionlog.KindRoundAdvance,
 				payload: logPayload{
 					Action: "next_round", FromRound: &r, ToRound: &next, Expired: names, ExpiredSpellIDs: spellIDs, ExpiredProficiencyIDs: profIDs,
-					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), PowerNames: m.powerNames(),
+					Maintenance: m.charges, MaintenanceUnpaid: m.unpaidIDs(), UnpaidTargets: m.unpaidTargets(), PowerNames: m.powerNames(),
 				},
 				pspDelta: -m.spent,
 				buffs:    active,
@@ -100,12 +100,27 @@ func PowerNames(rows []BuffEffect) map[string]localized.Text {
 	return out
 }
 
+// unpaidIDs are the unpaid powers' ids, in the list's order.
 func (m maintenance) unpaidIDs() []string {
 	var ids []string
 	for _, b := range m.unpaid {
-		ids = append(ids, b.PowerID)
+		if b.PowerID != "" {
+			ids = append(ids, b.PowerID)
+		}
 	}
 	return ids
+}
+
+// unpaidTargets are the minds of the unpaid tangent and contact rows, in the
+// list's order.
+func (m maintenance) unpaidTargets() []string {
+	var targets []string
+	for _, b := range m.unpaid {
+		if b.linkRow() {
+			targets = append(targets, b.Target)
+		}
+	}
+	return targets
 }
 
 // chargeMaintenance keeps the maintained rows of active for rounds rounds
@@ -152,7 +167,7 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 	for i, b := range rows {
 		if paid[i] > 0 {
 			m.spent += paid[i]
-			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Cost: paid[i]})
+			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Target: b.Target, Cost: paid[i]})
 		}
 		if ended[i] {
 			m.unpaid = append(m.unpaid, active[i])

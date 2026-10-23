@@ -49,7 +49,9 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	for _, b := range before {
 		// ADR 0043 step 13: a power activated again renews its row.
 		samePower := buff.PowerID != "" && b.PowerID == buff.PowerID
-		if !samePower && !replacesDefence(buff, b) && (stacks || b.OnOther || !strings.EqualFold(b.Name, buff.Name)) {
+		// ADR 0044 step 3: a row holding a mind is named by the player's
+		// label; no buff of that name renews it.
+		if !samePower && !replacesDefence(buff, b) && (stacks || b.OnOther || b.linkRow() || !strings.EqualFold(b.Name, buff.Name)) {
 			after = append(after, b)
 		}
 	}

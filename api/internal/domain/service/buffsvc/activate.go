@@ -25,6 +25,9 @@ func (s *service) Activate(ctx context.Context, characterID int64, buff BuffEffe
 	buff.ProficiencyID = ""
 	// ADR 0043 step 13: only a power's successful check keeps a power up.
 	buff.PowerID, buff.MaintenanceCost, buff.MaintenancePeriod, buff.RoundsKept = "", 0, 0, 0
+	// ADR 0044 steps 3 to 5: only a raise or an attack puts a defence or a
+	// mind's row on.
+	buff.Defence, buff.Target, buff.Tangents = DefenceNone, "", 0
 	if buff.ID == "" {
 		buff.ID = uuid.New().String()
 	}

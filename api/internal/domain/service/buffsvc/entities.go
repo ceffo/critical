@@ -267,7 +267,39 @@ type BuffEffect struct {
 	// and stays until dismissed. "" for every other row. Stamped by the
 	// raise only.
 	Defence DefenceKind
+	// Target is the label of the opponent mind the row holds (ADR 0044
+	// step 3): the player's text, as the request named it (step 2). With no
+	// PowerID the row is a tangent row (Tangents 1 or 2) or a contact row
+	// (Tangents 0); "" for every other row.
+	Target string
+	// Tangents is the tangents a tangent row holds, 1 or 2; 0 on a contact
+	// row and every other row.
+	Tangents int
 }
+
+// Mind links (ADR 0044 step 3): what a tangent or contact row carries.
+const (
+	// MaxTangents is the most tangents a row holds: the next one is full
+	// contact.
+	MaxTangents = 2
+	// LinkMaintenanceCost is a tangent or contact row's maintenance, every
+	// round (the book's Maintaining Tangents; the Contact power's).
+	LinkMaintenanceCost = 1
+)
+
+// TangentRow reports whether the row holds tangents on a mind (step 3.1).
+func (b BuffEffect) TangentRow() bool {
+	return b.Target != "" && b.PowerID == "" && b.Tangents > 0
+}
+
+// ContactRow reports whether the row holds full contact with a mind (step
+// 3.2).
+func (b BuffEffect) ContactRow() bool {
+	return b.Target != "" && b.PowerID == "" && b.Tangents == 0
+}
+
+// linkRow reports whether the row is a tangent or contact row.
+func (b BuffEffect) linkRow() bool { return b.TangentRow() || b.ContactRow() }
 
 // DefenceKind is how a defence mode's row lasts (ADR 0044 steps 4 and 5).
 type DefenceKind string
@@ -302,8 +334,12 @@ func CurrentDefence(rows []BuffEffect) (BuffEffect, bool) {
 	return BuffEffect{}, false
 }
 
-// Maintained reports whether Next Round charges maintenance for the row.
-func (b BuffEffect) Maintained() bool { return b.PowerID != "" && b.MaintenanceCost > 0 }
+// Maintained reports whether Next Round charges maintenance for the row: a
+// maintained power's (ADR 0043 step 13) or a tangent or contact row's (ADR
+// 0044 step 3).
+func (b BuffEffect) Maintained() bool {
+	return (b.PowerID != "" || b.linkRow()) && b.MaintenanceCost > 0
+}
 
 // MaintenanceDue reports whether the Next Round ending the row's next round
 // kept charges its maintenance (ADR 0043 step 14, Q10): every period rounds

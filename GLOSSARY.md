@@ -249,6 +249,14 @@ _Code_: ContestSide, ContestCheck, ContestRecord, DefenceRecord
 A defence mode raised for the round, paid at the raise with no roll; a buff row that ends at the next move of the round counter. **Standing defence** (fr: défense permanente): a defence mode kept at no cost (mind blank), an untimed row. The **current defence** is the raised one, else the standing one. [ADR 0044](docs/adr/0044-psionic-combat.md) steps 4 and 5.
 _Code_: DefenceKind, RaiseRecord
 
+**Opponent** (fr: adversaire):
+The mind an attack or a contact names: a label the player gives (the **target**), open or closed as the DM tells, its level, the defence it raised and the DM's rolls for it. Not stored: the app keeps no opponent record. [ADR 0044](docs/adr/0044-psionic-combat.md) step 2.
+_Code_: Opponent
+
+**Tangent** (fr: tangente):
+A step into a closed mind, made by an attack that wins its contest; a buff row holds one or two on one mind at a time, at 1 PSP a round. The third is **contact** (fr: contact): full contact with that mind, a row per target at 1 PSP a round. An attack on another mind breaks the tangents; an unpaid charge or letting go ends either row. [ADR 0044](docs/adr/0044-psionic-combat.md) step 3.
+_Code_: TangentsChange
+
 **Initial cost** (fr: coût initial):
 The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (refused until telepathic combat) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
 _Code_: Cost

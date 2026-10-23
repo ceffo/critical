@@ -9,7 +9,7 @@
 set -euo pipefail
 tree_now() { # tree of the working copy, through a throwaway index: the real index is untouched
   local idx; idx=$(mktemp); trap 'rm -f "$idx"' RETURN
-  cp "$(git -C "$1" rev-parse --git-path index)" "$idx" 2>/dev/null || true
+  cp "$(git -C "$1" rev-parse --git-path index)" "$idx" 2>/dev/null || rm -f "$idx" # no index yet: git 2.56 refuses an empty file, a missing one is an empty index
   GIT_INDEX_FILE=$idx git -C "$1" add -A >/dev/null 2>&1
   GIT_INDEX_FILE=$idx git -C "$1" write-tree
 }

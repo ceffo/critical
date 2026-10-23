@@ -5,16 +5,19 @@
 #
 # Environment:
 #   EVENT   the GitHub event name (pull_request, push, ...).
-#   BASE    the commit to compare with (the PR's base, or the push's previous head).
-#   HEAD    the commit to compare (default HEAD).
+#   BASE    the PR's base commit (read on pull_request events only).
+#   HEAD    the PR's own head commit (default HEAD). Not the merge commit CI checks out: that one carries every
+#           commit main gained since the PR branched, and none of those is the PR's change.
 #   LABELS  comma-separated label names of the PR (read on pull_request events only).
 #
 # Skip when:
-#   - the PR carries the label ci-skip (a pull_request event only: the push to main that merges it runs
-#     everything, unless the path rule applies); or
-#   - every changed file is documentation: *.md anywhere, docs/**.
-# The decision defaults to running everything: no changed file found, an unreadable range (a new branch's
-# zero BASE, a force-pushed-away commit) or a changed file that is not documentation.
+#   - the PR carries the label ci-skip; or
+#   - every file the PR changes is documentation: *.md anywhere, docs/**. The PR's changes are the diff from
+#     the merge base of BASE and HEAD (BASE...HEAD), so a base that moved on does not count.
+# Only a pull request skips. A push to main (and a dispatched run) always runs everything: Release deploys
+# the commit that run gates, and a push's range can hold earlier commits whose own run was cancelled.
+# The decision defaults to running everything: no changed file found, an unreadable range or a changed file
+# that is not documentation.
 set -euo pipefail
 
 event="${EVENT:-}"
@@ -31,18 +34,18 @@ decide() {
     exit 0
 }
 
-if [ "$event" = pull_request ]; then
-    IFS=',' read -ra names <<< "$labels"
-    for name in "${names[@]}"; do
-        [ "$name" = ci-skip ] && decide true "the pull request has the ci-skip label"
-    done
-fi
+[ "$event" = pull_request ] || decide false "only a pull request skips the slow jobs"
+
+IFS=',' read -ra names <<< "$labels"
+for name in "${names[@]}"; do
+    [ "$name" = ci-skip ] && decide true "the pull request has the ci-skip label"
+done
 
 if [ -z "$base" ] || [[ "$base" =~ ^0+$ ]]; then
     decide false "no base commit to compare with"
 fi
-if ! files="$(git diff --name-only "$base" "$head" -- 2>/dev/null)"; then
-    decide false "cannot list the files changed since $base"
+if ! files="$(git diff --name-only "$base...$head" -- 2>/dev/null)"; then
+    decide false "cannot list the files the pull request changes"
 fi
 if [ -z "$files" ]; then
     decide false "no changed file found"

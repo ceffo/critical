@@ -45,7 +45,7 @@ check() {
 
 change readme README.md
 check "README only" true pull_request "" "$base"
-check "README only, on a push" true push "" "$base"
+check "README only, on a push" false push "" "$base"
 
 change docs-all docs/adr/0001-x.md web/README.md api/NOTES.md
 check "docs, nested markdown and tracker only" true pull_request "bug,other" "$base"
@@ -72,6 +72,22 @@ change docs-label README.md
 check "docs with the ci-skip label" true pull_request "ci-skip" "$base"
 
 git -C "$repo" checkout -q -B empty "$base"
+# A PR branched from an older main: main moved on (code), and the PR merged with it is the checked-out HEAD.
+# The PR's own head and the moved base are what the script gets; only the PR's own files count.
+git -C "$repo" checkout -q -B main-moved "$base"
+echo code > "$repo/moved.go"; git -C "$repo" add -A; git -C "$repo" commit -q -m moved
+moved="$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" checkout -q -B stale-docs "$base"
+echo doc >> "$repo/README.md"; git -C "$repo" add -A; git -C "$repo" commit -q -m docs
+prhead="$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" merge -q --no-edit main-moved
+out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$prhead" "$script")"
+[ "$out" = "skip_slow=true (only documentation changed)" ] || fail "docs PR on a moved base: $out"
+git -C "$repo" checkout -q -B stale-code "$base"
+echo code > "$repo/own.go"; git -C "$repo" add -A; git -C "$repo" commit -q -m code
+out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$(git rev-parse HEAD)" "$script")"
+[ "$out" = "skip_slow=false (own.go is not documentation)" ] || fail "code PR on a moved base: $out"
+
 check "no change" false pull_request "" "$base"
 check "no base" false push "" ""
 check "a dispatched run on main (no base)" false workflow_dispatch "" ""
@@ -80,7 +96,7 @@ check "a zero base (new branch)" false push "" 000000000000000000000000000000000
 check "an unknown base" false push "" 1111111111111111111111111111111111111111
 
 # The output file is optional: stdout carries the decision.
-out="$(cd "$repo" && git checkout -q readme && EVENT=push BASE="$base" "$script")"
+out="$(cd "$repo" && git checkout -q readme && EVENT=pull_request BASE="$base" "$script")"
 [ "$out" = "skip_slow=true (only documentation changed)" ] || fail "stdout without GITHUB_OUTPUT: $out"
 
 if [ "$fails" -ne 0 ]; then

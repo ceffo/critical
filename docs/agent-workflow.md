@@ -298,12 +298,12 @@ contract or domain struct.
 CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, the run step times out at 6; Playwright Chromium and the apt .debs it needs cached (apt key: Playwright version + ISO week, with restore-keys; the install is retried and bounded, a timed-out attempt's apt-get is stopped before the next one), 3 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
 **Main runs:** a push to `main` runs CI, and Release follows. A Dependabot PR merged by auto-merge starts no push run (GitHub: events caused by `GITHUB_TOKEN` start no workflow), so `dependabot-auto-merge.yml` waits for the merge and runs `gh workflow run ci.yml --ref main`; that dispatched run has no base commit, so `changes` runs every slow job.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
-`scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` when every
-changed file is documentation (`*.md`, `docs/**`; on a PR against its base, on a push
-against the previous head), or when the PR carries the label `ci-skip` (PR runs only: the push that
-merges it runs everything). `validate` and `generated` always run (required checks). A skipped job
-counts as a success, so the CI run is green and the Release workflow still starts and decides by its
-own rules; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
+`scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` on a pull request
+when every file the PR itself changes is documentation (`*.md`, `docs/**`; the diff from the merge base of
+the PR's base and head, not the merge commit CI checks out, which also holds what main gained meanwhile), or
+when the PR carries the label `ci-skip`. A push to main and a dispatched run never skip: Release deploys the
+commit that run gates. `validate` and `generated` always run (required checks). A skipped job
+counts as a success, so the PR is mergeable and green; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
 `ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still
 applies to it. PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
 `🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.

@@ -328,7 +328,9 @@ func (s *service) Stop(ctx context.Context, characterID int64, powerID string) (
 		if err != nil {
 			return fmt.Errorf("list buffs: %w", err)
 		}
-		i := slices.IndexFunc(rows, func(b buffsvc.BuffEffect) bool { return b.PowerID == powerID && (b.Maintained() || b.Defence != buffsvc.DefenceNone) })
+		i := slices.IndexFunc(rows, func(b buffsvc.BuffEffect) bool {
+			return b.PowerID == powerID && (b.Maintained() || b.Defence != buffsvc.DefenceNone)
+		})
 		if powerID == "" || i < 0 {
 			return ErrPowerNotMaintained
 		}

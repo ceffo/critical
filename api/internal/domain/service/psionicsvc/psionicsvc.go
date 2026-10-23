@@ -69,6 +69,11 @@ type SVC interface {
 	// step 7): two checks for one cost, one psionic_attack entry. The
 	// refusals are Attack's (attack.go).
 	Attack(ctx context.Context, characterID int64, req AttackRequest) (*AttackResult, error)
+	// Contact uses the contact power on the request's open mind (ADR 0044
+	// step 9): one check, its cost by the target's level, one power_check
+	// entry making the contact row on a success. The refusals are
+	// Contact's (contact.go).
+	Contact(ctx context.Context, characterID int64, req ContactRequest) (*UseResult, error)
 }
 
 // Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
@@ -85,6 +90,9 @@ type Buffs interface {
 	// (ADR 0044 step 3), inside the ctx transaction, without recording: the
 	// attack's entry records the snapshot (zero when nothing changed).
 	AddTangents(ctx context.Context, characterID int64, target string, won int) (buffsvc.TangentsChange, actionlog.Snapshot, error)
+	// MakeContact is the contact power's success (ADR 0044 step 9), as
+	// AddTangents: inside the ctx transaction, without recording.
+	MakeContact(ctx context.Context, characterID int64, target string) (buffsvc.TangentsChange, actionlog.Snapshot, error)
 }
 
 // Dice rolls the power check's d20 (dicesvc).
@@ -99,6 +107,12 @@ type Tables interface {
 	// AttackVersusDefence is Table 14's modifier to the attacker's score
 	// for an attack mode meeting a defence mode (ADR 0044 step 1.1).
 	AttackVersusDefence(attack, defence string) (int, error)
+	// ContactCost is Table 29's contact cost for a target's level
+	// (ruletablesvc.ErrLevelOutOfTable past it, ADR 0044 Q15).
+	ContactCost(level int) (int, error)
+	// ContactModifier is the contact power's score modifier for code of
+	// kind (ADR 0044 step 1.3).
+	ContactModifier(kind, code string) (int, error)
 }
 
 // Log is the PSP ledger's writer (actionlogsvc).

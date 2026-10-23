@@ -74,6 +74,119 @@ func (_c *MockTables_AttackVersusDefence_Call) RunAndReturn(run func(string, str
 	return _c
 }
 
+// ContactCost provides a mock function with given fields: level
+func (_m *MockTables) ContactCost(level int) (int, error) {
+	ret := _m.Called(level)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ContactCost")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(int) (int, error)); ok {
+		return rf(level)
+	}
+	if rf, ok := ret.Get(0).(func(int) int); ok {
+		r0 = rf(level)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(int) error); ok {
+		r1 = rf(level)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTables_ContactCost_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContactCost'
+type MockTables_ContactCost_Call struct {
+	*mock.Call
+}
+
+// ContactCost is a helper method to define mock.On call
+//   - level int
+func (_e *MockTables_Expecter) ContactCost(level interface{}) *MockTables_ContactCost_Call {
+	return &MockTables_ContactCost_Call{Call: _e.mock.On("ContactCost", level)}
+}
+
+func (_c *MockTables_ContactCost_Call) Run(run func(level int)) *MockTables_ContactCost_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(int))
+	})
+	return _c
+}
+
+func (_c *MockTables_ContactCost_Call) Return(_a0 int, _a1 error) *MockTables_ContactCost_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTables_ContactCost_Call) RunAndReturn(run func(int) (int, error)) *MockTables_ContactCost_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ContactModifier provides a mock function with given fields: kind, code
+func (_m *MockTables) ContactModifier(kind string, code string) (int, error) {
+	ret := _m.Called(kind, code)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ContactModifier")
+	}
+
+	var r0 int
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, string) (int, error)); ok {
+		return rf(kind, code)
+	}
+	if rf, ok := ret.Get(0).(func(string, string) int); ok {
+		r0 = rf(kind, code)
+	} else {
+		r0 = ret.Get(0).(int)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, string) error); ok {
+		r1 = rf(kind, code)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockTables_ContactModifier_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContactModifier'
+type MockTables_ContactModifier_Call struct {
+	*mock.Call
+}
+
+// ContactModifier is a helper method to define mock.On call
+//   - kind string
+//   - code string
+func (_e *MockTables_Expecter) ContactModifier(kind interface{}, code interface{}) *MockTables_ContactModifier_Call {
+	return &MockTables_ContactModifier_Call{Call: _e.mock.On("ContactModifier", kind, code)}
+}
+
+func (_c *MockTables_ContactModifier_Call) Run(run func(kind string, code string)) *MockTables_ContactModifier_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockTables_ContactModifier_Call) Return(_a0 int, _a1 error) *MockTables_ContactModifier_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockTables_ContactModifier_Call) RunAndReturn(run func(string, string) (int, error)) *MockTables_ContactModifier_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PSPRecoveryRate provides a mock function with given fields: activity
 func (_m *MockTables) PSPRecoveryRate(activity string) (int, error) {
 	ret := _m.Called(activity)

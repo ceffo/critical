@@ -275,6 +275,10 @@ type BuffEffect struct {
 	// Tangents is the tangents a tangent row holds, 1 or 2; 0 on a contact
 	// row and every other row.
 	Tangents int
+	// ContactFrom is the row's RoundsKept when it became a contact row (ADR
+	// 0044 step 10): a contact made in an earlier round has RoundsKept above
+	// it. 0 for every other row.
+	ContactFrom int
 }
 
 // Mind links (ADR 0044 step 3): what a tangent or contact row carries.

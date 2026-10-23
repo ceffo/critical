@@ -49,6 +49,10 @@ type SVC interface {
 	// the snapshot (zero when nothing changed), inside the transaction ctx
 	// carries.
 	AddTangents(ctx context.Context, characterID int64, target string, won int) (TangentsChange, actionlog.Snapshot, error)
+	// MakeContact is the contact power's success on target (ADR 0044 step
+	// 9): target's row becomes a contact row, without recording, as
+	// AddTangents.
+	MakeContact(ctx context.Context, characterID int64, target string) (TangentsChange, actionlog.Snapshot, error)
 	Edit(ctx context.Context, characterID int64, buffID string, e BuffEdit) ([]BuffEffect, error)
 	// Dismiss stops a row; cause is how it ended when its spell has end
 	// effects (ADR 0004 step 21), and end what they did.

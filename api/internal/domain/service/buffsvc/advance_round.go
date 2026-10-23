@@ -125,8 +125,9 @@ func (m maintenance) unpaidTargets() []string {
 
 // chargeMaintenance keeps the maintained rows of active for rounds rounds
 // (a Next Round: 1; passing time: its rounds), charging from the current
-// PSPs: round by round, each round's due rows in the list's order. A row
-// whose cost the PSPs left cannot pay ends there, charging nothing more; a
+// PSPs: round by round, each round's due rows in the list's order, the
+// contact rows after the others, free while a power on their target is kept
+// up (ADR 0044 step 10). A row whose cost the PSPs left cannot pay ends there, charging nothing more; a
 // cheaper row after it may still pay. Every kept maintained row's RoundsKept
 // grows by rounds. charges has one line per power that paid, in the list's
 // order, its Cost the total it paid. The PSPs are read only when a row is
@@ -147,21 +148,34 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 	rows := slices.Clone(active)
 	paid := make([]int, len(rows))
 	ended := make([]bool, len(rows))
-	for range rounds {
-		for i := range rows {
-			b := &rows[i]
-			if ended[i] || !b.Maintained() {
-				continue
+	// ADR 0044 step 10: a contact row is free in a round where a power kept
+	// up through it is still on, so each round the contact rows come after
+	// the other rows.
+	freeContact := func(c BuffEffect) bool {
+		for j, b := range rows {
+			if !ended[j] && usesContact(b, c) {
+				return true
 			}
-			if b.MaintenanceDue() {
-				if b.MaintenanceCost > left {
-					ended[i] = true
+		}
+		return false
+	}
+	for range rounds {
+		for _, contacts := range []bool{false, true} {
+			for i := range rows {
+				b := &rows[i]
+				if ended[i] || !b.Maintained() || b.ContactRow() != contacts {
 					continue
 				}
-				left -= b.MaintenanceCost
-				paid[i] += b.MaintenanceCost
+				if b.MaintenanceDue() && !(contacts && freeContact(*b)) {
+					if b.MaintenanceCost > left {
+						ended[i] = true
+						continue
+					}
+					left -= b.MaintenanceCost
+					paid[i] += b.MaintenanceCost
+				}
+				b.RoundsKept++
 			}
-			b.RoundsKept++
 		}
 	}
 	for i, b := range rows {

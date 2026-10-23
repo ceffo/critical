@@ -156,6 +156,22 @@ func (t *Tables) ContactCost(level int) (int, error) {
 	return 0, ErrLevelOutOfTable
 }
 
+// ContactModifier is the contact power's score modifier for code of kind
+// (ADR 0044 step 1.3: Table 30 by distance, Table 31 by life order, or the
+// resistance). An unknown kind or code is an error.
+func (t *Tables) ContactModifier(kind, code string) (int, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return 0, err
+	}
+	for _, r := range c.ContactModifiers {
+		if r.Kind == kind && r.Code == code {
+			return r.Modifier, nil
+		}
+	}
+	return 0, fmt.Errorf("contact modifiers: no row for %s %q", kind, code)
+}
+
 // CheckPowerKinds is the start-up check that ties the combat tables to the
 // powers (ADR 0044 step 1.1): every attack of Table 14 is an attack_mode
 // power, every defence a defence_mode power, and every such mode of the

@@ -53,6 +53,8 @@ type snapBuff struct {
 	// restore "" and 0 (ADR 0044 step 3).
 	Target   string `json:"target,omitempty"`
 	Tangents int    `json:"tangents,omitempty"`
+	// ContactFrom is absent from rows not made contact rows (ADR 0044 step 10).
+	ContactFrom int `json:"contact_from,omitempty"`
 }
 
 type snapEffects struct {
@@ -101,7 +103,7 @@ func toSnapBuffs(buffs []BuffEffect) []snapBuff {
 			Effects: snapEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
-			Target: b.Target, Tangents: b.Tangents,
+			Target: b.Target, Tangents: b.Tangents, ContactFrom: b.ContactFrom,
 		}
 	}
 	return out
@@ -115,7 +117,7 @@ func fromSnapBuffs(in []snapBuff) []BuffEffect {
 			Effects: BuffEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 			SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 			PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
-			Target: b.Target, Tangents: b.Tangents,
+			Target: b.Target, Tangents: b.Tangents, ContactFrom: b.ContactFrom,
 		}
 	}
 	return out

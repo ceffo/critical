@@ -102,6 +102,23 @@ out="$("$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-404 TST-3 2>"$tmp/err")"
 grep -q 'TST-404 not moved' "$tmp/err" || fail "bad issue not reported"
 [ "$(sent_states)" = "s-rev" ] || fail "the good issue was skipped after the bad one"
 
+# --- ship.sh refusals, before any push or Linear call (sup-84 retro)
+: > "$tmp/requests"; : > "$GH_LOG"
+echo "Closes TST-1. Follows up the TST-9 epic." > "$tmp/body2"
+"$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body2" TST-1 2>"$tmp/err" && fail "stray id in the body shipped"
+grep -q 'TST-9 named but not closed' "$tmp/err" || fail "stray id not named: $(cat "$tmp/err")"
+"$S/ship.sh" "$tmp/wt" "feat: x (TST-8)" "$tmp/body" TST-1 2>/dev/null && fail "stray id in the title shipped"
+echo "UTF-8 and sup-84 are not ids" > "$tmp/body3"
+SHIP_ID_PREFIX=TST "$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body3" 2>"$tmp/err" >/dev/null || fail "non-id words refused: $(cat "$tmp/err")"
+printf 'validate:\n\techo ok\n' > "$tmp/wt/justfile"; git -C "$tmp/wt" add justfile
+git -C "$tmp/wt" -c user.name=t -c user.email=t@t commit -qm justfile
+: > "$GH_LOG"
+"$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-1 2>"$tmp/err" && fail "HEAD without a gate stamp shipped"
+grep -q 'never passed' "$tmp/err" || fail "gate refusal not explained: $(cat "$tmp/err")"
+grep -q 'pr create' "$GH_LOG" && fail "a refused ship opened a PR"
+(cd "$tmp/wt" && "$root/scripts/gate-stamp.sh" write)
+"$S/ship.sh" "$tmp/wt" "feat: x" "$tmp/body" TST-1 >/dev/null 2>"$tmp/err" || fail "stamped HEAD refused: $(cat "$tmp/err")"
+
 # --- land.sh: merges only through its gate, no Linear call
 : > "$tmp/requests"; : > "$GH_LOG"
 git -C "$tmp/main" fetch -q origin; git -C "$tmp/main" checkout -q -B main origin/feat

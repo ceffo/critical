@@ -6,8 +6,13 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets check-api check-web
+validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-api check-web
     @echo "--- Project Validation Successful ---"
+    @scripts/gate-stamp.sh write
+
+# The gate stamp that ties a green `just validate` to the tree it ran on (ship.sh refuses a HEAD without it).
+test-gate-stamp:
+    scripts/test-gate-stamp.sh
 
 # Fail when an ADR cites a Test* name that has no `func TestName` in the code. A cited name ending
 # in `_` is a prefix (e.g. TestCrit_StepN_ stands for TestCrit_Step1_..., so the N placeholder is

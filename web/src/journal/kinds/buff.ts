@@ -53,8 +53,15 @@ export interface BuffLogPayload {
   hpAfter?: number;
   /** dismiss: the psionic power the stopped row kept up (ADR 0043 step 16). */
   powerId?: string;
-  /** next_round / pass_time: what each maintained power was charged (ADR 0043 steps 14 and 15). */
-  maintenance?: { powerId: string; cost: number }[];
+  /** dismiss: the mind a tangent or contact row held, when the player let go of it (ADR 0044 step 3). */
+  target?: string;
+  /**
+   * next_round / pass_time: what each maintained power was charged (ADR 0043 steps 14 and 15). A
+   * tangent or contact row's charge has no power (`powerId` ""), and names its `target` (ADR 0044).
+   */
+  maintenance?: { powerId: string; target?: string; cost: number }[];
+  /** next_round / pass_time: the minds whose tangent or contact row the PSPs left could not pay. */
+  unpaidTargets?: string[];
   /** next_round / pass_time: the powers the PSPs left could not pay; they ended. */
   maintenanceUnpaid?: string[];
   /** The powers above (and a dismissed one) by id, named in every language when logged. */
@@ -171,7 +178,7 @@ function buffText(
   const kept = (p.maintenance ?? [])
     .map((m) =>
       t("log.buff.maintenanceOne", {
-        power: power(m.powerId),
+        power: m.target && !m.powerId ? m.target : power(m.powerId),
         cost: m.cost,
       }),
     )
@@ -185,6 +192,11 @@ function buffText(
     if (p.maintenanceUnpaid?.length) {
       out = `${out} ${t("log.buff.powersEnded", {
         powers: p.maintenanceUnpaid.map((id) => power(id)).join(", "),
+      })}`;
+    }
+    if (p.unpaidTargets?.length) {
+      out = `${out} ${t("log.buff.targetsEnded", {
+        targets: p.unpaidTargets.join(", "),
       })}`;
     }
     return endOfMany
@@ -227,6 +239,8 @@ function buffText(
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
+      if (p.target && !p.powerId)
+        return t("log.buff.letGo", { target: p.target });
       if (p.powerId)
         return t("log.buff.powerStopped", { power: power(p.powerId, buff) });
       return withEnded(

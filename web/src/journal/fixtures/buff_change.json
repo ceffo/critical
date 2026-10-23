@@ -32,8 +32,38 @@
       "buff": "Mind Thrust",
       "powerId": "mind_thrust",
       "powerNames": {
-        "mind_thrust": { "en": "Mind Thrust", "fr": "Poussée mentale" }
+        "mind_thrust": {
+          "en": "Mind Thrust",
+          "fr": "Poussée mentale"
+        }
       }
+    }
+  },
+  "letGo": {
+    "payload": {
+      "action": "dismiss",
+      "buff": "Orc",
+      "target": "Orc"
+    }
+  },
+  "nextRoundHolds": {
+    "payload": {
+      "action": "next_round",
+      "fromRound": 3,
+      "toRound": 4,
+      "maintenance": [
+        {
+          "powerId": "",
+          "target": "Orc",
+          "cost": 1
+        }
+      ],
+      "unpaidTargets": [
+        "Goblin shaman"
+      ],
+      "expired": [
+        "Goblin shaman"
+      ]
     }
   }
 }

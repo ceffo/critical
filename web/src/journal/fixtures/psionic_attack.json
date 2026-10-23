@@ -85,7 +85,9 @@
       "tangentsBefore": 2,
       "tangentsAfter": 3,
       "contact": true,
-      "warnings": ["second_power_this_round"]
+      "warnings": [
+        "second_power_this_round"
+      ]
     },
     "roll": false
   },
@@ -125,6 +127,45 @@
       "tangentsBefore": 0,
       "tangentsAfter": 0,
       "broken": "Orc"
+    },
+    "roll": false
+  },
+  "openMindEffect": {
+    "payload": {
+      "power": "ego_whip",
+      "name": {
+        "en": "Ego Whip",
+        "fr": "Cinglement de l'ego"
+      },
+      "ability": "wis",
+      "abilityScore": 16,
+      "powerModifier": -3,
+      "score": 13,
+      "target": "Peasant",
+      "mind": "open",
+      "checks": [
+        {
+          "check": {
+            "target": 13,
+            "d20": 9,
+            "outcome": "success"
+          },
+          "winner": "attacker",
+          "effect": true
+        },
+        {
+          "check": {
+            "target": 13,
+            "d20": 15,
+            "outcome": "failure"
+          },
+          "winner": "defender"
+        }
+      ],
+      "cost": 4,
+      "spent": 4,
+      "tangentsBefore": 0,
+      "tangentsAfter": 0
     },
     "roll": false
   }

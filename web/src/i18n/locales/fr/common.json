@@ -1513,6 +1513,8 @@
       "maintenanceOne": "{{power}} {{cost}}",
       "maintenance": "— maintien (PFP) : {{powers}}",
       "powersEnded": "— pouvoirs terminés, PFP insuffisants : {{powers}}",
+      "targetsEnded": "— emprises terminées, PFP insuffisants : {{targets}}",
+      "letGo": "Emprise lâchée : {{target}}",
       "powerStopped": "Maintien arrêté : {{power}}",
       "passTime": "Temps écoulé : {{hours, number}} h ({{rounds}}), tour {{from}} → {{to}}",
       "dismissVoluntary": "{{buff}} : fin par moi",
@@ -1736,10 +1738,18 @@
     "defenceRaised": "Défense dressée ({{power}}) : PFP {{spent}}",
     "defenceRaisedStanding": "Défense dressée ({{power}}, permanente) : PFP {{spent}}",
     "psionicAttack": "Attaque psionique ({{attack}} sur {{target}}) : {{results}}",
+    "psionicAttackWith": "{{text}} ({{parts}})",
+    "attackParts": {
+      "tangents": "tangentes {{from}} → {{to}}",
+      "contact": "contact établi",
+      "broken": "tangentes sur {{target}} rompues",
+      "cost": "PFP {{spent}}"
+    },
     "psionicDefence": "Duel psychique ({{attack}} contre {{defence}}) : {{results}}",
     "psionicDefenceNone": "Duel psychique ({{attack}}, sans défense) : {{results}}",
     "contest": {
       "attackerWon": "l’attaquant l’emporte",
+      "attackerWonEffect": "l’attaquant l’emporte, effet à appliquer",
       "checkWon": "{{check}} : {{won}}",
       "andThen": "{{first}} ; {{next}}",
       "defended": "défendu"
@@ -2296,6 +2306,7 @@
     "power_not_maintained": "Ce pouvoir n’est pas maintenu.",
     "not_in_combat": "Ce mode de défense se dresse pour un tour de combat : aucun tour n’est en cours.",
     "not_a_defence_mode": "Ce pouvoir n’est pas un mode de défense.",
+    "not_an_attack_mode": "Ce pouvoir n’est pas un mode d’attaque.",
     "defence_mode_is_raised": "Un mode de défense se dresse, il ne s’utilise pas.",
     "psp_recovery_while_maintaining": "Pas de récupération de PFP pendant qu’un pouvoir est maintenu : arrêtez-le d’abord.",
     "not_a_psionicist": "Ce personnage n’est pas un psioniste.",

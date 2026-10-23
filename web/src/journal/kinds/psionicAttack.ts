@@ -52,27 +52,53 @@ export const psionicAttackKind: KindView<PsionicAttackPayload> = {
       : null;
   },
   icon: Lightning,
-  // "Psionic attack (Ego Whip on Orc): d20 5 vs 13 (Success): attacker won; …".
-  text: (p, { t, names }) =>
-    t("log.psionicAttack", {
-      attack: names.text(p.name, p.power),
-      target: p.target,
-      results: p.checks
-        .map((c) =>
-          t("log.contest.checkWon", {
-            check: checkText(c.check, false, t),
-            won: t(
-              c.winner === "attacker"
-                ? "log.contest.attackerWon"
-                : "log.contest.defended",
-            ),
-          }),
-        )
-        .reduce(
-          (a, b) => (a ? t("log.contest.andThen", { first: a, next: b }) : b),
-          "",
-        ),
-    }),
+  // "Psionic attack (Ego Whip on Orc): d20 5 vs 13 (Success): attacker won; … (tangents 1 → 2, PSPs 4)".
+  text: (p, { t, names }) => {
+    const results = p.checks
+      .map((c) =>
+        t("log.contest.checkWon", {
+          check: checkText(c.check, false, t),
+          won: t(
+            c.winner !== "attacker"
+              ? "log.contest.defended"
+              : c.effect
+                ? "log.contest.attackerWonEffect"
+                : "log.contest.attackerWon",
+          ),
+        }),
+      )
+      .reduce(
+        (a, b) => (a ? t("log.contest.andThen", { first: a, next: b }) : b),
+        "",
+      );
+    const parts: string[] = [];
+    // Contact ends the tangents' count; a closed mind otherwise shows how many it holds now.
+    if (p.contact) parts.push(t("log.attackParts.contact"));
+    else if (p.tangentsBefore !== p.tangentsAfter)
+      parts.push(
+        t("log.attackParts.tangents", {
+          from: p.tangentsBefore,
+          to: p.tangentsAfter,
+        }),
+      );
+    if (p.broken)
+      parts.push(t("log.attackParts.broken", { target: p.broken }));
+    parts.push(
+      p.spent < p.cost
+        ? t("log.powerParts.halfCost", { spent: p.spent, cost: p.cost })
+        : t("log.attackParts.cost", { spent: p.spent }),
+    );
+    for (const w of p.warnings ?? [])
+      parts.push(t(`log.powerParts.warning.${w}`));
+    return t("log.psionicAttackWith", {
+      text: t("log.psionicAttack", {
+        attack: names.text(p.name, p.power),
+        target: p.target,
+        results,
+      }),
+      parts: parts.join(", "),
+    });
+  },
   // The app rolls a d20 per check.
   rolled: () => true,
   short: (p, { t }, _e, value) => ({

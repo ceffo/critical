@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/ceffo/critical/schemas/catalogue.schema.json",
-  "title": "Critical! catalogue, format 18",
+  "title": "Critical! catalogue, format 19",
   "description": "Shape of the catalogue artifact (ADR 0021): the spells and the PHB rule tables (step 9), the class and race tables (step 10, ADR 0030 step 23), the racial level limits (step 11, DMG Table 7), each priest spell's sphere codes (step 12, ADR 0030 steps 15 and 23), the equipment reference data and its two rule tables (step 13, ADR 0033 steps 21 to 23), the language catalogue and each race's language list (step 14, ADR 0032 step 4) the non-weapon proficiency descriptions (step 16, ADR 0037 step 19) Table 5's magical defence adjustment on the wisdom rows (step 17, ADR 0006 step 9), the class, group and race definitions with their feature and trait lists (step 18, ADR 0040 steps 1 to 4 and 7) and Table 5's spell immunities on the wisdom rows (step 19, ADR 0006 step 10). and, format 13 (step 20, ADR 0043), the psionicist: its rows in the shared tables, the psionic power progression, inherent potential and PSP recovery tables, the psionic disciplines and powers. Format 14 (step 21) drops the unread per-class sphere table: a class's spheres are its sphere_access feature. Format 15 (step 22) names a class's Constitution hit point column by the boolean bracketed_constitution. Format 16 (step 23) lets a psionic power say which slot it takes where its kind does not. Format 17 (step 24) lets a class say it is never one of a multi-class character's classes. Format 18 (step 25, ADR 0044 step 1) adds the psionic combat tables (attack_versus_defence, contact_cost, contact_modifiers) and lets a power's initial cost name its table or carry a plus amount on contact. The API reads format 18 only: formats 3 to 17 were each the same shape without the parts added later (or with the sphere table), and are retired (steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2, 22.2, 23.2, 24.2 and 25.5). Shape only: the schema carries no book text.",
   "type": "object",
   "additionalProperties": false,
@@ -16,14 +16,15 @@
     "classes",
     "groups",
     "races",
+    "skill_sets",
     "disciplines",
     "powers"
   ],
   "properties": {
     "format": {
-      "description": "Artifact format: 18 (ADR 0021 step 25: format 17 plus the psionic combat tables and the table-named and contact-plus initial costs; format 17 was step 24's: format 16 plus the optional multiclass flag on a class; format 16 was step 23's: format 15 plus the optional slot on a psionic power; format 15 was step 22's: format 14 with the boolean bracketed_constitution on each class's hit dice in place of the Table 3 column name; format 14 was step 21's: format 13 without the per-class sphere_access rule table; format 13 was step 20's: format 12 plus the psionicist's rows, three psionic tables and the psionic disciplines and powers; format 12 was step 19's: format 11 plus the spell immunities of each wisdom row; format 11 was step 18's: format 10 plus the class, group and race definitions; format 10 was step 17's: format 9 plus the magical defence adjustment of each wisdom row; format 9 was step 16's: the formats 3 to 8 plus the non-weapon proficiency descriptions). An importer accepts exactly the formats it knows and refuses the rest.",
+      "description": "Artifact format: 19 (ADR 0021 step 27: format 18 plus the top-level skill_sets, the shared skill tables renamed skill_race, skill_dexterity (rows keyed by skill) and skill_armor, without thief_skill_base, bard_skill_base and bard_armor_penalty, and the parameters of the weapon_specialization feature); format 18 was step 25's. An importer accepts exactly the formats it knows and refuses the rest.",
       "enum": [
-        18
+        19
       ]
     },
     "version": {
@@ -74,6 +75,14 @@
         "$ref": "#/$defs/race_def"
       }
     },
+    "skill_sets": {
+      "description": "The skill sets (ADR 0040 step 12), in book order.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/skill_set"
+      }
+    },
     "disciplines": {
       "description": "The six psionic disciplines of the Complete Psionics Handbook (ADR 0043 step 8, ADR 0021 step 20).",
       "type": "array",
@@ -113,12 +122,9 @@
             "wizard_spells",
             "priest_spells",
             "priest_spell_wisdom",
-            "thief_skill_base",
-            "thief_skill_race",
-            "thief_skill_dexterity",
-            "thief_skill_armor",
-            "bard_armor_penalty",
-            "bard_skill_base",
+            "skill_race",
+            "skill_dexterity",
+            "skill_armor",
             "backstab",
             "turning_undead",
             "race_level_limits",
@@ -449,15 +455,7 @@
             "$ref": "#/$defs/priest_spell_wisdom_row"
           }
         },
-        "thief_skill_base": {
-          "type": "array",
-          "minItems": 8,
-          "maxItems": 8,
-          "items": {
-            "$ref": "#/$defs/skill_base_row"
-          }
-        },
-        "thief_skill_race": {
+        "skill_race": {
           "type": "array",
           "minItems": 40,
           "maxItems": 40,
@@ -465,35 +463,19 @@
             "$ref": "#/$defs/skill_race_row"
           }
         },
-        "thief_skill_dexterity": {
+        "skill_dexterity": {
           "type": "array",
           "minItems": 1,
           "items": {
             "$ref": "#/$defs/skill_dexterity_row"
           }
         },
-        "thief_skill_armor": {
+        "skill_armor": {
           "type": "array",
           "minItems": 24,
           "maxItems": 24,
           "items": {
             "$ref": "#/$defs/skill_armor_row"
-          }
-        },
-        "bard_armor_penalty": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 1,
-          "items": {
-            "$ref": "#/$defs/bard_armor_penalty_row"
-          }
-        },
-        "bard_skill_base": {
-          "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
-          "items": {
-            "$ref": "#/$defs/skill_base_row"
           }
         },
         "backstab": {
@@ -1329,34 +1311,6 @@
         }
       }
     },
-    "skill_base_row": {
-      "description": "PHB Table 26 (thief) or 33 (bard): a skill's base score in percent.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "skill",
-        "base"
-      ],
-      "properties": {
-        "skill": {
-          "enum": [
-            "pick_pockets",
-            "open_locks",
-            "find_remove_traps",
-            "move_silently",
-            "hide_in_shadows",
-            "detect_noise",
-            "climb_walls",
-            "read_languages"
-          ]
-        },
-        "base": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 100
-        }
-      }
-    },
     "skill_race_row": {
       "description": "PHB Table 27: a race's adjustment to a thieving skill, in percentage points.",
       "type": "object",
@@ -1394,17 +1348,14 @@
       }
     },
     "skill_dexterity_row": {
-      "description": "PHB Table 28: Dexterity adjustments to the five skills it changes, in percentage points (scores outside the rows: 0).",
+      "description": "PHB Table 28 as rows keyed by skill: a Dexterity band's adjustment to one skill, in percentage points (a skill with no row at a score adjusts by 0).",
       "type": "object",
       "additionalProperties": false,
       "required": [
         "dex_min",
         "dex_max",
-        "pick_pockets",
-        "open_locks",
-        "find_remove_traps",
-        "move_silently",
-        "hide_in_shadows"
+        "skill",
+        "adjustment"
       ],
       "properties": {
         "dex_min": {
@@ -1417,19 +1368,19 @@
           "minimum": 1,
           "maximum": 25
         },
-        "pick_pockets": {
-          "type": "integer"
+        "skill": {
+          "enum": [
+            "pick_pockets",
+            "open_locks",
+            "find_remove_traps",
+            "move_silently",
+            "hide_in_shadows",
+            "detect_noise",
+            "climb_walls",
+            "read_languages"
+          ]
         },
-        "open_locks": {
-          "type": "integer"
-        },
-        "find_remove_traps": {
-          "type": "integer"
-        },
-        "move_silently": {
-          "type": "integer"
-        },
-        "hide_in_shadows": {
+        "adjustment": {
           "type": "integer"
         }
       }
@@ -1461,25 +1412,6 @@
             "detect_noise",
             "climb_walls",
             "read_languages"
-          ]
-        },
-        "adjustment": {
-          "type": "integer"
-        }
-      }
-    },
-    "bard_armor_penalty_row": {
-      "description": "PHB Table 29's note: the bard's extra adjustment in non-elven (metal) chain mail, added to the elven chain column.",
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "armor",
-        "adjustment"
-      ],
-      "properties": {
-        "armor": {
-          "enum": [
-            "metal"
           ]
         },
         "adjustment": {
@@ -2409,10 +2341,8 @@
       ],
       "properties": {
         "set": {
-          "enum": [
-            "thief",
-            "bard"
-          ]
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
         },
         "budget": {
           "$ref": "#/$defs/rogue_budget"
@@ -2542,8 +2472,13 @@
             ]
           },
           "then": {
+            "required": [
+              "params"
+            ],
             "properties": {
-              "params": false
+              "params": {
+                "$ref": "#/$defs/feature_params_weapon_specialization"
+              }
             }
           }
         },
@@ -3685,6 +3620,159 @@
           "type": "integer",
           "minimum": 1,
           "maximum": 5
+        }
+      }
+    },
+    "skill_set": {
+      "description": "A set of skills a class's rogue_skills feature names (ADR 0040 step 12): the skills with their base percentages (PHB Table 26 for the thief's set, 33 for the bard's) and the least percentage a skill of the set is used at.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "min_percent",
+        "skills"
+      ],
+      "properties": {
+        "id": {
+          "description": "Language-neutral; what rogue_skills.set and characters.skill_sets name.",
+          "type": "string",
+          "pattern": "^[a-z]+(_[a-z]+)*$"
+        },
+        "name": {
+          "$ref": "#/$defs/localized"
+        },
+        "min_percent": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "skills": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/skill_set_skill"
+          }
+        }
+      }
+    },
+    "skill_set_skill": {
+      "description": "A skill of a set: its base percentage; armour_free marks a skill a multi-class character in body armour its class may not wear still uses (ADR 0042 step 16.3). Absent = false.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "base"
+      ],
+      "properties": {
+        "id": {
+          "enum": [
+            "pick_pockets",
+            "open_locks",
+            "find_remove_traps",
+            "move_silently",
+            "hide_in_shadows",
+            "detect_noise",
+            "climb_walls",
+            "read_languages"
+          ]
+        },
+        "base": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "armour_free": {
+          "const": true
+        }
+      }
+    },
+    "feature_params_weapon_specialization": {
+      "description": "The specialization's costs and Table 35 columns (ADR 0040 step 13).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "default_slots",
+        "melee_column",
+        "missile_column",
+        "types"
+      ],
+      "properties": {
+        "default_slots": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "melee_column": {
+          "enum": [
+            "melee",
+            "light_crossbow",
+            "heavy_crossbow",
+            "thrown_dagger",
+            "thrown_dart",
+            "other_missile"
+          ]
+        },
+        "missile_column": {
+          "enum": [
+            "melee",
+            "light_crossbow",
+            "heavy_crossbow",
+            "thrown_dagger",
+            "thrown_dart",
+            "other_missile"
+          ]
+        },
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "weapon_types",
+              "slots"
+            ],
+            "properties": {
+              "weapon_types": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^[a-z]+(_[a-z]+)*$"
+                }
+              },
+              "slots": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "column": {
+                "enum": [
+                  "melee",
+                  "light_crossbow",
+                  "heavy_crossbow",
+                  "thrown_dagger",
+                  "thrown_dart",
+                  "other_missile"
+                ]
+              },
+              "rate_of_fire": {
+                "const": true
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "column"
+                ]
+              },
+              {
+                "required": [
+                  "rate_of_fire"
+                ]
+              }
+            ]
+          }
         }
       }
     }

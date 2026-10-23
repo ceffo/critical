@@ -310,7 +310,7 @@ func TestParse_Step10_3_RejectsAMissingOrBrokenClassTable(t *testing.T) {
 			r := classRows(d, "wisdom")
 			d["wisdom"] = append(r[:3:3], r[4:]...)
 		}, "wisdom table: row 3: score 4 expected, got 5"},
-		{"a race skill twice", func(d map[string]any) { classRow(d, "thief_skill_race", 5)["skill"] = "pick_pockets" }, "thief_skill_race table: \"dwarf pick_pockets\" twice"},
+		{"a race skill twice", func(d map[string]any) { classRow(d, "skill_race", 5)["skill"] = "pick_pockets" }, "skill_race table: \"dwarf pick_pockets\" twice"},
 		{"an unknown group", func(d map[string]any) { classRow(d, "hit_dice", 0)["group"] = "paladin" }, "hit_dice table: unknown \"paladin\""},
 		{"a turning cell with a roll and an outcome", func(d map[string]any) {
 			classRow(d, "turning_undead", 0)["by_level"].([]any)[0].(map[string]any)["outcome"] = "turn"
@@ -447,8 +447,8 @@ func TestParse_Step11_3_RejectsMissingOrBrokenLevelLimits(t *testing.T) {
 			"race_requirements table: missing \"elf str\"",
 		},
 		{
-			"a restricted race with no thief skill rows", func(d map[string]any) { d["thief_skill_race"] = withoutRace(d, "thief_skill_race", "elf") },
-			"thief_skill_race table: missing \"elf pick_pockets\"",
+			"a restricted race with no thief skill rows", func(d map[string]any) { d["skill_race"] = withoutRace(d, "skill_race", "elf") },
+			"skill_race table: missing \"elf pick_pockets\"",
 		},
 		{
 			"a level above 20", func(d map[string]any) { classRow(d, levelLimits, 0)["max_level"] = 21 },

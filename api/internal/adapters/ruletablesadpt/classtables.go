@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
@@ -16,30 +17,27 @@ type classDTO struct {
 	// Experience is the formats-4-to-10 class-keyed XP table the artifact
 	// still carries (ADR 0040 step 7); the thresholds are read from the class
 	// definitions, so it is accepted and not read.
-	Experience          json.RawMessage        `json:"experience"`
-	HitDice             []hitDiceDTO           `json:"hit_dice"`
-	Constitution        []constitutionDTO      `json:"constitution"`
-	Intelligence        []intelligenceDTO      `json:"intelligence"`
-	Wisdom              []wisdomDTO            `json:"wisdom"`
-	ConSaveBonus        []conSaveBonusDTO      `json:"con_save_bonus"`
-	RaceRequirements    []raceRequirementDTO   `json:"race_requirements"`
-	RaceAdjustments     []raceAdjustmentDTO    `json:"race_adjustments"`
-	THAC0               []thac0DTO             `json:"thac0"`
-	SavingThrows        []savingThrowDTO       `json:"saving_throws"`
-	WarriorAttacks      []attackRateDTO        `json:"warrior_attacks"`
-	SpecialistAttacks   []specialistAttackDTO  `json:"specialist_attacks"`
-	RateOfFire          []rateOfFireDTO        `json:"rate_of_fire"`
-	WizardSpells        []progressionDTO       `json:"wizard_spells"`
-	PriestSpells        []progressionDTO       `json:"priest_spells"`
-	PriestSpellWisdom   []priestSpellWisdomDTO `json:"priest_spell_wisdom"`
-	ThiefSkillBase      []skillBaseDTO         `json:"thief_skill_base"`
-	ThiefSkillRace      []skillRaceDTO         `json:"thief_skill_race"`
-	ThiefSkillDexterity []skillDexterityDTO    `json:"thief_skill_dexterity"`
-	ThiefSkillArmor     []skillArmorDTO        `json:"thief_skill_armor"`
-	BardArmorPenalty    []bardArmorPenaltyDTO  `json:"bard_armor_penalty"`
-	BardSkillBase       []skillBaseDTO         `json:"bard_skill_base"`
-	Backstab            []backstabDTO          `json:"backstab"`
-	TurningUndead       []turningDTO           `json:"turning_undead"`
+	Experience        json.RawMessage        `json:"experience"`
+	HitDice           []hitDiceDTO           `json:"hit_dice"`
+	Constitution      []constitutionDTO      `json:"constitution"`
+	Intelligence      []intelligenceDTO      `json:"intelligence"`
+	Wisdom            []wisdomDTO            `json:"wisdom"`
+	ConSaveBonus      []conSaveBonusDTO      `json:"con_save_bonus"`
+	RaceRequirements  []raceRequirementDTO   `json:"race_requirements"`
+	RaceAdjustments   []raceAdjustmentDTO    `json:"race_adjustments"`
+	THAC0             []thac0DTO             `json:"thac0"`
+	SavingThrows      []savingThrowDTO       `json:"saving_throws"`
+	WarriorAttacks    []attackRateDTO        `json:"warrior_attacks"`
+	SpecialistAttacks []specialistAttackDTO  `json:"specialist_attacks"`
+	RateOfFire        []rateOfFireDTO        `json:"rate_of_fire"`
+	WizardSpells      []progressionDTO       `json:"wizard_spells"`
+	PriestSpells      []progressionDTO       `json:"priest_spells"`
+	PriestSpellWisdom []priestSpellWisdomDTO `json:"priest_spell_wisdom"`
+	SkillRace         []skillRaceDTO         `json:"skill_race"`
+	SkillDexterity    []skillDexterityDTO    `json:"skill_dexterity"`
+	SkillArmor        []skillArmorDTO        `json:"skill_armor"`
+	Backstab          []backstabDTO          `json:"backstab"`
+	TurningUndead     []turningDTO           `json:"turning_undead"`
 	// The psionicist tables (ADR 0021 step 20, format 13): Table 5 is read
 	// (ADR 0043 step 4), Table 6 too (steps 6 and 7), Table 4 the powers known
 	// (step 9).
@@ -194,11 +192,6 @@ type priestSpellWisdomDTO struct {
 	WisMin     int `json:"wis_min"`
 }
 
-type skillBaseDTO struct {
-	Skill string `json:"skill"`
-	Base  int    `json:"base"`
-}
-
 type skillRaceDTO struct {
 	Race       string `json:"race"`
 	Skill      string `json:"skill"`
@@ -206,23 +199,15 @@ type skillRaceDTO struct {
 }
 
 type skillDexterityDTO struct {
-	DexMin          int `json:"dex_min"`
-	DexMax          int `json:"dex_max"`
-	PickPockets     int `json:"pick_pockets"`
-	OpenLocks       int `json:"open_locks"`
-	FindRemoveTraps int `json:"find_remove_traps"`
-	MoveSilently    int `json:"move_silently"`
-	HideInShadows   int `json:"hide_in_shadows"`
+	DexMin     int    `json:"dex_min"`
+	DexMax     int    `json:"dex_max"`
+	Skill      string `json:"skill"`
+	Adjustment int    `json:"adjustment"`
 }
 
 type skillArmorDTO struct {
 	Armor      string `json:"armor"`
 	Skill      string `json:"skill"`
-	Adjustment int    `json:"adjustment"`
-}
-
-type bardArmorPenaltyDTO struct {
-	Armor      string `json:"armor"`
 	Adjustment int    `json:"adjustment"`
 }
 
@@ -258,7 +243,7 @@ func (d classDTO) missing() []string {
 
 // classes maps the DTOs to validated class tables. Every table is required
 // (a missing one names it); the rules are ruletablesvc.NewClassTables'.
-func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, error) {
+func (d classDTO) classes(defs *classes.Registry, sets []catalogue.SkillSet) (*ruletablesvc.ClassTables, error) {
 	if m := d.missing(); len(m) > 0 {
 		return nil, fmt.Errorf("the artifact needs the class and race tables, missing: %s", strings.Join(m, ", "))
 	}
@@ -305,18 +290,12 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 		PriestSpellWisdom: mapRows(d.PriestSpellWisdom, func(r priestSpellWisdomDTO) ruletablesvc.PriestSpellWisdomRow {
 			return ruletablesvc.PriestSpellWisdomRow(r)
 		}),
-		ThiefSkillBase: mapRows(d.ThiefSkillBase, func(r skillBaseDTO) ruletablesvc.SkillBaseRow { return ruletablesvc.SkillBaseRow(r) }),
-		ThiefSkillRace: mapRows(d.ThiefSkillRace, func(r skillRaceDTO) ruletablesvc.SkillRaceRow { return ruletablesvc.SkillRaceRow(r) }),
-		ThiefSkillDexterity: mapRows(d.ThiefSkillDexterity, func(r skillDexterityDTO) ruletablesvc.SkillDexterityRow {
-			return ruletablesvc.SkillDexterityRow(r)
-		}),
-		ThiefSkillArmor: mapRows(d.ThiefSkillArmor, func(r skillArmorDTO) ruletablesvc.SkillArmorRow { return ruletablesvc.SkillArmorRow(r) }),
-		BardArmorPenalty: mapRows(d.BardArmorPenalty, func(r bardArmorPenaltyDTO) ruletablesvc.BardArmorPenaltyRow {
-			return ruletablesvc.BardArmorPenaltyRow(r)
-		}),
-		BardSkillBase: mapRows(d.BardSkillBase, func(r skillBaseDTO) ruletablesvc.SkillBaseRow { return ruletablesvc.SkillBaseRow(r) }),
-		Backstab:      mapRows(d.Backstab, func(r backstabDTO) ruletablesvc.BackstabRow { return ruletablesvc.BackstabRow(r) }),
-		TurningUndead: turning,
+		SkillSets:      sets,
+		SkillRace:      mapRows(d.SkillRace, func(r skillRaceDTO) ruletablesvc.SkillRaceRow { return ruletablesvc.SkillRaceRow(r) }),
+		SkillDexterity: mapRows(d.SkillDexterity, func(r skillDexterityDTO) ruletablesvc.SkillDexterityRow { return ruletablesvc.SkillDexterityRow(r) }),
+		SkillArmor:     mapRows(d.SkillArmor, func(r skillArmorDTO) ruletablesvc.SkillArmorRow { return ruletablesvc.SkillArmorRow(r) }),
+		Backstab:       mapRows(d.Backstab, func(r backstabDTO) ruletablesvc.BackstabRow { return ruletablesvc.BackstabRow(r) }),
+		TurningUndead:  turning,
 		InherentPotential: mapRows(d.InherentPotential, func(r inherentPotentialDTO) ruletablesvc.InherentPotentialRow {
 			return ruletablesvc.InherentPotentialRow(r)
 		}),

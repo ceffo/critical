@@ -127,7 +127,11 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 		return nil, fmt.Errorf("definitions: %w", err)
 	}
 	tables = tables.WithDefinitions(reg)
-	classTables, err := f.classes(reg)
+	sets, err := skillSets(defs)
+	if err != nil {
+		return nil, err
+	}
+	classTables, err := f.classes(reg, sets)
 	if err != nil {
 		return nil, err
 	}

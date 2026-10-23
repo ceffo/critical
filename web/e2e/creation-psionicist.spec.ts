@@ -74,11 +74,9 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
   const panel = step.getByTestId("known-powers");
   await panel.getByRole("button", { name: /^Ajouter Télépathie/ }).click();
   await panel.getByRole("searchbox").fill("contact");
-  await panel
-    .getByTestId("pick-row")
-    .first()
-    .getByRole("button", { name: /^Ajouter/ })
-    .click();
+  // By name, not the first row: until the search answers, the first row is the unfiltered list's
+  // (a slow runner picked Vision de l'aura, whose discipline is not known, and the create was refused).
+  await panel.getByRole("button", { name: /^Ajouter Contact/ }).click();
   await expect(panel.getByTestId("known-power")).toHaveCount(1);
 
   for (const vp of [

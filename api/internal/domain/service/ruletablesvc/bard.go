@@ -2,7 +2,9 @@ package ruletablesvc
 
 import (
 	"fmt"
+	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
@@ -63,22 +65,18 @@ func (t *Tables) RogueSkills(rs classes.RogueSkills, race string, dex int, armor
 	if err != nil {
 		return nil, err
 	}
-	var base []SkillBaseRow
-	switch rs.Set {
-	case SkillSetThief:
-		base = c.ThiefSkillBase
-	case SkillSetBard:
-		base = c.BardSkillBase
-	default:
+	i := slices.IndexFunc(c.SkillSets, func(s catalogue.SkillSet) bool { return s.ID == rs.Set })
+	if i < 0 {
 		return nil, fmt.Errorf("rogue skills: unknown skill set %q", rs.Set)
 	}
+	set := c.SkillSets[i]
 	for _, a := range rs.Armour {
 		if skillArmorOf(a) == armor {
 			column := a.Column
 			if column == "" {
 				column = ArmorLeather
 			}
-			return rogueSkills(c, SkillsOf(&rs), base, race, dex, column, a.Extra, points), nil
+			return rogueSkills(c, SkillsOf(&rs), set, race, dex, column, a.Extra, points), nil
 		}
 	}
 	return nil, fmt.Errorf("%s skills: unknown armour %q", rs.Set, armor)

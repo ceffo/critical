@@ -1,5 +1,5 @@
 {
-  "format": 18,
+  "format": 19,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1152,17 +1152,7 @@
       {"spell_level": 6, "wis_min": 17},
       {"spell_level": 7, "wis_min": 18}
     ],
-    "thief_skill_base": [
-      {"skill": "pick_pockets", "base": 15},
-      {"skill": "open_locks", "base": 10},
-      {"skill": "find_remove_traps", "base": 5},
-      {"skill": "move_silently", "base": 10},
-      {"skill": "hide_in_shadows", "base": 5},
-      {"skill": "detect_noise", "base": 15},
-      {"skill": "climb_walls", "base": 60},
-      {"skill": "read_languages", "base": 0}
-    ],
-    "thief_skill_race": [
+    "skill_race": [
       {"race": "dwarf", "skill": "pick_pockets", "adjustment": 0},
       {"race": "elf", "skill": "pick_pockets", "adjustment": 5},
       {"race": "gnome", "skill": "pick_pockets", "adjustment": 0},
@@ -1204,18 +1194,54 @@
       {"race": "half_elf", "skill": "read_languages", "adjustment": 0},
       {"race": "halfling", "skill": "read_languages", "adjustment": -5}
     ],
-    "thief_skill_dexterity": [
-      {"dex_min": 9, "dex_max": 9, "pick_pockets": -15, "open_locks": -10, "find_remove_traps": -10, "move_silently": -20, "hide_in_shadows": -10},
-      {"dex_min": 10, "dex_max": 10, "pick_pockets": -10, "open_locks": -5, "find_remove_traps": -10, "move_silently": -15, "hide_in_shadows": -5},
-      {"dex_min": 11, "dex_max": 11, "pick_pockets": -5, "open_locks": 0, "find_remove_traps": -5, "move_silently": -10, "hide_in_shadows": 0},
-      {"dex_min": 12, "dex_max": 12, "pick_pockets": 0, "open_locks": 0, "find_remove_traps": 0, "move_silently": -5, "hide_in_shadows": 0},
-      {"dex_min": 13, "dex_max": 15, "pick_pockets": 0, "open_locks": 0, "find_remove_traps": 0, "move_silently": 0, "hide_in_shadows": 0},
-      {"dex_min": 16, "dex_max": 16, "pick_pockets": 0, "open_locks": 5, "find_remove_traps": 0, "move_silently": 0, "hide_in_shadows": 0},
-      {"dex_min": 17, "dex_max": 17, "pick_pockets": 5, "open_locks": 10, "find_remove_traps": 0, "move_silently": 5, "hide_in_shadows": 5},
-      {"dex_min": 18, "dex_max": 18, "pick_pockets": 10, "open_locks": 15, "find_remove_traps": 5, "move_silently": 10, "hide_in_shadows": 10},
-      {"dex_min": 19, "dex_max": 19, "pick_pockets": 15, "open_locks": 20, "find_remove_traps": 10, "move_silently": 15, "hide_in_shadows": 15}
+    "skill_dexterity": [
+      {"dex_min": 9, "dex_max": 9, "skill": "pick_pockets", "adjustment": -15},
+      {"dex_min": 9, "dex_max": 9, "skill": "open_locks", "adjustment": -10},
+      {"dex_min": 9, "dex_max": 9, "skill": "find_remove_traps", "adjustment": -10},
+      {"dex_min": 9, "dex_max": 9, "skill": "move_silently", "adjustment": -20},
+      {"dex_min": 9, "dex_max": 9, "skill": "hide_in_shadows", "adjustment": -10},
+      {"dex_min": 10, "dex_max": 10, "skill": "pick_pockets", "adjustment": -10},
+      {"dex_min": 10, "dex_max": 10, "skill": "open_locks", "adjustment": -5},
+      {"dex_min": 10, "dex_max": 10, "skill": "find_remove_traps", "adjustment": -10},
+      {"dex_min": 10, "dex_max": 10, "skill": "move_silently", "adjustment": -15},
+      {"dex_min": 10, "dex_max": 10, "skill": "hide_in_shadows", "adjustment": -5},
+      {"dex_min": 11, "dex_max": 11, "skill": "pick_pockets", "adjustment": -5},
+      {"dex_min": 11, "dex_max": 11, "skill": "open_locks", "adjustment": 0},
+      {"dex_min": 11, "dex_max": 11, "skill": "find_remove_traps", "adjustment": -5},
+      {"dex_min": 11, "dex_max": 11, "skill": "move_silently", "adjustment": -10},
+      {"dex_min": 11, "dex_max": 11, "skill": "hide_in_shadows", "adjustment": 0},
+      {"dex_min": 12, "dex_max": 12, "skill": "pick_pockets", "adjustment": 0},
+      {"dex_min": 12, "dex_max": 12, "skill": "open_locks", "adjustment": 0},
+      {"dex_min": 12, "dex_max": 12, "skill": "find_remove_traps", "adjustment": 0},
+      {"dex_min": 12, "dex_max": 12, "skill": "move_silently", "adjustment": -5},
+      {"dex_min": 12, "dex_max": 12, "skill": "hide_in_shadows", "adjustment": 0},
+      {"dex_min": 13, "dex_max": 15, "skill": "pick_pockets", "adjustment": 0},
+      {"dex_min": 13, "dex_max": 15, "skill": "open_locks", "adjustment": 0},
+      {"dex_min": 13, "dex_max": 15, "skill": "find_remove_traps", "adjustment": 0},
+      {"dex_min": 13, "dex_max": 15, "skill": "move_silently", "adjustment": 0},
+      {"dex_min": 13, "dex_max": 15, "skill": "hide_in_shadows", "adjustment": 0},
+      {"dex_min": 16, "dex_max": 16, "skill": "pick_pockets", "adjustment": 0},
+      {"dex_min": 16, "dex_max": 16, "skill": "open_locks", "adjustment": 5},
+      {"dex_min": 16, "dex_max": 16, "skill": "find_remove_traps", "adjustment": 0},
+      {"dex_min": 16, "dex_max": 16, "skill": "move_silently", "adjustment": 0},
+      {"dex_min": 16, "dex_max": 16, "skill": "hide_in_shadows", "adjustment": 0},
+      {"dex_min": 17, "dex_max": 17, "skill": "pick_pockets", "adjustment": 5},
+      {"dex_min": 17, "dex_max": 17, "skill": "open_locks", "adjustment": 10},
+      {"dex_min": 17, "dex_max": 17, "skill": "find_remove_traps", "adjustment": 0},
+      {"dex_min": 17, "dex_max": 17, "skill": "move_silently", "adjustment": 5},
+      {"dex_min": 17, "dex_max": 17, "skill": "hide_in_shadows", "adjustment": 5},
+      {"dex_min": 18, "dex_max": 18, "skill": "pick_pockets", "adjustment": 10},
+      {"dex_min": 18, "dex_max": 18, "skill": "open_locks", "adjustment": 15},
+      {"dex_min": 18, "dex_max": 18, "skill": "find_remove_traps", "adjustment": 5},
+      {"dex_min": 18, "dex_max": 18, "skill": "move_silently", "adjustment": 10},
+      {"dex_min": 18, "dex_max": 18, "skill": "hide_in_shadows", "adjustment": 10},
+      {"dex_min": 19, "dex_max": 19, "skill": "pick_pockets", "adjustment": 15},
+      {"dex_min": 19, "dex_max": 19, "skill": "open_locks", "adjustment": 20},
+      {"dex_min": 19, "dex_max": 19, "skill": "find_remove_traps", "adjustment": 10},
+      {"dex_min": 19, "dex_max": 19, "skill": "move_silently", "adjustment": 15},
+      {"dex_min": 19, "dex_max": 19, "skill": "hide_in_shadows", "adjustment": 15}
     ],
-    "thief_skill_armor": [
+    "skill_armor": [
       {"armor": "none", "skill": "pick_pockets", "adjustment": 5},
       {"armor": "elven_chain", "skill": "pick_pockets", "adjustment": -20},
       {"armor": "padded_studded_leather", "skill": "pick_pockets", "adjustment": -30},
@@ -1240,15 +1266,6 @@
       {"armor": "none", "skill": "read_languages", "adjustment": 0},
       {"armor": "elven_chain", "skill": "read_languages", "adjustment": 0},
       {"armor": "padded_studded_leather", "skill": "read_languages", "adjustment": 0}
-    ],
-    "bard_armor_penalty": [
-      {"armor": "metal", "adjustment": -5}
-    ],
-    "bard_skill_base": [
-      {"skill": "climb_walls", "base": 50},
-      {"skill": "detect_noise", "base": 20},
-      {"skill": "pick_pockets", "base": 10},
-      {"skill": "read_languages", "base": 5}
     ],
     "backstab": [
       {"level_min": 1, "level_max": 4, "multiplier": 2},
@@ -1807,7 +1824,7 @@
     {"id": "weaponsmithing", "description": {"en": "Invented fixture text for weaponsmithing. It stands in for the book's description.", "fr": "Texte inventé pour weaponsmithing. Il remplace la description du livre."}}
   ],
   "classes": [
-    {"id": "fighter", "name": {"en": "Fighter", "fr": "Guerrier"}, "group": "warrior", "prime_requisites": ["str"], "ability_minimums": [{"ability": "str", "min": 9}], "equipment": {"shields": true}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 2000}, {"level": 3, "xp": 4000}, {"level": 4, "xp": 8000}, {"level": 5, "xp": 16000}, {"level": 6, "xp": 32000}, {"level": 7, "xp": 64000}, {"level": 8, "xp": 125000}, {"level": 9, "xp": 250000}, {"level": 10, "xp": 500000}, {"level": 11, "xp": 750000}, {"level": 12, "xp": 1000000}, {"level": 13, "xp": 1250000}, {"level": 14, "xp": 1500000}, {"level": 15, "xp": 1750000}, {"level": 16, "xp": 2000000}, {"level": 17, "xp": 2250000}, {"level": 18, "xp": 2500000}, {"level": 19, "xp": 2750000}, {"level": 20, "xp": 3000000}], "hit_dice": {"die": 10, "dice_levels": 9, "after": 3, "bracketed_constitution": true}, "nonweapon_groups": ["warrior", "general"], "features": [{"kind": "exceptional_strength"}, {"kind": "melee_attacks_per_round", "params": {"table": "warrior_attacks"}}, {"kind": "weapon_specialization"}]},
+    {"id": "fighter", "name": {"en": "Fighter", "fr": "Guerrier"}, "group": "warrior", "prime_requisites": ["str"], "ability_minimums": [{"ability": "str", "min": 9}], "equipment": {"shields": true}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 2000}, {"level": 3, "xp": 4000}, {"level": 4, "xp": 8000}, {"level": 5, "xp": 16000}, {"level": 6, "xp": 32000}, {"level": 7, "xp": 64000}, {"level": 8, "xp": 125000}, {"level": 9, "xp": 250000}, {"level": 10, "xp": 500000}, {"level": 11, "xp": 750000}, {"level": 12, "xp": 1000000}, {"level": 13, "xp": 1250000}, {"level": 14, "xp": 1500000}, {"level": 15, "xp": 1750000}, {"level": 16, "xp": 2000000}, {"level": 17, "xp": 2250000}, {"level": 18, "xp": 2500000}, {"level": 19, "xp": 2750000}, {"level": 20, "xp": 3000000}], "hit_dice": {"die": 10, "dice_levels": 9, "after": 3, "bracketed_constitution": true}, "nonweapon_groups": ["warrior", "general"], "features": [{"kind": "exceptional_strength"}, {"kind": "melee_attacks_per_round", "params": {"table": "warrior_attacks"}}, {"kind": "weapon_specialization", "params": {"default_slots": 2, "melee_column": "melee", "missile_column": "other_missile", "types": [{"weapon_types": ["long_bow", "short_bow"], "slots": 3, "rate_of_fire": true}, {"weapon_types": ["light_crossbow"], "slots": 2, "column": "light_crossbow"}, {"weapon_types": ["heavy_crossbow"], "slots": 2, "column": "heavy_crossbow"}, {"weapon_types": ["dagger"], "slots": 2, "column": "thrown_dagger"}, {"weapon_types": ["dart"], "slots": 2, "column": "thrown_dart"}]}}]},
     {"id": "mage", "name": {"en": "Mage", "fr": "Magicien"}, "group": "wizard", "prime_requisites": ["int"], "ability_minimums": [{"ability": "int", "min": 9}], "equipment": {"armour": ["none"], "shields": false, "weapon_types": ["dagger", "dart", "sling"], "weapons": [{"code": "knife", "weapon_type": "other_melee"}, {"code": "quarterstaff", "weapon_type": "other_melee"}]}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 2500}, {"level": 3, "xp": 5000}, {"level": 4, "xp": 10000}, {"level": 5, "xp": 20000}, {"level": 6, "xp": 40000}, {"level": 7, "xp": 60000}, {"level": 8, "xp": 90000}, {"level": 9, "xp": 135000}, {"level": 10, "xp": 250000}, {"level": 11, "xp": 375000}, {"level": 12, "xp": 750000}, {"level": 13, "xp": 1125000}, {"level": 14, "xp": 1500000}, {"level": 15, "xp": 1875000}, {"level": 16, "xp": 2250000}, {"level": 17, "xp": 2625000}, {"level": 18, "xp": 3000000}, {"level": 19, "xp": 3375000}, {"level": 20, "xp": 3750000}], "hit_dice": {"die": 4, "dice_levels": 10, "after": 1, "bracketed_constitution": false}, "spell_progression": "wizard_spells", "nonweapon_groups": ["wizard", "general"], "features": [{"kind": "spellbook", "params": {"max_spell_level": 9, "free_spell_per_new_spell_level": true}}]},
     {"id": "cleric", "name": {"en": "Cleric", "fr": "Clerc"}, "group": "priest", "prime_requisites": ["wis"], "ability_minimums": [{"ability": "wis", "min": 9}], "equipment": {"shields": true, "blunt_only": true}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 1500}, {"level": 3, "xp": 3000}, {"level": 4, "xp": 6000}, {"level": 5, "xp": 13000}, {"level": 6, "xp": 27500}, {"level": 7, "xp": 55000}, {"level": 8, "xp": 110000}, {"level": 9, "xp": 225000}, {"level": 10, "xp": 450000}, {"level": 11, "xp": 675000}, {"level": 12, "xp": 900000}, {"level": 13, "xp": 1125000}, {"level": 14, "xp": 1350000}, {"level": 15, "xp": 1575000}, {"level": 16, "xp": 1800000}, {"level": 17, "xp": 2025000}, {"level": 18, "xp": 2250000}, {"level": 19, "xp": 2475000}, {"level": 20, "xp": 2700000}], "hit_dice": {"die": 8, "dice_levels": 9, "after": 2, "bracketed_constitution": false}, "spell_progression": "priest_spells", "nonweapon_groups": ["priest", "general"], "features": [{"kind": "wisdom_bonus_spells"}, {"kind": "spell_failure", "params": {"ability": "wis"}}, {"kind": "sphere_access", "params": {"major": ["all", "astral", "charm", "combat", "creation", "divination", "guardian", "healing", "necromantic", "protection", "summoning", "sun"], "minor": ["elemental_air", "elemental_earth", "elemental_fire", "elemental_water"], "minor_max_level": 3}}, {"kind": "turn_undead", "params": {"table": "turning_undead"}}]},
     {"id": "thief", "name": {"en": "Thief", "fr": "Voleur"}, "group": "rogue", "prime_requisites": ["dex"], "ability_minimums": [{"ability": "dex", "min": 9}], "alignments": ["neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"], "equipment": {"armour": ["none", "leather", "padded_studded", "elven_chain"], "shields": false, "weapon_types": ["dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"], "weapons": [{"code": "club", "weapon_type": "other_melee"}, {"code": "knife", "weapon_type": "other_melee"}, {"code": "broad_sword", "weapon_type": "other_melee"}, {"code": "quarterstaff", "weapon_type": "other_melee"}]}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 1250}, {"level": 3, "xp": 2500}, {"level": 4, "xp": 5000}, {"level": 5, "xp": 10000}, {"level": 6, "xp": 20000}, {"level": 7, "xp": 40000}, {"level": 8, "xp": 70000}, {"level": 9, "xp": 110000}, {"level": 10, "xp": 160000}, {"level": 11, "xp": 220000}, {"level": 12, "xp": 440000}, {"level": 13, "xp": 660000}, {"level": 14, "xp": 880000}, {"level": 15, "xp": 1100000}, {"level": 16, "xp": 1320000}, {"level": 17, "xp": 1540000}, {"level": 18, "xp": 1760000}, {"level": 19, "xp": 1980000}, {"level": 20, "xp": 2200000}], "hit_dice": {"die": 6, "dice_levels": 10, "after": 2, "bracketed_constitution": false}, "nonweapon_groups": ["rogue", "general"], "features": [{"kind": "rogue_skills", "params": {"set": "thief", "budget": {"first": 60, "per_level": 30, "per_skill_first": 30, "per_skill_per_level": 15}, "armour": [{"code": "none", "column": "none", "extra": 0}, {"code": "leather", "extra": 0}, {"code": "padded_studded", "column": "padded_studded_leather", "extra": 0}, {"code": "elven_chain", "column": "elven_chain", "extra": 0}, {"code": "metal", "column": "padded_studded_leather", "extra": 0}, {"code": "none_allowed", "column": "padded_studded_leather", "extra": 0}]}}, {"kind": "backstab", "params": {"table": "backstab"}}]},
@@ -1828,6 +1845,10 @@
     {"id": "half_elf", "name": {"en": "Half-elf", "fr": "Demi-elfe"}, "requirements": [{"ability": "str", "min": 3, "max": 18}, {"ability": "dex", "min": 6, "max": 18}, {"ability": "con", "min": 6, "max": 18}, {"ability": "int", "min": 4, "max": 18}, {"ability": "wis", "min": 3, "max": 18}, {"ability": "cha", "min": 3, "max": 18}], "adjustments": [], "identity": {"height": {"male": 60, "female": 58, "dice": {"count": 2, "sides": 6}}, "weight": {"male": 110, "female": 85, "dice": {"count": 3, "sides": 12}}, "start_age": {"base": 15, "dice": {"count": 1, "sides": 6}}, "max_age": {"base": 125, "dice": {"count": 3, "sides": 20}}}, "traits": []},
     {"id": "halfling", "name": {"en": "Halfling", "fr": "Petite-gens"}, "requirements": [{"ability": "str", "min": 7, "max": 18}, {"ability": "dex", "min": 7, "max": 18}, {"ability": "con", "min": 10, "max": 18}, {"ability": "int", "min": 6, "max": 18}, {"ability": "wis", "min": 3, "max": 17}, {"ability": "cha", "min": 3, "max": 18}], "adjustments": [{"ability": "dex", "adjustment": 1}, {"ability": "str", "adjustment": -1}], "identity": {"height": {"male": 32, "female": 30, "dice": {"count": 2, "sides": 8}}, "weight": {"male": 52, "female": 48, "dice": {"count": 5, "sides": 4}}, "start_age": {"base": 20, "dice": {"count": 3, "sides": 4}}, "max_age": {"base": 100, "dice": {"count": 1, "sides": 100}}}, "traits": [{"kind": "con_save_bonus", "params": {"categories": ["rod_staff_wand", "spell"], "poison": true}}, {"kind": "no_exceptional_strength"}]},
     {"id": "human", "name": {"en": "Human", "fr": "Humain"}, "requirements": [], "adjustments": [], "identity": {"height": {"male": 60, "female": 59, "dice": {"count": 2, "sides": 10}}, "weight": {"male": 140, "female": 100, "dice": {"count": 6, "sides": 10}}, "start_age": {"base": 15, "dice": {"count": 1, "sides": 4}}, "max_age": {"base": 90, "dice": {"count": 2, "sides": 20}}}, "traits": []}
+  ],
+  "skill_sets": [
+    {"id": "thief", "name": {"en": "Thief skills", "fr": "Talents de voleur"}, "min_percent": 1, "skills": [{"id": "pick_pockets", "base": 15}, {"id": "open_locks", "base": 10, "armour_free": true}, {"id": "find_remove_traps", "base": 5}, {"id": "move_silently", "base": 10}, {"id": "hide_in_shadows", "base": 5}, {"id": "detect_noise", "base": 15, "armour_free": true}, {"id": "climb_walls", "base": 60}, {"id": "read_languages", "base": 0}]},
+    {"id": "bard", "name": {"en": "Bard skills", "fr": "Talents de barde"}, "min_percent": 0, "skills": [{"id": "climb_walls", "base": 50}, {"id": "detect_noise", "base": 20}, {"id": "pick_pockets", "base": 10}, {"id": "read_languages", "base": 5}]}
   ],
   "disciplines": [
     {"id": "clairsentience", "name": {"en": "Clairsentience", "fr": "Clairsentience"}},

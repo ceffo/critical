@@ -51,15 +51,22 @@ const FormatPowerSlot = 16
 // never one of a multi-class character's classes (`multiclass: false`).
 const FormatMultiClassFlag = 17
 
-// FormatPsionicCombat is format 18 (ADR 0021 step 25, ADR 0044 step 1): format
+// FormatPsionicCombat was format 18 (ADR 0021 step 25, ADR 0044 step 1): format
 // 17 plus the psionic combat tables and the table-named and contact-plus
-// initial costs. It is the only format the API reads (step 25.5): the formats 1
-// to 17 are refused like any unknown format, with the advice to run `just
-// catalogue`.
+// initial costs.
 const FormatPsionicCombat = 18
 
-// Formats lists the formats this API reads: format 18 only (step 25.5).
-var Formats = []int{FormatPsionicCombat}
+// FormatSkillSets is format 19 (ADR 0021 step 27, ADR 0040 steps 12 to 14):
+// format 18 plus the top-level skill sets, the shared skill tables renamed
+// skill_race, skill_dexterity (rows keyed by skill) and skill_armor, without
+// the per-set base and penalty tables, and the parameters of the
+// weapon_specialization feature. It is the only format the API reads (step
+// 27.5): the formats 1 to 18 are refused like any unknown format, with the
+// advice to run `just catalogue`.
+const FormatSkillSets = 19
+
+// Formats lists the formats this API reads: format 19 only (step 27.5).
+var Formats = []int{FormatSkillSets}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:
@@ -72,6 +79,50 @@ type Catalogue struct {
 	// ProficiencyDescriptions are the descriptions (format 9 on) of the non-weapon
 	// proficiencies (ADR 0021 step 16): one row per proficiency id.
 	ProficiencyDescriptions []ProficiencyDescription
+}
+
+// SkillSet is one skill set of the artifact (format 19, ADR 0040 step 12): the
+// skills a class's rogue_skills feature names by ID, with their base
+// percentages.
+type SkillSet struct {
+	// ID is the language-neutral code rogue_skills.set and characters.skill_sets name.
+	ID string
+	// Name is the heading the client shows for the set.
+	Name localized.Text
+	// MinPercent is the least percentage a skill of the set is used at.
+	MinPercent int
+	// Skills are the set's skills in order.
+	Skills []SkillSetSkill
+}
+
+// SkillSetSkill is one skill of a set: its base percentage (PHB Table 26 or
+// 33) and whether a multi-class character in body armour its class may not
+// wear still uses it (ADR 0042 step 16.3).
+type SkillSetSkill struct {
+	ID         string
+	Base       int
+	ArmourFree bool
+}
+
+// CheckSkillSets refuses a set id twice and a skill twice in one set (the
+// schema has checked the shapes); the rules that tie the sets to the classes
+// and the shared tables are the rule tables service's.
+func CheckSkillSets(sets []SkillSet) error {
+	seen := make(map[string]bool, len(sets))
+	for _, s := range sets {
+		if seen[s.ID] {
+			return fmt.Errorf("skill sets: set %q twice", s.ID)
+		}
+		seen[s.ID] = true
+		skills := make(map[string]bool, len(s.Skills))
+		for _, k := range s.Skills {
+			if skills[k.ID] {
+				return fmt.Errorf("skill sets: set %q has skill %q twice", s.ID, k.ID)
+			}
+			skills[k.ID] = true
+		}
+	}
+	return nil
 }
 
 // ProficiencyDescription is one non-weapon proficiency's description, a

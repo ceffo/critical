@@ -3,6 +3,7 @@ package ruletablesvc
 import (
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
@@ -40,32 +41,25 @@ type SkillPercent struct {
 }
 
 // rogueSkills is the sum of ADR 0030 steps 17 and 18 for each of skills, in
-// order: the base from base (the class's table), the entered points, Table 27
+// order: the base from set (the class's skill set), the entered points, Table 27
 // for race, Table 28 for dex (a skill without a column: 0), Table 29's armor
 // column (leather: 0) plus extra (the bard's metal armour penalty, step 18),
 // capped at MaxSkillPercent and floored at MinSkillPercent.
-func rogueSkills(c *ClassTables, skills []string, base []SkillBaseRow, race string, dex int, armor string, extra int, points map[string]int) []SkillPercent {
-	var dexRow SkillDexterityRow
-	for _, r := range c.ThiefSkillDexterity {
-		if dex >= r.DexMin && dex <= r.DexMax {
-			dexRow = r
-			break
-		}
-	}
+func rogueSkills(c *ClassTables, skills []string, set catalogue.SkillSet, race string, dex int, armor string, extra int, points map[string]int) []SkillPercent {
 	out := make([]SkillPercent, 0, len(skills))
 	for _, skill := range skills {
-		p := SkillPercent{Skill: skill, Points: points[skill], Dexterity: dexterityColumn(dexRow, skill), Armor: extra}
-		for _, r := range base {
-			if r.Skill == skill {
-				p.Base = r.Base
+		p := SkillPercent{Skill: skill, Points: points[skill], Dexterity: dexterityAdjustment(c, dex, skill), Armor: extra}
+		for _, k := range set.Skills {
+			if k.ID == skill {
+				p.Base = k.Base
 			}
 		}
-		for _, r := range c.ThiefSkillRace {
+		for _, r := range c.SkillRace {
 			if r.Race == race && r.Skill == skill {
 				p.Race = r.Adjustment
 			}
 		}
-		for _, r := range c.ThiefSkillArmor {
+		for _, r := range c.SkillArmor {
 			if r.Armor == armor && r.Skill == skill {
 				p.Armor += r.Adjustment
 			}
@@ -77,19 +71,13 @@ func rogueSkills(c *ClassTables, skills []string, base []SkillBaseRow, race stri
 	return out
 }
 
-// dexterityColumn is Table 28's column of skill (0 for a skill without one).
-func dexterityColumn(r SkillDexterityRow, skill string) int {
-	switch skill {
-	case "pick_pockets":
-		return r.PickPockets
-	case "open_locks":
-		return r.OpenLocks
-	case "find_remove_traps":
-		return r.FindRemoveTraps
-	case "move_silently":
-		return r.MoveSilently
-	case "hide_in_shadows":
-		return r.HideInShadows
+// dexterityAdjustment is Table 28's adjustment of skill at dex (0 for a skill
+// without a row at that score).
+func dexterityAdjustment(c *ClassTables, dex int, skill string) int {
+	for _, r := range c.SkillDexterity {
+		if r.Skill == skill && dex >= r.DexMin && dex <= r.DexMax {
+			return r.Adjustment
+		}
 	}
 	return 0
 }

@@ -197,34 +197,69 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 	}
 }
 
-// TestSchema_Step25_OnlyFormat18IsValid (ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2, 22.2, 23.2, 24.2 and 25.5):
-// the schema accepts format 18 only; every earlier format, retired, is refused whatever it carries (the API
-// refuses it as an unknown format), and so is an artifact without a part format 18 requires.
-func TestSchema_Step25_OnlyFormat18IsValid(t *testing.T) {
+// TestSchema_Step14_OnlyTheNextFormatIsValid (ADR 0040 step 14, ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2,
+// 22.2, 23.2, 24.2, 25.5 and 27.5): the schema accepts format 19 only; every earlier format, retired, is refused
+// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 19
+// requires, or with a table or a shape of an earlier format.
+func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 18")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 19")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
 	}
-	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
+	for _, part := range []string{"skill_sets", "equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 18 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 19 requires %s", part)
 	}
 	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 18 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 19 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 18 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 19 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 18 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 19 requires the spell immunities")
+	// ADR 0040 steps 12 to 14: the skill sets, Table 28 by skill and the specialization params.
+	refuseEach(t, map[string]func(a map[string]any){
+		"the thief skill base table back":   func(a map[string]any) { tables(a)["thief_skill_base"] = tables(a)["skill_race"] },
+		"the bard armour penalty back":      func(a map[string]any) { tables(a)["bard_armor_penalty"] = []any{} },
+		"the old name of the race table":    func(a map[string]any) { tables(a)["thief_skill_race"] = tables(a)["skill_race"] },
+		"no Dexterity table":                func(a map[string]any) { delete(tables(a), "skill_dexterity") },
+		"a Dexterity row without its skill": func(a map[string]any) { delete(row(tables(a), "skill_dexterity", 0), "skill") },
+		"a Dexterity row of a skill column": func(a map[string]any) { row(tables(a), "skill_dexterity", 0)["open_locks"] = 5 },
+		"a set with a skill without a base": func(a map[string]any) { delete(set(a, 0)["skills"].([]any)[0].(map[string]any), "base") },
+		"a set with no skills":              func(a map[string]any) { set(a, 0)["skills"] = []any{} },
+		"a set id that is no code":          func(a map[string]any) { set(a, 0)["id"] = "Thief" },
+		"armour_free that is false":         func(a map[string]any) { set(a, 0)["skills"].([]any)[1].(map[string]any)["armour_free"] = false },
+		"a set without its minimum":         func(a map[string]any) { delete(set(a, 0), "min_percent") },
+		"a rogue_skills set that is no code": func(a map[string]any) {
+			feature(t, classDef(a, 3), "rogue_skills")["params"].(map[string]any)["set"] = "Thief"
+		},
+		"a specialization with no params":         func(a map[string]any) { delete(feature(t, classDef(a, 0), "weapon_specialization"), "params") },
+		"a specialization with an unknown column": func(a map[string]any) { specialization(t, a)["melee_column"] = "pole" },
+		"a specialization with no default":        func(a map[string]any) { delete(specialization(t, a), "default_slots") },
+		"a specialization type with no weapons": func(a map[string]any) {
+			specialization(t, a)["types"].([]any)[0].(map[string]any)["weapon_types"] = []any{}
+		},
+		"a specialization type with no slots": func(a map[string]any) { delete(specialization(t, a)["types"].([]any)[0].(map[string]any), "slots") },
+		"a specialization type with both a column and a rate": func(a map[string]any) {
+			specialization(t, a)["types"].([]any)[0].(map[string]any)["column"] = "melee"
+		},
+		"a specialization type with neither": func(a map[string]any) {
+			delete(specialization(t, a)["types"].([]any)[0].(map[string]any), "rate_of_fire")
+		},
+	})
+	a = fixtureDoc(t)
+	set(a, 1)["id"] = "new_set"
+	feature(t, classDef(a, 4), "rogue_skills")["params"].(map[string]any)["set"] = "new_set"
+	assert.NoError(t, sch.Validate(a), "a new set is a catalogue change only: the rogue_skills set is any code")
 	// ADR 0021 step 24.1: a class's multiclass flag is an optional boolean.
 	a = fixtureDoc(t)
 	classDef(a, 0)["multiclass"] = "no"
@@ -256,6 +291,17 @@ func TestSchema_Step25_OnlyFormat18IsValid(t *testing.T) {
 			tables(a)["hit_dice"] = tables(a)["hit_dice"].([]any)[:4]
 		},
 	})
+}
+
+// set is the i-th skill set of a fixture document.
+func set(a map[string]any, i int) map[string]any {
+	return a["skill_sets"].([]any)[i].(map[string]any)
+}
+
+// specialization is the params of the fighter's weapon_specialization.
+func specialization(t *testing.T, a map[string]any) map[string]any {
+	t.Helper()
+	return feature(t, classDef(a, 0), "weapon_specialization")["params"].(map[string]any)
 }
 
 // classDef is the i-th class of a fixture document, for a test to edit.
@@ -305,9 +351,6 @@ func TestSchema_Step18_ClassGroupAndRaceDefinitions(t *testing.T) {
 		},
 		"an unknown param": func(a map[string]any) {
 			feature(t, classDef(a, 2), "turn_undead")["params"].(map[string]any)["extra"] = 1
-		},
-		"a skill set that is neither": func(a map[string]any) {
-			feature(t, classDef(a, 3), "rogue_skills")["params"].(map[string]any)["set"] = "ranger"
 		},
 		"a group without its THAC0 rows": func(a map[string]any) { a["groups"].([]any)[0].(map[string]any)["thac0"] = []any{} },
 		"a race without its identity":    func(a map[string]any) { delete(a["races"].([]any)[0].(map[string]any), "identity") },
@@ -362,7 +405,7 @@ func TestSchema_Step10_ClassTables(t *testing.T) {
 		"a missing table":          func(a map[string]any) { delete(tables(a), "thac0") },
 		"an unknown class code":    func(a map[string]any) { row(tables(a), "hit_dice", 0)["group"] = "paladin" },
 		"a race name in French":    func(a map[string]any) { row(tables(a), "race_requirements", 0)["race"] = "nain" },
-		"an unknown skill":         func(a map[string]any) { row(tables(a), "thief_skill_base", 0)["skill"] = "Pick Pockets" },
+		"an unknown skill":         func(a map[string]any) { set(a, 0)["skills"].([]any)[0].(map[string]any)["id"] = "Pick Pockets" },
 		"a text value":             func(a map[string]any) { row(tables(a), "thac0", 0)["rogue"] = "20" },
 		"a missing row field":      func(a map[string]any) { delete(row(tables(a), "saving_throws", 0), "breath") },
 		"an unknown row field":     func(a map[string]any) { row(tables(a), "backstab", 0)["note"] = "x" },

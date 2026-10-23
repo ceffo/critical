@@ -2,8 +2,10 @@ package ruletablesadpt
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
@@ -17,6 +19,39 @@ type definitionsDTO struct {
 	Classes []classDefDTO `json:"classes"`
 	Groups  []groupDefDTO `json:"groups"`
 	Races   []raceDefDTO  `json:"races"`
+	// SkillSets (format 19, ADR 0040 step 12) are the skill sets rogue_skills names.
+	SkillSets []skillSetDefDTO `json:"skill_sets"`
+}
+
+type skillSetDefDTO struct {
+	ID         string         `json:"id"`
+	Name       localized.Text `json:"name"`
+	MinPercent int            `json:"min_percent"`
+	Skills     []struct {
+		ID         string `json:"id"`
+		Base       int    `json:"base"`
+		ArmourFree bool   `json:"armour_free"`
+	} `json:"skills"`
+}
+
+// skillSets reads the skill sets of the definitions JSON; the artifact needs
+// at least one (a format below 19 has none).
+func skillSets(raw []byte) ([]catalogue.SkillSet, error) {
+	var d definitionsDTO
+	if err := json.Unmarshal(raw, &d); err != nil {
+		return nil, fmt.Errorf("definitions: %w", err)
+	}
+	if len(d.SkillSets) == 0 {
+		return nil, errors.New("the artifact needs the skill_sets list")
+	}
+	out := make([]catalogue.SkillSet, len(d.SkillSets))
+	for i, s := range d.SkillSets {
+		out[i] = catalogue.SkillSet{ID: s.ID, Name: s.Name, MinPercent: s.MinPercent}
+		for _, k := range s.Skills {
+			out[i].Skills = append(out[i].Skills, catalogue.SkillSetSkill{ID: k.ID, Base: k.Base, ArmourFree: k.ArmourFree})
+		}
+	}
+	return out, nil
 }
 
 type classDefDTO struct {
@@ -79,6 +114,18 @@ type featureParamsDTO struct {
 	Recovery      string           `json:"recovery"`
 	Against       string           `json:"against"`
 	Bonus         int              `json:"bonus"`
+	// The weapon_specialization params (format 19, ADR 0040 step 13).
+	DefaultSlots  int                `json:"default_slots"`
+	MeleeColumn   string             `json:"melee_column"`
+	MissileColumn string             `json:"missile_column"`
+	Types         []specTypeParamDTO `json:"types"`
+}
+
+type specTypeParamDTO struct {
+	WeaponTypes []string `json:"weapon_types"`
+	Slots       int      `json:"slots"`
+	Column      string   `json:"column"`
+	RateOfFire  bool     `json:"rate_of_fire"`
 }
 
 type pspRuleDTO struct {
@@ -141,6 +188,14 @@ func (f featureDTO) feature() (classes.Feature, error) {
 			}
 		}
 		out.Psionics = ps
+	case classes.KindWeaponSpecialization:
+		if len(f.Params) > 0 {
+			w := &classes.WeaponSpecialization{DefaultSlots: p.DefaultSlots, MeleeColumn: p.MeleeColumn, MissileColumn: p.MissileColumn}
+			for _, t := range p.Types {
+				w.Types = append(w.Types, classes.SpecializationType(t))
+			}
+			out.Specialization = w
+		}
 	case classes.KindSaveBonus:
 		out.SaveBonus = &classes.SaveBonus{Against: p.Against, Bonus: p.Bonus}
 	}

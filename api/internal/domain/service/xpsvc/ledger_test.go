@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
@@ -42,7 +43,7 @@ func newFixture(t *testing.T) fixture {
 	t.Helper()
 	f := fixture{dal: mocks.NewMockDAL(t), chars: mocks.NewMockCharacters(t), log: mocks.NewMockLog(t), tx: &recordingTx{}}
 	svc, err := xpsvc.New(xpsvc.Deps{
-		DAL: f.dal, Characters: f.chars, Thresholds: xpTables{}, Log: f.log, Tx: f.tx,
+		DAL: f.dal, Characters: f.chars, Rules: cataloguetest.Tables(t), Log: f.log, Tx: f.tx,
 		Now: func() time.Time { return today },
 	})
 	require.NoError(t, err)

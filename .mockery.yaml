@@ -204,7 +204,7 @@ packages:
       DAL:
       Log:
       Characters:
-      Thresholds:
+      Rules:
   github.com/ceffo/critical/api/internal/domain/service/detailssvc:
     config:
       dir: "internal/domain/service/detailssvc/mocks"

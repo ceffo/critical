@@ -1,19 +1,22 @@
 package xpsvc_test
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
-// xpTables is the experience tables by class, as printed: the Thief/Bard
-// column of PHB Table 25 (p.38) and Table 20 (p.30) for the mage.
-type xpTables struct{}
+// phbClass is class's definition with the experience table as printed (the
+// Thief/Bard column of PHB Table 25, p.38, and Table 20, p.30, for the mage)
+// and its prime requisites; a class without a printed column has no table.
+func phbClass(class string) classes.Class {
+	return classes.Class{ID: class, Experience: phbXP[class], PrimeRequisites: phbPrimes[class]}
+}
 
 var phbXP = map[string][]int{
 	"bard": {
@@ -29,25 +32,6 @@ var phbXP = map[string][]int{
 // phbPrimes are the prime requisites of PHB chapter 3 (ADR 0040 step 6).
 var phbPrimes = map[string][]string{
 	"fighter": {"str"}, "mage": {"int"}, "cleric": {"wis"}, "thief": {"dex"}, "bard": {"dex", "cha"},
-}
-
-func (xpTables) PrimeRequisites(class string) ([]string, error) {
-	p, ok := phbPrimes[class]
-	if !ok {
-		return nil, fmt.Errorf("unknown class %q", class)
-	}
-	return p, nil
-}
-
-func (xpTables) XPThreshold(class string, level int) (int, error) {
-	col, ok := phbXP[class]
-	if !ok {
-		return 0, fmt.Errorf("unknown class %q", class)
-	}
-	if level < 1 || level > len(col) {
-		return 0, fmt.Errorf("level %d out of range", level)
-	}
-	return col[level-1], nil
 }
 
 // ADR 0015 step 1: an entry adds its base, plus 10% of it rounded to the
@@ -113,9 +97,7 @@ func TestBonusEligible_Step6_EveryPrimeRequisiteAt16(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			primes, err := xpTables{}.PrimeRequisites(tt.class)
-			require.NoError(t, err)
-			assert.Equal(t, tt.want, xpsvc.BonusEligible(primes, tt.c))
+			assert.Equal(t, tt.want, xpsvc.BonusEligible(phbClass(tt.class).PrimeRequisites, tt.c))
 		})
 	}
 	assert.False(t, xpsvc.BonusEligible(nil, charactersvc.View{Str: 18}), "a class without prime requisites gets none")
@@ -224,14 +206,14 @@ func TestComputeProgress_FromTheClassTable(t *testing.T) {
 			if class == "" {
 				class = "bard"
 			}
-			got, err := xpsvc.ComputeProgress(class, tt.level, tt.total, xpTables{})
+			got, err := xpsvc.ComputeProgress(phbClass(class), tt.level, tt.total)
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 
-	_, err := xpsvc.ComputeProgress("bard", 0, 0, xpTables{})
+	_, err := xpsvc.ComputeProgress(phbClass("bard"), 0, 0)
 	require.Error(t, err, "a level below the table")
-	_, err = xpsvc.ComputeProgress("cleric", 1, 0, xpTables{})
+	_, err = xpsvc.ComputeProgress(phbClass("cleric"), 1, 0)
 	require.Error(t, err, "a class without a table")
 }

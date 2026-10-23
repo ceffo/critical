@@ -50,7 +50,6 @@ func TestProgress_Step5_ReadsTheClassDefinition(t *testing.T) {
 		Level, Total int
 		Progress     xpsvc.Progress
 	}
-	tables := cataloguetest.Tables(t)
 	var rows []any
 	for _, def := range cataloguetest.Definitions(t).Classes() {
 		for level := 1; level <= classes.MaxLevel+1; level++ {
@@ -62,7 +61,7 @@ func TestProgress_Step5_ReadsTheClassDefinition(t *testing.T) {
 				require.NoError(t, err)
 			}
 			for _, total := range []int{floor - 1, floor, (floor + ceiling) / 2, ceiling - 1, ceiling, ceiling + 1} {
-				got, err := xpsvc.ComputeProgress(def.ID, level, total, tables)
+				got, err := xpsvc.ComputeProgress(def, level, total)
 				require.NoError(t, err, "%s level %d total %d", def.ID, level, total)
 				rows = append(rows, progress{def.ID, level, total, got})
 			}

@@ -306,7 +306,8 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     check of a power that has `maintenance` puts a row on the buff list, untimed (until stopped),
     carrying the power's catalogue id (`power_id`, beside `spell_id`) and its maintenance cost and
     period, with the power's effect when it has one (step 17). Activating a power already
-    maintained renews it (ADR 0004 step 6). A power without `maintenance` puts no row unless its
+    maintained renews it (ADR 0004 step 6); a row on a mind is renewed only by the same power on
+    the same mind ([ADR 0044](0044-psionic-combat.md) step 10). A power without `maintenance` puts no row unless its
     effect has rounds (step 17).
     Tests: `Activate_Step13_AMaintainedPowerIsAnUntimedRow` (psionicsvc: the row, its id and
     cost), `Activate_Step13_NoMaintenanceNoRow`.

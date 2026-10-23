@@ -47,11 +47,7 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 	// and is never renewed (two Webs on two areas are two rows).
 	stacks := isStrengthBonus(buff.Effects) || buff.OnOther
 	for _, b := range before {
-		// ADR 0043 step 13: a power activated again renews its row.
-		samePower := buff.PowerID != "" && b.PowerID == buff.PowerID
-		// ADR 0044 step 3: a row holding a mind is named by the player's
-		// label; no buff of that name renews it.
-		if !samePower && !replacesDefence(buff, b) && (stacks || b.OnOther || b.linkRow() || !strings.EqualFold(b.Name, buff.Name)) {
+		if !renews(buff, b, stacks) {
 			after = append(after, b)
 		}
 	}
@@ -64,6 +60,22 @@ func (s *service) Add(ctx context.Context, characterID int64, buff BuffEffect) (
 		return BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("save active buffs: %w", err)
 	}
 	return buff, snaps[0], nil
+}
+
+// renews reports whether buff, put on, replaces row b.
+func renews(buff, b BuffEffect, stacks bool) bool {
+	// ADR 0043 step 13: a power activated again renews its row.
+	samePower := buff.PowerID != "" && b.PowerID == buff.PowerID
+	// ADR 0044 step 10: a power used on a mind is maintained for that mind
+	// alone, so only the same power on the same mind renews its row (its
+	// name doesn't either).
+	if b.PowerID != "" && b.Target != "" {
+		return samePower && strings.EqualFold(b.Target, buff.Target)
+	}
+	// ADR 0044 step 3: a row holding a mind is named by the player's label;
+	// no buff of that name renews it.
+	return samePower || replacesDefence(buff, b) ||
+		!(stacks || b.OnOther || b.linkRow() || !strings.EqualFold(b.Name, buff.Name))
 }
 
 // replacesDefence reports whether the defence mode's row buff, put on,

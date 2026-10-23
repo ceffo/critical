@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
@@ -133,6 +134,16 @@ func TestContactPower_Step10_ContactFreeWhileAPowerUsesIt(t *testing.T) {
 		assert.Equal(t, -3, e.PSPDelta, "2 + 1")
 	})
 
+	t.Run("short of PSPs: the power pays first, the contact is free", func(t *testing.T) {
+		f := newFixture(t)
+		c, p := contactOn("c", "Orc", 3, 2), usedOn("p", "Orc", 1)
+		f.pspIs(2)
+		active, expired, e := f.advances(t, []buffsvc.BuffEffect{c, p}, 5)
+		assert.Equal(t, []buffsvc.BuffEffect{keptMore(c, 1), keptMore(p, 1)}, active, "both kept")
+		assert.Empty(t, expired)
+		assert.Equal(t, -2, e.PSPDelta, "inflict pain paid 2, the contact free")
+	})
+
 	t.Run("the power ends unpaid: the contact pays", func(t *testing.T) {
 		f := newFixture(t)
 		c, p := contactOn("c", "Orc", 3, 2), usedOn("p", "Orc", 1)
@@ -168,7 +179,12 @@ func TestContactPower_Step10_EndingContactEndsItsPowers(t *testing.T) {
 		assert.Equal(t, []any{"inflict_pain"}, pl["contactPowersEnded"])
 		assert.Equal(t, "Orc", pl["target"])
 		require.Equal(t, []string{buffsvc.StateKeyBuffs}, snapKeys(e), "one undo brings both back")
-		assert.Len(t, decodeSnap(t, e.Snapshots[0].Before), 4)
+		before := decodeSnap(t, e.Snapshots[0].Before)
+		require.Len(t, before, 4)
+		assert.Equal(t, "Orc", before[0]["target"])
+		assert.InDelta(t, 2, before[0]["contact_from"], 0, "the contact row comes back with its ContactFrom")
+		assert.Equal(t, "inflict_pain", before[1]["power_id"])
+		assert.Equal(t, "Orc", before[1]["target"], "and its power, on its target")
 	})
 
 	t.Run("the power", func(t *testing.T) {
@@ -181,4 +197,96 @@ func TestContactPower_Step10_EndingContactEndsItsPowers(t *testing.T) {
 		_, listed := payload(t, f.entries[0])["contactPowersEnded"]
 		assert.False(t, listed)
 	})
+}
+
+// ADR 0044 step 10: each use of a power on a mind is maintained for that
+// mind alone. Inflict pain used on Goblin leaves its row on Orc: two rows;
+// only the same power on the same mind (ignoring case) renews.
+func TestAdd_Step10_APowerOnTwoMindsIsTwoRows(t *testing.T) {
+	ctx := context.Background()
+	co, cg, onOrc := contactOn("co", "Orc", 3, 1), contactOn("cg", "Goblin", 3, 1), usedOn("p", "Orc", 2)
+	pain := func(target string) buffsvc.BuffEffect {
+		b := maintained("", "inflict_pain", 2, 1, 0)
+		b.Target = target
+		return b
+	}
+
+	t.Run("on another mind: a second row", func(t *testing.T) {
+		f := newFixture(t)
+		f.state([]buffsvc.BuffEffect{co, cg, onOrc}, 5)
+		var saved []buffsvc.BuffEffect
+		f.savesAny(&saved)
+		row, _, err := f.svc.Add(ctx, charID, pain("Goblin"))
+		require.NoError(t, err)
+		require.Len(t, saved, 4)
+		assert.Equal(t, []buffsvc.BuffEffect{co, cg, onOrc}, saved[:3], "Orc's row stays")
+		assert.Equal(t, "Goblin", saved[3].Target)
+		assert.Equal(t, row, saved[3])
+	})
+
+	t.Run("on the same mind: renewed", func(t *testing.T) {
+		f := newFixture(t)
+		f.state([]buffsvc.BuffEffect{co, onOrc}, 5)
+		var saved []buffsvc.BuffEffect
+		f.savesAny(&saved)
+		_, _, err := f.svc.Add(ctx, charID, pain("orc"))
+		require.NoError(t, err)
+		require.Len(t, saved, 2)
+		assert.Equal(t, co, saved[0])
+		assert.Zero(t, saved[1].RoundsKept, "the renewed row starts again")
+	})
+}
+
+// ADR 0044 step 10: two minds each with a contact and inflict pain on it:
+// Next Round charges 2 + 2 and both contacts are free.
+func TestContactPower_Step10_TwoMindsPayTheirOwnMaintenance(t *testing.T) {
+	f := newFixture(t)
+	rows := []buffsvc.BuffEffect{
+		contactOn("co", "Orc", 3, 1), contactOn("cg", "Goblin", 3, 1),
+		usedOn("po", "Orc", 2), usedOn("pg", "Goblin", 1),
+	}
+	f.pspIs(20)
+	active, expired, e := f.advances(t, rows, 5)
+	assert.Len(t, active, 4)
+	assert.Empty(t, expired)
+	assert.Equal(t, -4, e.PSPDelta)
+}
+
+// ADR 0044 step 10: a contact made this round is not yet one from an
+// earlier round; after a Next Round, or passing time out of combat, it is.
+func TestContactBefore_Step10_AfterNextRoundOrPassingTime(t *testing.T) {
+	made := contactOn("c", "Orc", 0, 0)
+	_, ok := buffsvc.ContactBefore([]buffsvc.BuffEffect{made}, "Orc")
+	require.False(t, ok, "this round")
+
+	t.Run("Next Round", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(20)
+		active, _, _ := f.advances(t, []buffsvc.BuffEffect{made}, 5)
+		_, ok := buffsvc.ContactBefore(active, "Orc")
+		assert.True(t, ok)
+	})
+
+	t.Run("passing time", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(20)
+		active, _, _ := f.passes(t, []buffsvc.BuffEffect{made}, 0, 0.1)
+		_, ok := buffsvc.ContactBefore(active, "Orc")
+		assert.True(t, ok)
+	})
+}
+
+// ADR 0043 step 7: a long rest ends the contact row and the power kept up
+// through it, both coming back on undo.
+func TestEndMaintained_Step10_TheContactAndItsPower(t *testing.T) {
+	f := newFixture(t)
+	c, p := contactOn("c", "Orc", 3, 1), usedOn("p", "Orc", 2)
+	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{c, p}, nil).Once()
+	f.saves([]buffsvc.BuffEffect{})
+	ended, snap, err := f.svc.EndMaintained(context.Background(), charID)
+	require.NoError(t, err)
+	assert.Equal(t, []buffsvc.BuffEffect{c, p}, ended)
+	before := decodeSnap(t, snap.Before)
+	require.Len(t, before, 2)
+	assert.InDelta(t, 1, before[0]["contact_from"], 0)
 }

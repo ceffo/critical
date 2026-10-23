@@ -39,6 +39,9 @@ var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.Err
 type SVC interface {
 	domain.Service
 	GetCharacter(ctx context.Context, id int64) (*Character, error)
+	// View is character id's read model (ADR 0045): the same read as
+	// GetCharacter (stored, derived once), projected to what the services read.
+	View(ctx context.Context, id int64) (View, error)
 	// WeaponProficiency is what character id's weapon picks make of its
 	// weapons: the type it is specialized in (ADR 0037 step 9) and the
 	// non-proficiency penalty of each type (step 8), from the character row

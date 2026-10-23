@@ -61,7 +61,7 @@ _Code_: Group
 One class of a character with its own realized level and XP, **active** (it earns XP and levels) or **frozen** (a dual-class's old class, with the level it was left at); the class features are read through it. [ADR 0040](docs/adr/0040-classes-are-data.md) step 5, [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 1. _Avoid_: "class" for the entry.
 _Code_: Entry
 _Code_: EntryState
-_Code_: EntryDerived, ClassLevel, Classes
+_Code_: EntryDerived, EntryView, ClassLevel, Classes
 
 **Primary class entry** (fr: classe principale):
 The first active class entry: the class and level the single-class screens and rules read until the multi-class math lands (the first entry when none is active). One term for what the code calls `classes.Primary` and the web `primaryClass` / `primaryLevel` (`web/src/lib/classEntries.ts`); "active class" and "primary class" are the same entry, said differently. [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 1.

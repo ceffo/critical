@@ -259,12 +259,11 @@ type entryCalc struct {
 }
 
 // firstActive is the first active entry (classes.ValidateEntries refused a
-// character with none; Entries gives a character built from the mirror one).
+// character with none; Entries gives a character built from the mirror one),
+// the entry classes.PrimaryIndex names.
 func firstActive(entries []entryCalc) entryCalc {
-	for _, e := range entries {
-		if e.entry.State == classes.EntryActive {
-			return e
-		}
+	if i := classes.PrimaryIndex(derivedEntries(entries)); i >= 0 {
+		return entries[i]
 	}
 	return entries[0]
 }

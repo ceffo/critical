@@ -682,6 +682,63 @@ func (_c *MockSVC_SetCurrent_Call) RunAndReturn(run func(context.Context, uuid.U
 	return _c
 }
 
+// View provides a mock function with given fields: ctx, id
+func (_m *MockSVC) View(ctx context.Context, id int64) (charactersvc.View, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for View")
+	}
+
+	var r0 charactersvc.View
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (charactersvc.View, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) charactersvc.View); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(charactersvc.View)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_View_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'View'
+type MockSVC_View_Call struct {
+	*mock.Call
+}
+
+// View is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockSVC_Expecter) View(ctx interface{}, id interface{}) *MockSVC_View_Call {
+	return &MockSVC_View_Call{Call: _e.mock.On("View", ctx, id)}
+}
+
+func (_c *MockSVC_View_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_View_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_View_Call) Return(_a0 charactersvc.View, _a1 error) *MockSVC_View_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_View_Call) RunAndReturn(run func(context.Context, int64) (charactersvc.View, error)) *MockSVC_View_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // WeaponProficiency provides a mock function with given fields: ctx, id
 func (_m *MockSVC) WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error) {
 	ret := _m.Called(ctx, id)

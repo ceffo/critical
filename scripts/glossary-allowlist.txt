@@ -124,3 +124,4 @@ Catalog  # Technical: port reading the loaded spell effect data (see Spell effec
 Thresholds  # Technical: port reading the XP table and the prime requisites (see XP table)
 Rounds  # Technical: port supplying the current round (see Round)
 LegacyWeapon  # Technical: a weapon as the retired weapons table stored it, input of the one-time equipment conversion
+Option  # Technical: the viewtest builder's functional option (tests only)

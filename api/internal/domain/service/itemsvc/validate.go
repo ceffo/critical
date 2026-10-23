@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 )
 
 // Limits on what the item editor accepts.
@@ -25,10 +26,6 @@ const (
 	maxDiceSides   = 1000
 	maxDiceMod     = 1000
 )
-
-// SaveCategories are the save categories an item's effect may allow, as
-// they appear on the wire (the same names as the character's saves).
-var SaveCategories = []string{"para_poison", "rod_staff_wand", "petri_poly", "breath", "spell"}
 
 var diceRE = regexp.MustCompile(`^(\d+)d(\d+)([+-]\d+)?$`)
 
@@ -118,7 +115,7 @@ func (i Item) Validate() error {
 			return fieldErr("effectDice", "Effect dice must look like 2d6 or 1d8+2")
 		}
 	}
-	if i.EffectSave != "" && !slices.Contains(SaveCategories, i.EffectSave) {
+	if i.EffectSave != "" && !slices.Contains(saves.Categories, i.EffectSave) {
 		return fieldErr("effectSave", "Unknown save category")
 	}
 	if err := i.validPiecePowers(); err != nil {

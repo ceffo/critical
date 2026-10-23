@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ApiError } from "@/api/http";
-import { stopPower, invokePower } from "@/api/psionics";
+import { stopPower, invokePower, raisePower } from "@/api/psionics";
 import { localized } from "@/i18n/localized";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
@@ -24,6 +24,25 @@ export function PowerActions({ power }: { power: Power }) {
     s.buffs.some((b) => b.powerId === power.id),
   );
   const name = localized(i18n.language, power.name);
+  const defence = power.kind === "defence_mode";
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  // A defence mode is raised, not used (ADR 0044 step 4): no roll, the cost paid. A refusal (out of
+  // combat, too few PSPs) is worded under the row, from the server's code.
+  async function raise() {
+    setRefusal(null);
+    await useTableStore.getState().submit(async () => {
+      try {
+        await raisePower(power.id);
+      } catch (e) {
+        if (e instanceof ApiError && e.status < 500) {
+          setRefusal(e.message);
+          return;
+        }
+        throw e;
+      }
+    });
+  }
 
   async function use(req: Parameters<typeof invokePower>[1]) {
     let check = null as Awaited<ReturnType<typeof invokePower>>["check"] | null;
@@ -64,14 +83,34 @@ export function PowerActions({ power }: { power: Power }) {
           </Button>
         </>
       )}
-      <Button
-        className="px-2"
-        disabled={busy}
-        aria-label={t("powers.use.useNamed", { name })}
-        onClick={() => setOpen(true)}
-      >
-        {t("powers.use.use")}
-      </Button>
+      {defence ? (
+        <Button
+          className="px-2"
+          disabled={busy}
+          aria-label={t("powers.defence.raiseNamed", { name })}
+          onClick={() => void raise()}
+        >
+          {t("powers.defence.raise")}
+        </Button>
+      ) : (
+        <Button
+          className="px-2"
+          disabled={busy}
+          aria-label={t("powers.use.useNamed", { name })}
+          onClick={() => setOpen(true)}
+        >
+          {t("powers.use.use")}
+        </Button>
+      )}
+      {refusal && (
+        <p
+          role="alert"
+          className="basis-full text-label text-danger"
+          data-testid="raise-refused"
+        >
+          {refusal}
+        </p>
+      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
           <DialogTitle className="section-label mb-3">

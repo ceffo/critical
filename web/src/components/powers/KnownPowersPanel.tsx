@@ -11,6 +11,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { KnownPowers, PowerPick } from "@/types/character";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
+import { DefencePanel } from "./DefencePanel";
 import { PowerActions } from "./PowerActions";
 
 const COUNT_KEYS = [
@@ -73,6 +74,7 @@ export function KnownPowersPanel() {
       known={known}
       busy={busy}
       refusal={refusal}
+      defence
       onChange={async (next) => {
         if (busy) return;
         setRefusal(null);
@@ -93,11 +95,14 @@ export function KnownPowersEditor({
   known,
   busy,
   refusal,
+  defence = false,
   onChange,
 }: {
   known: KnownPowers;
   busy: boolean;
   refusal: ApiError | null;
+  /** Show the current defence and Defend (the dashboard's, not the creation's). */
+  defence?: boolean;
   onChange: (next: PowerPick[]) => void | Promise<void>;
 }) {
   const { t, i18n } = useTranslation();
@@ -228,6 +233,7 @@ export function KnownPowersEditor({
               </div>
             ))}
           </dl>
+          {defence && <DefencePanel powerName={powerName} />}
           {refusal && (
             <Refusal
               error={refusal}

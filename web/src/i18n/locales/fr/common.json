@@ -268,6 +268,32 @@
       "warning": {
         "second_power_this_round": "Un deuxième pouvoir dans le même tour de combat."
       }
+    },
+    "defence": {
+      "current": "Défense actuelle",
+      "none": "Aucune",
+      "kind": {
+        "raised": "dressée ce tour",
+        "standing": "permanente"
+      },
+      "raise": "Dresser",
+      "raiseNamed": "Dresser {{name}}",
+      "defend": "Défendre",
+      "title": "Se défendre d’une attaque",
+      "attack": "Mode d’attaque",
+      "chooseAttack": "Choisir le mode d’attaque…",
+      "twoChecks": "Deux jets",
+      "rolls": "Les jets du MJ",
+      "rollN": "Jet {{n}}",
+      "succeeded": "Jet {{n}} réussi",
+      "keep": "Garder un jet pour le tour",
+      "keepNone": "N’en garder aucun",
+      "keepRoll": "Garder le jet contre le jet {{n}}",
+      "against": "Contre {{name}}",
+      "noDefence": "Aucune défense : les réussites de l’attaquant l’emportent",
+      "tableModifier": "Table 14 : {{modifier}} à l’attaque",
+      "contest": "Duel {{n}} (jet {{roll}})",
+      "fromKept": "jet gardé"
     }
   },
   "round": {

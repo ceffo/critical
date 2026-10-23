@@ -312,7 +312,8 @@ func rowName(p catalogue.Power) string {
 }
 
 // Stop is ADR 0043 step 16: the maintained power's row is dismissed, which
-// logs one entry and costs nothing; the undo puts it back.
+// logs one entry and costs nothing; the undo puts it back. A defence mode's
+// row (ADR 0044 step 5) is stopped the same way, its maintenance cost being 0.
 func (s *service) Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error) {
 	var out []buffsvc.BuffEffect
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
@@ -327,7 +328,7 @@ func (s *service) Stop(ctx context.Context, characterID int64, powerID string) (
 		if err != nil {
 			return fmt.Errorf("list buffs: %w", err)
 		}
-		i := slices.IndexFunc(rows, func(b buffsvc.BuffEffect) bool { return b.PowerID == powerID && b.Maintained() })
+		i := slices.IndexFunc(rows, func(b buffsvc.BuffEffect) bool { return b.PowerID == powerID && (b.Maintained() || b.Defence != buffsvc.DefenceNone) })
 		if powerID == "" || i < 0 {
 			return ErrPowerNotMaintained
 		}

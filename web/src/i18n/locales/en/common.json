@@ -268,6 +268,32 @@
       "warning": {
         "second_power_this_round": "A second power in the same combat round."
       }
+    },
+    "defence": {
+      "current": "Current defence",
+      "none": "None",
+      "kind": {
+        "raised": "raised this round",
+        "standing": "standing"
+      },
+      "raise": "Raise",
+      "raiseNamed": "Raise {{name}}",
+      "defend": "Defend",
+      "title": "Defend against an attack",
+      "attack": "Attack mode",
+      "chooseAttack": "Choose the attack mode…",
+      "twoChecks": "Two checks",
+      "rolls": "The DM’s rolls",
+      "rollN": "Roll {{n}}",
+      "succeeded": "Check {{n}} succeeded",
+      "keep": "Keep a check for the round",
+      "keepNone": "Keep none",
+      "keepRoll": "Keep the check against roll {{n}}",
+      "against": "Against {{name}}",
+      "noDefence": "No defence: the attacker’s successes win",
+      "tableModifier": "Table 14: {{modifier}} to the attack",
+      "contest": "Contest {{n}} (roll {{roll}})",
+      "fromKept": "kept check"
     }
   },
   "round": {

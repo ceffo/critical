@@ -17,6 +17,7 @@ import { splitParts } from "@/lib/xpSplit";
 import type { XpChangeRecord, XpEntry } from "@/types/xp";
 import type { LearnResult, LevelUpRecord, SpellAdded } from "@/types/character";
 import type { LogEntry } from "@/types/log";
+import type { LocalizedText } from "@/types/localized";
 import type { KindView } from "../kindView";
 import { skillName } from "../words";
 
@@ -479,6 +480,9 @@ export const spellPrepKind: KindView<PrepPayload> = {
 interface RestPayload {
   slotsReset: number;
   itemsRefilled?: string[];
+  powersEnded?: string[];
+  powerNames?: Record<string, LocalizedText>;
+  targetsEnded?: string[];
 }
 
 export const longRestKind: KindView<RestPayload> = {
@@ -487,9 +491,25 @@ export const longRestKind: KindView<RestPayload> = {
     return p && typeof p.slotsReset === "number" ? (p as RestPayload) : null;
   },
   icon: Moon,
-  text: (p, { t }) =>
-    t("log.rest", {
+  text: (p, { t, names }) => {
+    const base = t("log.rest", {
       slots: p.slotsReset,
       items: p.itemsRefilled?.length ?? 0,
-    }),
+    });
+    // ADR 0043 step 7 and ADR 0044 step 3: what the rest ended, the powers kept up and the holds.
+    const ended: string[] = [];
+    if (p.powersEnded?.length)
+      ended.push(
+        t("log.rest_ended.powers", {
+          powers: p.powersEnded
+            .map((id) => names.text(p.powerNames?.[id], id))
+            .join(", "),
+        }),
+      );
+    if (p.targetsEnded?.length)
+      ended.push(
+        t("log.rest_ended.targets", { targets: p.targetsEnded.join(", ") }),
+      );
+    return ended.length ? `${base} ${ended.join(" ")}` : base;
+  },
 };

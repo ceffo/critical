@@ -1611,6 +1611,10 @@
     "initiativeWith": "Initiative {{value}} pour le tour {{round}} ({{breakdown}})",
     "initiativeCorrect": "Initiative du tour {{round}} corrigée : {{before}} → {{after}} ({{cause}})",
     "rest": "Repos long : {{slots}} emplacements de sort et {{items}} objets rechargés",
+    "rest_ended": {
+      "powers": "— pouvoirs terminés : {{powers}}",
+      "targets": "— emprises terminées : {{targets}}"
+    },
     "prep": "Préparé : {{spells}}",
     "prepNone": "Aucun sort préparé",
     "saveThrow": {

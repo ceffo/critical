@@ -1611,6 +1611,10 @@
     "initiativeWith": "Initiative {{value}} for round {{round}} ({{breakdown}})",
     "initiativeCorrect": "Round {{round}} initiative corrected: {{before}} → {{after}} ({{cause}})",
     "rest": "Long rest: {{slots}} spell slots and {{items}} items refilled",
+    "rest_ended": {
+      "powers": "— powers ended: {{powers}}",
+      "targets": "— holds ended: {{targets}}"
+    },
     "prep": "Prepared: {{spells}}",
     "prepNone": "Prepared no spells",
     "saveThrow": {

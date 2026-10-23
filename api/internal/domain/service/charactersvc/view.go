@@ -6,6 +6,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -83,6 +84,16 @@ type View struct {
 	SkillPoints      skills.SetPoints
 	ProficiencyPicks skills.Picks
 	PsionicPicks     []psionics.Pick
+}
+
+// SaveFigure is the character's save figure for the saves owner (ADR 0046
+// step 3.3): the targets, the race's bonus, the Wisdom adjustment and the
+// class grants the derived block holds.
+func (v View) SaveFigure() saves.Figure {
+	return saves.Figure{
+		Saves: v.Saves, Race: v.RaceSaveBonus, RaceID: v.Race,
+		MagicDefence: v.MagicDefence, Wis: v.Wis, Class: v.ClassSaveBonuses,
+	}
 }
 
 // EntryView is one class entry: the stored entry with its derived figures

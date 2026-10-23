@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -29,12 +30,13 @@ func thiefFixture(t *testing.T) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	thief := &charactersvc.Character{ID: charID, Class: "thief", Dex: 17}
-	thief.Derived.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{
+	thief := viewtest.Single("thief", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0))
+	thief.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{
 		{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40},
 		{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Percent: 55},
 	}}}
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (charactersvc.View, error) { return thief, nil }).Maybe()
+	f.view = &thief
 	return f
 }
 
@@ -113,9 +115,9 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 	}
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
-	thief := &charactersvc.Character{ID: charID, Class: "thief"}
-	thief.Derived.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}}}
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(thief, nil)
+	thief := viewtest.Single("thief", 1, viewtest.WithIdentity(charID, "Test", ""))
+	thief.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}}}
+	f.chars.EXPECT().View(mock.Anything, charID).Return(thief, nil)
 	_, err = svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{Value: 30, Reason: "rope"})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
@@ -128,10 +130,8 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 // at a usable percentage; Open Locks, not blocked, rolls.
 func TestSkills_Step16_3_ABlockedSkillIsNotRolled(t *testing.T) {
 	f := thiefFixture(t)
-	char, err := f.chars.GetCharacter(context.Background(), charID)
-	require.NoError(t, err)
-	char.Derived.SkillSets[0].Skills[1].Blocked = true // climb walls, 55%
-	_, err = f.svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{})
+	f.view.SkillSets[0].Skills[1].Blocked = true // climb walls, 55%
+	_, err := f.svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{})
 	var fe *domain.FieldError
 	require.ErrorAs(t, err, &fe)
 	assert.Equal(t, domain.FieldError{Field: "id", Message: skillsvc.CodeSkillBlockedByArmour}, *fe)
@@ -150,10 +150,8 @@ func TestSkills_Step16_3_ABlockedSkillIsNotRolled(t *testing.T) {
 func TestThiefSkill_Step13_AnOldClassSkillWarnsBeforeTheCrossover(t *testing.T) {
 	for _, dormant := range []bool{true, false} {
 		f := thiefFixture(t)
-		char, err := f.chars.GetCharacter(context.Background(), charID)
-		require.NoError(t, err)
-		char.Class = "fighter"
-		char.Derived.SkillSets[0].Dormant = dormant
+		f.view.Entries[0].Class = "fighter"
+		f.view.SkillSets[0].Dormant = dormant
 		f.records()
 		f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(30).Once()
 		got := f.roll(t, "open_locks")

@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -45,21 +46,21 @@ type fixture struct {
 	rulesets *rulesetmocks.MockResolver
 	rs       ruleset.Ruleset
 	tx       *countingTx
-	entries  []actionlog.NewEntry
+	// view is the character a thief test reads by reference, to change it between rolls.
+	view    *charactersvc.View
+	entries []actionlog.NewEntry
 }
 
 // The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16) and
 // two of the bard skills its character service derives (ADR 0030 step 18).
 // Its picks are derived by the character service (ADR 0037 steps 3 to 5):
 // each with its catalogue ability and modifier and its target.
-func bard() *charactersvc.Character {
-	c := &charactersvc.Character{
-		ID: charID, Class: "bard", Str: 12, Dex: 17, Con: 16, Int: 14, Wis: 8, Cha: 16,
-		Derived: charactersvc.Derived{SkillSets: []skills.SkillSet{{Set: "bard", Skills: bardSkills}}},
-	}
+func bard() charactersvc.View {
+	c := viewtest.Single("bard", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(12, 17, 16, 14, 8, 16))
+	c.SkillSets = []skills.SkillSet{{Set: "bard", Skills: bardSkills}}
 	slots := skills.ProficiencySlots{Picks: append([]skills.PickFigures{}, catalog...)}
 	slots.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
-	c.Derived.Proficiencies = &slots
+	c.Proficiencies = &slots
 	return c
 }
 
@@ -134,7 +135,7 @@ func newFixture(t *testing.T) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: f.buffs, Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard(), nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(bard(), nil).Maybe()
 	return f
 }
 

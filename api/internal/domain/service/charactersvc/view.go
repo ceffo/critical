@@ -22,6 +22,9 @@ type View struct {
 	ID   int64
 	Name string
 	Race string
+	// Languages are the languages the sheet knows, as the read gives them (the
+	// skills tab reads them; the rest of Details stays with charactersvc).
+	Languages []string
 
 	// Abilities (step 1.2).
 	Str            int
@@ -124,7 +127,7 @@ func buildView(c Character, d Derived) View {
 		entries[i] = e
 	}
 	return View{
-		ID: c.ID, Name: c.Name, Race: c.Race,
+		ID: c.ID, Name: c.Name, Race: c.Race, Languages: c.Details.Languages,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,
@@ -332,4 +335,29 @@ func (v View) FeatureClass(kind, fallback string) string {
 		return g.Class
 	}
 	return fallback
+}
+
+// SetSkillFigures replaces the view's skill sets with those of points (ADR
+// 0037 step 10's preview): the figures Derived.SetSkillFigures gives the
+// entity, from the view's grants, armour column, race and Dexterity.
+func (v *View) SetSkillFigures(t skills.SkillTables, def func(string) (classes.Class, error), points skills.SetPoints) error {
+	sets, err := skillSetsOf(t, def, v.SkillGrants(v.Primary().Class), v.SkillColumn, v.Race, v.Dex, len(v.Entries) > 1, points)
+	if err != nil {
+		return err
+	}
+	v.SkillSets = sets
+	return nil
+}
+
+// StoredEntries are the entries as classes.Entry values (class, state,
+// starting XP, realized and left-at levels): what the XP split and the
+// level-from-XP helpers take, without a second read of the stored row.
+func (v View) StoredEntries() []classes.Entry {
+	out := make([]classes.Entry, len(v.Entries))
+	for i, e := range v.Entries {
+		out[i] = classes.Entry{
+			Class: e.Class, State: e.State, StartingXP: e.StartingXP, RealizedLevel: e.RealizedLevel, LeftAtLevel: e.LeftAtLevel,
+		}
+	}
+	return out
 }

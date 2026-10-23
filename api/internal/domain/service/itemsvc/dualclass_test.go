@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -27,11 +28,11 @@ func (c catalogueClasses) Class(id string) (classes.Class, error) {
 }
 
 // dualClass is a character who left old at leftAt and is now newClass at level.
-func dualClass(old string, leftAt int, newClass string, level int) *charactersvc.Character {
-	return &charactersvc.Character{ID: 1, Class: newClass, Classes: []classes.Entry{
-		{Class: old, RealizedLevel: leftAt, State: classes.EntryFrozen, LeftAtLevel: leftAt},
-		{Class: newClass, RealizedLevel: level, State: classes.EntryActive},
-	}}
+// The old entry is dormant until the active one passes the left-at level (ADR 0042 step 13).
+func dualClass(old string, leftAt int, newClass string, level int) charactersvc.View {
+	v := viewtest.Multi(viewtest.WithFrozen(old, leftAt), viewtest.WithEntry(newClass, level))
+	v.Entries[0].Dormant = level <= leftAt
+	return v
 }
 
 // ADR 0042 step 13: "an action that uses a frozen entry's [...] equipment allowance before the
@@ -46,7 +47,7 @@ func TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover(t *test
 	sword := weapon("l", "long_sword", "long_sword", "s")
 	for _, tc := range []struct {
 		name   string
-		c      *charactersvc.Character
+		c      charactersvc.View
 		pieces []itemsvc.Item
 		want   []itemsvc.Warning
 	}{
@@ -79,7 +80,7 @@ func TestClassWarnings_Step13_AnOldClassAllowanceWarnsBeforeTheCrossover(t *test
 		t.Run(tc.name, func(t *testing.T) {
 			f := deps(t)
 			f.Classes = catalogueClasses{cataloguetest.Definitions(t)}
-			f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(tc.c, nil)
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(tc.c, nil)
 			svc, err := itemsvc.New(mocks.NewMockDAL(t), f.Deps)
 			require.NoError(t, err)
 

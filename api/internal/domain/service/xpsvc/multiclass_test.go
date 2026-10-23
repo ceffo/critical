@@ -11,6 +11,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
@@ -34,10 +35,7 @@ func TestBonusEligible_Step6_EveryActiveClassesPrimeRequisites(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
-				ID: 1, Class: "mage", Str: tc.str, Int: tc.int, Classes: tc.entries,
-				Derived: charactersvc.Derived{TargetLevel: 3},
-			}, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(tc.entries, viewtest.WithScores(tc.str, 0, 0, tc.int, 0, 0)), nil).Once()
 			f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil).Once()
 			got, err := f.svc.Get(context.Background(), 1)
 			require.NoError(t, err)
@@ -53,9 +51,7 @@ func TestEntrySplit_Step5_1_ThePreviewAndTheLedgerCarryTheShares(t *testing.T) {
 	f := newFixture(t)
 	two := []classes.Entry{classes.SingleEntry("mage", 1, 0), classes.SingleEntry("cleric", 1, 0)}
 	f.chars.EXPECT().ClassEntries(mock.Anything, int64(1)).Return(two, nil).Once()
-	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
-		ID: 1, Class: "mage", Derived: charactersvc.Derived{TargetLevel: 1}, Classes: two,
-	}, nil)
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(two), nil)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return([]xpsvc.Entry{{ID: 3, Base: 1001}}, nil)
 	want := []xpsvc.ClassAmount{{Class: "mage", Amount: 500}, {Class: "cleric", Amount: 500}}
 
@@ -94,7 +90,7 @@ func TestLoggedPayload_Step5_1_CarriesTheSplitOnEntryAndBefore(t *testing.T) {
 	two := []classes.Entry{classes.SingleEntry("mage", 1, 0), classes.SingleEntry("cleric", 1, 0)}
 	stored := xpsvc.Entry{ID: 3, Date: "2026-10-10", Reason: "ogre", Base: 1001}
 	list := func(f fixture) {
-		f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{ID: 1, Class: "mage", Classes: two, Derived: charactersvc.Derived{TargetLevel: 1}}, nil)
+		f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(two), nil)
 		f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	}
 
@@ -147,4 +143,19 @@ func TestAdd_AFailingEntriesReadFailsTheWriteAndLogsNothing(t *testing.T) {
 	_, err := f.svc.Add(context.Background(), 1, xpsvc.EntryInput{Base: 100})
 	require.ErrorIs(t, err, boom)
 	assert.Equal(t, 1, f.tx.n) // the failure happened inside the one unit of work; no Record (the mock would fail)
+}
+
+// viewOf is a view with the stored entries es, each at its realized level and
+// its target level 3 (the first one's, the primary's, is the level read).
+func viewOf(es []classes.Entry, opts ...viewtest.Option) charactersvc.View {
+	var all []viewtest.Option
+	for _, e := range es {
+		if e.State == classes.EntryFrozen {
+			all = append(all, viewtest.WithFrozen(e.Class, e.LeftAtLevel))
+		} else {
+			all = append(all, viewtest.WithEntry(e.Class, e.RealizedLevel))
+		}
+	}
+	v := viewtest.Multi(append(all, opts...)...)
+	return v
 }

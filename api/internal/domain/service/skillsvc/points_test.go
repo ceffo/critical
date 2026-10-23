@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -35,10 +36,9 @@ func pointsFixtureAt(t *testing.T, class string, level int, points map[string]in
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: class, SkillPoints: skills.SetPoints(nil).With(class, points), RealizedLevel: level,
-		Derived: charactersvc.Derived{RealizedLevel: level},
-	}, nil).Maybe()
+	v := viewtest.Single(class, level, viewtest.WithIdentity(charID, "Test", ""))
+	v.SkillPoints = skills.SetPoints(nil).With(class, points)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(v, nil).Maybe()
 	return f
 }
 
@@ -195,11 +195,10 @@ func TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt(t *testing.T) {
 	tables := &fakeTables{}
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: tables, Tx: f.tx})
 	require.NoError(t, err)
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (*charactersvc.Character, error) {
-		return &charactersvc.Character{
-			ID: charID, Class: "thief", Race: "elf", Dex: 17, SkillPoints: skills.SetPoints{"thief": {"open_locks": 30}}, RealizedLevel: 1,
-			Derived: charactersvc.Derived{RealizedLevel: 1, SkillColumn: "leather"},
-		}, nil
+	f.chars.EXPECT().View(mock.Anything, charID).RunAndReturn(func(context.Context, int64) (charactersvc.View, error) {
+		v := viewtest.Single("thief", 1, viewtest.WithIdentity(charID, "Test", "elf"), viewtest.WithScores(0, 17, 0, 0, 0, 0))
+		v.SkillPoints, v.SkillColumn = skills.SetPoints{"thief": {"open_locks": 30}}, "leather"
+		return v, nil
 	})
 	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, mock.Anything).Return(nil, nil)
 

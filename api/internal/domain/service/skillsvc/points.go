@@ -62,7 +62,7 @@ type skillOwner struct {
 // ownerOf is the skill set addressed by set and its grant: set when named, else the character's
 // only set across every rogue_skills grant (a thief/bard has two: a *domain.FieldError field set,
 // code empty). A set no grant lists stays with the first grant's class, which refuses it.
-func (s *service) ownerOf(c *charactersvc.Character, set string) (skillOwner, error) {
+func (s *service) ownerOf(c charactersvc.View, set string) (skillOwner, error) {
 	type listed struct {
 		set   string
 		def   classes.Class
@@ -70,7 +70,7 @@ func (s *service) ownerOf(c *charactersvc.Character, set string) (skillOwner, er
 	}
 	var out skillOwner
 	var sets []listed
-	for i, g := range c.Derived.SkillGrants(c.Class) {
+	for i, g := range c.SkillGrants(c.Primary().Class) {
 		def, err := s.classDef(g.Class)
 		if err != nil {
 			return skillOwner{}, err
@@ -130,7 +130,7 @@ func orEmpty(m map[string]int) map[string]int {
 func (s *service) SetPoints(ctx context.Context, characterID int64, set string, points map[string]int) (map[string]int, error) {
 	var out map[string]int
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.chars.GetCharacter(ctx, characterID)
+		c, err := s.chars.View(ctx, characterID)
 		if err != nil {
 			return err
 		}

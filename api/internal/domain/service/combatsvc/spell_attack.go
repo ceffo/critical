@@ -40,10 +40,6 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	if err != nil {
 		return nil, fmt.Errorf("strength table: %w", err)
 	}
-	dexMissile, _, err := s.rules.DexMods(char.Dex)
-	if err != nil {
-		return nil, fmt.Errorf("dexterity table: %w", err)
-	}
 	res := &ToHitRoll{BaseThac0: char.THAC0, TargetAC: targetAC, Modifiers: []Modifier{}}
 	sum := 0
 	add := func(m Modifier) {
@@ -51,7 +47,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 		sum += m.Value
 	}
 	add(Modifier{Kind: ModStrength, Detail: strconv.Itoa(mods.EffectiveStr), StrExceptional: mods.EffectiveStrExceptional, Value: strHit})
-	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: dexMissile})
+	add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: char.DexMissile})
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 	}

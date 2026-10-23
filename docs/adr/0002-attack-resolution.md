@@ -41,7 +41,8 @@ return a distinct value for each call and expect an exact number of calls.
    Tests: `TestResolveAttack` ("long sword +2 vs AC 5 at effective STR 18 hits on 5", "short bow
    +2 with a +3 arrow at DEX 17 hits on 4" at effective STR 18, "hurled darts take STR and DEX").
 5. **Dexterity.** The PHB Table 2 missile attack adjustment for every missile weapon, bow or
-   hurled; none in melee. Tests: `TestResolveAttack` (same three cases as step 4).
+   hurled; none in melee. _(Read from the character view's `DexMissile`, not from `combatsvc`'s own
+   rules port: [ADR 0046](0046-derived-figures.md) step 2.1, implemented 2026-10-23.)_ Tests: `TestResolveAttack` (same three cases as step 4).
 6. **Weapon magic.** The weapon's own magic, or a "the weapon becomes +N" from a buff or from an
    item power that is on (the Power Gem's thunder hammer, +5) when that is at least as high: the
    higher one, never both. To hit and to damage alike. Several "+N" do not add up either, buffs

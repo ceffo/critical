@@ -87,69 +87,6 @@ func (_c *MockRules_AttackRateFor_Call) RunAndReturn(run func(string, int, strin
 	return _c
 }
 
-// DexMods provides a mock function with given fields: dex
-func (_m *MockRules) DexMods(dex int) (int, int, error) {
-	ret := _m.Called(dex)
-
-	if len(ret) == 0 {
-		panic("no return value specified for DexMods")
-	}
-
-	var r0 int
-	var r1 int
-	var r2 error
-	if rf, ok := ret.Get(0).(func(int) (int, int, error)); ok {
-		return rf(dex)
-	}
-	if rf, ok := ret.Get(0).(func(int) int); ok {
-		r0 = rf(dex)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(int) int); ok {
-		r1 = rf(dex)
-	} else {
-		r1 = ret.Get(1).(int)
-	}
-
-	if rf, ok := ret.Get(2).(func(int) error); ok {
-		r2 = rf(dex)
-	} else {
-		r2 = ret.Error(2)
-	}
-
-	return r0, r1, r2
-}
-
-// MockRules_DexMods_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DexMods'
-type MockRules_DexMods_Call struct {
-	*mock.Call
-}
-
-// DexMods is a helper method to define mock.On call
-//   - dex int
-func (_e *MockRules_Expecter) DexMods(dex interface{}) *MockRules_DexMods_Call {
-	return &MockRules_DexMods_Call{Call: _e.mock.On("DexMods", dex)}
-}
-
-func (_c *MockRules_DexMods_Call) Run(run func(dex int)) *MockRules_DexMods_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_DexMods_Call) Return(missile int, ac int, err error) *MockRules_DexMods_Call {
-	_c.Call.Return(missile, ac, err)
-	return _c
-}
-
-func (_c *MockRules_DexMods_Call) RunAndReturn(run func(int) (int, int, error)) *MockRules_DexMods_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // StrengthMods provides a mock function with given fields: str, exceptional
 func (_m *MockRules) StrengthMods(str int, exceptional int) (int, int, error) {
 	ret := _m.Called(str, exceptional)

@@ -54,7 +54,7 @@ func profChar(t *testing.T, class string, picks ...string) charactersvc.View {
 	}
 	f, ok := skills.ProficiencyFigures(book, class, 5, 12, skills.Spending{Picks: skills.Picks{Weapon: weapon}})
 	require.True(t, ok, "no Table 34 row for %s", class)
-	v := viewtest.Single(class, 5, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(12, 17, 0, 0, 0, 0))
+	v := viewtest.Single(class, 5, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(12, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3))
 	v.THAC0, v.Proficiencies = profTHAC0, &f
 	return v
 }

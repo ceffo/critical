@@ -108,6 +108,9 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	delete(m, "Features")
 	// The PSP pool (ADR 0043 step 5) is new; the PSP tests cover it.
 	delete(m, "PSP")
+	// The Dexterity columns (ADR 0046 step 2.1) are new; the AC and attack tests cover them.
+	delete(m, "DexMissile")
+	delete(m, "DexDefence")
 
 	return m
 }

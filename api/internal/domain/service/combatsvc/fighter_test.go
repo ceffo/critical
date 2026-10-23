@@ -20,7 +20,7 @@ import (
 // fighter is a level 13 fighter with Strength 18/50 and Dexterity 17 (the
 // THAC0 is set, not derived: combat reads Derived.THAC0).
 func fighter() charactersvc.View {
-	v := viewtest.Single("fighter", 13, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(18, 17, 0, 0, 0, 0))
+	v := viewtest.Single("fighter", 13, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(18, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3))
 	v.Entries[0].Group = "warrior"
 	v.StrExceptional, v.THAC0, v.Specializes, v.ExceptionalStrength = 50, 8, true, true
 	return v

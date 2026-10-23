@@ -199,7 +199,8 @@ name or comment); this ADR names none yet.
     2. **Armour magic**: the worn armour's `ac` powers (step 17).
     3. **Shield**: minus the worn shield's AC bonus, then its `ac` powers.
     4. **Dexterity**: PHB Table 2's defensive adjustment for the sheet's Dexterity (the catalogue's
-       `dexterity.defensive`, ADR 0021 step 9).
+       `dexterity.defensive`, ADR 0021 step 9), taken from the character view's `DexDefence`
+       ([ADR 0046](0046-derived-figures.md) step 2.1), no longer read by `acsvc`.
     5. **Protection**: the `ac` effects of the other worn pieces' powers, in list order (step 12).
     6. **Buffs**: the `ac` effects of the buffs that apply, in list order ([ADR 0004](0004-buffs.md)
        steps 10 and 11).

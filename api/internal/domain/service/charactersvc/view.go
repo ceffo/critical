@@ -44,10 +44,14 @@ type View struct {
 	Entries []EntryView
 
 	// The derived figures of the character (step 1.4), as Derived states them.
-	THAC0            int
-	Saves            Saves
-	RaceSaveBonus    Saves
-	MagicDefence     int
+	THAC0         int
+	Saves         Saves
+	RaceSaveBonus Saves
+	MagicDefence  int
+	// DexMissile and DexDefence are PHB Table 2's columns at Dex (ADR 0046
+	// step 2.1): the missile attack adjustment and the armour class one.
+	DexMissile       int
+	DexDefence       int
 	ClassSaveBonuses []ClassSaveBonus
 	SpellImmunities  []string
 	SpellSlots       map[int]int
@@ -145,7 +149,7 @@ func buildView(c Character, d Derived) View {
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,
-		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, MagicDefence: d.MagicDefence,
+		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, MagicDefence: d.MagicDefence, DexMissile: d.DexMissile, DexDefence: d.DexDefence,
 		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
 		SkillSets: d.SkillSets, Backstab: d.Backstab, LevelUp: d.LevelUp, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,

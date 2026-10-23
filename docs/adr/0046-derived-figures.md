@@ -1,7 +1,7 @@
 # ADR 0046: Derived figures: one owner each for AC, saves, slots and levels
 
 **Status**: accepted 2026-10-23 (the user accepted every open question's default: "defaults") (design step; the user's goal, 2026-10-21: "a logical rule engine
-with locality"; triage 2026-10-22). Shape A below is the chosen shape. Not implemented. Builds on
+with locality"; triage 2026-10-22). Shape A below is the chosen shape. Step 2 (AC) implemented 2026-10-23; the others not. Builds on
 [ADR 0045](0045-character-view.md) (the character view) and respects
 [ADR 0038](0038-domain-and-wire.md) (no transport tags in the domain). Amends, each on
 implementation: [ADR 0002](0002-attack-resolution.md) step 5, [ADR 0006](0006-saving-throws.md)
@@ -134,7 +134,7 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
    4. A consumer reads a figure from the view ([ADR 0045](0045-character-view.md) step 1) when it
       depends on the character alone, and calls the owner's function when it depends on more (AC on
       items and buffs, a save on the buffs and the player's flags).
-2. **AC (first).** Owner: `acsvc.Derive`, unchanged (ADR 0033 step 10).
+2. **AC (first).** Owner: `acsvc.Derive`, unchanged (ADR 0033 step 10). Implemented 2026-10-23 (2.1 to 2.3 as written).
    1. *Dexterity reaches `acsvc` and `combatsvc` through the view.* `charactersvc` reads PHB
       Table 2 once in `Derive` and the view carries both columns (`DexMissile`, `DexDefence`). A Dexterity outside the
       table is refused where the table is read, with today's message, so a character whose score is
@@ -146,8 +146,8 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       score of Table 2 through `acsvc.Derive` with the view-fed adjustment and compares each AC and
       its rows with the pre-change value from a committed table of expected values;
       `Attack_Step2_MissileAdjustmentFromTheView` and `SpellAttack_Step2_MissileAdjustmentFromTheView`
-      assert the attack's Dexterity modifier for the same scores; `Derive_Step2_NoSecondTableRead`
-      builds `acsvc` and `combatsvc` with no table and still gets the figure. The existing
+      assert the attack's Dexterity modifier for the same scores; `Derive_Step2_TheDexterityTableIsReadOnce`
+      counts one `DexMods` call per derivation (`acsvc` and `combatsvc` have no table to read). The existing
       `acsvc` derive tests and the composition tests run unchanged.
 3. **Saves (second).** Owner: a new package `domain/saves`, which takes over from `charactersvc`:
    1. *The type.* `saves.Saves` (the five numbers) with `Of(category)` and the category list (the

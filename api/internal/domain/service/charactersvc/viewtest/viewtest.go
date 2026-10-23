@@ -81,6 +81,12 @@ func WithScores(str, dex, con, intelligence, wis, cha int) Option {
 	}
 }
 
+// WithDexAdjust sets PHB Table 2's two columns for the view's Dexterity (ADR
+// 0046 step 2.1): a test states the row it wants, the builder reads no table.
+func WithDexAdjust(missile, defence int) Option {
+	return func(v *charactersvc.View) { v.DexMissile, v.DexDefence = missile, defence }
+}
+
 // WithPSP sets the PSP pool (current and maximum) and the stored maximum.
 func WithPSP(current, max int) Option {
 	return func(v *charactersvc.View) {

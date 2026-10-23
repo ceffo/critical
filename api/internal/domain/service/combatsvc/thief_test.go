@@ -20,7 +20,7 @@ import (
 // thief is a level 5 thief, Strength 16 (Table 1: +0 to hit, +1 damage):
 // THAC0 18 and PHB Table 30's x3, as the character service derives them.
 func thief() charactersvc.View {
-	v := viewtest.Single("thief", 5, viewtest.WithIdentity(charID, "Test", "halfling"), viewtest.WithScores(16, 17, 0, 0, 0, 0))
+	v := viewtest.Single("thief", 5, viewtest.WithIdentity(charID, "Test", "halfling"), viewtest.WithScores(16, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3))
 	v.Entries[0].Group = "rogue"
 	v.THAC0, v.Backstab = 18, 3
 	return v

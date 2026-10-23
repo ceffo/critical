@@ -461,7 +461,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	// powers that apply and the sheet's Dexterity (ADR 0033 step 10); its
 	// override is a logged move undone by its snapshot (step 13).
 	bs.AC, err = acsvc.New(acsvc.Deps{
-		Items: bs.Items, Effects: bs.Buffs, Characters: charSvc, Tables: ruleTables,
+		Items: bs.Items, Effects: bs.Buffs, Characters: charSvc,
 		Overrides: characterDAL, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.AC, err); err != nil {

@@ -49,8 +49,9 @@ holds the inputs, and every figure is derived from them, never entered
   realized level, its starting XP and a state (active, or frozen with the level it was left at;
   [ADR 0042](adr/0042-multi-class-and-dual-class.md) step 1; table `character_classes`, domain
   `classes.Entry`, wire `classes[]`). Every character today has the one active entry its class,
-  level and XP total gave at migration 035; the rules read the first active entry
-  (`classes.Primary`) until the multi-class math lands.
+  level and XP total gave at migration 035; the rules read the first active entry, the
+  **primary class entry** (`classes.Primary`; the web's `primaryClass` and `primaryLevel`), until
+  the multi-class math lands.
 - **Race**, with its traits.
 - **Ability scores**: six stored scores; the **score in effect** adds the app's effects
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
@@ -182,6 +183,33 @@ picks); everything else is derived, as for any character. Three terms carry what
 Skill points, **Exceptional Strength** and the score in effect are not creation terms: they are the
 character's own, entered or derived as described above.
 
+## Rolls, effects and spells (built)
+
+A roll answers with a **breakdown**; the terms below are its parts and the data behind them.
+
+- **Modifier**: a labelled bonus or penalty with its kind. The **aggregate** of buffs and item
+  powers feeds the breakdown as **contributions** (additive) and **factors** (multiplicative); a
+  **situational** modifier is the only one the player types in. A **dice roll** is the thrown dice
+  of one formula, in order, with the total.
+- **Damage**: an attack's is the weapon's dice plus **damage terms**; a spell's is **spell effect
+  data**, one of four shapes (dice, a table by caster level, parts with their own save, steps),
+  rolled by a **cast** at the caster level.
+- **Duration** and **end effect**: a spell's effect entry gives its duration and may list end
+  effects, each applied once when the buff row ends by one of its end causes; the **end result**
+  reports the effects rolled and the HP before and after (the ledger caps a heal at max HP).
+- **Level-up**: a **pending level** is taken into a **taken level**, with the **level grants**
+  (slots and skill points) it gives beyond hit points; the **XP table** places each level cell
+  against the sheet's level, and the **level limits** of a race cap what a class entry may reach.
+- **Spell** reference data: the **area of effect** and **components** as the book words them;
+  a **free spell** is a level's grant to the **spellbook**. The preparation limit of a **spell
+  slot** and the learning limits of the spellbook are different rules that happen to share the
+  word "limit".
+- **Language**: a character's languages are catalogue codes, the race's native one first, each
+  other costing a non-weapon slot (**proficiency slot**); a **proficiency crossover** is a
+  Table 38 row of the groups a class learns at the table's cost.
+- **Equipment**: a **shield** and **weapon versus armour** are catalogue rows; an **AC override**
+  is the one AC the player sets by hand.
+
 ## Ruleset and house rules
 
 A **ruleset** is the set of rules a game plays by: the books' rules plus the table's **house
@@ -276,4 +304,15 @@ attack mode's check against a defence mode's. The **opponent** is the request's 
 - **Power.** A class feature is not a power; "power" belongs to psionics, and to an item power
   in [ADR 0016](adr/0016-inventory.md), which is an effect an item carries.
 - **Discipline vs school.** A discipline is psionic, a school is a wizard spell grouping.
+- **Primary / active class.** The code's `classes.Primary`, the web's `primaryClass` and
+  `primaryLevel` and the phrase "first active class entry" are one thing: the **primary class
+  entry**. A rename of the web helpers to the glossary word is a follow-up the user picks.
+- **Skill set vs kind of skill.** A **skill set** is a `rogue_skills` feature's list and the
+  points entered for it; `skillsvc.Kind` (`proficiency`, `bardSkill`, `thiefSkill`) is the **check
+  kind**, what a roll is judged as. They are not synonyms.
+- **Same name, other thing.** `authsvc.Identity` (a login claim) is no **race identity**;
+  `authsvc.Language` (the mail language of an invite) is no **language**; `ruletablesvc.Crossover`
+  (Table 38) is no dual-class **crossover**; `prepsvc.LevelLimit` and `spellbook.Limits` are no
+  race **level limits**. The four interfaces named `Rules` (derivation, combat, creation rolls,
+  level-up) read rule tables and are no concept.
 - **Where the house rules live.** In a ruleset, not on the character (user, 2026-10-21).

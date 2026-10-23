@@ -110,87 +110,17 @@ Text  # Technical: text and localisation helpers (Localized text)
 Texts  # Technical: text and localisation helpers (Localized text)
 TextOnly  # Technical: text and localisation helpers (Localized text)
 NewClass  # The class of a NewCharacter: one class entry as entered at creation (see Class entry)
-Language  # Needs a term: language, book and proficiency-pool concepts
-Languages  # Needs a term: language, book and proficiency-pool concepts
-LanguageBook  # Needs a term: language, book and proficiency-pool concepts
-Book  # Needs a term: language, book and proficiency-pool concepts
-ProficiencyBook  # Needs a term: language, book and proficiency-pool concepts
-NonweaponPool  # Needs a term: language, book and proficiency-pool concepts
-WeaponPick  # Needs a term: language, book and proficiency-pool concepts
-WeaponPickFigures  # Needs a term: language, book and proficiency-pool concepts
-WeaponTypeFigure  # Needs a term: language, book and proficiency-pool concepts
-Damage  # Needs a term: damage and effect duration concepts
-DamageAt  # Needs a term: damage and effect duration concepts
-DamagePart  # Needs a term: damage and effect duration concepts
-DamagePartAt  # Needs a term: damage and effect duration concepts
-DamageResult  # Needs a term: damage and effect duration concepts
-DamageStepAt  # Needs a term: damage and effect duration concepts
-DamageSteps  # Needs a term: damage and effect duration concepts
-DamageTerm  # Needs a term: damage and effect duration concepts
-DamageTermKind  # Needs a term: damage and effect duration concepts
-Duration  # Needs a term: damage and effect duration concepts
-DurationKind  # Needs a term: damage and effect duration concepts
-Effects  # Needs a term: damage and effect duration concepts
-EndCause  # Needs a term: damage and effect duration concepts
-EndEffect  # Needs a term: damage and effect duration concepts
-EndEffectRoll  # Needs a term: damage and effect duration concepts
-EndKind  # Needs a term: damage and effect duration concepts
-EndResult  # Needs a term: damage and effect duration concepts
-Formula  # Needs a term: damage and effect duration concepts
-FormulaRoll  # Needs a term: damage and effect duration concepts
-RolledDamage  # Needs a term: damage and effect duration concepts
-RolledGroup  # Needs a term: damage and effect duration concepts
-Roll  # Needs a term: damage and effect duration concepts
-RollInput  # Needs a term: damage and effect duration concepts
-RollResult  # Needs a term: damage and effect duration concepts
-ToHitRoll  # Needs a term: damage and effect duration concepts
-DieRoll  # Needs a term: damage and effect duration concepts
-Dice  # Needs a term: damage and effect duration concepts
-Factor  # Needs a term: damage and effect duration concepts
-Modifier  # Needs a term: damage and effect duration concepts
-ModifierKind  # Needs a term: damage and effect duration concepts
-Contribution  # Needs a term: damage and effect duration concepts
-Situational  # Needs a term: damage and effect duration concepts
-AbilityGain  # Needs a term: level, limits and grant concepts
-LevelCell  # Needs a term: level, limits and grant concepts
-LevelDice  # Needs a term: level, limits and grant concepts
-LevelGrants  # Needs a term: level, limits and grant concepts
-LevelLimit  # Needs a term: level, limits and grant concepts
-LevelLimits  # Needs a term: level, limits and grant concepts
-Limits  # Needs a term: level, limits and grant concepts
-PendingLevel  # Needs a term: level, limits and grant concepts
-TakenLevel  # Needs a term: level, limits and grant concepts
-Thresholds  # Needs a term: level, limits and grant concepts
-Tier  # Needs a term: level, limits and grant concepts
-Spending  # Needs a term: level, limits and grant concepts
-Rounds  # Needs a term: level, limits and grant concepts
-AreaOfEffect  # Needs a term: spell, target and area concepts
-AreaValue  # Needs a term: spell, target and area concepts
-Components  # Needs a term: spell, target and area concepts
-FreeSpell  # Needs a term: spell, target and area concepts
-FreeSpells  # Needs a term: spell, target and area concepts
-Target  # Needs a term: spell, target and area concepts
-TargetChoice  # Needs a term: spell, target and area concepts
-TargetSize  # Needs a term: spell, target and area concepts
-Group  # Needs a term: spell, target and area concepts
-Category  # Needs a term: spell, target and area concepts
-CellStatus  # Needs a term: spell, target and area concepts
-Power  # Needs a term: spell, target and area concepts
-Rules  # Needs a term: spell, target and area concepts
-Armour  # Needs a term: spell, target and area concepts
-AC  # Needs a term: spell, target and area concepts
-Shield  # Needs a term: spell, target and area concepts
-LegacyWeapon  # Needs a term: spell, target and area concepts
-WeaponVsArmor  # Needs a term: spell, target and area concepts
-Charges  # Needs a term: spell, target and area concepts
-CarryOver  # Needs a term: spell, target and area concepts
-Crossover  # Needs a term: spell, target and area concepts
-StepPer  # Needs a term: spell, target and area concepts
-Override  # Needs a term: spell, target and area concepts
-Overrides  # Needs a term: spell, target and area concepts
-Catalog  # Needs a term: spell, target and area concepts
-Favourite  # Needs a term: spell, target and area concepts
-TurningCell  # Needs a term: turning table cell
 ModeAt  # Technical: generic helper or envelope with no domain meaning of its own
 Added  # Technical: generic helper or envelope with no domain meaning of its own
 ClassAmount  # Technical: one class entry's share of an XP award, a view of the split already named by the class entry term
+LanguageBook  # Technical: port reading the language catalogue (see Language)
+Book  # Technical: port reading a spellbook or the powers catalogue (see Spellbook, Power)
+ProficiencyBook  # Technical: port reading the non-weapon catalogue and Table 38 (see Proficiency)
+Rules  # Technical: four unrelated ports that read rule tables (class tables for the derivation, the PHB lookup for combat, creation rolls, level-up); the shared name is a rename candidate, not a concept
+Armour  # Technical: port reading the body armour a character wears (see Skill armour)
+Effects  # Technical: port reading the buffs and item powers that apply (see Buff, Item power)
+Overrides  # Technical: port storing the AC override (see AC override)
+Catalog  # Technical: port reading the loaded spell effect data (see Spell effect data)
+Thresholds  # Technical: port reading the XP table and the prime requisites (see XP table)
+Rounds  # Technical: port supplying the current round (see Round)
+LegacyWeapon  # Technical: a weapon as the retired weapons table stored it, input of the one-time equipment conversion

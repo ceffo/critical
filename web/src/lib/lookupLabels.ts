@@ -1,8 +1,6 @@
-// Display-only French labels of the lookup: classes, Priest spheres and the common scraped
-// stat values. The stored data and the API values are never changed; text with no entry
+// Display-only French labels of the lookup: classes and Priest spheres. The stored data and the API values are never changed; text with no entry
 // in the catalogue shows exactly as scraped.
 import type { TFunction } from "i18next";
-import type { StatKey } from "@/lib/spellValues";
 
 /** Catalogue key of a raw text: trimmed, lowercased, every run of non-alphanumerics -> "_". */
 export function labelKey(raw: string): string {
@@ -17,15 +15,6 @@ function lookupLabel(t: TFunction, group: string, raw: string): string {
   const key = labelKey(raw);
   if (!key) return raw;
   return t(`lookup.${group}.${key}`, { defaultValue: raw });
-}
-
-/** A scraped stat value (exact whole-value match only; "210 yd" etc. are left alone). */
-export function translateValue(
-  t: TFunction,
-  stat: StatKey,
-  raw: string,
-): string {
-  return lookupLabel(t, `values.${stat}`, raw);
 }
 
 /** A Priest sphere name ("Elemental Fire"). */

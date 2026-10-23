@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Stop hook: a supervisor session can't end its turn while CI it owns is pending with no watcher, or
-# red and not handled, or while it has live agents and no fleet watcher (.claude/scripts/fleet-watch.sh). CI = main's CI/Release/Promote runs and every open PR's checks
+# red and not handled, or while it has live agents and no fleet watcher (.claude/scripts/fleet-watch.sh), or with no Linear watcher (.claude/scripts/queue-watch.sh) at any time. CI = main's CI/Release/Promote runs and every open PR's checks
 # (.claude/scripts/ci-state.sh). Other agents are not affected.
 #   pending + no live ci-watch.sh  -> blocked: arm .claude/scripts/ci-watch.sh (run_in_background)
 #   red, not in supervisor/ci-red-handled -> blocked: act on it, then record it there
@@ -44,6 +44,13 @@ if [ $qrc = 3 ]; then
 }Work is waiting on you (.claude/scripts/ready-queue.sh):
 $queue
 Dispatch every READY item and stack every STACK item now (one lane each, per Parallelism); work or flag every STALLED one to the user. An item you can't start is a question to the user: add it to $W/held (\"<id> <reason>\") and to the ledger's pending questions."
+fi
+# Linear is watched at all times (user, 2026-10-23): no live queue-watch.sh blocks the turn's end, idle or not.
+qpid=$(cat "$W/queue-watch.pid" 2>/dev/null)
+if [ $qrc != 3 ] && ! { [ -n "$qpid" ] && kill -0 "$qpid" 2>/dev/null; }; then
+  reason="${reason:+$reason
+
+}No Linear watcher: start .claude/scripts/queue-watch.sh with run_in_background before ending the turn (it wakes you when an item becomes READY, STACK or STALLED)."
 fi
 [ -z "$reason" ] && exit 0
 jq -n --arg r "$reason" '{decision:"block",reason:$r}'

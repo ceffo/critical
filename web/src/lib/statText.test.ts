@@ -339,7 +339,12 @@ describe("castingTimeText", () => {
       }),
     ).toBe("1 tour");
     expect(
-      castingTimeText(fr, { raw: "Special", kind: "special", time: none }),
+      castingTimeText(fr, {
+        raw: "Special",
+        kind: "special",
+        time: none,
+        label: "special",
+      }),
     ).toBe("Spécial");
     expect(
       castingTimeText(fr, {
@@ -363,7 +368,8 @@ describe("rangeText", () => {
     raw: string,
     distance = none,
     radius?: boolean,
-  ): SpellStats["range"] => ({ raw, kind, distance, radius });
+    label?: string,
+  ): SpellStats["range"] => ({ raw, kind, distance, radius, label });
 
   it("words every kind", () => {
     expect(rangeText(fr, r("self", "0"))).toBe("0");
@@ -375,7 +381,9 @@ describe("rangeText", () => {
     expect(
       rangeText(fr, r("distance", "10-ft. radius", qty(10, "foot"), true)),
     ).toBe("rayon de 3 m");
-    expect(rangeText(fr, r("special", "Special"))).toBe("Spéciale");
+    expect(
+      rangeText(fr, r("special", "Special", none, undefined, "special")),
+    ).toBe("Spéciale");
     expect(rangeText(fr, r("special", "Change"))).toBeNull();
   });
 });
@@ -432,7 +440,9 @@ describe("durationText", () => {
         d("until", "Until discharged", { condition: "discharged" }),
       ),
     ).toBe("Jusqu'à décharge");
-    expect(durationText(fr, d("special", "Special"))).toBe("Spéciale");
+    expect(
+      durationText(fr, d("special", "Special", { label: "special" })),
+    ).toBe("Spéciale");
     expect(
       durationText(
         fr,
@@ -527,7 +537,9 @@ describe("areaText", () => {
         }),
       ),
     ).toBe("cube de 12 m, 1 créature/niveau");
-    expect(areaText(fr, a("special", "Special"))).toBe("Spéciale");
+    expect(areaText(fr, a("special", "Special", { label: "special" }))).toBe(
+      "Spéciale",
+    );
   });
 
   it("says a square of square units once, by the unit", () => {
@@ -1031,9 +1043,9 @@ describe("saveText", () => {
     expect(saveText(fr, { raw: "None", kinds: ["none"] })).toBe("Aucune");
     expect(saveText(fr, { raw: "Neg.", kinds: ["negates"] })).toBe("Annule");
     expect(saveText(fr, { raw: "1/2", kinds: ["half"] })).toBe("½");
-    expect(saveText(fr, { raw: "Special", kinds: ["special"] })).toBe(
-      "Spéciale",
-    );
+    expect(
+      saveText(fr, { raw: "Special", kinds: ["special"], label: "special" }),
+    ).toBe("Spéciale");
     expect(
       saveText(fr, { raw: "Neg. or 1/2", kinds: ["negates", "half"] }),
     ).toBe("Annule ou ½");
@@ -1082,18 +1094,106 @@ describe("statText", () => {
     expect(statText(fr, spell as Spell, "casting_time").text).toBe("1 segment");
   });
 
-  it("falls back to the book's text, its common values labelled", () => {
-    expect(statText(fr, spell as Spell, "area_of_effect")).toEqual({
-      text: "Créature touchée",
-      source: "label",
-    });
-  });
-
   it("is the book's text in English, as before", () => {
     expect(statText(en, spell as Spell, "range")).toEqual({
       text: "60 yds. + 10 yds./level",
       source: "book",
     });
     expect(statText(en, spell as Spell, "components").text).toBe("V, S");
+  });
+});
+
+describe("statText (labels)", () => {
+  const stats = (area: SpellStats["area"]) =>
+    ({ area }) as unknown as SpellStats;
+  const spellOf = (text: string, area: SpellStats["area"]) =>
+    ({
+      stats: stats(area),
+      area_of_effect: { en: text },
+    }) as unknown as Spell;
+
+  it("words a stat from its label, never from its raw text", () => {
+    // A label the importer set is worded, whatever the raw text says...
+    expect(
+      statText(
+        fr,
+        spellOf("whatever", {
+          raw: "whatever",
+          kind: "special",
+          label: "line_of_sight",
+        }),
+        "area_of_effect",
+      ),
+    ).toEqual({ text: "Champ de vision", source: "label" });
+    // ...and a raw text that is a listed word, with no label, is not recognised.
+    expect(
+      statText(
+        fr,
+        spellOf("Line of sight", { raw: "Line of sight", kind: "special" }),
+        "area_of_effect",
+      ),
+    ).toEqual({ text: "Line of sight", source: "book" });
+    expect(areaText(fr, { raw: "Special", kind: "special" })).toBeNull();
+  });
+
+  it("shows the raw text when the label has no wording in the language", () => {
+    expect(
+      statText(
+        fr,
+        spellOf("Odd", { raw: "Odd", kind: "special", label: "odd" }),
+        "area_of_effect",
+      ),
+    ).toEqual({ text: "Odd", source: "book" });
+  });
+});
+
+describe("statText (verbatim)", () => {
+  it("shows the raw text of a special or partial stat", () => {
+    const spell = {
+      stats: {
+        area: {
+          raw: "Special (see below)",
+          kind: "special",
+        },
+        duration: {
+          raw: "Special (8 turns)",
+          kind: "special",
+          time: qty(8, "turn"),
+        },
+      },
+      area_of_effect: { en: "Special (see below)" },
+      duration: { en: "Special (8 turns)" },
+    } as unknown as Spell;
+    expect(statText(fr, spell, "area_of_effect")).toEqual({
+      text: "Special (see below)",
+      source: "book",
+    });
+    const partial = {
+      stats: {
+        area: { raw: "10 ft. of strange", kind: "area", partial: true },
+      },
+      area_of_effect: { en: "10 ft. of strange" },
+    } as unknown as Spell;
+    expect(statText(fr, partial, "area_of_effect")).toEqual({
+      text: "10 ft. of strange",
+      source: "book",
+    });
+  });
+
+  it("shows the raw text in the books' language, even for a labelled or typed stat", () => {
+    const spell = {
+      stats: {
+        area: {
+          raw: "creature touched",
+          kind: "touch",
+          label: "creature_touched",
+        },
+      },
+      area_of_effect: { en: "creature touched" },
+    } as unknown as Spell;
+    expect(statText(en, spell, "area_of_effect")).toEqual({
+      text: "creature touched",
+      source: "book",
+    });
   });
 });

@@ -97,28 +97,28 @@ func TestBonusEligible_Step6_EveryPrimeRequisiteAt16(t *testing.T) {
 	tests := []struct {
 		name  string
 		class string
-		c     charactersvc.Character
+		c     charactersvc.View
 		want  bool
 	}{
-		{"fighter Str 16", "fighter", charactersvc.Character{Str: 16, Dex: 10, Cha: 10}, true},
-		{"fighter 18/xx is 18", "fighter", charactersvc.Character{Str: 18, StrExceptional: 50}, true},
-		{"fighter Str 15, Dex 16, Cha 16", "fighter", charactersvc.Character{Str: 15, Dex: 16, Cha: 16}, false},
-		{"mage Int 16", "mage", charactersvc.Character{Int: 16}, true},
-		{"mage Int 15", "mage", charactersvc.Character{Int: 15, Dex: 18, Cha: 18}, false},
-		{"cleric Wis 17", "cleric", charactersvc.Character{Wis: 17}, true},
-		{"thief Dex 16", "thief", charactersvc.Character{Dex: 16, Cha: 3}, true},
-		{"bard Dex 16, Cha 16", "bard", charactersvc.Character{Dex: 16, Cha: 16}, true},
-		{"bard Dex 16, Cha 15", "bard", charactersvc.Character{Dex: 16, Cha: 15}, false},
-		{"bard Dex 15, Cha 18", "bard", charactersvc.Character{Dex: 15, Cha: 18}, false},
+		{"fighter Str 16", "fighter", charactersvc.View{Str: 16, Dex: 10, Cha: 10}, true},
+		{"fighter 18/xx is 18", "fighter", charactersvc.View{Str: 18, StrExceptional: 50}, true},
+		{"fighter Str 15, Dex 16, Cha 16", "fighter", charactersvc.View{Str: 15, Dex: 16, Cha: 16}, false},
+		{"mage Int 16", "mage", charactersvc.View{Int: 16}, true},
+		{"mage Int 15", "mage", charactersvc.View{Int: 15, Dex: 18, Cha: 18}, false},
+		{"cleric Wis 17", "cleric", charactersvc.View{Wis: 17}, true},
+		{"thief Dex 16", "thief", charactersvc.View{Dex: 16, Cha: 3}, true},
+		{"bard Dex 16, Cha 16", "bard", charactersvc.View{Dex: 16, Cha: 16}, true},
+		{"bard Dex 16, Cha 15", "bard", charactersvc.View{Dex: 16, Cha: 15}, false},
+		{"bard Dex 15, Cha 18", "bard", charactersvc.View{Dex: 15, Cha: 18}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			primes, err := xpTables{}.PrimeRequisites(tt.class)
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, xpsvc.BonusEligible(primes, &tt.c))
+			assert.Equal(t, tt.want, xpsvc.BonusEligible(primes, tt.c))
 		})
 	}
-	assert.False(t, xpsvc.BonusEligible(nil, &charactersvc.Character{Str: 18}), "a class without prime requisites gets none")
+	assert.False(t, xpsvc.BonusEligible(nil, charactersvc.View{Str: 18}), "a class without prime requisites gets none")
 }
 
 func cells(from int, statuses ...xpsvc.CellStatus) []xpsvc.LevelCell {

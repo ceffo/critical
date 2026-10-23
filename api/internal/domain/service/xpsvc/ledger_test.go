@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc/mocks"
 )
@@ -50,8 +51,9 @@ func newFixture(t *testing.T) fixture {
 }
 
 func (f fixture) sheet(dex, cha, level, xp int) {
-	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Class: "bard", Dex: dex, Cha: cha, XPTotal: xp, Derived: charactersvc.Derived{TargetLevel: level}}, nil)
+	v := viewtest.Single("bard", level, viewtest.WithScores(0, dex, 0, 0, 0, cha))
+	v.Entries[0].StartingXP = xp
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(v, nil)
 }
 
 // entries answers the stored class entries read (a single bard unless told).
@@ -110,8 +112,9 @@ func TestGet_NotEligibleBelow16(t *testing.T) {
 // 2,500.
 func TestGet_ProgressFromTheCharactersClassTable(t *testing.T) {
 	f := newFixture(t)
-	f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
-		Return(&charactersvc.Character{ID: 1, Class: "mage", XPTotal: 2_600, Derived: charactersvc.Derived{TargetLevel: 2}}, nil)
+	v := viewtest.Single("mage", 2)
+	v.Entries[0].StartingXP = 2_600
+	f.chars.EXPECT().View(mock.Anything, int64(1)).Return(v, nil)
 	f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 
 	got, err := f.svc.Get(context.Background(), 1)

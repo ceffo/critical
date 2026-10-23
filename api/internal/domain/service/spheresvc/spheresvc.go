@@ -20,7 +20,7 @@ import (
 
 // Characters reads a character with its derived values (charactersvc.SVC).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Book is the stored spellbook (spellbookadpt.Book).
@@ -94,7 +94,7 @@ func New(d Deps) (*Spheres, error) {
 // open returns the spells the character's spheres open within its slots,
 // ok false for a class without a sphere access.
 func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]catalogue.Spell, bool, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, false, err
 	}
@@ -103,16 +103,16 @@ func (s *Spheres) open(ctx context.Context, characterID int64, entry string) ([]
 }
 
 // openOf is open on the character c read.
-func (s *Spheres) openOf(c *charactersvc.Character, entry string) ([]catalogue.Spell, bool) {
+func (s *Spheres) openOf(c charactersvc.View, entry string) ([]catalogue.Spell, bool) {
 	// ADR 0042 steps 12 and 14: the entry granting the sphere access, with
 	// its own level and slots; a named entry is that one (a cleric/mage's mage
 	// entry has no sphere access: its stored spellbook).
-	class := c.Derived.FeatureClass(classes.KindSphereAccess, c.Class)
+	class := c.FeatureClass(classes.KindSphereAccess, c.Primary().Class)
 	if entry != "" {
 		class = entry
 	}
-	level, slots := c.Derived.RealizedLevel, c.Derived.SpellSlots
-	if e, ok := c.Derived.Entry(class); ok {
+	level, slots := c.Primary().RealizedLevel, c.SpellSlots
+	if e, ok := c.Entry(class); ok {
 		level, slots = e.RealizedLevel, e.SpellSlots
 	}
 	def, found := s.defs.Class(class)
@@ -160,14 +160,14 @@ func (s *Spheres) Of(ctx context.Context, characterID int64, class string) ([]pr
 // the cleric's sphere spells and the mage's stored spellbook. One caster (or
 // none derived) is the first entry's source.
 func (s *Spheres) SpellKeys(ctx context.Context, characterID int64) ([]string, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
 	entries := []string{""}
-	if c.Derived.Casters() > 1 {
+	if c.Casters() > 1 {
 		entries = entries[:0]
-		for _, e := range c.Derived.Classes {
+		for _, e := range c.Entries {
 			// ADR 0042 steps 13 and 14: a dual-class's frozen caster
 			// entry casts too, so its spells are the character's.
 			if e.Casts {

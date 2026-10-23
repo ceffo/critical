@@ -4,7 +4,9 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -169,5 +171,28 @@ func TestDerive_Step13_TheOldClassSkillSetIsDormantUntilTheCrossover(t *testing.
 		if assert.NotEmpty(t, d.SkillSets, "fighter %d", tc.fighter) {
 			assert.Equal(t, tc.dormant, d.SkillSets[0].Dormant, "fighter %d", tc.fighter)
 		}
+	}
+}
+
+// ADR 0045: View.SetSkillFigures (the skills preview of a draft) gives a
+// dual-class the sets Derived.SetSkillFigures gives the entity: the frozen
+// thief's set, Dormant before the crossover, with the multi-class flag set.
+func TestView_SetSkillFigures_EqualsTheEntitysOnADualClass(t *testing.T) {
+	tables := cataloguetest.Tables(t)
+	points := skills.SetPoints{"thief": {"open_locks": 10}}
+	for _, tc := range []struct {
+		fighter, xp int
+		dormant     bool
+	}{{5, 20_000, true}, {10, 600_000, false}} {
+		c := multi("human", frozen("thief", 9, 120_000), entry("fighter", tc.fighter, tc.xp))
+		c.Class, c.RealizedLevel, c.XPTotal, c.Dex = "fighter", tc.fighter, tc.xp, 17
+		c.Derived = derived(t, c)
+		v := charactersvc.BuildView(*c, c.Derived)
+
+		require.NoError(t, v.SetSkillFigures(tables, tables.Class, points))
+		require.NoError(t, c.Derived.SetSkillFigures(tables, tables.Class, c, points))
+		require.NotEmpty(t, v.SkillSets, "fighter %d", tc.fighter)
+		assert.Equal(t, c.Derived.SkillSets, v.SkillSets, "fighter %d", tc.fighter)
+		assert.Equal(t, tc.dormant, v.SkillSets[0].Dormant, "fighter %d", tc.fighter)
 	}
 }

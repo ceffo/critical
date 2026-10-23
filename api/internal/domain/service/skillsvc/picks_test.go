@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -27,18 +28,17 @@ type picksFixture struct {
 
 // newPicksFixture is a bard of Intelligence 9 and Dexterity 15 at realized level 1 (testBook's
 // rogue row: 3 + 0 + 2 = 5 non-weapon slots) storing stored, with no language catalogue; every
-// GetCharacter answers it (the read after a save included).
+// View answers it (the read after a save included).
 func newPicksFixture(t *testing.T, stored skills.Picks) *picksFixture {
 	t.Helper()
-	return newSheetFixture(t, &charactersvc.Character{
-		ID: charID, Class: "bard", Int: 9, Dex: 15, RealizedLevel: 1, Proficiencies: stored,
-		Derived: charactersvc.Derived{RealizedLevel: 1},
-	}, nil)
+	c := viewtest.Single("bard", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 15, 0, 9, 0, 0))
+	c.ProficiencyPicks = stored
+	return newSheetFixture(t, c, nil)
 }
 
-// newSheetFixture is the service over c, read by every GetCharacter, and the language catalogue
+// newSheetFixture is the service over c, read by every View, and the language catalogue
 // languages (nil: none).
-func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.LanguageBook) *picksFixture {
+func newSheetFixture(t *testing.T, c charactersvc.View, languages skills.LanguageBook) *picksFixture {
 	t.Helper()
 	f := &picksFixture{fixture: &fixture{
 		chars: mocks.NewMockCharacters(t), abils: mocks.NewMockAbilities(t), dice: mocks.NewMockDice(t),
@@ -53,7 +53,7 @@ func newSheetFixture(t *testing.T, c *charactersvc.Character, languages skills.L
 	})
 	require.NoError(t, err)
 	f.svc = svc
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Maybe()
 	return f
 }
 
@@ -269,12 +269,12 @@ func TestSkillCheck_Step5_TargetCountsExtraSlots(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			c := bard() // Dex 17
-			c.Derived.Proficiencies = &skills.ProficiencySlots{Picks: []skills.PickFigures{
+			c.Proficiencies = &skills.ProficiencySlots{Picks: []skills.PickFigures{
 				{ID: "jumping", Ability: "dex", Slots: tc.slots, Cost: 1, Extra: tc.extra, Known: true},
 			}}
-			c.Derived.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
+			c.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
 			f.chars.ExpectedCalls = nil
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
+			f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil)
 			f.records()
 			f.dice.EXPECT().RollDie(20).Return(tc.d20).Once()
 			r := f.roll(t, "jumping")

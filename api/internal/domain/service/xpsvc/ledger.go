@@ -20,10 +20,11 @@ const (
 )
 
 func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
+	entryList := c.StoredEntries()
 	entries, err := s.dal.List(ctx, characterID)
 	if err != nil {
 		return nil, err
@@ -31,12 +32,11 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	for i := range entries {
 		a := EntryAmount(entries[i].Base, entries[i].Bonus)
 		entries[i].BonusAmount, entries[i].Total = a.BonusAmount, a.Total
-		entries[i].Split = splitAmount(c.Entries(), entries[i].ID, a.Total)
+		entries[i].Split = splitAmount(entryList, entries[i].ID, a.Total)
 	}
 	// The total and the progress are the first active entry's (its
 	// starting XP plus its share of each award, ADR 0042 step 5; a
 	// single-class character's whole ledger).
-	entryList := c.Entries()
 	first, _ := classes.Primary(entryList)
 	amounts := make([]charactersvc.Award, len(entries))
 	for i := range entries {
@@ -46,7 +46,7 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	// The level is the target level the rules derive from that total, and
 	// the thresholds are the class's (ADR 0030 step 3, amending ADR 0015
 	// step 3); the realized level waits for the level-up step (step 7).
-	progress, err := ComputeProgress(c.Class, c.Derived.TargetLevel, total, s.table)
+	progress, err := ComputeProgress(c.Primary().Class, c.Primary().TargetLevel, total, s.table)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 		primes = append(primes, p...)
 	}
 	return &Ledger{
-		Opening:       c.XPTotal,
+		Opening:       c.Primary().StartingXP,
 		Total:         total,
 		BonusEligible: BonusEligible(primes, c),
 		Progress:      progress,

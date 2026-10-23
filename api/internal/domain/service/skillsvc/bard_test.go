@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc/mocks"
@@ -28,14 +28,15 @@ func derivedBardFixture(t *testing.T) *fixture {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	f.svc = svc
-	bard := &charactersvc.Character{ID: charID, Class: "bard", Dex: 16, SkillPoints: skills.SetPoints{"bard": {"detect_noise": 17}}}
-	bard.Derived.SkillSets = []skills.SkillSet{{Set: "bard", Skills: []ruletablesvc.SkillPercent{
+	bard := viewtest.Single("bard", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 16, 0, 0, 0, 0))
+	bard.SkillPoints = skills.SetPoints{"bard": {"detect_noise": 17}}
+	bard.SkillSets = []skills.SkillSet{{Set: "bard", Skills: []ruletablesvc.SkillPercent{
 		{Skill: "climb_walls", Base: 50, Armor: -25, Percent: 25},
 		{Skill: "detect_noise", Base: 20, Points: 17, Percent: 37},
 		{Skill: "pick_pockets", Base: 10, Armor: -25, Percent: 0},
 		{Skill: "read_languages", Base: 5, Percent: 5},
 	}}}
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(bard, nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(bard, nil).Maybe()
 	return f
 }
 

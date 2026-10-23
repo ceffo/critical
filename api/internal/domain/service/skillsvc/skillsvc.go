@@ -94,7 +94,7 @@ type SVC interface {
 // thief's skills, derived on the character (ADR 0030 steps 17 and 18), not
 // stored.
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Abilities gives the sheet's score in an ability and the score in effect

@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -26,12 +26,12 @@ func (l liftRuleset) ForCharacter(context.Context, int64) (ruleset.Ruleset, erro
 }
 
 // multiClass is a character of the active classes cls, level 3 each.
-func multiClass(cls ...string) *charactersvc.Character {
-	out := &charactersvc.Character{ID: 1, Class: cls[0]}
+func multiClass(cls ...string) charactersvc.View {
+	var opts []viewtest.Option
 	for _, c := range cls {
-		out.Classes = append(out.Classes, classes.Entry{Class: c, RealizedLevel: 3, State: classes.EntryActive})
+		opts = append(opts, viewtest.WithEntry(c, 3))
 	}
-	return out
+	return viewtest.Multi(opts...)
 }
 
 // ADR 0041 step 2.5 on the items (ADR 0042 step 16.1, "unless the ruleset lifts it"): the
@@ -42,10 +42,10 @@ func multiClass(cls ...string) *charactersvc.Character {
 func TestWarnings_Step2_5_TheWeaponLiftReachesTheItems(t *testing.T) {
 	sword := weapon("l", "long_sword", "long_sword", "s")
 	warned := []itemsvc.Warning{w("l", itemsvc.WarnWeaponNotAllowed)}
-	single := &charactersvc.Character{ID: 1, Class: "cleric", Classes: []classes.Entry{{Class: "cleric", RealizedLevel: 3, State: classes.EntryActive}}}
+	single := viewtest.Single("cleric", 3)
 	for _, tc := range []struct {
 		name string
-		c    *charactersvc.Character
+		c    charactersvc.View
 		on   bool
 		want []itemsvc.Warning
 	}{
@@ -60,7 +60,7 @@ func TestWarnings_Step2_5_TheWeaponLiftReachesTheItems(t *testing.T) {
 			f := deps(t)
 			f.Classes = catalogueClasses{cataloguetest.Definitions(t)}
 			f.Rulesets = liftRuleset{on: tc.on}
-			f.chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(tc.c, nil)
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(tc.c, nil)
 			svc, err := itemsvc.New(mocks.NewMockDAL(t), f.Deps)
 			require.NoError(t, err)
 

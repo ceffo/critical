@@ -21,12 +21,12 @@ import (
 // (the ruleset's success effects, ADR 0041 step 6): the default has Tumbling, AC -4 for 1 round.
 
 // tumbler is the bard with Tumbling picked as well as the fixture's catalogue: Dex 17, target 17.
-func tumbler() *charactersvc.Character {
+func tumbler() charactersvc.View {
 	c := bard()
 	picks := append([]skills.PickFigures{}, catalog...)
 	picks = append(picks, skills.PickFigures{ID: "tumbling", Ability: "dex", Slots: 1, Cost: 1, Known: true})
-	c.Derived.Proficiencies = &skills.ProficiencySlots{Picks: picks}
-	c.Derived.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
+	c.Proficiencies = &skills.ProficiencySlots{Picks: picks}
+	c.Proficiencies.SetTargets(func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) })
 	return c
 }
 
@@ -34,7 +34,7 @@ func newTumbler(t *testing.T) *fixture {
 	t.Helper()
 	f := newFixture(t)
 	f.chars.ExpectedCalls = nil
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tumbler(), nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(tumbler(), nil).Maybe()
 	return f
 }
 

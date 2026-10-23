@@ -119,7 +119,7 @@ type DAL interface {
 // the weapon type it is specialized in (ADR 0037 step 9), a read of the
 // character row alone.
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 	WeaponProficiency(ctx context.Context, id int64) (skills.WeaponProficiency, error)
 }
 

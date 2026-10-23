@@ -204,7 +204,7 @@ func wielded(p Item, pieces []Item) classes.Weapon {
 // its class and its pieces: the list the caller already holds, or, with none,
 // the character's pieces as stored.
 func (s *service) Warnings(ctx context.Context, characterID int64, items []Item) ([]Warning, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, err
 	}
@@ -213,8 +213,11 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 			return nil, err
 		}
 	}
-	entries := c.Entries()
-	limits, err := s.limitsOf(c.ActiveClassIDs())
+	active := make([]string, 0, len(c.Entries))
+	for _, e := range c.Active() {
+		active = append(active, e.Class)
+	}
+	limits, err := s.limitsOf(active)
 	if err != nil {
 		return nil, err
 	}
@@ -222,8 +225,8 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 	// before the crossover. One the definitions do not know allows nothing
 	// more.
 	var frozen []string
-	for _, e := range entries {
-		if e.State == classes.EntryFrozen {
+	for _, e := range c.Entries {
+		if e.Frozen() {
 			frozen = append(frozen, e.Class)
 		}
 	}
@@ -231,7 +234,7 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 	if err != nil {
 		return nil, err
 	}
-	old := OldClasses{Equipment: oldLimits, Dormant: !classes.Crossed(entries)}
+	old := OldClasses{Equipment: oldLimits, Dormant: c.HasDormant()}
 	// ADR 0041 steps 2.5 and 3: the weapon lift of the character's ruleset.
 	rs, err := s.rulesets.ForCharacter(ctx, characterID)
 	if err != nil {

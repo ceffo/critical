@@ -105,10 +105,10 @@ func (s picksState) picks() skills.Picks {
 // stored sheet at the realized level (the picks, the languages, then the budget); nothing is
 // written. A refusal is a *domain.FieldError or a *domain.BudgetError. The weapon picks are
 // checked under the ruleset's weapon lift (ADR 0041 step 2.5).
-func (s *service) edited(c *charactersvc.Character, e Edit, lift ruleset.WeaponLift) (skills.Picks, []string, error) {
+func (s *service) edited(c charactersvc.View, e Edit, lift ruleset.WeaponLift) (skills.Picks, []string, error) {
 	before := skills.Sheet{
-		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
-		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: s.languages.Native(c.Race),
+		Class: c.Primary().Class, Level: c.Primary().RealizedLevel, Classes: c.SkillClasses(), Intelligence: c.Int,
+		Picks: c.ProficiencyPicks, Languages: c.Languages, Native: s.languages.Native(c.Race),
 		MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
 	}
 	after, err := skills.Apply(s.book, s.languages, c.Race, before, skills.Edit(e))
@@ -120,9 +120,9 @@ func (s *service) edited(c *charactersvc.Character, e Edit, lift ruleset.WeaponL
 
 // proficiencies reads the pools of c with picks and languages (skills.Read, the sheet's own
 // assembly) under the ruleset's weapon lift.
-func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, languages []string, lift ruleset.WeaponLift) *Proficiencies {
+func (s *service) proficiencies(c charactersvc.View, picks skills.Picks, languages []string, lift ruleset.WeaponLift) *Proficiencies {
 	f, ws := skills.Read(s.book, skills.Sheet{
-		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int, Picks: picks,
+		Class: c.Primary().Class, Level: c.Primary().RealizedLevel, Classes: c.SkillClasses(), Intelligence: c.Int, Picks: picks,
 		Languages: languages, Native: s.languages.Native(c.Race), MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
 		Score: func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) },
 	})
@@ -135,7 +135,7 @@ func (s *service) proficiencies(c *charactersvc.Character, picks skills.Picks, l
 func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error) {
 	var out *Proficiencies
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.chars.GetCharacter(ctx, characterID)
+		c, err := s.chars.View(ctx, characterID)
 		if err != nil {
 			return err
 		}
@@ -164,7 +164,7 @@ func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, e
 func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edit) (*Proficiencies, error) {
 	var out *Proficiencies
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.chars.GetCharacter(ctx, characterID)
+		c, err := s.chars.View(ctx, characterID)
 		if err != nil {
 			return err
 		}
@@ -176,7 +176,7 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 		if err != nil {
 			return err
 		}
-		before, beforeLangs := c.Proficiencies.Clone(), c.Details.Languages
+		before, beforeLangs := c.ProficiencyPicks.Clone(), c.Languages
 		picksChanged, langsChanged := !before.Equal(next), !skills.LanguagesEqual(beforeLangs, langs)
 		if picksChanged || langsChanged {
 			if picksChanged {
@@ -219,13 +219,14 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 // carries no weapon picks, one logged before the languages moved to the Skills tab no
 // languages: the stored ones stay.
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
-	var stored *charactersvc.Character
+	var stored charactersvc.View
+	loaded := false
 	load := func() error {
-		if stored != nil {
+		if loaded {
 			return nil
 		}
-		c, err := s.chars.GetCharacter(ctx, characterID)
-		stored = c
+		c, err := s.chars.View(ctx, characterID)
+		stored, loaded = c, err == nil
 		return err
 	}
 	picks := st.picks()
@@ -233,7 +234,7 @@ func (s *service) restorePicks(ctx context.Context, characterID int64, _ string,
 		if err := load(); err != nil {
 			return err
 		}
-		picks.Weapon = stored.Proficiencies.Clone().Weapon
+		picks.Weapon = stored.ProficiencyPicks.Clone().Weapon
 	}
 	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)
@@ -246,7 +247,7 @@ func (s *service) restorePicks(ctx context.Context, characterID int64, _ string,
 			return err
 		}
 	}
-	if st.Languages != nil && !skills.LanguagesEqual(stored.Details.Languages, *st.Languages) {
+	if st.Languages != nil && !skills.LanguagesEqual(stored.Languages, *st.Languages) {
 		if err := s.picks.SetLanguages(ctx, characterID, *st.Languages); err != nil {
 			return fmt.Errorf("restore languages: %w", err)
 		}

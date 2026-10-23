@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
 )
@@ -28,9 +29,27 @@ func (b book) Of(ctx context.Context, id int64, _ string) ([]prepsvc.SpellbookEn
 
 func (book) SpellKeys(context.Context, int64) ([]string, error) { return []string{"sleep"}, nil }
 
-type chars struct{ c *charactersvc.Character }
+type chars struct{ c charactersvc.View }
 
-func (c chars) GetCharacter(context.Context, int64) (*charactersvc.Character, error) { return c.c, nil }
+func (c chars) View(context.Context, int64) (charactersvc.View, error) { return c.c, nil }
+
+// single is a one-entry caster of class at level with slots, the figure on
+// the view and on its entry.
+func single(class string, level int, slots map[int]int) charactersvc.View {
+	v := viewtest.Single(class, level)
+	v.SpellSlots, v.Entries[0].SpellSlots, v.Entries[0].Casts = slots, slots, true
+	return v
+}
+
+// entry is a casting entry of the view the test builds by hand.
+func dormant(e charactersvc.EntryView) charactersvc.EntryView {
+	e.Dormant = true
+	return e
+}
+
+func entry(class string, state classes.EntryState, level int, casts bool, slots map[int]int) charactersvc.EntryView {
+	return charactersvc.EntryView{Class: class, State: state, RealizedLevel: level, Casts: casts, SpellSlots: slots}
+}
 
 func priest(id string, level int, spheres ...string) catalogue.Spell {
 	return catalogue.Spell{ID: id, Class: "Priest", Level: level, Spheres: spheres}
@@ -83,7 +102,7 @@ func ids(es []prepsvc.SpellbookEntry) []string {
 // order; another class from its spellbook.
 func TestSpheres_Step15_WhatAClassPreparesFrom(t *testing.T) {
 	ctx := context.Background()
-	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 4: 1}}}
+	c := single("cleric", 5, map[int]int{1: 3, 2: 2, 4: 1})
 	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
 	all, err := s.All(ctx, 1)
@@ -94,7 +113,7 @@ func TestSpheres_Step15_WhatAClassPreparesFrom(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, []string{"bless", "chant", "produce_flame"}, keys)
 
-	mage := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{RealizedLevel: 1, SpellSlots: map[int]int{1: 1}}}
+	mage := single("mage", 1, map[int]int{1: 1})
 	s, err = spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{mage}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
 	all, err = s.All(ctx, 1)
@@ -107,7 +126,7 @@ func TestSpheres_Step15_WhatAClassPreparesFrom(t *testing.T) {
 // other spheres and another minor cap is offered a different set of spells.
 func TestSpheres_Step15_TheFeatureDrivesTheSpheres(t *testing.T) {
 	ctx := context.Background()
-	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 9, SpellSlots: map[int]int{1: 3, 2: 2, 4: 1, 5: 1}}}
+	c := single("cleric", 9, map[int]int{1: 3, 2: 2, 4: 1, 5: 1})
 	other := classes.SphereAccess{Major: []string{"thought"}, Minor: []string{"elemental_fire", "combat"}, MinorMaxLevel: 4}
 	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, other), Catalogue: cat})
 	require.NoError(t, err)
@@ -140,7 +159,7 @@ func TestSpheres_Step15_SixthLevelNeedsWisdom17(t *testing.T) {
 		{"Wisdom 16", map[int]int{1: 7, 2: 6, 3: 4, 4: 3, 5: 2}, false},
 		{"Wisdom 17", map[int]int{1: 7, 2: 6, 3: 5, 4: 3, 5: 2, 6: 1}, true},
 	} {
-		c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{RealizedLevel: 11, SpellSlots: tc.slots}}
+		c := single("cleric", 11, tc.slots)
 		s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 		require.NoError(t, err)
 		all, err := s.All(ctx, 1)
@@ -155,12 +174,9 @@ func TestSpheres_Step15_SixthLevelNeedsWisdom17(t *testing.T) {
 // slots (no 4th level: no Produce Fire), whichever entry is first.
 func TestSpheres_Step14_EachEntryPreparesFromItsOwnSource(t *testing.T) {
 	ctx := context.Background()
-	c := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{
-		SpellSlots: map[int]int{1: 4, 2: 2, 3: 2},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "mage", State: classes.EntryActive, RealizedLevel: 6, Casts: true, SpellSlots: map[int]int{1: 4, 2: 2, 3: 2}},
-			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
-		},
+	c := charactersvc.View{SpellSlots: map[int]int{1: 4, 2: 2, 3: 2}, Entries: []charactersvc.EntryView{
+		entry("mage", classes.EntryActive, 6, true, map[int]int{1: 4, 2: 2, 3: 2}),
+		entry("cleric", classes.EntryActive, 5, true, map[int]int{1: 3, 2: 3, 3: 1}),
 	}}
 	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
@@ -178,13 +194,10 @@ func TestSpheres_Step14_EachEntryPreparesFromItsOwnSource(t *testing.T) {
 // mage's stored spellbook (the code before gave the sphere spells only).
 func TestSpheres_Step14_MineHoldsEveryCastingEntrysSpells(t *testing.T) {
 	ctx := context.Background()
-	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
-		SpellSlots: map[int]int{1: 3, 2: 3, 3: 1},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
-			{Class: "mage", State: classes.EntryActive, RealizedLevel: 6, Casts: true, SpellSlots: map[int]int{1: 4, 2: 2, 3: 2}},
-			{Class: "fighter", State: classes.EntryActive, RealizedLevel: 6},
-		},
+	c := charactersvc.View{SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}, Entries: []charactersvc.EntryView{
+		entry("cleric", classes.EntryActive, 5, true, map[int]int{1: 3, 2: 3, 3: 1}),
+		entry("mage", classes.EntryActive, 6, true, map[int]int{1: 4, 2: 2, 3: 2}),
+		entry("fighter", classes.EntryActive, 6, false, nil),
 	}}
 	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)
@@ -198,12 +211,9 @@ func TestSpheres_Step14_MineHoldsEveryCastingEntrysSpells(t *testing.T) {
 // mage left at 9, now a cleric 5, has the cleric's sphere spells and the
 // mage's spellbook (the code before listed the active entries only).
 func TestSpheres_Step14_MineHoldsTheOldClassSpells(t *testing.T) {
-	c := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
-		SpellSlots: map[int]int{1: 3, 2: 3, 3: 1},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "mage", State: classes.EntryFrozen, RealizedLevel: 9, Casts: true, Dormant: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
-			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}},
-		},
+	c := charactersvc.View{SpellSlots: map[int]int{1: 3, 2: 3, 3: 1}, Entries: []charactersvc.EntryView{
+		dormant(entry("mage", classes.EntryFrozen, 9, true, map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1})),
+		entry("cleric", classes.EntryActive, 5, true, map[int]int{1: 3, 2: 3, 3: 1}),
 	}}
 	s, err := spheresvc.New(spheresvc.Deps{Book: book{}, Characters: chars{c}, Classes: defs(t, cleric), Catalogue: cat})
 	require.NoError(t, err)

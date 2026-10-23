@@ -126,3 +126,4 @@ Rounds  # Technical: port supplying the current round (see Round)
 LegacyWeapon  # Technical: a weapon as the retired weapons table stored it, input of the one-time equipment conversion
 WeaponSpecialization  # Technical: the params of the weapon_specialization class feature (ADR 0040 step 13)
 SpecializationType  # Technical: a row of the weapon_specialization params
+Option  # Technical: the viewtest builder's functional option (tests only)

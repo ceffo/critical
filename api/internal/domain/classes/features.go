@@ -107,6 +107,31 @@ type Feature struct {
 	Psionics *Psionics
 	// SaveBonus is save_bonus's params.
 	SaveBonus *SaveBonus
+	// Specialization is weapon_specialization's params (ADR 0040 step 13),
+	// read from format 19 on; nothing reads them until the specialization
+	// rules move to them.
+	Specialization *WeaponSpecialization
+}
+
+// WeaponSpecialization are the params of weapon_specialization (ADR 0040
+// step 13): the slots a specialization costs in all, the Table 35 columns a
+// specialist reads in melee and in a missile type no row names, and the
+// weapon types that differ.
+type WeaponSpecialization struct {
+	DefaultSlots  int
+	MeleeColumn   string
+	MissileColumn string
+	Types         []SpecializationType
+}
+
+// SpecializationType is one kind of missile weapon that differs: its weapon
+// type codes and what it costs in all, and either its own Table 35 Column or
+// RateOfFire (the specialist keeps the weapon type's Table 45 rate of fire).
+type SpecializationType struct {
+	WeaponTypes []string
+	Slots       int
+	Column      string
+	RateOfFire  bool
 }
 
 // SaveBonus are the params of save_bonus (ADR 0043 step 3): Bonus is added
@@ -341,7 +366,8 @@ func checkSaveBonus(b SaveBonus) error {
 // kind.
 func checkParams(f Feature) error {
 	table, ability, spheres, rogue, book := f.Table != "", f.Ability != "", f.Spheres != nil, f.RogueSkills != nil, f.Spellbook != nil
-	if (f.Kind != KindPsionics && f.Psionics != nil) || (f.Kind != KindSaveBonus && f.SaveBonus != nil) {
+	if (f.Kind != KindPsionics && f.Psionics != nil) || (f.Kind != KindSaveBonus && f.SaveBonus != nil) ||
+		(f.Kind != KindWeaponSpecialization && f.Specialization != nil) {
 		return errors.New("a missing or unexpected parameter")
 	}
 	want := func(t, a, s, r, b bool) error {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
@@ -166,35 +167,25 @@ type PriestSpellWisdomRow struct {
 	SpellLevel, WisMin int
 }
 
-// SkillBaseRow is PHB Table 26 or 33.
-type SkillBaseRow struct {
-	Skill string
-	Base  int
-}
-
 // SkillRaceRow is PHB Table 27.
 type SkillRaceRow struct {
 	Race, Skill string
 	Adjustment  int
 }
 
-// SkillDexterityRow is PHB Table 28 (scores outside the rows: 0).
+// SkillDexterityRow is a row of PHB Table 28 keyed by skill (ADR 0040 step
+// 12): the adjustment of Skill at the scores DexMin..DexMax (scores outside
+// the skill's rows: 0).
 type SkillDexterityRow struct {
-	DexMin, DexMax                                                       int
-	PickPockets, OpenLocks, FindRemoveTraps, MoveSilently, HideInShadows int
+	DexMin, DexMax int
+	Skill          string
+	Adjustment     int
 }
 
 // SkillArmorRow is PHB Table 29.
 type SkillArmorRow struct {
 	Armor, Skill string
 	Adjustment   int
-}
-
-// BardArmorPenaltyRow is Table 29's note: the bard's extra adjustment in
-// metal armour, added to the elven chain column (ADR 0030 step 1).
-type BardArmorPenaltyRow struct {
-	Armor      string
-	Adjustment int
 }
 
 // BackstabRow is PHB Table 30 over a level band.
@@ -220,29 +211,29 @@ type TurningRow struct {
 // ClassTables holds the validated class and race tables. Built by
 // NewClassTables only; its slices are not to be modified.
 type ClassTables struct {
-	HitDice             []HitDiceRow
-	Constitution        []ConstitutionRow
-	Intelligence        []IntelligenceRow
-	Wisdom              []WisdomRow
-	ConSaveBonus        []ConSaveBonusRow
-	RaceRequirements    []RaceRequirementRow
-	RaceAdjustments     []RaceAdjustmentRow
-	THAC0               []THAC0Row
-	SavingThrows        []SavingThrowRow
-	WarriorAttacks      []AttackRateRow
-	SpecialistAttacks   []SpecialistAttackRow
-	RateOfFire          []RateOfFireRow
-	WizardSpells        []SpellProgressionRow
-	PriestSpells        []SpellProgressionRow
-	PriestSpellWisdom   []PriestSpellWisdomRow
-	ThiefSkillBase      []SkillBaseRow
-	ThiefSkillRace      []SkillRaceRow
-	ThiefSkillDexterity []SkillDexterityRow
-	ThiefSkillArmor     []SkillArmorRow
-	BardArmorPenalty    []BardArmorPenaltyRow
-	BardSkillBase       []SkillBaseRow
-	Backstab            []BackstabRow
-	TurningUndead       []TurningRow
+	HitDice           []HitDiceRow
+	Constitution      []ConstitutionRow
+	Intelligence      []IntelligenceRow
+	Wisdom            []WisdomRow
+	ConSaveBonus      []ConSaveBonusRow
+	RaceRequirements  []RaceRequirementRow
+	RaceAdjustments   []RaceAdjustmentRow
+	THAC0             []THAC0Row
+	SavingThrows      []SavingThrowRow
+	WarriorAttacks    []AttackRateRow
+	SpecialistAttacks []SpecialistAttackRow
+	RateOfFire        []RateOfFireRow
+	WizardSpells      []SpellProgressionRow
+	PriestSpells      []SpellProgressionRow
+	PriestSpellWisdom []PriestSpellWisdomRow
+	// SkillSets are the artifact's skill sets (format 19, ADR 0040 step 12): the
+	// skills of each with their base percentages (PHB Tables 26 and 33).
+	SkillSets      []catalogue.SkillSet
+	SkillRace      []SkillRaceRow
+	SkillDexterity []SkillDexterityRow
+	SkillArmor     []SkillArmorRow
+	Backstab       []BackstabRow
+	TurningUndead  []TurningRow
 	// InherentPotential is CPsiH Table 5 (ADR 0043 step 4), empty in a
 	// catalogue without the psionicist.
 	InherentPotential []InherentPotentialRow
@@ -299,12 +290,10 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		{"wizard_spells", checkProgression(c.WizardSpells, MaxWizardSpellLevel)},
 		{"priest_spells", checkProgression(c.PriestSpells, MaxPriestSpellLevel)},
 		{"priest_spell_wisdom", checkPriestWisdom(c.PriestSpellWisdom)},
-		{"thief_skill_base", once(c.ThiefSkillBase, func(r SkillBaseRow) string { return r.Skill }, ThiefSkills)},
-		{"thief_skill_race", perRace(c.ThiefSkillRace, func(r SkillRaceRow) (string, string) { return r.Race, r.Skill }, races, ThiefSkills)},
-		{"thief_skill_dexterity", checkScores(c.ThiefSkillDexterity, func(r SkillDexterityRow) (int, int) { return r.DexMin, r.DexMax }, false)},
-		{"thief_skill_armor", once(c.ThiefSkillArmor, func(r SkillArmorRow) string { return r.Armor + " " + r.Skill }, pairs(SkillArmors, ThiefSkills))},
-		{"bard_armor_penalty", once(c.BardArmorPenalty, func(r BardArmorPenaltyRow) string { return r.Armor }, []string{"metal"})},
-		{"bard_skill_base", once(c.BardSkillBase, func(r SkillBaseRow) string { return r.Skill }, BardSkills)},
+		{"skill_sets", checkSkillSets(c.SkillSets)},
+		{"skill_race", perRace(c.SkillRace, func(r SkillRaceRow) (string, string) { return r.Race, r.Skill }, races, ThiefSkills)},
+		{"skill_dexterity", checkSkillDexterity(c.SkillDexterity)},
+		{"skill_armor", once(c.SkillArmor, func(r SkillArmorRow) string { return r.Armor + " " + r.Skill }, pairs(SkillArmors, ThiefSkills))},
 		{"backstab", checkBands(c.Backstab, func(r BackstabRow) (int, int) { return r.LevelMin, r.LevelMax })},
 		{"turning_undead", checkTurning(c.TurningUndead)},
 		{"inherent_potential", checkInherentPotential(c.InherentPotential, defs)},
@@ -357,6 +346,52 @@ func checkScores[R any](rows []R, rng func(R) (int, int), full bool) error {
 	}
 	if full && next != MaxScore+1 {
 		return fmt.Errorf("must cover scores 1..%d", MaxScore)
+	}
+	return nil
+}
+
+// checkSkillSets: the sets the Go skill lists still stand for (SkillSetThief
+// and SkillSetBard) exist and list exactly those skills, each with a base
+// (ADR 0040 step 12 replaces the lists by the sets themselves); set ids and
+// skills within a set are unique (catalogue.CheckSkillSets, at the import).
+func checkSkillSets(sets []catalogue.SkillSet) error {
+	if err := catalogue.CheckSkillSets(sets); err != nil {
+		return err
+	}
+	for set, want := range map[string][]string{SkillSetThief: ThiefSkills, SkillSetBard: BardSkills} {
+		i := slices.IndexFunc(sets, func(s catalogue.SkillSet) bool { return s.ID == set })
+		if i < 0 {
+			return fmt.Errorf("the skill set %q is missing", set)
+		}
+		got := make([]string, len(sets[i].Skills))
+		for j, k := range sets[i].Skills {
+			got[j] = k.ID
+		}
+		if !slices.Equal(got, want) {
+			return fmt.Errorf("the skill set %q lists %v, want %v", set, got, want)
+		}
+	}
+	return nil
+}
+
+// checkSkillDexterity: Table 28's rows name a thieving skill, and each
+// skill's rows ascend without overlap inside 1..MaxScore (a skill with no row
+// at a score adjusts by 0).
+func checkSkillDexterity(rows []SkillDexterityRow) error {
+	if len(rows) == 0 {
+		return errors.New("no rows")
+	}
+	bySkill := map[string][]SkillDexterityRow{}
+	for _, r := range rows {
+		if !slices.Contains(ThiefSkills, r.Skill) {
+			return fmt.Errorf("unknown skill %q", r.Skill)
+		}
+		bySkill[r.Skill] = append(bySkill[r.Skill], r)
+	}
+	for skill, rs := range bySkill {
+		if err := checkScores(rs, func(r SkillDexterityRow) (int, int) { return r.DexMin, r.DexMax }, false); err != nil {
+			return fmt.Errorf("skill %s: %w", skill, err)
+		}
 	}
 	return nil
 }

@@ -43,7 +43,16 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 		"fighter": {"", []classes.Feature{
 			{Kind: classes.KindExceptionalStrength, FromLevel: 1},
 			{Kind: classes.KindMeleeAttacksPerRound, FromLevel: 1, Table: "warrior_attacks"},
-			{Kind: classes.KindWeaponSpecialization, FromLevel: 1},
+			{Kind: classes.KindWeaponSpecialization, FromLevel: 1, Specialization: &classes.WeaponSpecialization{
+				DefaultSlots: 2, MeleeColumn: "melee", MissileColumn: "other_missile",
+				Types: []classes.SpecializationType{
+					{WeaponTypes: []string{"long_bow", "short_bow"}, Slots: 3, RateOfFire: true},
+					{WeaponTypes: []string{"light_crossbow"}, Slots: 2, Column: "light_crossbow"},
+					{WeaponTypes: []string{"heavy_crossbow"}, Slots: 2, Column: "heavy_crossbow"},
+					{WeaponTypes: []string{"dagger"}, Slots: 2, Column: "thrown_dagger"},
+					{WeaponTypes: []string{"dart"}, Slots: 2, Column: "thrown_dart"},
+				},
+			}},
 		}},
 		"mage": {"wizard_spells", []classes.Feature{
 			{Kind: classes.KindSpellbook, FromLevel: 1, Spellbook: &classes.Spellbook{MaxSpellLevel: 9, FreeSpellPerNewSpellLevel: true}},

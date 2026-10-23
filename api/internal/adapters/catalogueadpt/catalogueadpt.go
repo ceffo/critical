@@ -1,6 +1,6 @@
 // Package catalogueadpt reads the spell catalogue artifact (ADR 0021) from
 // the file at CRITICAL_CATALOGUE and validates it (steps 5.1 and 5.2): the
-// file must exist, carry the one format this API knows (11, step 18.3; the
+// file must exist, carry the one format this API knows (19, ADR 0021 step 27.5; the
 // formats 1 to 10 are retired and refused like any unknown format), match the
 // committed JSON Schema and hold no duplicate id. It maps the spells to catalogue.Catalogue
 // and hands the artifact's rule tables (the PHB rule tables, from format 4
@@ -84,6 +84,10 @@ type Artifact struct {
 	// serves them from memory.
 	Disciplines []catalogue.Discipline
 	Powers      []catalogue.Power
+	// SkillSets are the format-19 artifact's skill sets (ADR 0040 step 12),
+	// in book order; ruletablesadpt reads them from Definitions too, to build
+	// the skill tables.
+	SkillSets []catalogue.SkillSet
 }
 
 // Load reads and validates the artifact at path and returns its spells.
@@ -149,6 +153,19 @@ type artifactDTO struct {
 	// (ADR 0043 step 8).
 	Disciplines []disciplineDTO `json:"disciplines"`
 	Powers      []powerDTO      `json:"powers"`
+	// SkillSets (format 19, ADR 0040 step 12) are the skill sets rogue_skills names.
+	SkillSets []skillSetDTO `json:"skill_sets"`
+}
+
+type skillSetDTO struct {
+	ID         string         `json:"id"`
+	Name       localized.Text `json:"name"`
+	MinPercent int            `json:"min_percent"`
+	Skills     []struct {
+		ID         string `json:"id"`
+		Base       int    `json:"base"`
+		ArmourFree bool   `json:"armour_free"`
+	} `json:"skills"`
 }
 
 type disciplineDTO struct {
@@ -318,11 +335,23 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate proficiency description ids: %s", strings.Join(first(dups), ", "))
 	}
+	sets := make([]catalogue.SkillSet, 0, len(a.SkillSets))
+	for _, s := range a.SkillSets {
+		set := catalogue.SkillSet{ID: s.ID, Name: s.Name.Clean(), MinPercent: s.MinPercent}
+		for _, k := range s.Skills {
+			set.Skills = append(set.Skills, catalogue.SkillSetSkill{ID: k.ID, Base: k.Base, ArmourFree: k.ArmourFree})
+		}
+		sets = append(sets, set)
+	}
+	if err := catalogue.CheckSkillSets(sets); err != nil {
+		return Artifact{}, err
+	}
 	defs, err := json.Marshal(struct {
-		Classes json.RawMessage `json:"classes"`
-		Groups  json.RawMessage `json:"groups"`
-		Races   json.RawMessage `json:"races"`
-	}{a.Classes, a.Groups, a.Races})
+		Classes   json.RawMessage `json:"classes"`
+		Groups    json.RawMessage `json:"groups"`
+		Races     json.RawMessage `json:"races"`
+		SkillSets []skillSetDTO   `json:"skill_sets"`
+	}{a.Classes, a.Groups, a.Races, a.SkillSets})
 	if err != nil {
 		return Artifact{}, fmt.Errorf("definitions: %w", err)
 	}
@@ -339,7 +368,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	}
 	return Artifact{
 		Catalogue: out, RuleTables: a.RuleTables, Equipment: a.Equipment, Languages: a.Languages, Definitions: defs,
-		Disciplines: disciplines, Powers: powers,
+		Disciplines: disciplines, Powers: powers, SkillSets: sets,
 	}, nil
 }
 

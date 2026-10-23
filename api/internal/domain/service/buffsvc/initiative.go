@@ -342,5 +342,5 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 // InitiativeCorrector the items are given, over this service's own store and
 // log, so the two can never differ.
 func (s *service) CorrectInitiative(ctx context.Context, characterID int64, cause InitiativeModifier) (*Initiative, error) {
-	return corrector{dal: s.dal, log: s.log}.CorrectInitiative(ctx, characterID, cause)
+	return s.corrector.CorrectInitiative(ctx, characterID, cause)
 }

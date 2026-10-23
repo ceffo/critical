@@ -46,7 +46,7 @@ func LedgerTotal(opening int, entries []Entry) int {
 // BonusMinScore on the sheet. A fighter's 18/xx is
 // 18 for the test (the plain score). A class without prime requisites gets
 // none.
-func BonusEligible(primes []string, c *charactersvc.Character) bool {
+func BonusEligible(primes []string, c charactersvc.View) bool {
 	for _, a := range primes {
 		if s, ok := c.Score(charactersvc.Ability(a)); !ok || s < BonusMinScore {
 			return false

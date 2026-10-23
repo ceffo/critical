@@ -8,7 +8,7 @@ import (
 )
 
 // abilityScore is the sheet's score for an ability key.
-func abilityScore(c *charactersvc.Character, a Ability) (int, error) {
+func abilityScore(c charactersvc.View, a Ability) (int, error) {
 	score, ok := c.Score(a)
 	if !ok {
 		return 0, fmt.Errorf("unknown ability %q", a)

@@ -259,12 +259,11 @@ type entryCalc struct {
 }
 
 // firstActive is the first active entry (classes.ValidateEntries refused a
-// character with none; Entries gives a character built from the mirror one).
+// character with none; Entries gives a character built from the mirror one),
+// the entry classes.PrimaryIndex names.
 func firstActive(entries []entryCalc) entryCalc {
-	for _, e := range entries {
-		if e.entry.State == classes.EntryActive {
-			return e
-		}
+	if i := classes.PrimaryIndex(derivedEntries(entries)); i >= 0 {
+		return entries[i]
 	}
 	return entries[0]
 }
@@ -548,26 +547,36 @@ func saveField(s *Saves, cat string) *int {
 // they are filled, for the derivation and for a draft of the points (ADR 0030 steps 17 and 18;
 // the figures are the skills module's, ADR 0037 step 17).
 func (d *Derived) SetSkillFigures(t skills.SkillTables, def func(string) (classes.Class, error), c *Character, points skills.SetPoints) error {
+	// ADR 0042 step 16.3: a dual-class's frozen entry counts.
+	sets, err := skillSetsOf(t, def, d.SkillGrants(c.Class), d.SkillColumn, c.Race, c.Dex, len(c.Entries()) > 1, points)
+	if err != nil {
+		return err
+	}
+	d.SkillSets = sets
+	return nil
+}
+
+// skillSetsOf is the skill sets of every rogue_skills grant at the points,
+// the one rule SetSkillFigures (the entity) and View.SetSkillFigures share.
+func skillSetsOf(t skills.SkillTables, def func(string) (classes.Class, error), grants []FeatureGrant, column, race string, dex int, multi bool, points skills.SetPoints) ([]skills.SkillSet, error) {
 	var sets []skills.SkillSet
-	for _, g := range d.SkillGrants(c.Class) {
+	for _, g := range grants {
 		class, err := def(g.Class)
 		if err != nil {
-			return fmt.Errorf("skill figures: %w", err)
+			return nil, fmt.Errorf("skill figures: %w", err)
 		}
 		got, err := skills.SkillSetsOf(t, skills.PointsSheet{
-			Class: class, Race: c.Race, Dex: c.Dex, Level: g.Level, ArmorColumn: d.SkillColumn, Points: points,
-			MultiClass: len(c.Entries()) > 1, // ADR 0042 step 16.3: a dual-class's frozen entry counts
+			Class: class, Race: race, Dex: dex, Level: g.Level, ArmorColumn: column, Points: points, MultiClass: multi,
 		})
 		if err != nil {
-			return fmt.Errorf("skill figures: %w", err)
+			return nil, fmt.Errorf("skill figures: %w", err)
 		}
 		for i := range got {
 			got[i].Dormant = g.Dormant // ADR 0042 step 13
 		}
 		sets = append(sets, got...)
 	}
-	d.SkillSets = sets
-	return nil
+	return sets, nil
 }
 
 // setSpellFailure is ADR 0030 step 14 through the entries (ADR 0042 steps 12

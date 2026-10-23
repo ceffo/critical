@@ -283,12 +283,12 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 // a catalogue proficiency with an ability, its target derived on the
 // character. A pick with no check (Blind-fighting, an id the catalogue does
 // not hold) is not rolled.
-func checkable(char *charactersvc.Character) []skills.PickFigures {
-	if char.Derived.Proficiencies == nil {
+func checkable(char charactersvc.View) []skills.PickFigures {
+	if char.Proficiencies == nil {
 		return nil
 	}
 	var out []skills.PickFigures
-	for _, p := range char.Derived.Proficiencies.Picks {
+	for _, p := range char.Proficiencies.Picks {
 		if p.HasCheck {
 			out = append(out, p)
 		}
@@ -298,7 +298,7 @@ func checkable(char *charactersvc.Character) []skills.PickFigures {
 
 // find is the unrolled check of skill id (of the skill set set, "" for the first that holds it): its kind, die and target.
 func (s *service) find(ctx context.Context, characterID int64, set, id string) (checkRecord, error) {
-	char, err := s.chars.GetCharacter(ctx, characterID)
+	char, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("get character: %w", err)
 	}
@@ -321,7 +321,7 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
 	// a bard skill's target is the percentage the character service derives
 	// (its terms are on the character).
-	for _, ss := range char.Derived.SkillSets {
+	for _, ss := range char.SkillSets {
 		if set != "" && ss.Set != set {
 			continue
 		}
@@ -367,8 +367,8 @@ type draft struct {
 // withPoints is char derived with the draft points in place of its stored
 // ones: refused as SetPoints refuses them, then the skills' figures of the
 // draft at the realized level and the worn armour's skill armour.
-func (s *service) withPoints(char *charactersvc.Character, d draft) error {
-	own, err := s.ownerOf(char, d.set) // ADR 0042 step 12
+func (s *service) withPoints(char *charactersvc.View, d draft) error {
+	own, err := s.ownerOf(*char, d.set) // ADR 0042 step 12
 	if err != nil {
 		return err
 	}
@@ -382,7 +382,7 @@ func (s *service) withPoints(char *charactersvc.Character, d draft) error {
 		return err
 	}
 	all := char.SkillPoints.With(set, next)
-	if err := char.Derived.SetSkillFigures(s.tables, s.classDef, char, all); err != nil {
+	if err := char.SetSkillFigures(s.tables, s.classDef, all); err != nil {
 		return fmt.Errorf("preview skill points: %w", err)
 	}
 	char.SkillPoints = all
@@ -394,12 +394,12 @@ func (s *service) withPoints(char *charactersvc.Character, d draft) error {
 func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (*Skills, error) {
 	var out *Skills
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		char, err := s.chars.GetCharacter(ctx, characterID)
+		char, err := s.chars.View(ctx, characterID)
 		if err != nil {
 			return fmt.Errorf("get character: %w", err)
 		}
 		if draft != nil {
-			if err := s.withPoints(char, *draft); err != nil {
+			if err := s.withPoints(&char, *draft); err != nil {
 				return err
 			}
 		}
@@ -408,8 +408,8 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			return err
 		}
 		profs := checkable(char)
-		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.Derived.SkillSets))}
-		for _, ss := range char.Derived.SkillSets {
+		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.SkillSets))}
+		for _, ss := range char.SkillSets {
 			kind, _ := KindOfSet(ss.Set)
 			set := SkillSet{Set: ss.Set, Kind: kind, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
 			for _, sk := range ss.Skills {

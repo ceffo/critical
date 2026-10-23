@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -40,13 +41,11 @@ func phbLanguages(t *testing.T) *ruletablesvc.Languages {
 
 // elf is an elf bard of Intelligence 9 at realized level 1 (5 non-weapon slots) with picks
 // spending slots and the languages as a read shows them (the native one among them).
-func elf(slots int, languages ...string) *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Class: "bard", Race: "elf", Int: 9, Dex: 15, RealizedLevel: 1,
-		Proficiencies: nonweapon(pk("tumbling", slots)),
-		Details:       charactersvc.Details{Languages: languages},
-		Derived:       charactersvc.Derived{RealizedLevel: 1},
-	}
+func elf(slots int, languages ...string) charactersvc.View {
+	v := viewtest.Single("bard", 1, viewtest.WithIdentity(charID, "Test", "elf"), viewtest.WithScores(0, 15, 0, 9, 0, 0))
+	v.ProficiencyPicks = nonweapon(pk("tumbling", slots))
+	v.Languages = languages
+	return v
 }
 
 // ADR 0037 steps 6, 10 and 18 on the Skills tab's languages pool: the languages beyond the native

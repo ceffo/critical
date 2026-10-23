@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc/mocks"
 )
@@ -24,12 +25,10 @@ func TestTurn_Step13_AnOldClassTurnWarnsBeforeTheCrossover(t *testing.T) {
 	for _, dormant := range []bool{true, false} {
 		t.Run(map[bool]string{true: "fighter 3", false: "fighter 8"}[dormant], func(t *testing.T) {
 			chars := mocks.NewMockCharacters(t)
-			chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-				ID: charID, Class: "fighter", Derived: charactersvc.Derived{
-					RealizedLevel: 3, Turning: table,
-					Features: []charactersvc.FeatureGrant{{Kind: classes.KindTurnUndead, Class: "cleric", Level: 7, Dormant: dormant}},
-				},
-			}, nil).Once()
+			v := viewtest.Multi(viewtest.WithFrozen("cleric", 7), viewtest.WithEntry("fighter", 3))
+			v.Turning = table
+			v.Features = []charactersvc.FeatureGrant{{Kind: classes.KindTurnUndead, Class: "cleric", Level: 7, Dormant: dormant}}
+			chars.EXPECT().View(mock.Anything, charID).Return(v, nil).Once()
 			dice := mocks.NewMockDice(t)
 			dice.EXPECT().RollDie(6).Return(3).Once()
 			dice.EXPECT().RollDie(6).Return(4).Once()

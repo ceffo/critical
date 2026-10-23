@@ -8,8 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/classes"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 )
 
@@ -17,13 +16,8 @@ import (
 // ruleset. A multi-class cleric/fighter's long sword pick previews allowed with the weapon lift
 // on, and is refused weapon_not_allowed with it off (the book's rule, ADR 0042 step 16.1).
 func TestPreviewProficiencies_Step2_5_ReadsTheWeaponLift(t *testing.T) {
-	clericFighter := &charactersvc.Character{
-		ID: charID, Class: "cleric", Int: 12, RealizedLevel: 3, Proficiencies: nonweapon(),
-		Derived: charactersvc.Derived{RealizedLevel: 3, Classes: []charactersvc.EntryDerived{
-			{Class: "cleric", State: classes.EntryActive, RealizedLevel: 3},
-			{Class: "fighter", State: classes.EntryActive, RealizedLevel: 3},
-		}},
-	}
+	clericFighter := viewtest.Multi(viewtest.WithEntry("cleric", 3), viewtest.WithEntry("fighter", 3), viewtest.WithScores(0, 0, 0, 12, 0, 0))
+	clericFighter.ProficiencyPicks = nonweapon()
 	edit := skillsvc.Edit{Picks: withWeapons(nonweapon(), "long_sword")}
 
 	t.Run("lift on", func(t *testing.T) {

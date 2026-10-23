@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rsmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc/mocks"
 )
@@ -67,16 +68,15 @@ var (
 )
 
 // sheet is a human level-6 fighter with 21,000 XP.
-func sheet(str, intel int, alignment string) *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Race: "human", Class: "fighter", RealizedLevel: 6, Str: str, Int: intel, Dex: 12, Con: 14, Wis: 10, Cha: 10,
-		Details: charactersvc.Details{Alignment: alignment},
-		Derived: charactersvc.Derived{Classes: []charactersvc.EntryDerived{{Class: "fighter", XP: 21_000}}},
-	}
+func sheet(str, intel int, alignment string) charactersvc.View {
+	v := viewtest.Single("fighter", 6, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(str, 12, 14, intel, 10, 10))
+	v.Alignment = alignment
+	v.Entries[0].XP = 21_000
+	return v
 }
 
-func (f *fixture) expectRead(c *charactersvc.Character) {
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(c, nil)
+func (f *fixture) expectRead(c charactersvc.View) {
+	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil)
 	f.rules.EXPECT().ForCharacter(mock.Anything, charID).Return(ruleset.Default(), nil)
 	f.cat.EXPECT().Race("human").Return(classes.Race{}, false).Maybe()
 	f.cat.EXPECT().Get("fighter").Return(fighter, nil).Maybe()
@@ -89,7 +89,7 @@ func TestSwitch_Step2_2_TheNewClassMinimumsAndAlignmentAreRefusedWithNothingWrit
 	for _, tc := range []struct {
 		name  string
 		class classes.Class
-		sheet *charactersvc.Character
+		sheet charactersvc.View
 		want  error
 	}{
 		{"ability minimums of the new class", strictMage, sheet(17, 17, "true_neutral"), dualclasssvc.ErrMinimumsNotMet},
@@ -97,7 +97,7 @@ func TestSwitch_Step2_2_TheNewClassMinimumsAndAlignmentAreRefusedWithNothingWrit
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.sheet, nil)
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.sheet, nil)
 			f.rules.EXPECT().ForCharacter(mock.Anything, charID).Return(ruleset.Default(), nil)
 			f.cat.EXPECT().Race("human").Return(classes.Race{}, false)
 			f.cat.EXPECT().Get("fighter").Return(fighter, nil)

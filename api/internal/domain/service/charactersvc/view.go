@@ -25,6 +25,8 @@ type View struct {
 	// Languages are the languages the sheet knows, as the read gives them (the
 	// skills tab reads them; the rest of Details stays with charactersvc).
 	Languages []string
+	// Alignment is the sheet's alignment (Details.Alignment); empty when unset.
+	Alignment string
 
 	// Abilities (step 1.2).
 	Str            int
@@ -139,7 +141,7 @@ func buildView(c Character, d Derived) View {
 		entries[i] = e
 	}
 	return View{
-		ID: c.ID, Name: c.Name, Race: c.Race, Languages: c.Details.Languages,
+		ID: c.ID, Name: c.Name, Race: c.Race, Languages: c.Details.Languages, Alignment: c.Details.Alignment,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,

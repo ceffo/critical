@@ -4,6 +4,7 @@
 import { ShieldWarning } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
 import type { LocalizedText } from "@/types/localized";
+import { checkText } from "@/components/powers/defend";
 import type { KindView, ShortVerdict } from "../kindView";
 
 /** One contest as logged (psionicsvc ContestRecord). */
@@ -49,22 +50,42 @@ export const psionicDefenceKind: KindView<PsionicDefencePayload> = {
   icon: ShieldWarning,
   // "Psychic contest (Psionic Blast against Mind Blank): defended, attacker won".
   text: (p, { t, names }) => {
+    // Per contest: the check as decided (die, outcome, kept +1), then who won.
     const results = p.contests
-      .map((c) =>
-        t(
+      .map((c) => {
+        const won = t(
           c.winner === "attacker"
             ? "log.contest.attackerWon"
             : "log.contest.defended",
-        ),
-      )
-      .join(", ");
+        );
+        return c.check
+          ? t("log.contest.checkWon", {
+              check: checkText(c.check, c.fromKept, t),
+              won,
+            })
+          : won;
+      })
+      .reduce(
+        (a, b) => (a ? t("log.contest.andThen", { first: a, next: b }) : b),
+        "",
+      );
+    const kept =
+      p.keptCheck && !p.contests.every((c) => c.fromKept)
+        ? t("powers.defence.keptForRound", {
+            d20: p.keptCheck.d20,
+            target: p.keptCheck.target,
+          })
+        : "";
     return t(p.defence ? "log.psionicDefence" : "log.psionicDefenceNone", {
       attack: names.text(p.attackName, p.attack),
       defence: p.defence ? names.text(p.defenceName, p.defence) : "",
-      results,
+      results: kept
+        ? t("log.contest.andThen", { first: results, next: kept })
+        : results,
     });
   },
-  rolled: () => false,
+  // The app rolled a d20 per contest unless the check was kept or there was no defence.
+  rolled: (p) => !!p?.contests.some((c) => c.check && !c.fromKept),
   short: (p, { t }, _e, value) => ({
     value,
     what: t("log.kinds.psionic_defence"),

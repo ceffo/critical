@@ -1859,7 +1859,7 @@
         "ability": "wis",
         "modifier": -3
       },
-      "initial_cost": 3,
+      "initial_cost": 4,
       "prerequisites": [
         "mind_thrust"
       ],
@@ -1892,7 +1892,7 @@
         "ability": "wis",
         "modifier": -4
       },
-      "initial_cost": 4,
+      "initial_cost": 5,
       "prerequisites": [
         "ego_whip"
       ],
@@ -1923,9 +1923,9 @@
       "kind": "attack_mode",
       "score": {
         "ability": "wis",
-        "modifier": -5
+        "modifier": -4
       },
-      "initial_cost": 6,
+      "initial_cost": 7,
       "prerequisites": [
         "id_insinuation"
       ],
@@ -1956,13 +1956,9 @@
       "kind": "defence_mode",
       "score": {
         "ability": "wis",
-        "modifier": -2
+        "modifier": -3
       },
-      "initial_cost": 2,
-      "maintenance": {
-        "cost": 2,
-        "period": 1
-      },
+      "initial_cost": 1,
       "prerequisites": [],
       "range": {
         "en": "0",
@@ -1991,13 +1987,9 @@
       "kind": "defence_mode",
       "score": {
         "ability": "wis",
-        "modifier": -3
+        "modifier": -2
       },
       "initial_cost": 3,
-      "maintenance": {
-        "cost": 3,
-        "period": 1
-      },
       "prerequisites": [],
       "range": {
         "en": "0",
@@ -2026,13 +2018,9 @@
       "kind": "defence_mode",
       "score": {
         "ability": "wis",
-        "modifier": -4
+        "modifier": -3
       },
       "initial_cost": 4,
-      "maintenance": {
-        "cost": 4,
-        "period": 1
-      },
       "prerequisites": [],
       "range": {
         "en": "0",
@@ -2061,13 +2049,9 @@
       "kind": "defence_mode",
       "score": {
         "ability": "wis",
-        "modifier": -5
+        "modifier": -2
       },
-      "initial_cost": 5,
-      "maintenance": {
-        "cost": 5,
-        "period": 1
-      },
+      "initial_cost": 6,
       "prerequisites": [],
       "range": {
         "en": "0",

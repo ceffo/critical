@@ -11,11 +11,11 @@
         "en": "Mind Blank",
         "fr": "Esprit vide"
       },
-      "defenceKind": "raised",
+      "defenceKind": "standing",
       "ability": "wis",
       "abilityScore": 16,
-      "score": 16,
-      "modifier": -2,
+      "score": 9,
+      "modifier": 2,
       "contests": [
         {
           "attack": {
@@ -23,9 +23,10 @@
             "success": true
           },
           "check": {
-            "target": 16,
-            "d20": 6,
-            "outcome": "success"
+            "target": 10,
+            "d20": 10,
+            "outcome": "success",
+            "kept": true
           },
           "winner": "defender"
         },
@@ -35,13 +36,22 @@
             "success": true
           },
           "check": {
-            "target": 16,
+            "target": 10,
             "d20": 17,
-            "outcome": "failure"
+            "outcome": "failure",
+            "kept": true
           },
           "winner": "attacker"
         }
-      ]
+      ],
+      "powerModifier": -7,
+      "kept": true,
+      "keptCheck": {
+        "target": 10,
+        "d20": 10,
+        "outcome": "success",
+        "kept": true
+      }
     },
     "roll": false
   },
@@ -61,6 +71,50 @@
           "winner": "attacker"
         }
       ]
+    },
+    "roll": false
+  },
+  "fromKept": {
+    "payload": {
+      "attack": "psionic_blast",
+      "attackName": {
+        "en": "Psionic Blast",
+        "fr": "Explosion psionique"
+      },
+      "defence": "mind_blank",
+      "defenceName": {
+        "en": "Mind Blank",
+        "fr": "Esprit vide"
+      },
+      "defenceKind": "standing",
+      "ability": "wis",
+      "abilityScore": 16,
+      "score": 9,
+      "modifier": 2,
+      "contests": [
+        {
+          "attack": {
+            "roll": 12,
+            "success": true
+          },
+          "check": {
+            "target": 10,
+            "d20": 10,
+            "outcome": "success",
+            "kept": true
+          },
+          "fromKept": true,
+          "winner": "attacker"
+        }
+      ],
+      "powerModifier": -7,
+      "kept": true,
+      "keptCheck": {
+        "target": 10,
+        "d20": 10,
+        "outcome": "success",
+        "kept": true
+      }
     },
     "roll": false
   }

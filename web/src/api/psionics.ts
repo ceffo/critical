@@ -71,7 +71,7 @@ export interface IncomingRoll {
 /** One contest of a defend: the DM's roll, the defence's check (none without a defence), the winner. */
 export interface ContestResult {
   attack: IncomingRoll;
-  check?: { target: number; d20: number; outcome: string };
+  check?: { target: number; d20: number; outcome: string; kept?: boolean };
   fromKept?: boolean;
   winner: "attacker" | "defender";
 }
@@ -86,6 +86,8 @@ export interface DefendResult {
   /** Table 14's cell for the attack against the defence, for the DM's own score. */
   modifier?: number;
   contests: ContestResult[];
+  /** The check the round's next contests of this defence take with no die. */
+  keptCheck?: { target: number; d20: number; outcome: string; kept?: boolean };
 }
 
 /** POST /api/psionics/defend: decides the DM's one or two rolls of an attack mode against the current defence (step 8). */

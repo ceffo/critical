@@ -19,15 +19,14 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
 )
 
-// defenceBook: thought shield (Wis -2, 2 PSPs, kept at 2), mind blank (Wis
+// defenceBook: thought shield (Wis -3, 1 PSP, not kept), mind blank (Wis
 // -7, 0 PSPs, kept at 0: a standing defence), ego whip (an attack mode) and a
 // devotion.
 func defenceBook() psionics.Book {
 	return psionics.NewBook([]catalogue.Discipline{{ID: "telepathy"}}, []catalogue.Power{
 		{
 			ID: "thought_shield", Kind: catalogue.KindDefenceMode, Name: map[string]string{"en": "Thought Shield"},
-			Score: &catalogue.PowerScore{Ability: "wis", Modifier: -2}, InitialCost: catalogue.Cost{Amount: 2},
-			Maintenance: &catalogue.Maintenance{Cost: catalogue.Cost{Amount: 2}, Period: 1},
+			Score: &catalogue.PowerScore{Ability: "wis", Modifier: -3}, InitialCost: catalogue.Cost{Amount: 1},
 		},
 		{
 			ID: "mind_blank", Kind: catalogue.KindDefenceMode, Name: map[string]string{"en": "Mind Blank"},
@@ -45,7 +44,7 @@ func defenceBook() psionics.Book {
 	})
 }
 
-// defender is a psionicist with Wis 16 (thought shield at 14, mind blank at
+// defender is a psionicist with Wis 16 (thought shield at 13, mind blank at
 // 9) who knows the book's powers, with current PSPs of a 30 maximum.
 func defender(current int) *charactersvc.Character {
 	c := psionicist(
@@ -93,7 +92,7 @@ func expectAdd(m defenceMocks, got *buffsvc.BuffEffect) {
 		}).Once()
 }
 
-// ADR 0044 step 4: raising thought shield pays its 2 PSPs with no roll (the
+// ADR 0044 step 4: raising thought shield pays its 1 PSP with no roll (the
 // dice mock is never called): a defence_raised entry with the PSP delta and
 // the round's raised row in its snapshot.
 func TestRaiseDefence_Step4_PaysTheCostNoRoll(t *testing.T) {
@@ -110,13 +109,13 @@ func TestRaiseDefence_Step4_PaysTheCostNoRoll(t *testing.T) {
 	assert.Equal(t, "thought_shield", row.PowerID)
 	assert.Zero(t, row.MaintenanceCost, "a raised mode is paid again, never kept")
 	assert.Equal(t, actionlog.KindDefenceRaised, got.Kind)
-	assert.Equal(t, -2, got.PSPDelta)
+	assert.Equal(t, -1, got.PSPDelta)
 	assert.Equal(t, []actionlog.Snapshot{rowSnap}, got.Snapshots)
 	var rec psionicsvc.RaiseRecord
 	require.NoError(t, json.Unmarshal(got.Payload, &rec))
-	assert.Equal(t, psionicsvc.RaiseRecord{Power: "thought_shield", Name: map[string]string{"en": "Thought Shield"}, Defence: buffsvc.DefenceRaised, Cost: 2}, rec)
+	assert.Equal(t, psionicsvc.RaiseRecord{Power: "thought_shield", Name: map[string]string{"en": "Thought Shield"}, Defence: buffsvc.DefenceRaised, Cost: 1}, rec)
 	assert.Equal(t, rec, res.Raise)
-	assert.Equal(t, actionlog.PSPState{Current: 8, Max: 30}, res.PSP)
+	assert.Equal(t, actionlog.PSPState{Current: 9, Max: 30}, res.PSP)
 	assert.Equal(t, "row-1", res.BuffID)
 	m.dice.AssertNotCalled(t, "RollDie", mock.Anything)
 }
@@ -152,7 +151,7 @@ func TestRaiseDefence_Step4_Refusals(t *testing.T) {
 		psp         int
 		err         error
 	}{
-		{"under the cost", "thought_shield", 1, psionicsvc.ErrNotEnoughPSP},
+		{"under the cost", "thought_shield", 0, psionicsvc.ErrNotEnoughPSP},
 		{"not a defence mode", "thrust", 30, psionicsvc.ErrNotADefenceMode},
 		{"an attack mode", "ego_whip", 30, psionicsvc.ErrNotADefenceMode},
 		{"not known", "no_such_power", 30, psionicsvc.ErrPowerNotKnown},
@@ -214,7 +213,7 @@ var (
 	blankRow     = buffsvc.BuffEffect{ID: "s", PowerID: "mind_blank", Defence: buffsvc.DefenceStanding}
 )
 
-// ADR 0044 step 8: ego whip's two rolls against thought shield (14): a
+// ADR 0044 step 8: ego whip's two rolls against thought shield (13): a
 // check each, two dice, each contest decided by step 6; one psionic_defence
 // entry with no PSP delta; Table 14's cell beside the DM's roll.
 func TestDefend_Step8_AContestPerIncomingRoll(t *testing.T) {
@@ -236,7 +235,7 @@ func TestDefend_Step8_AContestPerIncomingRoll(t *testing.T) {
 	rec := defenceOf(t, got)
 	assert.Equal(t, rec, res.Defence)
 	assert.Equal(t, "thought_shield", rec.Defence)
-	assert.Equal(t, 14, rec.Score)
+	assert.Equal(t, 13, rec.Score)
 	assert.False(t, rec.Kept)
 	require.NotNil(t, rec.Modifier)
 	assert.Equal(t, -4, *rec.Modifier)
@@ -252,7 +251,7 @@ func TestDefend_Step8_AContestPerIncomingRoll(t *testing.T) {
 // round's later requests (read from the round's earlier psionic_defence
 // entry); a check kept before the round started does not count.
 func TestDefend_Step8_AKeptRollForTheRound(t *testing.T) {
-	kept := psionics.CheckContest(14, 4, false)
+	kept := psionics.CheckContest(13, 4, false)
 	prev := func(id int64, round int) actionlog.Entry {
 		b, err := json.Marshal(psionicsvc.DefenceRecord{Attack: "ego_whip", Defence: "thought_shield", KeptCheck: &kept})
 		require.NoError(t, err)

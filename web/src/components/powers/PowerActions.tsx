@@ -20,9 +20,10 @@ export function PowerActions({ power }: { power: Power }) {
   const [open, setOpen] = useState(false);
   const busy = useTableStore((s) => s.busy);
   const run = useTableStore((s) => s.run);
-  const maintained = useBuffsStore((s) =>
-    s.buffs.some((b) => b.powerId === power.id),
-  );
+  // The row up for this power: a defence reads by its kind (raised this round, standing), any other
+  // as maintained.
+  const row = useBuffsStore((s) => s.buffs.find((b) => b.powerId === power.id));
+  const maintained = !!row;
   const name = localized(i18n.language, power.name);
   const defence = power.kind === "defence_mode";
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -71,7 +72,9 @@ export function PowerActions({ power }: { power: Power }) {
             className="shrink-0 text-label whitespace-nowrap text-muted-foreground"
             data-testid="power-maintained"
           >
-            {t("powers.use.maintained")}
+            {row?.defence
+              ? t(`powers.defence.kind.${row.defence}`)
+              : t("powers.use.maintained")}
           </span>
           <Button
             className="px-2"

@@ -39,7 +39,7 @@ func defenceRows(t *testing.T, bs interface {
 	return out
 }
 
-// ADR 0044 step 4: thought shield raised in round 1 pays 2 PSPs, its row
+// ADR 0044 step 4: thought shield raised in round 1 pays 1 PSP, its row
 // lasts the round; the undo gives both back; a use of it is refused; the
 // next Next Round ends it.
 func TestRaiseDefence_Step4_UndoGivesThePSPAndTheRowBack(t *testing.T) {
@@ -56,7 +56,7 @@ func TestRaiseDefence_Step4_UndoGivesThePSPAndTheRowBack(t *testing.T) {
 	res, err := bs.Psionics.RaiseDefence(ctx, id, "thought_shield")
 	require.NoError(t, err)
 	assert.Equal(t, before, dice.calls["die"], "no roll")
-	assert.Equal(t, 179, currentPSP(t, bs, id))
+	assert.Equal(t, 180, currentPSP(t, bs, id))
 	rows := defenceRows(t, bs.Buffs, id)
 	require.Len(t, rows, 1)
 	assert.Equal(t, res.BuffID, rows[0].ID)
@@ -68,13 +68,13 @@ func TestRaiseDefence_Step4_UndoGivesThePSPAndTheRowBack(t *testing.T) {
 	assert.Equal(t, 181, currentPSP(t, bs, id))
 	assert.Empty(t, defenceRows(t, bs.Buffs, id))
 	redoTop(t, bs, id)
-	assert.Equal(t, 179, currentPSP(t, bs, id))
+	assert.Equal(t, 180, currentPSP(t, bs, id))
 	assert.Len(t, defenceRows(t, bs.Buffs, id), 1)
 
 	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
 	assert.Empty(t, defenceRows(t, bs.Buffs, id), "it lasts the round")
-	assert.Equal(t, 179, currentPSP(t, bs, id), "never charged")
+	assert.Equal(t, 180, currentPSP(t, bs, id), "never charged")
 }
 
 // ADR 0044 step 5: mind blank raised out of combat is a standing row: PSPs
@@ -117,16 +117,16 @@ func TestDefend_Step8_UndoRemovesTheEntry(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Equal(t, "thought_shield", res.Defence.Defence)
-	assert.Equal(t, 15, res.Defence.Score, "Wis 17 - 2")
+	assert.Equal(t, 14, res.Defence.Score, "Wis 17 - 3")
 	require.NotNil(t, res.Defence.Modifier, "Table 14's cell")
 	assert.Equal(t, psionics.SideDefender, res.Defence.Contests[0].Winner, "3 against 5")
-	assert.Equal(t, 179, currentPSP(t, bs, id), "no PSP")
+	assert.Equal(t, 180, currentPSP(t, bs, id), "no PSP")
 	assert.Equal(t, before+1, dice.calls["die"], "one check")
 
 	undoTop(t, bs, id)
 	entries, err := bs.Log.ActiveEntries(ctx, id, actionlog.KindPsionicDefence, 5)
 	require.NoError(t, err)
 	assert.Empty(t, entries)
-	assert.Equal(t, 179, currentPSP(t, bs, id))
+	assert.Equal(t, 180, currentPSP(t, bs, id))
 	assert.Len(t, defenceRows(t, bs.Buffs, id), 1, "the raise stays")
 }

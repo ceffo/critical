@@ -293,7 +293,10 @@
       "noDefence": "Aucune défense : les réussites de l’attaquant l’emportent",
       "tableModifier": "Table 14 : {{modifier}} à l’attaque",
       "contest": "Duel {{n}} (jet {{roll}})",
-      "fromKept": "jet gardé"
+      "fromKept": "gardé pour le tour, pas de dé",
+      "keptPlusOne": "+1 gardé",
+      "failureAsOne": "un échec compte pour 1",
+      "keptForRound": "jet gardé pour le tour (d20 {{d20}} contre {{target}})"
     }
   },
   "round": {
@@ -1735,6 +1738,8 @@
     "psionicDefenceNone": "Duel psychique ({{attack}}, sans défense) : {{results}}",
     "contest": {
       "attackerWon": "l’attaquant l’emporte",
+      "checkWon": "{{check}} : {{won}}",
+      "andThen": "{{first}} ; {{next}}",
       "defended": "défendu"
     },
     "powerCheck": "Jet de pouvoir ({{power}}) : d20 {{d20}} contre {{target}}, {{verdict}}, PFP {{spent}}",

@@ -1,6 +1,7 @@
 // What the defend form (ADR 0044 step 8) sends and the one thing it checks before the server does.
 // The contests, the checks and the winners are the server's; the current defence shown beside the
 // form is the same pick the server makes (the mode raised this round, else the standing one).
+import type { TFunction } from "i18next";
 import type { IncomingRoll } from "@/api/psionics";
 import type { BuffEffect } from "@/types/buffs";
 
@@ -47,4 +48,20 @@ export function defendRequest(
   };
   if (d.keep !== null && d.keep < rolls.length) req.keep = d.keep;
   return req;
+}
+
+/** How a defence check was decided, as words: the die against the target, the outcome, the kept +1. */
+export function checkText(
+  c: { target: number; d20: number; outcome: string; kept?: boolean },
+  fromKept: boolean | undefined,
+  t: TFunction,
+): string {
+  const parts = [t(`powers.use.outcome.${c.outcome}`)];
+  if (c.kept) {
+    parts.push(t("powers.defence.keptPlusOne"));
+    if (c.outcome !== "success" && c.outcome !== "natural_20")
+      parts.push(t("powers.defence.failureAsOne"));
+  }
+  if (fromKept) parts.push(t("powers.defence.fromKept"));
+  return `${t("powers.use.rolled", { d20: c.d20, target: c.target })} (${parts.join(", ")})`;
 }

@@ -10,6 +10,7 @@ import type { Power } from "@/types/powers";
 import {
   CHECK_DIE,
   EMPTY_DEFEND,
+  checkText,
   defendRequest,
   type DefendDraft,
 } from "./defend";
@@ -198,9 +199,7 @@ export function DefendOutcome({
       {r.contests.map((c, i) => (
         <span key={i} data-winner={c.winner}>
           {t("powers.defence.contest", { n: i + 1, roll: c.attack.roll })}
-          {c.check &&
-            ` · ${t("powers.use.rolled", { d20: c.check.d20, target: c.check.target })}${c.fromKept ? ` (${t("powers.defence.fromKept")})` : ""}`}{" "}
-          ·{" "}
+          {c.check && ` · ${checkText(c.check, c.fromKept, t)}`} ·{" "}
           <strong>
             {t(
               c.winner === "attacker"
@@ -210,6 +209,17 @@ export function DefendOutcome({
           </strong>
         </span>
       ))}
+      {r.keptCheck && (
+        <span
+          className="text-label text-muted-foreground first-letter:uppercase"
+          data-testid="defend-kept"
+        >
+          {t("powers.defence.keptForRound", {
+            d20: r.keptCheck.d20,
+            target: r.keptCheck.target,
+          })}
+        </span>
+      )}
     </div>
   );
 }

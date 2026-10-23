@@ -293,7 +293,10 @@
       "noDefence": "No defence: the attacker’s successes win",
       "tableModifier": "Table 14: {{modifier}} to the attack",
       "contest": "Contest {{n}} (roll {{roll}})",
-      "fromKept": "kept check"
+      "fromKept": "kept for the round, no die",
+      "keptPlusOne": "+1 kept",
+      "failureAsOne": "a failure counts as 1",
+      "keptForRound": "check kept for the round (d20 {{d20}} vs {{target}})"
     }
   },
   "round": {
@@ -1735,6 +1738,8 @@
     "psionicDefenceNone": "Psychic contest ({{attack}}, no defence): {{results}}",
     "contest": {
       "attackerWon": "attacker won",
+      "checkWon": "{{check}}: {{won}}",
+      "andThen": "{{first}}; {{next}}",
       "defended": "defended"
     },
     "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}",

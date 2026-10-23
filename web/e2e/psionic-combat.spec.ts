@@ -66,7 +66,7 @@ test.describe("a psionicist in psionic combat", () => {
     // In combat a mode raised for the round comes first, and lapses at the next move of the round.
     await shield.getByRole("button", { name: "Raise Thought Shield" }).click();
     await expect(current).toContainText("Thought Shield · raised this round");
-    await expect(pool).toHaveText("38 / 40");
+    await expect(pool).toHaveText("39 / 40");
     await expect(shield.getByTestId("raise-refused")).toHaveCount(0);
     await nextRound(page);
     await expect(current).toContainText("Mind Blank · standing");
@@ -155,5 +155,109 @@ test.describe("a psionicist in psionic combat", () => {
       );
       await snap(page, `defend-form-fr-${vp.width}x${vp.height}`);
     }
+  });
+  // The defence's check is worded as it was decided: the kept +1 of a standing mode, the check kept
+  // for the round (no die the second time), and Undo / Redo of a Next Round bring a lapsed raise back.
+  test("the contest says how it was decided", async ({ page }) => {
+    test.setTimeout(40_000);
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "mind_blank" },
+          { kind: "power", id: "thought_shield" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    const current = page.getByTestId("current-defence");
+    const row = (name: string) =>
+      page.getByTestId("known-power").filter({ hasText: name });
+    const dialog = page.getByRole("dialog");
+    const defend = async (roll: string, keep: boolean) => {
+      await current.getByRole("button", { name: "Defend" }).click();
+      await dialog.getByLabel("Attack mode").selectOption("ego_whip");
+      await dialog.getByLabel("Roll 1", { exact: true }).fill(roll);
+      await dialog.getByLabel("Check 1 succeeded").check();
+      if (keep)
+        await dialog
+          .getByLabel("Keep a check for the round")
+          .selectOption({ label: "Keep the check against roll 1" });
+      await dialog.getByRole("button", { name: "Defend" }).click();
+      return dialog.getByTestId("defend-result");
+    };
+
+    // Mind blank raised at round 0, combat started: round 1 shows the kept +1.
+    await row("Mind Blank")
+      .getByRole("button", { name: "Raise Mind Blank" })
+      .click();
+    await expect(current).toContainText("Mind Blank · standing");
+    await nextRound(page);
+    const first = await defend("14", false);
+    await expect(first).toContainText("+1 kept");
+    await snap(page, "defend-result-kept-plus-one");
+    await page.keyboard.press("Escape");
+
+    // The raised row on the panel, in both languages and sizes.
+    await row("Thought Shield")
+      .getByRole("button", { name: "Raise Thought Shield" })
+      .click();
+    await expect(current).toContainText("Thought Shield · raised this round");
+    await expect(row("Thought Shield")).toContainText("Stop");
+    for (const lang of ["en", "fr"] as const) {
+      if (lang === "fr") await chooseLanguage(page, "fr");
+      for (const vp of [
+        { width: 1920, height: 1080 },
+        { width: 2560, height: 1440 },
+      ]) {
+        await page.setViewportSize(vp);
+        await expectNoClippedText(current, `raised ${lang} ${vp.width}`);
+        await snap(page, `powers-raised-${lang}-${vp.width}x${vp.height}`);
+      }
+    }
+    await chooseLanguage(page, "en");
+
+    // Two defends in one round, the first keeps its check: the second takes it with no die.
+    const kept = await defend("12", true);
+    await expect(kept).toContainText("Thought Shield");
+    await expect(kept.getByTestId("defend-kept")).toBeVisible();
+    await page.keyboard.press("Escape");
+    const second = await defend("9", false);
+    await expect(second).toContainText("kept for the round, no die");
+    await expect(second.locator("[data-winner]")).toHaveCount(1);
+    await snap(page, "defend-result-from-kept");
+    await page.keyboard.press("Escape");
+    await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
+    await expect(logEntry(page, "Psychic contest").first()).toContainText(
+      "kept for the round, no die",
+    );
+    await snap(page, "defend-journal-from-kept");
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+
+    // Next Round lowers the raised row; Undo brings it back, Redo lowers it again.
+    await nextRound(page);
+    await expect(current).toContainText("Mind Blank · standing");
+    await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
+    await page.getByTestId("undo").click();
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    await expect(current).toContainText("Thought Shield · raised this round");
+    await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
+    await page.getByTestId("redo").click();
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    await expect(current).toContainText("Mind Blank · standing");
   });
 });

@@ -269,6 +269,20 @@
         "second_power_this_round": "A second power in the same combat round."
       }
     },
+    "attack": {
+      "title": "Attack with {{name}}",
+      "attack": "Attack",
+      "attackNamed": "Attack with {{name}}",
+      "target": "Opponent",
+      "mind": "Mind",
+      "closed": "Closed",
+      "open": "Open",
+      "level": "Level",
+      "defence": "Defence",
+      "noDefence": "No defence raised",
+      "check": "Check {{n}}",
+      "tangents": "{{target}}: tangents {{from}} → {{to}}"
+    },
     "defence": {
       "current": "Current defence",
       "none": "None",

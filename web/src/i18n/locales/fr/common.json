@@ -269,6 +269,20 @@
         "second_power_this_round": "Un deuxième pouvoir dans le même tour de combat."
       }
     },
+    "attack": {
+      "title": "Attaquer avec {{name}}",
+      "attack": "Attaquer",
+      "attackNamed": "Attaquer avec {{name}}",
+      "target": "Adversaire",
+      "mind": "Esprit",
+      "closed": "Fermé",
+      "open": "Ouvert",
+      "level": "Niveau",
+      "defence": "Défense",
+      "noDefence": "Aucune défense levée",
+      "check": "Test {{n}}",
+      "tangents": "{{target}} : tangentes {{from}} → {{to}}"
+    },
     "defence": {
       "current": "Défense actuelle",
       "none": "Aucune",

@@ -171,14 +171,12 @@ per class" rule, [ADR 0040](0040-classes-are-data.md)).
       (ADR 0042 step 1, "As built"). The web keeps exactly one helper over it, `primaryEntry`, from
       which `primaryClass` and `primaryLevel` are derived at call sites; the second copy of the
       rule goes (default, Q2).
-   2. **As built (changed: the first draft kept a web helper and a shared case table, with no
-      server-sent field).** The user ruled that game logic lives only in Go, so the web keeps no
-      helper at all: `CharacterDTO.primaryClass` carries the class code of the first active entry,
-      else of the first entry (the rule of step 3.1, `classes.PrimaryIndex`). `primaryClass` and
-      `primaryLevel` are deleted from the web; a level is read from `classes` or `derived.classes`
-      by that code. A Go test (`TestToDTO_PrimaryClass`) covers single-class, multi-class, a
-      dual-class's frozen first entry and no active entry.
-   3. The wire gained that one field; no other shape changes.
+   2. The Go rule of step 3.1 and the web helper agree on the same table of cases (a single active
+      entry; several; a frozen entry first; no active entry), written as a Go test and a web unit
+      test with the same rows, so one cannot drift from the other. A server-sent `primary` field is
+      not added: it would make the wire carry a derived choice the client can compute from entries
+      already sent.
+   3. The web item removes the duplicate; this ADR changes no wire shape.
 6. **Tests without `Derive`, and what stays composed.**
    1. *A service's test builds a view without `Derive`.* The tests package `charactersvc/viewtest`
       offers `viewtest.Single(class, level)`, `viewtest.Multi(...)` and options (`WithScores`,
@@ -238,8 +236,8 @@ Each is a choice the ADR cannot settle alone; the step is written with the defau
 1. **Q1, derive once per read, or cache.** Default: once per read, no cache (step 2.2). A cache would
    need invalidation on an XP award, a level-up, an equip and a buff end, which is the coupling the
    read-time derivation avoids.
-2. **Q2, the web twin: removed, or served by the wire.** Decided: served by the wire (`primaryClass`,
-   step 5.2); the web helper is gone.
+2. **Q2, the web twin: removed, or served by the wire.** Default: one helper kept in the web and a
+   shared case table in both test suites (step 5), no server-sent `primary` field.
 3. **Q3, `SkillClasses`: one method for two sources.** Default: merge `StoredClasses` and
    `ProficiencyClasses` (step 3.4), proved by `View_Step3_SkillClassesEqualsStoredAndProficiencyClasses`
    on the party's fixtures; if they differ for a case the party does not cover, the test names it

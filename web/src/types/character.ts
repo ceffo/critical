@@ -412,9 +412,6 @@ export interface Character {
 
   /** The class entries, in the order the classes were taken (ADR 0042 step 1). */
   classes: ClassEntry[];
-  /** The class code of the first active entry, else of the first (ADR 0045 step 5): the class the
-   * single-class screens read. The server picks it; the web never recomputes it from `classes`. */
-  primaryClass: string;
   /** The PHB race the rules read ("half_elf"…), "" when none is set. */
   raceCode: string;
   derived: Derived;

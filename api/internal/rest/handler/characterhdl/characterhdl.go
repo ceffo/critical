@@ -213,11 +213,8 @@ type CharacterDTO struct {
 	HPMax          int             `json:"hpMax"`
 	XPTotal        int             `json:"xpTotal"`
 	Classes        []ClassEntryDTO `json:"classes"`
-	// PrimaryClass is the class code of the first active entry, else of the
-	// first entry (ADR 0045 step 5): the class the single-class screens read.
-	PrimaryClass string     `json:"primaryClass"`
-	RaceCode     string     `json:"raceCode"`
-	Derived      DerivedDTO `json:"derived"`
+	RaceCode       string          `json:"raceCode"`
+	Derived        DerivedDTO      `json:"derived"`
 	// Missing lists the required fields the character lacks (ADR 0032 step
 	// 8.2: "alignment", "sex"); the card asks the player to pick them.
 	Missing []string `json:"missing"`
@@ -501,26 +498,13 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 	if c == nil {
 		return CharacterDTO{}
 	}
-	entries := c.Entries()
 	return CharacterDTO{
-		ID: c.ID, Name: c.Name, PrimaryClass: primaryClass(entries),
+		ID: c.ID, Name: c.Name,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
-		HPMax: c.HPMax, XPTotal: c.XPTotal, Classes: classEntriesDTO(entries), RaceCode: c.Race,
+		HPMax: c.HPMax, XPTotal: c.XPTotal, Classes: classEntriesDTO(c.Entries()), RaceCode: c.Race,
 		Derived: derivedDTO(c.Derived), DetailsDTO: wire.DetailsToDTO(c.Details),
 		Missing: c.Details.Missing(), Warnings: warningsDTO(c.Warnings),
 	}
-}
-
-// primaryClass is the class code of the first active entry, else of the first
-// entry (the same rule as charactersvc.View.Primary), "" when there is none.
-func primaryClass(entries []classes.Entry) string {
-	if i := classes.PrimaryIndex(entries); i >= 0 {
-		return entries[i].Class
-	}
-	if len(entries) > 0 {
-		return entries[0].Class
-	}
-	return ""
 }
 
 func warningsDTO(ws []charactersvc.Warning) []WarningDTO { return wire.WarningsDTO(ws) }

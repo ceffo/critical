@@ -51,13 +51,13 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   for (const [ability, score] of scores)
     await step.getByLabel(ability, { exact: true }).fill(score);
   await next();
-  await step.getByLabel("PV max").fill("20");
+  await step.getByLabel("PV max").fill("2");
   await next();
   await next();
   await expect(step).toHaveAttribute("data-step", "psionics");
   const panel = step.getByTestId("known-powers");
-  await panel.getByRole("button", { name: /^Ajouter Télépathie/ }).click();
-  await panel.getByRole("searchbox").fill("contact");
+  await panel.getByRole("button", { name: /^Ajouter Métapsionisme/ }).click();
+  await panel.getByRole("searchbox").fill("intensification");
   await panel
     .getByTestId("pick-row")
     .first()
@@ -86,7 +86,9 @@ test("use a known power, keep it up across Next Round, stop it", async ({
     .getByTestId("rail")
     .getByRole("button", { name: "Pouvoirs" })
     .click();
-  const row = page.getByTestId("known-power").filter({ hasText: "Contact" });
+  const row = page
+    .getByTestId("known-power")
+    .filter({ hasText: "Intensification" });
   await expect(row).toBeVisible();
   await snap(page, "powers-panel");
 
@@ -96,8 +98,10 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   const dialog = page.getByRole("dialog");
   let resultText = "";
   for (let attempt = 0; attempt < 6; attempt++) {
-    await row.getByRole("button", { name: "Utiliser Contact" }).click();
+    await row.getByRole("button", { name: "Utiliser Intensification" }).click();
     await dialog.getByLabel("Coût initial (PFP)").fill("3");
+    // A power with no score of its own takes the player's, set high so the check succeeds.
+    await dialog.getByLabel("Score du pouvoir").fill("25");
     await dialog
       .getByRole("button", { name: "Ajouter un modificateur" })
       .click();
@@ -112,7 +116,9 @@ test("use a known power, keep it up across Next Round, stop it", async ({
       if (attempt === 0)
         await snap(page, `use-dialog-${vp.width}x${vp.height}`);
     }
-    await dialog.getByRole("button", { name: "Utiliser Contact" }).click();
+    await dialog
+      .getByRole("button", { name: "Utiliser Intensification" })
+      .click();
     const result = dialog.getByTestId("use-result");
     await expect(result).toBeVisible();
     resultText = await result.innerText();
@@ -134,7 +140,7 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   // The journal words the breakdown: the ability, the labelled modifier.
   const check = journal
     .getByRole("listitem")
-    .filter({ hasText: "Contact" })
+    .filter({ hasText: "Intensification" })
     .first();
   await expect(check).toContainText("calme");
   await snap(page, "after-use-1920");
@@ -146,7 +152,7 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect(
     journal.getByRole("listitem").filter({ hasText: "maintien" }).first(),
-  ).toContainText("Contact 1");
+  ).toContainText("Intensification 1");
   await expect(row.getByTestId("power-maintained")).toBeAttached();
   const afterRound = Number((await pool.innerText()).split("/")[0]);
   expect(afterRound).toBe(afterUse - 1);
@@ -157,21 +163,23 @@ test("use a known power, keep it up across Next Round, stop it", async ({
     .getByRole("button", { name: "Pouvoirs" })
     .click();
   await row
-    .getByRole("button", { name: "Arrêter le maintien de Contact" })
+    .getByRole("button", {
+      name: "Arrêter le maintien de Intensification",
+    })
     .click();
   await expect(row.getByTestId("power-maintained")).toHaveCount(0);
   await page.getByTestId("rail").getByRole("button", { name: "Agir" }).click();
   await expect(
     journal
       .getByRole("listitem")
-      .filter({ hasText: "Maintien arrêté : Contact" }),
+      .filter({ hasText: "Maintien arrêté : Intensification" }),
   ).toBeVisible();
   expect(Number((await pool.innerText()).split("/")[0])).toBe(afterRound);
   await page.setViewportSize({ width: 2560, height: 1440 });
   await snap(page, "after-stop-2560");
 
   // Undo the stop from the journal: the tag is back, the PSPs unchanged, the stop line struck.
-  await undoEntry(page, "Maintien arrêté : Contact");
+  await undoEntry(page, "Maintien arrêté : Intensification");
   expect(Number((await pool.innerText()).split("/")[0])).toBe(afterRound);
   await page
     .getByTestId("rail")

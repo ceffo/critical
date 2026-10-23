@@ -192,3 +192,71 @@ func TestDefend_Step8_Post(t *testing.T) {
 	rec = do(h, "POST", "/api/psionics/defend", `{"rolls":`)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
+
+// POST /api/psionics/powers/{id}/attack: the opponent, the DM's rolls and the
+// modifiers reach the service as sent, the payload's wire shape is the
+// journal's, and the refusals' codes are stable (ADR 0044 step 7).
+func TestAttack_Step7_Post(t *testing.T) {
+	h, m := newRouter(t)
+	vs := 2
+	want := psionicsvc.AttackRequest{
+		Mode: "ego-whip",
+		Opponent: psionics.Opponent{
+			Target: "Orc", Mind: "closed", Level: 5, Defence: "thought-shield",
+			Rolls: []psionics.ContestSide{{Roll: 10, Success: true}, {Roll: 3, Success: false}},
+		},
+		Modifiers: []psionicsvc.Modifier{{Value: -2, Reason: "medium range"}},
+	}
+	m.psionics.EXPECT().Attack(mock.Anything, int64(1), want).Return(&psionicsvc.AttackResult{
+		Attack: psionicsvc.AttackRecord{
+			Power: "ego-whip", Score: 13, Target: "Orc", Mind: "closed",
+			Defence: "thought-shield", AttackVersusDefence: &vs,
+			Checks: []psionicsvc.AttackCheck{
+				{
+					Check:   psionics.ContestCheck{Target: 15, Roll: 12, Outcome: "success"},
+					Defence: &psionics.ContestSide{Roll: 10, Success: true}, Winner: "attacker",
+				},
+				{
+					Check:  psionics.ContestCheck{Target: 15, Roll: 2, Outcome: "success"},
+					Winner: "attacker", Effect: true,
+				},
+			},
+			Cost: 4, Spent: 4, TangentsBefore: 2, TangentsAfter: 3, Contact: true, Broken: "Goblin",
+		},
+		PSP: actionlog.PSPState{Current: 16, Max: 40}, LogEntryID: 9,
+	}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/ego-whip/attack",
+		`{"target":"Orc","mind":"closed","level":5,"defence":"thought-shield",
+		"rolls":[{"roll":10,"success":true},{"roll":3,"success":false}],
+		"modifiers":[{"value":-2,"reason":"medium range"}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"attack":{"power":"ego-whip","score":13,"target":"Orc","mind":"closed",
+		"defence":"thought-shield","attackVersusDefence":2,
+		"checks":[
+		  {"check":{"target":15,"d20":12,"outcome":"success"},"defence":{"roll":10,"success":true},"winner":"attacker"},
+		  {"check":{"target":15,"d20":2,"outcome":"success"},"winner":"attacker","effect":true}],
+		"cost":4,"spent":4,"tangentsBefore":2,"tangentsAfter":3,"contact":true,"broken":"Goblin"},
+		"psp":{"current":16,"max":40},"logEntryId":9}`, rec.Body.String())
+
+	for err, want := range map[error]string{
+		psionicsvc.ErrNotAnAttackMode: "not_an_attack_mode",
+		psionicsvc.ErrNotEnoughPSP:    "not_enough_psp",
+		psionicsvc.ErrNeedsContact:    "needs_contact",
+		psionicsvc.ErrPowerNotKnown:   "power_not_known",
+		psionicsvc.ErrNotPsionicist:   "not_a_psionicist",
+	} {
+		m.psionics.EXPECT().Attack(mock.Anything, int64(1), mock.Anything).Return(nil, err).Once()
+		rec := do(h, "POST", "/api/psionics/powers/x/attack", `{"target":"Orc","mind":"open"}`)
+		require.Equal(t, http.StatusConflict, rec.Code, want)
+		assert.Contains(t, rec.Body.String(), `"code":"`+want+`"`)
+	}
+
+	m.psionics.EXPECT().Attack(mock.Anything, int64(1), mock.Anything).
+		Return(nil, &domain.FieldError{Field: "target", Message: "a target is 1 to 60 characters"}).Once()
+	rec = do(h, "POST", "/api/psionics/powers/x/attack", `{"mind":"open"}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `target`)
+
+	rec = do(h, "POST", "/api/psionics/powers/x/attack", `{"target":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}

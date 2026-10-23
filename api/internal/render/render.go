@@ -241,6 +241,8 @@ var mappings = []mapping{
 	{target: psionicsvc.ErrNotInCombat, status: http.StatusConflict, code: "not_in_combat"},
 	{target: psionicsvc.ErrNotADefenceMode, status: http.StatusConflict, code: "not_a_defence_mode"},
 	{target: psionicsvc.ErrDefenceModeIsRaised, status: http.StatusConflict, code: "defence_mode_is_raised"},
+	// ADR 0044 step 7: an attack of a power that is not an attack mode.
+	{target: psionicsvc.ErrNotAnAttackMode, status: http.StatusConflict, code: "not_an_attack_mode"},
 	{target: psionicsvc.ErrRecoveryWhileMaintaining, status: http.StatusConflict, code: "psp_recovery_while_maintaining"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},

@@ -17,9 +17,9 @@ import (
 
 // withImmunities is the test bard with Wisdom wis and the spell immunities
 // Table 5 gives it (derived by charactersvc, ADR 0006 step 10.1).
-func withImmunities(wis int, ids ...string) *charactersvc.Character {
+func withImmunities(wis int, ids ...string) charactersvc.View {
 	c := withWisdom("fighter", wis, 4)
-	c.Derived.SpellImmunities = ids
+	c.SpellImmunities = ids
 	return c
 }
 
@@ -33,7 +33,7 @@ func TestResolveSavingThrow_Step10_WisdomSpellImmunity(t *testing.T) {
 	at20 := append(append([]string{}, at19...), "forget", "hold_person", "hold_person_priest", "ray_of_enfeeblement", "scare")
 	for _, c := range []struct {
 		name   string
-		char   *charactersvc.Character
+		char   charactersvc.View
 		spell  string
 		immune bool
 	}{

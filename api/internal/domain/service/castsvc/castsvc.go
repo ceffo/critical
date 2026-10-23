@@ -95,9 +95,9 @@ type Attacks interface {
 	RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*combatsvc.ToHitRoll, error)
 }
 
-// Characters supplies the caster level of the Bard (charactersvc).
+// Characters supplies the character view (ADR 0045): the caster level and class groups (charactersvc).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Dice is the dice port.

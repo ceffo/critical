@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
-import { primaryClass } from "@/lib/classEntries";
+import { primaryEntry } from "@/lib/classEntries";
 import { useClassName } from "@/lib/useClassName";
 import { useCreationOptions } from "@/lib/useCreationOptions";
 import { useCharacterStore } from "@/stores/character";
@@ -38,7 +38,7 @@ export function TakeClassDialog({
   const offered = (options?.classes ?? [])
     .map((c) => c.class)
     .filter((c) => !have.has(c));
-  const from = primaryClass(character.classes);
+  const from = primaryEntry(character.classes)?.class ?? "";
   // A single-class sheet has no `derived.classes`: its level is the realized one.
   const level =
     character.derived.classes?.find((e) => e.class === from)?.level ??

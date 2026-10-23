@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	buffmocks "github.com/ceffo/critical/api/internal/domain/service/buffsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -609,7 +610,7 @@ func TestResolveAttack_Rejections(t *testing.T) {
 	t.Run("character lookup error keeps the sentinel", func(t *testing.T) {
 		f := newFixture(t)
 		f.weapons.EXPECT().Get(mock.Anything, charID, "longsword").Return(longsword, nil)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(nil, domain.ErrCharacterNotFound)
+		f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{}, domain.ErrCharacterNotFound)
 		_, err := f.svc.ResolveAttack(ctx, charID, combatsvc.AttackRequest{WeaponID: "longsword"})
 		assert.ErrorIs(t, err, domain.ErrCharacterNotFound)
 	})

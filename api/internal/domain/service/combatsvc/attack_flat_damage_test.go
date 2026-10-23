@@ -37,7 +37,7 @@ func flatTerm(dice string, k int) combatsvc.DamageTerm {
 
 // flatAttack runs one hit of w by char, the damage die returning die (none
 // expected when sides is 0).
-func flatAttack(t *testing.T, char *charactersvc.Character, w combatsvc.Weapon, mods buffsvc.BuffModifiers, crit []combatsvc.CritRow, d20, critCheck, sides, die int, req combatsvc.AttackRequest) (*combatsvc.RollResult, *fixture) {
+func flatAttack(t *testing.T, char charactersvc.View, w combatsvc.Weapon, mods buffsvc.BuffModifiers, crit []combatsvc.CritRow, d20, critCheck, sides, die int, req combatsvc.AttackRequest) (*combatsvc.RollResult, *fixture) {
 	t.Helper()
 	f := newFixture(t)
 	f.critRows = crit

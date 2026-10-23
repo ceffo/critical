@@ -172,8 +172,11 @@ type Weapons interface {
 	WeaponInHand(ctx context.Context, characterID int64) (weapon HeldWeapon, ok bool, err error)
 }
 
-// Characters supplies the base STR from the sheet (charactersvc).
+// Characters supplies the character view (ADR 0045): the base STR and the
+// stored maximum HP. GetCharacter stays for the maintenance charge, which
+// reads the PSP pool (the psionic path, migrated with psionicsvc).
 type Characters interface {
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 

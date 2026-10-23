@@ -12,17 +12,18 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
 // thief is a level 5 thief, Strength 16 (Table 1: +0 to hit, +1 damage):
 // THAC0 18 and PHB Table 30's x3, as the character service derives them.
-func thief() *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Str: 16, Dex: 17, Class: "thief", Race: "halfling",
-		Derived: charactersvc.Derived{RealizedLevel: 5, Group: "rogue", THAC0: 18, Backstab: 3},
-	}
+func thief() charactersvc.View {
+	v := viewtest.Single("thief", 5, viewtest.WithIdentity(charID, "Test", "halfling"), viewtest.WithScores(16, 17, 0, 0, 0, 0))
+	v.Entries[0].Group = "rogue"
+	v.THAC0, v.Backstab = 18, 3
+	return v
 }
 
 var (
@@ -111,8 +112,8 @@ func TestResolveAttack_Step19_Backstab(t *testing.T) {
 // ADR 0030 step 19: a class without the backstab (a bard's, a fighter's)
 // is refused before anything is rolled, spent or logged.
 func TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie(t *testing.T) {
-	for _, char := range []*charactersvc.Character{bard(), fighter()} {
-		t.Run(char.Class, func(t *testing.T) {
+	for _, char := range []charactersvc.View{bard(), fighter()} {
+		t.Run(char.Primary().Class, func(t *testing.T) {
 			f := newFixture(t)
 			f.weapons.EXPECT().Get(mock.Anything, charID, "dagger").Return(dagger1, nil)
 			f.withChar(char)
@@ -127,10 +128,10 @@ func TestResolveAttack_Step19_BackstabRefusedBeforeAnyDie(t *testing.T) {
 // backstab's effective THAC0 for a thief, none for another class.
 func TestGetAttackForm_Step19_BackstabPreview(t *testing.T) {
 	for _, tc := range []struct {
-		char *charactersvc.Character
+		char charactersvc.View
 		want bool
 	}{{thief(), true}, {bard(), false}} {
-		t.Run(tc.char.Class, func(t *testing.T) {
+		t.Run(tc.char.Primary().Class, func(t *testing.T) {
 			f := newFixture(t)
 			f.forms.EXPECT().Get(mock.Anything, charID).Return(combatsvc.AttackForm{}, false, nil).Once()
 			f.weapons.EXPECT().List(mock.Anything, charID).Return([]combatsvc.Weapon{dagger1}, nil)

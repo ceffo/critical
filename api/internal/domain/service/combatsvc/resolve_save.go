@@ -58,8 +58,8 @@ const ImmunitySourceWisdom = "wisdom"
 // ImmunityTo is ADR 0006 step 10.1: the immunity of char to the spell with
 // catalogue id spellID (nil: none, or no spell named). It reads the derived
 // immunities, never a spell id in the code.
-func ImmunityTo(char *charactersvc.Character, spellID string) *Immunity {
-	if spellID == "" || !slices.Contains(char.Derived.SpellImmunities, spellID) {
+func ImmunityTo(char charactersvc.View, spellID string) *Immunity {
+	if spellID == "" || !slices.Contains(char.SpellImmunities, spellID) {
 		return nil
 	}
 	return &Immunity{Source: ImmunitySourceWisdom, Score: char.Wis}
@@ -92,13 +92,13 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 	}
 	var res *SaveBreakdown
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		char, err := s.chars.GetCharacter(ctx, characterID)
+		char, err := s.chars.View(ctx, characterID)
 		if err != nil {
-			return fmt.Errorf("get character: %w", err)
+			return fmt.Errorf("get character view: %w", err)
 		}
 		// The target is the derived one (ADR 0030 step 6, amending ADR 0006
 		// step 1): PHB Table 60 for the class group and level.
-		target := savesByCategory(char.Derived.Saves)[category]
+		target := savesByCategory(char.Saves)[category]
 
 		rec := SaveBreakdown{Category: string(category), Target: target, Modifiers: []BreakdownModifier{}, MindAffecting: opts.MindAffecting, SpellID: opts.SpellID}
 		// ADR 0006 step 10.2: against a spell the character is immune to,
@@ -117,19 +117,19 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		}
 		// The race's bonus (ADR 0030 step 22.1) is one named modifier on the
 		// roll, like a buff's: it moves the roll, never the target.
-		if b := savesByCategory(char.Derived.RaceSaveBonus)[category]; b != 0 {
+		if b := savesByCategory(char.RaceSaveBonus)[category]; b != 0 {
 			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModRace), Detail: char.Race, Value: b})
 		}
 		// ADR 0006 step 9.4: on a save the player flags as against magic that
 		// attacks the mind, Table 5's adjustment at the sheet's Wisdom is one
 		// named modifier on the roll (never the target), in any category.
-		if b := char.Derived.MagicDefence; opts.MindAffecting && b != 0 {
+		if b := char.MagicDefence; opts.MindAffecting && b != 0 {
 			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModWisdom), Detail: strconv.Itoa(char.Wis), Value: b})
 		}
 		// ADR 0043 step 3: a class's save_bonus is one named modifier on the
 		// roll, beside the Wisdom adjustment, when the request carries its
 		// tag; the one tag is the mind-affecting flag (Q12).
-		for _, b := range char.Derived.ClassSaveBonuses {
+		for _, b := range char.ClassSaveBonuses {
 			if b.Against == classes.SaveAgainstMindAffecting && opts.MindAffecting {
 				rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: string(ModClass), Detail: b.Class, Value: b.Bonus})
 			}

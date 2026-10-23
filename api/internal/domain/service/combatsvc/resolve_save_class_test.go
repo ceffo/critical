@@ -23,16 +23,16 @@ import (
 // without the grant (a fighter) gets the Wisdom line only. Every roll is one
 // d20 with its own value.
 func TestResolveSavingThrow_Step3_ThePsionicistsTwoAgainstCharm(t *testing.T) {
-	psionicist := func() *charactersvc.Character {
+	psionicist := func() charactersvc.View {
 		c := withWisdom("psionicist", 17, 3)
-		c.Derived.ClassSaveBonuses = []charactersvc.ClassSaveBonus{{Class: "psionicist", Against: classes.SaveAgainstMindAffecting, Bonus: 2}}
+		c.ClassSaveBonuses = []charactersvc.ClassSaveBonus{{Class: "psionicist", Against: classes.SaveAgainstMindAffecting, Bonus: 2}}
 		return c
 	}
 	wisdom := combatsvc.BreakdownModifier{Kind: string(combatsvc.ModWisdom), Detail: strconv.Itoa(17), Value: 3}
 	class := combatsvc.BreakdownModifier{Kind: string(combatsvc.ModClass), Detail: "psionicist", Value: 2}
 	cases := []struct {
 		name          string
-		char          *charactersvc.Character
+		char          charactersvc.View
 		category      combatsvc.SaveCategory
 		mindAffecting bool
 		d20           int

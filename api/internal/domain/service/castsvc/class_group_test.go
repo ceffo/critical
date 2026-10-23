@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
@@ -18,8 +19,10 @@ import (
 var groupOf = map[string]string{"fighter": "warrior", "cleric": "priest", "mage": "wizard", "thief": "rogue", "bard": "rogue"}
 
 // casterOf is a level 15 character of class.
-func casterOf(class string) *charactersvc.Character {
-	return &charactersvc.Character{ID: charID, Class: class, Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: groupOf[class]}}
+func casterOf(class string) charactersvc.View {
+	v := viewtest.Single(class, bardLevel, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(12, 0, 0, 0, 0, 0))
+	v.Entries[0].Group = groupOf[class]
+	return v
 }
 
 // ADR 0030 step 2: the class group of the character picks a by-group effect.

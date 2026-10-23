@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
@@ -61,11 +62,13 @@ var book = map[string]prepsvc.SpellbookEntry{
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
-	return newFixtureFor(t, &charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: 15, SpellSlots: bardTable}})
+	v := viewtest.Single("bard", 15)
+	v.SpellSlots = bardTable
+	return newFixtureFor(t, v)
 }
 
 // newFixtureFor is a fixture whose character 1 is c.
-func newFixtureFor(t *testing.T, c *charactersvc.Character) *fixture {
+func newFixtureFor(t *testing.T, c charactersvc.View) *fixture {
 	t.Helper()
 	f := &fixture{slots: mocks.NewMockSlots(t), log: mocks.NewMockLog(t), items: mocks.NewMockItems(t), tx: &passTx{}}
 
@@ -78,7 +81,7 @@ func newFixtureFor(t *testing.T, c *charactersvc.Character) *fixture {
 
 	// The limits are the character's derived slots (ADR 0030 step 8).
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, int64(1)).
+	chars.EXPECT().View(mock.Anything, int64(1)).
 		Return(c, nil).Maybe()
 
 	svc, err := prepsvc.New(prepsvc.Deps{
@@ -383,13 +386,10 @@ func TestPrepare_NothingLogsAnEmptyList(t *testing.T) {
 // it; the cleric's single 3rd-level slot refuses two, the mage's three
 // accept them; a class that does not cast is refused.
 func TestPrepare_Step14_EachEntryPreparesInItsOwnSlots(t *testing.T) {
-	clericMage := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
-		RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
-			{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 9},
-			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
-		},
+	clericMage := charactersvc.View{SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}, Entries: []charactersvc.EntryView{
+		{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
+		{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 9},
+		{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
 	}}
 	ctx := context.Background()
 
@@ -438,12 +438,9 @@ func TestPrepare_Step14_EachEntryPreparesInItsOwnSlots(t *testing.T) {
 // its mage entry: the mage's spellbook (not the cleric's sphere spells), the
 // mage's limits, slots tagged "mage". Asked for the cleric, the cleric's.
 func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T) {
-	mageCleric := &charactersvc.Character{Class: "mage", Derived: charactersvc.Derived{
-		RealizedLevel: 9, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
-			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
-		},
+	mageCleric := charactersvc.View{SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}, Entries: []charactersvc.EntryView{
+		{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 9, Casts: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+		{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
 	}}
 	ctx := context.Background()
 	newSvc := func(t *testing.T) (prepsvc.SVC, *mocks.MockSlots, *mocks.MockLog, *mocks.MockItems) {
@@ -454,7 +451,7 @@ func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T)
 		b.EXPECT().Of(mock.Anything, int64(1), "mage").Return([]prepsvc.SpellbookEntry{book["alarm"], book["fireball"]}, nil).Maybe()
 		b.EXPECT().Of(mock.Anything, int64(1), "cleric").Return([]prepsvc.SpellbookEntry{book["enlarge"]}, nil).Maybe()
 		chars := mocks.NewMockCharacters(t)
-		chars.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(mageCleric, nil).Maybe()
+		chars.EXPECT().View(mock.Anything, int64(1)).Return(mageCleric, nil).Maybe()
 		slots, log, items := mocks.NewMockSlots(t), mocks.NewMockLog(t), mocks.NewMockItems(t)
 		svc, err := prepsvc.New(prepsvc.Deps{Slots: slots, Spellbook: b, Effects: catalog(t), Items: items, Characters: chars, Log: log, Tx: &passTx{}})
 		require.NoError(t, err)
@@ -506,12 +503,9 @@ func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T)
 // slots and limits, tagged "mage" (two spellcasting entries); the cleric's
 // stay the cleric's.
 func TestPrepare_Step13_TheOldClassPreparesInItsOwnSlots(t *testing.T) {
-	mageToCleric := &charactersvc.Character{Class: "cleric", Derived: charactersvc.Derived{
-		RealizedLevel: 5, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1},
-		Classes: []charactersvc.EntryDerived{
-			{Class: "mage", Group: "wizard", State: classes.EntryFrozen, RealizedLevel: 9, Casts: true, Dormant: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
-			{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
-		},
+	mageToCleric := charactersvc.View{SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}, Entries: []charactersvc.EntryView{
+		{Class: "mage", Group: "wizard", State: classes.EntryFrozen, RealizedLevel: 9, Casts: true, Dormant: true, SpellSlots: map[int]int{1: 4, 2: 3, 3: 3, 4: 2, 5: 1}},
+		{Class: "cleric", Group: "priest", State: classes.EntryActive, RealizedLevel: 5, Casts: true, SpellSlots: map[int]int{1: 3, 2: 2, 3: 1}},
 	}}
 	ctx := context.Background()
 

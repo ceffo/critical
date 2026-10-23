@@ -24,6 +24,7 @@ import (
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -96,14 +97,11 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 	combathdl.RegisterRoutes(r, func(*http.Request) int64 { return charID }, svc)
 	w.router = r
 
-	w.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Str: 12, Dex: 17, Class: "bard", Race: "dwarf",
-		Derived: charactersvc.Derived{
-			RealizedLevel: 15, THAC0: 13,
-			Saves:         charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14},
-			RaceSaveBonus: charactersvc.Saves{Spell: 4},
-		},
-	}, nil).Maybe()
+	dwarf := viewtest.Single("bard", 15, viewtest.WithIdentity(charID, "Test", "dwarf"), viewtest.WithScores(12, 17, 0, 0, 0, 0))
+	dwarf.THAC0 = 13
+	dwarf.Saves = charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14}
+	dwarf.RaceSaveBonus = charactersvc.Saves{Spell: 4}
+	w.chars.EXPECT().View(mock.Anything, charID).Return(dwarf, nil).Maybe()
 	return w
 }
 

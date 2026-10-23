@@ -16,11 +16,9 @@ import (
 
 // dualElf is the party's elf: a fighter frozen at 9, then a mage realized at
 // mageLevel owing pending (as Derive sends them: one class, ADR 0042 step 11's
-// NoHitPoints up to the fighter's 9). The mirror's class is the active mage.
-func dualElf(mageLevel int, pending ...charactersvc.PendingLevel) *charactersvc.Character {
-	c := multi(15, 40, owing{class: "fighter", level: 9, frozen: true}, owing{class: "mage", level: mageLevel, pending: pending})
-	c.Class, c.RealizedLevel = "mage", mageLevel
-	return c
+// NoHitPoints up to the fighter's 9). The primary entry is the active mage.
+func dualElf(mageLevel int, pending ...charactersvc.PendingLevel) charactersvc.View {
+	return multi(15, 40, owing{class: "fighter", level: 9, frozen: true}, owing{class: "mage", level: mageLevel, pending: pending})
 }
 
 // noHP is a dual-class's level that gains no hit points (ADR 0042 step 11).
@@ -38,7 +36,7 @@ func noHP(level int) charactersvc.PendingLevel {
 func TestRoll_Step11_NoHitPointsUntilTheCrossover(t *testing.T) {
 	t.Run("mage 9: the level taken, 0 hit points, no die", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(dualElf(8, noHP(9)), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(dualElf(8, noHP(9)), nil).Once()
 		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, "", 9, 40).Return(nil).Once()
 		got := f.recorded()
 
@@ -56,7 +54,7 @@ func TestRoll_Step11_NoHitPointsUntilTheCrossover(t *testing.T) {
 	})
 	t.Run("mage 10: a d4 plus the whole Constitution adjustment", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(dualElf(9, d4(10)), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(dualElf(9, d4(10)), nil).Once()
 		f.dice.EXPECT().RollDie(4).Return(3).Once()
 		f.rules.EXPECT().ConstitutionFor(15).Return(con(1, 1, 0), nil).Once()
 		f.dal.EXPECT().SetRealizedLevel(mock.Anything, charID, "", 10, 44).Return(nil).Once()
@@ -69,7 +67,7 @@ func TestRoll_Step11_NoHitPointsUntilTheCrossover(t *testing.T) {
 	})
 	t.Run("a die entered for a level without hit points is refused", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(dualElf(8, noHP(9)), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(dualElf(8, noHP(9)), nil).Once()
 
 		_, err := f.svc.Roll(context.Background(), charID, levelupsvc.RollInput{Class: "mage", Level: 9, Die: intp(3)})
 		var fe *domain.FieldError

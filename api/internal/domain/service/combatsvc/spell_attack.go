@@ -28,9 +28,9 @@ type ToHitRoll struct {
 // active buffs' to-hit. It reads the sheet and the buffs and writes nothing:
 // the caller (castsvc) logs the cast it belongs to.
 func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetAC int) (*ToHitRoll, error) {
-	char, err := s.chars.GetCharacter(ctx, characterID)
+	char, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return nil, fmt.Errorf("get character: %w", err)
+		return nil, fmt.Errorf("get character view: %w", err)
 	}
 	mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponNone)
 	if err != nil {
@@ -44,7 +44,7 @@ func (s *service) RollSpellToHit(ctx context.Context, characterID int64, targetA
 	if err != nil {
 		return nil, fmt.Errorf("dexterity table: %w", err)
 	}
-	res := &ToHitRoll{BaseThac0: char.Derived.THAC0, TargetAC: targetAC, Modifiers: []Modifier{}}
+	res := &ToHitRoll{BaseThac0: char.THAC0, TargetAC: targetAC, Modifiers: []Modifier{}}
 	sum := 0
 	add := func(m Modifier) {
 		res.Modifiers = append(res.Modifiers, m)

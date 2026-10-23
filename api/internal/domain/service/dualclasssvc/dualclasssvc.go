@@ -80,10 +80,9 @@ type DAL interface {
 	ReplaceClassEntries(ctx context.Context, id int64, entries []classes.Entry) error
 }
 
-// Characters reads the character with its derived block (the XP of its
-// entries).
+// Characters reads the character view (ADR 0045): the entries with their XP.
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Ledger lists the XP awards with their ids: the new entry ignores them all
@@ -138,11 +137,11 @@ func (s *service) Close(_ context.Context) error  { return nil }
 func (s *service) Switch(ctx context.Context, characterID int64, newClass string) (*Result, error) {
 	var res *Result
 	err := s.Tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.Characters.GetCharacter(ctx, characterID)
+		c, err := s.Characters.View(ctx, characterID)
 		if err != nil {
 			return err
 		}
-		before := slices.Clone(c.Entries())
+		before := c.StoredEntries()
 		old, xp, err := s.check(ctx, c, before, newClass)
 		if err != nil {
 			return err
@@ -185,7 +184,7 @@ func (s *service) Switch(ctx context.Context, characterID int64, newClass string
 
 // check applies the conditions and returns the entry being left with its
 // derived XP.
-func (s *service) check(ctx context.Context, c *charactersvc.Character, entries []classes.Entry, newClass string) (classes.Entry, int, error) {
+func (s *service) check(ctx context.Context, c charactersvc.View, entries []classes.Entry, newClass string) (classes.Entry, int, error) {
 	active := classes.Active(entries)
 	if len(active) != 1 {
 		return classes.Entry{}, 0, ErrNotAllowed
@@ -225,10 +224,10 @@ func (s *service) check(ctx context.Context, c *charactersvc.Character, entries 
 	if len(target.UnmetMinimums(scores)) > 0 {
 		return classes.Entry{}, 0, ErrMinimumsNotMet
 	}
-	if c.Details.Alignment != "" && !target.AlignmentAllowed(c.Details.Alignment) {
+	if c.Alignment != "" && !target.AlignmentAllowed(c.Alignment) {
 		return classes.Entry{}, 0, ErrAlignmentNotAllowed
 	}
-	derived, ok := c.Derived.Entry(old.Class)
+	derived, ok := c.Entry(old.Class)
 	if !ok {
 		return classes.Entry{}, 0, fmt.Errorf("dualclasssvc: no derived entry for %q", old.Class)
 	}
@@ -237,7 +236,7 @@ func (s *service) check(ctx context.Context, c *charactersvc.Character, entries 
 
 // primesAtLeast reports whether every prime requisite of class is at least min
 // on the sheet.
-func primesAtLeast(c *charactersvc.Character, class classes.Class, min int) bool {
+func primesAtLeast(c charactersvc.View, class classes.Class, min int) bool {
 	for _, p := range class.PrimeRequisites {
 		if score, ok := c.Score(charactersvc.Ability(p)); !ok || score < min {
 			return false

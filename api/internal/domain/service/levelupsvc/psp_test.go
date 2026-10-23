@@ -23,14 +23,14 @@ import (
 // PSPs and leaves the maximum alone.
 func TestRoll_Step4_2_ALevelUpAddsWisdomModifierPlusTen(t *testing.T) {
 	tables := cataloguetest.Tables(t)
-	psionic := func(es ...owing) *charactersvc.Character {
+	psionic := func(es ...owing) charactersvc.View {
 		c := multi(14, 30, es...)
 		c.Wis, c.Int, c.Con, c.PSPMax = 17, 15, 14, 181
 		return c
 	}
 	t.Run("a psionicist level: +12, recorded and snapshotted", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).
+		f.chars.EXPECT().View(mock.Anything, charID).
 			Return(psionic(owing{class: "thief", level: 5}, owing{class: "psionicist", level: 4, pending: []charactersvc.PendingLevel{d6(5)}}), nil).Once()
 		f.dice.EXPECT().RollDie(6).Return(5).Once()
 		f.rules.EXPECT().ConstitutionFor(14).Return(con(0, 0, 0), nil).Once()
@@ -52,7 +52,7 @@ func TestRoll_Step4_2_ALevelUpAddsWisdomModifierPlusTen(t *testing.T) {
 	})
 	t.Run("the thief's level: no PSPs", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).
+		f.chars.EXPECT().View(mock.Anything, charID).
 			Return(psionic(owing{class: "thief", level: 5, pending: []charactersvc.PendingLevel{d6(6)}}, owing{class: "psionicist", level: 4}), nil).Once()
 		f.dice.EXPECT().RollDie(6).Return(5).Once()
 		f.rules.EXPECT().ConstitutionFor(14).Return(con(0, 0, 0), nil).Once()

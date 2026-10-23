@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -66,11 +67,10 @@ const charID = int64(4)
 // Intelligence 14 (Table 4: 7th level, 60%, 9 per level) for a mage.
 var int14Mage = charactersvc.SpellbookRules{ClassMaxSpellLevel: 9, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9}
 
-func mage(level int, rules *charactersvc.SpellbookRules) *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Class: "mage", RealizedLevel: level,
-		Derived: charactersvc.Derived{RealizedLevel: level, Spellbook: rules},
-	}
+func mage(level int, rules *charactersvc.SpellbookRules) charactersvc.View {
+	v := viewtest.Single("mage", level, viewtest.WithIdentity(charID, "Test", ""))
+	v.Spellbook = rules
+	return v
 }
 
 // catalogue answers the catalogue's lookups from spells.
@@ -100,7 +100,7 @@ func TestLearn_Step20_1_RefusedBeforeAnyDie(t *testing.T) {
 	bard := charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 9, LearnChance: 85, MaxSpellsPerLevel: 18}
 	for _, tc := range []struct {
 		name     string
-		c        *charactersvc.Character
+		c        charactersvc.View
 		spell    string
 		book     []string
 		failedAt int
@@ -118,7 +118,7 @@ func TestLearn_Step20_1_RefusedBeforeAnyDie(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(cat)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.c, nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(tc.book, nil).Maybe()
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, tc.spell).Return(tc.failedAt, tc.failedAt > 0, nil).Maybe()
 			_, err := f.svc.Learn(context.Background(), charID, tc.spell)
@@ -129,7 +129,7 @@ func TestLearn_Step20_1_RefusedBeforeAnyDie(t *testing.T) {
 	t.Run("a spell the catalogue does not hold", func(t *testing.T) {
 		f := newFixture(t)
 		f.catalogue(cat)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 		_, err := f.svc.Learn(context.Background(), charID, "nope")
 		require.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -152,7 +152,7 @@ func TestLearn_Step20_1_WhatIsNotRefused(t *testing.T) {
 	}
 	for _, tc := range []struct {
 		name     string
-		c        *charactersvc.Character
+		c        charactersvc.View
 		book     []string
 		failedAt int
 	}{
@@ -163,7 +163,7 @@ func TestLearn_Step20_1_WhatIsNotRefused(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(cat)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.c, nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(tc.book, nil)
 			f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(tc.failedAt, tc.failedAt > 0, nil)
@@ -197,7 +197,7 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 		t.Run(map[bool]string{true: "learned", false: "failed"}[tc.learned], func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(map[string]learnsvc.Spell{"new3": {Level: 3, Wizard: true}})
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return([]string{}, nil)
 			f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(0, false, nil)

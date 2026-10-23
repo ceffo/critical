@@ -21,7 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
@@ -61,9 +61,9 @@ func newCastWire(t *testing.T) *castWire {
 		slots: mocks.NewMockSlots(t), texts: mocks.NewMockTexts(t), buffs: mocks.NewMockBuffs(t), dice: mocks.NewMockDice(t),
 	}
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
-		ID: charID, Class: "bard", Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: "rogue"},
-	}, nil).Maybe()
+	bard := viewtest.Single("bard", bardLevel, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(12, 0, 0, 0, 0, 0))
+	bard.Entries[0].Group = "rogue"
+	chars.EXPECT().View(mock.Anything, charID).Return(bard, nil).Maybe()
 	log := mocks.NewMockLog(t)
 	log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 		func(_ context.Context, e actionlog.NewEntry) (int64, error) {

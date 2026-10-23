@@ -218,9 +218,9 @@ func effectModifiers(ms []InitiativeModifier) []InitiativeModifier {
 // item 6): the weapon in hand's speed (none with no weapon in hand), then
 // the initiative effects of buffs, the round's buff list after the advance.
 func (s *service) initiativeModifiers(ctx context.Context, characterID int64, buffs []BuffEffect) ([]InitiativeModifier, error) {
-	c, err := s.chars.GetCharacter(ctx, characterID)
+	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return nil, fmt.Errorf("get character: %w", err)
+		return nil, fmt.Errorf("get character view: %w", err)
 	}
 	base := BaseStrengthOf(c)
 	powers, err := s.items.ItemPowers(ctx, characterID)

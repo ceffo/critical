@@ -112,10 +112,11 @@ _Code_: Trait
 **Ability score** (fr: caractéristique):
 One of the six scores; the **score in effect** has the app's effects applied.
 [ADR 0004](docs/adr/0004-buffs.md) steps 7 to 10, [ADR 0028](docs/adr/0028-ability-checks.md) step 2.
-_Code_: Ability, Abilities, AbilityMinimum
+_Code_: Ability, Abilities, AbilityMinimum, Strength, BaseStrength
 
 **Exceptional Strength** (fr: force exceptionnelle):
 The percentile (18/01 to 18/00) a character of a class with the `exceptional_strength` feature rolls at Strength 18, unless its race has `no_exceptional_strength`. The server's derived data says when the creation form offers it. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 9 and 10, [ADR 0040](docs/adr/0040-classes-are-data.md) step 3. _Avoid_: 18/xx as a name (it is the notation).
+_Code_: StrScore
 
 **Realized level** (fr: niveau acquis) and **Target level** (fr: niveau donné par l'XP):
 The level taken, and the one the XP total gives; "level" alone is the realized one; the gap is the
@@ -336,7 +337,7 @@ _Code_: Proficiencies, ProficiencyDescription
 
 **Bard skills**, **Thief skills** (fr: talents de barde, talents de voleur), **Skill points**:
 The rogue percentages and the points entered for them, read through the class's `rogue_skills` feature: its skill set, budget and armour entries. [ADR 0030](docs/adr/0030-classes-and-races.md) steps 17 and 18, [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.
-_Code_: RogueSkills, SkillBudget
+_Code_: RogueSkills, SkillBudget, SkillPointsBudget, BudgetWarning, SkillPercent, PointsSheet
 
 **Skill set** (fr: jeu de talents):
 One `rogue_skills` feature a class grants and what comes of it on a character: its skill list, its own budget, skill armour and stored points, apart from any other set the character has (a thief/bard has two, and both list pick pockets). The client renders the list of sets, never a class. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.5.
@@ -541,6 +542,19 @@ The settings popover of the dice footer. [ADR 0034](docs/adr/0034-onboarding-scr
 
 **Intro** and **Creation flow** (fr: création):
 The first screen of a user without a character, and the stepped creation. [ADR 0034](docs/adr/0034-onboarding-screens.md) steps 1 to 6.
+_Code_: NewCharacter
+
+**Creation options** (fr: choix de la création):
+What the server offers the creation form: the creatable classes with the races each admits and the alignments, hit die and skills they bring, each race's ability adjustments, languages and identity figures, the ranges an entered value must fall in (the ones Create checks), and the classes a set of scores leaves unmet. [ADR 0034](docs/adr/0034-onboarding-screens.md) steps 1 to 6, [ADR 0032](docs/adr/0032-character-identity-and-creation-rolls.md) steps 2 and 5.
+_Code_: CreationOptions, ClassOption, ClassUnmet, RaceAdjustmentOption, RaceIdentityOption, RaceLanguageOption, FigureOption
+
+**Race identity** (fr: apparence de la race):
+A race's height, weight and age rows (PHB Tables 10 and 11), from which the creation rolls the figures of a new character. [ADR 0040](docs/adr/0040-classes-are-data.md) step 2, [ADR 0032](docs/adr/0032-character-identity-and-creation-rolls.md) step 5.
+_Code_: Identity
+
+**Ability score method** (fr: méthode de tirage des caractéristiques):
+One of the six ways of rolling the ability scores (DMG chapter 1): how many totals, of how many dice, and how the player assigns them. [ADR 0032](docs/adr/0032-character-identity-and-creation-rolls.md) step 6.
+_Code_: ScoreMethod, ScoreRoll
 
 **Theme** (fr: thème):
 One of the four colour themes. [ADR 0026](docs/adr/0026-contrast-ladder-raised-stage-four-themes.md).

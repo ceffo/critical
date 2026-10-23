@@ -160,6 +160,28 @@ the others text; a human is a race with no traits. The level limits and the clas
 admits are book data; how they apply (they warn; the racial lift for multi-class and dual-class)
 is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).
 
+## Creation (built)
+
+The creation flow ([ADR 0034](adr/0034-onboarding-screens.md)) enters the values of a **new
+character** (a list of class entries, a race, six ability scores, the figures, the optional
+picks); everything else is derived, as for any character. Three terms carry what surrounds it:
+
+- **Creation options**: what the server offers the form, read from the catalogue and the ruleset,
+  never decided by the form. A class option lists a class with the races it admits (the
+  ruleset's, [ADR 0041](adr/0041-ruleset.md)), its alignments, hit die and skill list; a race has an
+  adjustment option (its **race** traits' ability adjustments), a language option and an identity
+  option. The same ranges guard Create, so a value the form accepts is one Create accepts. A set of
+  scores that leaves a class under its **ability** minimum is reported as that class's unmet
+  abilities.
+- **Race identity**: the height, weight and age rows of a **race**; the creation rolls the new
+  character's figures from them, and a figure outside the row's range warns instead of refusing.
+- **Ability score method**: one of the six rolling methods. A method gives totals (score rolls)
+  and says how the player assigns them to the **ability scores**; a roll is a breakdown, one value
+  per die, and the stored scores are the assigned totals.
+
+Skill points, **Exceptional Strength** and the score in effect are not creation terms: they are the
+character's own, entered or derived as described above.
+
 ## Ruleset and house rules
 
 A **ruleset** is the set of rules a game plays by: the books' rules plus the table's **house

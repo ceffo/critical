@@ -86,11 +86,11 @@ type View struct {
 	PsionicPicks     []psionics.Pick
 }
 
-// SaveFigure is the character's save figure for the saves owner (ADR 0046
+// SaveInputs is what the saves owner builds a save from, for the saves owner (ADR 0046
 // step 3.3): the targets, the race's bonus, the Wisdom adjustment and the
 // class grants the derived block holds.
-func (v View) SaveFigure() saves.Figure {
-	return saves.Figure{
+func (v View) SaveInputs() saves.Inputs {
+	return saves.Inputs{
 		Saves: v.Saves, Race: v.RaceSaveBonus, RaceID: v.Race,
 		MagicDefence: v.MagicDefence, Wis: v.Wis, Class: v.ClassSaveBonuses,
 	}

@@ -9,10 +9,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
-// Figure is a character's save figure as the view states it (ADR 0046 step
-// 3.3): the five targets and what the roll's terms are built from. The
-// caller (charactersvc.View.SaveFigure) fills it from the derived block.
-type Figure struct {
+// Inputs are what a character's save is built from, as the view states it
+// (ADR 0046 step 3.3): the five targets and what the roll's terms come from.
+// The caller (charactersvc.View.SaveInputs) fills it from the derived block.
+type Inputs struct {
 	// Saves are the five targets (PHB Table 60, the best of the entries
 	// that count).
 	Saves Saves
@@ -71,7 +71,7 @@ func Check(cat string) error {
 // Target is the save's target in category cat (ADR 0030 step 6, amending ADR
 // 0006 step 1): the figure's Table 60 value, never moved by a term. An
 // unknown category is refused.
-func Target(f Figure, cat string) (int, error) {
+func Target(f Inputs, cat string) (int, error) {
 	if err := Check(cat); err != nil {
 		return 0, err
 	}
@@ -85,7 +85,7 @@ func Target(f Figure, cat string) (int, error) {
 // category), then each class save_bonus whose tag the request carries (ADR
 // 0043 step 3). A zero race or Wisdom value adds no term. Nil for none; the
 // caller appends the buffs' terms.
-func Terms(f Figure, cat string, fl Flags) []Term {
+func Terms(f Inputs, cat string, fl Flags) []Term {
 	var out []Term
 	if b, _ := f.Race.Of(cat); b != 0 {
 		out = append(out, Term{Code: TermRace, Source: f.RaceID, Value: b})

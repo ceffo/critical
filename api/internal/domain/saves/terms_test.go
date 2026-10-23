@@ -13,8 +13,8 @@ import (
 
 // figure has a distinct value everywhere, so a term read from the wrong
 // field or category shows.
-func figure() saves.Figure {
-	return saves.Figure{
+func figure() saves.Inputs {
+	return saves.Inputs{
 		Saves:        saves.Saves{ParaPoison: 11, RodStaffWand: 12, PetriPoly: 13, Breath: 14, Spell: 15},
 		Race:         saves.Saves{RodStaffWand: 3, Spell: 4},
 		RaceID:       "dwarf",
@@ -65,6 +65,6 @@ func TestSaves_Step3_TermsWisdomOnlyWhenFlagged(t *testing.T) {
 
 // ADR 0046 step 3.3: a zero race bonus or Wisdom adjustment adds no term.
 func TestTerms_ZeroValuesDropped(t *testing.T) {
-	f := saves.Figure{Saves: figure().Saves, RaceID: "human", Wis: 12}
+	f := saves.Inputs{Saves: figure().Saves, RaceID: "human", Wis: 12}
 	assert.Nil(t, saves.Terms(f, "spell", saves.Flags{MindAffecting: true}))
 }

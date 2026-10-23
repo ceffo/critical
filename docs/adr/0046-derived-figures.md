@@ -149,21 +149,22 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       assert the attack's Dexterity modifier for the same scores; `Derive_Step2_TheDexterityTableIsReadOnce`
       counts one `DexMods` call per derivation (`acsvc` and `combatsvc` have no table to read). The existing
       `acsvc` derive tests and the composition tests run unchanged.
-3. **Saves (second).** Owner: a new package `domain/saves`, which takes over from `charactersvc`. Implemented 2026-10-23 (3.1 to 3.5 as amended below):
+3. **Saves (second).** Owner: a new package `domain/saves`, which takes over from `charactersvc`. Implemented 2026-10-23 (3.1 to 3.5 as amended below; 3.2 amended in place after review):
    1. *The type.* `saves.Saves` (the five numbers) with `Of(category)` and the category list (the
       one list, `classes.SaveCategories` re-exported by the owner as `saves.Categories`), so no package
       re-types the switch. `itemsvc.SaveCategories`, a third copy of the list that the ADR's context
       did not name, folded into it: item validation reads `saves.Categories`. `charactersvc.Saves` becomes an alias for it for one item, then goes.
    2. *The derivation.* The best-of across entries (ADR 0042 step 9), the race's Constitution
-      bonus (ADR 0030 step 22.1), the class `save_bonus` grants (ADR 0043 step 3) and the magical
-      defence move from `charactersvc/derive.go` into `saves`; `charactersvc.Derive` calls them with the
-      table rows it already holds. The tables stay in `ruletablesvc`; `SavesFor` is called by
-      `charactersvc` only.
+      bonus (ADR 0030 step 22.1) and the class `save_bonus` grants (ADR 0043 step 3) are computed by
+      `charactersvc.Derive` with the table rows it already holds, and reach `saves` only through
+      `saves.Inputs`. The magical defence stays a table read in `charactersvc.Derive`, and so does the
+      crossover and dormant-entry filtering (ADR 0042 step 9): it did not move into `saves`. The
+      tables stay in `ruletablesvc`; `SavesFor` is called by `charactersvc` only.
    3. *The roll's terms.* `saves.Check(category)` (an unknown category is invalid input, so
-      `combatsvc` refuses it before its transaction and rolls nothing), `saves.Target(figure, category)`
-      and `saves.Terms(figure, category, flags)`
+      `combatsvc` refuses it before its transaction and rolls nothing), `saves.Target(inputs, category)`
+      and `saves.Terms(inputs, category, flags)`
       build the save's target and its ordered named modifiers (race, Wisdom if mind-affecting,
-      class bonuses) from the view's figure and the player's flags; `combatsvc` adds the buffs' contributions it
+      class bonuses) from the view's `saves.Inputs` (`View.SaveInputs()`, the owner's input, not the step 1.3 `Figure` it returns) and the player's flags; `combatsvc` adds the buffs' contributions it
       reads from `buffsvc`, draws the d20, settles the verdict and records it.
    4. *Removes:* `combatsvc.savesByCategory` and `saveCategories`; `charactersvc.saveField`;
       `characterhdl.savesDTO`'s own copy of the five fields (it never held a switch; it now takes

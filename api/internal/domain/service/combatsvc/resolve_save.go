@@ -83,7 +83,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		}
 		// The target is the derived one (ADR 0030 step 6, amending ADR 0006
 		// step 1): PHB Table 60 for the class group and level.
-		figure := char.SaveFigure()
+		figure := char.SaveInputs()
 		target, err := saves.Target(figure, string(category))
 		if err != nil {
 			return err

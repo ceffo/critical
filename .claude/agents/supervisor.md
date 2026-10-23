@@ -54,7 +54,8 @@ herdr agent wait dev-<id> --until done --until idle --until blocked
 If `HERDR_ENV` isn't `1`, use the Agent tool (`subagent_type: developer` / `code-reviewer`) with the
 same brief files and `SendMessage` for later rounds, and tell the user.
 
-When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it; `<item>` in upper case as the tracker writes it, a lower-case marker is ignored, sup-71):
+When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it; any case works, fleet-watch matches markers, briefs and reports case-insensitively, sup-85):
+At every transition, also run `herdr agent list` and act on every idle/done agent whose report you haven't read: a watcher reports the first event and exits, so a second agent that finished in the same minute is yours to catch (sup-85: four finished agents sat open for an hour).
 - `done` / `idle` → read the report file (overwritten every round; check its mtime is after your
   prompt). Missing or stale → `herdr agent read dev-<id> --source recent-unwrapped --lines 60`: the
   agent stopped early, likely with a question. (herdr reports `done` while an agent waits on a
@@ -239,7 +240,7 @@ Before dispatch: claim the item (tracker "Claim": `.claude/scripts/linear-state.
 
 Decide up front whether the change will need review (section 3). Branch `feat/<id>-<slug>` or
 `fix/<id>-<slug>`; worktree `<wt>/<id>-<slug>`, which you create first (mechanical, so it's yours):
-`git fetch origin && git worktree add <path> -b <branch> origin/<db>`. Launch `dev-<id>` in it with
+`git fetch origin && git worktree add <path> -b <branch> origin/<db>`, then `npm --prefix <path>/web ci` (a worktree has no `node_modules`: three validate runs failed on a missing eslint in sup-85). Launch `dev-<id>` in it with
 the model and a short brief: item id and title, branch, worktree, the acceptance criteria in your own
 words, known related decisions (from the docs index and the tracker; pass the conclusions), areas
 likely involved, any user constraint, and **`review: yes|no`**:
@@ -521,6 +522,8 @@ user says so, at the next quiet point (no agent mid-commit, no rework half sent)
 Without herdr there is no successor to start: update the ledger and tell the user to start one.
 
 ## Reporting to the user
+
+When the user asks a question, answer it first, in that turn, before changing anything; a fix you think of goes in the answer as a proposal (user, 2026-10-23: "I asked a question. I'd rather you answer it first before implemeting changes").
 
 End **every** reply with all pending questions to the user, restated in full and numbered, each
 with the default you apply meanwhile; never "still open, see above". **The list comes from

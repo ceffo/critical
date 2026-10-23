@@ -70,27 +70,6 @@ func (t *Tables) XPThreshold(class string, level int) (int, error) {
 	return c.XPThreshold(level)
 }
 
-// LevelFor is ADR 0030 step 3: the highest level whose threshold in class's
-// experience table is at or under xp, from 1 to MaxLevel (the table stops at
-// 20, so does the level). Negative XP is level 1, as 0 is.
-func (t *Tables) LevelFor(class string, xp int) (int, error) {
-	c, err := t.Class(class)
-	if err != nil {
-		return 0, err
-	}
-	return c.LevelFor(xp), nil
-}
-
-// THAC0For is ADR 0030 step 5: PHB Table 53's THAC0 for group at level,
-// read from the group's definition (ADR 0040 step 7).
-func (t *Tables) THAC0For(group string, level int) (int, error) {
-	d, err := t.Definitions()
-	if err != nil {
-		return 0, err
-	}
-	return d.THAC0(group, level)
-}
-
 // SavesFor is ADR 0030 step 6: PHB Table 60's row of group whose level band
 // holds level.
 func (t *Tables) SavesFor(group string, level int) (SavingThrowRow, error) {

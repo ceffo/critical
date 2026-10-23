@@ -56,11 +56,11 @@ func TestLevelFor_Step3_HighestThresholdAtOrUnderTheXP(t *testing.T) {
 		{"fighter", 3_000_000, 20},
 	}
 	for _, tt := range tests {
-		got, err := tbl.LevelFor(tt.class, tt.xp)
+		c, err := tbl.Class(tt.class)
 		require.NoError(t, err)
-		assert.Equal(t, tt.want, got, "%s at %d XP", tt.class, tt.xp)
+		assert.Equal(t, tt.want, c.LevelFor(tt.xp), "%s at %d XP", tt.class, tt.xp)
 	}
-	_, err := tbl.LevelFor("paladin", 0)
+	_, err := tbl.Class("paladin")
 	require.Error(t, err)
 }
 
@@ -85,7 +85,8 @@ func TestXPThreshold_ByClass(t *testing.T) {
 
 // ADR 0030 step 5: PHB Table 53 (p.91), by group and level.
 func TestTHAC0For_Step5_Table53(t *testing.T) {
-	tbl := phb(t)
+	defs, err := phb(t).Definitions()
+	require.NoError(t, err)
 	for _, tt := range []struct {
 		group       string
 		level, want int
@@ -104,28 +105,30 @@ func TestTHAC0For_Step5_Table53(t *testing.T) {
 		{"wizard", 4, 19},
 		{"wizard", 20, 14},
 	} {
-		got, err := tbl.THAC0For(tt.group, tt.level)
+		got, err := defs.THAC0(tt.group, tt.level)
 		require.NoError(t, err)
 		assert.Equal(t, tt.want, got, "%s level %d", tt.group, tt.level)
 	}
 	for _, bad := range []int{0, 21} {
-		_, err := tbl.THAC0For("rogue", bad)
+		_, err := defs.THAC0("rogue", bad)
 		require.Error(t, err, "level %d", bad)
 	}
-	_, err := tbl.THAC0For("monk", 1)
+	_, err = defs.THAC0("monk", 1)
 	require.Error(t, err)
 }
 
-// ADR 0040 step 7: THAC0For reads the group definitions' rows; at every
+// ADR 0040 step 7: the registry's THAC0 reads the group definitions' rows; at every
 // level they equal the format-10 Table 53 columns they replace.
 func TestRuleTables_Step7_RowsKeyedByClassAndGroup(t *testing.T) {
 	tbl := phb(t)
+	defs, err := tbl.Definitions()
+	require.NoError(t, err)
 	c, ok := tbl.Classes()
 	require.True(t, ok)
 	require.Len(t, c.THAC0, 20)
 	for _, r := range c.THAC0 {
 		for group, want := range map[string]int{"warrior": r.Warrior, "priest": r.Priest, "rogue": r.Rogue, "wizard": r.Wizard} {
-			got, err := tbl.THAC0For(group, r.Level)
+			got, err := defs.THAC0(group, r.Level)
 			require.NoError(t, err)
 			assert.Equal(t, want, got, "%s level %d", group, r.Level)
 		}

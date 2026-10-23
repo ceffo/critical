@@ -23,6 +23,7 @@ func TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel(t *testing.T) {
 	for _, target := range []int{15, 16} {
 		e := newEnvWithBook(t, profBook(t))
 		k := kelsen()
+		k.XPTotal = xpAt(t, "bard", target)
 		k.Proficiencies = weapons("other_melee", "long_sword", "short_bow", "dagger")
 		e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(k, nil).Once()
 		e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()
@@ -83,9 +84,7 @@ func TestCreate_Step14_WeaponPicksCheckedAsTheEditor(t *testing.T) {
 		n.Class, n.Race = "mage", "human"
 		e.rules.EXPECT().RaceAllows("human", "mage").Return(true, nil).Once()
 		// The picks are judged at the starting level: a level 1 mage's derivation.
-		e.rules.EXPECT().LevelFor("mage", 0).Return(1, nil).Once()
 		e.rules.EXPECT().XPThreshold("mage", 2).Return(2_500, nil).Once()
-		e.rules.EXPECT().THAC0For("wizard", 1).Return(20, nil).Once()
 		e.rules.EXPECT().SavesFor("wizard", 1).Return(ruletablesvc.SavingThrowRow{Group: "wizard", LevelMin: 1, LevelMax: 5}, nil).Once()
 		e.rules.EXPECT().SpellsPerDay(classDef("mage"), 1, mock.Anything).Return(map[int]int{1: 1}, nil).Once()
 		e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()

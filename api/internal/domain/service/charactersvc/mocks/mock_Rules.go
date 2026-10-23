@@ -415,63 +415,6 @@ func (_c *MockRules_IntelligenceFor_Call) RunAndReturn(run func(int) (ruletables
 	return _c
 }
 
-// LevelFor provides a mock function with given fields: class, xp
-func (_m *MockRules) LevelFor(class string, xp int) (int, error) {
-	ret := _m.Called(class, xp)
-
-	if len(ret) == 0 {
-		panic("no return value specified for LevelFor")
-	}
-
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (int, error)); ok {
-		return rf(class, xp)
-	}
-	if rf, ok := ret.Get(0).(func(string, int) int); ok {
-		r0 = rf(class, xp)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(class, xp)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_LevelFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'LevelFor'
-type MockRules_LevelFor_Call struct {
-	*mock.Call
-}
-
-// LevelFor is a helper method to define mock.On call
-//   - class string
-//   - xp int
-func (_e *MockRules_Expecter) LevelFor(class interface{}, xp interface{}) *MockRules_LevelFor_Call {
-	return &MockRules_LevelFor_Call{Call: _e.mock.On("LevelFor", class, xp)}
-}
-
-func (_c *MockRules_LevelFor_Call) Run(run func(class string, xp int)) *MockRules_LevelFor_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_LevelFor_Call) Return(_a0 int, _a1 error) *MockRules_LevelFor_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_LevelFor_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_LevelFor_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // LevelLimit provides a mock function with given fields: race, class
 func (_m *MockRules) LevelLimit(race string, class string) (ruletablesvc.LevelLimitRow, bool) {
 	ret := _m.Called(race, class)
@@ -1159,63 +1102,6 @@ func (_c *MockRules_SpellsPerDay_Call) Return(_a0 map[int]int, _a1 error) *MockR
 }
 
 func (_c *MockRules_SpellsPerDay_Call) RunAndReturn(run func(classes.Class, int, int) (map[int]int, error)) *MockRules_SpellsPerDay_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// THAC0For provides a mock function with given fields: group, level
-func (_m *MockRules) THAC0For(group string, level int) (int, error) {
-	ret := _m.Called(group, level)
-
-	if len(ret) == 0 {
-		panic("no return value specified for THAC0For")
-	}
-
-	var r0 int
-	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (int, error)); ok {
-		return rf(group, level)
-	}
-	if rf, ok := ret.Get(0).(func(string, int) int); ok {
-		r0 = rf(group, level)
-	} else {
-		r0 = ret.Get(0).(int)
-	}
-
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(group, level)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockRules_THAC0For_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'THAC0For'
-type MockRules_THAC0For_Call struct {
-	*mock.Call
-}
-
-// THAC0For is a helper method to define mock.On call
-//   - group string
-//   - level int
-func (_e *MockRules_Expecter) THAC0For(group interface{}, level interface{}) *MockRules_THAC0For_Call {
-	return &MockRules_THAC0For_Call{Call: _e.mock.On("THAC0For", group, level)}
-}
-
-func (_c *MockRules_THAC0For_Call) Run(run func(group string, level int)) *MockRules_THAC0For_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(string), args[1].(int))
-	})
-	return _c
-}
-
-func (_c *MockRules_THAC0For_Call) Return(_a0 int, _a1 error) *MockRules_THAC0For_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockRules_THAC0For_Call) RunAndReturn(run func(string, int) (int, error)) *MockRules_THAC0For_Call {
 	_c.Call.Return(run)
 	return _c
 }

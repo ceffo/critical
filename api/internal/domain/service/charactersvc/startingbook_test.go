@@ -95,9 +95,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 func expectClassAt(e *env, class string, xp, level int, slots map[int]int) {
 	group, _ := e.rules.ClassGroup(class) // the fixture's definitions (newRules)
 	e.rules.EXPECT().RaceAllows(mock.Anything, class).Return(true, nil).Maybe()
-	e.rules.EXPECT().LevelFor(class, xp).Return(level, nil).Maybe()
 	e.rules.EXPECT().XPThreshold(class, level+1).Return(xp+1, nil).Maybe()
-	e.rules.EXPECT().THAC0For(group, level).Return(20, nil).Maybe()
 	e.rules.EXPECT().SavesFor(group, level).Return(ruletablesvc.SavingThrowRow{}, nil).Maybe()
 	switch class {
 	case "mage":
@@ -186,7 +184,7 @@ func TestCreate_Step20_7_LimitsAtTheStartingLevel(t *testing.T) {
 			spellRefusal("mirror_image", charactersvc.CodeSpellLevelAboveClass),
 		},
 		{
-			"level 9 mage, 6th-level spell", 40_000, 9, mage9Slots, int14,
+			"level 9 mage, 6th-level spell", xpAt(t, "mage", 9), 9, mage9Slots, int14,
 			[]string{"cloudkill", "death_fog"},
 			spellRefusal("death_fog", charactersvc.CodeSpellLevelAboveClass),
 		},
@@ -201,7 +199,7 @@ func TestCreate_Step20_7_LimitsAtTheStartingLevel(t *testing.T) {
 			nil,
 		},
 		{
-			"level 9 mage, Int 9, 5th-level spell", 40_000, 9, mage9Slots, int9,
+			"level 9 mage, Int 9, 5th-level spell", xpAt(t, "mage", 9), 9, mage9Slots, int9,
 			[]string{"stoneskin", "cloudkill"},
 			spellRefusal("cloudkill", charactersvc.CodeSpellLevelAboveIntelligence),
 		},
@@ -252,9 +250,9 @@ func TestCreate_Step20_7_LimitsAtTheStartingLevel(t *testing.T) {
 // no level, and every refusal is listed by spell, in the order entered.
 func TestDraft_Step20_7_RefusesBySpellAndCode(t *testing.T) {
 	e := newBookEnv(t, int14)
-	expectClassAt(e, "mage", 40_000, 9, mage9Slots)
+	expectClassAt(e, "mage", xpAt(t, "mage", 9), 9, mage9Slots)
 	d, err := e.svc.Draft(context.Background(),
-		elminster(40_000, "read_magic", "bless", "sleep", "cloudkill", "meteor_swarm", "sleep", "fireball"), nil)
+		elminster(xpAt(t, "mage", 9), "read_magic", "bless", "sleep", "cloudkill", "meteor_swarm", "sleep", "fireball"), nil)
 	require.NoError(t, err)
 	assert.Equal(t, &charactersvc.StartingSpellbook{
 		ClassMaxSpellLevel: 5, IntMaxSpellLevel: 7, MaxSpellsPerLevel: 9,
@@ -283,9 +281,9 @@ func TestDraft_Step20_7_ABardAtLevel1HasNoSpellLevel(t *testing.T) {
 	assert.Equal(t, []error{spellRefusal("sleep", charactersvc.CodeSpellLevelAboveClass)}, d.Refusals)
 
 	e = newBookEnv(t, int14)
-	expectClassAt(e, "bard", 2_500, 2, map[int]int{1: 1})
+	expectClassAt(e, "bard", xpAt(t, "bard", 2), 2, map[int]int{1: 1})
 	n = lyra()
-	n.XP, n.Spellbook = 2_500, []string{"sleep", "mirror_image"}
+	n.XP, n.Spellbook = xpAt(t, "bard", 2), []string{"sleep", "mirror_image"}
 	d, err = e.svc.Draft(context.Background(), n, nil)
 	require.NoError(t, err)
 	assert.Equal(t, []charactersvc.SpellLevelCount{{Level: 1, Count: 1}}, d.Spellbook.Levels)

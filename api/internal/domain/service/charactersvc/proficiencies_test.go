@@ -17,9 +17,7 @@ import (
 // expectKelsenAt answers the lookups of Kelsen's read at the realized level 15 with an XP total
 // whose target level is target.
 func expectKelsenAt(e *env, target int) {
-	e.rules.EXPECT().LevelFor("bard", mock.Anything).Return(target, nil).Once()
 	e.rules.EXPECT().XPThreshold("bard", target+1).Return(1_600_000, nil).Once()
-	e.rules.EXPECT().THAC0For("rogue", 15).Return(13, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
 	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()
@@ -40,6 +38,7 @@ func TestDerive_Step3_SlotsFollowTheRealizedLevel(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := newEnvWithBook(t, profBook(t))
 			k := kelsen()
+			k.XPTotal = xpAt(t, "bard", tc.target)
 			k.Proficiencies = picks(p("tumbling", 1), p("cooking", 1), p("tracking", 2), p("blind_fighting", 2), p("old_skill", 2))
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(k, nil).Once()
 			e.xp.EXPECT().Awards(mock.Anything, int64(3)).Return(nil, nil).Once()

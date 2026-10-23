@@ -635,7 +635,7 @@ func TestRealCatalogue_Step20_ThePsionicistsFiguresReadFromTheRealArtifact(t *te
 	xp, err := tables.XPThreshold(class.ID, 5)
 	require.NoError(t, err)
 	assert.Equal(t, 16_500, xp)
-	thac0, err := tables.THAC0For(class.Group, 1)
+	thac0, err := defs.THAC0(class.Group, 1)
 	require.NoError(t, err)
 	assert.Equal(t, 20, thac0)
 	saves, err := tables.SavesFor(class.Group, 1)

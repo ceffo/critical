@@ -194,8 +194,6 @@ type Rules interface {
 	Definitions() (*classes.Registry, error)
 	// RaceAdjustmentsFor is PHB Table 8 for a race.
 	RaceAdjustmentsFor(race string) (map[string]int, error)
-	// LevelFor is the class's level at xp (ADR 0030 step 3).
-	LevelFor(class string, xp int) (int, error)
 	// HitDiceFor is the group's hit die, name level and fixed gain after it.
 	HitDiceFor(group string) (ruletablesvc.HitDiceRow, error)
 	// ConstitutionFor is PHB Table 3.
@@ -382,10 +380,7 @@ func (s *service) HP(_ context.Context, in HPInput) (*HPResult, error) {
 		return nil, &domain.FieldError{Field: "xp", Message: charactersvc.CodeOutOfRange}
 	}
 	group := class.Group
-	level, err := s.rules.LevelFor(in.Class, in.XP)
-	if err != nil {
-		return nil, fmt.Errorf("hp roll: %w", err)
-	}
+	level := class.LevelFor(in.XP)
 	hd, err := s.rules.HitDiceFor(group)
 	if err != nil {
 		return nil, fmt.Errorf("hp roll: %w", err)

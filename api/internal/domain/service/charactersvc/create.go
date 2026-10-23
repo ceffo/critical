@@ -980,7 +980,7 @@ func (s *service) skillsLevel(k checked) (int, error) {
 		if e.Level > 0 {
 			return e.Level, nil
 		}
-		return s.rules.LevelFor(e.Class, e.XP)
+		return k.def.LevelFor(e.XP), nil
 	}
 	return 0, nil
 }

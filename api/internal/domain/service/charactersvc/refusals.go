@@ -1,11 +1,16 @@
 package charactersvc
 
 import (
+	"slices"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The creation's refusal rules (ADR 0030 step 1, ADR 0040 step 8, ADR 0042 steps 1 and 2): pure
@@ -178,4 +183,92 @@ func primeRefusals(n NewCharacter, defs *classes.Registry, scores map[string]int
 		}
 	}
 	return out
+}
+
+// cleanName is the trimmed name, or the field error naming what is wrong.
+func cleanName(raw string) (string, error) {
+	name := strings.TrimSpace(raw)
+	switch {
+	case name == "":
+		return "", &domain.FieldError{Field: "name", Message: CodeEmpty}
+	case utf8.RuneCountInString(name) > MaxNameLen:
+		return "", &domain.FieldError{Field: "name", Message: CodeTooLong}
+	}
+	return name, nil
+}
+
+// validSkills is ADR 0030 steps 1, 17 and 18: a class with skill sets enters
+// its points in its first set (skills.ValidSkillPoints, skills.FirstSet); any
+// other class enters none. The armour is no entry (ADR 0033 step 14).
+func validSkills(n NewCharacter, def classes.Class) (skills.SetPoints, error) {
+	set := skills.FirstSet(def)
+	points, err := skills.ValidSkillPoints(def, set, n.SkillPoints)
+	if err != nil {
+		return nil, err
+	}
+	return skills.SetPoints(nil).With(set, points), nil
+}
+
+// validExceptional is ADR 0030 step 9: an exceptional strength is optional,
+// 1 to 100, and only with Strength 18 for a character one of whose active
+// classes has exceptional_strength (ADR 0040 step 3, ADR 0042 step 12) of a
+// race that rolls it.
+func validExceptional(n NewCharacter, active []classes.Class, race classes.Race) error {
+	switch {
+	case n.StrExceptional == 0:
+		return nil
+	case n.StrExceptional < MinStrExceptional || n.StrExceptional > MaxStrExceptional:
+		return &domain.FieldError{Field: "strExceptional", Message: CodeOutOfRange}
+	}
+	for _, def := range active {
+		if ruletablesvc.ExceptionalStrengthAllowed(def, race, n.Str) {
+			return nil
+		}
+	}
+	return &domain.FieldError{Field: "strExceptional", Message: CodeNotAllowed}
+}
+
+// refusal is the field error of code on field.
+func refusal(field, code string) error { return &domain.FieldError{Field: field, Message: code} }
+
+// creatableClass is the class's definition and whether a character may be created with it (ADR 0040
+// step 8): a class listing a kind the code does not compute yet is not creatable.
+func creatableClass(defs *classes.Registry, id string) (classes.Class, bool) {
+	class, ok := defs.Class(id)
+	return class, ok && class.Implemented()
+}
+
+// raceKnown reports whether the catalogue defines the race.
+func raceKnown(defs *classes.Registry, id string) bool { return slices.Contains(defs.RaceIDs(), id) }
+
+// abilityRefusal is ADR 0030 step 1's range of an ability score as it stands on the sheet, nil when in range.
+func abilityRefusal(field string, v int) error {
+	if v < MinAbility || v > MaxAbility {
+		return refusal(field, CodeOutOfRange)
+	}
+	return nil
+}
+
+// hpMaxRefusal is the range of the max HP entered, nil when in range.
+func hpMaxRefusal(v int) error {
+	if v < MinHPMax || v > MaxHPMax {
+		return refusal("hpMax", CodeOutOfRange)
+	}
+	return nil
+}
+
+// pspMaxRefusal is the range of the PSP maximum entered (ADR 0043 step 4.4); nil enters none.
+func pspMaxRefusal(v *int) error {
+	if v != nil && (*v < 1 || *v > MaxPSPMax) {
+		return refusal(FieldPSPMax, CodeOutOfRange)
+	}
+	return nil
+}
+
+// xpRefusal is the range of the starting XP entered in field, nil when in range.
+func xpRefusal(field string, v int) error {
+	if v < MinStartingXP || v > MaxStartingXP {
+		return refusal(field, CodeOutOfRange)
+	}
+	return nil
 }

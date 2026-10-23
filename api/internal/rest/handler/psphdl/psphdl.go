@@ -55,6 +55,7 @@ type defender interface {
 	RaiseDefence(ctx context.Context, characterID int64, powerID string) (*psionicsvc.RaiseResult, error)
 	Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)
 	Attack(ctx context.Context, characterID int64, req psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)
+	Contact(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.UseResult, error)
 }
 
 // CharacterIDFunc resolves the active character ID from the request context.
@@ -70,6 +71,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec re
 	r.Post("/api/psionics/powers/{id}/raise", render.Handle(Raise(charID, def)))
 	r.Post("/api/psionics/defend", render.Handle(Defend(charID, def)))
 	r.Post("/api/psionics/powers/{id}/attack", render.Handle(Attack(charID, def)))
+	r.Post("/api/psionics/powers/{id}/contact", render.Handle(Contact(charID, def)))
 }
 
 // RaiseDTO is a defence mode's raise as logged: the payload of the
@@ -176,6 +178,53 @@ func Attack(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 	}
 }
 
+type contactBody struct {
+	Target  string `json:"target"`
+	Mind    string `json:"mind"`
+	Level   int    `json:"level"`
+	Defence string `json:"defence"`
+	// Cost is the DM's cost for a level Table 29 has no row for, and only
+	// then (Q15).
+	Cost      *int                  `json:"cost"`
+	Distance  string                `json:"distance"`
+	LifeOrder string                `json:"lifeOrder"`
+	Resisting bool                  `json:"resisting"`
+	Modifiers []psionicsvc.Modifier `json:"modifiers"`
+}
+
+// Contact uses the known contact power {id} on the opponent the body names
+// (ADR 0044 step 9): the check, Table 29's cost for its level and the
+// distance, life-order and resisting lines. The answer is the Use one
+// (UseDTO); a success is in check.contact. 400 on a bad opponent, distance,
+// life order, modifier or cost, or a level Table 29 lacks with no cost given
+// (level_out_of_table);
+// 409 not_a_contact_power, mind_closed, not_enough_psp, power_not_known,
+// not_a_psionicist.
+func Contact(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body contactBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.Contact(r.Context(), charID(r), psionicsvc.ContactRequest{
+			Power: chi.URLParam(r, "id"),
+			Opponent: psionics.Opponent{
+				Target: body.Target, Mind: body.Mind, Level: body.Level, Defence: body.Defence,
+			},
+			Cost:     body.Cost,
+			Distance: body.Distance, LifeOrder: body.LifeOrder, Resisting: body.Resisting,
+			Modifiers: body.Modifiers,
+		})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, UseDTO{
+			Check: res.Check, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max}, LogEntryID: res.LogEntryID, BuffID: res.BuffID,
+		})
+		return nil
+	}
+}
+
 type useBody struct {
 	Modifiers []psionicsvc.Modifier `json:"modifiers"`
 	Cost      *int                  `json:"cost"`
@@ -183,6 +232,8 @@ type useBody struct {
 	// MaintenanceCost is the maintenance of a power whose maintenance cost
 	// is variable, and only then.
 	MaintenanceCost *int `json:"maintenanceCost"`
+	// Target is the mind a power whose cost is contact is used on.
+	Target string `json:"target"`
 }
 
 // UseDTO is a power's use as logged: the check's breakdown (the power_check
@@ -207,6 +258,7 @@ func Use(charID CharacterIDFunc, svc user) render.HandlerFunc {
 		}
 		res, err := svc.Use(r.Context(), charID(r), chi.URLParam(r, "id"), psionicsvc.UseRequest{
 			Modifiers: body.Modifiers, Cost: body.Cost, Score: body.Score, MaintenanceCost: body.MaintenanceCost,
+			Target: body.Target,
 		})
 		if err != nil {
 			return err

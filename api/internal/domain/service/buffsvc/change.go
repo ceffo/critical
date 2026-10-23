@@ -60,6 +60,10 @@ type logPayload struct {
 	// Target is the mind a dismissed tangent or contact row held (ADR 0044
 	// step 3.3: letting go).
 	Target string `json:"target,omitempty"`
+	// ContactPowersEnded are the powers kept up through a dismissed contact
+	// row, which end with it (ADR 0044 step 10), by id in the list's order;
+	// PowerNames names them.
+	ContactPowersEnded []string `json:"contactPowersEnded,omitempty"`
 	// Maintenance is what Next Round charged each maintained power, in the
 	// list's order (ADR 0043 step 14); the entry's PSP delta is their sum,
 	// negated. MaintenanceUnpaid are the powers whose cost the PSPs left

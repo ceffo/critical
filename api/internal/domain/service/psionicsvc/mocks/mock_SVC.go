@@ -138,6 +138,66 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// Contact provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) Contact(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.UseResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Contact")
+	}
+
+	var r0 *psionicsvc.UseResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.ContactRequest) (*psionicsvc.UseResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.ContactRequest) *psionicsvc.UseResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.UseResult)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, psionicsvc.ContactRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Contact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Contact'
+type MockSVC_Contact_Call struct {
+	*mock.Call
+}
+
+// Contact is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req psionicsvc.ContactRequest
+func (_e *MockSVC_Expecter) Contact(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_Contact_Call {
+	return &MockSVC_Contact_Call{Call: _e.mock.On("Contact", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_Contact_Call) Run(run func(ctx context.Context, characterID int64, req psionicsvc.ContactRequest)) *MockSVC_Contact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(psionicsvc.ContactRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Contact_Call) Return(_a0 *psionicsvc.UseResult, _a1 error) *MockSVC_Contact_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Contact_Call) RunAndReturn(run func(context.Context, int64, psionicsvc.ContactRequest) (*psionicsvc.UseResult, error)) *MockSVC_Contact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Defend provides a mock function with given fields: ctx, characterID, req
 func (_m *MockSVC) Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error) {
 	ret := _m.Called(ctx, characterID, req)

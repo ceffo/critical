@@ -88,16 +88,22 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
     await page.setViewportSize(vp);
     await expectNoClippedText(psionics, `psionics step ${vp.width}`);
     // One scrollbar: the step's scroller does not scroll when the editor has its own lists.
-    const doubled = await step.evaluate((el) => {
-      const scrollers = [el, ...el.querySelectorAll("*")].filter(
-        (n) =>
-          n instanceof HTMLElement &&
-          n.scrollHeight > n.clientHeight + 1 &&
-          ["auto", "scroll"].includes(getComputedStyle(n).overflowY),
-      );
-      return scrollers.length;
-    });
-    expect(doubled, `scrolling boxes in the step at ${vp.width}`).toBe(0);
+    // Polled: right after a pick the editor's list re-renders, and a slow runner can catch it mid-layout.
+    await expect
+      .poll(
+        () =>
+          step.evaluate((el) => {
+            const scrollers = [el, ...el.querySelectorAll("*")].filter(
+              (n) =>
+                n instanceof HTMLElement &&
+                n.scrollHeight > n.clientHeight + 1 &&
+                ["auto", "scroll"].includes(getComputedStyle(n).overflowY),
+            );
+            return scrollers.length;
+          }),
+        { message: `scrolling boxes in the step at ${vp.width}` },
+      )
+      .toBe(0);
     await snap(page, `psionics-step-${vp.width}x${vp.height}`);
   }
 

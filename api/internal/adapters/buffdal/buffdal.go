@@ -75,6 +75,8 @@ type jsonBuff struct {
 	// step 3).
 	Target   string `json:"target,omitempty"`
 	Tangents int    `json:"tangents,omitempty"`
+	// ContactFrom is absent from rows not made contact rows (ADR 0044 step 10).
+	ContactFrom int `json:"contact_from,omitempty"`
 }
 
 type jsonEffects struct {
@@ -104,7 +106,7 @@ func (j jsonBuff) toDomain() buffsvc.BuffEffect {
 		Effects: buffsvc.BuffEffects(j.Effects), Note: j.Note, StartRound: j.StartRound, ChargesTotal: j.ChargesTotal,
 		SpellID: j.SpellID, ProficiencyID: j.ProficiencyID, OnOther: j.OnOther,
 		PowerID: j.PowerID, PowerName: j.PowerName, MaintenanceCost: j.MaintenanceCost, MaintenancePeriod: j.MaintenancePeriod, RoundsKept: j.RoundsKept, Defence: j.Defence,
-		Target: j.Target, Tangents: j.Tangents,
+		Target: j.Target, Tangents: j.Tangents, ContactFrom: j.ContactFrom,
 	}
 }
 
@@ -114,7 +116,7 @@ func fromDomain(b buffsvc.BuffEffect) jsonBuff {
 		Effects: jsonEffects(b.Effects), Note: b.Note, StartRound: b.StartRound, ChargesTotal: b.ChargesTotal,
 		SpellID: b.SpellID, ProficiencyID: b.ProficiencyID, OnOther: b.OnOther,
 		PowerID: b.PowerID, PowerName: b.PowerName, MaintenanceCost: b.MaintenanceCost, MaintenancePeriod: b.MaintenancePeriod, RoundsKept: b.RoundsKept, Defence: b.Defence,
-		Target: b.Target, Tangents: b.Tangents,
+		Target: b.Target, Tangents: b.Tangents, ContactFrom: b.ContactFrom,
 	}
 }
 

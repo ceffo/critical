@@ -61,5 +61,38 @@
       "unpaidTargets": ["Goblin shaman"],
       "expired": ["Goblin shaman"]
     }
+  },
+  "letGoEndsPowers": {
+    "payload": {
+      "action": "dismiss",
+      "buff": "Orc",
+      "target": "Orc",
+      "contactPowersEnded": ["inflict_pain"],
+      "powerNames": {
+        "inflict_pain": {
+          "en": "Inflict Pain",
+          "fr": "Infliger la douleur"
+        }
+      }
+    }
+  },
+  "nextRoundContactFree": {
+    "payload": {
+      "action": "next_round",
+      "fromRound": 3,
+      "toRound": 4,
+      "maintenance": [
+        {
+          "powerId": "inflict_pain",
+          "cost": 2
+        }
+      ],
+      "powerNames": {
+        "inflict_pain": {
+          "en": "Inflict Pain",
+          "fr": "Infliger la douleur"
+        }
+      }
+    }
   }
 }

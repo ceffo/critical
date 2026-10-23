@@ -30,6 +30,14 @@ export interface PowerCheckPayload {
   maintenancePeriod?: number;
   /** Warnings the check raised, by code (second_power_this_round). */
   warnings?: string[];
+  /** The mind the check was on: the contact power's target, or the contacted mind of a power paid on contact. */
+  opponent?: string;
+  /** The contact power's target's level (Table 29's row). */
+  level?: number;
+  /** The contact power's score lines (Tables 30 and 31, resisting), by code. */
+  contactModifiers?: { kind: string; code: string; modifier: number }[];
+  /** The contact power's success made (or renewed) the opponent's contact row. */
+  contact?: boolean;
 }
 
 function verdict(p: PowerCheckPayload, t: TFunction): ShortVerdict {
@@ -67,6 +75,23 @@ export function breakdown(p: PowerCheckPayload, t: TFunction): string[] {
   }
   if (p.relearns)
     parts.push(t("log.powerParts.relearns", { count: p.relearns }));
+  if (p.opponent) {
+    parts.push(
+      p.level
+        ? `${t("log.powerParts.opponent", { target: p.opponent })}, ${t("log.powerParts.targetLevel", { level: p.level })}`
+        : t("log.powerParts.opponent", { target: p.opponent }),
+    );
+  }
+  for (const c of p.contactModifiers ?? []) {
+    parts.push(
+      t("log.powerParts.contactLine", {
+        what: t(`log.contactWords.${c.kind}.${c.code}`, {
+          defaultValue: c.code,
+        }),
+        modifier: formatSigned(c.modifier),
+      }),
+    );
+  }
   for (const m of p.modifiers ?? []) {
     parts.push(
       m.reason
@@ -88,6 +113,7 @@ export function breakdown(p: PowerCheckPayload, t: TFunction): string[] {
       }),
     );
   }
+  if (p.contact) parts.push(t("log.powerParts.contactMade"));
   for (const w of p.warnings ?? []) {
     parts.push(t(`log.powerParts.warning.${w}`, { defaultValue: w }));
   }

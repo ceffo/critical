@@ -1243,6 +1243,71 @@ func (_c *MockSVC_ListStatus_Call) RunAndReturn(run func(context.Context, int64)
 	return _c
 }
 
+// MakeContact provides a mock function with given fields: ctx, characterID, target
+func (_m *MockSVC) MakeContact(ctx context.Context, characterID int64, target string) (buffsvc.TangentsChange, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID, target)
+
+	if len(ret) == 0 {
+		panic("no return value specified for MakeContact")
+	}
+
+	var r0 buffsvc.TangentsChange
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) (buffsvc.TangentsChange, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID, target)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string) buffsvc.TangentsChange); ok {
+		r0 = rf(ctx, characterID, target)
+	} else {
+		r0 = ret.Get(0).(buffsvc.TangentsChange)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID, target)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64, string) error); ok {
+		r2 = rf(ctx, characterID, target)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockSVC_MakeContact_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'MakeContact'
+type MockSVC_MakeContact_Call struct {
+	*mock.Call
+}
+
+// MakeContact is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - target string
+func (_e *MockSVC_Expecter) MakeContact(ctx interface{}, characterID interface{}, target interface{}) *MockSVC_MakeContact_Call {
+	return &MockSVC_MakeContact_Call{Call: _e.mock.On("MakeContact", ctx, characterID, target)}
+}
+
+func (_c *MockSVC_MakeContact_Call) Run(run func(ctx context.Context, characterID int64, target string)) *MockSVC_MakeContact_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_MakeContact_Call) Return(_a0 buffsvc.TangentsChange, _a1 actionlog.Snapshot, _a2 error) *MockSVC_MakeContact_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockSVC_MakeContact_Call) RunAndReturn(run func(context.Context, int64, string) (buffsvc.TangentsChange, actionlog.Snapshot, error)) *MockSVC_MakeContact_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Module provides a mock function with no fields
 func (_m *MockSVC) Module() domain.Module {
 	ret := _m.Called()

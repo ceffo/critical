@@ -179,3 +179,28 @@ func TestLongRest_Step7_EndsMaintainedPowers(t *testing.T) {
 	assert.Contains(t, e.Snapshots, f.buffSnap)
 	assert.JSONEq(t, `{"slotsReset":0,"itemsRefilled":[],"powersEnded":["levitation"],"powerNames":{"levitation":{"en":"Levitation","fr":"Lévitation"}}}`, string(e.Payload))
 }
+
+// ADR 0043 step 7 with ADR 0044 step 10: a contact row and the power kept up
+// through it both end, the entry naming the power and the target.
+func TestLongRest_Step7_EndsTheContactAndItsPower(t *testing.T) {
+	f := newFixture(t)
+	f.maintained = []buffsvc.BuffEffect{
+		{ID: "c", Name: "Orc", Target: "Orc", MaintenanceCost: buffsvc.LinkMaintenanceCost, MaintenancePeriod: 1, ContactFrom: 1},
+		{ID: "p", Name: "Inflict Pain", PowerID: "inflict_pain", PowerName: localized.Text{"en": "Inflict Pain", "fr": "Douleur"}, MaintenanceCost: 2, Target: "Orc"},
+	}
+	f.buffSnap = actionlog.Snapshot{Key: "buffs", Before: []byte(`[1,2]`), After: []byte(`[]`)}
+	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return(nil, nil)
+	f.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil).Maybe()
+	f.psp.EXPECT().NightsPSPRecovery(mock.Anything, int64(1)).Return(0, nil).Once()
+
+	_, err := f.svc.LongRest(context.Background(), 1)
+	require.NoError(t, err)
+	require.Len(t, f.entries, 1)
+	e := f.entries[0]
+	assert.Contains(t, e.Snapshots, f.buffSnap)
+	assert.JSONEq(t, `{"slotsReset":0,"itemsRefilled":[],"powersEnded":["inflict_pain"],"targetsEnded":["Orc"],
+		"powerNames":{"inflict_pain":{"en":"Inflict Pain","fr":"Douleur"}}}`, string(e.Payload))
+}

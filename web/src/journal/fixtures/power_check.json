@@ -66,5 +66,69 @@
       "spent": 12
     },
     "roll": true
+  },
+  "contact": {
+    "pspDelta": -8,
+    "payload": {
+      "power": "contact",
+      "name": {
+        "en": "Contact",
+        "fr": "Contact"
+      },
+      "ability": "wis",
+      "abilityScore": 15,
+      "opponent": "Bird",
+      "level": 7,
+      "contactModifiers": [
+        {
+          "kind": "distance",
+          "code": "miles_10",
+          "modifier": -3
+        },
+        {
+          "kind": "life_order",
+          "code": "bird",
+          "modifier": -3
+        },
+        {
+          "kind": "resistance",
+          "code": "resisting",
+          "modifier": -2
+        }
+      ],
+      "target": 7,
+      "d20": 5,
+      "outcome": "success",
+      "success": true,
+      "cost": 8,
+      "spent": 8,
+      "maintenanceCost": 1,
+      "maintenancePeriod": 1,
+      "contact": true
+    },
+    "roll": true
+  },
+  "costIsContact": {
+    "pspDelta": 0,
+    "payload": {
+      "power": "inflict_pain",
+      "name": {
+        "en": "Inflict Pain",
+        "fr": "Infliger la douleur"
+      },
+      "ability": "con",
+      "abilityScore": 16,
+      "powerModifier": -4,
+      "opponent": "Orc",
+      "target": 12,
+      "d20": 8,
+      "outcome": "success",
+      "success": true,
+      "cost": 0,
+      "spent": 0,
+      "maintenanceCost": 2,
+      "maintenancePeriod": 1
+    },
+    "roll": true
   }
 }

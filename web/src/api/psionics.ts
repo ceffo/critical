@@ -22,6 +22,8 @@ export interface UsePowerRequest {
   maintenanceCost?: number;
   /** The score of a power that has none of its own (the book gives it in the text). */
   score?: number;
+  /** The mind a power paid on contact is used on: one the character made contact with in an earlier round. */
+  target?: string;
 }
 
 /** The power check as the server logged it (the power_check entry's payload, as far as the panel shows it). */
@@ -37,6 +39,11 @@ export interface PowerCheckResult {
   maintenancePeriod?: number;
   /** Warning codes: "second_power_this_round". */
   warnings?: string[];
+  /** The mind the check was on (the contact power's target, or a contacted mind), and the contact power's extras. */
+  opponent?: string;
+  level?: number;
+  contactModifiers?: { kind: string; code: string; modifier: number }[];
+  contact?: boolean;
 }
 
 /** POST /api/psionics/powers/{id}/use: checks a known power and spends its initial cost (steps 10-13). */
@@ -145,4 +152,25 @@ export function attackPower(
   req: AttackRequest,
 ): Promise<{ attack: AttackResult; psp: PspPool; logEntryId: number }> {
   return post(`/api/psionics/powers/${encodeURIComponent(id)}/attack`, req);
+}
+
+/** What the contact power sends: the open mind, its level (Table 29's row), the distance and life-order codes (Tables 30 and 31), the DM's resisting call, the labelled modifiers. */
+export interface ContactRequest {
+  target: string;
+  mind: "open" | "closed";
+  level: number;
+  /** The DM's cost, only for a level the contact table has no row for (level_out_of_table). */
+  cost?: number;
+  distance: string;
+  lifeOrder: string;
+  resisting?: boolean;
+  modifiers: PowerModifier[];
+}
+
+/** POST /api/psionics/powers/{id}/contact: uses the contact power on a mind (ADR 0044 step 9); the answer is the use's. */
+export function contactPower(
+  id: string,
+  req: ContactRequest,
+): Promise<{ check: PowerCheckResult; psp: PspPool; logEntryId: number }> {
+  return post(`/api/psionics/powers/${encodeURIComponent(id)}/contact`, req);
 }

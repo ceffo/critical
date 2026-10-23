@@ -79,6 +79,20 @@ func TestRuleTables_Step1_ContactCostAndModifiers(t *testing.T) {
 		_, err := tbl.ContactCost(level)
 		require.ErrorIs(t, err, ruletablesvc.ErrLevelOutOfTable, "level %d", level)
 	}
+	for _, tc := range []struct {
+		kind, code string
+		want       int
+	}{
+		{ruletablesvc.ContactDistance, "miles_10", -3},
+		{ruletablesvc.ContactLifeOrder, "bird", -3},
+		{ruletablesvc.ContactResistance, "resisting", -2},
+	} {
+		got, err := tbl.ContactModifier(tc.kind, tc.code)
+		require.NoError(t, err, tc.code)
+		assert.Equal(t, tc.want, got, tc.code)
+	}
+	_, err := tbl.ContactModifier(ruletablesvc.ContactDistance, "bird")
+	require.Error(t, err, "a code of another kind")
 
 	for name, tc := range map[string]struct {
 		change func(rt map[string]any)

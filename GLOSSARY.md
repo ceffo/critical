@@ -261,8 +261,12 @@ _Code_: TangentsChange
 An attack mode's use on an opponent: one cost for two power checks, each a psychic contest against the opponent's defence (Table 14's cell on the score), half the cost when both fail; won contests are tangents on a closed mind, the mode's effect on an open or contacted one. Logged as a `psionic_attack` entry. [ADR 0044](docs/adr/0044-psionic-combat.md) step 7.
 _Code_: AttackRecord, AttackCheck
 
+**Contact power** (fr: pouvoir de contact):
+The power that makes contact with an open mind (never a closed one): its cost is Table 29's row for the target's level, its score takes the distance, life-order and resisting lines (`contact_modifiers`), and a success puts the target's contact row. A power whose cost is `contact` then needs that row from an earlier round, costs only its plus amount, and keeps the contact free while it is kept up; ending the contact ends it. Logged as a `power_check` entry. [ADR 0044](docs/adr/0044-psionic-combat.md) steps 9 and 10.
+_Code_: ContactRequest, ContactLine
+
 **Initial cost** (fr: coût initial):
-The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (refused until telepathic combat) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
+The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (paid by a contact, ADR 0044 step 10) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
 _Code_: Cost
 
 **Maintenance cost** (fr: coût de maintien):

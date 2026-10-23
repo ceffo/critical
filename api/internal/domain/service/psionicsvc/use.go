@@ -24,8 +24,9 @@ var (
 	// ErrPowerNotKnown: the power is not one the character knows (step 9),
 	// or no power of the catalogue.
 	ErrPowerNotKnown = errors.New("the character does not know that power")
-	// ErrNeedsContact: the power's cost is paid on contact, telepathic
-	// combat's (layer 2, step 21).
+	// ErrNeedsContact: the power's maintenance is paid on contact (no power
+	// of the catalogue has one; a power whose initial cost is contact is ADR
+	// 0044 step 10's).
 	ErrNeedsContact = errors.New("the power needs contact")
 	// ErrNotEnoughPSP: the current PSPs are under the power's full initial
 	// cost (step 11, Q6).
@@ -66,12 +67,14 @@ type Modifier struct {
 // table gives it), and only then. Score is the power score of a power whose
 // score is a formula in its text (the catalogue has none), and only then.
 // MaintenanceCost is the maintenance of a power whose maintenance cost is
-// `variable`, and only then (step 13).
+// `variable`, and only then (step 13). Target is the mind a power whose
+// cost is contact is used on (ADR 0044 step 10), and only then.
 type UseRequest struct {
 	Modifiers       []Modifier
 	Cost            *int
 	Score           *int
 	MaintenanceCost *int
+	Target          string
 }
 
 // UseResult is a power's check as logged, with the pool after it. BuffID is
@@ -117,6 +120,17 @@ type CheckRecord struct {
 	MaintenancePeriod int `json:"maintenancePeriod,omitempty"`
 	// Warnings are the check's warnings (step 12: WarnSecondPowerThisRound).
 	Warnings []string `json:"warnings,omitempty"`
+	// Opponent is the mind the check was on (ADR 0044 steps 9 and 10): the
+	// contact power's target, or the contacted mind of a power whose cost is
+	// contact; "" for every other power. Level is the contact power's
+	// target's level (Table 29's row) and ContactModifiers its score's
+	// lines (Tables 30 and 31, resisting).
+	Opponent         string        `json:"opponent,omitempty"`
+	Level            int           `json:"level,omitempty"`
+	ContactModifiers []ContactLine `json:"contactModifiers,omitempty"`
+	// Contact: the contact power's success made (or renewed) the
+	// opponent's contact row (step 9).
+	Contact bool `json:"contact,omitempty"`
 }
 
 // Use is ADR 0043 steps 10 and 11: a power check of a known power, one d20
@@ -127,8 +141,12 @@ type CheckRecord struct {
 // row on (or renews it) in the same entry, its snapshot beside the PSPs, so
 // the undo takes both back (step 13). Refused before the roll:
 // ErrNotPsionicist, ErrPowerNotKnown, ErrDefenceModeIsRaised (a defence mode
-// is raised, ADR 0044 step 4), ErrNeedsContact, a *domain.FieldError on
-// "modifiers", "cost", "maintenanceCost" or "score", ErrNotEnoughPSP.
+// is raised, ADR 0044 step 4), ErrUseContactRoute (the contact power, ADR
+// 0044 step 9), ErrNoContact (a power whose cost is contact
+// names a target no contact row made in an earlier round holds, ADR 0044
+// step 10: its initial cost is then its plus amount, its row carries the
+// target), ErrNeedsContact, a *domain.FieldError on "modifiers", "cost",
+// "maintenanceCost", "score" or "target", ErrNotEnoughPSP.
 func (s *service) Use(ctx context.Context, characterID int64, powerID string, req UseRequest) (*UseResult, error) {
 	mods, err := modifiers(req.Modifiers)
 	if err != nil {
@@ -150,10 +168,18 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		if p.Kind == catalogue.KindDefenceMode {
 			return ErrDefenceModeIsRaised
 		}
+		if p.InitialCost.Table != "" {
+			return ErrUseContactRoute
+		}
+		target, err := s.contactTarget(ctx, characterID, p, req.Target)
+		if err != nil {
+			return err
+		}
 		rec, err := checkOf(c, p, req, mods)
 		if err != nil {
 			return err
 		}
+		rec.Opponent = target
 		pool := charactersvc.PSPPool{}
 		if c.Derived.PSP != nil {
 			pool = *c.Derived.PSP
@@ -177,6 +203,7 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		if rec.Success && rec.MaintenanceCost > 0 {
 			row, snap, err := s.buffs.Add(ctx, characterID, buffsvc.BuffEffect{
 				Name: rowName(p), PowerID: p.ID, PowerName: p.Name, MaintenanceCost: rec.MaintenanceCost, MaintenancePeriod: rec.MaintenancePeriod,
+				Target: target,
 			})
 			if err != nil {
 				return fmt.Errorf("maintain power: %w", err)
@@ -211,7 +238,11 @@ func checkOf(c *charactersvc.Character, p catalogue.Power, req UseRequest, mods 
 	rec := CheckRecord{Power: p.ID, Name: p.Name, Relearns: psionics.Relearns(c.PsionicPicks, p.ID), Modifiers: mods}
 	switch p.InitialCost.Kind {
 	case catalogue.CostContact:
-		return CheckRecord{}, ErrNeedsContact
+		// ADR 0044 step 10 (Q12): the contact paid for the rest.
+		if req.Cost != nil {
+			return CheckRecord{}, domain.FieldErrorf("cost", "the power's cost is contact, not entered")
+		}
+		rec.Cost = p.InitialCost.Plus
 	case catalogue.CostVariable:
 		if req.Cost == nil || *req.Cost < 1 {
 			return CheckRecord{}, domain.FieldErrorf("cost", "the power's cost is variable: give it, at least 1")

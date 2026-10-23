@@ -1542,7 +1542,8 @@
       "endCapped": "rolls {{dice}}: {{rolls}}, no HP regained",
       "endCappedNamed": "{{buff}} rolls {{dice}}: {{rolls}}, no HP regained",
       "withEnd": "{{text}}: {{end}}",
-      "withEndAfter": "{{text}}. {{end}}"
+      "withEndAfter": "{{text}}. {{end}}",
+      "contactEnded": "— powers ended with it: {{powers}}"
     },
     "attack": {
       "miss": "{{weapon}} vs AC {{ac}}: miss",
@@ -1787,6 +1788,33 @@
       "maintained": "kept up: {{cost}} PSPs every {{count}} rounds",
       "warning": {
         "second_power_this_round": "second power this round"
+      },
+      "opponent": "on {{target}}",
+      "targetLevel": "target level {{level}}",
+      "contactLine": "{{what}} {{modifier}}",
+      "contactMade": "contact made"
+    },
+    "contactWords": {
+      "distance": {
+        "sight": "in sight",
+        "mile_1": "1 mile",
+        "miles_10": "10 miles",
+        "miles_100": "100 miles",
+        "miles_1000": "1,000 miles",
+        "miles_10000": "10,000 miles"
+      },
+      "life_order": {
+        "mammal": "mammal",
+        "marsupial": "marsupial",
+        "bird": "bird",
+        "reptile_amphibian": "reptile or amphibian",
+        "fish": "fish",
+        "arachnid_insect": "arachnid or insect",
+        "monster": "monster",
+        "plant": "plant"
+      },
+      "resistance": {
+        "resisting": "resisting"
       }
     }
   },
@@ -2322,7 +2350,7 @@
     "no_spellbook": "This class has no spellbook.",
     "no_psp_pool": "This character has no PSP pool.",
     "power_not_known": "The character does not know that power.",
-    "needs_contact": "This power needs contact, which is not available yet.",
+    "needs_contact": "This power is paid on contact, which this action does not handle.",
     "not_enough_psp": "Not enough PSPs for this power's initial cost.",
     "power_not_maintained": "This power is not maintained.",
     "not_in_combat": "This defence mode is raised for a combat round: no round is running.",
@@ -2347,7 +2375,12 @@
     "cannot_turn_undead": "This priest cannot turn that undead yet.",
     "class_cannot_turn": "This class does not turn undead.",
     "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled.",
-    "skill_blocked_by_armour": "Your body armour blocks that skill."
+    "skill_blocked_by_armour": "Your body armour blocks that skill.",
+    "not_a_contact_power": "This power is not the contact power.",
+    "mind_closed": "Contact does not work on a closed mind.",
+    "level_out_of_table": "The contact table has no row for that level: give the cost the DM sets.",
+    "use_contact_route": "This power is used through Contact, not Use.",
+    "no_contact": "No contact with that target from an earlier round: use Contact on it first."
   },
   "lastShort": {
     "attack": "Attack",

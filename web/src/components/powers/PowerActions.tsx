@@ -32,7 +32,9 @@ export function PowerActions({ power }: { power: Power }) {
   const maintained = !!row;
   // The minds already held in a tangent or contact row, offered as the attack's targets.
   const held = useBuffsStore((s) => s.buffs);
-  const targets = [...new Set(held.flatMap((b) => (b.target ? [b.target] : [])))];
+  const targets = [
+    ...new Set(held.flatMap((b) => (b.target ? [b.target] : []))),
+  ];
   const name = localized(i18n.language, power.name);
   const defence = power.kind === "defence_mode";
   const attackMode = power.kind === "attack_mode";

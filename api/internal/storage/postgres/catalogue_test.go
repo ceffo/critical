@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -700,4 +701,24 @@ func testdataSeedRefs(t *testing.T) []catalogue.Ref {
 		}
 	}
 	return refs
+}
+
+// A start whose re-typing fails does not go on: the import returns the error (and with it the
+// composition's start), naming the spell.
+type retypeFailing struct{ *fakeStore }
+
+func (s retypeFailing) SetSpellStats(context.Context, storeq.SetSpellStatsParams) error {
+	return errors.New("boom")
+}
+
+func TestImportCatalogue_Step26_3_AFailedRetypeFailsTheStart(t *testing.T) {
+	f := newFakeStore()
+	cat := fixtureCatalogue(t)
+	require.NoError(t, importOn(f, cat, nil))
+	for i := range f.t.Spells {
+		f.t.Spells[i].Stats = sql.NullString{}
+	}
+	err := importCatalogue(context.Background(), f, retypeFailing{f}, cat, nil)
+	require.ErrorContains(t, err, "re-type spell")
+	require.ErrorContains(t, err, "boom")
 }

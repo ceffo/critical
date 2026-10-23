@@ -36,6 +36,10 @@ func TestSpellStats_Step26_1_AllSixFieldsAreTypedWithTheirRaw(t *testing.T) {
 	var back spellstats.Stats
 	require.NoError(t, json.Unmarshal(blob, &back))
 	assert.Equal(t, st, back)
+	// A raw that is not a common value has no label (the label is the parser's, not the raw's).
+	assert.Empty(t, st.Range.Label)
+	assert.Empty(t, st.Area.Label)
+	assert.Equal(t, "neg_", st.Save.Label, "a common value does")
 }
 
 // ADR 0021 step 26.2: a text the parser does not read keeps its raw as a special kind with no
@@ -86,7 +90,7 @@ func TestParse_Step26_4_CommonValuesCarryTheirLabel(t *testing.T) {
 
 	for raw, want := range map[string]string{
 		"Line of sight":      "line_of_sight",
-		" hearing  RANGE.":   "hearing_range",
+		" hearing  RANGE ":   "hearing_range",
 		"The caster's hand":  "the_caster_s_hand",
 		"Special":            "special",
 		"Variable":           "variable",
@@ -96,13 +100,20 @@ func TestParse_Step26_4_CommonValuesCarryTheirLabel(t *testing.T) {
 	} {
 		assert.Equal(t, want, spellstats.ParseArea(raw).Label, raw)
 	}
-	assert.Empty(t, spellstats.ParseDuration("Instantaneous").Label, "a kind needs no label")
-	assert.Empty(t, spellstats.ParseSave("Neg.").Label)
+	assert.Equal(t, "instantaneous", spellstats.ParseDuration("Instantaneous").Label)
+	assert.Equal(t, "permanent", spellstats.ParseDuration("Permanent").Label)
+	assert.Equal(t, "touch", spellstats.ParseRange("Touch").Label)
+	assert.Equal(t, "unlimited", spellstats.ParseRange("Unlimited").Label)
+	assert.Equal(t, "neg_", spellstats.ParseSave("Neg.").Label)
+	assert.Equal(t, "none", spellstats.ParseSave("None").Label)
+	assert.Equal(t, "1_2", spellstats.ParseSave("1/2").Label)
+	assert.Empty(t, spellstats.ParseSave("Neg. or 1/2").Label, "whole text only")
+	assert.Empty(t, spellstats.ParseDuration("3 rds./level").Label)
 
 	blob, err := json.Marshal(st)
 	require.NoError(t, err)
 	assert.Contains(t, string(blob), `"label":"special"`)
-	blob, err = json.Marshal(spellstats.Parse(spellstats.Raw{Range: "Touch"}))
+	blob, err = json.Marshal(spellstats.Parse(spellstats.Raw{Range: "30 yds."}))
 	require.NoError(t, err)
 	assert.NotContains(t, string(blob), `"label"`)
 }

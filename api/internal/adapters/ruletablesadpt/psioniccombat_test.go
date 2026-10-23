@@ -70,7 +70,7 @@ func TestRuleTables_Step1_AttackVersusDefence(t *testing.T) {
 // code twice or unknown are refused at start.
 func TestRuleTables_Step1_ContactCostAndModifiers(t *testing.T) {
 	tbl := phb(t)
-	for level, want := range map[int]int{1: 1, 2: 1, 3: 2, 5: 3, 8: 3, 9: 5, 20: 5} {
+	for level, want := range map[int]int{1: 3, 5: 3, 6: 8, 10: 8, 11: 13, 16: 18, 20: 18} {
 		got, err := tbl.ContactCost(level)
 		require.NoError(t, err, "level %d", level)
 		assert.Equal(t, want, got, "level %d", level)

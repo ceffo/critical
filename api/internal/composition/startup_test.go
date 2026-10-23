@@ -549,3 +549,17 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 		assert.Equal(t, fire, got)
 	}
 }
+
+// ADR 0044 step 1.1: a cell of the attack-versus-defence grid naming a devotion where a mode
+// belongs refuses the start, so the power-kind check runs in the composition root.
+func TestStartup_Step1_RefusesAGridCellNamingADevotion(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		for _, r := range d["rule_tables"].(map[string]any)["attack_versus_defence"].([]any) {
+			if r.(map[string]any)["attack"] == "psionic_blast" {
+				r.(map[string]any)["attack"] = "contact"
+			}
+		}
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, `"contact" is not an attack mode`)
+}

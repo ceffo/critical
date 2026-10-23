@@ -324,6 +324,11 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 			return ruletablesvc.PowerProgressionRow(r)
 		}),
 		PSPRecovery: mapRows(d.PSPRecovery, func(r pspRecoveryDTO) ruletablesvc.PSPRecoveryRow { return ruletablesvc.PSPRecoveryRow(r) }),
+		AttackVersusDefence: mapRows(d.AttackVersusDefence, func(r attackVersusDefenceDTO) ruletablesvc.AttackVersusDefenceRow {
+			return ruletablesvc.AttackVersusDefenceRow(r)
+		}),
+		ContactCost:      mapRows(d.ContactCost, func(r contactCostDTO) ruletablesvc.ContactCostRow { return ruletablesvc.ContactCostRow(r) }),
+		ContactModifiers: mapRows(d.ContactModifiers, func(r contactModifierDTO) ruletablesvc.ContactModifierRow { return ruletablesvc.ContactModifierRow(r) }),
 	}, defs)
 }
 

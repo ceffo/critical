@@ -94,10 +94,10 @@ two power ids in its row of data.
       (Switch Personality's "contact +30", which format 13 read as `contact`;
       `catalogue-inputs/POWER_STATS` gains the line).
    5. **Rollout, as ADR 0021 step 18.6**: the API reads format 18 only.
-   Tests: `Schema_Step25_OnlyFormat18IsValid` (cataloguecheck), `Parse_Step25_ReadsFormat18AndRefusesFormat17`
-   (catalogueadpt), `RuleTables_Step1_AttackVersusDefence` (ruletablesadpt: the 25 cells, mind
+   Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck), `TestParse_Step25_ReadsFormat18AndRefusesFormat17`
+   (catalogueadpt), `TestRuleTables_Step1_AttackVersusDefence` (ruletablesadpt: the 25 cells, mind
    thrust against tower of iron will -5, a cell naming a devotion refused at start),
-   `RuleTables_Step1_ContactCostAndModifiers`.
+   `TestRuleTables_Step1_ContactCostAndModifiers`.
 
 ### The opponent and the combat state
 

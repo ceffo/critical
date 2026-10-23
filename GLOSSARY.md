@@ -241,6 +241,14 @@ _Code_: PowerScore
 The d20 roll at or under the power score that decides whether a psionic power works; logged as a `power_check` entry with its breakdown and the PSPs spent. [ADR 0043](docs/adr/0043-psionics.md) steps 10 and 11. _Avoid_: check (alone).
 _Code_: CheckRecord
 
+**Psychic contest** (fr: lutte psychique):
+An attack mode's power check against a defence mode's: the higher successful roll wins, the defender takes ties and double failures; a power kept from an earlier round checks at +1 and its failure counts as a success of 1. [ADR 0044](docs/adr/0044-psionic-combat.md) step 6.
+_Code_: ContestSide, ContestCheck
+
+**Raised defence** (fr: défense levée):
+A defence mode raised for the round, paid at the raise with no roll; a buff row that ends at the next move of the round counter. **Standing defence** (fr: défense permanente): a defence mode kept at no cost (mind blank), an untimed row. The **current defence** is the raised one, else the standing one. [ADR 0044](docs/adr/0044-psionic-combat.md) steps 4 and 5.
+_Code_: DefenceKind
+
 **Initial cost** (fr: coût initial):
 The PSPs a power costs when it is used; half on a failed check, rounded up. The catalogue holds a number, or the word `variable` (the player enters it) or `contact` (refused until telepathic combat) where the book prints none. [ADR 0043](docs/adr/0043-psionics.md) step 11.
 _Code_: Cost

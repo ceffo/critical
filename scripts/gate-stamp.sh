@@ -9,7 +9,8 @@
 set -euo pipefail
 tree_now() { # tree of the working copy, through a throwaway index: the real index is untouched
   local idx; idx=$(mktemp); trap 'rm -f "$idx"' RETURN
-  cp "$(git -C "$1" rev-parse --git-path index)" "$idx" 2>/dev/null || true
+  local src; src=$(git -C "$1" rev-parse --git-path index); [[ $src = /* ]] || src="$1/$src" # relative to $1, not to our cwd
+  cp "$src" "$idx" 2>/dev/null || true
   GIT_INDEX_FILE=$idx git -C "$1" add -A >/dev/null 2>&1
   GIT_INDEX_FILE=$idx git -C "$1" write-tree
 }

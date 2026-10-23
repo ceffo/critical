@@ -428,7 +428,7 @@ func once[R any](rows []R, key func(R) string, want []string) error {
 }
 
 func pairs(a, b []string) []string {
-	out := make([]string, 0, len(a)*len(b))
+	var out []string
 	for _, x := range a {
 		for _, y := range b {
 			out = append(out, x+" "+y)

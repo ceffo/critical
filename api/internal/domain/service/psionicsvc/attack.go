@@ -14,8 +14,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 )
 
-// ErrNotAnAttackMode: an attack of a power that is not an attack mode (ADR
-// 0044 step 7), refused before anything is rolled or written.
+// ErrNotAnAttackMode is the refusal of an attack of a power that is not an
+// attack mode (ADR 0044 step 7), before anything is rolled or written.
 var ErrNotAnAttackMode = errors.New("the power is not an attack mode")
 
 // AttackRequest is an attack mode's use (step 7): the mode, the opponent the

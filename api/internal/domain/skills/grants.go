@@ -11,25 +11,11 @@ type LevelGrants struct {
 	SkillPoints    int
 }
 
-// GrantsAt is ADR 0037 step 15: what level grants a character of class beyond hit points, the
-// slots of step 3's pools gained over the level below (Table 34 from book; none without a row)
-// and a thief's or a bard's skill points (ADR 0030 steps 17 and 18). Zero at level 1.
-func GrantsAt(book Book, class string, level int) LevelGrants {
-	var g LevelGrants
-	if row, ok := book.SlotRowOf(class); ok {
-		g.WeaponSlots, g.NonweaponSlots = ruletablesvc.SlotsGainedAt(row, level)
-	}
-	if def, ok := book.ClassDef(class); ok {
-		for _, rs := range RogueSetsAt(def, level) {
-			g.SkillPoints += ruletablesvc.SkillPointsGainedAt(&rs, level)
-		}
-	}
-	return g
-}
-
-// GrantsOf is GrantsAt for a level of the entry of class among a character's active entries
-// cls (ADR 0042 steps 7 and 15): the slots of the combined pools at that entry's level over the
-// level below, and the skill points the level grants when class has them.
+// GrantsOf is ADR 0037 step 15 for a level of the entry of class among a character's active
+// entries cls (ADR 0042 steps 7 and 15, ADR 0046 step 4.2: the one rule, a single-class
+// character being one entry): the slots of the combined pools at that entry's level over the
+// level below (Table 34 from book; none without a row), and a thief's or a bard's skill points
+// the level grants (ADR 0030 steps 17 and 18). Zero at level 1.
 func GrantsOf(book Book, cls Classes, class string, level int) LevelGrants {
 	var g LevelGrants
 	if level >= 2 {

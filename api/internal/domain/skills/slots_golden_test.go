@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
@@ -22,7 +21,7 @@ var updateGolden = flag.Bool("update", false, "rewrite the golden files")
 // ADR 0046 step 4.2 (step 7: the values are the old code's, committed in
 // testdata/golden/slots_grants.json): what each level from 0 to 20 grants a character of each
 // class of the fixture catalogue (ADR 0037 step 15, profBook's Table 34), and of a class with no
-// row. GrantsOf for the one entry of a single-class character grants the same.
+// row, read through GrantsOf for the one entry of a single-class character (the one path).
 func TestSlots_Step4_GrantsAtEqualsGrantsOfForOneEntry(t *testing.T) {
 	book := profBook(t)
 	type grant struct {
@@ -33,9 +32,7 @@ func TestSlots_Step4_GrantsAtEqualsGrantsOfForOneEntry(t *testing.T) {
 	lines := []string{}
 	for _, class := range append(cataloguetest.Definitions(t).ClassIDs(), "no_such_class") {
 		for level := 0; level <= 20; level++ {
-			g := skills.GrantsAt(book, class, level)
-			one := skills.Classes{{Class: class, Level: level}}
-			assert.Equal(t, g, skills.GrantsOf(book, one, class, level), "%s level %d", class, level)
+			g := skills.GrantsOf(book, skills.Classes{{Class: class, Level: level}}, class, level)
 			b, err := json.Marshal(grant{class, level, g})
 			require.NoError(t, err)
 			lines = append(lines, string(b))

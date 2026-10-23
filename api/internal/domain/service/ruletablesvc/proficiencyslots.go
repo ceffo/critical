@@ -37,19 +37,6 @@ type WeaponPool = slots.WeaponPool
 // WeaponSlots is slots.Weapon (ADR 0037 step 3, ADR 0046 step 4.1).
 func WeaponSlots(row SlotRow, level, spent int) WeaponPool { return slots.Weapon(row, level, spent) }
 
-// SlotsGainedAt is ADR 0037 step 15 on step 3's pools: the weapon and the
-// non-weapon slots level grants, available at level minus available at the
-// level below (the Intelligence term is the same at both). None at level 1
-// (its slots are the initial ones) or under.
-func SlotsGainedAt(row SlotRow, level int) (weapon, nonweapon int) {
-	if level < 2 {
-		return 0, 0
-	}
-	weapon = slots.Weapon(row, level, 0).Available - slots.Weapon(row, level-1, 0).Available
-	nonweapon = slots.Nonweapon(row, level, 0, 0).Available - slots.Nonweapon(row, level-1, 0, 0).Available
-	return weapon, nonweapon
-}
-
 // WeaponTypes is every weapon type code of ADR 0030 step 23, in display order, and the one owner
 // of the list: itemsvc's weapon pieces and the weapon proficiency picks (ADR 0037 step 7) read
 // it. itemsvc names each code as a constant.

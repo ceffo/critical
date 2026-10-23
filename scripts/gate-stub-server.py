@@ -6,6 +6,9 @@ import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 mode = sys.argv[1]
+# "flaky": the first two requests to /api/auth/options get no answer (connection closed), then it is the gated app.
+# "mute": /api/health answers, every other request gets no answer (an app that went away mid-check).
+dropped = 0
 APP = b'<html><div id="root"></div></html>'
 UNAUTH = json.dumps({"error": "sign in", "code": "unauthenticated"}).encode()
 
@@ -23,7 +26,12 @@ class H(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def handle_any(self):
+        global dropped
         p = self.path.split("?")[0]
+        if (mode == "mute" and p != "/api/health") or (mode == "flaky" and p == "/api/auth/options" and dropped < 2):
+            dropped += 1
+            self.close_connection = True
+            return
         html = "text/html" in (self.headers.get("Accept") or "")
         if p == "/api/health":
             login = "dev" if mode == "devlogin" else "google"

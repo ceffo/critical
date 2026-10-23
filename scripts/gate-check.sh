@@ -18,6 +18,10 @@
 # Exit codes: 0 gate live; 1 a check failed; 2 bad usage; 3 the app serves nothing at all (/api/health never
 # answered 200 and the last answer was no response or a 5xx: a crash-looping or stopped app), which a caller
 # that is about to replace the release may accept (scripts/fly-access-check.sh, UNSERVED_OK).
+# Exit 4: the app answered /api/health and then stopped answering (HTTP 000 on a later request, still so after
+# GATE_CHECK_RETRY seconds): an unreachable app, not an open gate. A single refused or reset connection does not
+# fail the check: a request that got no answer at all (HTTP 000) is repeated for up to GATE_CHECK_RETRY seconds
+# (default 20). Any answer is judged at once and never repeated, so an open gate fails on its first answer.
 # GATE_CHECK_WAIT (seconds, default 90) is how long a cold machine is waited for on the first request.
 set -euo pipefail
 
@@ -25,16 +29,32 @@ base="${1:?usage: gate-check.sh <base url>}"
 base="${base%/}"
 [[ "$base" =~ ^https?://[A-Za-z0-9.:_-]+$ ]] || { echo "gate-check: bad base url: $base" >&2; exit 2; }
 wait="${GATE_CHECK_WAIT:-90}"
+retry="${GATE_CHECK_RETRY:-20}"
 body="$(mktemp)"
 hdr="$(mktemp)"
 trap 'rm -f "$body" "$hdr"' EXIT
 fail() { echo "gate-check: FAIL ($base): $*" >&2; exit 1; }
 
-# get <path> [curl args]: status code on stdout; the body in $body, the headers in $hdr; no redirects.
-get() {
+# get_once <path> [curl args]: status code on stdout (000: no answer); the body in $body, the headers in $hdr; no redirects.
+get_once() {
     local path="$1"
     shift
     curl -sS -m 30 -o "$body" -D "$hdr" -w '%{http_code}' "$@" "$base$path" 2>/dev/null || true
+}
+# get <path> [curl args]: as get_once, but no answer at all is repeated for up to $retry seconds; still none:
+# the app is unreachable (exit 4), which is not a verdict on the gate.
+get() {
+    local begin=$SECONDS code
+    while :; do
+        code="$(get_once "$@")"
+        [ "$code" != 000 ] && break
+        if [ $((SECONDS - begin)) -ge "$retry" ]; then
+            echo "gate-check: UNREACHABLE ($base): $1: no answer (HTTP 000) for ${retry}s after the app had answered; the gate was not judged" >&2
+            exit 4
+        fi
+        sleep 2
+    done
+    echo "$code"
 }
 location() { tr -d '\r' <"$hdr" | sed -n 's/^[Ll]ocation: //p' | head -n1; }
 
@@ -42,13 +62,13 @@ location() { tr -d '\r' <"$hdr" | sed -n 's/^[Ll]ocation: //p' | head -n1; }
 start=$SECONDS
 code=000
 while [ $((SECONDS - start)) -lt "$wait" ]; do
-    code="$(get /api/health)"
+    code="$(get_once /api/health)"
     [ "$code" = 200 ] && break
     sleep 2
 done
 if [ "$code" != 200 ]; then
     case "$code" in
-        000 | 5??) echo "gate-check: FAIL ($base): /api/health: HTTP $code, the app serves nothing" >&2; exit 3 ;;
+        000 | 5??) echo "gate-check: UNREACHABLE ($base): /api/health: HTTP $code for ${wait}s, the app serves nothing (the gate was not judged)" >&2; exit 3 ;;
     esac
     fail "/api/health: HTTP $code"
 fi

@@ -432,7 +432,9 @@ no data) answer a visitor; every other page redirects to `/login`, every other `
   login is configured, not the dev login of local runs), `/api/auth/options` offers Google and not the dev login,
   `/api/auth/dev` is not there, `/api/character`, `/api/characters`, `/api/spells/names` and `/api/spells/filters`
   answer 401 `unauthenticated`, a POST to `/api/characters` is refused, and `/` and a page redirect a browser to
-  `/login`. Read-only, no cookie, prints status codes only.
+  `/login`. Read-only, no cookie, prints status codes only. A request that gets no answer at all (HTTP 000) is
+  repeated for up to `GATE_CHECK_RETRY` seconds (20); an app still silent then is **unreachable** (exit 4, "the gate
+  was not judged"), which is told apart from an open gate (exit 1, at once on the first answer).
 - **The access check** (`scripts/fly-access-check.sh`), run by every deploy before and after it (staging:
   `scripts/staging-deploy.sh`; production: `scripts/promote.sh`, no bypass for either, the former
   `PUBLIC_ACCESS_OPTION` variable is gone): an app with no public address must have its private one
@@ -760,6 +762,8 @@ read an empty token), and a calling job cannot have an environment. The job pass
      was no response or a 5xx, as with a crash-looping release) passes, since it exposes no content and
      the deploy that replaces it must be able to run. An app that answers without the gate is still refused,
      and the check after the deploy has no exception.
+     A fly API transient during `fly deploy` (api.machines.dev or api.fly.io: a cancelled request, a timeout, a 5xx) is
+     retried, at most 3 runs in all; any other failure fails at once and rolls back.
   2. `fly deploy -c deploy/fly.staging.toml --image registry.fly.io/critical-hit-staging:<sha>` (always the
      commit's own build, with or without a version: runs of different commits can compute one version, and
      `:v<version>` then names whichever pushed last); the machine is started if it was stopped. The image

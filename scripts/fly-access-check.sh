@@ -11,7 +11,7 @@
 # redirects to the login page. UNSERVED_OK=1 (the check before a deploy only): an app that serves nothing at
 # all (the gate check exits 3: no response or a 5xx on /api/health, e.g. a crash-looping release) passes,
 # since it exposes no content and the deploy that replaces it must be able to run; the check after the
-# deploy never sets it, so the new release must hold the gate. There is no bypass, for staging or production. GATE_CHECK names the gate check
+# deploy never sets it (exit 4, an app that stopped answering mid-check, never passes), so the new release must hold the gate. There is no bypass, for staging or production. GATE_CHECK names the gate check
 # script (the offline tests stub it); prints no secret.
 set -euo pipefail
 
@@ -29,8 +29,10 @@ else
     "$gate" "https://$app.fly.dev" || rc=$?
     if [ "$rc" = 3 ] && [ "${UNSERVED_OK:-}" = 1 ]; then
         echo "fly-access-check: OK ($app: public address, but it serves nothing now; the deploy replaces it and the gate is checked after)"
+    elif [ "$rc" = 3 ] || [ "$rc" = 4 ]; then
+        echo "fly-access-check: FAIL: $app has a public address and does not answer, so the login gate could not be checked (unreachable, not an open gate)" >&2; exit 1
     elif [ "$rc" != 0 ]; then
-        echo "fly-access-check: FAIL: $app has a public address and the login gate check failed" >&2; exit 1
+        echo "fly-access-check: FAIL: $app has a public address and the login gate is OPEN or misconfigured (the gate check failed)" >&2; exit 1
     else
         echo "fly-access-check: OK ($app: public, login gate live)"
     fi

@@ -31,6 +31,23 @@ for mode in devlogin devroute opencatalogue openpost openapp; do
     [[ "$out" == *"gate-check: FAIL"* ]] || fail "$mode: no FAIL line: $out"
 done
 
+# A request that gets no answer at all is repeated: two dropped connections do not fail the gate check.
+serve flaky
+out="$(GATE_CHECK_RETRY=20 "$here/gate-check.sh" "$url" 2>&1)" || fail "a dropped connection failed the check instead of being retried: $out"
+[[ "$out" == *"gate-check: OK"* ]] || fail "flaky: no OK line: $out"
+
+# An app that answers health and then goes silent is "unreachable" (exit 4, no gate verdict), not an open gate.
+serve mute
+rc=0; out="$(GATE_CHECK_RETRY=3 "$here/gate-check.sh" "$url" 2>&1)" || rc=$?
+[ "$rc" = 4 ] || fail "mute: want exit 4 (unreachable), got $rc: $out"
+[[ "$out" == *"UNREACHABLE"* && "$out" == *"gate was not judged"* ]] || fail "mute: the failure does not say it was no answer: $out"
+
+# An open gate still fails at once, whatever the retry window: no waiting, exit 1.
+serve openpost
+start=$SECONDS
+rc=0; out="$(GATE_CHECK_RETRY=60 "$here/gate-check.sh" "$url" 2>&1)" || rc=$?
+[ "$rc" = 1 ] && [ $((SECONDS - start)) -lt 15 ] || fail "an open gate must fail at once with exit 1, got $rc after $((SECONDS - start))s: $out"
+
 kill $pid 2>/dev/null || true
 rc=0; out="$(GATE_CHECK_WAIT=2 "$here/gate-check.sh" "$url" 2>&1)" || rc=$?
 [ "$rc" = 3 ] || fail "a dead server must exit 3 (serves nothing), got $rc: $out"

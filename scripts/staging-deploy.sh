@@ -60,7 +60,28 @@ rollback_hint() {
 }
 trap rollback_hint EXIT
 
-"$fly" deploy -c "$config" -a "$app" --image "$image" --no-public-ips --ha=false --yes
+# A fly API transient (a 5xx, a timeout or a cancelled request talking to api.machines.dev / api.fly.io) is
+# retried: the deploy is idempotent for one image. At most DEPLOY_ATTEMPTS runs (default 3), DEPLOY_RETRY_SLEEP
+# seconds apart (default 20). Any other failure (a build or config error, a health check that failed on the
+# machine itself) fails at once and rolls back.
+attempts="${DEPLOY_ATTEMPTS:-3}"
+n=1
+while :; do
+    deploy_log="$(mktemp)"
+    rc=0
+    "$fly" deploy -c "$config" -a "$app" --image "$image" --no-public-ips --ha=false --yes >"$deploy_log" 2>&1 || rc=$?
+    cat "$deploy_log"
+    [ "$rc" -eq 0 ] && { rm -f "$deploy_log"; break; }
+    if [ "$n" -lt "$attempts" ] && grep -qE 'api\.machines\.dev|api\.fly\.io|request canceled|Client\.Timeout|TLS handshake timeout|status code 50[0-9]|HTTP 50[0-9]|connection reset by peer' "$deploy_log"; then
+        n=$((n + 1))
+        rm -f "$deploy_log"
+        echo "staging-deploy: fly API transient error; retrying the deploy (attempt $n of $attempts)" >&2
+        sleep "${DEPLOY_RETRY_SLEEP:-20}"
+        continue
+    fi
+    rm -f "$deploy_log"
+    exit "$rc"
+done
 FLY="$fly" "$smoke" "$app" "$sha" ${version:+"$version"}
 # After: the release now running must hold the gate too.
 FLY="$fly" "$here/fly-access-check.sh" "$app"

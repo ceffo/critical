@@ -480,13 +480,24 @@ flowchart LR
     **Removes** the allowlist entries `api/internal/domain/service/ruletablesvc/bard.go:thief` and
     `api/internal/domain/service/ruletablesvc/bard.go:bard`; the file's name goes too (`bard.go` becomes
     `rogueskills.go`).
-    Tests: `SkillSets_Step12_ASetComesFromTheCatalogue` (ruletablesvc: a test set `test_scout` with two
+    Tests: `SkillSets_Step12_ASetComesFromTheCatalogue` (ruletablesadpt: a test set `test_scout` with two
     skills and a base each, listed by a test class, gets its skills and percentages with no code change),
-    `SkillSets_Step12_TheFiveClassesKeepTodaysPercentages` (composition: the golden file of
-    `Classes_Golden_FeaturesDeriveWhatTheGoListsDid`, skills part, passes unchanged),
+    `Classes_Golden_FeaturesDeriveWhatTheGoListsDid` (composition: its skills part passes unchanged),
     `Import_Step12_RefusesABrokenSkillSet` (ruletablesadpt: unknown set, skill twice, missing base, a
     pair missing from a shared table), `SkillDexterity_Step12_RowsKeyedBySkill` (ruletablesadpt: the
     reshaped Table 28 gives the old per-skill columns).
+    _(As built, 2026-10-23: `ruletablesadpt.definitions` resolves each `rogue_skills.set` against the artifact's
+    `skill_sets` and fills `classes.RogueSkills.Skills` and `.ArmourFree` (not params: the loader's); it refuses
+    a set the catalogue does not list at start, naming the class. `ruletablesvc.SkillsOf` returns `Skills`; the
+    base rows are the set's `base`, read by `RogueSkills`; `ArmourFreeSkills`, `ThiefSkills`, `BardSkills`,
+    `CheckSkillSet` and `SkillSetThief`/`SkillSetBard` are gone, and `bard.go` is `rogueskills.go`.
+    `CheckDefinitions` still refuses a `rogue_skills` whose set resolved to no skill. The shared tables are
+    checked against the union of the sets' skills: Table 27 and Table 29 need every race x skill and armour x
+    skill pair once, and a Table 28 row for a skill no set lists is **refused**, not ignored, since it could
+    never be read and is a mistake of the data. `SkillArmors` (Table 29's armour columns, not skills) stays.
+    The two allowlist entries moved from `ruletablesvc/bard.go` to `skillsvc/rules.go`: `KindOfSet` still maps
+    the set code to the per-set check kind until step 15's single `rogueSkill` kind, which strikes them. The
+    "five classes keep today's percentages" test is the existing composition golden, unchanged.)_
 
 13. **Weapon specialization carries its numbers.** The `weapon_specialization` feature (step 3) takes
     parameters, replacing `specializationSlots`, `bowSpecializationSlots`, `bowTypes` and

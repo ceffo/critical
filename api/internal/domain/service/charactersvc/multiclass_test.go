@@ -267,8 +267,8 @@ func TestSkills_Step16_3_ArmourBlocksAllButTwo(t *testing.T) {
 	}
 	bare := in(fighterThief(), "")
 	chain := in(fighterThief(), ruletablesvc.ColumnMetal)
-	require.Len(t, chain, len(ruletablesvc.ThiefSkills))
-	for _, skill := range ruletablesvc.ThiefSkills {
+	require.Len(t, chain, 8)
+	for _, skill := range []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"} {
 		if skill == "open_locks" || skill == "detect_noise" {
 			assert.Equal(t, bare[skill], chain[skill], "%s at the no-armour percentage", skill)
 			continue
@@ -280,7 +280,7 @@ func TestSkills_Step16_3_ArmourBlocksAllButTwo(t *testing.T) {
 	single := multi("human", entry("thief", 6, 20_000))
 	single.Classes = nil
 	alone := in(single, ruletablesvc.ColumnMetal)
-	for _, skill := range ruletablesvc.ThiefSkills {
+	for _, skill := range []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"} {
 		assert.False(t, alone[skill].Blocked, "a single-class thief: %s", skill)
 	}
 	assert.NotEqual(t, bare["open_locks"].Percent, alone["open_locks"].Percent, "a single-class thief reads the armour's column")

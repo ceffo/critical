@@ -32,7 +32,7 @@ var featureTables = map[string]string{
 
 // CheckDefinitions is ADR 0040 step 8 on what the rule tables read of the
 // class definitions: a spell_progression naming a slot table, a feature's
-// table param naming the table its kind reads, a known rogue_skills set with
+// table param naming the table its kind reads, a rogue_skills set the catalogue resolved to skills, with
 // an armour entry for each Table 29 column (SkillColumns, none_allowed
 // included: SkillArmorFor has no fallback).
 func CheckDefinitions(defs *classes.Registry) error {
@@ -45,8 +45,8 @@ func CheckDefinitions(defs *classes.Registry) error {
 				return fmt.Errorf("class %q: feature %s: table %q, want %q", c.ID, f.Kind, f.Table, want)
 			}
 			if f.RogueSkills != nil {
-				if err := CheckSkillSet(f.RogueSkills.Set); err != nil {
-					return fmt.Errorf("class %q: %w", c.ID, err)
+				if len(f.RogueSkills.Skills) == 0 {
+					return fmt.Errorf("class %q: rogue_skills set %q lists no skill", c.ID, f.RogueSkills.Set)
 				}
 				for _, column := range SkillColumns {
 					if _, ok := f.RogueSkills.SkillArmourFor(column); !ok {

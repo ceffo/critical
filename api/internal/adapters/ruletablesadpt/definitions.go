@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/classes"
@@ -269,6 +270,22 @@ type raceDefRequirement struct {
 	Max     int    `json:"max"`
 }
 
+// resolveSkillSet fills rs's skills from the catalogue's skill set rs.Set names
+// (ADR 0040 step 12): a set the catalogue does not list is refused at start.
+func resolveSkillSet(rs *classes.RogueSkills, sets []skillSetDefDTO) error {
+	i := slices.IndexFunc(sets, func(s skillSetDefDTO) bool { return s.ID == rs.Set })
+	if i < 0 {
+		return fmt.Errorf("rogue_skills: unknown skill set %q", rs.Set)
+	}
+	for _, k := range sets[i].Skills {
+		rs.Skills = append(rs.Skills, k.ID)
+		if k.ArmourFree {
+			rs.ArmourFree = append(rs.ArmourFree, k.ID)
+		}
+	}
+	return nil
+}
+
 // definitions maps the definitions to a validated class registry (the rules
 // are classes.New's). The experience and THAC0 rows must be levels 1, 2, ...
 // in order.
@@ -295,6 +312,11 @@ func definitions(raw []byte) (*classes.Registry, error) {
 			v, err := f.feature()
 			if err != nil {
 				return nil, fmt.Errorf("class %q: %w", c.ID, err)
+			}
+			if v.RogueSkills != nil {
+				if err := resolveSkillSet(v.RogueSkills, d.SkillSets); err != nil {
+					return nil, fmt.Errorf("class %q: %w", c.ID, err)
+				}
 			}
 			features[j] = v
 		}

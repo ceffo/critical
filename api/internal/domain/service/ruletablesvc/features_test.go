@@ -86,8 +86,11 @@ func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 		{"an unknown skill set", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
 			Set: "test_set", Armour: allColumns(),
 		}})},
+		{"a set that resolved to no skill", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
+			Set: "thief", Armour: allColumns(),
+		}})},
 		{"rogue_skills without the none_allowed and the metal entries", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-			Set: ruletablesvc.SkillSetThief, Armour: allColumns()[:4],
+			Set: "thief", Skills: []string{"climb_walls"}, Armour: allColumns()[:4],
 		}})},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,7 +98,7 @@ func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 		})
 	}
 	require.NoError(t, ruletablesvc.CheckDefinitions(editedDefs(t, addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-		Set: ruletablesvc.SkillSetThief, Armour: allColumns(),
+		Set: "thief", Skills: []string{"climb_walls"}, Armour: allColumns(),
 	}}))), "every column listed")
 }
 

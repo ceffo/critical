@@ -210,6 +210,11 @@ type RogueSkills struct {
 	// Armour maps each body armour skill column (ADR 0033 step 14) to the
 	// thief_skill_armor row it reads and the extra adjustment.
 	Armour []SkillArmour
+	// Skills are the set's skills in its order and ArmourFree those among them a
+	// multi-class character in body armour its class may not wear still uses
+	// (ADR 0040 step 12). Not params: the loader fills them from the catalogue's
+	// skill set that Set names.
+	Skills, ArmourFree []string
 }
 
 // SkillBudget is a rogue_skills budget: First points at level 1 and PerLevel
@@ -309,6 +314,7 @@ func (f Feature) clone() Feature {
 	if f.RogueSkills != nil {
 		r := *f.RogueSkills
 		r.Armour = slices.Clone(r.Armour)
+		r.Skills, r.ArmourFree = slices.Clone(r.Skills), slices.Clone(r.ArmourFree)
 		f.RogueSkills = &r
 	}
 	if f.Spellbook != nil {

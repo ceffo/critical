@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // abilityScore is the sheet's score for an ability key.
@@ -57,14 +56,21 @@ const CodeSkillUnusable = "skill_unusable"
 // owns the wording.
 const CodeSkillBlockedByArmour = "skill_blocked_by_armour"
 
+// The skill set codes whose check kind is still one per set (ADR 0040 step 3.2): the single
+// rogueSkill kind (step 15) removes them.
+const (
+	setThief = "thief"
+	setBard  = "bard"
+)
+
 // KindOfSet is the check kind a skill set logs (ADR 0040 step 3.2, ADR 0014 step 3): the set
 // code is a rogue_skills param, not a class id. ok is false for a set this package does not
-// know (ruletablesvc.CheckSkillSet refuses it at start).
+// know.
 func KindOfSet(set string) (Kind, bool) {
 	switch set {
-	case ruletablesvc.SkillSetThief:
+	case setThief:
 		return KindThiefSkill, true
-	case ruletablesvc.SkillSetBard:
+	case setBard:
 		return KindBardSkill, true
 	}
 	return "", false

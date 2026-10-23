@@ -24,9 +24,9 @@ api/internal/storage/postgres/languages.go:gnome
 api/internal/storage/postgres/languages.go:halfling
 
 # TEMPORARY: the skill-set codes of the rogue_skills `set` param (thief, bard), removed by the skill-set
-# work (the rogue_skills set moves to data).
-api/internal/domain/service/ruletablesvc/bard.go:thief
-api/internal/domain/service/ruletablesvc/bard.go:bard
+# work (the check kind per set, until the single rogueSkill kind).
+api/internal/domain/service/skillsvc/rules.go:thief
+api/internal/domain/service/skillsvc/rules.go:bard
 web/src/components/actions/SkillsTab.tsx:thief
 web/src/components/actions/SkillsTab.tsx:bard
 

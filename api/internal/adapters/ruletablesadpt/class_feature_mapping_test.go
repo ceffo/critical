@@ -69,13 +69,16 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 		"thief": {"", []classes.Feature{
 			{Kind: classes.KindRogueSkills, FromLevel: 1, RogueSkills: &classes.RogueSkills{
 				Set: "thief", Budget: classes.SkillBudget{First: 60, PerLevel: 30, PerSkillFirst: 30, PerSkillPerLevel: 15},
-				Armour: armour("padded_studded_leather", 0),
+				Armour:     armour("padded_studded_leather", 0),
+				Skills:     []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"},
+				ArmourFree: []string{"open_locks", "detect_noise"},
 			}},
 			{Kind: classes.KindBackstab, FromLevel: 1, Table: "backstab"},
 		}},
 		"bard": {"bard_spells", []classes.Feature{
 			{Kind: classes.KindRogueSkills, FromLevel: 1, RogueSkills: &classes.RogueSkills{
 				Set: "bard", Budget: classes.SkillBudget{First: 20, PerLevel: 15}, Armour: armour("elven_chain", -5),
+				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 			}},
 			{Kind: classes.KindSpellbook, FromLevel: 1, Spellbook: &classes.Spellbook{MaxSpellLevel: 6}},
 		}},

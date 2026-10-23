@@ -72,6 +72,8 @@ type AreaOfEffect struct {
 	// Usually is who the text says it usually is ("One individual (usually
 	// caster)": caster).
 	Usually string `json:"usually,omitempty"`
+	// Label is the common value the text is (step 26.4), "" otherwise.
+	Label string `json:"label,omitempty"`
 }
 
 // AreaValue is an AreaOfEffect computed for a caster level.
@@ -150,6 +152,12 @@ var wordCounts = map[string]string{"one": "1", "two": "2"}
 // reading holds only in part is read as alternatives when it is a choice
 // ("1 creature or object") whose every reading is whole.
 func ParseArea(raw string) AreaOfEffect {
+	a := parseAreaKind(raw)
+	a.Label = labelOf(areaLabels, raw)
+	return a
+}
+
+func parseAreaKind(raw string) AreaOfEffect {
 	if a, ok := parseAnnotated(raw); ok {
 		return a
 	}

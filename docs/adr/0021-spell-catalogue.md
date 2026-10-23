@@ -883,10 +883,10 @@ is only ever appended to by play.
     **Q3** a row without stored stats: an error naming the spell, not a re-parse (26.3); **Q4** common values as a `label` key set by the
     parser, not matched in the web (26.4); **Q5** the unparsed 21 texts stay verbatim, none gets a parser of its own (26.6); **Q6** the
     parser keeps being re-run on a start rather than versioned in `catalogue_meta` (the notes of step 8).
-    Tests (Go, to write with the code item, each failing on today's code; named without the `Test` prefix until they exist, which `check-adr-tests` would otherwise look for): `SpellStats_Step26_1_AllSixFieldsAreTypedWithTheirRaw`,
-    `SpellStats_Step26_2_AnUnreadStatKeepsItsRawAndHasNoValue` (a `special` kind, a `partial` area, a save of unreadable text: no value at any
-    caster level), `SpellDAL_Step26_3_ARowWithoutStatsIsAnErrorNotAParse`, `ImportCatalogue_Step26_3_ATypedStatIsWrittenByTheImporterOnly`,
-    `Parse_Step26_4_CommonValuesCarryTheirLabel`, web: `statText (labels)` ("words a stat from its label, never from its raw text") and
+    Tests (Go): `TestSpellStats_Step26_1_AllSixFieldsAreTypedWithTheirRaw`,
+    `TestSpellStats_Step26_2_AnUnreadStatKeepsItsRawAndHasNoValue` (a `special` kind, a `partial` area, a save of unreadable text: no value at any
+    caster level), `TestSpellDAL_Step26_3_ARowWithoutStatsIsAnErrorNotAParse`, `TestImportCatalogue_Step26_3_ATypedStatIsWrittenByTheImporterOnly`,
+    `TestParse_Step26_4_CommonValuesCarryTheirLabel`, web: `statText (labels)` ("words a stat from its label, never from its raw text") and
     `statText (verbatim)` ("shows the raw text of a special or partial stat"); the committed checks of 26.7 stay.
 
 ## Consequences

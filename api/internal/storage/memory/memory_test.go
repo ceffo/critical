@@ -525,6 +525,13 @@ func TestStore_Step8_1_SeededLikeTheDatabase(t *testing.T) {
 	all, err := s.Spells().Search(ctx, spellsvc.Filter{})
 	require.NoError(t, err)
 	assert.Len(t, all, len(artifact.Catalogue.Spells))
+	labelled := 0
+	for _, sp := range all {
+		if sp.Stats.Duration.Label != "" || sp.Stats.Save.Label != "" || sp.Stats.Area.Label != "" {
+			labelled++
+		}
+	}
+	assert.Positive(t, labelled, "the memory store serves the parser's labels")
 	wizard, err := s.Spells().Search(ctx, spellsvc.Filter{Class: "WIZARD", Levels: []int{1}})
 	require.NoError(t, err)
 	require.NotEmpty(t, wizard)

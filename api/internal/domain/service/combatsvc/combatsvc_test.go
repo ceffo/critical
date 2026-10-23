@@ -162,7 +162,7 @@ func TestResolveSavingThrow(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			f := newFixture(t)
 			f.withChar(bard())
-			f.dice.EXPECT().RollD20().Return(tt.d20)
+			f.dice.EXPECT().RollD20().Return(tt.d20).Once()
 			mods := strMods(12)
 			if tt.saveBonus != 0 {
 				mods.SaveBonus = tt.saveBonus
@@ -300,7 +300,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 	t.Run("aggregate error", func(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
-		f.dice.EXPECT().RollD20().Return(10)
+		f.dice.EXPECT().RollD20().Return(10).Once()
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(buffsvc.BuffModifiers{}, boom)
 
 		res, err := f.svc.ResolveSavingThrow(context.Background(), charID, combatsvc.SaveSpell, combatsvc.SaveOptions{})
@@ -318,7 +318,7 @@ func TestResolveSavingThrow_Errors(t *testing.T) {
 	t.Run("record error", func(t *testing.T) {
 		f := newFixture(t)
 		f.withChar(bard())
-		f.dice.EXPECT().RollD20().Return(10)
+		f.dice.EXPECT().RollD20().Return(10).Once()
 		f.buffs.EXPECT().Aggregate(mock.Anything, charID, str12, mock.Anything).Return(strMods(12), nil)
 		f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(0, boom)
 

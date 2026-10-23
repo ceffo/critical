@@ -14,7 +14,7 @@ import {
   attackRequest,
   type AttackDraft,
 } from "./attack";
-import { checkText } from "./defend";
+import { CHECK_DIE, checkText } from "./defend";
 import { MAX_MODIFIER, MAX_MODIFIERS, MAX_REASON_LEN } from "./powerUse";
 
 /**
@@ -154,7 +154,7 @@ export function AttackForm({
                 inputMode="numeric"
                 autoComplete="off"
                 aria-label={t("powers.defence.rollN", { n: i + 1 })}
-                placeholder="1–20"
+                placeholder={`1–${CHECK_DIE}`}
                 value={r.roll}
                 onChange={(e) => setRoll(i, { roll: e.target.value })}
               />

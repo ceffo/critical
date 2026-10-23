@@ -121,7 +121,11 @@ writes `Test<name>` and adds the prefix here in the same PR.
    beside `weaponPicks` [{type, slots, allowed}]. Tests `TestWeaponSlots_Step3_ByGroupAndLevel`
    (ruletablesvc), `TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel` (charactersvc), and the
    composition's `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP`: 5 at 15 with 17 pending,
-   6 once 17 is taken.)_
+   6 once 17 is taken. Since 2026-10-23 the two pools, with Table 34's `SlotRow`, are `slots.NonweaponSlots`
+   and `slots.WeaponSlots` in `domain/slots`, the slots owner ([ADR 0046](0046-derived-figures.md)
+   step 4.1): the tests named above that read `ruletablesvc` are `TestSlots_Step4_PoolsMatchTable34`
+   and the pool tests in `domain/slots`; the Intelligence term still reads Table 4 in `ruletablesvc`
+   and is passed in.)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 15, on implementation: a multi-class character takes, per pool, the largest initial count and the fastest rate among its active class entries' Table 34 rows (the book's reading; the triage's "best line" is ADR 0042's question Q10), the levels gained counted on the level of the entry whose rate is used; the weapon picks are one pool; a dual-class keeps the old class's slots at its left-at level and adds the new class's gains)_
 4. **Cost of a non-weapon pick.** Table 37's slots when one of the proficiency's groups is among
    the class's Table 38 groups, one more otherwise (PHB p.54). A bard pays 1 for Tumbling
@@ -422,7 +426,9 @@ writes `Test<name>` and adds the prefix here in the same PR.
     realized level; while anything is left to spend a reminder stays on the character card with
     links to the editors: `derived.levelUp.toSpend` (`charactersvc.ToSpend`: each pool's left
     slots and the skill points left, 0 when none or over budget), so an undone level-up takes its
-    grants back with the realized level. Tests: `TestGrantsAt_Step15_GrantsSlotsAndPoints` (each
+    grants back with the realized level. Since 2026-10-23 what a level grants has one path,
+    `skills.GrantsOf` over one entry, on the pools of `domain/slots`: `GrantsAt` and
+    `SlotsGainedAt` are gone ([ADR 0046](0046-derived-figures.md) step 4.2). Tests: `TestGrantsAt_Step15_GrantsSlotsAndPoints` (each
     group, levels 1 to 6), `TestToSpend_Step15_LeftCountsNeverNegative` (charactersvc),
     `TestLevelUp_Step15_GrantsSlotsAndPoints` (levelupsvc: the answer's remaining pending levels carry theirs),
     `TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain` and
@@ -529,11 +535,11 @@ proficiencies, weapon specialities, thief and bards skills, etc."
     loses the languages) and its details card.
 
 _(As built, 2026-10-20.)_
-- **Step 17.** `api/internal/domain/skills` imports `domain` (the errors) and `ruletablesvc` only. It
+- **Step 17.** `api/internal/domain/skills` imports `domain` (the errors), `domain/slots` (the pools, since 2026-10-23) and `ruletablesvc` only. It
   holds the picks' types (`Picks`, `PickFigures`, `ProficiencySlots`, `LevelGrants`,
   `WeaponProficiency`…), `ValidPicks`, `PicksWithinBudget`, `ProficiencyFigures`, `SlotWarnings`
   (its own `Warning`; charactersvc maps it to the sheet's), `LanguageSlots`, `ValidLanguages`,
-  `GrantsAt`, `ToSpend`, `ValidSkillPoints`, `SkillPointsWithinBudget` and `PointsFiguresOf` (the
+  `GrantsOf` (the slots a level grants; it was `GrantsAt`), `ToSpend`, `ValidSkillPoints`, `SkillPointsWithinBudget` and `PointsFiguresOf` (the
   bard's and the thief's percentages and budget over a `SkillTables` port). `skills.Read` is the one
   assembly of the pools and their warnings: the character's read, the editor's preview and save and
   the creation's checks call it. `charactersvc.SVC` has no skills preview or budget method any more

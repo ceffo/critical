@@ -29,6 +29,7 @@ type RoundStore interface {
 // inside the recording transaction (the adapter follows the ctx transaction).
 type RoundReader struct{ DAL RoundStore }
 
+// GetRound is the character's current round number.
 func (r RoundReader) GetRound(ctx context.Context, characterID int64) (int, error) {
 	return r.DAL.GetRoundNumber(ctx, characterID)
 }
@@ -39,6 +40,7 @@ func (r RoundReader) GetRound(ctx context.Context, characterID int64) (int, erro
 // step 14). It follows the ctx transaction.
 type WornArmour struct{ DAL itemsvc.DAL }
 
+// WornSkillColumn is the worn body armour's column, "" when none is worn.
 func (a WornArmour) WornSkillColumn(ctx context.Context, characterID int64) (string, error) {
 	pieces, err := a.DAL.List(ctx, characterID)
 	if err != nil {
@@ -54,6 +56,7 @@ type WeaponInHand struct {
 	Weapons combatsvc.Weapons
 }
 
+// WeaponInHand is the weapon the attack form holds, false when none is.
 func (w WeaponInHand) WeaponInHand(ctx context.Context, characterID int64) (buffsvc.HeldWeapon, bool, error) {
 	held, ok, err := combatsvc.InHand(ctx, w.Forms, w.Weapons, characterID)
 	if err != nil || !ok {
@@ -80,6 +83,7 @@ type FreeSpells struct {
 	Book Claims
 }
 
+// LevelsTaken lists the levels the active level_up entries reached.
 func (f FreeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]charactersvc.TakenLevel, error) {
 	// One entry per level taken at most: the class tables' levels of a
 	// multi-class character's classes bound them (ADR 0042 step 7).
@@ -98,6 +102,7 @@ func (f FreeSpells) LevelsTaken(ctx context.Context, characterID int64) ([]chara
 	return levels, nil
 }
 
+// Claimed lists the free spells the character claimed.
 func (f FreeSpells) Claimed(ctx context.Context, characterID int64) ([]spellbook.FreeSpell, error) {
 	return f.Book.Claimed(ctx, characterID)
 }
@@ -105,6 +110,7 @@ func (f FreeSpells) Claimed(ctx context.Context, characterID int64) ([]spellbook
 // ProficiencyIDs tells rulesetsvc which proficiency ids the book knows.
 type ProficiencyIDs struct{ Book *ruletablesvc.Proficiencies }
 
+// Has reports whether the book lists id.
 func (p ProficiencyIDs) Has(id string) bool {
 	_, ok := p.Book.Get(id)
 	return ok

@@ -260,3 +260,87 @@ func TestAttack_Step7_Post(t *testing.T) {
 	rec = do(h, "POST", "/api/psionics/powers/x/attack", `{"target":`)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
+
+// POST /api/psionics/powers/{id}/contact: the opponent, the distance, the
+// life order, the resisting flag and the modifiers reach the service as sent;
+// the answer is the Use one with the contact lines (ADR 0044 step 9).
+func TestContact_Step9_Post(t *testing.T) {
+	h, m := newRouter(t)
+	want := psionicsvc.ContactRequest{
+		Power:     "contact",
+		Opponent:  psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
+		Distance:  "10_miles",
+		LifeOrder: "bird",
+		Resisting: true,
+		Modifiers: []psionicsvc.Modifier{{Value: 1, Reason: "calm"}},
+	}
+	m.psionics.EXPECT().Contact(mock.Anything, int64(1), want).Return(&psionicsvc.UseResult{
+		Check: psionicsvc.CheckRecord{
+			Power: "contact", Ability: "wis", AbilityScore: 15, Target: 7, Roll: 10, Outcome: psionics.OutcomeSuccess,
+			Success: true, Cost: 8, Spent: 8, Opponent: "Bird", Level: 7, Contact: true,
+			ContactModifiers: []psionicsvc.ContactLine{
+				{Kind: "distance", Code: "10_miles", Modifier: -3},
+				{Kind: "life_order", Code: "bird", Modifier: -3},
+				{Kind: "resisting", Code: "resisting", Modifier: -2},
+			},
+		},
+		PSP: actionlog.PSPState{Current: 20, Max: 40}, LogEntryID: 9,
+	}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/contact/contact",
+		`{"target":"Bird","mind":"open","level":7,"distance":"10_miles","lifeOrder":"bird","resisting":true,
+		"modifiers":[{"value":1,"reason":"calm"}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"check":{"power":"contact","ability":"wis","abilityScore":15,"target":7,"d20":10,
+		"outcome":"success","success":true,"cost":8,"spent":8,"opponent":"Bird","level":7,
+		"contactModifiers":[{"kind":"distance","code":"10_miles","modifier":-3},
+		  {"kind":"life_order","code":"bird","modifier":-3},{"kind":"resisting","code":"resisting","modifier":-2}],
+		"contact":true},
+		"psp":{"current":20,"max":40},"logEntryId":9}`, rec.Body.String())
+
+	for err, want := range map[error]string{
+		psionicsvc.ErrNotAContactPower: "not_a_contact_power",
+		psionicsvc.ErrMindClosed:       "mind_closed",
+		psionicsvc.ErrNotEnoughPSP:     "not_enough_psp",
+		psionicsvc.ErrPowerNotKnown:    "power_not_known",
+		psionicsvc.ErrNotPsionicist:    "not_a_psionicist",
+	} {
+		m.psionics.EXPECT().Contact(mock.Anything, int64(1), mock.Anything).Return(nil, err).Once()
+		rec := do(h, "POST", "/api/psionics/powers/x/contact", `{"target":"Orc","mind":"open"}`)
+		require.Equal(t, http.StatusConflict, rec.Code, want)
+		assert.Contains(t, rec.Body.String(), `"code":"`+want+`"`)
+	}
+
+	m.psionics.EXPECT().Contact(mock.Anything, int64(1), mock.Anything).Return(nil, psionicsvc.ErrLevelOutOfTable).Once()
+	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":"Orc","mind":"open","level":99}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"level_out_of_table"`)
+
+	m.psionics.EXPECT().Contact(mock.Anything, int64(1), mock.Anything).
+		Return(nil, &domain.FieldError{Field: "distance", Message: "unknown distance"}).Once()
+	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":"Orc","mind":"open","distance":"far"}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `distance`)
+
+	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// A power whose cost is contact names its target on the use route; its
+// refusal is no_contact (ADR 0044 step 10).
+func TestUse_Step10_PostTarget(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().Use(mock.Anything, int64(1), "inflict_pain", psionicsvc.UseRequest{Target: "Orc"}).
+		Return(&psionicsvc.UseResult{
+			Check: psionicsvc.CheckRecord{Power: "inflict_pain", Target: 12, Roll: 5, Outcome: psionics.OutcomeSuccess,
+				Success: true, Cost: 0, Opponent: "Orc"},
+			PSP: actionlog.PSPState{Current: 30, Max: 40}, LogEntryID: 4,
+		}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/inflict_pain/use", `{"target":"Orc"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"opponent":"Orc"`)
+
+	m.psionics.EXPECT().Use(mock.Anything, int64(1), "inflict_pain", mock.Anything).Return(nil, psionicsvc.ErrNoContact).Once()
+	rec = do(h, "POST", "/api/psionics/powers/inflict_pain/use", `{"target":"Elf"}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"no_contact"`)
+}

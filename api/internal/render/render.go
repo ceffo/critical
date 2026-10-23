@@ -243,6 +243,12 @@ var mappings = []mapping{
 	{target: psionicsvc.ErrDefenceModeIsRaised, status: http.StatusConflict, code: "defence_mode_is_raised"},
 	// ADR 0044 step 7: an attack of a power that is not an attack mode.
 	{target: psionicsvc.ErrNotAnAttackMode, status: http.StatusConflict, code: "not_an_attack_mode"},
+	// ADR 0044 steps 9 and 10: the contact power's refusals, and a power
+	// whose cost is contact with no contact held from an earlier round.
+	{target: psionicsvc.ErrNotAContactPower, status: http.StatusConflict, code: "not_a_contact_power"},
+	{target: psionicsvc.ErrMindClosed, status: http.StatusConflict, code: "mind_closed"},
+	{target: psionicsvc.ErrNoContact, status: http.StatusConflict, code: "no_contact"},
+	{target: psionicsvc.ErrLevelOutOfTable, status: http.StatusBadRequest, code: "level_out_of_table"},
 	{target: psionicsvc.ErrRecoveryWhileMaintaining, status: http.StatusConflict, code: "psp_recovery_while_maintaining"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.
 	{target: actionlogsvc.ErrNoPSPPool, status: http.StatusBadRequest, code: "no_psp_pool"},

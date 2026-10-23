@@ -240,7 +240,9 @@ var (
 // xpAt is the XP at which the fixture catalogue's class reaches level.
 func xpAt(t *testing.T, class string, level int) int {
 	t.Helper()
-	xp, err := cataloguetest.Tables(t).XPThreshold(class, level)
+	def, err := cataloguetest.Definitions(t).Get(class)
+	require.NoError(t, err)
+	xp, err := def.XPThreshold(level)
 	require.NoError(t, err)
 	return xp
 }

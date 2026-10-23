@@ -2,7 +2,6 @@ package xpsvc_test
 
 import (
 	"encoding/json"
-	"flag"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,11 +14,6 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/xpsvc"
 )
 
-// updateGolden rewrites the golden files from the code as it is: `go test
-// ./internal/domain/service/xpsvc -run TestProgress_Step5 -update`. Review the diff before
-// committing it.
-var updateGolden = flag.Bool("update", false, "rewrite the golden files")
-
 // goldenLines compares the records, one JSON line each, with testdata/golden/name.
 func goldenLines(t *testing.T, name string, records []any) {
 	t.Helper()
@@ -31,9 +25,6 @@ func goldenLines(t *testing.T, name string, records []any) {
 	}
 	got := "[\n" + strings.Join(lines, ",\n") + "\n]\n"
 	path := filepath.Join("testdata", "golden", name)
-	if *updateGolden {
-		require.NoError(t, os.WriteFile(path, []byte(got), 0o644))
-	}
 	want, err := os.ReadFile(path)
 	require.NoError(t, err)
 	require.Equal(t, string(want), got, "%s changed", name)

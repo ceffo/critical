@@ -275,7 +275,9 @@ func TestDerive_Steps13to16_TheClericsWisdomAndTurning(t *testing.T) {
 // level from the class definition, so a test sets the XP, not the level.
 func xpAt(t *testing.T, class string, level int) int {
 	t.Helper()
-	xp, err := cataloguetest.Tables(t).XPThreshold(class, level)
+	def, err := cataloguetest.Definitions(t).Get(class)
+	require.NoError(t, err)
+	xp, err := def.XPThreshold(level)
 	require.NoError(t, err)
 	return xp
 }

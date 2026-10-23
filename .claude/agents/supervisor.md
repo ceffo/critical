@@ -54,7 +54,8 @@ herdr agent wait dev-<id> --until done --until idle --until blocked
 If `HERDR_ENV` isn't `1`, use the Agent tool (`subagent_type: developer` / `code-reviewer`) with the
 same brief files and `SendMessage` for later rounds, and tell the user.
 
-When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it; `<item>` in upper case as the tracker writes it, a lower-case marker is ignored, sup-71):
+When the wait returns (after reading a report you act on later, e.g. a developer held until a merge, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch stops re-reporting it; any case works, fleet-watch matches markers, briefs and reports case-insensitively, sup-85):
+At every transition, also run `herdr agent list` and act on every idle/done agent whose report you haven't read: a watcher reports the first event and exits, so a second agent that finished in the same minute is yours to catch (sup-85: four finished agents sat open for an hour).
 - `done` / `idle` → read the report file (overwritten every round; check its mtime is after your
   prompt). Missing or stale → `herdr agent read dev-<id> --source recent-unwrapped --lines 60`: the
   agent stopped early, likely with a question. (herdr reports `done` while an agent waits on a

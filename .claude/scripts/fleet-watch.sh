@@ -52,17 +52,20 @@ fresh_report() { # the agent's report newer than the supervisor's last prompt fo
   # (an agent suffix is dropped: dev-x-12b -> X-12). The marker is a .prompt-<item> file or, without one, the item's newest
   # brief (written just before each prompt), so a forgotten marker never hides a report.
   local item=${1#*-}; item=${item^^}; item=$(sed -E 's/([0-9]+)[A-Z]+$/\1/' <<<"$item"); local f p
+  # Briefs and reports named in lower case (cri-222-1.md) count too: a case-sensitive glob missed four finished
+  # agents at once, whose tabs then sat open with unread reports (sup-85).
+  local nc; nc=$(shopt -p nocaseglob); shopt -s nocaseglob
   # The newest of all markers is the last prompt: a report must be newer than it.
   # Exact item only (a "-" or the end after it), so item 3 never matches item 34's files.
   p=$(ls -td "$W"/.prompt-"$item" "$W"/.prompt-"$item"-* "$W"/.prompt-*-"$item" \
     "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
-  [ -n "$p" ] || return 1
+  [ -n "$p" ] || { $nc; return 1; }
   for f in "$R"/"$item"-*.md "$R"/*-"$item".md "$R"/"$item".md; do
     # The supervisor's archived copies of earlier rounds (<item>-dev-r4a.md, -r1-survey.md, -plan.md) are not
     # reports: a plain cp gives them a fresh mtime, which re-fired NEEDS-SUPERVISOR on handled work (sup-80, sup-83).
     case ${f##*/} in *-r[0-9]*.md|*-survey.md|*-plan.md) continue ;; esac
-    [ -f "$f" ] && [ "$f" -nt "$p" ] && return 0
-  done; return 1
+    [ -f "$f" ] && [ "$f" -nt "$p" ] && { $nc; return 0; }
+  done; $nc; return 1
 }
 while read -r n s q t; do
   [ -n "$n" ] || continue; seen[$n]=$q; state[$n]=$s

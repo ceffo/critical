@@ -4,9 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -192,6 +195,44 @@ func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
 		AreaOfEffect: "1-5 targets", Components: "V, S", SavingThrow: "None",
 	}), stats)
 }
+
+// ADR 0021 step 26.3: the importer is the only writer of typed stats. Every spell of a fresh
+// import holds exactly what the parser makes of its stat texts, labels included, and a start
+// rewrites a row typed before the parser set labels (its stats without the label key).
+func TestImportCatalogue_Step26_3_ATypedStatIsWrittenByTheImporterOnly(t *testing.T) {
+	f := newFakeStore()
+	cat := fixtureCatalogue(t)
+	require.NoError(t, importOn(f, cat, nil))
+	rows := byKey(catalogueRows(f))
+	labelled := 0
+	for _, sp := range cat.Spells {
+		want := spellstats.Parse(spellstats.Raw{
+			CastingTime: sp.CastingTime.Default(), Range: sp.Range.Default(), Duration: sp.Duration.Default(),
+			AreaOfEffect: sp.AreaOfEffect.Default(), Components: sp.Components.Default(), SavingThrow: sp.SavingThrow.Default(),
+		})
+		var got spellstats.Stats
+		require.NoError(t, json.Unmarshal([]byte(rows[sp.ID].Stats), &got), sp.ID)
+		assert.Equal(t, want, got, sp.ID)
+		if got.Duration.Label != "" || got.Save.Label != "" || got.Area.Label != "" {
+			labelled++
+		}
+	}
+	assert.Positive(t, labelled, "the fixture holds the book's word Special")
+
+	// Rows typed by the parser of before labels: the same stats without the key.
+	var stale []string
+	for key, r := range rows {
+		if strings.Contains(r.Stats, `"label"`) {
+			stale = append(stale, key)
+			f.setStats(sql.NullString{String: noLabel.ReplaceAllString(r.Stats, ""), Valid: true}, key)
+		}
+	}
+	require.NotEmpty(t, stale)
+	require.NoError(t, importOn(f, cat, nil))
+	assert.Equal(t, rows, byKey(catalogueRows(f)), "the start re-typed the rows, with their labels")
+}
+
+var noLabel = regexp.MustCompile(`,?"label":"[a-z0-9_]+"`)
 
 // setStats overwrites the stored typed stats of the spells with these keys.
 func (f *fakeStore) setStats(stats sql.NullString, keys ...string) {
@@ -660,4 +701,24 @@ func testdataSeedRefs(t *testing.T) []catalogue.Ref {
 		}
 	}
 	return refs
+}
+
+// A start whose re-typing fails does not go on: the import returns the error (and with it the
+// composition's start), naming the spell.
+type retypeFailing struct{ *fakeStore }
+
+func (s retypeFailing) SetSpellStats(context.Context, storeq.SetSpellStatsParams) error {
+	return errors.New("boom")
+}
+
+func TestImportCatalogue_Step26_3_AFailedRetypeFailsTheStart(t *testing.T) {
+	f := newFakeStore()
+	cat := fixtureCatalogue(t)
+	require.NoError(t, importOn(f, cat, nil))
+	for i := range f.t.Spells {
+		f.t.Spells[i].Stats = sql.NullString{}
+	}
+	err := importCatalogue(context.Background(), f, retypeFailing{f}, cat, nil)
+	require.ErrorContains(t, err, "re-type spell")
+	require.ErrorContains(t, err, "boom")
 }

@@ -76,6 +76,8 @@ export interface SpellArea {
   special?: "plus" | "or" | "note";
   /** Who it usually is ("One individual (usually caster)"). */
   usually?: string;
+  /** A common value of the book (ADR 0021 step 26.4), set by the importer. */
+  label?: string;
 }
 
 /** A quantity computed at a caster level; `dice` is still to be rolled on top of `amount`. */
@@ -87,12 +89,19 @@ export interface SpellValue {
 }
 
 export interface SpellStats {
-  casting_time: { raw: string; kind: "timed" | "special"; time: SpellQuantity };
+  casting_time: {
+    raw: string;
+    kind: "timed" | "special";
+    time: SpellQuantity;
+    /** A common value of the book (ADR 0021 step 26.4), set by the importer. */
+    label?: string;
+  };
   range: {
     raw: string;
     kind: "self" | "touch" | "distance" | "unlimited" | "special";
     distance: SpellQuantity;
     radius?: boolean;
+    label?: string;
   };
   duration: {
     raw: string;
@@ -105,6 +114,7 @@ export interface SpellStats {
       | "special";
     time: SpellQuantity;
     condition?: string;
+    label?: string;
   };
   area: SpellArea;
   components: {
@@ -115,7 +125,11 @@ export interface SpellStats {
     m_optional?: boolean;
     special?: boolean;
   };
-  save: { raw: string; kinds: ("none" | "negates" | "half" | "special")[] };
+  save: {
+    raw: string;
+    kinds: ("none" | "negates" | "half" | "special")[];
+    label?: string;
+  };
 }
 
 export interface SpellValues {

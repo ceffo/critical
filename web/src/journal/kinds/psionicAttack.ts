@@ -81,8 +81,7 @@ export const psionicAttackKind: KindView<PsionicAttackPayload> = {
           to: p.tangentsAfter,
         }),
       );
-    if (p.broken)
-      parts.push(t("log.attackParts.broken", { target: p.broken }));
+    if (p.broken) parts.push(t("log.attackParts.broken", { target: p.broken }));
     parts.push(
       p.spent < p.cost
         ? t("log.powerParts.halfCost", { spent: p.spent, cost: p.cost })

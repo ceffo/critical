@@ -58,12 +58,8 @@
           "cost": 1
         }
       ],
-      "unpaidTargets": [
-        "Goblin shaman"
-      ],
-      "expired": [
-        "Goblin shaman"
-      ]
+      "unpaidTargets": ["Goblin shaman"],
+      "expired": ["Goblin shaman"]
     }
   }
 }

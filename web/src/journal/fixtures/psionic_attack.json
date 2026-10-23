@@ -85,9 +85,7 @@
       "tangentsBefore": 2,
       "tangentsAfter": 3,
       "contact": true,
-      "warnings": [
-        "second_power_this_round"
-      ]
+      "warnings": ["second_power_this_round"]
     },
     "roll": false
   },

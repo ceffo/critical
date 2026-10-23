@@ -28,6 +28,7 @@ internal/cmd/<binary>/...         # boots logger, env, composition root, server
 internal/domain/                  # cross-cutting domain primitives (entities, sentinel errors, generic Service interface)
 internal/domain/service/<svc>/    # one package per business service — pure business logic
 internal/adapters/<svc>dal/       # one package per adapter — implementations of driven ports
+internal/adapters/bridgeadpt/        # adapters between two services: a port satisfied from another service or store (no I/O of its own)
 internal/storage/<engine>/        # shared infra primitives: pool, transaction wrapper, type helpers
 internal/rest/server/             # generic HTTP server (lifecycle only)
 internal/rest/<router>/           # router(s) — wire routes to handlers and middleware

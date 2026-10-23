@@ -15,7 +15,7 @@ Step 18 (the class, group and race definitions, format 11; the API reads format 
 of [ADR 0040](0040-classes-are-data.md) step 11.1, which decided the shape.
 Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; format 10 was the only format read until step 18) is **decided as built**, 2026-10-21:
 the column is decided by [ADR 0006](0006-saving-throws.md) step 9.1 (user triage of 2026-10-21) and step 1's rule makes it a format.
-Step 26 (the six spell stats are typed once by the importer, the fallback is the verbatim text, a common value is a `label`; no format change) is _proposed_, design only.
+Step 26 (the six spell stats are typed once by the importer, the fallback is the verbatim text, a common value is a `label`; no format change) is accepted 2026-10-23 (the user accepted every open question's default: "ok with all"), design only.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):

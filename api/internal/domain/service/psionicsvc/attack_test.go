@@ -373,6 +373,34 @@ func TestAttack_Step7_CountsTowardTheRoundsPowers(t *testing.T) {
 	assert.Equal(t, []string{psionicsvc.WarnSecondPowerThisRound}, use.Check.Warnings)
 }
 
+// ADR 0043 step 12: a power check made earlier in the round (no attack entry)
+// makes the attack the round's second power.
+func TestAttack_Step7_AfterAPowerCheckWarns(t *testing.T) {
+	chars := mocks.NewMockCharacters(t)
+	m := attackMocks{dice: mocks.NewMockDice(t), log: mocks.NewMockLog(t), buffs: mocks.NewMockBuffs(t), tables: mocks.NewMockTables(t)}
+	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(attacker(20), nil)
+	m.buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(3, nil)
+	m.buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(nil, nil).Maybe()
+	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).
+		Return([]actionlog.Entry{{ID: 5, Round: 3, Kind: actionlog.KindRoundAdvance}}, nil)
+	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPsionicAttack, 1).Return(nil, nil)
+	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).
+		Return([]actionlog.Entry{{ID: 9, Round: 3, Kind: actionlog.KindPowerCheck, Payload: []byte(`{"power":"thrust"}`)}}, nil)
+	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	svc, err := psionicsvc.New(psionicsvc.Deps{
+		Tables: m.tables, Log: m.log, Characters: chars, Picks: mocks.NewMockPicks(t),
+		Dice: m.dice, Buffs: m.buffs, Book: attackBook(), Tx: passTx{},
+	})
+	require.NoError(t, err)
+	rolls(m, 18, 18)
+	expectTangents(m, "Orc", 0, buffsvc.TangentsChange{})
+	m.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(41), nil).Once()
+
+	res, err := svc.Attack(context.Background(), 7, psionicsvc.AttackRequest{Mode: "ego_whip", Opponent: closedOrc()})
+	require.NoError(t, err)
+	assert.Equal(t, []string{psionicsvc.WarnSecondPowerThisRound}, res.Attack.Warnings)
+}
+
 // ADR 0044 step 7: the refusals, before any roll or write (the mocks fail
 // on any call).
 func TestAttack_Step7_RefusalsRollAndWriteNothing(t *testing.T) {

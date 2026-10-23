@@ -70,6 +70,19 @@ func TestTangents_Step3_ARowPerTargetChargedOnePSP(t *testing.T) {
 			"its id, start and rounds kept stay: it was paid for")
 	})
 
+	t.Run("a target typed in another case is the same row", func(t *testing.T) {
+		f := newFixture(t)
+		held := mindRow("o", "Orc", 1, 2)
+		f.state([]buffsvc.BuffEffect{held}, 5)
+		more := mindRow("o", "Orc", 2, 2)
+		f.saves([]buffsvc.BuffEffect{more})
+		ch, _, err := f.svc.AddTangents(ctx, charID, "orc", 1)
+		require.NoError(t, err)
+		assert.Nil(t, ch.Broken, "no other mind: nothing breaks")
+		assert.Equal(t, buffsvc.TangentsChange{Target: "Orc", Before: 1, After: 2, Row: more}, ch)
+		assert.Equal(t, 1, buffsvc.TangentsOn([]buffsvc.BuffEffect{held}, "ORC"), "TangentsOn ignores case")
+	})
+
 	t.Run("a second tangent past contact counts for nothing", func(t *testing.T) {
 		f := newFixture(t)
 		f.state([]buffsvc.BuffEffect{mindRow("o", "Orc", 2, 1)}, 5)

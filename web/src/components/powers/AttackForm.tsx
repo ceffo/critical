@@ -26,11 +26,14 @@ import { MAX_MODIFIER, MAX_MODIFIERS, MAX_REASON_LEN } from "./powerUse";
 export function AttackForm({
   busy,
   powerName,
+  targets,
   onAttack,
 }: {
   busy: boolean;
   /** The name of the attack mode, in the player's language. */
   powerName: string;
+  /** The minds already held in a row, offered beside free text: the same label attacks the same row. */
+  targets: string[];
   onAttack: (
     req: NonNullable<ReturnType<typeof attackRequest>>,
   ) => Promise<{ result: AttackResult } | { refused: string }>;
@@ -94,11 +97,17 @@ export function AttackForm({
         <input
           className={fieldClass}
           autoComplete="off"
+          list="attack-targets"
           maxLength={MAX_TARGET_LEN}
           aria-label={t("powers.attack.target")}
           value={draft.target}
           onChange={(e) => set({ target: e.target.value })}
         />
+        <datalist id="attack-targets" data-testid="attack-targets">
+          {targets.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
       </label>
 
       <div className="flex flex-wrap gap-3">

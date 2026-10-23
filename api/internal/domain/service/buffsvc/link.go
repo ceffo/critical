@@ -3,6 +3,7 @@ package buffsvc
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -78,15 +79,16 @@ func addTangents(rows []BuffEffect, target string, won, round int) (TangentsChan
 	at := -1
 	for _, b := range rows {
 		switch {
-		case b.TangentRow() && b.Target != target:
+		case b.TangentRow() && !strings.EqualFold(b.Target, target):
 			ch.Broken = &b
 			continue
-		case b.linkRow() && b.Target == target:
+		case b.linkRow() && strings.EqualFold(b.Target, target):
 			at = len(after)
 		}
 		after = append(after, b)
 	}
 	if at >= 0 {
+		ch.Target = after[at].Target // the row's label, whatever the case typed
 		ch.Before = held(after[at])
 	}
 	ch.After = min(ch.Before+won, MaxTangents+1)
@@ -133,10 +135,10 @@ func linkRow(target string, round int) BuffEffect {
 
 // TangentsOn is the tangents rows hold on target (ADR 0044 step 3): 0 with
 // no row holding it, MaxTangents+1 when a contact row does. target is
-// compared as given: trim it first (psionics.NormalizeTarget).
+// compared ignoring case, as a renewed name is: trim it first (psionics.NormalizeTarget).
 func TangentsOn(rows []BuffEffect, target string) int {
 	for _, b := range rows {
-		if b.linkRow() && b.Target == target {
+		if b.linkRow() && strings.EqualFold(b.Target, target) {
 			return held(b)
 		}
 	}

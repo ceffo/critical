@@ -166,6 +166,9 @@ func (s *service) Attack(ctx context.Context, characterID int64, req AttackReque
 		if err != nil {
 			return fmt.Errorf("add tangents: %w", err)
 		}
+		if ch.Target != "" {
+			rec.Target = ch.Target // an existing row's label, whatever the case typed
+		}
 		rec.TangentsBefore, rec.TangentsAfter, rec.Contact = ch.Before, ch.After, ch.Contact
 		if ch.Broken != nil {
 			rec.Broken = ch.Broken.Target

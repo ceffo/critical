@@ -4,7 +4,6 @@ import type { AttackRequest } from "@/api/psionics";
 import { MAX_MODIFIER, MAX_MODIFIERS } from "./powerUse";
 
 export const MAX_TARGET_LEN = 60;
-export const MAX_LEVEL = 30;
 
 export interface AttackDraft {
   target: string;
@@ -37,7 +36,7 @@ export function attackRequest(d: AttackDraft): AttackRequest | null {
   const target = d.target.trim();
   if (!target || target.length > MAX_TARGET_LEN) return null;
   const level = d.level.trim() === "" ? 0 : whole(d.level);
-  if (level === null || level < 0 || level > MAX_LEVEL) return null;
+  if (level === null || level < 0) return null;
   const req: AttackRequest = { target, mind: d.mind, level, modifiers: [] };
   if (d.defence) {
     req.defence = d.defence;

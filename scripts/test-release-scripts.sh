@@ -53,7 +53,7 @@ names = [st.get("id") or st.get("name") or st.get("uses") for st in steps]
 idx = {n: i for i, n in enumerate(names)}
 check(list(wf["jobs"]) == ["release"], "not one job from the version to the tag")
 for need in ("version", "secrets", "Refuse a manual run without its secrets", "Set up flyctl",
-             "Check out the release commit", "Build and push the release image", "deploy", "Tag the version"):
+             "Check out the release commit", "build", "deploy", "Tag the version"):
     check(need in idx, f"no step {need}")
 if not errs:
     check(idx["version"] < idx["secrets"], "the version is not computed first")
@@ -63,14 +63,14 @@ if not errs:
         if names[i] == "Refuse a manual run without its secrets":
             continue
         check("steps.secrets.outputs.ready == 'true'" in st.get("if", ""), f"step {names[i]} runs without the secrets")
-    for n in ("Check out the release commit", "Build and push the release image", "Tag the version"):
+    for n in ("Check out the release commit", "build", "Tag the version"):
         check("steps.version.outputs.release == 'true'" in steps[idx[n]]["if"], f"step {n} runs without a release")
     check("release == 'true' || steps.version.outputs.redeploy == 'true'" in steps[idx["secrets"]]["if"],
           "the secrets check runs when nothing is released")
     check(idx["deploy"] < idx["Tag the version"] and names[-1] == "Tag the version", "the tag is not the last step, after the deploy")
     check("steps.deploy.outputs.digest" in str(steps[idx["Tag the version"]]["env"]), "the tag does not name the staging digest")
     readers = [names[i] for i, st in enumerate(steps) if "{{ secrets." in str(st)]
-    check(readers == ["secrets", "Build and push the release image", "deploy"], f"the secrets are read by {readers}")
+    check(readers == ["secrets", "build", "deploy"], f"the secrets are read by {readers}")
     check("RULEBOOKS_DEPLOY_KEY" not in str(steps[idx["deploy"]]), "the deploy step gets the rulebooks key")
     refuse = steps[idx["Refuse a manual run without its secrets"]]
     check("github.event_name == 'workflow_dispatch'" in refuse["if"], "an automatic run without secrets would fail main")
@@ -91,9 +91,13 @@ for part in ("github.event.workflow_run.conclusion == 'success'", "contains(from
     check(part in cond, f"job condition lacks {part}")
 check("inputs.version" in job["env"]["REDEPLOY"] and "${{" not in steps[idx["version"]]["run"],
       "the version input reaches the script other than through the environment")
-build = steps[idx["Build and push the release image"]]["run"]
+build = steps[idx["build"]]["run"]
 check('scripts/changelog.sh gen "$COMMIT" "$VERSION"' in build and "CHANGELOG_DIR" in build,
       "the release build does not make the changelog of its version for the image (ADR 0039 step 6)")
+check('release-catalogue.sh "$dir" release-src' in build, "the build does not check the catalogue's format against the release commit")
+check("status\" = 3" in build and "unreadable=true" in build, "an unreadable catalogue does not skip the deploy")
+check("steps.build.outputs.unreadable != 'true'" in steps[idx["deploy"]]["if"] and "steps.build.outputs.unreadable != 'true'" in steps[idx["Tag the version"]]["if"],
+      "an unreadable catalogue still deploys or tags")
 if errs:
     print("\n".join("test-release-scripts: FAIL: " + e for e in errs), file=sys.stderr)
     sys.exit(1)
@@ -130,6 +134,42 @@ if RULEBOOKS_DEPLOY_KEY="$key" RULEBOOKS_REMOTE="file://$books" "$root/scripts/r
     fail "catalogue: succeeded without dist/catalogue.json"
 fi
 [ -z "$(ls -A "$tmp/none" 2>/dev/null)" ] || fail "catalogue: left a file when dist/catalogue.json is missing"
+
+# A catalogue format the app at the release commit does not read is refused before the build (exit 3, nothing
+# written, nothing on stdout), whichever half of a format bump came first; one it reads passes.
+app="$tmp/app"
+mkdir -p "$app/api/internal/domain/catalogue"
+cp "$root/api/internal/domain/catalogue/catalogue.go" "$app/api/internal/domain/catalogue/catalogue.go"
+read_format="$("$root/scripts/catalogue-formats.sh" "$app")"
+[ -n "$read_format" ] || fail "catalogue formats: the app reads none"
+fetch() { # <format json> <dest>: sets status, stdout in $tmp/out
+    mkdir -p "$books/dist"
+    printf '{"format":%s}\n' "$1" > "$books/dist/catalogue.json"
+    git_q -C "$books" add -A
+    git_q -C "$books" commit -m "format $1"
+    status=0
+    RULEBOOKS_DEPLOY_KEY="$key" RULEBOOKS_REMOTE="file://$books" "$root/scripts/release-catalogue.sh" "$2" "$app" >"$tmp/out" 2>"$tmp/err" || status=$?
+}
+fetch "$read_format" "$tmp/fmt-ok"
+[ "$status" = 0 ] && [ -s "$tmp/fmt-ok/catalogue.json" ] || fail "catalogue format: the format the app reads was refused: $(cat "$tmp/err")"
+fetch "$((read_format + 1))" "$tmp/fmt-newer"
+[ "$status" = 3 ] || fail "catalogue format: a newer rulebooks format exited $status, not 3"
+[ ! -s "$tmp/out" ] || fail "catalogue format: a refused catalogue printed on stdout"
+[ -z "$(ls -A "$tmp/fmt-newer" 2>/dev/null)" ] || fail "catalogue format: a refused catalogue was left in the dest dir"
+grep -q "format $((read_format + 1)); the app reads format $read_format" "$tmp/err" || fail "catalogue format: the notice does not name both sides: $(cat "$tmp/err")"
+fetch "$((read_format - 1))" "$tmp/fmt-older"
+[ "$status" = 3 ] || fail "catalogue format: an older rulebooks format exited $status, not 3"
+fetch '"'"$read_format"'"' "$tmp/fmt-string"
+[ "$status" = 0 ] || fail "catalogue format: a format written as a string was refused"
+fetch null "$tmp/fmt-none"
+[ "$status" = 3 ] || fail "catalogue format: a catalogue without a format exited $status, not 3"
+fetch "$((read_format + 1))" "$tmp/fmt-nocheck-src" # without the app dir the check is off (the operator's own build)
+RULEBOOKS_DEPLOY_KEY="$key" RULEBOOKS_REMOTE="file://$books" "$root/scripts/release-catalogue.sh" "$tmp/fmt-nocheck" >/dev/null 2>&1 \
+    || fail "catalogue format: refused without an app dir"
+sed -i 's/^var Formats = .*/var Formats = []int{FormatPsionics, 99}/' "$app/api/internal/domain/catalogue/catalogue.go"
+[ "$("$root/scripts/catalogue-formats.sh" "$app" | tr '\n' ' ')" = "13 99 " ] || fail "catalogue formats: a list of constants and numbers is not resolved"
+sed -i 's/^var Formats = .*/var Formats = []int{FormatGone}/' "$app/api/internal/domain/catalogue/catalogue.go"
+"$root/scripts/catalogue-formats.sh" "$app" >/dev/null 2>&1 && fail "catalogue formats: an unknown constant was accepted"
 
 # --- release-image.sh ---
 stubs="$tmp/bin"

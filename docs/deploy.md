@@ -705,6 +705,15 @@ take the same number).
   agent and the clone are removed when the script ends, the catalogue when the build step ends. It is
   never printed, never an artifact, never in an actions cache (the workflow has none) or an exported build
   cache.
+  **Format check.** The script is given the release commit's checkout and compares the catalogue's
+  `format` with the formats the app there reads (`scripts/catalogue-formats.sh` parses the `Formats` list
+  of `api/internal/domain/catalogue/catalogue.go`; a Go test keeps that parse equal to the list the API
+  uses). A format the app does not read, from either half of a format bump landing first, exits 3 before
+  anything is built: an automatic run ends green with a `Release skipped` warning, the deploy and the tag
+  steps are skipped and staging keeps running its version; the next main run releases once the app and the
+  rulebooks agree (the merge of the other half is such a run). A manual run fails instead, like a missing
+  secret. Before this check the unreadable catalogue was baked in, the app crashed at boot and the smoke
+  check rolled staging back (three failed runs).
 - **Image** (`scripts/release-image.sh`, the script `just release-image` runs too): one plain `docker
   build` of the clean checkout with the catalogue as the `catalogue` build context, `COMMIT` and `VERSION`
   (reported by `/api/health`), labelled `org.opencontainers.image.revision=<commit>`,
@@ -727,7 +736,8 @@ take the same number).
 - **No shell tracing** anywhere (`set -x` is absent), and none of the scripts prints a secret.
   `just validate` runs `scripts/test-release-scripts.sh`, which exercises the three scripts offline (docker
   and fly stubbed, a local rulebooks repo and a generated key): the missing-secret no-op, stdout of the
-  fetch being only the sha, the labels, the full-sha and version tags, a dirty tree refused, and the job's
+  fetch being only the sha, a newer, older or absent catalogue format refused before the build (exit 3,
+  nothing written) and the build step skipping the deploy and the tag on it, the labels, the full-sha and version tags, a dirty tree refused, and the job's
   steps parsed (the version first, every build, deploy and tag step gated on the secrets, the tag last). Its rulebooks remote is
   a `file://` repository, so ssh itself (the agent's key reaching GitHub, the pinned host key) is only
   proven by the first real run (user steps left).
@@ -1129,3 +1139,6 @@ digest with the new `critical.rulebooks.revision`, under the next version, at le
 anything that makes a release. Re-running an earlier release run does not do it: a run that passed has its
 range end at its own tag (no release), and any older run is refused once a newer version exists ("a newer
 release exists", "Release version"). Once staging passed and tagged the version, promote it as above.
+A catalogue in a format the app on `main` does not read yet (a format bump) is not released: the run
+skips with a warning (see "Format check" above) and the release comes with the next main run, so the
+two halves of a bump may merge in either order.

@@ -128,12 +128,20 @@ jobs:
       # the checkouts, never an artifact or a cache), built into the image, then deleted. The image goes
       # to the staging app's repository, the one the staging deploy token may push to, tagged with the
       # commit and the version; production gets the same digest by the promotion (docs/deploy.md).
+      #
+      # A catalogue whose format the app at this commit does not read (a format bump of the rulebooks
+      # whose app half is not on main yet, or the reverse) is caught here, before anything is built:
+      # an automatic run ends green with a warning and deploys nothing (staging keeps its running
+      # version); the release happens by itself on the next main run once both halves are there. A
+      # manual run fails instead (someone asked for a deploy that cannot happen).
       - name: Build and push the release image
+        id: build
         if: steps.secrets.outputs.ready == 'true' && steps.version.outputs.release == 'true'
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
           RULEBOOKS_DEPLOY_KEY: ${{ secrets.RULEBOOKS_DEPLOY_KEY }}
           VERSION: ${{ steps.version.outputs.version }}
+          EVENT: ${{ github.event_name }}
         run: |
           dir="$RUNNER_TEMP/catalogue"
           # The changelog (ADR 0039): made here, where the history and the tags are, for the versions up to
@@ -143,7 +151,18 @@ jobs:
           trap 'rm -rf "$dir" "$CHANGELOG_DIR"' EXIT
           mkdir -p "$CHANGELOG_DIR"
           scripts/changelog.sh gen "$COMMIT" "$VERSION" > "$CHANGELOG_DIR/changelog.json"
-          rulebooks="$(scripts/release-catalogue.sh "$dir")"
+          status=0
+          rulebooks="$(scripts/release-catalogue.sh "$dir" release-src)" || status=$?
+          if [ "$status" = 3 ]; then
+            if [ "$EVENT" = workflow_dispatch ]; then
+              echo "::error title=Release::the rulebooks catalogue is in a format the app at this commit does not read (see above): nothing was released"
+              exit 1
+            fi
+            echo "::warning title=Release skipped::the rulebooks catalogue is in a format the app at ${COMMIT:0:7} does not read (see the log): nothing is built or deployed, staging keeps its version. The next main run releases once the app and the rulebooks agree."
+            echo "unreadable=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          [ "$status" = 0 ] || exit "$status"
           unset RULEBOOKS_DEPLOY_KEY
           app="$(sed -n 's/^app = "\(.*\)"$/\1/p' deploy/fly.staging.toml)"
           release="$PWD/scripts/release-image.sh"
@@ -155,7 +174,7 @@ jobs:
       # Deploy, smoke-check (health reports the commit and the version), record the deployment.
       - name: Deploy to staging
         id: deploy
-        if: steps.secrets.outputs.ready == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.build.outputs.unreadable != 'true'
         uses: ./.github/actions/staging-deploy
         with:
           sha: ${{ steps.version.outputs.sha }}
@@ -166,7 +185,7 @@ jobs:
       # Only after a passed staging deploy (a failed one stops the job above): the version becomes a tag.
       # Made with the workflow's token, so it starts no workflow (the Promote workflow is run by hand).
       - name: Tag the version
-        if: steps.secrets.outputs.ready == 'true' && steps.version.outputs.release == 'true'
+        if: steps.secrets.outputs.ready == 'true' && steps.version.outputs.release == 'true' && steps.build.outputs.unreadable != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}

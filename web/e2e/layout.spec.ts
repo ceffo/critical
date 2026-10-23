@@ -830,7 +830,22 @@ test("journal split: drag resizes, click toggles, kept across reload", async ({
   // Default: the band takes at most 60 % of the stage, the journal at least 14rem.
   const stage = await heightOf(page.getByTestId("act-stage"));
   expect(await heightOf(band)).toBeLessThanOrEqual(stage * 0.6 + 1);
-  const before = await heightOf(slot);
+  // The band is as tall as its content, so the journal's height follows the content: measure it
+  // once the logged entry has rendered and the layout has stopped moving.
+  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
+  const settled = async () => {
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const now = await heightOf(slot);
+        const same = now === last;
+        last = now;
+        return same;
+      })
+      .toBe(true);
+    return last;
+  };
+  const before = await settled();
   expect(before).toBeGreaterThanOrEqual(224);
 
   // Drag the handle down by 120 px: the journal shrinks by as much, the band grows. Down, not up:
@@ -4064,6 +4079,9 @@ test("Ajouter: the catalogue rows and the copy panel uncut, fr and en, 1280 to 2
 test("AC: the shield beside the HP, its breakdown popover and the Inventaire's AC card uncut, fr and en, 1280 to 2560", async ({
   page,
 }) => {
+  // Like the other viewport sweeps: five viewports in two languages and four states take about
+  // 20 s unloaded, and a starved runner needs more than the 30 s default.
+  test.setTimeout(90_000);
   await openDashboard(page);
   await addBuff(page, {
     name: "Protection from Evil",

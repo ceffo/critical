@@ -3,9 +3,15 @@
 // - harder): `target` stays the unadjusted one, `adjustedTarget` is the one the roll is judged
 // against (steps 5 to 8).
 
+import type { LocalizedText } from "./localized";
+
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
 
-export type SkillKind = "proficiency" | "bardSkill" | "thiefSkill";
+/** The check kind a skill is logged under: a proficiency's, or `rogueSkill` for any skill set (its
+ * `set` says which). `bardSkill` and `thiefSkill` are the kinds entries stored before were logged
+ * under; they still read (ADR 0040 step 15). */
+export type SkillKind =
+  "proficiency" | "rogueSkill" | "bardSkill" | "thiefSkill";
 
 /** The newest non-voided check of a skill, with the adjustment and verdict in effect. */
 export interface LastCheck {
@@ -57,11 +63,11 @@ export type ThiefSkill = RogueSkill;
 export type BardSkill = RogueSkill;
 
 /** One skill set of the character (ADR 0040 step 3.5): one per rogue_skills feature its classes
- * grant, each with its own budget and points. `set` is the code the points are spent under, `kind`
- * the check kind its rolls are logged as (a thief's set logs thiefSkill, ADR 0040 step 3.2). */
+ * grant, each with its own budget and points. `set` is the code the points are spent under and the
+ * rolls are made with; `name` is the set's heading, served by language (ADR 0040 step 15). */
 export interface SkillSet {
   set: string;
-  kind: Exclude<SkillKind, "proficiency">;
+  name: LocalizedText;
   /** ADR 0033 step 14: the skill armour the set reads, from the body armour worn (none, leather,
    * padded_studded_leather, elven_chain, metal). */
   skillArmor: string;
@@ -103,6 +109,9 @@ export interface SkillBudget {
 export interface SkillCheck {
   id: string;
   kind: SkillKind;
+  /** The skill set a `rogueSkill` check was made in; absent on a proficiency's and on an entry
+   * stored as `thiefSkill` or `bardSkill`. */
+  set?: string;
   die: number;
   roll: number;
   target: number;

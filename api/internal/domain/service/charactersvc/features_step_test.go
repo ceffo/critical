@@ -435,3 +435,14 @@ func TestDerive_Step16_2_NoArmourComesFromTheEquipment(t *testing.T) {
 		{"a mage listing leather may wear it", leather, "mage", 1, nil, noArmour(false)},
 	})
 }
+
+// ADR 0040 step 15: the derived block names each skill set from the catalogue,
+// by language; the client holds no heading of its own.
+func TestSkillSets_Step15_TheDerivedBlockNamesEachSet(t *testing.T) {
+	runFeatureCases(t, []featureCase{
+		{"the thief's set is served with its name", keep, "thief", 1, nil, func(t *testing.T, d charactersvc.Derived) {
+			require.Len(t, d.SkillSets, 1)
+			assert.NotEmpty(t, d.SkillSets[0].Name["en"])
+		}},
+	})
+}

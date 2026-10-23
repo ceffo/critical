@@ -1340,6 +1340,22 @@ describe("entryText for skill checks", () => {
     );
   });
 
+  it("words a rogueSkill check, and the entries stored under the old kinds (ADR 0040 step 15)", async () => {
+    const en = await makeT("en");
+    const rogue = {
+      ...bard,
+      id: "open_locks",
+      kind: "rogueSkill",
+      set: "thief",
+    };
+    expect(entryText(entry("skill_check", rogue, ""), en)).toMatch(
+      /^Open Locks: d100 51 vs 50/,
+    );
+    expect(
+      entryText(entry("skill_check", { ...rogue, kind: "thiefSkill" }, ""), en),
+    ).toMatch(/^Open Locks: d100 51 vs 50/);
+  });
+
   it("words a thief skill check (ADR 0030 step 17) like a bard skill's (fr)", async () => {
     const fr = await makeT("fr");
     const thief = {

@@ -1407,6 +1407,7 @@
     "multRoll": "d100 multiplicateur",
     "skill": {
       "proficiency": "Compétence · d{{die}} sous {{stat}}",
+      "rogueSkill": "Talent de classe · d{{die}} sous {{percent}} %",
       "bardSkill": "Talent de barde · d{{die}} sous {{percent}} %",
       "thiefSkill": "Talent de voleur · d{{die}} sous {{percent}} %",
       "success": "Réussi",
@@ -2146,7 +2147,6 @@
   },
   "skills": {
     "proficiencies": "Compétences diverses",
-    "bardSkills": "Talents de barde",
     "percent": "{{value}} %",
     "rollLabel": "Lancer {{name}}",
     "names": {
@@ -2224,7 +2224,6 @@
       "tracking": "Pistage",
       "weaponsmithing": "Forge d’armes"
     },
-    "thiefSkills": "Talents de voleur",
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
     "budget": {
       "skill_points_total": "Points de talent : {{points}} au total, {{limit}} au plus à ce niveau",

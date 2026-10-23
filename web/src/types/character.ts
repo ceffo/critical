@@ -288,6 +288,8 @@ export interface ProficienciesAnswer {
  * (GET /api/skills' set `budget`; null before the level its points start). */
 export interface DerivedSkillSet {
   set: string;
+  /** The set's name by language (ADR 0040 step 15). */
+  name: LocalizedText;
   skillArmor: string;
   skills: ThiefSkillTerms[];
   warnings: SkillBudgetWarning[];

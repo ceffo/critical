@@ -220,7 +220,10 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
    …; rogues 1-4, 5-8, …; warriors 1-2, 3-4, …; wizards 1-5, 6-10, … (the warriors' level 0 row is
    unused: a character starts at level 1). The race's bonus (step 22) is one named modifier on the
    roll, like a buff's `save_bonus` (ADR 0006 step 1): it moves the roll, never the target. Amends
-   ADR 0006 step 1 ("the target of the category on the character sheet").
+   ADR 0006 step 1 ("the target of the category on the character sheet"). _(The best-of across
+   entries and the target of a category are `domain/saves`'s, the saves owner: [ADR
+   0046](0046-derived-figures.md) step 3, implemented 2026-10-23; the Table 60 row is still read by
+   `ruletablesvc`.)_
 
    Tests: `TestSavesFor_Step6_Table60` (ruletablesadpt), `TestDerive_Step6_SavesFromTable60`
    (charactersvc), `TestResolveSavingThrow` (combatsvc, on the derived targets).
@@ -883,6 +886,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        _(As built)_ The bonus is the derived block's `raceSaveBonus` (per category) and, on the
        roll, a modifier of kind `race` whose detail is the race code; the poison flag waits for the
        user's OK (until then dwarves and halflings get no bonus against poison).
+       _(The bonus per category is `saves.RaceBonus` and its roll term `saves.TermRace`, both in
+       `domain/saves`: [ADR 0046](0046-derived-figures.md) step 3.)_
        Tests: `TestConSaveBonusFor_Step22_1_Table9` (ruletablesadpt), `TestDerive_Step22_1_RaceSaveBonus`
        (charactersvc), `TestResolveSavingThrow_Step22_1_RaceBonusIsANamedModifier` (combatsvc).
     2. Thief and bard skills: step 17 and 18's Table 27.

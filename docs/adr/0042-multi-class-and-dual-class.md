@@ -318,6 +318,9 @@ bard 15 never).)_
    the most advantageous roll), category by category, so two classes' rows may mix
    _(Q6)_. A dual-class character as step 8: the active entry's rows until the crossover,
    then the best per category _(Q5)_. The race's bonus is unchanged (ADR 0030 step 22).
+   _(The best-per-category is `saves.Best`, in `domain/saves`, the saves owner; the crossover and the
+   dormant-entry filtering stay in `charactersvc`: [ADR 0046](0046-derived-figures.md) step 3,
+   implemented 2026-10-23.)_
    Test: `Saves_Step9_BestPerCategory` (charactersvc: a fighter/mage at levels where the fighter is
    better on breath and the mage on spells takes each best).
    _(As built, 2026-10-22, for a multi-class character: per category among the active entries, in the

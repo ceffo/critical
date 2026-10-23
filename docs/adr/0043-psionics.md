@@ -139,7 +139,8 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    `10-special-abilities.md`), in addition to Wisdom's magical defence adjustment
    ([ADR 0006](0006-saving-throws.md) step 9). It is a labelled modifier of the save's breakdown,
    given when the save request carries the tag; the tag is the mind-affecting tag of ADR 0006
-   step 9 _(Q12)_.
+   step 9 _(Q12)_. _(The class bonuses are `saves.ClassBonuses` and their terms `saves.Terms`, in
+   `domain/saves`, the saves owner: [ADR 0046](0046-derived-figures.md) step 3.)_
    Test: `ResolveSavingThrow_Step3_ThePsionicistsTwoAgainstCharm` (combatsvc: a psionicist's mind-affecting save
    carries +2 and the Wisdom adjustment, two labelled lines; a fighter's carries no +2).
 

@@ -88,7 +88,7 @@ _Code_: Feature
 
 **Class save bonus** (fr: bonus de classe aux jets de protection):
 A bonus a class's `save_bonus` feature adds to a save whose request carries its effect tag (the psionicist's +2 against mind-affecting magic), a named modifier on the roll beside the Wisdom adjustment. [ADR 0043](docs/adr/0043-psionics.md) step 3.
-_Code_: SaveBonus, ClassSaveBonus
+_Code_: SaveBonus, ClassSaveBonus, ClassBonus
 
 **Class limits** (fr: limites de classe):
 What a class may wear and wield: the body armour columns, whether it uses a shield, the weapons it may wield (by type or catalogue code) or only blunt ones. Breaking them is a warning, never a refusal; they also give the weapon types a proficiency may be picked in. [ADR 0033](docs/adr/0033-equipment.md) step 20, [ADR 0037](docs/adr/0037-proficiencies.md) step 7, [ADR 0040](docs/adr/0040-classes-are-data.md) step 1.6.
@@ -163,7 +163,7 @@ _Code_: Override
 **Saving throw** (fr: jet de sauvegarde), or **save**:
 A d20 at or above the target of one of the five categories. [ADR 0006](docs/adr/0006-saving-throws.md).
 _Avoid_: jet de protection.
-_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, SaveOptions, Saves, SaveType
+_Code_: Save, SaveAdjustment, SaveBreakdown, SaveCategory, SaveEffect, SaveOptions, Saves, SaveType, Figure, Flags
 
 **Mind-affecting** (fr: contre l'esprit):
 A flag on a saving-throw request: the save is against mind-affecting magic, so Wisdom's magical

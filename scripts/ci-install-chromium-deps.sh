@@ -13,6 +13,7 @@
 #   SETTLE_SECONDS   seconds to wait for apt/dpkg to be gone   (15)
 #   SUDO             privilege prefix, empty for none          (sudo)
 #   APT_PROCS        process names that hold the apt locks     (apt-get apt dpkg)
+#   APT_KILL         the subset of those that get stopped      (apt-get apt)
 set -uo pipefail
 
 INSTALL_CMD="${INSTALL_CMD:-npx playwright install-deps chromium}"
@@ -21,6 +22,7 @@ ATTEMPT_TIMEOUT="${ATTEMPT_TIMEOUT:-135}"
 SETTLE_SECONDS="${SETTLE_SECONDS:-15}"
 SUDO="${SUDO-sudo}"
 APT_PROCS="${APT_PROCS:-apt-get apt dpkg}"
+APT_KILL="${APT_KILL:-apt-get apt}"
 
 # shellcheck disable=SC2086 # APT_PROCS and SUDO are word lists on purpose.
 holders() { for p in $APT_PROCS; do pgrep -x "$p"; done; }
@@ -29,10 +31,9 @@ holders() { for p in $APT_PROCS; do pgrep -x "$p"; done; }
 free_locks() {
     [ -z "$(holders)" ] && return 0
     echo "apt processes still running after the timed-out attempt; stopping them"
+    local p
     # shellcheck disable=SC2086
-    $SUDO pkill -TERM -x apt-get || true
-    # shellcheck disable=SC2086
-    $SUDO pkill -TERM -x apt || true
+    for p in $APT_KILL; do $SUDO pkill -TERM -x "$p" || true; done
     local waited=0
     while [ -n "$(holders)" ] && [ "$waited" -lt "$SETTLE_SECONDS" ]; do
         sleep 1
@@ -40,9 +41,7 @@ free_locks() {
         # After a few seconds of grace, stop asking politely.
         if [ "$waited" -eq 3 ]; then
             # shellcheck disable=SC2086
-            $SUDO pkill -KILL -x apt-get || true
-            # shellcheck disable=SC2086
-            $SUDO pkill -KILL -x apt || true
+            for p in $APT_KILL; do $SUDO pkill -KILL -x "$p" || true; done
         fi
     done
     # A killed apt-get may have left packages unpacked but unconfigured; finish them before the next run.

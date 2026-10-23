@@ -85,7 +85,8 @@ func TestBard_Step18_CreateRollSpendAndUndo(t *testing.T) {
 
 	check, err := bs.Skills.Roll(ctx, id, "climb_walls", skillsvc.Adjustment{})
 	require.NoError(t, err)
-	assert.Equal(t, skillsvc.KindBardSkill, check.Kind)
+	assert.Equal(t, skillsvc.KindRogueSkill, check.Kind)
+	assert.Equal(t, "bard", check.Set)
 	assert.Equal(t, 40, check.Target, "the derived percentage")
 	assert.True(t, check.Success, "40 at or under 40")
 	check, err = bs.Skills.Roll(ctx, id, "climb_walls", skillsvc.Adjustment{})

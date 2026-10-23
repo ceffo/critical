@@ -571,6 +571,11 @@ flowchart LR
     kinds. The proficiency's own kind is unchanged. The specialization side needs no new reading: the
     creation and level-up options already carry the cost as `specializationSlots`, now computed from the
     params (step 13).
+    _As built (server half):_ `name` and `min_percent` reach the rogue_skills params at load, as `Skills`
+    does, so no port grew. A skill-set check logs `rogueSkill` with `set`; `skillsvc` keeps the two
+    literals `thief` and `bard` only to give an entry stored as `thiefSkill` or `bardSkill` the set it
+    stood for (its last check, its adjustment). `GET /api/skills` and the roll's answer carry `set`; the
+    roll takes `?set=`.
     **Removes** the allowlist entries `web/src/components/actions/SkillsTab.tsx:thief` and
     `web/src/components/actions/SkillsTab.tsx:bard`.
     Tests: `SkillsTab` (web unit: two sets, one of them a test set the client has never heard of,

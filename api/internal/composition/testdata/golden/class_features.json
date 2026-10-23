@@ -115,6 +115,11 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 0,
@@ -304,6 +309,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 0,
@@ -493,6 +503,11 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 180,
@@ -688,6 +703,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 180,
@@ -883,6 +903,11 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 90,
@@ -1076,6 +1101,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 0,
+          "Name": {
+            "en": "Bard skills",
+            "fr": "Talents de barde"
+          },
           "Points": {
             "First": 20,
             "Left": 90,
@@ -3848,6 +3878,11 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 0,
@@ -4051,6 +4086,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 0,
@@ -4254,6 +4294,11 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 360,
@@ -4457,6 +4502,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 360,
@@ -4660,6 +4710,11 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 180,
@@ -4863,6 +4918,11 @@
         {
           "Armor": "none",
           "Budget": [],
+          "MinPercent": 1,
+          "Name": {
+            "en": "Thief skills",
+            "fr": "Talents de voleur"
+          },
           "Points": {
             "First": 60,
             "Left": 180,

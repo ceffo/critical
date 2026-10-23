@@ -31,7 +31,7 @@ func thiefFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	f.svc = svc
 	thief := viewtest.Single("thief", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0))
-	thief.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{
+	thief.SkillSets = []skills.SkillSet{{Set: "thief", MinPercent: 1, Skills: []ruletablesvc.SkillPercent{
 		{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40},
 		{Skill: "climb_walls", Base: 60, Race: -15, Armor: 10, Percent: 55},
 	}}}
@@ -42,7 +42,7 @@ func thiefFixture(t *testing.T) *fixture {
 
 // ADR 0030 step 17 through ADR 0014 step 3: a thieving skill is one d100 at
 // or under the percentage the character service derives, logged as one
-// skill check of kind thiefSkill.
+// skill check of kind rogueSkill with its set.
 func TestThiefSkill_Step17_D100AtOrUnderTheDerivedPercent(t *testing.T) {
 	for _, tt := range []struct {
 		roll    int
@@ -50,9 +50,10 @@ func TestThiefSkill_Step17_D100AtOrUnderTheDerivedPercent(t *testing.T) {
 	}{{40, true}, {41, false}, {1, true}} {
 		f := thiefFixture(t)
 		f.records()
-		f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(tt.roll).Once()
+		f.dice.EXPECT().RollDie(skillsvc.RogueSkillDie).Return(tt.roll).Once()
 		got := f.roll(t, "open_locks")
-		assert.Equal(t, skillsvc.KindThiefSkill, got.Kind)
+		assert.Equal(t, skillsvc.KindRogueSkill, got.Kind)
+		assert.Equal(t, "thief", got.Set)
 		assert.Equal(t, 100, got.Die)
 		assert.Equal(t, 40, got.Target)
 		assert.Equal(t, tt.success, got.Success, "roll %d", tt.roll)
@@ -60,7 +61,8 @@ func TestThiefSkill_Step17_D100AtOrUnderTheDerivedPercent(t *testing.T) {
 		assert.Equal(t, actionlog.KindSkillCheck, f.entries[0].Kind)
 		var rec map[string]any
 		require.NoError(t, json.Unmarshal(f.entries[0].Payload, &rec))
-		assert.Equal(t, "thiefSkill", rec["kind"])
+		assert.Equal(t, "rogueSkill", rec["kind"])
+		assert.Equal(t, "thief", rec["set"])
 	}
 }
 
@@ -74,7 +76,7 @@ func TestThiefSkill_TheAdjustmentMovesTheTarget(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 50, got.AdjustedTarget)
 	assert.True(t, got.Success)
-	assert.Equal(t, 100, skillsvc.MaxAdjustment(skillsvc.KindThiefSkill))
+	assert.Equal(t, 100, skillsvc.MaxAdjustment(skillsvc.KindRogueSkill))
 
 	f = thiefFixture(t)
 	_, err = f.svc.Roll(context.Background(), charID, "open_locks", skillsvc.Adjustment{Value: 101})
@@ -91,7 +93,7 @@ func TestThiefSkill_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 	got, err := f.svc.List(context.Background(), charID)
 	require.NoError(t, err)
 	require.Len(t, got.SkillSets, 1)
-	assert.Equal(t, skillsvc.KindThiefSkill, got.SkillSets[0].Kind)
+	assert.Equal(t, 1, got.SkillSets[0].MinPercent)
 	assert.Equal(t, []skillsvc.SetSkill{
 		{SkillPercent: ruletablesvc.SkillPercent{Skill: "open_locks", Base: 10, Points: 20, Dexterity: 10, Percent: 40}},
 		{
@@ -116,7 +118,7 @@ func TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie(t *testing.T) {
 	svc, err := skillsvc.New(skillsvc.Deps{Characters: f.chars, Abilities: f.abils, Dice: f.dice, Log: f.log, Points: f.points, Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: f.rulesets, Book: testBook(t), Tables: &fakeTables{}, Tx: f.tx})
 	require.NoError(t, err)
 	thief := viewtest.Single("thief", 1, viewtest.WithIdentity(charID, "Test", ""))
-	thief.SkillSets = []skills.SkillSet{{Set: "thief", Skills: []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}}}
+	thief.SkillSets = []skills.SkillSet{{Set: "thief", MinPercent: 1, Skills: []ruletablesvc.SkillPercent{{Skill: "climb_walls", Base: 60, Race: -15, Armor: -50, Percent: 0}}}}
 	f.chars.EXPECT().View(mock.Anything, charID).Return(thief, nil)
 	_, err = svc.Roll(context.Background(), charID, "climb_walls", skillsvc.Adjustment{Value: 30, Reason: "rope"})
 	var fe *domain.FieldError
@@ -137,7 +139,7 @@ func TestSkills_Step16_3_ABlockedSkillIsNotRolled(t *testing.T) {
 	assert.Equal(t, domain.FieldError{Field: "id", Message: skillsvc.CodeSkillBlockedByArmour}, *fe)
 
 	f.records()
-	f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(40).Once()
+	f.dice.EXPECT().RollDie(skillsvc.RogueSkillDie).Return(40).Once()
 	assert.True(t, f.roll(t, "open_locks").Success)
 }
 
@@ -153,7 +155,7 @@ func TestThiefSkill_Step13_AnOldClassSkillWarnsBeforeTheCrossover(t *testing.T) 
 		f.view.Entries[0].Class = "fighter"
 		f.view.SkillSets[0].Dormant = dormant
 		f.records()
-		f.dice.EXPECT().RollDie(skillsvc.ThiefSkillDie).Return(30).Once()
+		f.dice.EXPECT().RollDie(skillsvc.RogueSkillDie).Return(30).Once()
 		got := f.roll(t, "open_locks")
 		assert.True(t, got.Success, "rolled at the thief's 40%%")
 		require.Len(t, f.entries, 1)

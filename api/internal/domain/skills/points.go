@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -247,11 +248,15 @@ func (s PointsSheet) ArmourBlocks() bool {
 // terms, the skill armour the set reads, the budget's warnings and the budget as figures at the
 // realized level. Each set has its own budget.
 type SkillSet struct {
-	Set    string
-	Skills []ruletablesvc.SkillPercent
-	Armor  string
-	Budget []ruletablesvc.BudgetWarning
-	Points *ruletablesvc.SkillPointsBudget
+	Set string
+	// Name is the set's heading and MinPercent the least percentage a skill of it is used at
+	// (ADR 0040 step 15), from its rogue_skills params.
+	Name       localized.Text
+	MinPercent int
+	Skills     []ruletablesvc.SkillPercent
+	Armor      string
+	Budget     []ruletablesvc.BudgetWarning
+	Points     *ruletablesvc.SkillPointsBudget
 	// Dormant: the set is a dual-class's old class's before the crossover
 	// (ADR 0042 step 13): rolled, warning dual_class_old_ability. Set by the
 	// character's derivation from its grant. Domain only, not on the wire.
@@ -266,7 +271,7 @@ type SkillSet struct {
 func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 	var out []SkillSet
 	for _, rs := range RogueSetsAt(s.Class, s.Level) {
-		set := SkillSet{Set: rs.Set, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
+		set := SkillSet{Set: rs.Set, Name: rs.Name, MinPercent: rs.MinPercent, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
 		points := s.Points.Of(rs.Set)
 		var err error
 		if set.Skills, err = t.RogueSkills(rs, s.Race, s.Dex, set.Armor, points); err != nil {

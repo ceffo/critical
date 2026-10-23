@@ -277,6 +277,7 @@ func resolveSkillSet(rs *classes.RogueSkills, sets []skillSetDefDTO) error {
 	if i < 0 {
 		return fmt.Errorf("rogue_skills: unknown skill set %q", rs.Set)
 	}
+	rs.Name, rs.MinPercent = sets[i].Name, sets[i].MinPercent
 	for _, k := range sets[i].Skills {
 		rs.Skills = append(rs.Skills, k.ID)
 		if k.ArmourFree {

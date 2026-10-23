@@ -42,7 +42,7 @@ func derivedBardFixture(t *testing.T) *fixture {
 
 // ADR 0030 step 18 through ADR 0014 step 3 (as amended): a bard skill is
 // one d100 at or under the percentage the character service derives from
-// its points, logged as one skill check of kind bardSkill.
+// its points, logged as one skill check of kind rogueSkill with its set.
 func TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent(t *testing.T) {
 	for _, tt := range []struct {
 		roll    int
@@ -50,16 +50,18 @@ func TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent(t *testing.T) {
 	}{{37, true}, {38, false}, {1, true}} {
 		f := derivedBardFixture(t)
 		f.records()
-		f.dice.EXPECT().RollDie(skillsvc.BardSkillDie).Return(tt.roll).Once()
+		f.dice.EXPECT().RollDie(skillsvc.RogueSkillDie).Return(tt.roll).Once()
 		got := f.roll(t, "detect_noise")
-		assert.Equal(t, skillsvc.KindBardSkill, got.Kind)
+		assert.Equal(t, skillsvc.KindRogueSkill, got.Kind)
+		assert.Equal(t, "bard", got.Set)
 		assert.Equal(t, 100, got.Die)
 		assert.Equal(t, 37, got.Target, "the derived percentage")
 		assert.Equal(t, tt.success, got.Success, "roll %d", tt.roll)
 		require.Len(t, f.entries, 1)
 		var rec map[string]any
 		require.NoError(t, json.Unmarshal(f.entries[0].Payload, &rec))
-		assert.Equal(t, "bardSkill", rec["kind"])
+		assert.Equal(t, "rogueSkill", rec["kind"])
+		assert.Equal(t, "bard", rec["set"])
 	}
 	f := derivedBardFixture(t)
 	_, err := f.svc.Roll(context.Background(), charID, "open_locks", skillsvc.Adjustment{})
@@ -78,7 +80,6 @@ func TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck(t *testing.T) {
 	require.Len(t, got.SkillSets, 1)
 	set := got.SkillSets[0]
 	assert.Equal(t, "bard", set.Set)
-	assert.Equal(t, skillsvc.KindBardSkill, set.Kind)
 	require.Len(t, set.Skills, 4)
 	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 		[]string{set.Skills[0].Skill, set.Skills[1].Skill, set.Skills[2].Skill, set.Skills[3].Skill})

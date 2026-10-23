@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // The closed list of class feature kinds (ADR 0040 step 3). A class has a
@@ -252,6 +254,10 @@ type RogueSkills struct {
 	// (ADR 0040 step 12). Not params: the loader fills them from the catalogue's
 	// skill set that Set names.
 	Skills, ArmourFree []string
+	// Name and MinPercent are the skill set's heading and least usable percentage (ADR 0040
+	// steps 12 and 15), filled by the loader like Skills.
+	Name       localized.Text
+	MinPercent int
 }
 
 // SkillBudget is a rogue_skills budget: First points at level 1 and PerLevel

@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -310,7 +311,7 @@ type EntryDerivedDTO struct {
 	NextLevelXP *int   `json:"nextLevelXp"`
 }
 
-// SkillSetDTO is one skill set of the sheet (ADR 0040 step 3.5): set the rogue_skills set code,
+// SkillSetDTO is one skill set of the sheet (ADR 0040 steps 3.5 and 15): set the rogue_skills set code, name its heading (a language map),
 // skillArmor the skill armour it reads (ADR 0033 step 14: from the worn body armour's Table 29
 // column; none, leather, padded_studded_leather, elven_chain or metal), skills each of its skills
 // with its terms and percentage, warnings the entered points' breach of its budget (never null) and
@@ -318,6 +319,7 @@ type EntryDerivedDTO struct {
 // the level its points start.
 type SkillSetDTO struct {
 	Set        string                     `json:"set"`
+	Name       localized.Text             `json:"name"`
 	SkillArmor string                     `json:"skillArmor"`
 	Skills     []SkillTermsDTO            `json:"skills"`
 	Warnings   []BudgetWarningDTO         `json:"warnings"`
@@ -329,7 +331,7 @@ func skillSetDTOs(sets []skills.SkillSet) []SkillSetDTO {
 	out := make([]SkillSetDTO, 0, len(sets))
 	for _, set := range sets {
 		dto := SkillSetDTO{
-			Set: set.Set, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Points),
+			Set: set.Set, Name: set.Name, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Points),
 			Skills: make([]SkillTermsDTO, len(set.Skills)), Warnings: make([]BudgetWarningDTO, len(set.Budget)),
 		}
 		for i, sk := range set.Skills {

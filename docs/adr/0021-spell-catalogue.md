@@ -15,6 +15,7 @@ Step 18 (the class, group and race definitions, format 11; the API reads format 
 of [ADR 0040](0040-classes-are-data.md) step 11.1, which decided the shape.
 Step 17 (Table 5's magical defence adjustment on the wisdom rows, format 10; format 10 was the only format read until step 18) is **decided as built**, 2026-10-21:
 the column is decided by [ADR 0006](0006-saving-throws.md) step 9.1 (user triage of 2026-10-21) and step 1's rule makes it a format.
+Step 26 (the six spell stats are typed once by the importer, the fallback is the verbatim text, a common value is a `label`; no format change) is accepted 2026-10-23 (the user accepted every open question's default: "ok with all"), design only.
 Step 9 (the PHB rule tables in the artifact, format 3) is **accepted**, 2026-10-16 (proposed in
 critical-y9e0.9.1, accepted by the user; implemented by critical-y9e0.9.2, .9.3 and .9.6, which retired
 format 1). Step 6 (the storage engine) amended 2026-10-16 by [ADR 0025](0025-postgresql-storage.md):
@@ -64,7 +65,7 @@ is only ever appended to by play.
      | `level` | yes | integer 1 to 9 |
      | `school` | yes | raw book text, may hold several (`"Alteration, Evocation"`) |
      | `sphere` | no | Priest spells only, raw text; omitted for Wizard spells |
-     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, exactly the fields `spellstats.Raw` / the current `seeds/spells.json` loader read; non-empty (use the book's own `"None"`/`"Special"`); the typed form is parsed by the API at import, never shipped |
+     | `casting_time`, `range`, `duration`, `area_of_effect`, `components`, `saving_throw` | yes | the six raw stat texts, exactly the fields `spellstats.Raw` / the current `seeds/spells.json` loader read; non-empty (use the book's own `"None"`/`"Special"`); the typed form is parsed by the API at import, never shipped (step 26 fixes its shape and the verbatim fallback) |
      | `name` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `description` | yes | `{ "en": "…", "fr": "…" }`, `en` required, `fr` optional |
      | `source` | yes | book of the English text, 2 to 8 upper-case characters (`PHB`, `TOM`, …) |
@@ -181,7 +182,7 @@ is only ever appended to by play.
    `CLAUDE.md` is unchanged, this step is the mechanism that makes it hold. French and English
    text, OCR and the scripts stay in `critical-rulebooks`.
 
-8. **Stats are typed values; wording, units and language are the UI's.** The catalogue, the database
+8. **Stats are typed values; wording, units and language are the UI's** (amended by step 26: one typed shape, a verbatim fallback, a `label` for common values). The catalogue, the database
    and the API carry the six stats as the book's English text plus their typed form (step 5.6), and
    never a translated or reworded stat text (no `*_fr` stat field, column or format). The client
    words the typed values in the UI language:
@@ -820,6 +821,64 @@ is only ever appended to by play.
     3. **Rollout, as step 18.6.** The API reads **format 18 only**; the builder publishes format 18 first.
     Tests: `TestSchema_Step25_OnlyFormat18IsValid` (cataloguecheck), `TestParse_Step25_ReadsFormat18AndRefusesFormat17`,
     `TestPowerCatalogue_Step25_ReadsTheTableAndPlusCosts` and `TestRuleTables_Step25_ReadsTheCombatTables` (catalogueadpt).
+
+26. **The six spell stats are typed once, by the importer; the rest reads the typed value** (accepted 2026-10-23, design only; no code and no format change in this
+    step; user triage 2026-10-22, "file 7"). The amendment of step 8 (typed stats) and step 5.6 (import rules). What it fixes is a
+    reading of the code, not a new mechanism: the importer already types the six stats of every spell and stores them (`spells.stats`, JSON,
+    `spellstats.Parse`), and a start on the recorded version types them again when the parser reads them differently (the notes of step 8).
+    What remains per read is a silent re-parse in `spelldal` for a row without stored stats, and the web's recognition of prose in the
+    book's text (`isSpecialWord`, `translateValue` on the raw text of a stat). This step removes both and fixes the shape.
+    1. **Which fields are typed: all six**, each as `{raw, kind, ...}` as today: `casting_time` and `duration` (a `time` of terms), `range`
+       (`self`, `touch`, `distance`, `unlimited`), `area_of_effect` (`area`, `targets`, `self`, `touch`, `alternatives`, `together`, with `partial`,
+       `figure`, `special` notes), `components` (V, S, M flags) and `saving_throw` (`kinds` in the book's order). No other prose is parsed
+       for a rule: the description is never typed (the marks of step 15 are display only). The shape is the Go type `spellstats.Stats`
+       and `web/src/types` mirrors it; a field added to a typed stat is added to both in the same change.
+    2. **The fallback for what the prose cannot express is the verbatim text.** A stat the parser does not read is `{raw, kind: "special"}`
+       (a save: `kinds: ["special"]`), and the importer stores exactly that: never a guess, never a dropped spell, never a partial value. Three
+       cases, each with a value rule: (a) the book's own word "Special" is a **label** (step 26.4), not a failure; (b) a text the parser holds
+       only in part (an area marked `partial`, step 8's notes) keeps its reading and has no value at a caster level; (c) any other text is
+       shown as written, has no value at a caster level, and is never filtered on a kind it does not have. The unparsed prose stays served
+       (`area_of_effect`, `saving_throw`... as the `stats` texts of the spell payload, step 8), for display and for the fallback.
+    3. **Where the parse runs: the API importer, once per catalogue version or parser change.** `spellstats.Parse` is called by the
+       importer (`storage/postgres/seed.go`; the in-memory store's seeding is the same call) and by nothing that serves a spell: the reader
+       (`spelldal`) decodes the stored `stats` and a row without them, or with unreadable JSON, is an error that names the spell and the
+       start's re-typing pass (step 5.6) rewrites it, never a silent parse per read. The parse does **not** move to the builder: the
+       builder is Python, a second parser would duplicate some 1,500 lines of Go that the tests of step 8 pin, every parser improvement
+       would wait for a builder release and a format, and step 1 says the typed form is never shipped. If the user overrules this, the
+       artifact carries the typed stats under the **next format number** (allotted by the supervisor, as step 18.6: the builder publishes
+       first, the API reads that format only) and the importer validates them instead of parsing; nothing else here changes.
+    4. **A common value is a label, set by the parser.** The book's words that the lookup shows as labels (`lookup.values.*`: "Instantaneous",
+       "Special", "Hearing range", "Line of sight"...) become a `label` on the typed stat, a key of a closed list the Go parser owns and the web
+       holds the wording of. The web translates the `label`; it no longer compares a stat's raw text with a word list. Stats without a label
+       show their typed wording (step 8) or, when `kind` is `special`, their `raw`.
+    5. **What the web renders from the typed value, and what it never does.** In the books' language it shows the `raw` text of the stat; in
+       another language it words the typed value (units, nouns, shapes, per-level terms, metric conversion: step 8), the label, or the `raw`
+       when the kind is `special` or the reading `partial`. It reads **no rule from a text**: it recognises nothing in `raw`, computes no value
+       at a caster level (`Stats.At` and the `values` of the payload are Go, step 8) and picks no kind by matching words. No rule moves to
+       the web; the size of `statText.ts` is wording and conversion, which stay there.
+    6. **The spells that do not parse today** (measured on the real catalogue with `go run ./cmd/spellstats`, in this PR's description; the
+       texts stay in the committed allow-list of `TestRepoSeeds_EverySpellStatParses`, not here, step 7): of the stats that fall to `special`,
+       most are the book's own word "Special" (duration, area, save, range, casting time: label, 26.2a); 21 are other texts, all kept
+       verbatim by decision (26.2c): prose the book gives instead of a measurable value, a
+       "Special (...)" that keeps its number in the typed time, and one scrape glitch. 14 areas are `partial` and 26 are `alternatives`
+       (pinned by `areaReadingCounts`). No spell is hidden, rewritten or dropped for it, and none gets a special-cased parse (the rule
+       against a branch per spell holds). A spell is added to the list only by editing the allow-list and its pinned count on purpose.
+    7. **The check is committed and deterministic**: `TestRepoSeeds_EverySpellStatParses` (the real catalogue, skipped without it) fails on
+       any text that falls to `special` and is neither the literal word nor allow-listed, and pins the allow-list's size;
+       `TestRealCatalogue_AreaReadingsAndPerLevelDurations` pins the `partial` and `alternatives` counts. The new tests of this step run on
+       the fixture, so `just validate` covers them.
+    8. **Rollout.** No format, no migration, no change to the artifact or the builder. The code item that follows moves the per-read
+       parse out of `spelldal`, adds `label` to the typed stats (the start's re-typing pass writes it, step 5.6) and moves the web's raw-text
+       recognition to it.
+    _Open questions, with the default applied:_ **Q1** where the parse runs: the API importer (26.3); **Q2** a format: none (26.3, 26.8);
+    **Q3** a row without stored stats: an error naming the spell, not a re-parse (26.3); **Q4** common values as a `label` key set by the
+    parser, not matched in the web (26.4); **Q5** the unparsed 21 texts stay verbatim, none gets a parser of its own (26.6); **Q6** the
+    parser keeps being re-run on a start rather than versioned in `catalogue_meta` (the notes of step 8).
+    Tests (Go, to write with the code item, each failing on today's code; named without the `Test` prefix until they exist, which `check-adr-tests` would otherwise look for): `SpellStats_Step26_1_AllSixFieldsAreTypedWithTheirRaw`,
+    `SpellStats_Step26_2_AnUnreadStatKeepsItsRawAndHasNoValue` (a `special` kind, a `partial` area, a save of unreadable text: no value at any
+    caster level), `SpellDAL_Step26_3_ARowWithoutStatsIsAnErrorNotAParse`, `ImportCatalogue_Step26_3_ATypedStatIsWrittenByTheImporterOnly`,
+    `Parse_Step26_4_CommonValuesCarryTheirLabel`, web: `statText (labels)` ("words a stat from its label, never from its raw text") and
+    `statText (verbatim)` ("shows the raw text of a special or partial stat"); the committed checks of 26.7 stay.
 
 ## Consequences
 

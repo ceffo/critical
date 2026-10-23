@@ -298,3 +298,50 @@ func TestInitiative_ADR0035Item6_2_AScrollUsedIsNotCounted(t *testing.T) {
 	}, got.Modifiers)
 	assert.Equal(t, 8, got.Total())
 }
+
+// ADR 0035 items 6.2 and 6.4 through the real services, the cycle's two sides
+// together: an item used out of combat records no initiative_correct; a
+// reroll right after a cast is allowed (the correction is the last entry);
+// a second item used replaces the first's term and keeps the d10 and the
+// effects recorded at the roll.
+func TestInitiative_ADR0035Item6_2_ItemOutOfCombatCastThenRerollTwoItems(t *testing.T) {
+	dice := &attackDice{t: t, dies: []int{7, 4, 2, 3}, calls: map[string]int{}}
+	tb := mageWith(t, dice, "magic_missile")
+	wand, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
+		Name: localized.Of("Wand of frost"), Category: itemsvc.CategoryMagic, MagicKind: "wand",
+		Behaviour: itemsvc.BehaviourCharges, Count: 5, MaxCount: 5,
+	})
+	require.NoError(t, err)
+	potion, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
+		Name: localized.Of("Potion of healing"), Category: itemsvc.CategoryMagic, MagicKind: "potion",
+		Behaviour: itemsvc.BehaviourStock, Count: 2,
+	})
+	require.NoError(t, err)
+	_, err = tb.bs.Cast.AddEffect(tb.ctx, tb.id, castsvc.AddEffectRequest{SpellID: "haste"})
+	require.NoError(t, err)
+
+	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, wand.Item.ID)
+	require.NoError(t, err)
+	assert.Equal(t, 0, tb.countKind(t, actionlog.KindInitiativeCorrect), "round 0, no initiative: no correction")
+	assert.Nil(t, tb.initiative(t))
+
+	_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
+	require.NoError(t, err)
+	_, err = tb.bs.Cast.Cast(tb.ctx, tb.id, 0, castsvc.CastRequest{})
+	require.NoError(t, err)
+	rerolled, err := tb.bs.Buffs.RerollInitiative(tb.ctx, tb.id)
+	require.NoError(t, err, "a reroll right after a cast is allowed")
+	assert.Equal(t, 3, rerolled.D10)
+
+	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, wand.Item.ID)
+	require.NoError(t, err)
+	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, potion.Item.ID)
+	require.NoError(t, err)
+	got := tb.initiative(t)
+	assert.Equal(t, 3, got.D10, "the correction keeps the die")
+	assert.Equal(t, []buffsvc.InitiativeModifier{
+		{Source: buffsvc.InitiativeItem, Value: 4, ItemID: potion.Item.ID, Name: "Potion of healing", MagicKind: "potion"}, hasteTerm,
+	}, got.Modifiers, "the second item replaces the first's term and keeps the effects")
+	assert.Equal(t, 5, got.Total(), "3 + 4 − 2")
+	assert.Equal(t, 4, dice.calls["die"])
+}

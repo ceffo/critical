@@ -181,14 +181,15 @@ type Characters interface {
 }
 
 type service struct {
-	dal     DAL
-	tx      domain.TxRunner
-	log     Log
-	chars   Characters
-	dice    Dice
-	items   Items
-	weapons Weapons
-	spells  Spells
+	dal       DAL
+	corrector InitiativeCorrector
+	tx        domain.TxRunner
+	log       Log
+	chars     Characters
+	dice      Dice
+	items     Items
+	weapons   Weapons
+	spells    Spells
 }
 
 // New constructs the service.
@@ -221,7 +222,7 @@ func NewWithConfig(cfg *Config, dal DAL, tx domain.TxRunner, log Log, chars Char
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("buffsvc: invalid config: %w", err)
 	}
-	return &service{dal: dal, tx: tx, log: log, chars: chars, dice: dice, items: items, weapons: weapons, spells: spells}, nil
+	return &service{dal: dal, corrector: corrector{dal: dal, log: log}, tx: tx, log: log, chars: chars, dice: dice, items: items, weapons: weapons, spells: spells}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

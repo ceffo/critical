@@ -127,3 +127,5 @@ LegacyWeapon  # Technical: a weapon as the retired weapons table stored it, inpu
 WeaponSpecialization  # Technical: the params of the weapon_specialization class feature (ADR 0040 step 13)
 SpecializationType  # Technical: a row of the weapon_specialization params
 Option  # Technical: the viewtest builder's functional option (tests only)
+InitiativeCorrector  # Technical: port, service or wiring type (clean architecture plumbing)
+CorrectionStore  # Technical: port, service or wiring type (clean architecture plumbing)

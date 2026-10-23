@@ -5,7 +5,6 @@ package composition
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/adapters/bridgeadpt"
@@ -340,9 +339,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	// A magic item used corrects the round's initiative (ADR 0035 item 6.2)
-	// through buffsvc, built after the items: bound below.
+	// through the corrector, which needs the initiative store and the log
+	// only: it is built before the items and the buffs, which both take it.
 	initiativeItems, _ := ruleTables.InitiativeItems()
-	itemInitiative := &lateInitiative{}
+	itemInitiative, err := buffsvc.NewInitiativeCorrector(buffDAL, logSvc)
+	if err != nil {
+		return nil, err
+	}
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment, Classes: ruleTables,
 		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
@@ -359,7 +362,6 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := bs.add(bs.Buffs, err); err != nil {
 		return nil, err
 	}
-	itemInitiative.buffs = bs.Buffs
 	bs.Spells, err = spellsvc.New(spellDAL, catalogue, prepSource)
 	if err := bs.add(bs.Spells, err); err != nil {
 		return nil, err
@@ -555,17 +557,6 @@ func (b *BackingServices) Close(ctx context.Context) error {
 		}
 	}
 	return firstErr
-}
-
-// lateInitiative is itemsvc's Initiative port, bound to buffsvc once it is
-// built (buffsvc reads the items' powers, so the items come first).
-type lateInitiative struct{ buffs buffsvc.SVC }
-
-func (l *lateInitiative) CorrectInitiative(ctx context.Context, characterID int64, cause buffsvc.InitiativeModifier) (*buffsvc.Initiative, error) {
-	if l.buffs == nil {
-		return nil, errors.New("initiative: buffsvc not bound")
-	}
-	return l.buffs.CorrectInitiative(ctx, characterID, cause)
 }
 
 // seedSpellRefs are the spell ids the seeds refer to: a catalogue import may

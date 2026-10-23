@@ -1,6 +1,6 @@
 # ADR 0044: Psionic combat: defence modes, attack modes, tangents and contact
 
-**Status**: proposed 2026-10-22. Layer 2 of the psionicist, which the user's triage of 2026-10-21
+**Status**: accepted 2026-10-22 (user: "default": every default of Q1 to Q16 taken). Layer 2 of the psionicist, which the user's triage of 2026-10-21
 put in a "later item in the same epic" ([ADR 0043](0043-psionics.md), Context). The readings where
 the book is silent, unclear or leaves the choice to the DM (Q1 to Q16) are proposed defaults put to
 the user ("Open questions"); each step cites the question it waits on. Not implemented. Replaces
@@ -267,6 +267,8 @@ two power ids in its row of data.
     character (Q7); wild talents (ADR 0043 step 23).
 
 ## Open questions
+
+User, 2026-10-22: "default". Every default below is accepted; the steps stand as written.
 
 Each is a reading where the book is unclear, silent or leaves the choice to the DM, or a choice
 the app must make; the step is written with the default.

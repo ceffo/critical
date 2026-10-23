@@ -91,3 +91,28 @@ describe("EffectsTimeline rows not on the character (ADR 0004 step 20.5)", () =>
     expect(fr).toContain("pas sur vous");
   });
 });
+
+describe("EffectsTimeline mind links (ADR 0044 step 3)", () => {
+  const link = (tangents?: number) =>
+    ({
+      id: "t1",
+      name: "Orc",
+      charges: 0,
+      duration: 0,
+      effects: {},
+      note: "",
+      startRound: 1,
+      chargesTotal: 0,
+      target: "Orc",
+      tangents,
+    }) as import("@/types/buffs").BuffEffect;
+
+  it("shows the opponent and the tangents a row holds, or its contact", async () => {
+    expect(await render(2, "en", [link(2)])).toContain("2 tangents");
+    expect(await render(2, "en", [link(1)])).toContain("1 tangent<");
+    expect(await render(2, "fr", [link(2)])).toContain("2 tangentes");
+    const contact = await render(2, "en", [link()]);
+    expect(contact).toContain("Orc");
+    expect(contact).toContain("contact");
+  });
+});

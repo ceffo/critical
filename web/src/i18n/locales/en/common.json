@@ -357,6 +357,9 @@
     "power": "{{name}}: item power"
   },
   "buffs": {
+    "tangentsHeld_one": "{{count}} tangent",
+    "tangentsHeld_other": "{{count}} tangents",
+    "contactHeld": "contact",
     "charges": "{{count}} ch",
     "rounds": "{{count}} rd",
     "untilDismissed": "until dismissed",

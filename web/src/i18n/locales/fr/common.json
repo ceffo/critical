@@ -357,6 +357,9 @@
     "power": "{{name}} : pouvoir d’objet"
   },
   "buffs": {
+    "tangentsHeld_one": "{{count}} tangente",
+    "tangentsHeld_other": "{{count}} tangentes",
+    "contactHeld": "contact",
     "charges": "{{count}} ch.",
     "rounds": "{{count}} tr.",
     "untilDismissed": "jusqu'à retrait",

@@ -271,8 +271,8 @@ func TestParse_Step10_1_ReadsTheClassTables(t *testing.T) {
 	c, ok := phb(t).Classes()
 	require.True(t, ok, "the artifact carries the class tables")
 	// The thresholds are the class definitions' (ADR 0040 step 1.7).
-	assert.Equal(t, 3000000, must.Do(phb(t).XPThreshold("fighter", 20)), "fighter, level 20")
-	assert.Equal(t, 1100000, must.Do(phb(t).XPThreshold("bard", 15)), "bard, level 15")
+	assert.Equal(t, 3000000, must.Do(must.Do(phb(t).Class("fighter")).XPThreshold(20)), "fighter, level 20")
+	assert.Equal(t, 1100000, must.Do(must.Do(phb(t).Class("bard")).XPThreshold(15)), "bard, level 15")
 	assert.Equal(t, 13, c.THAC0[14].Rogue, "rogue THAC0, level 15")
 	assert.Equal(t, 1, c.THAC0[19].Warrior, "warrior THAC0, level 20")
 	var rogue ruletablesvc.SavingThrowRow

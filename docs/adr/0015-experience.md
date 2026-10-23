@@ -53,6 +53,9 @@ Tests live in `api/internal/domain/service/xpsvc/` unless named otherwise.
    Tests: `TestComputeProgress_FromTheClassTable`, `TestBardXPThreshold` (ruletablesadpt, against the
    PHB page), `TestParse_Step9_3_RejectsBrokenTables` (ruletablesadpt).
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 7, on implementation: the progress is per active class entry, on the entry's XP and its class's table; a frozen entry shows none)_
+   _(Amended 2026-10-23 by [ADR 0046](0046-derived-figures.md) step 5: `ComputeProgress(def, level, total)`
+   takes the entry's class definition and reads `def.XPThreshold`; the ledger gets definitions from its
+   `Rules` port (`Definitions()`) and the prime requisites from `def.PrimeRequisites`.)_
 4. **The ledger is on the action stack.** Adding, editing (base, bonus, reason, session) and
    deleting an entry each write the `xp_entries` table and record one action-log entry in the same
    transaction ([ADR 0018](0018-transactions-and-undo.md) steps 1 and 7): `xp_add`, `xp_edit`,

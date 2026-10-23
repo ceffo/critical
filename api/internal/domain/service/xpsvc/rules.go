@@ -3,8 +3,8 @@ package xpsvc
 import (
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // BonusPercent is the prime-requisite experience bonus (ADR 0015 step 1).
@@ -55,28 +55,28 @@ func BonusEligible(primes []string, c charactersvc.View) bool {
 	return len(primes) > 0
 }
 
-// ComputeProgress is ADR 0015 step 3, read in class's experience table
-// (ADR 0030 step 3: PHB Tables 14, 20, 23 and 25): the floor is the
-// threshold of the level, the ceiling the next level's. ToNext is what is
-// left to the ceiling (0 once reached), Progress the share of the way from
-// floor to ceiling clamped to 0..1. At the last level there is no ceiling
+// ComputeProgress is ADR 0015 step 3, read in def's experience table (ADR
+// 0030 step 3: PHB Tables 14, 20, 23 and 25, the class definition's rows): the
+// floor is the threshold of the level, the ceiling the next level's. ToNext is
+// what is left to the ceiling (0 once reached), Progress the share of the way
+// from floor to ceiling clamped to 0..1. At the last level there is no ceiling
 // and the progress is full; a level above the table is treated as the last
 // level, keeping its own Level. The cells are LevelCells consecutive levels
 // starting two below the level, kept inside the table.
-func ComputeProgress(class string, level, total int, table Thresholds) (Progress, error) {
+func ComputeProgress(def classes.Class, level, total int) (Progress, error) {
 	threshold := func(l int) (int, error) {
-		th, err := table.XPThreshold(class, l)
+		th, err := def.XPThreshold(l)
 		if err != nil {
 			return 0, fmt.Errorf("xp progress: %w", err)
 		}
 		return th, nil
 	}
-	floor, err := threshold(min(level, ruletablesvc.MaxLevel))
+	floor, err := threshold(min(level, classes.MaxLevel))
 	if err != nil {
 		return Progress{}, err
 	}
 	p := Progress{Level: level, CurrentFloor: floor, Progress: 1, ProgressPercent: 100}
-	if level < ruletablesvc.MaxLevel {
+	if level < classes.MaxLevel {
 		ceiling, err := threshold(level + 1)
 		if err != nil {
 			return Progress{}, err
@@ -87,7 +87,7 @@ func ComputeProgress(class string, level, total int, table Thresholds) (Progress
 		p.Progress = min(1, max(0, float64(total-floor)/float64(ceiling-floor)))
 		p.ProgressPercent = min(100, max(0, (total-floor)*100/(ceiling-floor)))
 	}
-	start := min(max(1, level-2), ruletablesvc.MaxLevel-LevelCells+1)
+	start := min(max(1, level-2), classes.MaxLevel-LevelCells+1)
 	for l := start; l < start+LevelCells; l++ {
 		th, err := threshold(l)
 		if err != nil {

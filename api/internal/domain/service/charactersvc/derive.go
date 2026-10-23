@@ -21,8 +21,6 @@ type Rules interface {
 	Class(class string) (classes.Class, error)
 	// ClassGroup is the class's group (ADR 0040 step 1.2).
 	ClassGroup(class string) (string, error)
-	// XPThreshold is the XP that reaches level in the class's table.
-	XPThreshold(class string, level int) (int, error)
 	// DexMods is PHB Table 2 (ADR 0046 step 2.1): the missile attack and the
 	// defensive adjustments of a Dexterity score, an error outside 1..25.
 	DexMods(dex int) (missile, ac int, err error)
@@ -318,7 +316,8 @@ func (ed *EntryDerived) setLevels(e classes.Entry, def classes.Class, shares, le
 	}
 	ed.TargetLevel, ed.RealizedLevel = target, realized
 	if target < ruletablesvc.MaxLevel {
-		next, err := rules.XPThreshold(e.Class, target+1)
+		// ADR 0046 step 5.1: the next threshold is the class definition's.
+		next, err := def.XPThreshold(target + 1)
 		if err != nil {
 			return fmt.Errorf("derive %s: %w", e.Class, err)
 		}

@@ -246,8 +246,13 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 		if e.frozen() {
 			entry.State, entry.RealizedLevel, entry.LeftAtLevel = classes.EntryFrozen, e.LeftAtLevel, e.LeftAtLevel
 			if e.XP == 0 && classOK && e.LeftAtLevel >= 1 && e.LeftAtLevel <= classes.MaxLevel {
-				// A class left keeps the XP that reaches its left-at level when none is entered.
-				if entry.StartingXP, err = s.rules.XPThreshold(e.Class, e.LeftAtLevel); err != nil {
+				// A class left keeps the XP that reaches its left-at level when none is entered,
+				// read from the class definition (ADR 0046 step 5.1).
+				var def classes.Class
+				if def, err = defs.Get(e.Class); err != nil {
+					return checked{}, fmt.Errorf("new character: %w", err)
+				}
+				if entry.StartingXP, err = def.XPThreshold(e.LeftAtLevel); err != nil {
 					return checked{}, fmt.Errorf("new character: %w", err)
 				}
 			}

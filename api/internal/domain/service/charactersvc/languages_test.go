@@ -39,7 +39,6 @@ func createdDetails(t *testing.T, race string, languages *[]string) (charactersv
 		n.Languages = *languages
 	}
 	e.rules.EXPECT().RaceAllows(race, "bard").Return(true, nil).Maybe()
-	e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Maybe()
 	e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Maybe()
 	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Maybe()
 	e.rules.EXPECT().ConSaveBonusFor(mock.Anything).Return(0, nil).Maybe()

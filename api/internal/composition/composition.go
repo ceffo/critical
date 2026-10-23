@@ -403,7 +403,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, err
 	}
 	bs.XP, err = xpsvc.New(xpsvc.Deps{
-		DAL: st.XP, Characters: charSvc, Thresholds: ruleTables, Log: logSvc, Tx: tx,
+		DAL: st.XP, Characters: charSvc, Rules: ruleTables, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.XP, err); err != nil {
 		return nil, err

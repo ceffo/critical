@@ -41,7 +41,6 @@ var rogue1to4Saves = charactersvc.Saves{ParaPoison: 13, RodStaffWand: 14, PetriP
 // expectLevel1Bard answers the derivation of a level 1 bard at 0 XP (PHB
 // Tables 25, 53, 60 and 32).
 func expectLevel1Bard(e *env) {
-	e.rules.EXPECT().XPThreshold("bard", 2).Return(1_250, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 1, mock.Anything).Return(map[int]int{}, nil).Once()
 }
@@ -194,7 +193,6 @@ func TestCreate_Step9_ExceptionalStrength(t *testing.T) {
 		t.Run(fmt.Sprintf("stored %d", exc), func(t *testing.T) {
 			e := newEnv(t)
 			e.rules.EXPECT().RaceAllows("human", "fighter").Return(true, nil).Once()
-			e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
 			e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{Group: "warrior"}, nil).Once()
 			e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
 				return c.Class == "fighter" && c.Str == 18 && c.StrExceptional == exc
@@ -251,7 +249,6 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 	t.Run("stored", func(t *testing.T) {
 		e := newEnv(t)
 		e.rules.EXPECT().RaceAllows("halfling", "thief").Return(true, nil).Once()
-		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Once()
 		want := map[string]int{"open_locks": 30, "pick_pockets": 25}
@@ -341,7 +338,6 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 		return n
 	}
 	expectLevel1Thief := func(e *env, points map[string]int, times int) {
-		e.rules.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Times(times)
 		e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Times(times)
 		e.rules.EXPECT().ConSaveBonusFor(12).Return(0, nil).Times(times)
 		e.rules.EXPECT().RogueSkills(skillSet("thief"), "halfling", 17, "none", points).Return(nil, nil).Times(times)
@@ -458,7 +454,6 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 				ID: 5, Class: tc.class, Race: "human", Dex: 12, RealizedLevel: 1,
 			}, nil).Once()
 			e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
-			e.rules.EXPECT().XPThreshold(tc.class, 2).Return(1_250, nil).Once()
 			e.rules.EXPECT().SavesFor("rogue", 1).Return(rogue1to4, nil).Once()
 			skills := []ruletablesvc.SkillPercent{{Skill: "climb_walls", Percent: 60}}
 			if tc.class == "thief" {
@@ -481,7 +476,6 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			ID: 5, Class: "fighter", Race: "human", Str: 12, RealizedLevel: 1,
 		}, nil).Once()
 		e.xp.EXPECT().Awards(mock.Anything, int64(5)).Return(nil, nil).Once()
-		e.rules.EXPECT().XPThreshold("fighter", 2).Return(2_000, nil).Once()
 		e.rules.EXPECT().SavesFor("warrior", 1).Return(ruletablesvc.SavingThrowRow{}, nil).Once()
 		got, err := e.svc.GetCharacter(context.Background(), 5)
 		require.NoError(t, err)
@@ -572,9 +566,6 @@ func expectOptionTables(e *env) {
 	e.rules.EXPECT().HitDiceFor(mock.Anything).RunAndReturn(func(group string) (ruletablesvc.HitDiceRow, error) {
 		return ruletablesvc.HitDiceRow{Group: group, Die: dice[group]}, nil
 	}).Maybe()
-	e.rules.EXPECT().XPThreshold(mock.Anything, mock.Anything).RunAndReturn(func(class string, level int) (int, error) {
-		return level*1000 + len(class), nil
-	}).Maybe()
 }
 
 // ADR 0034 step 4.1: each class carries its XP table read at levels 1 to 20, so a picked level
@@ -591,10 +582,11 @@ func TestCreationOptions_Step4_1_EachClassCarriesItsLevelToXPTableAndHitDie(t *t
 	}
 	bard := byClass["bard"]
 	require.Len(t, bard.LevelXP, 20)
-	assert.Equal(t, charactersvc.LevelXP{Level: 1, XP: 1004}, bard.LevelXP[0])
-	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 5004}, bard.LevelXP[4])
-	assert.Equal(t, charactersvc.LevelXP{Level: 20, XP: 20004}, bard.LevelXP[19])
-	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 5007}, byClass["fighter"].LevelXP[4], "each class its own table")
+	// The thresholds are the class definitions' (PHB Table 25 for the bard, Table 14 for the fighter).
+	assert.Equal(t, charactersvc.LevelXP{Level: 1, XP: 0}, bard.LevelXP[0])
+	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 10_000}, bard.LevelXP[4])
+	assert.Equal(t, charactersvc.LevelXP{Level: 20, XP: 2_200_000}, bard.LevelXP[19])
+	assert.Equal(t, charactersvc.LevelXP{Level: 5, XP: 16_000}, byClass["fighter"].LevelXP[4], "each class its own table")
 	assert.Equal(t, 6, bard.HitDie)
 	assert.Equal(t, 10, byClass["fighter"].HitDie)
 	assert.Equal(t, 4, byClass["mage"].HitDie)

@@ -71,20 +71,19 @@ type Log interface {
 	actionlog.Recorder
 }
 
-// Thresholds is the class's experience table (PHB Tables 14, 20, 23 and
-// 25): the XP that reaches a level, an error outside the table or for an
-// unknown class; and its prime requisites (ADR 0040 step 6), which pick the
-// bonus.
-type Thresholds interface {
-	XPThreshold(class string, level int) (int, error)
-	PrimeRequisites(class string) ([]string, error)
+// Rules are the catalogue's class definitions (ADR 0040 step 5): a class's
+// experience table (PHB Tables 14, 20, 23 and 25, read through
+// classes.Class.XPThreshold) and its prime requisites (ADR 0040 step 6), which
+// pick the bonus.
+type Rules interface {
+	Definitions() (*classes.Registry, error)
 }
 
 // Deps are the service's collaborators. Now is optional (time.Now).
 type Deps struct {
 	DAL        DAL
 	Characters Characters
-	Thresholds Thresholds
+	Rules      Rules
 	Log        Log
 	Tx         domain.TxRunner
 	Now        func() time.Time
@@ -93,7 +92,7 @@ type Deps struct {
 type service struct {
 	dal   DAL
 	chars Characters
-	table Thresholds
+	rules Rules
 	log   Log
 	tx    domain.TxRunner
 	now   func() time.Time
@@ -101,14 +100,14 @@ type service struct {
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.DAL == nil || d.Characters == nil || d.Thresholds == nil || d.Log == nil || d.Tx == nil {
+	if d.DAL == nil || d.Characters == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("xpsvc: nil dependency")
 	}
 	now := d.Now
 	if now == nil {
 		now = time.Now
 	}
-	return &service{dal: d.DAL, chars: d.Characters, table: d.Thresholds, log: d.Log, tx: d.Tx, now: now}, nil
+	return &service{dal: d.DAL, chars: d.Characters, rules: d.Rules, log: d.Log, tx: d.Tx, now: now}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

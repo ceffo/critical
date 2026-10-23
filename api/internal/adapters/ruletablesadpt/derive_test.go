@@ -64,7 +64,8 @@ func TestLevelFor_Step3_HighestThresholdAtOrUnderTheXP(t *testing.T) {
 	require.Error(t, err)
 }
 
-// The next level's threshold, from the same column (Tables 25 and 14).
+// The next level's threshold, from the same column (Tables 25 and 14): the
+// class definition's (ADR 0046 step 5).
 func TestXPThreshold_ByClass(t *testing.T) {
 	tbl := phb(t)
 	for _, tt := range []struct {
@@ -73,12 +74,16 @@ func TestXPThreshold_ByClass(t *testing.T) {
 	}{
 		{"bard", 16, 1_320_000}, {"thief", 17, 1_540_000}, {"fighter", 16, 2_000_000}, {"fighter", 1, 0},
 	} {
-		got, err := tbl.XPThreshold(tt.class, tt.level)
+		c, err := tbl.Class(tt.class)
+		require.NoError(t, err)
+		got, err := c.XPThreshold(tt.level)
 		require.NoError(t, err)
 		assert.Equal(t, tt.want, got, "%s level %d", tt.class, tt.level)
 	}
+	bard, err := tbl.Class("bard")
+	require.NoError(t, err)
 	for _, bad := range []int{0, 21} {
-		_, err := tbl.XPThreshold("bard", bad)
+		_, err := bard.XPThreshold(bad)
 		require.Error(t, err, "level %d", bad)
 	}
 }

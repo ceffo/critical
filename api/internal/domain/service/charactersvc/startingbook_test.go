@@ -96,7 +96,6 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 func expectClassAt(e *env, class string, xp, level int, slots map[int]int) {
 	group, _ := e.rules.ClassGroup(class) // the fixture's definitions (newRules)
 	e.rules.EXPECT().RaceAllows(mock.Anything, class).Return(true, nil).Maybe()
-	e.rules.EXPECT().XPThreshold(class, level+1).Return(xp+1, nil).Maybe()
 	e.rules.EXPECT().SavesFor(group, level).Return(ruletablesvc.SavingThrowRow{}, nil).Maybe()
 	switch class {
 	case "mage":

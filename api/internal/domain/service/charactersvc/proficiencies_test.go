@@ -17,7 +17,6 @@ import (
 // expectKelsenAt answers the lookups of Kelsen's read at the realized level 15 with an XP total
 // whose target level is target.
 func expectKelsenAt(e *env, target int) {
-	e.rules.EXPECT().XPThreshold("bard", target+1).Return(1_600_000, nil).Once()
 	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
 	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
 	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Maybe()

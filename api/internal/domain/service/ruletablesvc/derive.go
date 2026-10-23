@@ -59,17 +59,6 @@ func (t *Tables) classTables() (*ClassTables, error) {
 	return t.classes, nil
 }
 
-// XPThreshold is the XP that reaches level in class's experience table (PHB
-// Tables 14, 20, 23 and 25, the class definition's rows, ADR 0040 step 1.7), an
-// error outside 1..MaxLevel.
-func (t *Tables) XPThreshold(class string, level int) (int, error) {
-	c, err := t.Class(class)
-	if err != nil {
-		return 0, err
-	}
-	return c.XPThreshold(level)
-}
-
 // SavesFor is ADR 0030 step 6: PHB Table 60's row of group whose level band
 // holds level.
 func (t *Tables) SavesFor(group string, level int) (SavingThrowRow, error) {

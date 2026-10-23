@@ -46,18 +46,26 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	// The level is the target level the rules derive from that total, and
 	// the thresholds are the class's (ADR 0030 step 3, amending ADR 0015
 	// step 3); the realized level waits for the level-up step (step 7).
-	progress, err := ComputeProgress(c.Primary().Class, c.Primary().TargetLevel, total, s.table)
+	defs, err := s.rules.Definitions()
+	if err != nil {
+		return nil, fmt.Errorf("xp progress: %w", err)
+	}
+	def, err := defs.Get(c.Primary().Class)
+	if err != nil {
+		return nil, fmt.Errorf("xp progress: %w", err)
+	}
+	progress, err := ComputeProgress(def, c.Primary().TargetLevel, total)
 	if err != nil {
 		return nil, err
 	}
 	// ADR 0042 step 6: the prime requisites of every active entry's class.
 	var primes []string
 	for _, e := range classes.Active(entryList) {
-		p, err := s.table.PrimeRequisites(e.Class)
+		d, err := defs.Get(e.Class)
 		if err != nil {
 			return nil, fmt.Errorf("xp ledger: %w", err)
 		}
-		primes = append(primes, p...)
+		primes = append(primes, d.PrimeRequisites...)
 	}
 	return &Ledger{
 		Opening:       c.Primary().StartingXP,

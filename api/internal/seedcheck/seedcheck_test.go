@@ -632,7 +632,7 @@ func TestRealCatalogue_Step20_ThePsionicistsFiguresReadFromTheRealArtifact(t *te
 	hd, err := tables.HitDiceFor(class.Group)
 	require.NoError(t, err)
 	assert.Equal(t, ruletablesvc.HitDiceRow{Group: class.Group, Die: 6, NameLevel: 9, GainAfter: 2}, hd)
-	xp, err := tables.XPThreshold(class.ID, 5)
+	xp, err := class.XPThreshold(5)
 	require.NoError(t, err)
 	assert.Equal(t, 16_500, xp)
 	thac0, err := defs.THAC0(class.Group, 1)

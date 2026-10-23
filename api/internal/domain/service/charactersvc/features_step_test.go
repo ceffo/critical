@@ -275,7 +275,9 @@ func TestDraft_Step10_SkillPointsBelowTheFromLevelAreRefused(t *testing.T) {
 	thiefSkills, ok := def.Lists(classes.KindRogueSkills)
 	require.True(t, ok)
 	rules := edited(t, lateSkills(thiefSkills))
-	threshold, err := rules.XPThreshold("test_latescout", 3)
+	scout, err := rules.Class("test_latescout")
+	require.NoError(t, err)
+	threshold, err := scout.XPThreshold(3)
 	require.NoError(t, err)
 	for _, tc := range []struct {
 		name   string

@@ -1542,7 +1542,8 @@
       "endCapped": "jette {{dice}} : {{rolls}}, aucun PV regagné",
       "endCappedNamed": "{{buff}} jette {{dice}} : {{rolls}}, aucun PV regagné",
       "withEnd": "{{text}}, {{end}}",
-      "withEndAfter": "{{text}}. {{end}}"
+      "withEndAfter": "{{text}}. {{end}}",
+      "contactEnded": "— pouvoirs terminés avec elle : {{powers}}"
     },
     "attack": {
       "miss": "{{weapon}} contre CA {{ac}} : attaque ratée",
@@ -1787,6 +1788,33 @@
       "maintained": "maintenu : {{cost}} PFP tous les {{count}} tours",
       "warning": {
         "second_power_this_round": "deuxième pouvoir ce tour"
+      },
+      "opponent": "sur {{target}}",
+      "targetLevel": "cible de niveau {{level}}",
+      "contactLine": "{{what}} {{modifier}}",
+      "contactMade": "contact établi"
+    },
+    "contactWords": {
+      "distance": {
+        "sight": "à vue",
+        "mile_1": "1 mille",
+        "miles_10": "10 milles",
+        "miles_100": "100 milles",
+        "miles_1000": "1 000 milles",
+        "miles_10000": "10 000 milles"
+      },
+      "life_order": {
+        "mammal": "mammifère",
+        "marsupial": "marsupial",
+        "bird": "oiseau",
+        "reptile_amphibian": "reptile ou amphibien",
+        "fish": "poisson",
+        "arachnid_insect": "arachnide ou insecte",
+        "monster": "monstre",
+        "plant": "plante"
+      },
+      "resistance": {
+        "resisting": "résiste"
       }
     }
   },
@@ -2322,7 +2350,7 @@
     "no_spellbook": "Cette classe n'a pas de grimoire.",
     "no_psp_pool": "Ce personnage n’a pas de réserve de PFP.",
     "power_not_known": "Le personnage ne connaît pas ce pouvoir.",
-    "needs_contact": "Ce pouvoir demande un contact, pas encore disponible.",
+    "needs_contact": "Ce pouvoir se paie au contact, ce que cette action ne gère pas.",
     "not_enough_psp": "Pas assez de PFP pour le coût initial de ce pouvoir.",
     "power_not_maintained": "Ce pouvoir n’est pas maintenu.",
     "not_in_combat": "Ce mode de défense se dresse pour un tour de combat : aucun tour n’est en cours.",
@@ -2347,7 +2375,11 @@
     "cannot_turn_undead": "Ce prêtre ne peut pas encore repousser ce mort-vivant.",
     "class_cannot_turn": "Cette classe ne repousse pas les morts-vivants.",
     "end_cause_required": "Ce sort agit quand il prend fin : dites si vous l'avez terminé ou s'il a été dissipé.",
-    "skill_blocked_by_armour": "Votre armure de corps bloque cette compétence."
+    "skill_blocked_by_armour": "Votre armure de corps bloque cette compétence.",
+    "not_a_contact_power": "Ce pouvoir n’est pas le pouvoir de contact.",
+    "mind_closed": "Le contact ne marche pas sur un esprit fermé.",
+    "level_out_of_table": "La table de contact n’a pas de ligne pour ce niveau.",
+    "no_contact": "Aucun contact avec cette cible depuis un tour précédent : utilisez d’abord Contact sur elle."
   },
   "lastShort": {
     "attack": "Attaque",

@@ -55,6 +55,8 @@ export interface BuffLogPayload {
   powerId?: string;
   /** dismiss: the mind a tangent or contact row held, when the player let go of it (ADR 0044 step 3). */
   target?: string;
+  /** dismiss of a contact row: the powers kept up through it, ended in the same entry (ADR 0044 step 10). */
+  contactPowersEnded?: string[];
   /**
    * next_round / pass_time: what each maintained power was charged (ADR 0043 steps 14 and 15). A
    * tangent or contact row's charge has no power (`powerId` ""), and names its `target` (ADR 0044).
@@ -239,8 +241,14 @@ function buffText(
     case "delete_template":
       return t("log.buff.deleteTemplate", { buff });
     case "dismiss":
-      if (p.target && !p.powerId)
-        return t("log.buff.letGo", { target: p.target });
+      if (p.target && !p.powerId) {
+        const letGo = t("log.buff.letGo", { target: p.target });
+        return p.contactPowersEnded?.length
+          ? `${letGo} ${t("log.buff.contactEnded", {
+              powers: p.contactPowersEnded.map((id) => power(id)).join(", "),
+            })}`
+          : letGo;
+      }
       if (p.powerId)
         return t("log.buff.powerStopped", { power: power(p.powerId, buff) });
       return withEnded(

@@ -47,4 +47,16 @@ describeKind("buff_change", fixtures, {
       text: "Tour 3 → 4 — expirés : Goblin shaman — maintien (PFP) : Orc 1 — emprises terminées, PFP insuffisants : Goblin shaman",
     },
   },
+  // ADR 0044 step 10: letting go of a contact ends the powers kept up through it, in the same entry.
+  letGoEndsPowers: {
+    en: { text: "Let go of Orc — powers ended with it: Inflict Pain" },
+    fr: {
+      text: "Emprise lâchée : Orc — pouvoirs terminés avec elle : Infliger la douleur",
+    },
+  },
+  // Contact is free while a power uses it: only the power's charge is listed.
+  nextRoundContactFree: {
+    en: { text: "Round 3 → 4 — maintenance (PSPs): Inflict Pain 2" },
+    fr: { text: "Tour 3 → 4 — maintien (PFP) : Infliger la douleur 2" },
+  },
 });

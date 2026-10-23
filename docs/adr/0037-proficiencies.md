@@ -121,8 +121,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    beside `weaponPicks` [{type, slots, allowed}]. Tests `TestWeaponSlots_Step3_ByGroupAndLevel`
    (ruletablesvc), `TestDerive_Step3_WeaponSlotsFollowTheRealizedLevel` (charactersvc), and the
    composition's `TestDerived_BenefitsFollowTheRealizedLevelNotTheXP`: 5 at 15 with 17 pending,
-   6 once 17 is taken. Since 2026-10-23 the two pools, with Table 34's `SlotRow`, are `slots.NonweaponSlots`
-   and `slots.WeaponSlots` in `domain/slots`, the slots owner ([ADR 0046](0046-derived-figures.md)
+   6 once 17 is taken. Since 2026-10-23 the two pools, with Table 34's row (`slots.Row`), are `slots.Nonweapon`
+   and `slots.Weapon` (extra slots: `slots.Extra`) in `domain/slots`, the slots owner ([ADR 0046](0046-derived-figures.md)
    step 4.1): the tests named above that read `ruletablesvc` are `TestSlots_Step4_PoolsMatchTable34`
    and the pool tests in `domain/slots`; the Intelligence term still reads Table 4 in `ruletablesvc`
    and is passed in.)_

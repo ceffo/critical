@@ -183,7 +183,7 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
 4. **Slots (third).** Owner: a new package `domain/slots`. Implemented 2026-10-23 (4.1 to 4.6 as amended below).
    1. *Proficiency pools* (ADR 0037 step 3). `NonweaponSlots`, `WeaponSlots`, `ExtraSlots` and the
       pool types move from `ruletablesvc/proficiencyslots.go` into `slots`, taking the `SlotRow`
-      value (Table 34's row, a plain type) as input; `skills` imports `slots` for them. _(As built:
+      value (Table 34's row, a plain type) as input; `skills` imports `slots` for them. _(As built: they are named `slots.Nonweapon`, `slots.Weapon`, `slots.Extra` and `slots.Row`;
       only the slot formulas left `skills`' reads of a service package; it still reads the rest of
       `ruletablesvc` (languages, skill points, specialization). `TestSlots_Step4_SkillsReadsNoPoolFromAService`
       pins it: no selector into a service import names a `slots` export or a removed pool name.)_

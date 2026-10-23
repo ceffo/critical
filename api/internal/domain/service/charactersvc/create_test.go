@@ -452,6 +452,7 @@ func TestGetCharacter_Step14_TheSkillsReadTheWornArmour(t *testing.T) {
 			e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			e.rules.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			e.rules.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+			e.rules.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 			e.armour.columns[5] = tc.worn
 			e.reader.EXPECT().GetCharacter(mock.Anything, int64(5)).Return(&charactersvc.Character{
 				ID: 5, Class: tc.class, Race: "human", Dex: 12, RealizedLevel: 1,

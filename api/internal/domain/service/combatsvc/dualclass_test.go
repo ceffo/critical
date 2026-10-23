@@ -28,7 +28,7 @@ import (
 // class at level.
 func dualClass(old, active string, level int, kind string, crossed bool) charactersvc.View {
 	opts := []viewtest.Option{
-		viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(16, 17, 0, 0, 0, 0),
+		viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(16, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3),
 		viewtest.WithFrozen(old, 9), viewtest.WithEntry(active, level),
 	}
 	if !crossed {

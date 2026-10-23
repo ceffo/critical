@@ -234,6 +234,11 @@ type Derived struct {
 	// RaceSaveBonus is step 22.1: the race's bonus per category, a named
 	// modifier on the roll (0: none), never a change of the target.
 	RaceSaveBonus Saves
+	// DexMissile and DexDefence are PHB Table 2's two columns at the sheet's
+	// Dexterity (ADR 0046 step 2.1): the missile attack adjustment and the
+	// defensive (armour class) adjustment, read once here.
+	DexMissile int
+	DexDefence int
 	// MagicDefence is ADR 0006 step 9.1: PHB Table 5's magical defence
 	// adjustment at the sheet's Wisdom (any class), a named modifier on a
 	// save the player flags as against magic that attacks the mind (0: none).

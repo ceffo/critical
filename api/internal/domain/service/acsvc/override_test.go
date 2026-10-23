@@ -34,7 +34,6 @@ type fixture struct {
 	items     *mocks.MockItems
 	effects   *mocks.MockEffects
 	chars     *mocks.MockCharacters
-	tables    *mocks.MockTables
 	overrides *mocks.MockOverrides
 	log       *mocks.MockLog
 	tx        *countingTx
@@ -44,11 +43,11 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	f := &fixture{
 		items: mocks.NewMockItems(t), effects: mocks.NewMockEffects(t), chars: mocks.NewMockCharacters(t),
-		tables: mocks.NewMockTables(t), overrides: mocks.NewMockOverrides(t), log: mocks.NewMockLog(t),
+		overrides: mocks.NewMockOverrides(t), log: mocks.NewMockLog(t),
 		tx: &countingTx{},
 	}
 	svc, err := acsvc.New(acsvc.Deps{
-		Items: f.items, Effects: f.effects, Characters: f.chars, Tables: f.tables,
+		Items: f.items, Effects: f.effects, Characters: f.chars,
 		Overrides: f.overrides, Log: f.log, Tx: f.tx,
 	})
 	require.NoError(t, err)
@@ -59,8 +58,7 @@ func newFixture(t *testing.T) *fixture {
 // reads expects the reads of one Get: a Dexterity 17 character in chain
 // mail with Protection from Evil on.
 func (f *fixture) reads() {
-	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0)), nil).Once()
-	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3)), nil).Once()
 	f.items.EXPECT().List(mock.Anything, charID).Return([]itemsvc.Item{armour("chain", 5, itemsvc.StateWorn)}, nil).Once()
 	f.items.EXPECT().Warnings(mock.Anything, charID, mock.Anything).Return(nil, nil).Once()
 	f.effects.EXPECT().ListStatus(mock.Anything, charID).Return([]buffsvc.BuffStatus{acBuff("Protection from Evil", -2, true)}, nil).Once()
@@ -188,8 +186,7 @@ func TestAC_Step13_RestorerWritesTheSnapshotBack(t *testing.T) {
 // as the item service computes them from the class's equipment (ADR 0040 step 1.6).
 func TestAC_Step20_TheCardCarriesTheWornArmourWarningsOnly(t *testing.T) {
 	f := newFixture(t)
-	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0)), nil).Once()
-	f.tables.EXPECT().DexMods(17).Return(2, -3, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("fighter", 1, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3)), nil).Once()
 	items := []itemsvc.Item{armour("chain", 5, itemsvc.StateWorn), {ID: "sword", Category: itemsvc.CategoryWeapon, State: itemsvc.StateWielded}}
 	f.items.EXPECT().List(mock.Anything, charID).Return(items, nil).Once()
 	f.items.EXPECT().Warnings(mock.Anything, charID, items).Return([]itemsvc.Warning{

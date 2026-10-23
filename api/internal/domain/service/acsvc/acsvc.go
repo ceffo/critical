@@ -49,12 +49,6 @@ type Characters interface {
 	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
-// Tables is PHB Table 2 (ruletablesvc.Lookup's DexMods): the defensive
-// adjustment for a Dexterity score.
-type Tables interface {
-	DexMods(dex int) (missile, ac int, err error)
-}
-
 // Overrides stores the override (characters.ac_override and
 // ac_override_label). Both join the ctx transaction; nil is none.
 // domain.ErrCharacterNotFound for an unknown character.
@@ -73,7 +67,6 @@ type Deps struct {
 	Items      Items
 	Effects    Effects
 	Characters Characters
-	Tables     Tables
 	Overrides  Overrides
 	Log        Log
 	Tx         domain.TxRunner
@@ -83,7 +76,6 @@ type service struct {
 	items     Items
 	effects   Effects
 	chars     Characters
-	tables    Tables
 	overrides Overrides
 	log       Log
 	tx        domain.TxRunner
@@ -91,11 +83,11 @@ type service struct {
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Items == nil || d.Effects == nil || d.Characters == nil || d.Tables == nil || d.Overrides == nil || d.Log == nil || d.Tx == nil {
+	if d.Items == nil || d.Effects == nil || d.Characters == nil || d.Overrides == nil || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("acsvc: nil dependency")
 	}
 	return &service{
-		items: d.Items, effects: d.Effects, chars: d.Characters, tables: d.Tables,
+		items: d.Items, effects: d.Effects, chars: d.Characters,
 		overrides: d.Overrides, log: d.Log, tx: d.Tx,
 	}, nil
 }
@@ -109,10 +101,6 @@ func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
 	c, err := s.chars.View(ctx, characterID)
 	if err != nil {
 		return nil, err
-	}
-	_, dexAdj, err := s.tables.DexMods(c.Dex)
-	if err != nil {
-		return nil, fmt.Errorf("dexterity %d: %w", c.Dex, err)
 	}
 	items, err := s.items.List(ctx, characterID)
 	if err != nil {
@@ -130,7 +118,7 @@ func (s *service) Get(ctx context.Context, characterID int64) (*AC, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get ac override: %w", err)
 	}
-	ac := Derive(Inputs{Items: items, Buffs: buffs, Powers: powers, Dexterity: c.Dex, DexAdjust: dexAdj})
+	ac := Derive(Inputs{Items: items, Buffs: buffs, Powers: powers, Dexterity: c.Dex, DexAdjust: c.DexDefence})
 	ac.Override = o
 	warnings, err := s.items.Warnings(ctx, characterID, items)
 	if err != nil {

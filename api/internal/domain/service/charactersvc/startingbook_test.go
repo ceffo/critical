@@ -79,6 +79,7 @@ func newBookEnv(t *testing.T, intRow ruletablesvc.IntelligenceRow) *env {
 	withDefinitions(t, e.rules)
 	e.rules.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 	e.rules.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+	e.rules.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 	e.rules.EXPECT().IntelligenceFor(mock.Anything).Return(intRow, nil).Maybe()
 	e.rules.EXPECT().RogueSkills(skillSet("bard"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	svc, err := charactersvc.New(charactersvc.Deps{

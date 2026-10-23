@@ -105,7 +105,6 @@ type FormStore interface {
 // Rules is the PHB rule-table lookup (ruletablesvc.Lookup).
 type Rules interface {
 	StrengthMods(str, exceptional int) (hit, dmg int, err error)
-	DexMods(dex int) (missile, ac int, err error)
 	// AttackRateFor is ADR 0030 step 11 (ruletablesvc.Tables.AttackRateFor).
 	AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error)
 }

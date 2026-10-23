@@ -34,7 +34,7 @@ const charID = int64(1)
 // 12, DEX 17, and distinct derived save targets (step 6). Combat reads the
 // effective STR from the buffs port, never from the sheet.
 func bard() charactersvc.View {
-	v := viewtest.Single("bard", 15, viewtest.WithIdentity(charID, "Test", "half_elf"), viewtest.WithScores(12, 17, 0, 0, 0, 0))
+	v := viewtest.Single("bard", 15, viewtest.WithIdentity(charID, "Test", "half_elf"), viewtest.WithScores(12, 17, 0, 0, 0, 0), viewtest.WithDexAdjust(2, -3))
 	v.Entries[0].Group = "rogue"
 	v.THAC0 = 13
 	v.Saves = charactersvc.Saves{ParaPoison: 11, RodStaffWand: 13, PetriPoly: 12, Breath: 15, Spell: 14}
@@ -79,6 +79,12 @@ type fixture struct {
 
 func newFixture(t *testing.T) *fixture {
 	t.Helper()
+	return newFixtureWithRules(t, phb(t))
+}
+
+// newFixtureWithRules is newFixture over the given rule tables.
+func newFixtureWithRules(t *testing.T, rules combatsvc.Rules) *fixture {
+	t.Helper()
 	f := &fixture{
 		chars:    mocks.NewMockCharacters(t),
 		buffs:    mocks.NewMockBuffs(t),
@@ -93,7 +99,7 @@ func newFixture(t *testing.T) *fixture {
 		func(context.Context, int64) (ruleset.Ruleset, error) { return rulesetWithCrit(f.critRows), nil }).Maybe()
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
-		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
+		Items: f.items, Forms: f.forms, Rules: rules, Log: f.log, Tx: noTx{},
 	})
 	require.NoError(t, err)
 	f.svc = svc

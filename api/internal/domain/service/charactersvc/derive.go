@@ -23,6 +23,9 @@ type Rules interface {
 	ClassGroup(class string) (string, error)
 	// XPThreshold is the XP that reaches level in the class's table.
 	XPThreshold(class string, level int) (int, error)
+	// DexMods is PHB Table 2 (ADR 0046 step 2.1): the missile attack and the
+	// defensive adjustments of a Dexterity score, an error outside 1..25.
+	DexMods(dex int) (missile, ac int, err error)
 	// SavesFor is the PHB Table 60 row of the group at level (step 6).
 	SavesFor(group string, level int) (ruletablesvc.SavingThrowRow, error)
 	// ConSaveBonusFor is PHB Table 9 (step 22.1).
@@ -124,6 +127,11 @@ func Derive(c *Character, awards []Award, armour string, rules Rules) (Derived, 
 	// Wisdom, an ability rule every class and race gets (step 9.2).
 	if d.MagicDefence, err = rules.MagicDefenceFor(c.Wis); err != nil {
 		return Derived{}, fmt.Errorf("derive magic defence: %w", err)
+	}
+	// ADR 0046 step 2.1: Table 2 is read here, once; a Dexterity outside it
+	// refuses the whole read.
+	if d.DexMissile, d.DexDefence, err = rules.DexMods(c.Dex); err != nil {
+		return Derived{}, fmt.Errorf("dexterity %d: %w", c.Dex, err)
 	}
 	// ADR 0006 step 10.1: the spells Table 5 makes the sheet's Wisdom immune
 	// to, for every class and race like the adjustment.

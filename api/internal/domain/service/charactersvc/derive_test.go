@@ -440,6 +440,7 @@ func newRules(t *testing.T) *mocks.MockRules {
 	withDefinitions(t, r)
 	r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 	r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+	r.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 	r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 	// A bard derives its skills (step 18), which the tests that are not
 	// about them leave empty.
@@ -498,6 +499,7 @@ func TestDerive_Step20_1_SpellbookRules(t *testing.T) {
 			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+			r.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 			r.EXPECT().XPThreshold(tc.class, 14).Return(1_500_000, nil).Once()
 			r.EXPECT().SavesFor(mock.Anything, 13).Return(rogue13to16, nil).Once()
 			r.EXPECT().SpellsPerDay(classDef("mage"), 13, mock.Anything).Return(map[int]int{1: 5}, nil).Maybe()
@@ -583,6 +585,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 			withDefinitions(t, r)
 			r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 			r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+			r.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 			r.EXPECT().IntelligenceFor(mock.Anything).Return(int14, nil).Maybe()
 			// 40,000 XP is level 7 in Table 25; the realized level 2 gives
 			// the budget: 20 + 15 = 35.
@@ -612,6 +615,7 @@ func TestDerive_Step18_TheBardsSkillsAndBudget(t *testing.T) {
 		withDefinitions(t, r)
 		r.EXPECT().MagicDefenceFor(mock.Anything).Return(0, nil).Maybe()
 		r.EXPECT().SpellImmunitiesFor(mock.Anything).Return(nil, nil).Maybe()
+		r.EXPECT().DexMods(mock.Anything).Return(0, 0, nil).Maybe()
 		r.EXPECT().XPThreshold("thief", 2).Return(1_250, nil).Once()
 		r.EXPECT().SavesFor("rogue", 1).Return(ruletablesvc.SavingThrowRow{}, nil)
 		r.EXPECT().RogueSkills(skillSet("thief"), mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil, nil).Once()

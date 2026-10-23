@@ -136,10 +136,10 @@ type DAL interface {
 	SetPSPMax(ctx context.Context, id int64, pspMax int) error
 }
 
-// Characters reads the character with its derived block (the pending
+// Characters reads the character view (ADR 0045): the pending
 // levels).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Rules is PHB Table 3.
@@ -198,15 +198,15 @@ func (s *service) Close(_ context.Context) error  { return nil }
 func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*Result, error) {
 	var res *Result
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		c, err := s.chars.GetCharacter(ctx, characterID)
+		c, err := s.chars.View(ctx, characterID)
 		if err != nil {
 			return err
 		}
 		class := in.Class
 		if class == "" {
-			class = c.Class
+			class = c.Primary().Class
 		}
-		entry, ok := c.Derived.Entry(class)
+		entry, ok := c.Entry(class)
 		if !ok {
 			return ErrNotPending
 		}
@@ -217,7 +217,7 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 		if res, err = s.gain(c, pending[0], in.Die); err != nil {
 			return err
 		}
-		res.Pending = slices.DeleteFunc(slices.Clone(c.Derived.LevelUp.Pending), func(p charactersvc.PendingLevel) bool {
+		res.Pending = slices.DeleteFunc(slices.Clone(c.LevelUp.Pending), func(p charactersvc.PendingLevel) bool {
 			return p.Class == class && p.Level == in.Level
 		})
 		res.HPMaxBefore, res.HPMaxAfter = c.HPMax, c.HPMax+res.Gain
@@ -252,7 +252,7 @@ func (s *service) Roll(ctx context.Context, characterID int64, in RollInput) (*R
 // gain is ADR 0030 steps 7.1 and 7.2 for the pending level p of c's entry,
 // divided by the number of classes (ADR 0042 steps 10.2 and 10.3); 0
 // for a dual-class's level before the crossover (ADR 0042 step 11).
-func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, entered *int) (*Result, error) {
+func (s *service) gain(c charactersvc.View, p charactersvc.PendingLevel, entered *int) (*Result, error) {
 	count := max(p.Classes, 1)
 	res := &Result{Class: p.Class, Classes: count, Level: p.Level, HitDie: p.Die, Manual: entered != nil}
 	// ADR 0042 step 11: a dual-class's level up to its old class's gains no
@@ -313,7 +313,7 @@ func (s *service) gain(c *charactersvc.Character, p charactersvc.PendingLevel, e
 // step 4.4); nil for a class with no psionics. A dual-class's level before the crossover gains it
 // too (step 18.2: the PSPs are the psionicist entry's, at its level), and a multi-class
 // character's is not divided (Q2).
-func (s *service) pspGain(c *charactersvc.Character, class string) (*PSPGain, error) {
+func (s *service) pspGain(c charactersvc.View, class string) (*PSPGain, error) {
 	defs, err := s.rules.Definitions()
 	if err != nil {
 		return nil, fmt.Errorf("level-up: %w", err)

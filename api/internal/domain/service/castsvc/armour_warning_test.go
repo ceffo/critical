@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -20,14 +19,10 @@ import (
 // allows it, so the piece itself is not warned) is warned and still casts; an
 // elf fighter/mage in elven chain is not, a human one is; unarmoured, nothing.
 func TestCast_Step16_2_WizardSpellInArmourWarns(t *testing.T) {
-	fighterMage := func(race string) *charactersvc.Character {
-		return &charactersvc.Character{ID: charID, Class: "fighter", Race: race, Str: 17, Derived: charactersvc.Derived{
-			RealizedLevel: 7, Group: "warrior",
-			Classes: []charactersvc.EntryDerived{
-				{Class: "fighter", Group: "warrior", State: classes.EntryActive, RealizedLevel: 7},
-				{Class: "mage", Group: "wizard", State: classes.EntryActive, RealizedLevel: 6, Casts: true, NoArmour: true},
-			},
-		}}
+	fighterMage := func(race string) charactersvc.View {
+		v := multiOf(active("fighter", "warrior", 7, false), active("mage", "wizard", 6, true))
+		v.Race, v.Str = race, 17
+		return v
 	}
 	body := func(column string) itemsvc.Item {
 		return itemsvc.Item{ID: "a", Category: itemsvc.CategoryArmour, State: itemsvc.StateWorn, SkillColumn: column}

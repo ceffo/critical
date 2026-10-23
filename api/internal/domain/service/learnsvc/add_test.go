@@ -35,7 +35,7 @@ func (f fixture) recordAdd(got *actionlog.NewEntry) {
 func TestAdd_Step20_6_NoDieAndTheSpellIsInTheBook(t *testing.T) {
 	f := newFixture(t)
 	f.catalogue(map[string]learnsvc.Spell{"new3": {Level: 3, Wizard: true}, "old1": {Level: 1, Wizard: true}})
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 	f.book.EXPECT().Keys(mock.Anything, charID).Return([]string{"old1"}, nil)
 	f.book.EXPECT().Entries(mock.Anything, charID).Return([]spellbook.Entry{{Key: "old1", Origin: spellbook.OriginStarting}}, nil)
 	f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(0, false, nil)
@@ -73,7 +73,7 @@ func TestAdd_Step20_6_RefusedLikeLearn(t *testing.T) {
 	bard := charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 9, LearnChance: 85, MaxSpellsPerLevel: 18}
 	for _, tc := range []struct {
 		code  string
-		c     *charactersvc.Character
+		c     charactersvc.View
 		spell string
 		book  []string
 		want  error
@@ -88,7 +88,7 @@ func TestAdd_Step20_6_RefusedLikeLearn(t *testing.T) {
 		t.Run(tc.code, func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(cat)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(tc.c, nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(tc.c, nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(tc.book, nil).Maybe()
 			_, err := f.svc.Add(context.Background(), charID, tc.spell)
 			require.ErrorIs(t, err, tc.want)
@@ -98,7 +98,7 @@ func TestAdd_Step20_6_RefusedLikeLearn(t *testing.T) {
 	t.Run("a spell the catalogue does not hold", func(t *testing.T) {
 		f := newFixture(t)
 		f.catalogue(cat)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
+		f.chars.EXPECT().View(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 		_, err := f.svc.Add(context.Background(), charID, "nope")
 		require.ErrorIs(t, err, domain.ErrNotFound)
 	})
@@ -112,7 +112,7 @@ func TestAdd_Step20_6_NotRefusedForASpellFailedAtThisLevel(t *testing.T) {
 		t.Run(itoa(failedAt), func(t *testing.T) {
 			f := newFixture(t)
 			f.catalogue(map[string]learnsvc.Spell{"new3": {Level: 3, Wizard: true}})
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
+			f.chars.EXPECT().View(mock.Anything, charID).Return(mage(5, &int14Mage), nil).Once()
 			f.book.EXPECT().Keys(mock.Anything, charID).Return(nil, nil)
 			f.book.EXPECT().Entries(mock.Anything, charID).Return(nil, nil)
 			f.dal.EXPECT().LearnFailure(mock.Anything, charID, "new3").Return(failedAt, true, nil)

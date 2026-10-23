@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 )
 
 // warriorStr is a warrior's sheet Strength (ADR 0030 step 10's scale).
@@ -87,13 +87,14 @@ func TestAggregate_Step10_4_GatesRead18xxAs18(t *testing.T) {
 // a character whose derived block has exceptional_strength (a fighter) only.
 func TestGetEffectiveStr_Step10_TheFightersPercentile(t *testing.T) {
 	f := newFixture(t)
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).
-		Return(&charactersvc.Character{ID: charID, Class: "fighter", Str: 18, StrExceptional: 50, Derived: charactersvc.Derived{Group: "warrior", ExceptionalStrength: true}}, nil).Once()
+	fighter := viewtest.Single("fighter", 5, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(18, 10, 10, 10, 10, 10))
+	fighter.StrExceptional, fighter.ExceptionalStrength = 50, true
+	f.chars.EXPECT().View(mock.Anything, charID).Return(fighter, nil).Once()
 	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{strength(2)}, nil).Once()
 	got, err := f.svc.GetEffectiveStr(context.Background(), charID)
 	require.NoError(t, err)
 	assert.Equal(t, buffsvc.Strength{Base: 18, Effective: 18, BaseExceptional: 50, EffectiveExceptional: 70}, got)
 
-	assert.False(t, buffsvc.BaseStrengthOf(&charactersvc.Character{Class: "bard", Str: 18, Derived: charactersvc.Derived{Group: "rogue"}}).Warrior)
-	assert.True(t, buffsvc.BaseStrengthOf(&charactersvc.Character{Class: "fighter", Str: 18, Derived: charactersvc.Derived{Group: "warrior", ExceptionalStrength: true}}).Warrior)
+	assert.False(t, buffsvc.BaseStrengthOf(viewtest.Single("bard", 5, viewtest.WithScores(18, 10, 10, 10, 10, 10))).Warrior)
+	assert.True(t, buffsvc.BaseStrengthOf(fighter).Warrior)
 }

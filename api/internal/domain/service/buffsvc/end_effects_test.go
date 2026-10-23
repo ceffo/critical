@@ -31,7 +31,7 @@ func endSpells(f *fixture) {
 // hpIs answers the reads of the HP around a heal: the ledger total and max HP.
 func (f *fixture) hpIs(total, maxHP int) {
 	f.log.EXPECT().HPTotal(mock.Anything, charID).Return(total, nil).Once()
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 10, HPMax: maxHP}, nil).Once()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: 10, HPMax: maxHP}, nil).Once()
 }
 
 // ADR 0004 step 21, the dismiss: a row whose spell has end effects needs a

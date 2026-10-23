@@ -51,9 +51,9 @@ func (s *service) ResolveAttack(ctx context.Context, characterID int64, req Atta
 		if !weapon.Wielded {
 			return domain.FieldErrorf("weaponId", "%s is not wielded", weapon.Name.Any())
 		}
-		char, err := s.chars.GetCharacter(ctx, characterID)
+		char, err := s.chars.View(ctx, characterID)
 		if err != nil {
-			return fmt.Errorf("get character: %w", err)
+			return fmt.Errorf("get character view: %w", err)
 		}
 		mods, err := s.buffs.Aggregate(ctx, characterID, buffsvc.BaseStrengthOf(char), buffsvc.WeaponKind(weapon.Kind))
 		if err != nil {
@@ -136,9 +136,9 @@ func (s *service) spendAmmo(ctx context.Context, characterID int64, weapon Weapo
 // d20, crit-check d100, multiplier d100, then the damage dice, all on every
 // attack (ADR 0002 step 1). The crit multiplier is the one of the crit-table
 // range holding the multiplier d100.
-func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
+func (s *service) resolve(char charactersvc.View, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, crit CritTable, req AttackRequest) (*RollResult, error) {
 	res := &RollResult{
-		BaseThac0:      char.Derived.THAC0,
+		BaseThac0:      char.THAC0,
 		Modifiers:      []Modifier{},
 		DamageTerms:    []DamageTerm{},
 		CritMultiplier: 1,
@@ -215,7 +215,7 @@ func (s *service) resolve(char *charactersvc.Character, weapon Weapon, ammo *ite
 	// (PHB p.40, Table 30 at the realized level), its dice and K, before
 	// Strength and magic.
 	if req.Backstab {
-		rolled.BackstabMultiplier = float64(char.Derived.Backstab)
+		rolled.BackstabMultiplier = float64(char.Backstab)
 		rolled.Terms = append(rolled.Terms, DamageTerm{Term: TermStandardMult, Kind: ModBackstab, Value: rolled.BackstabMultiplier})
 	}
 	rolled.Terms = append(rolled.Terms, weaponTerms...)
@@ -417,11 +417,11 @@ func (s *service) ListWeapons(ctx context.Context, characterID int64) ([]Weapon,
 // before the crossover: a backstab only a dormant entry grants, or a weapon
 // only an old class allows (itemsvc's warning on the piece). A character
 // with no dormant entry reads nothing.
-func (s *service) attackWarnings(ctx context.Context, char *charactersvc.Character, weapon Weapon, backstab bool) ([]string, error) {
-	if !char.Derived.HasDormant() {
+func (s *service) attackWarnings(ctx context.Context, char charactersvc.View, weapon Weapon, backstab bool) ([]string, error) {
+	if !char.HasDormant() {
 		return nil, nil
 	}
-	if g, ok := char.Derived.Grant(classes.KindBackstab); backstab && ok && g.Dormant {
+	if g, ok := char.Grant(classes.KindBackstab); backstab && ok && g.Dormant {
 		return []string{classes.WarnOldAbility}, nil
 	}
 	items, err := s.items.List(ctx, char.ID)

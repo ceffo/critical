@@ -64,10 +64,10 @@ func (w Weapon) PointBlankAllowed() bool {
 }
 
 // BackstabAllowed reports whether char may backstab with weapon (ADR 0030
-// step 19): a thief's class has the backstab (Derived.Backstab above 0),
+// step 19): a thief's class has the backstab (View.Backstab above 0),
 // and the blow is struck with a melee weapon (PHB p.40).
-func BackstabAllowed(char *charactersvc.Character, weapon Weapon) bool {
-	return char.Derived.Backstab > 0 && weapon.Kind == WeaponMelee
+func BackstabAllowed(char charactersvc.View, weapon Weapon) bool {
+	return char.Backstab > 0 && weapon.Kind == WeaponMelee
 }
 
 // attackModifiers lists the to-hit modifiers in the order of ADR 0002 steps
@@ -77,14 +77,14 @@ func BackstabAllowed(char *charactersvc.Character, weapon Weapon) bool {
 // between the buffs and the situational modifier (ADR 0037 step 8). A nil or zero situational
 // adds nothing. opt.pointBlank is the point-blank option, ErrInvalidInput for
 // a weapon that does not allow it; opt.backstab the backstab, ErrInvalidInput
-// for a character whose class has none (Derived.Backstab 0) or a weapon
+// for a character whose class has none (View.Backstab 0) or a weapon
 // other than a melee one (BackstabAllowed).
-func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, sit *Situational, opt attackOptions) (attackMods, error) {
+func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *itemsvc.Item, mods buffsvc.BuffModifiers, sit *Situational, opt attackOptions) (attackMods, error) {
 	if opt.pointBlank && !weapon.PointBlankAllowed() {
 		return attackMods{}, fmt.Errorf("%w: point blank needs a specialized bow or crossbow", domain.ErrInvalidInput)
 	}
 	switch {
-	case opt.backstab && char.Derived.Backstab == 0:
+	case opt.backstab && char.Backstab == 0:
 		return attackMods{}, fmt.Errorf("%w: backstab is a thief's", domain.ErrInvalidInput)
 	case opt.backstab && !BackstabAllowed(char, weapon):
 		return attackMods{}, fmt.Errorf("%w: backstab needs a melee weapon", domain.ErrInvalidInput)
@@ -164,7 +164,7 @@ func (s *service) attackModifiers(char *charactersvc.Character, weapon Weapon, a
 	// without a pick takes Table 34's penalty for the class group, after
 	// the buffs and before the situational modifier. A launcher is judged by
 	// its own type; a weapon without a type takes none.
-	if p := char.NonproficientPenalty(weapon.Type); p != 0 {
+	if p := char.Proficiencies.NonproficientPenalty(weapon.Type); p != 0 {
 		add(Modifier{Kind: ModNonproficient, Detail: weapon.Type, Value: p})
 	}
 	if sit != nil && sit.Value != 0 {

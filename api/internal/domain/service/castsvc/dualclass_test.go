@@ -17,9 +17,9 @@ import (
 
 // frozen is a dual-class's old class as Derive gives it: its left-at level,
 // dormant before the crossover (ADR 0042 step 13).
-func frozen(class, group string, leftAt int, casts, dormant bool) charactersvc.EntryDerived {
-	return charactersvc.EntryDerived{
-		Class: class, Group: group, State: classes.EntryFrozen, RealizedLevel: leftAt, Casts: casts,
+func frozen(class, group string, leftAt int, casts, dormant bool) charactersvc.EntryView {
+	return charactersvc.EntryView{
+		Class: class, Group: group, State: classes.EntryFrozen, RealizedLevel: leftAt, LeftAtLevel: leftAt, Casts: casts,
 		NoArmour: group == "wizard", Dormant: dormant,
 	}
 }
@@ -37,7 +37,7 @@ func frozen(class, group string, leftAt int, casts, dormant bool) charactersvc.E
 func TestCast_Step13_AnOldClassSpellWarnsBeforeTheCrossover(t *testing.T) {
 	tests := []struct {
 		name      string
-		c         *charactersvc.Character
+		c         charactersvc.View
 		slotClass string
 		wantLevel int
 		wantClass string

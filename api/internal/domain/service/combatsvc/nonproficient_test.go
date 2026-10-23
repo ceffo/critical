@@ -13,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -43,7 +44,7 @@ var (
 
 // profChar is a level 5 character of class with the weapon picks, its proficiency figures
 // derived from the fixture catalogue (STR 12: no Strength adjustment; DEX 17: +2 missile).
-func profChar(t *testing.T, class string, picks ...string) *charactersvc.Character {
+func profChar(t *testing.T, class string, picks ...string) charactersvc.View {
 	t.Helper()
 	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), cataloguetest.Definitions(t))
 	require.NoError(t, err)
@@ -53,10 +54,9 @@ func profChar(t *testing.T, class string, picks ...string) *charactersvc.Charact
 	}
 	f, ok := skills.ProficiencyFigures(book, class, 5, 12, skills.Spending{Picks: skills.Picks{Weapon: weapon}})
 	require.True(t, ok, "no Table 34 row for %s", class)
-	return &charactersvc.Character{
-		ID: charID, Str: 12, Dex: 17, Class: class, Race: "human",
-		Derived: charactersvc.Derived{RealizedLevel: 5, THAC0: profTHAC0, Proficiencies: &f},
-	}
+	v := viewtest.Single(class, 5, viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(12, 17, 0, 0, 0, 0))
+	v.THAC0, v.Proficiencies = profTHAC0, &f
+	return v
 }
 
 func nonprof(weaponType string, value int) combatsvc.Modifier {
@@ -67,31 +67,31 @@ var str12Mod = combatsvc.Modifier{Kind: combatsvc.ModStrength, Detail: "12", Val
 
 type nonprofCase struct {
 	name   string
-	char   func(t *testing.T) *charactersvc.Character
+	char   func(t *testing.T) charactersvc.View
 	weapon combatsvc.Weapon
 	// penalty is the expected modifier's value, 0 for none.
 	penalty int
 }
 
 var nonprofCases = []nonprofCase{
-	{"warrior (fighter) without a pick: -2", func(t *testing.T) *charactersvc.Character { return profChar(t, "fighter") }, plainDagger, -2},
-	{"wizard (mage) without a pick: -5", func(t *testing.T) *charactersvc.Character { return profChar(t, "mage") }, plainDagger, -5},
-	{"priest (cleric) without a pick: -3", func(t *testing.T) *charactersvc.Character { return profChar(t, "cleric") }, plainDagger, -3},
-	{"rogue (thief) without a pick: -3", func(t *testing.T) *charactersvc.Character { return profChar(t, "thief") }, plainDagger, -3},
-	{"rogue (bard) without a pick: -3", func(t *testing.T) *charactersvc.Character { return profChar(t, "bard") }, plainDagger, -3},
-	{"a pick of another type does not cover it", func(t *testing.T) *charactersvc.Character {
+	{"warrior (fighter) without a pick: -2", func(t *testing.T) charactersvc.View { return profChar(t, "fighter") }, plainDagger, -2},
+	{"wizard (mage) without a pick: -5", func(t *testing.T) charactersvc.View { return profChar(t, "mage") }, plainDagger, -5},
+	{"priest (cleric) without a pick: -3", func(t *testing.T) charactersvc.View { return profChar(t, "cleric") }, plainDagger, -3},
+	{"rogue (thief) without a pick: -3", func(t *testing.T) charactersvc.View { return profChar(t, "thief") }, plainDagger, -3},
+	{"rogue (bard) without a pick: -3", func(t *testing.T) charactersvc.View { return profChar(t, "bard") }, plainDagger, -3},
+	{"a pick of another type does not cover it", func(t *testing.T) charactersvc.View {
 		return profChar(t, "fighter", itemsvc.TypeLongSword)
 	}, plainDagger, -2},
-	{"fighter with the type picked: none", func(t *testing.T) *charactersvc.Character {
+	{"fighter with the type picked: none", func(t *testing.T) charactersvc.View {
 		return profChar(t, "fighter", itemsvc.TypeDagger)
 	}, plainDagger, 0},
-	{"mage with the type picked: none", func(t *testing.T) *charactersvc.Character {
+	{"mage with the type picked: none", func(t *testing.T) charactersvc.View {
 		return profChar(t, "mage", itemsvc.TypeDart, itemsvc.TypeDagger)
 	}, plainDagger, 0},
 	// A kept pick the class may not make (served allowed: false, step 7) is still a pick.
-	{"cleric with a kept pick its class may not make: none", func(t *testing.T) *charactersvc.Character {
+	{"cleric with a kept pick its class may not make: none", func(t *testing.T) charactersvc.View {
 		c := profChar(t, "cleric", itemsvc.TypeDagger)
-		require.False(t, c.Derived.Proficiencies.WeaponPicks[0].Allowed, "the cleric may not pick dagger")
+		require.False(t, c.Proficiencies.WeaponPicks[0].Allowed, "the cleric may not pick dagger")
 		return c
 	}, plainDagger, 0},
 }

@@ -423,11 +423,11 @@ type BaseStrength struct {
 }
 
 // BaseStrengthOf is c's sheet Strength (ADR 0030 steps 9 and 10); the group
-// scale is the derived exceptional_strength feature (c as GetCharacter reads it).
-func BaseStrengthOf(c *charactersvc.Character) BaseStrength {
+// scale is the derived exceptional_strength feature (View.ExceptionalStrength).
+func BaseStrengthOf(c charactersvc.View) BaseStrength {
 	return BaseStrength{
 		StrScore: StrScore{Score: c.Str, Exceptional: c.StrExceptional},
-		Warrior:  c.Derived.ExceptionalStrength,
+		Warrior:  c.ExceptionalStrength,
 	}
 }
 

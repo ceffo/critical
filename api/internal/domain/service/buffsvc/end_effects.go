@@ -127,9 +127,9 @@ func (s *service) endResult(ctx context.Context, characterID int64, rolls []EndE
 	if err != nil {
 		return EndResult{}, fmt.Errorf("hp total: %w", err)
 	}
-	ch, err := s.chars.GetCharacter(ctx, characterID)
+	ch, err := s.chars.View(ctx, characterID)
 	if err != nil {
-		return EndResult{}, fmt.Errorf("get character: %w", err)
+		return EndResult{}, fmt.Errorf("get character view: %w", err)
 	}
 	return EndResult{
 		Effects:  rolls,

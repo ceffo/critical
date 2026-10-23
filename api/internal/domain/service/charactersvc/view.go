@@ -25,6 +25,8 @@ type View struct {
 	// Languages are the languages the sheet knows, as the read gives them (the
 	// skills tab reads them; the rest of Details stays with charactersvc).
 	Languages []string
+	// Alignment is the sheet's alignment (Details.Alignment); empty when unset.
+	Alignment string
 
 	// Abilities (step 1.2).
 	Str            int
@@ -55,6 +57,15 @@ type View struct {
 	SkillColumn      string
 	SkillSets        []skills.SkillSet
 	Backstab         int
+	// LevelUp is the character's pending levels across its entries (Derived.LevelUp,
+	// with the grants and free spells each level carries); EntryView.LevelUp is one entry's.
+	LevelUp LevelUp
+	// ExceptionalStrength is the exceptional_strength feature granted (ADR 0030
+	// steps 9 and 10): the warrior's scale above 18.
+	ExceptionalStrength bool
+	// SpellFailure is the first granting entry's chance (ADR 0030 step 14), the
+	// one the sheet shows; EntryView.SpellFailure is each entry's own.
+	SpellFailure int
 	// Proficiencies are the derived non-weapon pool and the weapon figures
 	// (Derived.Proficiencies); ProficiencyPicks are the picks themselves.
 	Proficiencies *skills.ProficiencySlots
@@ -130,14 +141,14 @@ func buildView(c Character, d Derived) View {
 		entries[i] = e
 	}
 	return View{
-		ID: c.ID, Name: c.Name, Race: c.Race, Languages: c.Details.Languages,
+		ID: c.ID, Name: c.Name, Race: c.Race, Languages: c.Details.Languages, Alignment: c.Details.Alignment,
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,
 		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, MagicDefence: d.MagicDefence,
 		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
-		SkillSets: d.SkillSets, Backstab: d.Backstab, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
+		SkillSets: d.SkillSets, Backstab: d.Backstab, LevelUp: d.LevelUp, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
 		Features:    d.Features,
 		SkillPoints: c.SkillPoints, ProficiencyPicks: c.Proficiencies, PsionicPicks: c.PsionicPicks,
 	}

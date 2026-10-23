@@ -251,7 +251,7 @@ Each is a choice the ADR cannot settle alone; the step is written with the defau
    imported by tests only; if its import graph pulls production code in, it moves next to the
    mocks.
 
-## As built (steps 7.1 to 7.3)
+## As built (steps 7.1 to 7.4)
 
 - Step 7.1: `View`, `buildView`, the helpers, `viewtest` and the tests of step 6 exist
   (`TestView_Step6_ProjectsTheDerivedBlock`, `TestView_Step3_SkillClassesEqualsStoredAndProficiencyClasses`,
@@ -269,8 +269,18 @@ Each is a choice the ADR cannot settle alone; the step is written with the defau
   same names until step 7.6 removes the entity's readers.
 - `skillsLevel` stays in `charactersvc/create.go`: it reads the creation draft's new-class entry, not a
   derived entry (step 3.7). `SetEntryLevel` is untouched (the write services, step 7.4).
-- Still to migrate: combatsvc, buffsvc (non-psionic), prepsvc, castsvc, learnsvc, levelupsvc, dualclasssvc,
-  psionicsvc, then step 7.6 (the gate).
+- Step 7.4: combatsvc, buffsvc, castsvc, levelupsvc, learnsvc, prepsvc and dualclasssvc read `View`. Their tests
+  build views with `viewtest` (for instance `TestSwitch_Step2_2_TheNewClassMinimumsAndAlignmentAreRefusedWithNothingWritten`,
+  `TestAdd_Step20_8_RefusedWhenNotOwed`, `TestEffects_Step14_ByGroupGainTakesTheBestDie`); no composition test was
+  changed or removed. `GetCharacter(ctx` remains in three places only: charactersvc's own method; psionicsvc's
+  port (it migrates after the psionics ADR lands); buffsvc's `Characters.GetCharacter`, kept for the psionic
+  maintenance charge (the PSP read).
+- Additions to the view (all additive): `ExceptionalStrength`, `SpellFailure`, `LevelUp` (the pending levels
+  across the entries, as `Derived.LevelUp`, with their grants and free spells), `Alignment`. `BaseStrengthOf` takes
+  a `View`; combat's non-proficiency penalty reads `View.Proficiencies`.
+- The services' `Rules` interfaces carry no pass-through for a figure the view holds (they left in an earlier item),
+  so nothing was left to remove from them.
+- Still to migrate: psionicsvc and buffsvc's psionic path, then step 7.6 (the gate).
 
 ## Consequences
 

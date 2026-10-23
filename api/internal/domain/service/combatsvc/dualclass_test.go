@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -25,18 +26,18 @@ import (
 // dualClass is a character whose old class (left at 9) is dormant until
 // crossed, with the old class's feature kind granted at 9 and the active
 // class at level.
-func dualClass(old, active string, level int, kind string, crossed bool) *charactersvc.Character {
-	return &charactersvc.Character{
-		ID: charID, Str: 16, Dex: 17, Class: active, Race: "human",
-		Derived: charactersvc.Derived{
-			RealizedLevel: level, THAC0: 18,
-			Classes: []charactersvc.EntryDerived{
-				{Class: old, State: classes.EntryFrozen, RealizedLevel: 9, Dormant: !crossed},
-				{Class: active, State: classes.EntryActive, RealizedLevel: level},
-			},
-			Features: []charactersvc.FeatureGrant{{Kind: kind, Class: old, Level: 9, Dormant: !crossed}},
-		},
+func dualClass(old, active string, level int, kind string, crossed bool) charactersvc.View {
+	opts := []viewtest.Option{
+		viewtest.WithIdentity(charID, "Test", "human"), viewtest.WithScores(16, 17, 0, 0, 0, 0),
+		viewtest.WithFrozen(old, 9), viewtest.WithEntry(active, level),
 	}
+	if !crossed {
+		opts = append(opts, viewtest.WithDormant())
+	}
+	v := viewtest.Multi(opts...)
+	v.THAC0 = 18
+	v.Features = []charactersvc.FeatureGrant{{Kind: kind, Class: old, Level: 9, Dormant: !crossed}}
+	return v
 }
 
 // The elf, a fighter left at 9: at mage 7 its long sword shows the mage's
@@ -77,7 +78,7 @@ func TestResolveAttack_Step13_AnOldClassBackstabWarnsBeforeTheCrossover(t *testi
 			f := newFixture(t)
 			f.critRows = []combatsvc.CritRow{{From: 1, To: 100, Multiplier: 1.5}}
 			char := dualClass("thief", "fighter", 5, classes.KindBackstab, crossed)
-			char.Derived.Backstab = 4
+			char.Backstab = 4
 			f.weapons.EXPECT().Get(mock.Anything, charID, "dagger").Return(dagger1, nil)
 			f.withChar(char)
 			f.buffs.EXPECT().Aggregate(mock.Anything, charID, mock.Anything, buffsvc.WeaponKind("melee")).Return(str16Mods, nil)

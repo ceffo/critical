@@ -116,7 +116,7 @@ type Spellbook interface {
 // derived by the rules (ADR 0030 steps 3 and 8; charactersvc.SVC satisfies
 // it).
 type Characters interface {
-	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
+	View(ctx context.Context, id int64) (charactersvc.View, error)
 }
 
 // Items is the inventory (itemsvc.SVC satisfies it).
@@ -168,25 +168,25 @@ type caster struct {
 	// step 2 as amended by ADR 0030 steps 7 and 8).
 	level  int
 	limits map[int]int
-	c      *charactersvc.Character
+	c      charactersvc.View
 }
 
 // casterOf resolves the spellcasting entry of class ("" the first). A
 // character without derived entries is its own caster at its realized level.
 func (s *service) casterOf(ctx context.Context, characterID int64, class string) (caster, error) {
-	c, err := s.Characters.GetCharacter(ctx, characterID)
+	c, err := s.Characters.View(ctx, characterID)
 	if err != nil {
 		return caster{}, fmt.Errorf("get character: %w", err)
 	}
-	e, ok := c.Derived.CasterEntry(class)
+	e, ok := c.CasterEntry(class)
 	if !ok {
-		if class != "" && class != c.Class {
+		if class != "" && class != c.Primary().Class {
 			return caster{}, fmt.Errorf("%w: %q is not a spellcasting class of the character", domain.ErrInvalidInput, class)
 		}
-		return caster{class: c.Class, level: c.Derived.CasterLevel(), limits: c.Derived.SpellSlots, c: c}, nil
+		return caster{class: c.Primary().Class, level: c.CasterLevel(), limits: c.SpellSlots, c: c}, nil
 	}
 	out := caster{class: e.Class, level: e.RealizedLevel, limits: e.SpellSlots, c: c}
-	if c.Derived.Casters() > 1 {
+	if c.Casters() > 1 {
 		out.tag = e.Class
 	}
 	return out, nil
@@ -194,14 +194,14 @@ func (s *service) casterOf(ctx context.Context, characterID int64, class string)
 
 // owner is the entry class a stored slot belongs to: its Class, or the
 // first spellcasting entry's for an untagged one.
-func owner(c *charactersvc.Character, slot spellsvc.SpellSlot) string {
+func owner(c charactersvc.View, slot spellsvc.SpellSlot) string {
 	if slot.Class != "" {
 		return slot.Class
 	}
-	if e, ok := c.Derived.CasterEntry(""); ok {
+	if e, ok := c.CasterEntry(""); ok {
 		return e.Class
 	}
-	return c.Class
+	return c.Primary().Class
 }
 
 func (s *service) Info(ctx context.Context, characterID int64) (Info, error) {

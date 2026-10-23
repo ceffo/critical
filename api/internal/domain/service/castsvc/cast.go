@@ -22,9 +22,9 @@ import (
 // Cast spends the slot and applies its spell at the character's level, in
 // one transaction with one log entry.
 func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, req CastRequest) (CastResult, error) {
-	c, err := s.Characters.GetCharacter(ctx, characterID)
+	c, err := s.Characters.View(ctx, characterID)
 	if err != nil {
-		return CastResult{}, fmt.Errorf("get character: %w", err)
+		return CastResult{}, fmt.Errorf("get character view: %w", err)
 	}
 	var res CastResult
 	var warnings []string
@@ -120,7 +120,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		var snaps []actionlog.Snapshot
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
-			casterLevel: casterLevel, groups: c.Derived.Groups(), source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			casterLevel: casterLevel, groups: c.Groups(), source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -158,16 +158,16 @@ type caster struct {
 // (an untagged slot: the first one, an active one before a dual-class's
 // frozen one); the character's caster level and spell failure, and no armour
 // limit, when no entry is derived.
-func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) caster {
-	e, ok := c.Derived.CasterEntry(slot.Class)
+func casterOf(c charactersvc.View, slot spellsvc.SpellSlot) caster {
+	e, ok := c.CasterEntry(slot.Class)
 	if !ok {
-		e, ok = c.Derived.CasterEntry("")
+		e, ok = c.CasterEntry("")
 	}
 	if !ok {
-		return caster{level: c.Derived.CasterLevel(), failure: c.Derived.SpellFailure}
+		return caster{level: c.CasterLevel(), failure: c.SpellFailure}
 	}
 	out := caster{level: e.RealizedLevel, failure: e.SpellFailure, noArmour: e.NoArmour, dormant: e.Dormant}
-	if len(c.Derived.Classes) > 1 {
+	if len(c.Entries) > 1 {
 		out.class = e.Class
 	}
 	return out
@@ -178,7 +178,7 @@ func casterOf(c *charactersvc.Character, slot spellsvc.SpellSlot) caster {
 // dormant old class, and step 16.2's spell_in_armour when its class allows
 // no body armour and body armour is worn, whatever the character's other
 // classes allow. Only such a class reads the pieces.
-func (s *service) castWarnings(ctx context.Context, c *charactersvc.Character, who caster) ([]string, error) {
+func (s *service) castWarnings(ctx context.Context, c charactersvc.View, who caster) ([]string, error) {
 	var out []string
 	if who.dormant {
 		out = append(out, classes.WarnOldAbility)
@@ -232,9 +232,9 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 	}
 	// The spell lands on the character: his class group picks a by-group
 	// effect (ADR 0030 step 2), whoever cast it.
-	c, err := s.Characters.GetCharacter(ctx, characterID)
+	c, err := s.Characters.View(ctx, characterID)
 	if err != nil {
-		return CastResult{}, fmt.Errorf("get character: %w", err)
+		return CastResult{}, fmt.Errorf("get character view: %w", err)
 	}
 	var res CastResult
 	err = s.Tx.InTx(ctx, func(ctx context.Context) error {
@@ -251,7 +251,7 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: req.CasterLevel, groups: c.Derived.Groups(), source: SourceReceived, mode: mode,
+			spellID: id, casterLevel: req.CasterLevel, groups: c.Groups(), source: SourceReceived, mode: mode,
 		})
 		if err != nil {
 			return err
@@ -309,11 +309,11 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 	if !spelleffectsvc.RowOf(entryRef(entry, ok), spell.Stats.Duration).Any() {
 		return CastResult{}, fmt.Errorf("%w: %s", spelleffectsvc.ErrNotAnEffect, id)
 	}
-	c, err := s.Characters.GetCharacter(ctx, characterID)
+	c, err := s.Characters.View(ctx, characterID)
 	if err != nil {
-		return CastResult{}, fmt.Errorf("get character: %w", err)
+		return CastResult{}, fmt.Errorf("get character view: %w", err)
 	}
-	if err := checkCasterLevel(c.Derived.CasterLevel()); err != nil {
+	if err := checkCasterLevel(c.CasterLevel()); err != nil {
 		return CastResult{}, err
 	}
 	mode, err := s.modeFor(id, "")
@@ -325,7 +325,7 @@ func (s *service) AddEffect(ctx context.Context, characterID int64, req AddEffec
 		var snaps []actionlog.Snapshot
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
-			spellID: id, casterLevel: c.Derived.CasterLevel(), groups: c.Derived.Groups(), source: SourceEffect, mode: mode,
+			spellID: id, casterLevel: c.CasterLevel(), groups: c.Groups(), source: SourceEffect, mode: mode,
 		})
 		if err != nil {
 			return err

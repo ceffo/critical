@@ -123,7 +123,7 @@ func (f *fixture) savesInitiative() {
 // The roll reads the modifiers first: here a character with no item power
 // and no weapon in hand (initiative_test.go proves the modifiers).
 func (f *fixture) rollsInitiative(d10 int) {
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 10}, nil).Maybe()
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: 10}, nil).Maybe()
 	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(nil, nil).Maybe()
 	f.weapons.EXPECT().WeaponInHand(mock.Anything, charID).Return(buffsvc.HeldWeapon{}, false, nil).Maybe()
 	f.initiativeIs(nil)
@@ -138,7 +138,7 @@ func (f *fixture) powers(ps ...buffsvc.ItemPower) {
 }
 
 func (f *fixture) base(str int) {
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: str}, nil)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: str}, nil)
 }
 
 func decodeSnap(t *testing.T, raw json.RawMessage) []map[string]any {
@@ -629,7 +629,7 @@ func TestGetEffectiveStr(t *testing.T) {
 	t.Run("character error is wrapped", func(t *testing.T) {
 		f := newFixture(t)
 		boom := errors.New("boom")
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(nil, boom)
+		f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{}, boom)
 
 		_, err := f.svc.GetEffectiveStr(context.Background(), charID)
 		assert.ErrorIs(t, err, boom)
@@ -914,7 +914,7 @@ func TestRestorers_CoverEverySnapshotKey(t *testing.T) {
 	f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(1, nil)
 	f.dice.EXPECT().RollDie(10).Return(4)
 	f.log.EXPECT().TopID(mock.Anything, charID).Return(1, true, nil)
-	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{ID: charID, Str: 10}, nil)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: 10}, nil)
 	f.items.EXPECT().ItemPowers(mock.Anything, charID).Return(nil, nil)
 	f.weapons.EXPECT().WeaponInHand(mock.Anything, charID).Return(buffsvc.HeldWeapon{}, false, nil)
 
@@ -1078,7 +1078,7 @@ func TestRoundMoves(t *testing.T) {
 // effective STR as GetEffectiveStr), every other ability the sheet's, other
 // buffs active. An unknown key is refused.
 func TestGetAbilityScore(t *testing.T) {
-	sheet := &charactersvc.Character{ID: charID, Str: 12, Dex: 15, Con: 13, Int: 14, Wis: 9, Cha: 16}
+	sheet := charactersvc.View{ID: charID, Str: 12, Dex: 15, Con: 13, Int: 14, Wis: 9, Cha: 16}
 	cases := []struct {
 		name    string
 		ability charactersvc.Ability
@@ -1093,7 +1093,7 @@ func TestGetAbilityScore(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixture(t)
-			f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(sheet, nil)
+			f.chars.EXPECT().View(mock.Anything, charID).Return(sheet, nil)
 			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(c.buffs, nil).Once()
 			got, err := f.svc.GetAbilityScore(context.Background(), charID, c.ability)
 			require.NoError(t, err)
@@ -1103,7 +1103,7 @@ func TestGetAbilityScore(t *testing.T) {
 
 	t.Run("unknown ability", func(t *testing.T) {
 		f := newFixture(t)
-		f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(sheet, nil)
+		f.chars.EXPECT().View(mock.Anything, charID).Return(sheet, nil)
 		_, err := f.svc.GetAbilityScore(context.Background(), charID, "luck")
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
 	})

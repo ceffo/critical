@@ -31,9 +31,11 @@ func keptMore(b buffsvc.BuffEffect, n int) buffsvc.BuffEffect {
 // pspIs answers the character read of Next Round's maintenance with current
 // PSPs (before the initiative's own read).
 func (f *fixture) pspIs(current int) {
+	// The maintenance charge reads the PSP pool through the entity (psionic path).
 	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
 		ID: charID, Str: 10, Derived: charactersvc.Derived{PSP: &charactersvc.PSPPool{Current: current, Max: 50}},
-	}, nil).Once()
+	}, nil).Maybe() // not read when no row is due
+	f.chars.EXPECT().View(mock.Anything, charID).Return(charactersvc.View{ID: charID, Str: 10}, nil).Maybe()
 }
 
 // advances runs one Next Round from round with buffs and returns its entry.

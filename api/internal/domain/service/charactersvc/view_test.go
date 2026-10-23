@@ -41,6 +41,7 @@ func TestView_Step6_ProjectsTheDerivedBlock(t *testing.T) {
 			assert.Equal(t, c.ID, v.ID)
 			assert.Equal(t, c.Name, v.Name)
 			assert.Equal(t, c.Race, v.Race)
+			assert.Equal(t, c.Details.Alignment, v.Alignment)
 			assert.Equal(t, []int{c.Str, c.StrExceptional, c.Dex, c.Con, c.Int, c.Wis, c.Cha, c.HPMax, c.PSPMax},
 				[]int{v.Str, v.StrExceptional, v.Dex, v.Con, v.Int, v.Wis, v.Cha, v.HPMax, v.PSPMax})
 			assert.Equal(t, d.THAC0, v.THAC0)
@@ -56,6 +57,9 @@ func TestView_Step6_ProjectsTheDerivedBlock(t *testing.T) {
 			assert.Equal(t, d.SkillColumn, v.SkillColumn)
 			assert.Equal(t, d.SkillSets, v.SkillSets)
 			assert.Equal(t, d.Backstab, v.Backstab)
+			assert.Equal(t, d.ExceptionalStrength, v.ExceptionalStrength)
+			assert.Equal(t, d.SpellFailure, v.SpellFailure)
+			assert.Equal(t, d.LevelUp, v.LevelUp)
 			assert.Equal(t, d.Proficiencies, v.Proficiencies)
 			assert.Equal(t, d.PSP, v.PSP)
 			assert.Equal(t, d.Powers, v.Powers)

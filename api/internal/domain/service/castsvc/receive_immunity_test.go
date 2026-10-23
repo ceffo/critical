@@ -10,7 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 )
 
@@ -19,10 +19,9 @@ import (
 // the immunity. A spell outside the list still lands as usual.
 func TestReceive_Step10_ImmuneSpellAppliesNothing(t *testing.T) {
 	immuneTo := func(t *testing.T, dice ...int) *fixture {
-		return newFixtureOf(t, catalog(t), &charactersvc.Character{
-			ID: charID, Class: "bard", Str: 12, Wis: 19,
-			Derived: charactersvc.Derived{RealizedLevel: bardLevel, SpellImmunities: []string{"strength"}},
-		}, dice...)
+		v := viewtest.Single("bard", bardLevel, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(12, 0, 0, 0, 19, 0))
+		v.SpellImmunities = []string{"strength"}
+		return newFixtureOf(t, catalog(t), v, dice...)
 	}
 
 	t.Run("immune: no die, no buff, textOnly immune", func(t *testing.T) {

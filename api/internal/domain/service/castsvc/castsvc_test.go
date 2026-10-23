@@ -20,6 +20,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
@@ -107,11 +108,11 @@ func newFixture(t *testing.T, dice ...int) *fixture {
 // newFixtureWith is newFixture over another spell-effects catalog.
 func newFixtureWith(t *testing.T, effects spelleffectsvc.Catalog, dice ...int) *fixture {
 	t.Helper()
-	return newFixtureOf(t, effects, &charactersvc.Character{ID: charID, Class: "bard", Str: 12, Derived: charactersvc.Derived{RealizedLevel: bardLevel, Group: "rogue"}}, dice...)
+	return newFixtureOf(t, effects, casterOf("bard"), dice...)
 }
 
 // newFixtureOf is newFixtureWith for another caster.
-func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *charactersvc.Character, dice ...int) *fixture {
+func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster charactersvc.View, dice ...int) *fixture {
 	t.Helper()
 	f := &fixture{
 		slots:      mocks.NewMockSlots(t),
@@ -124,7 +125,7 @@ func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster *characte
 		tx:         &fakeTx{},
 	}
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(caster, nil).Maybe()
+	chars.EXPECT().View(mock.Anything, charID).Return(caster, nil).Maybe()
 	if wearsNothing(caster) {
 		// ADR 0042 step 16.2: a mage's cast reads the worn armour, the
 		// fixture's worn pieces (none unless a test sets them).
@@ -612,7 +613,7 @@ func TestCast_BuffErrorAborts(t *testing.T) {
 	buffs := mocks.NewMockBuffs(t)
 	buffs.EXPECT().Add(mock.Anything, charID, mock.Anything).Return(buffsvc.BuffEffect{}, actionlog.Snapshot{}, boom)
 	chars := mocks.NewMockCharacters(t)
-	chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{Derived: charactersvc.Derived{RealizedLevel: bardLevel}}, nil)
+	chars.EXPECT().View(mock.Anything, charID).Return(viewtest.Single("bard", bardLevel), nil)
 	svc, err := castsvc.New(castsvc.Deps{
 		Slots: f.slots, Effects: catalog(t), Texts: f.texts, Buffs: buffs, Initiative: f.initiative, Items: f.items, Attacks: f.attacks,
 		Characters: chars, Dice: f.dice, Log: mocks.NewMockLog(t), Tx: f.tx,
@@ -781,8 +782,8 @@ func TestDamageAt_NoneAndBounds(t *testing.T) {
 
 // wearsNothing reports whether one of caster's classes allows no body armour,
 // so that a cast reads its pieces (ADR 0042 step 16.2).
-func wearsNothing(caster *charactersvc.Character) bool {
-	for _, e := range caster.Derived.Classes {
+func wearsNothing(caster charactersvc.View) bool {
+	for _, e := range caster.Entries {
 		if e.NoArmour {
 			return true
 		}

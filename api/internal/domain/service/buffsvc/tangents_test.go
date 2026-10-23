@@ -62,6 +62,7 @@ func TestTangents_Step3_ARowPerTargetChargedOnePSP(t *testing.T) {
 		held := mindRow("o", "Orc", 1, 2)
 		f.state([]buffsvc.BuffEffect{held, bless}, 5)
 		contact := mindRow("o", "Orc", 0, 2)
+		contact.ContactFrom = 2 // contact made at its rounds kept (step 10)
 		f.saves([]buffsvc.BuffEffect{contact, bless})
 		ch, _, err := f.svc.AddTangents(ctx, charID, "Orc", 2)
 		require.NoError(t, err)

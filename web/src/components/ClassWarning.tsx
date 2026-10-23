@@ -3,7 +3,6 @@ import { Warning } from "@phosphor-icons/react";
 import { formatSigned } from "@/lib/format";
 import { useCharacterStore } from "@/stores/character";
 import type { ClassWarningCode } from "@/types/items";
-import { primaryClass } from "@/lib/classEntries";
 
 /**
  * The words of a class warning (ADR 0033 step 20, ADR 0035 item 9): "Pas pour un barde". The server
@@ -11,7 +10,7 @@ import { primaryClass } from "@/lib/classEntries";
  */
 function useClassWarningText(): (code: ClassWarningCode) => string {
   const { t } = useTranslation();
-  const cls = useCharacterStore((s) => primaryClass(s.character?.classes));
+  const cls = useCharacterStore((s) => s.character?.primaryClass ?? "");
   return (code) =>
     t(`equipment.warnings.${code}`, {
       who: t(`equipment.warnings.who.${cls}`),

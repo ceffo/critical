@@ -321,6 +321,16 @@ func TestContact_Step9_Post(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.Contains(t, rec.Body.String(), `distance`)
 
+	// Q15: the DM's cost for a level past the table reaches the service.
+	cost := 13
+	m.psionics.EXPECT().Contact(mock.Anything, int64(1), psionicsvc.ContactRequest{
+		Power: "contact", Opponent: psionics.Opponent{Target: "Orc", Mind: "open", Level: 21}, Cost: &cost,
+		Distance: "sight", LifeOrder: "mammal",
+	}).Return(&psionicsvc.UseResult{Check: psionicsvc.CheckRecord{Power: "contact", Cost: 13, Level: 21}}, nil).Once()
+	rec = do(h, "POST", "/api/psionics/powers/contact/contact",
+		`{"target":"Orc","mind":"open","level":21,"cost":13,"distance":"sight","lifeOrder":"mammal"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
 	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":`)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
@@ -345,4 +355,10 @@ func TestUse_Step10_PostTarget(t *testing.T) {
 	rec = do(h, "POST", "/api/psionics/powers/inflict_pain/use", `{"target":"Elf"}`)
 	require.Equal(t, http.StatusConflict, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"code":"no_contact"`)
+
+	// ADR 0044 step 9 (Q15): the contact power goes through its own route.
+	m.psionics.EXPECT().Use(mock.Anything, int64(1), "contact", mock.Anything).Return(nil, psionicsvc.ErrUseContactRoute).Once()
+	rec = do(h, "POST", "/api/psionics/powers/contact/use", `{"cost":13}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"use_contact_route"`)
 }

@@ -419,3 +419,73 @@ func TestContactPower_Step10_ThePlusAmount(t *testing.T) {
 		assert.Equal(t, "cost", fe.Field)
 	})
 }
+
+// ADR 0044 step 9 (Q15): for a level Table 29 has no row for, the DM gives
+// the cost. The contact still makes its contact row, so a power whose cost
+// is contact is accepted on that mind from the next round. A cost entered
+// for a level the table has, or under 1, is refused.
+func TestContact_Q15_TheDMsCostPastTheTable(t *testing.T) {
+	cost := func(n int) *int { return &n }
+
+	t.Run("level 21 with the DM's cost: the contact row", func(t *testing.T) {
+		svc, m := newContactSvc(t, telepath(20), nil)
+		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Once()
+		atSight(m)
+		rolls(m, 10)
+		expectContact(m)
+		var got actionlog.NewEntry
+		expectRecord(m.log, &got)
+		req := contactReq(21)
+		req.Cost = cost(13)
+		res, err := svc.Contact(context.Background(), 7, req)
+		require.NoError(t, err)
+		rec := payloadOf(t, got)
+		assert.Equal(t, 13, rec.Cost)
+		assert.Equal(t, 21, rec.Level)
+		assert.True(t, rec.Contact)
+		assert.Equal(t, "c1", res.BuffID)
+		assert.Equal(t, []actionlog.Snapshot{contactSnap}, got.Snapshots)
+	})
+
+	t.Run("inflict pain on that mind the next round", func(t *testing.T) {
+		// The row MakeContact made, after one Next Round.
+		svc, m := newContactSvc(t, telepath(20), []buffsvc.BuffEffect{contactRow("Orc", 1, 0)})
+		rolls(m, 4)
+		m.buffs.EXPECT().Add(mock.Anything, int64(7), mock.Anything).Return(buffsvc.BuffEffect{ID: "p1"}, tangentSnap, nil).Once()
+		expectRecord(m.log, new(actionlog.NewEntry))
+		res, err := svc.Use(context.Background(), 7, "inflict_pain", psionicsvc.UseRequest{Target: "Orc"})
+		require.NoError(t, err)
+		assert.True(t, res.Check.Success)
+	})
+
+	for _, c := range []struct {
+		name   string
+		level  int
+		cost   int
+		answer error
+	}{
+		{"a cost for a level the table has", 7, 5, nil},
+		{"a cost under 1", 21, 0, ruletablesvc.ErrLevelOutOfTable},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			svc, m := newContactSvc(t, telepath(20), nil)
+			m.tables.EXPECT().ContactCost(c.level).Return(8, c.answer).Once()
+			req := contactReq(c.level)
+			req.Cost = cost(c.cost)
+			_, err := svc.Contact(context.Background(), 7, req)
+			var fe *domain.FieldError
+			require.ErrorAs(t, err, &fe)
+			assert.Equal(t, "cost", fe.Field)
+		})
+	}
+}
+
+// ADR 0044 step 9 (Q15): Use refuses the contact power, whose cost names
+// a table, before the roll: it goes through Contact, which makes the
+// contact row, even with the DM's cost.
+func TestUse_Step9_TheContactPowerGoesThroughContact(t *testing.T) {
+	svc, _ := newContactSvc(t, telepath(20), nil)
+	cost := 13
+	_, err := svc.Use(context.Background(), 7, "contact", psionicsvc.UseRequest{Cost: &cost})
+	require.ErrorIs(t, err, psionicsvc.ErrUseContactRoute)
+}

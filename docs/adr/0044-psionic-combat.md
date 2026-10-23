@@ -242,30 +242,39 @@ two power ids in its row of data.
    `contact_modifiers`), then ADR 0043 steps 10 and 11 as for any power (half the cost on a
    failure; a failure may be tried again next round). A success puts the target's contact row (step
    3). Refused `mind_closed` against a closed mind (the book: the power never works on one) and
-   `level_out_of_table` for a level Table 29 has no row for _(Q15)_. The book's optional
-   language rule is not taken _(Q16)_.
+   `level_out_of_table` for a level Table 29 has no row for, unless the request gives the DM's
+   cost (at least 1, refused for a level the table has) _(Q15)_; that use still puts the contact
+   row. The contact power goes through this route only: the use route refuses a power whose cost
+   names a table (`use_contact_route`). The book's optional language rule is not taken _(Q16)_.
    Tests: `Contact_Step9_CostByTheTargetsLevel` (level 7: 8, or 4 on a failure),
    `Contact_Step9_DistanceLifeOrderAndResistance` (a bird at 10 miles resisting: -3, -3, -2),
-   `Contact_Step9_AClosedMindRefused`, `Contact_Step9_ASuccessPutsTheContactRow`.
+   `Contact_Step9_AClosedMindRefused`, `Contact_Step9_ASuccessPutsTheContactRow`,
+   `Contact_Q15_TheDMsCostPastTheTable` (level 21: the contact row, inflict pain on it the next
+   round), `Use_Step9_TheContactPowerGoesThroughContact`.
 
 10. **A power whose cost is contact** (amends ADR 0043 step 11, which refused it `needs_contact`;
     power descriptions, Initial Cost; Contact). Its use names a target holding a contact row made
     in an **earlier round** (refused `no_contact` otherwise, before the roll). Its initial cost is
     its `plus` amount, 0 when none (the contact paid for the rest) _(Q12)_; then ADR 0043 steps 10
-    to 13. A maintained one is a row carrying the `target`; in a round where such a row on the
+    to 13. A maintained one is a row carrying the `target`. Each maintained use on a subject is its
+    own row and pays its own maintenance (Contact, `cpsh/ch07-telepathy/02-telepathy-tower-of-iron-will-onward.md`):
+    such a row is renewed only by the same power on the same target (amends ADR 0043 step 13), so
+    inflict pain on two minds is two rows. In a round where such a row on the
     target pays its maintenance, the target's contact row charges nothing (the book: contact is
     free while another telepathic power uses it). When the contact row ends (dismissed or unpaid),
     the rows that use it end in the same transaction _(Q12)_.
     Tests: `ContactPower_Step10_NeedsContactFromAnEarlierRound` (psionicsvc: contact made this
     round refused, last round accepted), `ContactPower_Step10_ThePlusAmount` (switch personality: 30),
     `ContactPower_Step10_ContactFreeWhileAPowerUsesIt` (buffsvc: inflict pain at 2 on a contacted
-    target charges 2 a round, not 3), `ContactPower_Step10_EndingContactEndsItsPowers`.
+    target charges 2 a round, not 3; at 2 PSPs the power pays first and the contact is free),
+    `ContactPower_Step10_EndingContactEndsItsPowers`, `Add_Step10_APowerOnTwoMindsIsTwoRows`,
+    `ContactPower_Step10_TwoMindsPayTheirOwnMaintenance` (2 + 2, both contacts free).
 
 ### The screen and the journal
 
 11. **Wording and UI.** New entries `defence_raised`, `psionic_attack`, `psionic_defence`, each
     with a journal view (en, fr) and a fixture; new refusals `not_in_combat`, `mind_closed`,
-    `no_contact`, `level_out_of_table`, each a render row and an `apiError` key (en, fr); the
+    `no_contact`, `level_out_of_table`, `use_contact_route`, each a render row and an `apiError` key (en, fr); the
     contact modifier codes of step 1.3 worded (en, fr). The web adds psionic combat to the Powers
     panel: the current defence and a raise control for each known defence mode; an attack form
     (mode, target picked from the rows or typed, open or closed, the opponent's defence and the
@@ -334,7 +343,8 @@ the app must make; the step is written with the default.
     modifier against no defence, and psychic lock is out of scope. Other reading: lock built with
     two-sided powers.
 15. **Q15, a target above 20 levels or hit dice** (steps 1.2 and 9). Table 29 stops at 20.
-    Default: refused `level_out_of_table`; the DM gives a cost as a variable amount instead. Other
+    Default: refused `level_out_of_table`; the DM gives the cost on the contact route instead (step
+    9), which still makes the contact row. Other
     reading: 18 for every level over 20.
 16. **Q16, the optional language rule** (step 9). The book's option raises the contact cost for
     very intelligent minds. Default: not taken. Other reading: a ruleset switch (ADR 0041 step 2)
@@ -362,7 +372,9 @@ e2e. The order follows the data each step needs.
   `critical-rulebooks`, read only by the API after it.
 - Buff rows gain `target` and `tangents` (in the buff list's JSON, no migration); no opponent table.
 - New entries `defence_raised`, `psionic_attack`, `psionic_defence`; new refusals `not_in_combat`,
-  `mind_closed`, `no_contact`, `level_out_of_table`; `needs_contact` retired with step 10. Each
+  `mind_closed`, `no_contact`, `level_out_of_table`, `use_contact_route`; `needs_contact` no
+  longer refuses a power whose initial cost is contact (step 10) and stays only for a maintenance
+  cost of contact, which no catalogue power has. Each
   with its render row and `apiError` / journal key (en, fr).
 - A new pure rule (`psionics` contest) and new psionicsvc operations (raise, attack, defend,
   contact); buffsvc charges the tangent and contact rows through ADR 0043's maintenance.

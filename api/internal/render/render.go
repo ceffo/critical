@@ -248,6 +248,7 @@ var mappings = []mapping{
 	{target: psionicsvc.ErrNotAContactPower, status: http.StatusConflict, code: "not_a_contact_power"},
 	{target: psionicsvc.ErrMindClosed, status: http.StatusConflict, code: "mind_closed"},
 	{target: psionicsvc.ErrNoContact, status: http.StatusConflict, code: "no_contact"},
+	{target: psionicsvc.ErrUseContactRoute, status: http.StatusConflict, code: "use_contact_route"},
 	{target: psionicsvc.ErrLevelOutOfTable, status: http.StatusBadRequest, code: "level_out_of_table"},
 	{target: psionicsvc.ErrRecoveryWhileMaintaining, status: http.StatusConflict, code: "psp_recovery_while_maintaining"},
 	// ADR 0043 step 5: a PSP change for a character with no PSP maximum.

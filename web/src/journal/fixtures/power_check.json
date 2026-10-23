@@ -77,7 +77,6 @@
       },
       "ability": "wis",
       "abilityScore": 15,
-      "powerModifier": 0,
       "opponent": "Bird",
       "level": 7,
       "contactModifiers": [

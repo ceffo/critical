@@ -179,10 +179,13 @@ func Attack(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 }
 
 type contactBody struct {
-	Target    string                `json:"target"`
-	Mind      string                `json:"mind"`
-	Level     int                   `json:"level"`
-	Defence   string                `json:"defence"`
+	Target  string `json:"target"`
+	Mind    string `json:"mind"`
+	Level   int    `json:"level"`
+	Defence string `json:"defence"`
+	// Cost is the DM's cost for a level Table 29 has no row for, and only
+	// then (Q15).
+	Cost      *int                  `json:"cost"`
 	Distance  string                `json:"distance"`
 	LifeOrder string                `json:"lifeOrder"`
 	Resisting bool                  `json:"resisting"`
@@ -193,7 +196,8 @@ type contactBody struct {
 // (ADR 0044 step 9): the check, Table 29's cost for its level and the
 // distance, life-order and resisting lines. The answer is the Use one
 // (UseDTO); a success is in check.contact. 400 on a bad opponent, distance,
-// life order or modifier, or a level Table 29 lacks (level_out_of_table);
+// life order, modifier or cost, or a level Table 29 lacks with no cost given
+// (level_out_of_table);
 // 409 not_a_contact_power, mind_closed, not_enough_psp, power_not_known,
 // not_a_psionicist.
 func Contact(charID CharacterIDFunc, svc defender) render.HandlerFunc {
@@ -207,6 +211,7 @@ func Contact(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 			Opponent: psionics.Opponent{
 				Target: body.Target, Mind: body.Mind, Level: body.Level, Defence: body.Defence,
 			},
+			Cost:     body.Cost,
 			Distance: body.Distance, LifeOrder: body.LifeOrder, Resisting: body.Resisting,
 			Modifiers: body.Modifiers,
 		})

@@ -2378,7 +2378,8 @@
     "skill_blocked_by_armour": "Votre armure de corps bloque cette compétence.",
     "not_a_contact_power": "Ce pouvoir n’est pas le pouvoir de contact.",
     "mind_closed": "Le contact ne marche pas sur un esprit fermé.",
-    "level_out_of_table": "La table de contact n’a pas de ligne pour ce niveau.",
+    "level_out_of_table": "La table de contact n’a pas de ligne pour ce niveau : donnez le coût fixé par le MJ.",
+    "use_contact_route": "Ce pouvoir s’utilise par Contact, pas par Utiliser.",
     "no_contact": "Aucun contact avec cette cible depuis un tour précédent : utilisez d’abord Contact sur elle."
   },
   "lastShort": {

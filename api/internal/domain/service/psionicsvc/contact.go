@@ -33,14 +33,21 @@ var (
 	// ErrNoContact: a power whose cost is contact names a target no contact
 	// row made in an earlier round holds (step 10).
 	ErrNoContact = errors.New("no contact with the target from an earlier round")
+	// ErrUseContactRoute: Use of a power whose cost names a rule table (the
+	// contact power): its cost comes from the target, so it goes through
+	// Contact, which also makes the contact row (step 9, Q15).
+	ErrUseContactRoute = errors.New("the power's cost names a table: use it through Contact")
 )
 
 // ContactRequest is the contact power's use (ADR 0044 step 9): the power,
 // the opponent (step 2: its level gives the cost; no defence), the target's
 // distance and life order (Table 30 and 31 codes), whether the DM says the
-// target resists, and the labelled modifiers of ADR 0043 step 10.
+// target resists, and the labelled modifiers of ADR 0043 step 10. Cost is
+// the DM's cost for a target whose level Table 29 has no row for (Q15's
+// fallback), and only then.
 type ContactRequest struct {
 	Power     string
+	Cost      *int
 	Opponent  psionics.Opponent
 	Distance  string
 	LifeOrder string
@@ -63,8 +70,8 @@ type ContactLine struct {
 // success makes the target's contact row (buffsvc.MakeContact) in the
 // power_check entry, its snapshot beside the PSPs, so one undo takes both
 // back. Refused before the roll: a *domain.FieldError on the opponent's
-// fields, "defence", "distance", "lifeOrder", "level" (not given) or
-// "modifiers", ErrNotPsionicist, ErrPowerNotKnown, ErrNotAContactPower,
+// fields, "defence", "distance", "lifeOrder", "level" (not given), "cost"
+// (entered for a level the table has, or under 1) or "modifiers", ErrNotPsionicist, ErrPowerNotKnown, ErrNotAContactPower,
 // ErrMindClosed, ErrLevelOutOfTable, ErrNotEnoughPSP.
 func (s *service) Contact(ctx context.Context, characterID int64, req ContactRequest) (*UseResult, error) {
 	opp := req.Opponent
@@ -106,7 +113,7 @@ func (s *service) Contact(ctx context.Context, characterID int64, req ContactReq
 		if opp.Level < 1 {
 			return domain.FieldErrorf("level", "the contact's cost needs the target's level")
 		}
-		cost, err := s.rates.ContactCost(opp.Level)
+		cost, err := contactCost(s.rates.ContactCost(opp.Level))(req.Cost)
 		if err != nil {
 			return err
 		}
@@ -171,6 +178,27 @@ func (s *service) Contact(ctx context.Context, characterID int64, req ContactReq
 		return nil, err
 	}
 	return out, nil
+}
+
+// contactCost is the contact's initial cost from Table 29's answer (cost,
+// err) and the request's entered cost: the table's when it has the level's
+// row (no cost entered then), the entered one, at least 1, when it has not
+// (Q15: the DM gives the cost instead); ErrLevelOutOfTable when neither.
+func contactCost(cost int, err error) func(entered *int) (int, error) {
+	return func(entered *int) (int, error) {
+		switch {
+		case errors.Is(err, ErrLevelOutOfTable) && entered != nil:
+			if *entered < 1 {
+				return 0, domain.FieldErrorf("cost", "the contact's cost must be at least 1")
+			}
+			return *entered, nil
+		case err != nil:
+			return 0, err
+		case entered != nil:
+			return 0, domain.FieldErrorf("cost", "the contact's cost is the table's for the target's level, not entered")
+		}
+		return cost, nil
+	}
 }
 
 // contactLines adds the request's contact modifiers to rec as labelled lines

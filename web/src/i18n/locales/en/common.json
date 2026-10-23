@@ -2378,7 +2378,8 @@
     "skill_blocked_by_armour": "Your body armour blocks that skill.",
     "not_a_contact_power": "This power is not the contact power.",
     "mind_closed": "Contact does not work on a closed mind.",
-    "level_out_of_table": "The contact table has no row for that level.",
+    "level_out_of_table": "The contact table has no row for that level: give the cost the DM sets.",
+    "use_contact_route": "This power is used through Contact, not Use.",
     "no_contact": "No contact with that target from an earlier round: use Contact on it first."
   },
   "lastShort": {

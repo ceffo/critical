@@ -141,7 +141,8 @@ type CheckRecord struct {
 // row on (or renews it) in the same entry, its snapshot beside the PSPs, so
 // the undo takes both back (step 13). Refused before the roll:
 // ErrNotPsionicist, ErrPowerNotKnown, ErrDefenceModeIsRaised (a defence mode
-// is raised, ADR 0044 step 4), ErrNoContact (a power whose cost is contact
+// is raised, ADR 0044 step 4), ErrUseContactRoute (the contact power, ADR
+// 0044 step 9), ErrNoContact (a power whose cost is contact
 // names a target no contact row made in an earlier round holds, ADR 0044
 // step 10: its initial cost is then its plus amount, its row carries the
 // target), ErrNeedsContact, a *domain.FieldError on "modifiers", "cost",
@@ -166,6 +167,9 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		}
 		if p.Kind == catalogue.KindDefenceMode {
 			return ErrDefenceModeIsRaised
+		}
+		if p.InitialCost.Table != "" {
+			return ErrUseContactRoute
 		}
 		target, err := s.contactTarget(ctx, characterID, p, req.Target)
 		if err != nil {

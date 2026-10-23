@@ -159,6 +159,8 @@ export interface ContactRequest {
   target: string;
   mind: "open" | "closed";
   level: number;
+  /** The DM's cost, only for a level the contact table has no row for (level_out_of_table). */
+  cost?: number;
   distance: string;
   lifeOrder: string;
   resisting?: boolean;

@@ -272,3 +272,10 @@ func xpRefusal(field string, v int) error {
 	}
 	return nil
 }
+
+// raceOf is the race definition of id, the zero Race (no trait) for an id the
+// catalogue does not define: a race refusal is another check's.
+func raceOf(defs *classes.Registry, id string) classes.Race {
+	r, _ := defs.Race(id)
+	return r
+}

@@ -1,0 +1,3248 @@
+[
+  {
+    "id": "alarm",
+    "casting_time": "1 rd.",
+    "range": "10 yds.",
+    "duration": "4 hrs. + 1/2 hr./level",
+    "area_of_effect": "Up to 20-ft. cube",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "4 hrs. + 1/2 hr./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "hour"
+            },
+            {
+              "count": 0.5,
+              "unit": "hour",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Up to 20-ft. cube",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 20,
+                "unit": "foot"
+              }
+            ],
+            "up_to": true
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "armor",
+    "casting_time": "1 rd.",
+    "range": "Touch",
+    "duration": "Special",
+    "area_of_effect": "1 creature",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "Touch",
+        "kind": "touch",
+        "distance": {
+          "terms": null
+        },
+        "label": "touch"
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "1 creature",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "creature",
+        "label": "1_creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "burning_hands",
+    "casting_time": "1",
+    "range": "0",
+    "duration": "Instantaneous",
+    "area_of_effect": "The caster",
+    "components": "V, S",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "The caster",
+        "kind": "self",
+        "label": "the_caster"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "chromatic_orb",
+    "casting_time": "1",
+    "range": "0",
+    "duration": "Special",
+    "area_of_effect": "One creature",
+    "components": "V, S, M",
+    "saving_throw": "Neg.",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "One creature",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "creature",
+        "label": "one_creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Neg.",
+        "kinds": ["negates"],
+        "label": "neg_"
+      }
+    }
+  },
+  {
+    "id": "enlarge",
+    "casting_time": "1",
+    "range": "5 yds./level",
+    "duration": "5 rds./level",
+    "area_of_effect": "1 creature or object",
+    "components": "V, S, M",
+    "saving_throw": "Neg.",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "5 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "5 rds./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "1 creature or object",
+        "kind": "alternatives",
+        "alternatives": [
+          {
+            "raw": "1 creature",
+            "kind": "targets",
+            "targets": {
+              "terms": [
+                {
+                  "count": 1
+                }
+              ]
+            },
+            "noun": "creature"
+          },
+          {
+            "raw": "object",
+            "kind": "targets",
+            "targets": {
+              "terms": [
+                {
+                  "count": 1
+                }
+              ]
+            },
+            "noun": "object"
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Neg.",
+        "kinds": ["negates"],
+        "label": "neg_"
+      }
+    }
+  },
+  {
+    "id": "fist_of_stone",
+    "casting_time": "1",
+    "range": "0",
+    "duration": "1 round/level",
+    "area_of_effect": "The caster's hand",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "1 round/level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "The caster's hand",
+        "kind": "self",
+        "label": "the_caster_s_hand"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "identify",
+    "casting_time": "Special",
+    "range": "0",
+    "duration": "1 rd./level",
+    "area_of_effect": "1 item/level",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "1 item/level",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1,
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        },
+        "noun": "item"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "light",
+    "casting_time": "1",
+    "range": "60 yds.",
+    "duration": "1 turn/level",
+    "area_of_effect": "20-ft. radius",
+    "components": "V, M",
+    "saving_throw": "Special",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 turn/level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "turn",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "20-ft. radius",
+        "kind": "area",
+        "shape": "radius",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 20,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, M",
+        "v": true,
+        "s": false,
+        "m": true
+      },
+      "save": {
+        "raw": "Special",
+        "kinds": ["special"],
+        "label": "special"
+      }
+    }
+  },
+  {
+    "id": "magic_missile",
+    "casting_time": "1",
+    "range": "60 yds. + 10 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "1-5 targets",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "1-5 targets",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1,
+              "upper": 5
+            }
+          ]
+        },
+        "noun": "targets"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "sleep",
+    "casting_time": "1",
+    "range": "30 yds.",
+    "duration": "5 rds./level",
+    "area_of_effect": "Special",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "5 rds./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "melfs_acid_arrow",
+    "casting_time": "2",
+    "range": "180 yds.",
+    "duration": "Special",
+    "area_of_effect": "1 target",
+    "components": "V, S, M",
+    "saving_throw": "Special",
+    "stats": {
+      "casting_time": {
+        "raw": "2",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "180 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 180,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "1 target",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "target"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Special",
+        "kinds": ["special"],
+        "label": "special"
+      }
+    }
+  },
+  {
+    "id": "mirror_image",
+    "casting_time": "2",
+    "range": "0",
+    "duration": "3 rds./level",
+    "area_of_effect": "6-ft. radius",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "2",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "3 rds./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "6-ft. radius",
+        "kind": "area",
+        "shape": "radius",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 6,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "strength",
+    "casting_time": "1 turn",
+    "range": "Touch",
+    "duration": "1 hr./level",
+    "area_of_effect": "Person touched",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 turn",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "turn"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "Touch",
+        "kind": "touch",
+        "distance": {
+          "terms": null
+        },
+        "label": "touch"
+      },
+      "duration": {
+        "raw": "1 hr./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "hour",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Person touched",
+        "kind": "touch",
+        "label": "person_touched"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "tashas_uncontrollable_hideous_laughter",
+    "casting_time": "2",
+    "range": "60 yds.",
+    "duration": "1 rd./level",
+    "area_of_effect": "1 or more creatures in a 30-ft. cube",
+    "components": "V, S, M",
+    "saving_throw": "Neg.",
+    "stats": {
+      "casting_time": {
+        "raw": "2",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "1 or more creatures in a 30-ft. cube",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 30,
+                "unit": "foot"
+              }
+            ]
+          }
+        ],
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ],
+          "or_more": true
+        },
+        "noun": "creatures"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Neg.",
+        "kinds": ["negates"],
+        "label": "neg_"
+      }
+    }
+  },
+  {
+    "id": "dispel_magic",
+    "casting_time": "3",
+    "range": "120 yds.",
+    "duration": "Instantaneous",
+    "area_of_effect": "30-ft. cube",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "120 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 120,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "30-ft. cube",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 30,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "fireball",
+    "casting_time": "3",
+    "range": "10 yds. + 10 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "20-ft. radius",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "20-ft. radius",
+        "kind": "area",
+        "shape": "radius",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 20,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "haste",
+    "casting_time": "3",
+    "range": "60 yds.",
+    "duration": "3 rds. + 1 rd./level",
+    "area_of_effect": "40-ft. cube, 1 creature/level",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "3 rds. + 1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "round"
+            },
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "40-ft. cube, 1 creature/level",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 40,
+                "unit": "foot"
+              }
+            ]
+          }
+        ],
+        "targets": {
+          "terms": [
+            {
+              "count": 1,
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        },
+        "noun": "creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "slow",
+    "casting_time": "3",
+    "range": "90 yds. + 10 yds./level",
+    "duration": "3 rds. + 1 rd./level",
+    "area_of_effect": "40-ft. cube, 1 creature/level",
+    "components": "V, S, M",
+    "saving_throw": "Neg.",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "90 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 90,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "3 rds. + 1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "round"
+            },
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "40-ft. cube, 1 creature/level",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 40,
+                "unit": "foot"
+              }
+            ]
+          }
+        ],
+        "targets": {
+          "terms": [
+            {
+              "count": 1,
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        },
+        "noun": "creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Neg.",
+        "kinds": ["negates"],
+        "label": "neg_"
+      }
+    }
+  },
+  {
+    "id": "lightning_bolt",
+    "casting_time": "3",
+    "range": "40 yds. + 10 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "40 yds. x 10 ft.",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "40 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 40,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "40 yds. x 10 ft.",
+        "kind": "area",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 40,
+                "unit": "yard"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 10,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "improved_strength",
+    "casting_time": "4",
+    "range": "Touch",
+    "duration": "1 rd./level",
+    "area_of_effect": "Creature touched",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "Touch",
+        "kind": "touch",
+        "distance": {
+          "terms": null
+        },
+        "label": "touch"
+      },
+      "duration": {
+        "raw": "1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Creature touched",
+        "kind": "touch",
+        "label": "creature_touched"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "stoneskin",
+    "casting_time": "1",
+    "range": "Touch",
+    "duration": "Special",
+    "area_of_effect": "1 creature",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "Touch",
+        "kind": "touch",
+        "distance": {
+          "terms": null
+        },
+        "label": "touch"
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "1 creature",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "creature",
+        "label": "1_creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "polymorph_self",
+    "casting_time": "4",
+    "range": "0",
+    "duration": "2 turns/level",
+    "area_of_effect": "The caster",
+    "components": "V",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "2 turns/level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "turn",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "The caster",
+        "kind": "self",
+        "label": "the_caster"
+      },
+      "components": {
+        "raw": "V",
+        "v": true,
+        "s": false,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "wall_of_ice",
+    "casting_time": "4",
+    "range": "10 yds./level",
+    "duration": "1 turn/level",
+    "area_of_effect": "Special",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 turn/level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "turn",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "ice_storm",
+    "casting_time": "4",
+    "range": "10 yds./level",
+    "duration": "Special",
+    "area_of_effect": "20 or 40 ft. radius",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "20 or 40 ft. radius",
+        "kind": "alternatives",
+        "alternatives": [
+          {
+            "raw": "20 ft. radius",
+            "kind": "area",
+            "shape": "radius",
+            "dims": [
+              {
+                "terms": [
+                  {
+                    "count": 20,
+                    "unit": "foot"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "raw": "40 ft. radius",
+            "kind": "area",
+            "shape": "radius",
+            "dims": [
+              {
+                "terms": [
+                  {
+                    "count": 40,
+                    "unit": "foot"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "wall_of_fire",
+    "casting_time": "4",
+    "range": "60 yds.",
+    "duration": "Special",
+    "area_of_effect": "Special",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "mordenkainens_force_missiles",
+    "casting_time": "4",
+    "range": "30 yds. + 10 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "1-7 targets",
+    "components": "V, S",
+    "saving_throw": "Special",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "1-7 targets",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1,
+              "upper": 7
+            }
+          ]
+        },
+        "noun": "targets"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "Special",
+        "kinds": ["special"],
+        "label": "special"
+      }
+    }
+  },
+  {
+    "id": "rarys_mnemonic_enhancer",
+    "casting_time": "1 turn",
+    "range": "0",
+    "duration": "1 day",
+    "area_of_effect": "The caster",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 turn",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "turn"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "1 day",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "day"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "The caster",
+        "kind": "self",
+        "label": "the_caster"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "vitriolic_sphere",
+    "casting_time": "4",
+    "range": "150 yds.",
+    "duration": "Special",
+    "area_of_effect": "5-ft. radius",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "4",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "150 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 150,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "5-ft. radius",
+        "kind": "area",
+        "shape": "radius",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 5,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "magic_jar",
+    "casting_time": "1 rd.",
+    "range": "10 yds./level",
+    "duration": "Special",
+    "area_of_effect": "1 creature",
+    "components": "V, S, M",
+    "saving_throw": "Special",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Special",
+        "kind": "special",
+        "time": {
+          "terms": null
+        },
+        "label": "special"
+      },
+      "area": {
+        "raw": "1 creature",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "creature",
+        "label": "1_creature"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Special",
+        "kinds": ["special"],
+        "label": "special"
+      }
+    }
+  },
+  {
+    "id": "cloudkill",
+    "casting_time": "5",
+    "range": "10 yds.",
+    "duration": "1 rd./level",
+    "area_of_effect": "40 x 20 x 20 ft. cloud",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "5",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "40 x 20 x 20 ft. cloud",
+        "kind": "area",
+        "shape": "cloud",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 40,
+                "unit": "foot"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 20,
+                "unit": "foot"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 20,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "chain_lightning",
+    "casting_time": "5",
+    "range": "40 yds. + 5 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "Special",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "5",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "40 yds. + 5 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 40,
+              "unit": "yard"
+            },
+            {
+              "count": 5,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "death_fog",
+    "casting_time": "6",
+    "range": "30 yds.",
+    "duration": "1d4 rds. + 1/level",
+    "area_of_effect": "Two 10-ft. cubes/level",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "6",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 6,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1d4 rds. + 1/level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 0,
+              "dice": "1d4",
+              "unit": "round"
+            },
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Two 10-ft. cubes/level",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 10,
+                "unit": "foot",
+                "per_level": true,
+                "step": 1
+              }
+            ]
+          }
+        ],
+        "count": 2
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "incendiary_cloud",
+    "casting_time": "2",
+    "range": "30 yds.",
+    "duration": "4 rds. + 1d6 rounds",
+    "area_of_effect": "Special",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "2",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "4 rds. + 1d6 rounds",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 4,
+              "unit": "round"
+            },
+            {
+              "count": 0,
+              "dice": "1d6",
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "meteor_swarm",
+    "casting_time": "9",
+    "range": "40 yds. + 10 yds./level",
+    "duration": "Instantaneous",
+    "area_of_effect": "Special",
+    "components": "V, S",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "9",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 9,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "40 yds. + 10 yds./level",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 40,
+              "unit": "yard"
+            },
+            {
+              "count": 10,
+              "unit": "yard",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "detect_magic",
+    "casting_time": "1",
+    "range": "0",
+    "duration": "2 rds./level",
+    "area_of_effect": "10 x 60 ft.",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "2 rds./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "10 x 60 ft.",
+        "kind": "area",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 10,
+                "unit": "foot"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 60,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "detect_magic_priest",
+    "casting_time": "1 rd.",
+    "range": "0",
+    "duration": "1 turn",
+    "area_of_effect": "10 x 30 yds.",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "1 turn",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "turn"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "10 x 30 yds.",
+        "kind": "area",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 10,
+                "unit": "yard"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 30,
+                "unit": "yard"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "bless",
+    "casting_time": "1 rd.",
+    "range": "60 yds.",
+    "duration": "6 rds.",
+    "area_of_effect": "50-ft. cube",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "6 rds.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 6,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "50-ft. cube",
+        "kind": "area",
+        "shape": "cube",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 50,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "cure_light_wounds",
+    "casting_time": "5",
+    "range": "Touch",
+    "duration": "Permanent",
+    "area_of_effect": "Creature touched",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "5",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "Touch",
+        "kind": "touch",
+        "distance": {
+          "terms": null
+        },
+        "label": "touch"
+      },
+      "duration": {
+        "raw": "Permanent",
+        "kind": "permanent",
+        "time": {
+          "terms": null
+        },
+        "label": "permanent"
+      },
+      "area": {
+        "raw": "Creature touched",
+        "kind": "touch",
+        "label": "creature_touched"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "command",
+    "casting_time": "1",
+    "range": "30 yds.",
+    "duration": "1 rd.",
+    "area_of_effect": "1 creature",
+    "components": "V",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "1 creature",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "creature",
+        "label": "1_creature"
+      },
+      "components": {
+        "raw": "V",
+        "v": true,
+        "s": false,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "produce_flame",
+    "casting_time": "5",
+    "range": "0",
+    "duration": "1 rd./level",
+    "area_of_effect": "Special",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "5",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 5,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "1 rd./level",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round",
+              "per_level": true,
+              "step": 1
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "Special",
+        "kind": "special",
+        "label": "special"
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "chant",
+    "casting_time": "2 rds.",
+    "range": "0",
+    "duration": "Time of chanting",
+    "area_of_effect": "30-ft. radius",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "2 rds.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 2,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "Time of chanting",
+        "kind": "special",
+        "time": {
+          "terms": null
+        }
+      },
+      "area": {
+        "raw": "30-ft. radius",
+        "kind": "area",
+        "shape": "radius",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 30,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "flame_strike",
+    "casting_time": "8",
+    "range": "60 yds.",
+    "duration": "Instantaneous",
+    "area_of_effect": "5 ft. radius x 30 ft. column",
+    "components": "V, S, M",
+    "saving_throw": "1/2",
+    "stats": {
+      "casting_time": {
+        "raw": "8",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 8,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "60 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 60,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "5 ft. radius x 30 ft. column",
+        "kind": "area",
+        "shape": "radius",
+        "figure": "column",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 5,
+                "unit": "foot"
+              }
+            ]
+          },
+          {
+            "terms": [
+              {
+                "count": 30,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "1/2",
+        "kinds": ["half"],
+        "label": "1_2"
+      }
+    }
+  },
+  {
+    "id": "flame_walk",
+    "casting_time": "7",
+    "range": "40 yds.",
+    "duration": "1 rd.",
+    "area_of_effect": "12-ft. sq.",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "7",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 7,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "40 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 40,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "area": {
+        "raw": "12-ft. sq.",
+        "kind": "area",
+        "shape": "square",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 12,
+                "unit": "foot"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "animal_friendship",
+    "casting_time": "1 hr.",
+    "range": "10 yds.",
+    "duration": "Permanent",
+    "area_of_effect": "1 animal",
+    "components": "V, S, M",
+    "saving_throw": "Neg.",
+    "stats": {
+      "casting_time": {
+        "raw": "1 hr.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "hour"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "10 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 10,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Permanent",
+        "kind": "permanent",
+        "time": {
+          "terms": null
+        },
+        "label": "permanent"
+      },
+      "area": {
+        "raw": "1 animal",
+        "kind": "targets",
+        "targets": {
+          "terms": [
+            {
+              "count": 1
+            }
+          ]
+        },
+        "noun": "animal"
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "Neg.",
+        "kinds": ["negates"],
+        "label": "neg_"
+      }
+    }
+  },
+  {
+    "id": "thought_capture",
+    "casting_time": "3",
+    "range": "0",
+    "duration": "Instantaneous",
+    "area_of_effect": "10 yards",
+    "components": "V, S",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "3",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 3,
+              "unit": "segment"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "0",
+        "kind": "self",
+        "distance": {
+          "terms": null
+        }
+      },
+      "duration": {
+        "raw": "Instantaneous",
+        "kind": "instantaneous",
+        "time": {
+          "terms": null
+        },
+        "label": "instantaneous"
+      },
+      "area": {
+        "raw": "10 yards",
+        "kind": "area",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 10,
+                "unit": "yard"
+              }
+            ]
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S",
+        "v": true,
+        "s": true,
+        "m": false
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  },
+  {
+    "id": "create_water",
+    "casting_time": "1 rd.",
+    "range": "30 yds.",
+    "duration": "Permanent",
+    "area_of_effect": "Up to 27 cu. ft.",
+    "components": "V, S, M",
+    "saving_throw": "None",
+    "stats": {
+      "casting_time": {
+        "raw": "1 rd.",
+        "kind": "timed",
+        "time": {
+          "terms": [
+            {
+              "count": 1,
+              "unit": "round"
+            }
+          ]
+        }
+      },
+      "range": {
+        "raw": "30 yds.",
+        "kind": "distance",
+        "distance": {
+          "terms": [
+            {
+              "count": 30,
+              "unit": "yard"
+            }
+          ]
+        }
+      },
+      "duration": {
+        "raw": "Permanent",
+        "kind": "permanent",
+        "time": {
+          "terms": null
+        },
+        "label": "permanent"
+      },
+      "area": {
+        "raw": "Up to 27 cu. ft.",
+        "kind": "area",
+        "dims": [
+          {
+            "terms": [
+              {
+                "count": 27,
+                "unit": "cu foot"
+              }
+            ],
+            "up_to": true
+          }
+        ]
+      },
+      "components": {
+        "raw": "V, S, M",
+        "v": true,
+        "s": true,
+        "m": true
+      },
+      "save": {
+        "raw": "None",
+        "kinds": ["none"],
+        "label": "none"
+      }
+    }
+  }
+]

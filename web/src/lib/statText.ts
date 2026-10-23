@@ -4,7 +4,7 @@
 // metres for display.
 import type { TFunction } from "i18next";
 import { localized } from "@/i18n/localized";
-import { labelKey, translateValue } from "@/lib/lookupLabels";
+import { labelKey } from "@/lib/lookupLabels";
 import type { StatKey } from "@/lib/spellValues";
 import { mark, markedField, type ValueKind } from "@/lib/valueMarks";
 import type {
@@ -285,20 +285,34 @@ export function quantityText(
   return text;
 }
 
-/** The book's own "Special": the whole text is that one word. */
-function isSpecialWord(raw: string): boolean {
-  return labelKey(raw) === "special";
+/**
+ * The wording of a stat's label (ADR 0021 step 26.4): the importer set it, a key of
+ * `lookup.values.<group>`; null when the stat has none or the language has no wording for it. The
+ * text of the stat is never compared with a word list here.
+ */
+function labelText(
+  loc: StatLocale,
+  group: StatKey,
+  label: string | undefined,
+): string | null {
+  if (!label) return null;
+  return loc.t(`lookup.values.${group}.${label}`, { defaultValue: "" }) || null;
+}
+
+/** The book's own word "Special": the importer labelled the stat so. */
+function isSpecial(label: string | undefined): boolean {
+  return label === "special";
 }
 
 /** "Special", or "Special (8 turns)" when the book gives a number with it. */
 function specialText(
   loc: StatLocale,
   field: "castingTime" | "duration",
-  raw: string,
+  label: string | undefined,
   time: SpellQuantity | undefined,
 ): string | null {
   const special = loc.t(`lookup.values.${field}.special`);
-  if (isSpecialWord(raw)) return special;
+  if (isSpecial(label)) return special;
   if (!time?.terms?.length) return null;
   const detail = quantityText(loc, time);
   return detail && loc.t("lookup.stat.specialDetail", { special, detail });
@@ -309,7 +323,7 @@ export function castingTimeText(
   s: SpellStats["casting_time"],
 ): string | null {
   if (s.kind === "timed") return quantityText(loc, s.time);
-  return specialText(loc, "castingTime", s.raw, s.time);
+  return specialText(loc, "castingTime", s.label, s.time);
 }
 
 export function rangeText(
@@ -330,7 +344,7 @@ export function rangeText(
       });
     }
     default:
-      return isSpecialWord(s.raw) ? loc.t("lookup.values.range.special") : null;
+      return isSpecial(s.label) ? loc.t("lookup.values.range.special") : null;
   }
 }
 
@@ -364,7 +378,7 @@ export function durationText(
       return c && loc.t("lookup.stat.duration.until", { condition: c });
     }
     default:
-      return specialText(loc, "duration", s.raw, s.time);
+      return specialText(loc, "duration", s.label, s.time);
   }
 }
 
@@ -555,8 +569,8 @@ export function areaText(
     }
     default:
       // The caster, a creature touched...: the kind drops what the book says ("the caster's
-      // hand"), so only a text the language lists is worded; the rest is the book's.
-      return isSpecialWord(s.raw) ? loc.t("lookup.values.area.special") : null;
+      // hand"), so only a labelled text is worded (statText); the rest is the book's.
+      return isSpecial(s.label) ? loc.t("lookup.values.area.special") : null;
   }
 }
 
@@ -583,7 +597,7 @@ export function saveText(
 ): string | null {
   if (!s.kinds.length) return null;
   // "Special" with anything else ("None (special)") is the book's own wording.
-  if (s.kinds.includes("special") && !isSpecialWord(s.raw)) return null;
+  if (s.kinds.includes("special") && !isSpecial(s.label)) return null;
   return s.kinds
     .map((k) => loc.t(`lookup.saveKinds.${k}`))
     .join(loc.t("lookup.stat.or"));
@@ -628,7 +642,7 @@ function isBookLanguage(lang: string): boolean {
   return lang.split("-")[0] === "en";
 }
 
-/** The label group (`lookup.values.<group>`) of a field's book texts; none for the components. */
+/** The label group (`lookup.values.<group>`) of a field's stat; none for the components. */
 const LABEL_GROUP: Record<StatField, StatKey | null> = {
   casting_time: "castingTime",
   range: "range",
@@ -638,11 +652,30 @@ const LABEL_GROUP: Record<StatField, StatKey | null> = {
   saving_throw: "save",
 };
 
+/** The label the importer set on a field's typed stat. */
+function labelOf(stats: SpellStats, field: StatField): string | undefined {
+  switch (field) {
+    case "casting_time":
+      return stats.casting_time.label;
+    case "range":
+      return stats.range.label;
+    case "duration":
+      return stats.duration.label;
+    case "area_of_effect":
+      return stats.area.label;
+    case "saving_throw":
+      return stats.save.label;
+    case "components":
+      return undefined;
+  }
+}
+
 /**
- * A stat's text in the UI language (ADR 0021 step 8). In the books' language, the book's text (its
- * common values labelled, as before). In another language, the typed value worded in it, with
- * lengths in its system; where the parser left the field untyped or the language has no words for
- * a part of it, the book's text, its common values labelled. Never shortened.
+ * A stat's text in the UI language (ADR 0021 steps 8 and 26.5). In the books' language, the
+ * `raw` text. In another language, the typed value worded in it, with lengths in its system;
+ * else the stat's label worded; else, for a `special` kind, a `partial` reading or a language with
+ * no words for a part of it, the `raw` text. It recognises nothing in the `raw` text. Never
+ * shortened.
  */
 export function statText(
   loc: StatLocale,
@@ -652,16 +685,16 @@ export function statText(
   if (!isBookLanguage(loc.lang)) {
     const typed = typedStatText(loc, spell.stats, field);
     if (typed !== null) return { text: typed, source: "typed" };
+    const group = LABEL_GROUP[field];
+    const label = group && labelText(loc, group, labelOf(spell.stats, field));
+    if (label) return { text: label, source: "label" };
   }
-  const raw = localized(loc.lang, spell[field]);
-  const group = LABEL_GROUP[field];
-  const text = group ? translateValue(loc.t, group, raw) : raw;
-  if (text !== raw) return { text, source: "label" };
   // The book's own text: its gameplay values are the API's marks (ADR 0021 step 15).
+  const raw = localized(loc.lang, spell[field]);
   return {
     text: loc.marks
       ? markedField(loc.lang, spell[field], spell.marked, field)
-      : text,
+      : raw,
     source: "book",
   };
 }

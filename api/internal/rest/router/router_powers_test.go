@@ -63,7 +63,7 @@ func TestPowers_Step8_ServedFromTheCatalogueAsLanguageMaps(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	page = powerPage{}
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
-	require.Len(t, page.Items, 2)
+	require.Len(t, page.Items, 5)
 	assert.Equal(t, "psionic_blast", page.Items[0].ID, "book order")
 	assert.Equal(t, "mind_thrust", page.Items[1].ID)
 

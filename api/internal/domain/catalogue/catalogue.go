@@ -47,14 +47,19 @@ const FormatBracketedConstitution = 15
 // the slot its pick takes where its kind does not say it.
 const FormatPowerSlot = 16
 
-// FormatMultiClassFlag is format 17 (ADR 0021 step 24): a class may say it is
-// never one of a multi-class character's classes (`multiclass: false`). It is
-// the only format the API reads (step 24.2): the formats 1 to 16 are refused
-// like any unknown format, with the advice to run `just catalogue`.
+// FormatMultiClassFlag was format 17 (ADR 0021 step 24): a class may say it is
+// never one of a multi-class character's classes (`multiclass: false`).
 const FormatMultiClassFlag = 17
 
-// Formats lists the formats this API reads: format 17 only (step 24.2).
-var Formats = []int{FormatMultiClassFlag}
+// FormatPsionicCombat is format 18 (ADR 0021 step 25, ADR 0044 step 1): format
+// 17 plus the psionic combat tables and the table-named and contact-plus
+// initial costs. It is the only format the API reads (step 25.5): the formats 1
+// to 17 are refused like any unknown format, with the advice to run `just
+// catalogue`.
+const FormatPsionicCombat = 18
+
+// Formats lists the formats this API reads: format 18 only (step 25.5).
+var Formats = []int{FormatPsionicCombat}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

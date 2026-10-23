@@ -38,6 +38,9 @@ func Tables(t testing.TB) *ruletablesvc.Tables {
 	if err != nil {
 		t.Fatalf("fixture rule tables: %v", err)
 	}
+	if err := tables.CheckPowerKinds(a.Powers); err != nil {
+		t.Fatalf("fixture rule tables: %v", err)
+	}
 	return tables
 }
 

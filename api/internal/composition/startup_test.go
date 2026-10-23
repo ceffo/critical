@@ -273,7 +273,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 17")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 18")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -456,7 +456,7 @@ func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
 			delete(d, "proficiency_descriptions")
 		})
 		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 17", artifact, format))
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 18", artifact, format))
 		require.ErrorContains(t, err, "run `just catalogue`")
 	}
 }
@@ -548,4 +548,18 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fire, got)
 	}
+}
+
+// ADR 0044 step 1.1: a cell of the attack-versus-defence grid naming a devotion where a mode
+// belongs refuses the start, so the power-kind check runs in the composition root.
+func TestStartup_Step1_RefusesAGridCellNamingADevotion(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		for _, r := range d["rule_tables"].(map[string]any)["attack_versus_defence"].([]any) {
+			if r.(map[string]any)["attack"] == "psionic_blast" {
+				r.(map[string]any)["attack"] = "contact"
+			}
+		}
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, `"contact" is not an attack mode`)
 }

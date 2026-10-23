@@ -46,6 +46,29 @@ type classDTO struct {
 	PsionicistPowers  []powerProgressionDTO  `json:"psionicist_powers"`
 	InherentPotential []inherentPotentialDTO `json:"inherent_potential"`
 	PSPRecovery       []pspRecoveryDTO       `json:"psp_recovery"`
+	// The psionic combat tables (ADR 0021 step 25, format 18; ADR 0044 step 1):
+	// read as data here, checked and looked up by the rule tables service.
+	AttackVersusDefence []attackVersusDefenceDTO `json:"attack_versus_defence"`
+	ContactCost         []contactCostDTO         `json:"contact_cost"`
+	ContactModifiers    []contactModifierDTO     `json:"contact_modifiers"`
+}
+
+type attackVersusDefenceDTO struct {
+	Attack   string `json:"attack"`
+	Defence  string `json:"defence"`
+	Modifier int    `json:"modifier"`
+}
+
+type contactCostDTO struct {
+	MinLevel int `json:"min_level"`
+	MaxLevel int `json:"max_level"`
+	Cost     int `json:"cost"`
+}
+
+type contactModifierDTO struct {
+	Kind     string `json:"kind"`
+	Code     string `json:"code"`
+	Modifier int    `json:"modifier"`
 }
 
 type powerProgressionDTO struct {
@@ -301,6 +324,11 @@ func (d classDTO) classes(defs *classes.Registry) (*ruletablesvc.ClassTables, er
 			return ruletablesvc.PowerProgressionRow(r)
 		}),
 		PSPRecovery: mapRows(d.PSPRecovery, func(r pspRecoveryDTO) ruletablesvc.PSPRecoveryRow { return ruletablesvc.PSPRecoveryRow(r) }),
+		AttackVersusDefence: mapRows(d.AttackVersusDefence, func(r attackVersusDefenceDTO) ruletablesvc.AttackVersusDefenceRow {
+			return ruletablesvc.AttackVersusDefenceRow(r)
+		}),
+		ContactCost:      mapRows(d.ContactCost, func(r contactCostDTO) ruletablesvc.ContactCostRow { return ruletablesvc.ContactCostRow(r) }),
+		ContactModifiers: mapRows(d.ContactModifiers, func(r contactModifierDTO) ruletablesvc.ContactModifierRow { return ruletablesvc.ContactModifierRow(r) }),
 	}, defs)
 }
 

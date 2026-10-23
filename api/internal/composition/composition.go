@@ -663,6 +663,11 @@ func loadRuleTables(artifact catalogueadpt.Artifact, cfg Config) (*ruletablesvc.
 	if _, ok := t.Classes(); !ok {
 		return nil, fmt.Errorf("spell catalogue %s: %w", cfg.Catalogue, ruletablesvc.ErrNoClassTables)
 	}
+	// ADR 0044 step 1.1: Table 14 names attack and defence modes only, and
+	// every mode has its cells; a devotion where a mode belongs refuses the start.
+	if err := t.CheckPowerKinds(artifact.Powers); err != nil {
+		return nil, fmt.Errorf("spell catalogue %s: rule_tables: %w", cfg.Catalogue, err)
+	}
 	return t, nil
 }
 

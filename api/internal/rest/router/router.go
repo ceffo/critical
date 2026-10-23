@@ -179,7 +179,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 
 		characterhdl.RegisterRoutes(r, charID, bs.Character)
 		hphdl.RegisterRoutes(r, charID, bs.Log)
-		psphdl.RegisterRoutes(r, charID, bs.Log, bs.Psionics, bs.Psionics, bs.Psionics)
+		psphdl.RegisterRoutes(r, charID, bs.Log, bs.Psionics, bs.Psionics, bs.Psionics, bs.Psionics)
 		actionloghdl.RegisterRoutes(r, charID, bs.Log)
 		buffhdl.RegisterRoutes(r, charID, bs.Buffs)
 		spellhdl.RegisterRoutes(r, charID, bs.Spells, bs.Character, bs.Cast)

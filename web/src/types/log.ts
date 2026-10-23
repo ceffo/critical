@@ -45,6 +45,10 @@ export type LogKind =
   | "turn_undead"
   /** A psionicist's power check (ADR 0043 steps 10 and 11); popping it gives the PSPs spent back. */
   | "power_check"
+  /** A psionicist's defence mode raised (ADR 0044 steps 4 and 5); popping it gives the PSPs and the row back. */
+  | "defence_raised"
+  /** A psychic contest against the character (ADR 0044 step 8); it changes no state. */
+  | "psionic_defence"
   /** A thief's skill points spent on the sheet (ADR 0030 step 17); popping it gives them back. */
   | "skill_points"
   /** The proficiency picks saved (ADR 0037 steps 12 and 13); popping it gives them back. */

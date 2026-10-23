@@ -49,16 +49,84 @@ type user interface {
 	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
 }
 
+// defender is a defence mode's raise and the contests against it;
+// psionicsvc.SVC satisfies it.
+type defender interface {
+	RaiseDefence(ctx context.Context, characterID int64, powerID string) (*psionicsvc.RaiseResult, error)
+	Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)
+}
+
 // CharacterIDFunc resolves the active character ID from the request context.
 type CharacterIDFunc func(r *http.Request) int64
 
 // RegisterRoutes wires the PSP endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec recoverer, known knownSetter, use user) {
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec recoverer, known knownSetter, use user, def defender) {
 	r.Post("/api/psp/event", render.Handle(AppendChange(charID, svc)))
 	r.Post("/api/psp/recover", render.Handle(Recover(charID, rec)))
 	r.Put("/api/psionics/picks", render.Handle(SetKnownPowers(charID, known)))
 	r.Post("/api/psionics/powers/{id}/use", render.Handle(Use(charID, use)))
 	r.Post("/api/psionics/powers/{id}/stop", render.Handle(Stop(charID, use)))
+	r.Post("/api/psionics/powers/{id}/raise", render.Handle(Raise(charID, def)))
+	r.Post("/api/psionics/defend", render.Handle(Defend(charID, def)))
+}
+
+// RaiseDTO is a defence mode's raise as logged: the payload of the
+// defence_raised entry, the pool after the cost, the entry's id and the buff
+// row put.
+type RaiseDTO struct {
+	Raise      psionicsvc.RaiseRecord `json:"raise"`
+	PSP        StateDTO               `json:"psp"`
+	LogEntryID int64                  `json:"logEntryId"`
+	BuffID     string                 `json:"buffId"`
+}
+
+// Raise raises the known defence mode {id} with no roll (ADR 0044 steps 4
+// and 5). 409 not_a_defence_mode, not_in_combat, needs_contact,
+// not_enough_psp.
+func Raise(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		res, err := svc.RaiseDefence(r.Context(), charID(r), chi.URLParam(r, "id"))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, RaiseDTO{
+			Raise: res.Raise, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max},
+			LogEntryID: res.LogEntryID, BuffID: res.BuffID,
+		})
+		return nil
+	}
+}
+
+type defendBody struct {
+	Attack string                 `json:"attack"`
+	Rolls  []psionics.ContestSide `json:"rolls"`
+	Keep   *int                   `json:"keep"`
+}
+
+// DefendDTO is a contest as logged: the psionic_defence entry's payload and
+// its id.
+type DefendDTO struct {
+	Defence    psionicsvc.DefenceRecord `json:"defence"`
+	LogEntryID int64                    `json:"logEntryId"`
+}
+
+// Defend decides the DM's one or two rolls of an attack mode against the
+// current defence (ADR 0044 step 8). 400 on a bad attack, rolls or keep.
+func Defend(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body defendBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.Defend(r.Context(), charID(r), psionicsvc.DefendRequest{
+			Attack: body.Attack, Rolls: body.Rolls, Keep: body.Keep,
+		})
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, DefendDTO{Defence: res.Defence, LogEntryID: res.LogEntryID})
+		return nil
+	}
 }
 
 type useBody struct {

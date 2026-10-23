@@ -126,8 +126,9 @@ type CheckRecord struct {
 // gives the PSPs back. A success of a power with maintenance puts its buff
 // row on (or renews it) in the same entry, its snapshot beside the PSPs, so
 // the undo takes both back (step 13). Refused before the roll:
-// ErrNotPsionicist, ErrPowerNotKnown, ErrNeedsContact, a *domain.FieldError
-// on "modifiers", "cost", "maintenanceCost" or "score", ErrNotEnoughPSP.
+// ErrNotPsionicist, ErrPowerNotKnown, ErrDefenceModeIsRaised (a defence mode
+// is raised, ADR 0044 step 4), ErrNeedsContact, a *domain.FieldError on
+// "modifiers", "cost", "maintenanceCost" or "score", ErrNotEnoughPSP.
 func (s *service) Use(ctx context.Context, characterID int64, powerID string, req UseRequest) (*UseResult, error) {
 	mods, err := modifiers(req.Modifiers)
 	if err != nil {
@@ -145,6 +146,9 @@ func (s *service) Use(ctx context.Context, characterID int64, powerID string, re
 		p, ok := s.book.Power(powerID)
 		if !ok || !psionics.Knows(c.PsionicPicks, powerID) {
 			return ErrPowerNotKnown
+		}
+		if p.Kind == catalogue.KindDefenceMode {
+			return ErrDefenceModeIsRaised
 		}
 		rec, err := checkOf(c, p, req, mods)
 		if err != nil {
@@ -365,17 +369,9 @@ func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p
 	if err != nil {
 		return false, fmt.Errorf("power checks: %w", err)
 	}
-	// The round starts at the newest entry that moved the counter: a Next
-	// Round, or End combat, a Set round or passing time.
-	var since int64
-	for _, kind := range roundMoves {
-		moves, err := s.log.ActiveEntries(ctx, characterID, kind, 1)
-		if err != nil {
-			return false, fmt.Errorf("round moves: %w", err)
-		}
-		if len(moves) > 0 {
-			since = max(since, moves[0].ID)
-		}
+	since, err := s.roundStart(ctx, characterID)
+	if err != nil {
+		return false, err
 	}
 	for _, e := range checks {
 		if e.ID <= since || e.Round != round {
@@ -391,4 +387,21 @@ func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p
 		return true, nil
 	}
 	return false, nil
+}
+
+// roundStart is the id of the newest entry that moved the round counter (a
+// Next Round, or End combat, a Set round or passing time): the round's
+// entries come after it. 0 when none.
+func (s *service) roundStart(ctx context.Context, characterID int64) (int64, error) {
+	var since int64
+	for _, kind := range roundMoves {
+		moves, err := s.log.ActiveEntries(ctx, characterID, kind, 1)
+		if err != nil {
+			return 0, fmt.Errorf("round moves: %w", err)
+		}
+		if len(moves) > 0 {
+			since = max(since, moves[0].ID)
+		}
+	}
+	return since, nil
 }

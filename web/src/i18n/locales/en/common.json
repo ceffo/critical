@@ -1450,7 +1450,9 @@
       "spell_add": "Spellbook",
       "psp_recovery": "PSP recovery",
       "psionic_pick": "Known powers",
-      "power_check": "Power check"
+      "power_check": "Power check",
+      "defence_raised": "Defence raised",
+      "psionic_defence": "Psychic contest"
     },
     "status": {
       "active": "Active",
@@ -1701,6 +1703,14 @@
       "cleared": "AC override cleared"
     },
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
+    "defenceRaised": "Defence raised ({{power}}): PSPs {{spent}}",
+    "defenceRaisedStanding": "Defence raised ({{power}}, standing): PSPs {{spent}}",
+    "psionicDefence": "Psychic contest ({{attack}} against {{defence}}): {{results}}",
+    "psionicDefenceNone": "Psychic contest ({{attack}}, no defence): {{results}}",
+    "contest": {
+      "attackerWon": "attacker won",
+      "defended": "defended"
+    },
     "powerCheck": "Power check ({{power}}): d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}",
     "powerCheckWith": "{{text}} ({{parts}})",
     "powerParts": {
@@ -2251,6 +2261,9 @@
     "needs_contact": "This power needs contact, which is not available yet.",
     "not_enough_psp": "Not enough PSPs for this power's initial cost.",
     "power_not_maintained": "This power is not maintained.",
+    "not_in_combat": "This defence mode is raised for a combat round: no round is running.",
+    "not_a_defence_mode": "This power is not a defence mode.",
+    "defence_mode_is_raised": "A defence mode is raised, not used.",
     "psp_recovery_while_maintaining": "No PSP recovery while a power is maintained: stop it first.",
     "not_a_psionicist": "This character is not a psionicist.",
     "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",

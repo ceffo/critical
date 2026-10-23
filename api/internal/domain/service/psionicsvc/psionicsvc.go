@@ -57,6 +57,14 @@ type SVC interface {
 	// buff row, free, logged and undoable. ErrNotPsionicist,
 	// ErrPowerNotMaintained when no row keeps the power up.
 	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
+	// RaiseDefence raises a known defence mode (ADR 0044 steps 4 and 5): no
+	// roll, one defence_raised entry paying its initial cost and putting its
+	// row. The refusals are RaiseDefence's (defence.go).
+	RaiseDefence(ctx context.Context, characterID int64, powerID string) (*RaiseResult, error)
+	// Defend is a contest against the character (ADR 0044 step 8): one
+	// check of the current defence per incoming roll, one psionic_defence
+	// entry. The refusals are Defend's (defence.go).
+	Defend(ctx context.Context, characterID int64, req DefendRequest) (*DefendResult, error)
 }
 
 // Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
@@ -76,10 +84,13 @@ type Dice interface {
 	RollDie(sides int) int
 }
 
-// RecoveryRates is Table 6 (ruletablesvc.Tables).
-type RecoveryRates interface {
-	// PSPRecoveryRate is the PSPs an hour of activity recovers.
+// Tables are the rule tables the service reads (ruletablesvc.Tables).
+type Tables interface {
+	// PSPRecoveryRate is the PSPs an hour of activity recovers (Table 6).
 	PSPRecoveryRate(activity string) (int, error)
+	// AttackVersusDefence is Table 14's modifier to the attacker's score
+	// for an attack mode meeting a defence mode (ADR 0044 step 1.1).
+	AttackVersusDefence(attack, defence string) (int, error)
 }
 
 // Log is the PSP ledger's writer (actionlogsvc).
@@ -103,7 +114,7 @@ type Picks interface {
 
 // Deps are the service's collaborators.
 type Deps struct {
-	Rates      RecoveryRates
+	Tables     Tables
 	Log        Log
 	Characters Characters
 	Picks      Picks
@@ -115,7 +126,7 @@ type Deps struct {
 }
 
 type service struct {
-	rates RecoveryRates
+	rates Tables
 	log   Log
 	chars Characters
 	picks Picks
@@ -127,10 +138,10 @@ type service struct {
 
 // New constructs the service.
 func New(d Deps) (SVC, error) {
-	if d.Rates == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Buffs == nil || d.Book == nil || d.Tx == nil {
+	if d.Tables == nil || d.Log == nil || d.Characters == nil || d.Picks == nil || d.Dice == nil || d.Buffs == nil || d.Book == nil || d.Tx == nil {
 		return nil, fmt.Errorf("psionicsvc: nil dependency")
 	}
-	return &service{rates: d.Rates, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, buffs: d.Buffs, book: d.Book, tx: d.Tx}, nil
+	return &service{rates: d.Tables, log: d.Log, chars: d.Characters, picks: d.Picks, dice: d.Dice, buffs: d.Buffs, book: d.Book, tx: d.Tx}, nil
 }
 
 func (s *service) Health(_ context.Context) error { return nil }

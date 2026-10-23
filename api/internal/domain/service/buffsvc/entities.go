@@ -261,6 +261,45 @@ type BuffEffect struct {
 	// Round and +n per n rounds of passing time (steps 14 and 15). 0 for
 	// every other row. Never set by the caller.
 	RoundsKept int
+	// Defence marks the row of a defence mode raised by the power's use (ADR
+	// 0044 steps 4 and 5): DefenceRaised lasts the round it is raised in
+	// (every move of the round counter ends it), DefenceStanding is untimed
+	// and stays until dismissed. "" for every other row. Stamped by the
+	// raise only.
+	Defence DefenceKind
+}
+
+// DefenceKind is how a defence mode's row lasts (ADR 0044 steps 4 and 5).
+type DefenceKind string
+
+// Defence kinds as stored and sent on the wire.
+const (
+	DefenceNone DefenceKind = ""
+	// DefenceRaised is a defence mode raised for the round (step 4).
+	DefenceRaised DefenceKind = "raised"
+	// DefenceStanding is a defence mode kept at no cost (step 5).
+	DefenceStanding DefenceKind = "standing"
+)
+
+// CurrentDefence is the character's current defence among rows (ADR 0044
+// step 5): the mode raised this round, else the standing one; ok false
+// when none.
+func CurrentDefence(rows []BuffEffect) (BuffEffect, bool) {
+	var standing *BuffEffect
+	for i := range rows {
+		switch rows[i].Defence {
+		case DefenceRaised:
+			return rows[i], true
+		case DefenceStanding:
+			if standing == nil {
+				standing = &rows[i]
+			}
+		}
+	}
+	if standing != nil {
+		return *standing, true
+	}
+	return BuffEffect{}, false
 }
 
 // Maintained reports whether Next Round charges maintenance for the row.

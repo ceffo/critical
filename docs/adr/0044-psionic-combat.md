@@ -141,7 +141,7 @@ two power ids in its row of data.
    (Next Round, End combat, Set round, passing time). One a round: raising another replaces it and
    pays again _(Q2)_. It does not count toward ADR 0043 step 12 (already built).
    Tests: `RaiseDefence_Step4_PaysTheCostNoRoll` (psionicsvc, dice mock called 0 times),
-   `RaiseDefence_Step4_LastsTheRound` (buffsvc), `RaiseDefence_Step4_ASecondReplacesTheFirst`,
+   `TestRaiseDefence_Step4_LastsTheRound` (buffsvc), `TestRaiseDefence_Step4_ASecondReplacesTheFirst`,
    `RaiseDefence_Step4_RefusedOutOfCombat`.
 
 5. **A standing defence: a defence mode kept at no cost** (mind blank; amends ADR 0043 steps 6 and
@@ -163,9 +163,9 @@ two power ids in its row of data.
    score and a failed roll that counts as a success of 1 (Maintained Powers). ADR 0043 step 10's
    outcomes hold: a natural 20 fails, a natural 1 succeeds (as a roll of 1), a roll equal to the
    score succeeds (its text shown).
-   Tests: `Contest_Step6_HigherSuccessWins` (the book's example: an attack at 15 against a defence
+   Tests: `TestContest_Step6_HigherSuccessWins` (the book's example: an attack at 15 against a defence
    at 12; 14 against 9 wins, 9 against 11 loses, 8 against 8 the defender, both failing the
-   defender), `Contest_Step6_AKeptPowerPlusOneAndFailedIsOne`.
+   defender), `TestContest_Step6_AKeptPowerPlusOneAndFailedIsOne`.
 
 ### Attacking
 

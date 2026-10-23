@@ -3,6 +3,7 @@ package buffsvc
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -25,8 +26,8 @@ func (s *service) SetRound(ctx context.Context, characterID int64, to int) ([]Bu
 // snapshot of the round key only, except that moving the counter off a
 // maintained power's activation round closes that round (ADR 0043 step 14):
 // the row counts one round kept, charging nothing, so the next Next Round
-// charges it. Without such a row the buff list is neither snapshotted nor
-// written.
+// charges it; and a defence mode raised for the round ends (ADR 0044 step 4).
+// Without such a row the buff list is neither snapshotted nor written.
 func (s *service) moveRound(ctx context.Context, characterID int64, kind actionlog.Kind, action string, target func(from int) (int, error)) ([]BuffEffect, int, error) {
 	var active []BuffEffect
 	ch, err := s.apply(ctx, characterID, func(buffs []BuffEffect, from int) (change, error) {
@@ -38,6 +39,9 @@ func (s *service) moveRound(ctx context.Context, characterID int64, kind actionl
 		closed := false
 		if to != from {
 			active, closed = closeActivationRounds(buffs)
+			var lowered bool
+			active, lowered = lowerRaisedDefences(active)
+			closed = closed || lowered
 		}
 		return change{
 			kind:      kind,
@@ -67,4 +71,13 @@ func closeActivationRounds(buffs []BuffEffect) ([]BuffEffect, bool) {
 		}
 	}
 	return buffs, closed
+}
+
+// lowerRaisedDefences drops every defence mode raised for the round (ADR
+// 0044 step 4: the row ends at the next move of the round counter), and
+// reports whether there was one. Next Round and passing time end it as a
+// one-round row.
+func lowerRaisedDefences(buffs []BuffEffect) ([]BuffEffect, bool) {
+	out := slices.DeleteFunc(slices.Clone(buffs), func(b BuffEffect) bool { return b.Defence == DefenceRaised })
+	return out, len(out) != len(buffs)
 }

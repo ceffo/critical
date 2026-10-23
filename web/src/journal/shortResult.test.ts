@@ -198,6 +198,25 @@ const CASES: Record<LogKind, { e: LogEntry } & Want> = {
     en: "Power check · failed",
     fr: "Jet de pouvoir · échec",
   },
+  defence_raised: {
+    e: entry(
+      "defence_raised",
+      { power: "mind_blank", defence: "raised", cost: 1 },
+      { pspDelta: -1 },
+    ),
+    value: null,
+    en: "Defence raised · mind_blank",
+    fr: "Défense dressée · mind_blank",
+  },
+  psionic_defence: {
+    e: entry("psionic_defence", {
+      attack: "psionic_blast",
+      contests: [{ attack: { roll: 9, success: true }, winner: "defender" }],
+    }),
+    value: null,
+    en: "Psychic contest · defended",
+    fr: "Duel psychique · défendu",
+  },
   initiative: {
     e: entry("initiative", { round: 3, d10: 7 }),
     value: "7",

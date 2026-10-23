@@ -1,0 +1,67 @@
+{
+  "contest": {
+    "payload": {
+      "attack": "psionic_blast",
+      "attackName": {
+        "en": "Psionic Blast",
+        "fr": "Explosion psionique"
+      },
+      "defence": "mind_blank",
+      "defenceName": {
+        "en": "Mind Blank",
+        "fr": "Esprit vide"
+      },
+      "defenceKind": "raised",
+      "ability": "wis",
+      "abilityScore": 16,
+      "score": 16,
+      "modifier": -2,
+      "contests": [
+        {
+          "attack": {
+            "roll": 9,
+            "success": true
+          },
+          "check": {
+            "target": 16,
+            "d20": 6,
+            "outcome": "success"
+          },
+          "winner": "defender"
+        },
+        {
+          "attack": {
+            "roll": 14,
+            "success": true
+          },
+          "check": {
+            "target": 16,
+            "d20": 17,
+            "outcome": "failure"
+          },
+          "winner": "attacker"
+        }
+      ]
+    },
+    "roll": false
+  },
+  "noDefence": {
+    "payload": {
+      "attack": "psionic_blast",
+      "attackName": {
+        "en": "Psionic Blast",
+        "fr": "Explosion psionique"
+      },
+      "contests": [
+        {
+          "attack": {
+            "roll": 9,
+            "success": true
+          },
+          "winner": "attacker"
+        }
+      ]
+    },
+    "roll": false
+  }
+}

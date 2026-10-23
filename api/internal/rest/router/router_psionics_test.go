@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 )
@@ -133,4 +134,61 @@ func TestStop_Step16_Post(t *testing.T) {
 	rec = do(h, "POST", "/api/psionics/powers/lift/stop", ``)
 	require.Equal(t, http.StatusConflict, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"code":"power_not_maintained"`)
+}
+
+// POST /api/psionics/powers/{id}/raise: the wire shape and the refusals'
+// codes (ADR 0044 step 4).
+func TestRaise_Step4_Post(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().RaiseDefence(mock.Anything, int64(1), "mind-blank").Return(&psionicsvc.RaiseResult{
+		Raise:      psionicsvc.RaiseRecord{Power: "mind-blank", Defence: buffsvc.DefenceRaised, Cost: 1},
+		PSP:        actionlog.PSPState{Current: 19, Max: 40},
+		LogEntryID: 4, BuffID: "b1",
+	}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/mind-blank/raise", ``)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"raise":{"power":"mind-blank","defence":"raised","cost":1},
+		"psp":{"current":19,"max":40},"logEntryId":4,"buffId":"b1"}`, rec.Body.String())
+
+	for err, want := range map[error]string{
+		psionicsvc.ErrNotInCombat:         "not_in_combat",
+		psionicsvc.ErrNotADefenceMode:     "not_a_defence_mode",
+		psionicsvc.ErrNotEnoughPSP:        "not_enough_psp",
+		psionicsvc.ErrNeedsContact:        "needs_contact",
+		psionicsvc.ErrPowerNotKnown:       "power_not_known",
+		psionicsvc.ErrNotPsionicist:       "not_a_psionicist",
+		psionicsvc.ErrDefenceModeIsRaised: "defence_mode_is_raised",
+	} {
+		m.psionics.EXPECT().RaiseDefence(mock.Anything, int64(1), "x").Return(nil, err).Once()
+		rec := do(h, "POST", "/api/psionics/powers/x/raise", ``)
+		require.Equal(t, http.StatusConflict, rec.Code, want)
+		assert.Contains(t, rec.Body.String(), `"code":"`+want+`"`)
+	}
+}
+
+// POST /api/psionics/defend: the attack, the rolls and the keep reach the
+// service as sent; a field error answers 400.
+func TestDefend_Step8_Post(t *testing.T) {
+	h, m := newRouter(t)
+	keep := 1
+	want := psionicsvc.DefendRequest{
+		Attack: "psionic-blast", Keep: &keep,
+		Rolls: []psionics.ContestSide{{Roll: 12, Success: true}, {Roll: 3, Success: false}},
+	}
+	m.psionics.EXPECT().Defend(mock.Anything, int64(1), want).Return(&psionicsvc.DefendResult{
+		Defence: psionicsvc.DefenceRecord{Attack: "psionic-blast", Contests: []psionicsvc.ContestRecord{}}, LogEntryID: 8,
+	}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/defend",
+		`{"attack":"psionic-blast","rolls":[{"roll":12,"success":true},{"roll":3,"success":false}],"keep":1}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"defence":{"attack":"psionic-blast","contests":[]},"logEntryId":8}`, rec.Body.String())
+
+	m.psionics.EXPECT().Defend(mock.Anything, int64(1), mock.Anything).
+		Return(nil, &domain.FieldError{Field: "rolls", Message: "one or 2 rolls"}).Once()
+	rec = do(h, "POST", "/api/psionics/defend", `{"attack":"x","rolls":[]}`)
+	require.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Contains(t, rec.Body.String(), `rolls`)
+
+	rec = do(h, "POST", "/api/psionics/defend", `{"rolls":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }

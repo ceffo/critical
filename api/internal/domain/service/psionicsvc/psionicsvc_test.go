@@ -21,20 +21,20 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
 )
 
-func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
+func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockTables, *mocks.MockLog) {
 	t.Helper()
 	return newSvcWithBuffs(t, nil)
 }
 
 // newSvcWithBuffs is newSvc with active on the buff list.
-func newSvcWithBuffs(t *testing.T, active []buffsvc.BuffEffect) (psionicsvc.SVC, *mocks.MockRecoveryRates, *mocks.MockLog) {
+func newSvcWithBuffs(t *testing.T, active []buffsvc.BuffEffect) (psionicsvc.SVC, *mocks.MockTables, *mocks.MockLog) {
 	t.Helper()
-	rates, log := mocks.NewMockRecoveryRates(t), mocks.NewMockLog(t)
+	rates, log := mocks.NewMockTables(t), mocks.NewMockLog(t)
 	buffs := mocks.NewMockBuffs(t)
 	buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(active, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Buffs: buffs,
-		Rates: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t), Dice: mocks.NewMockDice(t),
+		Buffs:  buffs,
+		Tables: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t), Dice: mocks.NewMockDice(t),
 		Book: psionics.NewBook(nil, nil), Tx: passTx{},
 	})
 	require.NoError(t, err)
@@ -141,8 +141,8 @@ func newKnownSvc(t *testing.T, c *charactersvc.Character) (psionicsvc.SVC, *mock
 		[]catalogue.Power{{ID: "contact", Discipline: "telepathy", Kind: catalogue.KindDevotion}},
 	)
 	svc, err := psionicsvc.New(psionicsvc.Deps{
-		Buffs: mocks.NewMockBuffs(t),
-		Rates: mocks.NewMockRecoveryRates(t), Log: log, Characters: chars, Picks: picks, Dice: mocks.NewMockDice(t), Book: book, Tx: passTx{},
+		Buffs:  mocks.NewMockBuffs(t),
+		Tables: mocks.NewMockTables(t), Log: log, Characters: chars, Picks: picks, Dice: mocks.NewMockDice(t), Book: book, Tx: passTx{},
 	})
 	require.NoError(t, err)
 	return svc, picks, log

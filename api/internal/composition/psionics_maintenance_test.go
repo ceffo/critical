@@ -200,8 +200,8 @@ func TestMaintenance_Step13_ReactivationResetsTheCount(t *testing.T) {
 	assert.Equal(t, 154, currentPSP(t, bs, id), "10 rounds kept after the activation round: charged")
 }
 
-// Reviewer's scenario 7: in one combat round, a defence mode then two other
-// powers: only the third check warns; nothing warns at round 0.
+// Reviewer's scenario 7: in one combat round, a defence mode raised then two
+// other powers: only the third check warns; nothing warns at round 0.
 func TestUse_Step12_SecondPowerOfTheRound(t *testing.T) {
 	ctx := context.Background()
 	bs, id := thiefPsionicistRolling(t, []psionics.Pick{
@@ -221,8 +221,9 @@ func TestUse_Step12_SecondPowerOfTheRound(t *testing.T) {
 
 	_, _, _, _, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
-	assert.Empty(t, use("mind_blank"))
-	assert.Empty(t, use("psionic_blast"), "a defence mode does not count")
+	_, err = bs.Psionics.RaiseDefence(ctx, id, "mind_blank")
+	require.NoError(t, err)
+	assert.Empty(t, use("psionic_blast"), "a defence mode's raise does not count")
 	assert.Equal(t, []string{psionicsvc.WarnSecondPowerThisRound}, use("psionic_blast"))
 
 	_, _, err = bs.Buffs.ResetRound(ctx, id)

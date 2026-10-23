@@ -1,0 +1,28 @@
+{
+  "raised": {
+    "pspDelta": -1,
+    "payload": {
+      "power": "mind_blank",
+      "name": {
+        "en": "Mind Blank",
+        "fr": "Esprit vide"
+      },
+      "defence": "raised",
+      "cost": 1
+    },
+    "roll": false
+  },
+  "standing": {
+    "pspDelta": 0,
+    "payload": {
+      "power": "thought_shield",
+      "name": {
+        "en": "Thought Shield",
+        "fr": "Bouclier de pensée"
+      },
+      "defence": "standing",
+      "cost": 0
+    },
+    "roll": false
+  }
+}

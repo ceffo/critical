@@ -11,7 +11,7 @@ class registry, steps 5, 6, 8 and 9; see the as-built notes there). Step 11.3 is
 features and the spell progression (2026-10-22: every kind of step 3 is read through the
 lookup of step 5, the Go lists are gone; see the as-built notes of steps 3, 5, 8 and 11). The rest is
 not implemented: each step names the test its implementing item writes. Steps 12 to 16 (skill sets and weapon
-specialization as feature parameters, one amendment) are proposed 2026-10-23, awaiting the user's review. Amends
+specialization as feature parameters, one amendment) are accepted 2026-10-23 (the user accepted every open question's default: "ok with all"). Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
 [ADR 0036](0036-vocabulary.md) (`GLOSSARY.md`, `docs/domain-model.md`). The house rules live in the

@@ -90,7 +90,7 @@ func TestRaceRefusals_Step2_TheLiftDecidesTheRaceLimit(t *testing.T) {
 	fighter, thief, cleric, mage := NewClass{Class: "fighter"}, NewClass{Class: "thief"}, NewClass{Class: "cleric"}, NewClass{Class: "mage"}
 	book, lifted := ruleset.RacialLift{}, ruleset.RacialLift{MulticlassAnyRace: true, DualclassAnyRace: true}
 	allowAll := func(string, string) (bool, error) { return true, nil }
-	dash := func(race, class string) (bool, error) { return !(race == "dwarf" && class == "mage"), nil }
+	dash := func(race, class string) (bool, error) { return race != "dwarf" || class != "mage", nil }
 	for _, tc := range []struct {
 		name   string
 		lift   ruleset.RacialLift
@@ -148,10 +148,14 @@ func TestPrimeRefusals_Step2_2_DualClassPrimeRequisites(t *testing.T) {
 		{"the minimums exactly", dual("fighter", "mage"), scores("str", 15, "int", 17), []string{}},
 		{"under 15 in the class left", dual("fighter", "mage"), scores("str", 14), []string{"classes.0.class: " + CodePrimeRequisiteTooLow}},
 		{"under 17 in the new class", dual("fighter", "mage"), scores("int", 16), []string{"classes.1.class: " + CodePrimeRequisiteTooLow}},
-		{"both short", dual("fighter", "mage"), scores("str", 14, "int", 16),
-			[]string{"classes.0.class: " + CodePrimeRequisiteTooLow, "classes.1.class: " + CodePrimeRequisiteTooLow}},
-		{"one refusal per class however many requisites fail", dual("fighter", "bard"), scores("dex", 10, "cha", 10),
-			[]string{"classes.1.class: " + CodePrimeRequisiteTooLow}},
+		{
+			"both short", dual("fighter", "mage"), scores("str", 14, "int", 16),
+			[]string{"classes.0.class: " + CodePrimeRequisiteTooLow, "classes.1.class: " + CodePrimeRequisiteTooLow},
+		},
+		{
+			"one refusal per class however many requisites fail", dual("fighter", "bard"), scores("dex", 10, "cha", 10),
+			[]string{"classes.1.class: " + CodePrimeRequisiteTooLow},
+		},
 		{"a multi-class character has no such rule", multi("half_elf", NewClass{Class: "fighter"}, NewClass{Class: "mage"}), scores("str", 3, "int", 3), []string{}},
 		{"the one-class case has none", NewCharacter{Class: "fighter"}, scores("str", 3), []string{}},
 		{"a score not entered is not judged", dual("fighter", "mage"), map[string]int{}, []string{}},

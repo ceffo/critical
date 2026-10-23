@@ -11,6 +11,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
+	"github.com/ceffo/critical/api/internal/domain/classes"
+	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -223,4 +225,43 @@ func TestPreviewPoints_Step17_TheDraftReadAsTheSpendChecksIt(t *testing.T) {
 	var be *domain.BudgetError
 	require.ErrorAs(t, err, &be)
 	assert.Equal(t, domain.BudgetError{Field: "skillPoints", Spent: 65, Limit: 60}, *be)
+}
+
+// ADR 0042 steps 13 and 16.3 in the preview: a draft on a dual-class (a thief
+// left at 9, now a fighter 5) reads the thief's set through the grant of the
+// frozen entry: the multi-class flag set, so body
+// armour the thief may not wear blocks its skills, which a single thief's
+// draft in the same armour does not.
+func TestPreviewPoints_Step13_ADraftOnADualClassKeepsTheMultiFlagAndDormancy(t *testing.T) {
+	preview := func(v charactersvc.View) *skillsvc.Skills {
+		chars, logm := mocks.NewMockCharacters(t), mocks.NewMockLog(t)
+		svc, err := skillsvc.New(skillsvc.Deps{Characters: chars, Abilities: mocks.NewMockAbilities(t), Dice: mocks.NewMockDice(t), Log: logm, Points: mocks.NewMockPoints(t), Picks: mocks.NewMockPicks(t), Buffs: mocks.NewMockBuffs(t), Rulesets: rulesetmocks.NewMockResolver(t), Book: testBook(t), Tables: &fakeTables{}, Tx: &countingTx{}})
+		require.NoError(t, err)
+		v.SkillPoints, v.SkillColumn = skills.SetPoints{"thief": {"open_locks": 10}}, "chain"
+		chars.EXPECT().View(mock.Anything, charID).Return(v, nil).Once()
+		logm.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, mock.Anything).Return(nil, nil)
+		got, err := svc.PreviewPoints(context.Background(), charID, "", map[string]int{"open_locks": 20})
+		require.NoError(t, err)
+		require.Len(t, got.SkillSets, 1)
+		return got
+	}
+	grant := func(dormant bool) viewtest.Option {
+		return func(v *charactersvc.View) {
+			v.Features = []charactersvc.FeatureGrant{{Kind: classes.KindRogueSkills, Class: "thief", Level: 9, Dormant: dormant}}
+		}
+	}
+	blocked := func(s *skillsvc.Skills) bool {
+		for _, sk := range s.SkillSets[0].Skills {
+			if sk.Skill == "pick_pockets" {
+				return sk.Blocked
+			}
+		}
+		return false
+	}
+
+	dual := preview(viewtest.Multi(viewtest.WithFrozen("thief", 9), viewtest.WithEntry("fighter", 5), viewtest.WithDormant(), grant(true)))
+	assert.True(t, blocked(dual), "multi-class: the chain the thief may not wear blocks the skill")
+
+	single := preview(viewtest.Single("thief", 9, grant(false)))
+	assert.False(t, blocked(single), "single-class: not blocked")
 }

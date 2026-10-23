@@ -262,7 +262,11 @@ Each is a choice the ADR cannot settle alone; the step is written with the defau
 - Additions to the view the readers needed: `Languages` (the sheet's languages; the rest of `Details` stays
   with `charactersvc`, so step 1.6 is relaxed for this one list), `StoredEntries()` (the entries as
   `classes.Entry` for the XP split), `SetSkillFigures` (the skill-points preview, sharing `skillSetsOf` with
-  `Derived.SetSkillFigures`), `HasDormant`, `Score`, `NonproficientPenalty`.
+  `Derived.SetSkillFigures`), `HasDormant`, `Score`. `EntryView` carries `IgnoredAwardsThrough` (the XP ledger's cut-off of a dual-class
+  crossed in play), so `StoredEntries()` is the full stored entry for the split.
+- "First active" has one low-level rule, `classes.PrimaryIndex`; `View.Primary` and the derivation's `firstActive`
+  both call it. `Derived.{Grant, Casters, Groups, HasDormant, ...}` still duplicate `View`'s methods of the
+  same names until step 7.6 removes the entity's readers.
 - `skillsLevel` stays in `charactersvc/create.go`: it reads the creation draft's new-class entry, not a
   derived entry (step 3.7). `SetEntryLevel` is untouched (the write services, step 7.4).
 - Still to migrate: combatsvc, buffsvc (non-psionic), prepsvc, castsvc, learnsvc, levelupsvc, dualclasssvc,

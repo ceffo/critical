@@ -45,6 +45,30 @@ func WithFrozen(class string, leftAt int) Option {
 	}
 }
 
+// WithDormant marks every frozen entry Dormant, a dual-class before the
+// crossover (ADR 0042 step 13); WithFrozen alone states no dormancy.
+func WithDormant() Option {
+	return func(v *charactersvc.View) {
+		for i := range v.Entries {
+			if v.Entries[i].State == classes.EntryFrozen {
+				v.Entries[i].Dormant = true
+			}
+		}
+	}
+}
+
+// WithIgnoredAwards sets the ledger cut-off of the entry of class: the id of
+// the last award it ignores (a dual-class's new entry).
+func WithIgnoredAwards(class string, through int64) Option {
+	return func(v *charactersvc.View) {
+		for i := range v.Entries {
+			if v.Entries[i].Class == class {
+				v.Entries[i].IgnoredAwardsThrough = through
+			}
+		}
+	}
+}
+
 // WithIdentity sets the id, name and race.
 func WithIdentity(id int64, name, race string) Option {
 	return func(v *charactersvc.View) { v.ID, v.Name, v.Race = id, name, race }

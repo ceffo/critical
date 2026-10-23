@@ -14,9 +14,9 @@ import (
 // data with no transport tags, built in one place (buildView) from the stored
 // character and its derived block, and read-only. It holds what a service
 // reads and nothing else: no warnings, details, sheet or stored mirror (Class,
-// RealizedLevel, XPTotal). The entries are reached through Primary, Entry,
-// Active and SkillClasses only, so "which entry, which level" has one
-// implementation.
+// RealizedLevel, XPTotal). "Which entry, which level" has one implementation:
+// read the entries through Primary, Entry, Level, Active and SkillClasses
+// rather than re-deriving the choice from Entries.
 type View struct {
 	// Identity (ADR 0045 step 1.1).
 	ID   int64
@@ -77,6 +77,9 @@ type EntryView struct {
 	State       classes.EntryState
 	StartingXP  int
 	LeftAtLevel int
+	// IgnoredAwardsThrough is the id of the last ledger award the entry ignores
+	// (classes.Entry.IgnoredAwardsThrough); the XP split reads it.
+	IgnoredAwardsThrough int64
 	// Group is the class's group (ADR 0040 step 1.2).
 	Group string
 	// XP is the entry's starting XP plus its share of the ledger.
@@ -122,7 +125,7 @@ func buildView(c Character, d Derived) View {
 			NoArmour: ed.NoArmour, SpellFailure: ed.SpellFailure, LevelUp: ed.LevelUp, Dormant: ed.Dormant,
 		}
 		if i < len(stored) {
-			e.StartingXP, e.LeftAtLevel = stored[i].StartingXP, stored[i].LeftAtLevel
+			e.StartingXP, e.LeftAtLevel, e.IgnoredAwardsThrough = stored[i].StartingXP, stored[i].LeftAtLevel, stored[i].IgnoredAwardsThrough
 		}
 		entries[i] = e
 	}
@@ -154,7 +157,7 @@ func (s *service) View(ctx context.Context, id int64) (View, error) {
 // view is built from entries classes.ValidateEntries accepted or from the
 // mirror's one entry. The first entry stands in for a view with none active.
 func (v View) Primary() EntryView {
-	if i := slices.IndexFunc(v.Entries, func(e EntryView) bool { return e.State == classes.EntryActive }); i >= 0 {
+	if i := classes.PrimaryIndex(v.StoredEntries()); i >= 0 {
 		return v.Entries[i]
 	}
 	if len(v.Entries) > 0 {
@@ -205,12 +208,6 @@ func (v View) SkillClasses() skills.Classes {
 // HasDormant reports a dual-class before the crossover (ADR 0042 step 13).
 func (v View) HasDormant() bool {
 	return slices.ContainsFunc(v.Entries, func(e EntryView) bool { return e.Dormant })
-}
-
-// NonproficientPenalty is ADR 0037 step 8 for a weapon of weaponType, from the
-// derived picks: none without them.
-func (v View) NonproficientPenalty(weaponType string) int {
-	return v.Proficiencies.NonproficientPenalty(weaponType)
 }
 
 // Score is the score in ability a; ok is false for an unknown key.
@@ -351,12 +348,14 @@ func (v *View) SetSkillFigures(t skills.SkillTables, def func(string) (classes.C
 
 // StoredEntries are the entries as classes.Entry values (class, state,
 // starting XP, realized and left-at levels): what the XP split and the
-// level-from-XP helpers take, without a second read of the stored row.
+// level-from-XP helpers take, without a second read of the stored row. The
+// ledger cut-off (IgnoredAwardsThrough) is carried too.
 func (v View) StoredEntries() []classes.Entry {
 	out := make([]classes.Entry, len(v.Entries))
 	for i, e := range v.Entries {
 		out[i] = classes.Entry{
 			Class: e.Class, State: e.State, StartingXP: e.StartingXP, RealizedLevel: e.RealizedLevel, LeftAtLevel: e.LeftAtLevel,
+			IgnoredAwardsThrough: e.IgnoredAwardsThrough,
 		}
 	}
 	return out

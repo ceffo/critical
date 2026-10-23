@@ -49,7 +49,7 @@ func TestKelsen_TheSheetMatchesTheDerivedValues(t *testing.T) {
 	for _, b := range skills.BardSkills {
 		sheetSkills[b.ID] = b.Percent
 	}
-	require.Len(t, sheetSkills, len(ruletablesvc.BardSkills), "the sheet states the four bard skills")
+	require.Len(t, sheetSkills, 4, "the sheet states the four bard skills")
 	catalogues := map[string]string{"fixture tables": fixtureCatalogue}
 	if _, err := os.Stat(catalogueFile); err == nil {
 		catalogues["real artifact"] = catalogueFile

@@ -240,7 +240,7 @@ func TestSkillCheck_Step3_BardSkillD100AtOrUnderPercent(t *testing.T) {
 			r := f.roll(t, c.id)
 			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 			assert.Equal(t, &skillsvc.CheckResult{
-				ID: c.id, Kind: skillsvc.KindBardSkill, Die: 100, Roll: c.d100, Target: c.percent, AdjustedTarget: c.percent,
+				ID: c.id, Kind: skillsvc.KindRogueSkill, Set: "bard", Die: 100, Roll: c.d100, Target: c.percent, AdjustedTarget: c.percent,
 				Success: c.success, RolledSuccess: c.success, LogEntryID: 100,
 			}, r)
 		})
@@ -274,7 +274,7 @@ func TestSkillCheck_Step4_OneLoggedEntryPerCheck(t *testing.T) {
 	assert.JSONEq(t, `{"id":"musical_instrument","kind":"proficiency","die":20,"roll":7,"target":16,
 		"adjustment":0,"adjustedTarget":16,"success":true,"rolledSuccess":true,
 		"ability":"dex","abilityScore":17,"modifier":-1}`, string(f.entries[0].Payload))
-	assert.JSONEq(t, `{"id":"climb_walls","kind":"bardSkill","die":100,"roll":93,"target":85,
+	assert.JSONEq(t, `{"id":"climb_walls","kind":"rogueSkill","set":"bard","die":100,"roll":93,"target":85,
 		"adjustment":0,"adjustedTarget":85,"success":false,"rolledSuccess":false,"modifier":0}`,
 		string(f.entries[1].Payload))
 	assert.True(t, actionlog.IsRoll(actionlog.KindSkillCheck), "a check replaces the result card")
@@ -326,7 +326,7 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 			{ID: "acrobatics", Ability: skillsvc.AbilityDex, AbilityScore: 17, Modifier: 5, Target: 22},
 		},
 		SkillSets: []skillsvc.SkillSet{{
-			Set: "bard", Kind: skillsvc.KindBardSkill,
+			Set: "bard",
 			Skills: []skillsvc.SetSkill{
 				{SkillPercent: bardSkills[0], Last: &skillsvc.LastCheck{EntryID: 30, Roll: 12, Target: 85, AdjustedTarget: 85, Success: true}},
 				{SkillPercent: bardSkills[1]},

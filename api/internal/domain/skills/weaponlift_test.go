@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -55,7 +54,7 @@ func TestWeaponPick_Step2_5_TheWeaponLiftFreesAMulticlassCleric(t *testing.T) {
 // fighters only).
 func TestWeaponPick_Step2_5_TheLiftGivesNoSpecialization(t *testing.T) {
 	book := profBook(t)
-	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: fighterSlots(t, book, "long_sword")}}}
 	before := skills.Sheet{
 		Classes: skills.Classes{{Class: "fighter", Level: 3}, {Class: "cleric", Level: 3}}, Intelligence: 12,
 		Picks: weapons(), MulticlassAnyWeapon: true,

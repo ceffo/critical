@@ -23,21 +23,6 @@ const MaxScore = 25
 // Abilities are the six ability score codes.
 var Abilities = classes.Abilities
 
-// ThiefSkills are the eight thieving skills of PHB Table 26.
-var ThiefSkills = []string{
-	"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
-	"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
-}
-
-// ArmourFreeSkills are the two thieving skills a multi-class thief in body
-// armour its class may not wear still uses, at the no-armour percentage (ADR
-// 0042 step 16.3, Q16; PHB multi/dual, Thief: the gauntlets off for the first,
-// the helmet for the second). Every other skill of the set is blocked.
-var ArmourFreeSkills = []string{"open_locks", "detect_noise"}
-
-// BardSkills are the four bard skills of PHB Table 33.
-var BardSkills = []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}
-
 // SkillArmors are the armour columns of PHB Table 29 (leather, the
 // baseline, has none).
 var SkillArmors = []string{"none", "elven_chain", "padded_studded_leather"}
@@ -271,6 +256,7 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		return nil, errors.New("class tables: no class definitions")
 	}
 	groups, races := defs.Groups(), defs.Races()
+	skills := setSkills(c.SkillSets)
 	checks := []struct {
 		table string
 		err   error
@@ -291,9 +277,9 @@ func NewClassTables(c ClassTables, defs *classes.Registry) (*ClassTables, error)
 		{"priest_spells", checkProgression(c.PriestSpells, MaxPriestSpellLevel)},
 		{"priest_spell_wisdom", checkPriestWisdom(c.PriestSpellWisdom)},
 		{"skill_sets", checkSkillSets(c.SkillSets)},
-		{"skill_race", perRace(c.SkillRace, func(r SkillRaceRow) (string, string) { return r.Race, r.Skill }, races, ThiefSkills)},
-		{"skill_dexterity", checkSkillDexterity(c.SkillDexterity)},
-		{"skill_armor", once(c.SkillArmor, func(r SkillArmorRow) string { return r.Armor + " " + r.Skill }, pairs(SkillArmors, ThiefSkills))},
+		{"skill_race", perRace(c.SkillRace, func(r SkillRaceRow) (string, string) { return r.Race, r.Skill }, races, skills)},
+		{"skill_dexterity", checkSkillDexterity(c.SkillDexterity, skills)},
+		{"skill_armor", once(c.SkillArmor, func(r SkillArmorRow) string { return r.Armor + " " + r.Skill }, pairs(SkillArmors, skills))},
 		{"backstab", checkBands(c.Backstab, func(r BackstabRow) (int, int) { return r.LevelMin, r.LevelMax })},
 		{"turning_undead", checkTurning(c.TurningUndead)},
 		{"inherent_potential", checkInherentPotential(c.InherentPotential, defs)},
@@ -350,41 +336,46 @@ func checkScores[R any](rows []R, rng func(R) (int, int), full bool) error {
 	return nil
 }
 
-// checkSkillSets: the sets the Go skill lists still stand for (SkillSetThief
-// and SkillSetBard) exist and list exactly those skills, each with a base
-// (ADR 0040 step 12 replaces the lists by the sets themselves); set ids and
-// skills within a set are unique (catalogue.CheckSkillSets, at the import).
+// setSkills are the skills of every set, once each, in set order: the skills
+// the shared tables (Tables 27 to 29) must cover.
+func setSkills(sets []catalogue.SkillSet) []string {
+	var out []string
+	for _, s := range sets {
+		for _, k := range s.Skills {
+			if !slices.Contains(out, k.ID) {
+				out = append(out, k.ID)
+			}
+		}
+	}
+	return out
+}
+
+// checkSkillSets: set ids and the skills within a set are unique
+// (catalogue.CheckSkillSets), and each set lists a skill (ADR 0040 step 12).
 func checkSkillSets(sets []catalogue.SkillSet) error {
 	if err := catalogue.CheckSkillSets(sets); err != nil {
 		return err
 	}
-	for set, want := range map[string][]string{SkillSetThief: ThiefSkills, SkillSetBard: BardSkills} {
-		i := slices.IndexFunc(sets, func(s catalogue.SkillSet) bool { return s.ID == set })
-		if i < 0 {
-			return fmt.Errorf("the skill set %q is missing", set)
-		}
-		got := make([]string, len(sets[i].Skills))
-		for j, k := range sets[i].Skills {
-			got[j] = k.ID
-		}
-		if !slices.Equal(got, want) {
-			return fmt.Errorf("the skill set %q lists %v, want %v", set, got, want)
+	for _, s := range sets {
+		if len(s.Skills) == 0 {
+			return fmt.Errorf("the skill set %q lists no skill", s.ID)
 		}
 	}
 	return nil
 }
 
-// checkSkillDexterity: Table 28's rows name a thieving skill, and each
+// checkSkillDexterity: Table 28's rows name a skill of some set (a row for any
+// other skill is refused, not ignored: it can never be read), and each
 // skill's rows ascend without overlap inside 1..MaxScore (a skill with no row
 // at a score adjusts by 0).
-func checkSkillDexterity(rows []SkillDexterityRow) error {
+func checkSkillDexterity(rows []SkillDexterityRow, skills []string) error {
 	if len(rows) == 0 {
 		return errors.New("no rows")
 	}
 	bySkill := map[string][]SkillDexterityRow{}
 	for _, r := range rows {
-		if !slices.Contains(ThiefSkills, r.Skill) {
-			return fmt.Errorf("unknown skill %q", r.Skill)
+		if !slices.Contains(skills, r.Skill) {
+			return fmt.Errorf("unknown skill %q: no skill set lists it", r.Skill)
 		}
 		bySkill[r.Skill] = append(bySkill[r.Skill], r)
 	}

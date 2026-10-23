@@ -206,7 +206,7 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier, defs *class
 		if err != nil {
 			return fmt.Errorf("character %d: %w", c.ID, err)
 		}
-		if slices.ContainsFunc(picks.Weapon, skills.WeaponPick.IsSpecialization) {
+		if slices.ContainsFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.IsSpecializationOf(def) }) {
 			continue
 		}
 		first := types[0]
@@ -214,7 +214,7 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier, defs *class
 			slog.Warn("migration 027: specialized in several weapon types; the first is the specialization, the others plain picks",
 				"character", c.ID, "specialization", first, "plain", types[1:])
 		}
-		slots := ruletablesvc.SpecializationSlots(first)
+		slots := ruletablesvc.SpecializationSlots(def, first)
 		if i := slices.IndexFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == first }); i >= 0 {
 			picks.Weapon[i].Slots = slots
 		} else {

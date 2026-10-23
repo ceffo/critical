@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+
+	"github.com/ceffo/critical/api/internal/domain/localized"
 )
 
 // The closed list of class feature kinds (ADR 0040 step 3). A class has a
@@ -107,9 +109,8 @@ type Feature struct {
 	Psionics *Psionics
 	// SaveBonus is save_bonus's params.
 	SaveBonus *SaveBonus
-	// Specialization is weapon_specialization's params (ADR 0040 step 13),
-	// read from format 19 on; nothing reads them until the specialization
-	// rules move to them.
+	// Specialization is weapon_specialization's params (ADR 0040 step 13):
+	// what a specialization costs and which Table 35 column it reads.
 	Specialization *WeaponSpecialization
 }
 
@@ -122,6 +123,44 @@ type WeaponSpecialization struct {
 	MeleeColumn   string
 	MissileColumn string
 	Types         []SpecializationType
+}
+
+// row is the Types row naming weaponType, nil for none.
+func (w *WeaponSpecialization) row(weaponType string) *SpecializationType {
+	for i := range w.Types {
+		if slices.Contains(w.Types[i].WeaponTypes, weaponType) {
+			return &w.Types[i]
+		}
+	}
+	return nil
+}
+
+// SlotsFor is what a specialization in weaponType costs in all: its row's
+// Slots, else DefaultSlots.
+func (w *WeaponSpecialization) SlotsFor(weaponType string) int {
+	if r := w.row(weaponType); r != nil {
+		return r.Slots
+	}
+	return w.DefaultSlots
+}
+
+// ColumnFor is the Table 35 column a specialist of a weapon of weaponType
+// reads: MeleeColumn for a melee weapon, else the type's row Column or
+// MissileColumn. keepsRate is true when the row says RateOfFire: the
+// specialist keeps the type's Table 45 rate, and column is empty.
+func (w *WeaponSpecialization) ColumnFor(melee bool, weaponType string) (column string, keepsRate bool) {
+	if melee {
+		return w.MeleeColumn, false
+	}
+	if r := w.row(weaponType); r != nil {
+		if r.RateOfFire {
+			return "", true
+		}
+		if r.Column != "" {
+			return r.Column, false
+		}
+	}
+	return w.MissileColumn, false
 }
 
 // SpecializationType is one kind of missile weapon that differs: its weapon
@@ -210,6 +249,15 @@ type RogueSkills struct {
 	// Armour maps each body armour skill column (ADR 0033 step 14) to the
 	// thief_skill_armor row it reads and the extra adjustment.
 	Armour []SkillArmour
+	// Skills are the set's skills in its order and ArmourFree those among them a
+	// multi-class character in body armour its class may not wear still uses
+	// (ADR 0040 step 12). Not params: the loader fills them from the catalogue's
+	// skill set that Set names.
+	Skills, ArmourFree []string
+	// Name and MinPercent are the skill set's heading and least usable percentage (ADR 0040
+	// steps 12 and 15), filled by the loader like Skills.
+	Name       localized.Text
+	MinPercent int
 }
 
 // SkillBudget is a rogue_skills budget: First points at level 1 and PerLevel
@@ -309,6 +357,7 @@ func (f Feature) clone() Feature {
 	if f.RogueSkills != nil {
 		r := *f.RogueSkills
 		r.Armour = slices.Clone(r.Armour)
+		r.Skills, r.ArmourFree = slices.Clone(r.Skills), slices.Clone(r.ArmourFree)
 		f.RogueSkills = &r
 	}
 	if f.Spellbook != nil {

@@ -27,6 +27,7 @@ export function decodeSkillCheck(e: LogEntry): SkillCheck | null {
     typeof p.target === "number" &&
     typeof p.success === "boolean" &&
     (p.kind === "proficiency" ||
+      p.kind === "rogueSkill" ||
       p.kind === "bardSkill" ||
       p.kind === "thiefSkill")
     ? { ...(p as SkillCheck), logEntryId: e.id }
@@ -132,9 +133,12 @@ function SkillCard({
               ),
             })
           : t(
+              // Entries stored before the single kind keep their own wording (ADR 0040 step 15).
               c.kind === "thiefSkill"
                 ? "result.skill.thiefSkill"
-                : "result.skill.bardSkill",
+                : c.kind === "bardSkill"
+                  ? "result.skill.bardSkill"
+                  : "result.skill.rogueSkill",
               { die: c.die, percent: c.target },
             )
       }

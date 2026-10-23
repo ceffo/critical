@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // abilityScore is the sheet's score for an ability key.
@@ -36,19 +35,15 @@ const (
 	MaxAdjustmentReasonLen   = 80
 )
 
-// MinThiefSkillPercent is the least percentage a thieving skill is used at
-// (ADR 0030 step 17, PHB p.39): under it the player must spend points first.
-const MinThiefSkillPercent = 1
-
-// SkillUsable reports whether a skill of kind at percent can be rolled: a
-// thieving skill under MinThiefSkillPercent cannot, whatever else (the
-// server owns this rule; the web reads it).
-func SkillUsable(kind Kind, percent int) bool {
-	return kind != KindThiefSkill || percent >= MinThiefSkillPercent
+// SkillUsable reports whether a skill of a set whose least percentage is minPercent can be
+// rolled at percent (ADR 0030 step 17, PHB p.39: a thieving skill under 1% cannot be used until
+// points raise it, whatever the DM's adjustment). The server owns this rule; the web reads it.
+func SkillUsable(minPercent, percent int) bool {
+	return percent >= minPercent
 }
 
-// CodeSkillUnusable is the FieldError code of a roll of a thieving skill
-// under MinThiefSkillPercent. The web owns the wording.
+// CodeSkillUnusable is the FieldError code of a roll of a skill under its
+// set's least percentage. The web owns the wording.
 const CodeSkillUnusable = "skill_unusable"
 
 // CodeSkillBlockedByArmour is the FieldError code of a roll of a skill the
@@ -57,22 +52,33 @@ const CodeSkillUnusable = "skill_unusable"
 // owns the wording.
 const CodeSkillBlockedByArmour = "skill_blocked_by_armour"
 
-// KindOfSet is the check kind a skill set logs (ADR 0040 step 3.2, ADR 0014 step 3): the set
-// code is a rogue_skills param, not a class id. ok is false for a set this package does not
-// know (ruletablesvc.CheckSkillSet refuses it at start).
-func KindOfSet(set string) (Kind, bool) {
-	switch set {
-	case ruletablesvc.SkillSetThief:
-		return KindThiefSkill, true
-	case ruletablesvc.SkillSetBard:
-		return KindBardSkill, true
+// The skill set codes of the check kinds stored before the single rogueSkill kind (ADR 0040
+// step 15, Q1): an entry logged as thiefSkill or bardSkill carries no set, and these two
+// literals say which set it was rolled in. Reading only: nothing logs those kinds any more.
+const (
+	setThief = "thief"
+	setBard  = "bard"
+)
+
+// setOf is the skill set a check was rolled in: the one it logged, or for an entry stored
+// under a per-set kind the set that kind stood for.
+func setOf(rec checkRecord) string {
+	switch {
+	case rec.Set != "":
+		return rec.Set
+	case rec.Kind == KindThiefSkill:
+		return setThief
+	case rec.Kind == KindBardSkill:
+		return setBard
 	}
-	return "", false
+	return ""
 }
 
-// percentKind reports a check on a d100 against a percentage: a bard skill
-// (ADR 0014 step 3) or a thieving skill (ADR 0030 step 17).
-func percentKind(k Kind) bool { return k == KindBardSkill || k == KindThiefSkill }
+// percentKind reports a check on a d100 against a percentage: a skill of a skill set, or one of
+// the kinds stored before them (ADR 0014 step 3, ADR 0030 step 17).
+func percentKind(k Kind) bool {
+	return k == KindRogueSkill || k == KindBardSkill || k == KindThiefSkill
+}
 
 // MaxAdjustment is the largest adjustment, either sign, of a check of kind:
 // a percentage check's is in percentage points.
@@ -98,12 +104,4 @@ func Success(k Kind, roll, target int) bool {
 		return BardSkillSuccess(roll, target)
 	}
 	return ProficiencySuccess(roll, target)
-}
-
-// skillDie is the die of a skill set's check of kind (ADR 0014 step 3).
-func skillDie(k Kind) int {
-	if k == KindThiefSkill {
-		return ThiefSkillDie
-	}
-	return BardSkillDie
 }

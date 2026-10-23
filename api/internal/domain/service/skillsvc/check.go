@@ -28,8 +28,11 @@ const ChangeSkillAdjustment = "skillAdjustment"
 // Entries already in the log must stay decodable: add fields, never rename
 // them (decodeCheck fills the ones older entries lack).
 type checkRecord struct {
-	ID     string `json:"id"`
-	Kind   Kind   `json:"kind"`
+	ID   string `json:"id"`
+	Kind Kind   `json:"kind"`
+	// Set is the skill set of a rogueSkill check (ADR 0040 step 15); absent for a proficiency
+	// and in entries stored under thiefSkill or bardSkill (setOf).
+	Set    string `json:"set,omitempty"`
 	Die    int    `json:"die"`
 	Roll   int    `json:"roll"`
 	Target int    `json:"target"`
@@ -57,6 +60,8 @@ type checkRecord struct {
 	// blocked: the worn armour blocks the skill (ADR 0042 step 16.3); never
 	// logged, a blocked check is not rolled.
 	blocked bool
+	// minPercent is the least percentage the skill's set is used at; never logged.
+	minPercent int
 	// Warnings are the check's class warnings (ADR 0042 step 13:
 	// dual_class_old_ability, a dual-class's old class's skill before the
 	// crossover); absent when none and in older entries.
@@ -99,7 +104,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		rolled = *r.RolledSuccess
 	}
 	return &CheckResult{
-		ID: r.ID, Kind: r.Kind, Die: r.Die, Roll: r.Roll, Target: r.Target,
+		ID: r.ID, Kind: r.Kind, Set: setOf(r), Die: r.Die, Roll: r.Roll, Target: r.Target,
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
 		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
@@ -132,8 +137,8 @@ func checkRange(k Kind, value int) error {
 }
 
 // Roll rolls one check of skill id: a proficiency is one d20 against the
-// ability score plus the modifier (ADR 0014 steps 1 and 2), a bard or a
-// thieving skill one d100 against its derived percentage (step 3, ADR 0030
+// ability score plus the modifier (ADR 0014 steps 1 and 2), a skill of
+// a skill set one d100 against its derived percentage (step 3, ADR 0030
 // steps 17 and 18), the target moved by the pre-roll
 // adjustment (step 5). The check is a skill_check entry with no snapshots,
 // recorded in the same transaction (step 4), unless its success puts a buff
@@ -266,9 +271,9 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	if rec.blocked {
 		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillBlockedByArmour}
 	}
-	// ADR 0030 step 17 (PHB p.39): a thieving skill under 1% cannot be used
-	// until points raise it, whatever the DM's adjustment.
-	if !SkillUsable(rec.Kind, rec.Target) {
+	// ADR 0030 step 17 (PHB p.39): a skill under its set's least percentage cannot be
+	// used until points raise it, whatever the DM's adjustment.
+	if rec.Kind != KindProficiency && !SkillUsable(rec.minPercent, rec.Target) {
 		return checkRecord{}, &domain.FieldError{Field: "id", Message: CodeSkillUnusable}
 	}
 	rec.Roll = s.dice.RollDie(rec.Die)
@@ -325,13 +330,9 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		if set != "" && ss.Set != set {
 			continue
 		}
-		kind, ok := KindOfSet(ss.Set)
-		if !ok {
-			continue
-		}
 		for _, sk := range ss.Skills {
 			if sk.Skill == id {
-				rec := checkRecord{ID: sk.Skill, Kind: kind, Die: skillDie(kind), Target: sk.Percent, blocked: sk.Blocked}
+				rec := checkRecord{ID: sk.Skill, Kind: KindRogueSkill, Set: ss.Set, Die: RogueSkillDie, Target: sk.Percent, blocked: sk.Blocked, minPercent: ss.MinPercent}
 				if ss.Dormant {
 					// ADR 0042 step 13: allowed, warned.
 					rec.Warnings = []string{classes.WarnOldAbility}
@@ -410,10 +411,9 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 		profs := checkable(char)
 		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.SkillSets))}
 		for _, ss := range char.SkillSets {
-			kind, _ := KindOfSet(ss.Set)
-			set := SkillSet{Set: ss.Set, Kind: kind, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
+			set := SkillSet{Set: ss.Set, Name: ss.Name, MinPercent: ss.MinPercent, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
 			for _, sk := range ss.Skills {
-				set.Skills = append(set.Skills, SetSkill{SkillPercent: sk, Last: last[lastKey(kind, sk.Skill)]})
+				set.Skills = append(set.Skills, SetSkill{SkillPercent: sk, Last: last[lastKey("", ss.Set, sk.Skill)]})
 			}
 			out.SkillSets = append(out.SkillSets, set)
 		}
@@ -424,7 +424,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
 				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
-				Target: p.Target, Last: last[lastKey(KindProficiency, p.ID)],
+				Target: p.Target, Last: last[lastKey(KindProficiency, "", p.ID)],
 			})
 		}
 		return nil
@@ -436,8 +436,14 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 }
 
 // lastKey keys a skill's last check: two skill sets can hold the same skill, each with its own
-// kind, so the id alone is not enough.
-func lastKey(kind Kind, id string) string { return string(kind) + ":" + id }
+// percentage, so the id alone is not enough. kind is KindProficiency for a proficiency, anything
+// else for a skill of the set.
+func lastKey(kind Kind, set, id string) string {
+	if kind == KindProficiency {
+		return "proficiency:" + id
+	}
+	return "skill:" + set + ":" + id
+}
 
 // lastChecks maps each skill id to its newest non-voided check.
 func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string]*LastCheck, error) {
@@ -451,7 +457,7 @@ func (s *service) lastChecks(ctx context.Context, characterID int64) (map[string
 		if err != nil {
 			return nil, fmt.Errorf("decode skill check #%d: %w", e.ID, err)
 		}
-		key := lastKey(rec.Kind, rec.ID)
+		key := lastKey(rec.Kind, setOf(rec), rec.ID)
 		if _, seen := last[key]; seen || rec.ID == "" {
 			continue
 		}

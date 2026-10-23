@@ -86,8 +86,11 @@ func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 		{"an unknown skill set", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
 			Set: "test_set", Armour: allColumns(),
 		}})},
+		{"a set that resolved to no skill", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
+			Set: "thief", Armour: allColumns(),
+		}})},
 		{"rogue_skills without the none_allowed and the metal entries", addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-			Set: ruletablesvc.SkillSetThief, Armour: allColumns()[:4],
+			Set: "thief", Skills: []string{"climb_walls"}, Armour: allColumns()[:4],
 		}})},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -95,7 +98,7 @@ func TestImport_Step8_TheTablesRefuseWhatTheyCannotRead(t *testing.T) {
 		})
 	}
 	require.NoError(t, ruletablesvc.CheckDefinitions(editedDefs(t, addClass("test_scout", "thief", "", classes.Feature{Kind: classes.KindRogueSkills, RogueSkills: &classes.RogueSkills{
-		Set: ruletablesvc.SkillSetThief, Armour: allColumns(),
+		Set: "thief", Skills: []string{"climb_walls"}, Armour: allColumns(),
 	}}))), "every column listed")
 }
 
@@ -197,4 +200,80 @@ func TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait(t *testing.T) {
 	free := classes.Race{ID: "halfling"}
 	assert.False(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, barred, 18))
 	assert.True(t, ruletablesvc.ExceptionalStrengthAllowed(fighter, free, 18), "the id decides nothing, the trait does")
+}
+
+// ADR 0040 step 13: the slots a specialization costs and the Table 35 column it reads are the
+// class's weapon_specialization params, whatever its id. A test class with other params spends
+// and reads other figures than the book fighter on the same weapons.
+func TestWeaponSpecialization_Step13_ParamsDecideSlotsAndColumns(t *testing.T) {
+	melee := classes.Feature{Kind: classes.KindMeleeAttacksPerRound, Table: ruletablesvc.TableWarriorAttacks}
+	reg := editedDefs(t, addClass("test_specialist", "fighter", "", melee, classes.Feature{
+		Kind: classes.KindWeaponSpecialization,
+		Specialization: &classes.WeaponSpecialization{
+			DefaultSlots: 3, MeleeColumn: "melee", MissileColumn: "other_missile",
+			Types: []classes.SpecializationType{
+				{WeaponTypes: []string{"long_bow"}, Slots: 2, Column: "thrown_dart"},
+				{WeaponTypes: []string{"light_crossbow"}, Slots: 4, Column: "other_missile"},
+			},
+		},
+	}))
+	tables := cataloguetest.Tables(t).WithDefinitions(reg)
+	fighter, odd := classOf(t, reg, "fighter"), classOf(t, reg, "test_specialist")
+
+	for _, tc := range []struct {
+		weaponType     string
+		fighter, other int
+	}{{"long_bow", 3, 2}, {"long_sword", 2, 3}, {"light_crossbow", 2, 4}} {
+		assert.Equal(t, tc.fighter, ruletablesvc.SpecializationSlots(fighter, tc.weaponType), "fighter, %s", tc.weaponType)
+		assert.Equal(t, tc.other, ruletablesvc.SpecializationSlots(odd, tc.weaponType), "test class, %s", tc.weaponType)
+	}
+	assert.Zero(t, ruletablesvc.SpecializationSlots(classOf(t, reg, "mage"), "long_sword"), "a class that does not specialize")
+
+	rate := func(class, kind, weaponType string) ruletablesvc.AttackRate {
+		t.Helper()
+		got, ok, err := tables.AttackRateFor(class, 7, kind, weaponType, true)
+		require.NoError(t, err)
+		require.True(t, ok)
+		return got
+	}
+	// The crossbow: the fighter reads its own column, the test class other_missile (the fighter's sling).
+	assert.Equal(t, rate("fighter", "missile", "sling"), rate("test_specialist", "missile", "light_crossbow"))
+	assert.NotEqual(t, rate("fighter", "missile", "light_crossbow"), rate("test_specialist", "missile", "light_crossbow"))
+	// The bow: the fighter keeps the rate of fire, the test class reads a column.
+	assert.Equal(t, rate("fighter", "missile", "dart"), rate("test_specialist", "missile", "long_bow"))
+	assert.NotEqual(t, rate("fighter", "missile", "long_bow"), rate("test_specialist", "missile", "long_bow"))
+}
+
+// ADR 0040 step 13: the book fighter's params give back today's numbers. Costs: 3 slots in all for
+// a bow, 2 for everything else. Rates (PHB Tables 15, 35 and 45) for a specialist, by level.
+func TestWeaponSpecialization_Step13_TheFighterKeepsTodaysNumbers(t *testing.T) {
+	tables := cataloguetest.Tables(t)
+	fighter, err := tables.Class("fighter")
+	require.NoError(t, err)
+	for typ, want := range map[string]int{
+		"long_bow": 3, "short_bow": 3, "long_sword": 2, "dagger": 2, "light_crossbow": 2, "heavy_crossbow": 2, "dart": 2, "sling": 2,
+	} {
+		assert.Equal(t, want, ruletablesvc.SpecializationSlots(fighter, typ), typ)
+	}
+	rate := func(level int, kind, typ string, specialized bool) ruletablesvc.AttackRate {
+		t.Helper()
+		got, ok, err := tables.AttackRateFor("fighter", level, kind, typ, specialized)
+		require.NoError(t, err)
+		require.True(t, ok)
+		return got
+	}
+	r := func(a, n int) ruletablesvc.AttackRate { return ruletablesvc.AttackRate{Attacks: a, Rounds: n} }
+	// Melee: Table 15 by level, Table 35's melee column when specialized.
+	assert.Equal(t, r(1, 1), rate(1, "melee", "long_sword", false))
+	assert.Equal(t, r(3, 2), rate(1, "melee", "long_sword", true))
+	assert.Equal(t, r(2, 1), rate(7, "melee", "long_sword", true))
+	// A bow specialist keeps Table 45's rate of fire.
+	assert.Equal(t, rate(7, "missile", "long_bow", false), rate(7, "missile", "long_bow", true))
+	assert.Equal(t, rate(7, "missile", "short_bow", false), rate(7, "missile", "short_bow", true))
+	// The other missile types read their Table 35 columns.
+	for _, typ := range []string{"light_crossbow", "heavy_crossbow", "dagger", "dart", "sling"} {
+		assert.NotEmpty(t, rate(7, "missile", typ, true), typ)
+	}
+	assert.Equal(t, rate(7, "missile", "sling", true), rate(7, "missile", "other_missile", true), "other_missile column")
+	assert.NotEqual(t, rate(1, "missile", "dart", true), rate(1, "missile", "sling", true), "thrown_dart is its own column")
 }

@@ -321,7 +321,7 @@ func TestWeaponPick_Step16_1_ABluntOnlyEntryRestrictsThePicks(t *testing.T) {
 // takes it.
 func TestWeaponPick_Step15_OnlyASingleClassFighterSpecializes(t *testing.T) {
 	book := profBook(t)
-	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: ruletablesvc.SpecializationSlots("long_sword")}}}
+	spec := skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: fighterSlots(t, book, "long_sword")}}}
 	fighterThief := skills.Classes{{Class: "fighter", Level: 3}, {Class: "thief", Level: 3}}
 
 	_, err := skills.Apply(book, nil, "human", skills.Sheet{Classes: fighterThief, Intelligence: 12, Picks: weapons()}, skills.Edit{Picks: spec})

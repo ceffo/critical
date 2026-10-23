@@ -1407,6 +1407,7 @@
     "multRoll": "Multiplier d100",
     "skill": {
       "proficiency": "Proficiency · d{{die}} under {{stat}}",
+      "rogueSkill": "Class skill · d{{die}} under {{percent}}%",
       "bardSkill": "Bard skill · d{{die}} under {{percent}}%",
       "thiefSkill": "Thief skill · d{{die}} under {{percent}}%",
       "success": "Success",
@@ -2146,7 +2147,6 @@
   },
   "skills": {
     "proficiencies": "Proficiencies",
-    "bardSkills": "Bard skills",
     "percent": "{{value}}%",
     "rollLabel": "Roll {{name}}",
     "names": {
@@ -2224,7 +2224,6 @@
       "tracking": "Tracking",
       "weaponsmithing": "Weaponsmithing"
     },
-    "thiefSkills": "Thief skills",
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} ({{max}}% at most)",
     "budget": {
       "skill_points_total": "Skill points: {{points}} in all, at most {{limit}} at this level",

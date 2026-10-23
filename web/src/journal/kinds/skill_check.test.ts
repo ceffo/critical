@@ -41,6 +41,23 @@ describeKind("skill_check", fixtures, {
     },
     rolled: true,
   },
+  // ADR 0040 step 15: a skill-set check logs one kind, `rogueSkill`, with the set.
+  rogueSkill: {
+    en: {
+      text: "Open Locks: d100 31 vs 55, success",
+      short: "Open Locks · success",
+      subtitle: "Open Locks",
+      card: ["31 vs 55%"],
+    },
+    fr: {
+      text: "Crochetage : d100 31 contre 55, réussi",
+      short: "Crochetage · réussi",
+      subtitle: "Crochetage",
+      card: ["31 contre 55"],
+    },
+    value: { text: "31", tone: "pass" },
+    rolled: true,
+  },
   // ADR 0037 step 20: the buff the success put on, named from the proficiency.
   tumblingBuff: {
     en: {

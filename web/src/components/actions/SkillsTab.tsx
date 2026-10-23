@@ -22,14 +22,8 @@ import type {
   WeaponPickFigures,
   WeaponPool,
 } from "@/types/character";
-import type { SkillKind } from "@/types/skills";
+import { localized } from "@/i18n/localized";
 import { primaryEntry } from "@/lib/classEntries";
-
-const HEADINGS: Record<SkillKind, string> = {
-  proficiency: "skills.proficiencies",
-  bardSkill: "skills.bardSkills",
-  thiefSkill: "skills.thiefSkills",
-};
 
 /**
  * Skills tab of the Act panel (ADR 0014; layout ADR 0027 step 12): the non-weapon proficiencies
@@ -43,7 +37,7 @@ const HEADINGS: Record<SkillKind, string> = {
  * roll (ADR 0027 step 8.3, ADR 0014 step 6).
  */
 export function SkillsTab() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const skills = useSkillsStore((s) => s.skills);
   const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
@@ -80,7 +74,7 @@ export function SkillsTab() {
       skills.skillSets[0]
     )?.set;
   const rows = (
-    kind: SkillKind,
+    heading: string,
     skillSet: string | undefined,
     list: {
       id: string;
@@ -94,8 +88,8 @@ export function SkillsTab() {
     }[],
     after?: ReactNode,
   ) => {
-    const label = t(HEADINGS[kind]);
-    const id = `skills-${skillSet ?? kind}`;
+    const label = heading;
+    const id = `skills-${skillSet ?? "proficiency"}`;
     return (
       <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
         <h3 id={id} className="group-heading section-label px-2.5">
@@ -203,7 +197,7 @@ export function SkillsTab() {
       data-testid="skills-blocks"
     >
       {rows(
-        "proficiency",
+        t("skills.proficiencies"),
         undefined,
         skills.proficiencies.map((p) => {
           const pick = slots?.picks.find((f) => f.id === p.id);
@@ -251,7 +245,6 @@ export function SkillsTab() {
       {skills.skillSets.map((skillSet) => {
         const warnings =
           derivedSets?.find((d) => d.set === skillSet.set)?.warnings ?? [];
-        const kindPrefix = skillSet.kind === "thiefSkill" ? "thief" : "bard";
         const editing = editingPoints && editedSet === skillSet.set;
         return (
           <div
@@ -260,7 +253,7 @@ export function SkillsTab() {
             data-testid={`skill-set-${skillSet.set}`}
           >
             {rows(
-              skillSet.kind,
+              localized(i18n.language, skillSet.name) || skillSet.set,
               skillSet.set,
               // ADR 0030 steps 17 and 18: the server's percentage; its terms in the tooltip. The
               // server says which skill cannot be rolled yet.
@@ -282,7 +275,7 @@ export function SkillsTab() {
                       armor: formatSigned(s.armor),
                       max: s.maxPercent,
                     })}
-                    data-testid={`${kindPrefix}-percent-${s.id}`}
+                    data-testid={`${skillSet.set}-percent-${s.id}`}
                   >
                     {t("skills.percent", { value: s.percent })}
                   </span>

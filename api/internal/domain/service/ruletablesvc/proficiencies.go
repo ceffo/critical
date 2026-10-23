@@ -72,6 +72,17 @@ func (p *Proficiencies) ClassDef(class string) (classes.Class, bool) {
 	return p.defs.Class(class)
 }
 
+// SpecializationCostedAt reports whether some class of the catalogue spends slots in all on a
+// specialization in weaponType (ADR 0040 step 13), false without a catalogue (p nil).
+func (p *Proficiencies) SpecializationCostedAt(weaponType string, slots int) bool {
+	if p == nil || p.defs == nil {
+		return false
+	}
+	return slices.ContainsFunc(p.defs.Classes(), func(c classes.Class) bool {
+		return SpecializationSlots(c, weaponType) == slots
+	})
+}
+
 // NewProficiencies validates the rows: an id once and non-empty, a known
 // ability (or none, with a 0 modifier), at least one slot, one or more known
 // groups (the general one or a class group) once each; the crossovers cover each of Classes exactly once with

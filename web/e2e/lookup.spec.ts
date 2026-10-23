@@ -815,8 +815,8 @@ test("lookup powers: a power is found by its English or French name and its deta
   await openLookup(page);
   await classButton(page, "Powers").click();
   const powerRows = page.getByTestId("power-row");
-  await expect(powerRows).toHaveCount(9);
-  await expect(page.getByTestId("lookup-count")).toHaveText("9 powers");
+  await expect(powerRows).toHaveCount(17);
+  await expect(page.getByTestId("lookup-count")).toHaveText("17 powers");
 
   await page
     .getByRole("combobox", { name: "Search powers..." })

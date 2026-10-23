@@ -273,7 +273,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 17")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 18")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -456,7 +456,7 @@ func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
 			delete(d, "proficiency_descriptions")
 		})
 		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 17", artifact, format))
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 18", artifact, format))
 		require.ErrorContains(t, err, "run `just catalogue`")
 	}
 }

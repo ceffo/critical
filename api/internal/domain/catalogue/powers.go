@@ -33,6 +33,13 @@ const (
 type Cost struct {
 	Amount int
 	Kind   string
+	// Table names the rule table that gives the amount (format 18, ADR 0044
+	// step 1.4): "contact_cost" for the contact power, whose Kind is then
+	// CostVariable so the entered-cost path is unchanged. Empty otherwise.
+	Table string
+	// Plus is the amount a CostContact cost adds once contact is made (Switch
+	// Personality's 30); 0 when there is none.
+	Plus int
 }
 
 // Discipline is one of the six psionic disciplines (ADR 0043 step 8); the

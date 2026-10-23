@@ -29,7 +29,7 @@ func TestLoad_Fixture(t *testing.T) {
 	a, err := LoadArtifact(fixture)
 	require.NoError(t, err)
 	c := a.Catalogue
-	assert.Equal(t, catalogue.FormatMultiClassFlag, c.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, c.Format)
 	assert.Len(t, c.ProficiencyDescriptions, 65, "the fixture carries the proficiency descriptions")
 	assert.Equal(t, "1970-01-01", c.Version)
 	assert.NotEmpty(t, a.RuleTables, "the fixture carries the rule tables")
@@ -103,7 +103,7 @@ func proficiencyRow(d map[string]any, i int) map[string]any {
 // duplicate ids are refused.
 func TestParse_Step2_Refusals(t *testing.T) {
 	refuses(t, []refusal{
-		{"unknown format names it", func(d map[string]any) { d["format"] = 18 }, []string{"unknown format 18", "format 17", "just catalogue"}},
+		{"unknown format names it", func(d map[string]any) { d["format"] = 19 }, []string{"unknown format 19", "format 18", "just catalogue"}},
 		{"missing format", func(d map[string]any) { delete(d, "format") }, []string{"unknown format none"}},
 		{"schema violation lists the offence", func(d map[string]any) {
 			spells(d)[0].(map[string]any)["level"] = 12
@@ -146,12 +146,12 @@ func TestParse_Step16_ReadsTheProficiencyDescriptions(t *testing.T) {
 func TestParse_Step17_ReadsTheMagicDefence(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatMultiClassFlag, a.Catalogue.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, a.Catalogue.Format)
 	wisdom := func(d map[string]any, i int) map[string]any { return tables(d)["wisdom"].([]any)[i].(map[string]any) }
 	refuses(t, []refusal{
-		{"a wisdom row without it", func(d map[string]any) { delete(wisdom(d, 2), "magic_defence") }, []string{"format 17 schema", "wisdom/2", "magic_defence"}},
-		{"below -6", func(d map[string]any) { wisdom(d, 0)["magic_defence"] = -7 }, []string{"format 17 schema", "wisdom/0/magic_defence"}},
-		{"above +4", func(d map[string]any) { wisdom(d, 24)["magic_defence"] = 5 }, []string{"format 17 schema", "wisdom/24/magic_defence"}},
+		{"a wisdom row without it", func(d map[string]any) { delete(wisdom(d, 2), "magic_defence") }, []string{"format 18 schema", "wisdom/2", "magic_defence"}},
+		{"below -6", func(d map[string]any) { wisdom(d, 0)["magic_defence"] = -7 }, []string{"format 18 schema", "wisdom/0/magic_defence"}},
+		{"above +4", func(d map[string]any) { wisdom(d, 24)["magic_defence"] = 5 }, []string{"format 18 schema", "wisdom/24/magic_defence"}},
 	})
 }
 
@@ -164,7 +164,7 @@ func TestParse_Step17_RefusesFormat9WithTheCatalogueAdvice(t *testing.T) {
 			delete(r.(map[string]any), "magic_defence")
 		}
 	}))
-	require.ErrorContains(t, err, "unknown format 9: this API reads format 17; run `just catalogue` to fetch a current artifact")
+	require.ErrorContains(t, err, "unknown format 9: this API reads format 18; run `just catalogue` to fetch a current artifact")
 }
 
 // ADR 0021 step 16.5: format 8, or any earlier format, is refused as an unknown
@@ -177,7 +177,7 @@ func TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice(t *testing.T) {
 			delete(d, "proficiency_descriptions")
 		}))
 		require.ErrorContains(t, err, fmt.Sprintf(
-			"unknown format %d: this API reads format 17; run `just catalogue` to fetch a current artifact", format))
+			"unknown format %d: this API reads format 18; run `just catalogue` to fetch a current artifact", format))
 	}
 }
 
@@ -188,10 +188,10 @@ func TestParse_Step16_RefusesFormat8WithTheCatalogueAdvice(t *testing.T) {
 func TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatMultiClassFlag, a.Catalogue.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, a.Catalogue.Format)
 	refuses(t, []refusal{
-		{"a class without its group", func(d map[string]any) { delete(d["classes"].([]any)[0].(map[string]any), "group") }, []string{"format 17 schema", "classes/0", "group"}},
-		{"no races", func(d map[string]any) { delete(d, "races") }, []string{"format 17 schema", "races"}},
+		{"a class without its group", func(d map[string]any) { delete(d["classes"].([]any)[0].(map[string]any), "group") }, []string{"format 18 schema", "classes/0", "group"}},
+		{"no races", func(d map[string]any) { delete(d, "races") }, []string{"format 18 schema", "races"}},
 	})
 	_, err = Parse(artifact(t, func(d map[string]any) {
 		d["format"] = 10
@@ -199,7 +199,7 @@ func TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10(t *testing.T) {
 			delete(d, k)
 		}
 	}))
-	require.ErrorContains(t, err, "unknown format 10: this API reads format 17; run `just catalogue` to fetch a current artifact")
+	require.ErrorContains(t, err, "unknown format 10: this API reads format 18; run `just catalogue` to fetch a current artifact")
 }
 
 // ADR 0021 steps 20.1 and 20.3: the artifact is read with the psionicist's
@@ -210,12 +210,12 @@ func TestParse_Step18_ReadsTheDefinitionsAndRefusesFormat10(t *testing.T) {
 func TestParse_Step20_ReadsPsionicsAndRefusesFormat12(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatMultiClassFlag, a.Catalogue.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, a.Catalogue.Format)
 	refuses(t, []refusal{
-		{"a power of an unknown kind", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["kind"] = "spell" }, []string{"format 17 schema", "powers/0/kind"}},
-		{"a power with a cost that is a word", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["initial_cost"] = "many" }, []string{"format 17 schema", "powers/0/initial_cost"}},
-		{"no powers", func(d map[string]any) { delete(d, "powers") }, []string{"format 17 schema", "powers"}},
-		{"no psionics table", func(d map[string]any) { delete(tables(d), "psp_recovery") }, []string{"format 17 schema", "psp_recovery"}},
+		{"a power of an unknown kind", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["kind"] = "spell" }, []string{"format 18 schema", "powers/0/kind"}},
+		{"a power with a cost that is a word", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["initial_cost"] = "many" }, []string{"format 18 schema", "powers/0/initial_cost"}},
+		{"no powers", func(d map[string]any) { delete(d, "powers") }, []string{"format 18 schema", "powers"}},
+		{"no psionics table", func(d map[string]any) { delete(tables(d), "psp_recovery") }, []string{"format 18 schema", "psp_recovery"}},
 	})
 	_, err = Parse(artifact(t, func(d map[string]any) {
 		d["format"] = 12
@@ -223,7 +223,7 @@ func TestParse_Step20_ReadsPsionicsAndRefusesFormat12(t *testing.T) {
 			delete(d, k)
 		}
 	}))
-	require.ErrorContains(t, err, "unknown format 12: this API reads format 17; run `just catalogue` to fetch a current artifact")
+	require.ErrorContains(t, err, "unknown format 12: this API reads format 18; run `just catalogue` to fetch a current artifact")
 }
 
 // ADR 0021 step 23.1: a power's optional slot reaches the domain power, a slot outside science and
@@ -238,28 +238,27 @@ func TestParse_Step23_APowerReadsItsSlot(t *testing.T) {
 	assert.Equal(t, "science", slots["psionic_blast"], "the fixture's Psionic Blast names its slot")
 	assert.Empty(t, slots["mind_thrust"], "an attack mode with no slot leaves it to its kind")
 	refuses(t, []refusal{
-		{"a slot outside science and devotion", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["slot"] = "defence_mode" }, []string{"format 17 schema", "powers/0/slot"}},
+		{"a slot outside science and devotion", func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["slot"] = "defence_mode" }, []string{"format 18 schema", "powers/0/slot"}},
 		{"a sphere_access table", func(d map[string]any) {
 			tables(d)["sphere_access"] = []any{map[string]any{"class": "cleric", "sphere": "sun", "access": "major"}}
-		}, []string{"format 17 schema", "sphere_access"}},
+		}, []string{"format 18 schema", "sphere_access"}},
 	})
 }
 
-// ADR 0021 steps 24.1 and 24.2: format 17 is read, a class's optional multiclass flag is a boolean
-// (the definitions read it, ruletablesadpt), and format 16 is refused as an unknown format that
-// names format 17 and `just catalogue`.
-func TestParse_Step24_ReadsFormat17AndRefusesFormat16(t *testing.T) {
+// ADR 0021 steps 25.5 (and 24.1): format 18 is read, a class's optional multiclass flag is a boolean
+// (the definitions read it, ruletablesadpt), and format 17 is refused as an unknown format that
+// names format 18 and `just catalogue`.
+func TestParse_Step25_ReadsFormat18AndRefusesFormat17(t *testing.T) {
 	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
 	require.NoError(t, err)
-	assert.Equal(t, catalogue.FormatMultiClassFlag, a.Catalogue.Format)
-	assert.Equal(t, 17, a.Catalogue.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, a.Catalogue.Format)
 	refuses(t, []refusal{
 		{"a multiclass flag that is not a boolean", func(d map[string]any) {
 			d["classes"].([]any)[0].(map[string]any)["multiclass"] = "no"
-		}, []string{"format 17 schema", "classes/0/multiclass"}},
+		}, []string{"format 18 schema", "classes/0/multiclass"}},
 	})
 	_, err = Parse(artifact(t, func(d map[string]any) { d["format"] = 16 }))
-	require.ErrorContains(t, err, "unknown format 16: this API reads format 17; run `just catalogue` to fetch a current artifact")
+	require.ErrorContains(t, err, "unknown format 16: this API reads format 18; run `just catalogue` to fetch a current artifact")
 }
 
 // ADR 0021 step 20.3 and ADR 0023 step 3: French is optional on a power's text
@@ -271,12 +270,12 @@ func TestParse_Step20_APowerWithoutFrenchTextFallsBackToEnglish(t *testing.T) {
 		delete(d["powers"].([]any)[0].(map[string]any)["description"].(map[string]any), "fr")
 	}))
 	require.NoError(t, err, "no French description is not a refusal")
-	assert.Equal(t, 17, a.Catalogue.Format)
+	assert.Equal(t, catalogue.FormatPsionicCombat, a.Catalogue.Format)
 
 	refuses(t, []refusal{
 		{"a power description without English", func(d map[string]any) {
 			delete(d["powers"].([]any)[0].(map[string]any)["description"].(map[string]any), "en")
-		}, []string{"format 17 schema", "powers/0/description", "en"}},
+		}, []string{"format 18 schema", "powers/0/description", "en"}},
 	})
 	missing := localized.Text{"en": "Seen from afar."}
 	assert.Equal(t, "Seen from afar.", missing.Any(), "the English body stands in for the language the text lacks")
@@ -291,7 +290,7 @@ func TestPowerCatalogue_Step8_EveryPowerParses(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, a.Disciplines, 6)
 	assert.Equal(t, "Psychometabolism", a.Disciplines[2].Name["en"])
-	require.Len(t, a.Powers, 9)
+	require.Len(t, a.Powers, 17)
 	byID := map[string]catalogue.Power{}
 	for _, p := range a.Powers {
 		byID[p.ID] = p
@@ -307,6 +306,10 @@ func TestPowerCatalogue_Step8_EveryPowerParses(t *testing.T) {
 
 	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostVariable}, byID["telekinesis"].InitialCost)
 	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostContact}, byID["mindlink"].InitialCost)
+	// ADR 0044 step 1.4: the contact power names its table (a variable cost, so the entered-cost
+	// path is unchanged); Switch Personality is a contact with a plus amount.
+	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostVariable, Table: "contact_cost"}, byID["contact"].InitialCost)
+	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostContact, Plus: 30}, byID["switch_personality"].InitialCost)
 	assert.Equal(t, catalogue.Cost{Kind: catalogue.CostVariable}, byID["telekinesis"].Maintenance.Cost)
 	assert.Nil(t, byID["psionic_blast"].Maintenance, "a power that cannot be maintained has none")
 	assert.Equal(t, []string{"mindlink", "contact"}, byID["mind_thrust"].Prerequisites)
@@ -329,20 +332,20 @@ func TestPowerCatalogue_Step8_EveryPowerParses(t *testing.T) {
 // step 1's subset) and an id appears once.
 func TestParse_Step16_RefusesBadProficiencyDescriptions(t *testing.T) {
 	refuses(t, []refusal{
-		{"no list", func(d map[string]any) { delete(d, "proficiency_descriptions") }, []string{"format 17 schema", "proficiency_descriptions"}},
+		{"no list", func(d map[string]any) { delete(d, "proficiency_descriptions") }, []string{"format 18 schema", "proficiency_descriptions"}},
 		{"64 rows", func(d map[string]any) {
 			d["proficiency_descriptions"] = d["proficiency_descriptions"].([]any)[1:]
-		}, []string{"format 17 schema", "proficiency_descriptions"}},
+		}, []string{"format 18 schema", "proficiency_descriptions"}},
 		{"no French", func(d map[string]any) {
 			delete(proficiencyRow(d, 3)["description"].(map[string]any), "fr")
-		}, []string{"format 17 schema", "proficiency_descriptions/3/description", "fr"}},
+		}, []string{"format 18 schema", "proficiency_descriptions/3/description", "fr"}},
 		{"no English", func(d map[string]any) {
 			delete(proficiencyRow(d, 3)["description"].(map[string]any), "en")
-		}, []string{"format 17 schema", "proficiency_descriptions/3/description", "en"}},
+		}, []string{"format 18 schema", "proficiency_descriptions/3/description", "en"}},
 		{"a heading in the text", func(d map[string]any) {
 			proficiencyRow(d, 3)["description"].(map[string]any)["en"] = "x\n\n# H"
-		}, []string{"format 17 schema", "proficiency_descriptions/3/description/en"}},
-		{"a field beside the text", func(d map[string]any) { proficiencyRow(d, 3)["name"] = "x" }, []string{"format 17 schema", "name"}},
+		}, []string{"format 18 schema", "proficiency_descriptions/3/description/en"}},
+		{"a field beside the text", func(d map[string]any) { proficiencyRow(d, 3)["name"] = "x" }, []string{"format 18 schema", "name"}},
 		{"an id twice", func(d map[string]any) {
 			proficiencyRow(d, 4)["id"] = "agriculture"
 		}, []string{"duplicate proficiency description ids: agriculture"}},
@@ -366,46 +369,46 @@ func TestParse_Step9_to_14_TablesEquipmentAndLanguagesAreSchemaChecked(t *testin
 		return nil
 	}
 	refuses(t, []refusal{
-		{"no tables", func(d map[string]any) { delete(d, "rule_tables") }, []string{"format 17 schema", "rule_tables"}},
-		{"a missing table", func(d map[string]any) { delete(tables(d), "dexterity") }, []string{"format 17 schema", "dexterity"}},
-		{"a text in the tables", func(d map[string]any) { tables(d)["_source"] = "PHB" }, []string{"format 17 schema", "_source"}},
-		{"a missing class table", func(d map[string]any) { delete(tables(d), "turning_undead") }, []string{"format 17 schema", "turning_undead"}},
+		{"no tables", func(d map[string]any) { delete(d, "rule_tables") }, []string{"format 18 schema", "rule_tables"}},
+		{"a missing table", func(d map[string]any) { delete(tables(d), "dexterity") }, []string{"format 18 schema", "dexterity"}},
+		{"a text in the tables", func(d map[string]any) { tables(d)["_source"] = "PHB" }, []string{"format 18 schema", "_source"}},
+		{"a missing class table", func(d map[string]any) { delete(tables(d), "turning_undead") }, []string{"format 18 schema", "turning_undead"}},
 		{"a class name in a language", func(d map[string]any) {
 			tables(d)["hit_dice"].([]any)[0].(map[string]any)["group"] = "guerrier"
-		}, []string{"format 17 schema", "hit_dice/0/group"}},
-		{"no level limits", func(d map[string]any) { delete(tables(d), "race_level_limits") }, []string{"format 17 schema", "race_level_limits"}},
+		}, []string{"format 18 schema", "hit_dice/0/group"}},
+		{"no level limits", func(d map[string]any) { delete(tables(d), "race_level_limits") }, []string{"format 18 schema", "race_level_limits"}},
 		{"a human level limit", func(d map[string]any) {
 			tables(d)["race_level_limits"].([]any)[0].(map[string]any)["race"] = "human"
-		}, []string{"format 17 schema", "race_level_limits/0/race"}},
+		}, []string{"format 18 schema", "race_level_limits/0/race"}},
 		{"a level limit above 20", func(d map[string]any) {
 			tables(d)["race_level_limits"].([]any)[0].(map[string]any)["max_level"] = 21
-		}, []string{"format 17 schema", "race_level_limits/0/max_level"}},
+		}, []string{"format 18 schema", "race_level_limits/0/max_level"}},
 		{"24 level limits", func(d map[string]any) {
 			tables(d)["race_level_limits"] = tables(d)["race_level_limits"].([]any)[1:]
-		}, []string{"format 17 schema", "race_level_limits"}},
-		{"a priest spell without codes", func(d map[string]any) { delete(priest(d), "spheres") }, []string{"format 17 schema", "spheres"}},
-		{"a sphere name in a language", func(d map[string]any) { priest(d)["spheres"] = []any{"Tout"} }, []string{"format 17 schema", "spheres/0"}},
-		{"no equipment", func(d map[string]any) { delete(d, "equipment") }, []string{"format 17 schema", "equipment"}},
-		{"no Table 52", func(d map[string]any) { delete(tables(d), "weapon_vs_armor") }, []string{"format 17 schema", "weapon_vs_armor"}},
-		{"no Table 56", func(d map[string]any) { delete(tables(d), "initiative_item") }, []string{"format 17 schema", "initiative_item"}},
-		{"a code in capitals", func(d map[string]any) { row(d, "weapons", 0)["code"] = "BattleAxe" }, []string{"format 17 schema", "code"}},
-		{"a weapon type outside the list", func(d map[string]any) { row(d, "weapons", 0)["weapon_type"] = "axe" }, []string{"format 17 schema", "weapon_type"}},
-		{"a speed above 20", func(d map[string]any) { row(d, "weapons", 0)["speed"] = 21 }, []string{"format 17 schema", "speed"}},
-		{"damage in words", func(d map[string]any) { row(d, "weapons", 0)["damage_sm"] = "one d8" }, []string{"format 17 schema", "damage_sm"}},
-		{"an unknown Table 29 column", func(d map[string]any) { row(d, "armour", 0)["skill_column"] = "plate" }, []string{"format 17 schema", "skill_column"}},
-		{"a field the format lacks", func(d map[string]any) { row(d, "armour", 0)["weight"] = 35 }, []string{"format 17 schema", "weight"}},
+		}, []string{"format 18 schema", "race_level_limits"}},
+		{"a priest spell without codes", func(d map[string]any) { delete(priest(d), "spheres") }, []string{"format 18 schema", "spheres"}},
+		{"a sphere name in a language", func(d map[string]any) { priest(d)["spheres"] = []any{"Tout"} }, []string{"format 18 schema", "spheres/0"}},
+		{"no equipment", func(d map[string]any) { delete(d, "equipment") }, []string{"format 18 schema", "equipment"}},
+		{"no Table 52", func(d map[string]any) { delete(tables(d), "weapon_vs_armor") }, []string{"format 18 schema", "weapon_vs_armor"}},
+		{"no Table 56", func(d map[string]any) { delete(tables(d), "initiative_item") }, []string{"format 18 schema", "initiative_item"}},
+		{"a code in capitals", func(d map[string]any) { row(d, "weapons", 0)["code"] = "BattleAxe" }, []string{"format 18 schema", "code"}},
+		{"a weapon type outside the list", func(d map[string]any) { row(d, "weapons", 0)["weapon_type"] = "axe" }, []string{"format 18 schema", "weapon_type"}},
+		{"a speed above 20", func(d map[string]any) { row(d, "weapons", 0)["speed"] = 21 }, []string{"format 18 schema", "speed"}},
+		{"damage in words", func(d map[string]any) { row(d, "weapons", 0)["damage_sm"] = "one d8" }, []string{"format 18 schema", "damage_sm"}},
+		{"an unknown Table 29 column", func(d map[string]any) { row(d, "armour", 0)["skill_column"] = "plate" }, []string{"format 18 schema", "skill_column"}},
+		{"a field the format lacks", func(d map[string]any) { row(d, "armour", 0)["weight"] = 35 }, []string{"format 18 schema", "weight"}},
 		{"Table 56 with a modifier above 20", func(d map[string]any) {
 			tables(d)["initiative_item"].([]any)[0].(map[string]any)["modifier"] = 21
-		}, []string{"format 17 schema", "modifier"}},
-		{"no languages", func(d map[string]any) { delete(d, "languages") }, []string{"format 17 schema", "languages"}},
-		{"no race_languages", func(d map[string]any) { delete(tables(d), "race_languages") }, []string{"format 17 schema", "race_languages"}},
-		{"a language code in capitals", func(d map[string]any) { language(d, 0)["code"] = "Common" }, []string{"format 17 schema", "code"}},
+		}, []string{"format 18 schema", "modifier"}},
+		{"no languages", func(d map[string]any) { delete(d, "languages") }, []string{"format 18 schema", "languages"}},
+		{"no race_languages", func(d map[string]any) { delete(tables(d), "race_languages") }, []string{"format 18 schema", "race_languages"}},
+		{"a language code in capitals", func(d map[string]any) { language(d, 0)["code"] = "Common" }, []string{"format 18 schema", "code"}},
 		{"a language name without English", func(d map[string]any) {
 			language(d, 0)["name"] = map[string]any{"fr": "Commun"}
-		}, []string{"format 17 schema", "en"}},
+		}, []string{"format 18 schema", "en"}},
 		{"a race outside the six", func(d map[string]any) {
 			tables(d)["race_languages"].([]any)[0].(map[string]any)["race"] = "orc"
-		}, []string{"format 17 schema", "race"}},
+		}, []string{"format 18 schema", "race"}},
 	})
 }
 
@@ -450,4 +453,62 @@ func TestFixture_ADR0035Item6_2_NoCastingTimeUnderARoundVariesWithLevel(t *testi
 			assert.Equal(t, lo, hi, "%s (%q) varies with level below a round", s.ID, ct.Raw)
 		}
 	}
+}
+
+// ADR 0044 step 1.4: the two new shapes of an initial cost are read, and any other object is
+// refused by the schema.
+func TestPowerCatalogue_Step25_ReadsTheTableAndPlusCosts(t *testing.T) {
+	set := func(cost any) func(map[string]any) {
+		return func(d map[string]any) { d["powers"].([]any)[0].(map[string]any)["initial_cost"] = cost }
+	}
+	for name, tc := range map[string]struct {
+		cost any
+		want catalogue.Cost
+	}{
+		"a table":      {map[string]any{"table": "contact_cost"}, catalogue.Cost{Kind: catalogue.CostVariable, Table: "contact_cost"}},
+		"contact plus": {map[string]any{"kind": "contact", "plus": 30}, catalogue.Cost{Kind: catalogue.CostContact, Plus: 30}},
+	} {
+		a, err := ParseArtifact(artifact(t, set(tc.cost)))
+		require.NoError(t, err, name)
+		assert.Equal(t, tc.want, a.Powers[0].InitialCost, name)
+	}
+	refuses(t, []refusal{
+		{"a table that is unknown", set(map[string]any{"table": "level_cost"}), []string{"format 18 schema", "powers/0/initial_cost"}},
+		{"a contact plus below 1", set(map[string]any{"kind": "contact", "plus": 0}), []string{"format 18 schema", "powers/0/initial_cost"}},
+		{"an empty object", set(map[string]any{}), []string{"format 18 schema", "powers/0/initial_cost"}},
+	})
+}
+
+// ADR 0044 steps 1.1 to 1.3: the fixture's three combat tables are required, read as data, and
+// refused when one is absent or a row is out of shape.
+func TestRuleTables_Step25_ReadsTheCombatTables(t *testing.T) {
+	a, err := ParseArtifact(artifact(t, func(map[string]any) {}))
+	require.NoError(t, err)
+	var rt struct {
+		AVD []struct {
+			Attack, Defence string
+			Modifier        int
+		} `json:"attack_versus_defence"`
+		Cost []struct {
+			MinLevel int `json:"min_level"`
+			MaxLevel int `json:"max_level"`
+			Cost     int
+		} `json:"contact_cost"`
+		Mods []struct {
+			Kind, Code string
+			Modifier   int
+		} `json:"contact_modifiers"`
+	}
+	require.NoError(t, json.Unmarshal(a.RuleTables, &rt))
+	assert.Len(t, rt.AVD, 25, "five attack modes against five defence modes")
+	assert.Len(t, rt.Cost, 4)
+	assert.Equal(t, 1, rt.Cost[0].MinLevel)
+	assert.Len(t, rt.Mods, 15, "six distances, eight life orders and the resistance")
+	refuses(t, []refusal{
+		{"no attack versus defence table", func(d map[string]any) { delete(tables(d), "attack_versus_defence") }, []string{"format 18 schema", "attack_versus_defence"}},
+		{"no contact cost table", func(d map[string]any) { delete(tables(d), "contact_cost") }, []string{"format 18 schema", "contact_cost"}},
+		{"no contact modifiers table", func(d map[string]any) { delete(tables(d), "contact_modifiers") }, []string{"format 18 schema", "contact_modifiers"}},
+		{"a distance code of another kind", func(d map[string]any) { tables(d)["contact_modifiers"].([]any)[0].(map[string]any)["code"] = "mammal" }, []string{"format 18 schema", "contact_modifiers/0"}},
+		{"a modifier above 0", func(d map[string]any) { tables(d)["contact_modifiers"].([]any)[0].(map[string]any)["modifier"] = 1 }, []string{"format 18 schema", "contact_modifiers/0/modifier"}},
+	})
 }

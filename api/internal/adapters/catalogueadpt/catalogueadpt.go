@@ -156,8 +156,10 @@ type disciplineDTO struct {
 	Name localized.Text `json:"name"`
 }
 
-// costDTO reads a cost that is a number or one of the words `variable` and
-// `contact` (the schema admits nothing else).
+// costDTO reads a cost that is a number, one of the words `variable` and
+// `contact`, or (format 18, ADR 0044 step 1.4) `{table: contact_cost}`, which
+// reads as a variable cost naming its table, or `{kind: contact, plus: n}`
+// (the schema admits nothing else).
 type costDTO catalogue.Cost
 
 func (c *costDTO) UnmarshalJSON(b []byte) error {
@@ -167,10 +169,26 @@ func (c *costDTO) UnmarshalJSON(b []byte) error {
 		return nil
 	}
 	var n int
-	if err := json.Unmarshal(b, &n); err != nil {
-		return fmt.Errorf("a cost is a number, variable or contact: %w", err)
+	if err := json.Unmarshal(b, &n); err == nil {
+		*c = costDTO{Amount: n}
+		return nil
 	}
-	*c = costDTO{Amount: n}
+	var obj struct {
+		Table string `json:"table"`
+		Kind  string `json:"kind"`
+		Plus  int    `json:"plus"`
+	}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return fmt.Errorf("a cost is a number, variable, contact or an object: %w", err)
+	}
+	switch {
+	case obj.Table != "":
+		*c = costDTO{Kind: catalogue.CostVariable, Table: obj.Table}
+	case obj.Kind == catalogue.CostContact:
+		*c = costDTO{Kind: catalogue.CostContact, Plus: obj.Plus}
+	default:
+		return fmt.Errorf("a cost object names a table or is a contact with a plus amount")
+	}
 	return nil
 }
 

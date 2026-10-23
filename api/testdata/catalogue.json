@@ -1,5 +1,5 @@
 {
-  "format": 17,
+  "format": 18,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1397,6 +1397,232 @@
       {"activity": "walking", "per_hour": 3},
       {"activity": "resting", "per_hour": 6},
       {"activity": "sleeping", "per_hour": 12}
+    ],
+    "attack_versus_defence": [
+      {
+        "attack": "psionic_blast",
+        "defence": "mind_blank",
+        "modifier": 0
+      },
+      {
+        "attack": "psionic_blast",
+        "defence": "thought_shield",
+        "modifier": 1
+      },
+      {
+        "attack": "psionic_blast",
+        "defence": "mental_barrier",
+        "modifier": 2
+      },
+      {
+        "attack": "psionic_blast",
+        "defence": "intellect_fortress",
+        "modifier": 3
+      },
+      {
+        "attack": "psionic_blast",
+        "defence": "tower_of_iron_will",
+        "modifier": 4
+      },
+      {
+        "attack": "mind_thrust",
+        "defence": "mind_blank",
+        "modifier": -1
+      },
+      {
+        "attack": "mind_thrust",
+        "defence": "thought_shield",
+        "modifier": 0
+      },
+      {
+        "attack": "mind_thrust",
+        "defence": "mental_barrier",
+        "modifier": 1
+      },
+      {
+        "attack": "mind_thrust",
+        "defence": "intellect_fortress",
+        "modifier": 2
+      },
+      {
+        "attack": "mind_thrust",
+        "defence": "tower_of_iron_will",
+        "modifier": -5
+      },
+      {
+        "attack": "ego_whip",
+        "defence": "mind_blank",
+        "modifier": -2
+      },
+      {
+        "attack": "ego_whip",
+        "defence": "thought_shield",
+        "modifier": -1
+      },
+      {
+        "attack": "ego_whip",
+        "defence": "mental_barrier",
+        "modifier": 0
+      },
+      {
+        "attack": "ego_whip",
+        "defence": "intellect_fortress",
+        "modifier": 1
+      },
+      {
+        "attack": "ego_whip",
+        "defence": "tower_of_iron_will",
+        "modifier": 2
+      },
+      {
+        "attack": "id_insinuation",
+        "defence": "mind_blank",
+        "modifier": -3
+      },
+      {
+        "attack": "id_insinuation",
+        "defence": "thought_shield",
+        "modifier": -2
+      },
+      {
+        "attack": "id_insinuation",
+        "defence": "mental_barrier",
+        "modifier": -1
+      },
+      {
+        "attack": "id_insinuation",
+        "defence": "intellect_fortress",
+        "modifier": 0
+      },
+      {
+        "attack": "id_insinuation",
+        "defence": "tower_of_iron_will",
+        "modifier": 1
+      },
+      {
+        "attack": "psychic_crush",
+        "defence": "mind_blank",
+        "modifier": -4
+      },
+      {
+        "attack": "psychic_crush",
+        "defence": "thought_shield",
+        "modifier": -3
+      },
+      {
+        "attack": "psychic_crush",
+        "defence": "mental_barrier",
+        "modifier": -2
+      },
+      {
+        "attack": "psychic_crush",
+        "defence": "intellect_fortress",
+        "modifier": -1
+      },
+      {
+        "attack": "psychic_crush",
+        "defence": "tower_of_iron_will",
+        "modifier": 0
+      }
+    ],
+    "contact_cost": [
+      {
+        "min_level": 1,
+        "max_level": 2,
+        "cost": 1
+      },
+      {
+        "min_level": 3,
+        "max_level": 4,
+        "cost": 2
+      },
+      {
+        "min_level": 5,
+        "max_level": 8,
+        "cost": 3
+      },
+      {
+        "min_level": 9,
+        "max_level": 20,
+        "cost": 5
+      }
+    ],
+    "contact_modifiers": [
+      {
+        "kind": "distance",
+        "code": "sight",
+        "modifier": 0
+      },
+      {
+        "kind": "distance",
+        "code": "mile_1",
+        "modifier": -1
+      },
+      {
+        "kind": "distance",
+        "code": "miles_10",
+        "modifier": -2
+      },
+      {
+        "kind": "distance",
+        "code": "miles_100",
+        "modifier": -3
+      },
+      {
+        "kind": "distance",
+        "code": "miles_1000",
+        "modifier": -4
+      },
+      {
+        "kind": "distance",
+        "code": "miles_10000",
+        "modifier": -5
+      },
+      {
+        "kind": "life_order",
+        "code": "mammal",
+        "modifier": -1
+      },
+      {
+        "kind": "life_order",
+        "code": "marsupial",
+        "modifier": -2
+      },
+      {
+        "kind": "life_order",
+        "code": "bird",
+        "modifier": -3
+      },
+      {
+        "kind": "life_order",
+        "code": "reptile_amphibian",
+        "modifier": -4
+      },
+      {
+        "kind": "life_order",
+        "code": "fish",
+        "modifier": -5
+      },
+      {
+        "kind": "life_order",
+        "code": "arachnid_insect",
+        "modifier": -6
+      },
+      {
+        "kind": "life_order",
+        "code": "monster",
+        "modifier": -7
+      },
+      {
+        "kind": "life_order",
+        "code": "plant",
+        "modifier": -8
+      },
+      {
+        "kind": "resistance",
+        "code": "resisting",
+        "modifier": -2
+      }
     ]
   },
   "equipment": {
@@ -1616,10 +1842,285 @@
     {"id": "telekinesis", "name": {"en": "Telekinesis", "fr": "Télékinésie"}, "discipline": "psychokinesis", "kind": "science", "score": {"ability": "wis", "modifier": -3}, "initial_cost": "variable", "maintenance": {"cost": "variable", "period": 1}, "prerequisites": [], "range": {"en": "30 yards", "fr": "30 m"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "single item", "fr": "1 unique objet"}, "description": {"en": "Telekinesis, or \"TK\" for short, is the ability to move objects through space without touching them. All telekinetic efforts tend to be physically taxing, because they involve real work. Moving small, light objects is relatively easy. As the objects become more massive, the task becomes significantly more difficult. The costs above (3 PSPs initially and I per round of maintenance) assume that the object being moved weighs 3 pounds or less. For heavier objects, these rules apply: ● The initial cost equals the objects weight in pounds. ● The maintenance cost is half the initial cost, rounded down. ● The characters power score is decreased by one-third of the objects weight in pounds, rounded down. For example, to telekinetically snatch a 15-pound battle axe from a rack, a psionicist must pay 15 PSPs and make a power check with a -5 modifier to his score.\n\nA psionicist using TK can move an object up to 60 feet per round. The object can serve as a weapon. In this case, the character attacks using his own THACO score, with a penalty equaling the object's weight modifier (one-third its weight, rounded down).", "fr": "La télékinésie, ou \"TK\" pour abréger, est la capacité de déplacer les objets à travers l'espace sans les toucher. Tous les efforts télékinétiques tendent à être physiquement fatigants car ils impliquent un travail réel. Le déplacement de petits objets légers est relativement facile. Au fur et à mesure que les objets deviennent plus massifs, la tâche devient sensiblement plus difficile.\n\nLe coût ci-dessus (3 PFP au départ, plus 1 point par round de maintien) suppose que l'objet déplacé pèse 1,5 kg ou moins. Pour les objets plus lourds les règles suivantes s'appliquent : e Le coût initial est égal au double du poids de l'objet en kilogrammes. * je coût de maintien est égal à la moitié du coût initial, arrondi à l'entier inférieur. e Ie score de pouvoir du personnage est dimi- Rué des deux tiers du poids de l'objet en kilogramme, arrondi à l'entier inférieur. Par exemple, pour déplacer une hache de bataille pesant 7,5 kg depuis un râtelier, un psioniste doit dépenser 15 PFP et faire un test de pouvoir avec un ajustement de -5 à son score. Un psioniste utilisant la TK peut déplacer un objet à une vitesse maximum de 18 mètres par round. L'objet peut servir d'arme. Dans ce cas, le personnage attaque en utilisant son propre TACO, avec une pénalité égalant l'ajustement de poids de l'objet (les deux tiers de son poids, arrondi à l'entier inférieur).\n\nScore de pouvoir — Le personnage peut lever simultanément un second objet d'un poids égal ou inférieur à celui du premier pour le même coût. 20 — Le psioniste commet une maladresse avec l'objet, le laissant tomber, etc.\n\nDévotions psychokinétiques"}, "power_score_result": {"en": "The character can lift a second item of equal or lesser weight simultaneously for the same cost."}, "natural_20_result": {"en": "The psionicist \"fumbles\" the item, knocking it over, etc. Psychokinetic Devotions"}},
     {"id": "mindlink", "name": {"en": "Mindlink", "fr": "Lien spirituel"}, "discipline": "telepathy", "kind": "science", "score": {"ability": "wis", "modifier": -5}, "initial_cost": "contact", "maintenance": {"cost": 8, "period": 1}, "prerequisites": ["contact"], "range": {"en": "unlimited", "fr": "illimitée"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "individual", "fr": "un individu"}, "description": {"en": "Mindlink allows the user to communicate wordlessly with any intelligent creature he can contact (Intelligence 5 or greater on a human scale). This is two-way communication. It is not the same as mind-reading because the psionicist only receives thoughts which the other party wants to send. Language is not a barrier. Distance affects the telepath's ability to make contact, but it has no other effect (see \"contact\").", "fr": "Le lien spirituel permet à l'utilisateur de communiquer sans paroles avec n'importe quelle créature intelligente qu'il peut contacter (intelligence de 5 minimum, selon des critères humains). C'est une communication à double sens. Ce n'est pas identique à une lecture spirituelle, car le psioniste ne fait pas que recevoir les pensées que l'autre veut bien lui envoyer. Le langage ne constitue pas une barrière. La distance affecte la capacité télépathique pour prendre contact, mais n'a pas d'autre effet (voir \"Contact\").\n\nScore de pouvoir — Le lien spirituel permet d'obtenir une réponse à une question (voir \"Sonde\"). 20 — Le psioniste doit réussir un jet de sauvegarde contre la pétrification, sous peine d'être étourdi pendant 1d4 rounds."}, "power_score_result": {"en": "The mindlink allows one probing question (see probe)."}, "natural_20_result": {"en": "The psionicist must save vs. petrifica-tion or be stunned for 1d4 rounds."}},
     {"id": "psionic_blast", "name": {"en": "Psionic Blast", "fr": "Souffle psionique"}, "discipline": "telepathy", "kind": "attack_mode", "slot": "science", "score": {"ability": "wis", "modifier": -5}, "initial_cost": 10, "prerequisites": [], "range": {"en": "20/40/60 yards", "fr": "20/40/60 m"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "individual", "fr": "un individu"}, "description": {"en": "Psionic blast is a wave of brain force which can jolt a subject's mind like shocking news. This is one of the five telepathic attacks used to establish contact with another psionicist. (An illithids mind blast is not the same.) If this power is used against a mind that has already been contacted, the subject must save vs. death. Failure means he loses 80% of his remaining hit points, but only in his mind. The hit points are still there; he only thinks they're gone. He will pass out when the remaining 20% of his hit points are gone butwon't die unless all of them are actually lost. In any case, this effect wears off after six turns. At that time, an unconscious character awakens. This power has three ranges: short, medium, and long. At medium range, the psioni-cist's power score is reduced by two. At long range, it is reduced by five. Power Score: A victim who fails his save passes out for one turn. 20: No other effect.", "fr": "Le souffle psionique est une vague de force cérébrale qui peut bousculer l'esprit de quelqu'un comme pourrait le faire une nouvelle traumatisante. C'est l'une des cinq attaques télépathiques utilisées pour établir un contact avec un autre psioniste (le souffle psionique d'un illithid n'est pas le même). Si le pouvoir est utilisé contre un esprit qui a déjà été contacté, le sujet doit faire un jet de sauvegarde contre la mort. Un échec signifie une perte de 80% de ses points de vie restants, mais seulement dans eN. \\ 7er : AN 7.\n\nLe 77 L L) Sonde : nous avons les moyens de vous faire penser. Télépathie à son esprit. Les points de vie sont toujours là ; il pense simplement qu'ils sont perdus. Il s'évanouira quand les 20% de points de vie restants seront perdus (dans son esprit), mais ne mourra pas à moins qu'ils ne soient tous réellement perdus. Dans tous les cas, cet effet disparaît après six tours. À ce moment, un personnage inconscient se réveillera. Ce pouvoir a trois portées : courte, moyenne, et longue. À moyenne portée, le score de pouvoir est réduit de deux. À longue portée, il est réduit de cinq.\n\nScore de pouvoir — La victime échouant à son jet de sauvegarde s'évanouit pendant un tour. 20 — Pas d'autre effet."}},
-    {"id": "contact", "name": {"en": "Contact", "fr": "Contact"}, "discipline": "telepathy", "kind": "devotion", "score": {"ability": "wis", "modifier": 0}, "initial_cost": "variable", "maintenance": {"cost": 1, "period": 1}, "prerequisites": [], "range": {"en": "special", "fr": "spécial"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "individual", "fr": "un individu"}, "description": {"en": "Contact must be established before virtually any telepathic power can be used on another character or creature. It is just what its name implies-contact between the minds of the tel-epath and another character or creature. Contact does not allow communication by itself; it is merely the conduit for other telepathic exchanges. Many telepathic powers list \"contact\" as their initial cost. That means contact must be established in a previous round before those powers can be used. As long as contact is maintained, the psionicist can use other powers which require it, and can even switch (using attraction and then mindlink on the same subject after contact was established, for example). A psionicist can maintain contact with more than one subject at a time, but he must contact each one individually, and pay a maintenance cost for each use of the power. For example, if a psionicist wishes to inspire awe in two subjects, he must establish and maintain contact with each one separately. Once contact is established, it costs 1 PSP per round to maintain. The psionicist can perform any other action while maintaining contact. If he uses another telepathic power on the same subject while maintaining contact, the contact power is \"free\". (The cost of maintaining contact is covered by the other power's cost.)\n\nEstablishing Contact: The initial cost of contact is based on the target's level or hit dice, as shown below.\n\nA psionicist cannot contact a subject that he knows nothing about. In other words, he can't use this power to scan around and \"see what's out there.\" He must either have his subject in sight or know specifically who or what he is looking for. He cannot, for example, try to contact any random ore which may or may not be standing behind a closed door. However, he can try to contact a particular ore which he has seen before. If a psionicist fails to establish contact, he can try again the next round. Failure doesn't necessarily mean the targets mind cannot be contacted. Rather, it means the target has not been found yet. The psionicist can continue searching. Several factors can make telepathic contact difficult to establish: ● how far the target is (distance) ● resistance by the target-especially if the target is a psionicist ● whether or not the target is an intelligent mammal Each factor is described below.\n\nDistance: The greater the distance between the two minds, the more difficult it usually becomes to make contact. If the psionicist can see the target-either with normal vision or by using psionic powers-distance is not a factor. If the psionicist cannot see his target, normal range modifiers apply. Simply knowing where to look does not constitute \"seeing the target\" The maximum range for establishing contact is 10,000 miles when a psionicist cannot view his subject. Contact can be maintained across any distance, however; it is not broken if a contacted subject moves out of range. There is one exception: contact cannot be extended beyond a crystal sphere. Resistance: An untrained character-i.e., a nonpsionicist-can actively resist intrusion, resulting in a-2 modifier to the psionicist's power score. To resist, the character fills his mind with a barrage of thoughts and emotions-much as a child avoids a lecture by plugging his ears and yelling. For example, a character might repeat a poem ad nauseam, or scream battle cries. However, even these efforts won't work unless 1) the character is specifically resisting psychic intrusion, and 2) resisting intrusion is his sole activity. If the character tries to fight or cast a spell, for example, his psychic defense has too many \"holes\" to be useful. Unless a wild talent knows a telepathic defense mode, he is as vulnerable to contact as any nonpsionicist. Psionicists (and psionic creatures) are much better at resisting contact. In fact, this power won't work against them unless they intentionally drop their natural defenses. They must allow another psionicist to use contact on them, and can exclude some contacts while remaining open to others. If a psionicist resists, contact can only be established through mental attacks: psychic crush, ego whip, id insinuation, mind thrust, or psionic blast. See Chapter 2, \"Psionic Combat,\" for more information. Unusual Subjects: Contact can also be established with nonhuman minds, even plants. The further the subject is removed from mammals, the more difficult it becomes to establish contact. Modifiers that affect power scores are listed on the following page.\n\nContact Score These modifiers are in addition to any distance modifiers that may apply. That means contacting a distant plant or monster is an uncertain proposition at best.\n\nBreaking Contact: Contact is not severed until the psionicist breaks it off (fails to maintain it). If the person contacted is a psionicist, he may also do something to sever it. A psionicist often can eject an unwanted intruder (see \"ejection\").\n\nOptional Rule: The minds of very intelligent beings are more difficult to latch onto. Increase the cost of contact by adding the creature's \"# of Languages,\" minus two, as shown on Table 4 in Chapter I of the Player's Handbook. For example, a creature with Intelligence 17 knows six languages. The cost of contacting this creatures mind is increased by four.", "fr": "Un contact doit être établi avant que tout pouvoir télépathique puisse être virtuellement utilisé sur un autre personnage ou une autre créature. Ce pouvoir n'est rien d'autre que ce que signifie son nom — un contact entre l'esprit du télépathe et celui d'un autre personnage ou d'une autre créature. Il ne permet pas en lui-même une communication ; il est simplement la condition indispensable pour d'autres échanges télépathiques.\n\nDe nombreux pouvoirs télépathiques indiquent \"contact\" en guise de coût initial. Cela signifie qu'un contact doit avoir été établi lors d'un round précédent pour que ces pouvoirs puissent ensuite être utilisés. Tant que le contact est maintenu, le psioniste peut utiliser d'autres pouvoirs l'exigeant, et même en changer (en utilisant attirance puis lien spirituel sur le même sujet une fois que le contact a été établi, par exemple).\n\nUn psioniste peut maintenir simultanément un contact avec plus d'un sujet à la fois, mais il doit établir chaque contact individuellement, et payer le coût de maintien pour chaque utilisation de ce pouvoir. Par exemple, si un psioniste souhaite inspirer la crainte à deux sujets, il doit établir et maintenir le contact avec chacun séparément.\n\nUne fois que le contact est établi, le coût de maintien est de 1 PFP par round. Le psioniste peut effectuer n'importe quelle autre action pendant qu'il maintient un contact. S'il utilise un autre pouvoir télépathique sur le même sujet pendant qu'il maintient un contact, le maintien de ce dernier pouvoir est gratuit (son coût de maintien est couvert par les autres coûts de pouvoir).\n\nEtablissement du contact : Le coût initial du contact dépend du niveau ou du nombre de dés de vie de la cible, comme cela est indiqué ci-dessous. 82 e Chapitre Sept 1 à 5 niveaux ou dés de vie 3 PFP/round 6 à 10 niveaux ou dés de vie 8 PFP/round 11 à 15 niveaux ou dés de vie 13 PFP/round 16 à 20 niveaux ou dés de vie 18 PFP/round Un psioniste ne peut contacter un sujet dont il ne sait rien. En d'autres termes, il ne peut utiliser ce pouvoir pour sonder les environs et voir ce qui s'y passe, Il doit soit avoir son sujet en vue, soit connaître particulièrement celle ou celui qu'il cherche. Il ne peut pas, par exemple, tenter de contacter n'importe quel orque pris au hasard qui peut ou non se tenir derrière une porte fermée. Cependant, il peut essayer de tenter de contacter un orque particulier qu'il a déjà vu auparavant.\n\nSi le psioniste échoue dans l'établissement du contact, il peut réessayer au prochain round. L'échec ne signifie pas nécessairement que l'esprit de la cible ne peut être contacté. Il signifie plutôt que la cible n'a pas été trouvée. Le psioniste peut continuer sa recherche.\n\nPlusieurs facteurs peuvent rendre un contact télépathique plus difficile à établir : * à quelle distance se trouve la cible. * résistance de la cible — en particulier si c'est un psioniste. e si la cible est ou non un mammifère intelligent.\n\nChaque facteur est décrit ci-dessous.\n\nDistance : Plus la distance est grande entre les deux esprits, plus, en général, le contact devient difficile à établir. Si le psioniste peut voir la cible — soit avec sa vision normale, soit par des pouvoirs psioniques — la distance n'est pas un facteur. Si le psioniste ne peut voir la cible, les modificateurs normaux de distance s'appliquent. La simple connaissance de l'endroit où il faut regarder ne constitue pas en soi le fait de \"voir la cible\". Distance Ajustement du score de pouvoir Champ de vision 0 1,6 km - 16 km 160 km - 1.600 km - 16.000 km = La distance maximale pour établir le contact est de 16.000 km si le psioniste ne peut pas voir son sujet. Mais le contact peut être maintenu à travers n'importe quelle distance ; il n'est pas rompu si le sujet contacté se déplace hors de portée. Il y a une exception : le contact ne peut être étendu au-delà d'une sphère de cristal.\n\nRésistance : Un personnage non entraîné — c'est-àdire un non psioniste — peut activement résister à l'intrusion, entraînant un ajustement de -2 au score du pouvoir du psioniste. Pour résister, le personnage remplit son esprit d'un barrage de pensées et d'émotions — un peu comme un enfant évite une leçon en se bouchant les oreilles et en hurlant. Par exemple, un personnage peut répéter un poème ad nauseam, ou pousser un cri de guerre. Cependant, même ces efforts ne seront pas efficaces sauf si 1) le personnage est particulièrement résistant à l'intrusion, et 2) la résistance à l'intrusion est sa seule activité. Si le personnage essaye, par exemple, de combattre ou de lancer un sort, sa défense psychique comporte trop de trous pour être utile. Sauf s'il connaît un mode de défense télépathique, quelqu'un ayant un talent natif est aussi vulnérable à ce pouvoir que n'importe quel non psioniste. Les psionistes (et les créatures ayant des pouvoirs psioniques) y sont bien plus résistants. En fait, ce pouvoir ne fonctionne pas contre eux à moins qu'ils ne baissent intentionnellement leurs défenses naturelles. Ils doivent permettre à un autre psioniste d'utiliser le contact sur eux, et peuvent exclure certains contacts tout en restant ouverts à d'autres. Si un psioniste résiste, le contact ne peut être établi que par des attaques mentales : écrasement psychique, cinglement de l'ego, excitation du ça, pression mentale, ou souffle psionique. Voir Chapitre 2, \"Combat Psionique\", pour plus d'informations. Sujets inhabituels : Le contact peut également être établi avec des esprits non humains, même des plantes. Plus le sujet est éloigné des mammifères, plus le contact devient difficile à établir. Les ajustements qui affectent les scores de pouvoir sont donnés ci-dessous.\n\nOrdre biologique Ajustement du score de pouvoir Mammifères (sauf marsupiaux) -l Oiseaux -3 Reptiles, amphibiens -4 Poissons -5 Arachnides, insectes 6 Monstres -7 Plantes 8 Ces ajustements viennent en supplément de tout ajustement applicable en fonction de la distance. Cela signifie que contacter une plante ou un monstre éloigné constitue au mieux une affaire incertaine. Rupture du contact : Le contact n'est pas coupé tant que le psioniste ne le rompt pas (échec dans le maintien). Si la personne contactée est un psioniste, elle peut également faire quelque chose pour le briser. Un psioniste peut souvent expulser un intrus non désiré (voir \"Expulsion\").\n\nRègle optionnelle : Les esprits des créatures très intelligentes sont plus difficiles à saisir. Augmenter le coût du contact en ajoutant le \"Nombre de langages\" moins deux, comme le montre la Table 4 du Chapitre 1 du Manuel des joueurs. Par exemple, une créature avec 17 en Intelligence connaît six langues. Le coût de contact de l'esprit de cette créature est augmenté de quatre points.\n\nScore de pouvoir — Le contact est maintenu gratuitement pendant quatre rounds. 20 — Un contact ultérieur avec cet esprit est impossible à ce niveau d'expérience."}, "power_score_result": {"en": "The contact is maintained for four rounds for free."}, "natural_20_result": {"en": "Further contact with this mind is impossible at this experience level. Daydream Power Score: Wis Initial Cost: contact Maintenance Cost: 3/round Range: unlimited Preparation Time: 0 Area of Effect: individual Prerequisite: mindlink, contact By using this power, the telepath causes someone's mind to wander. This is only effective against characters with Intelligence 14 or less who are not concentrating hard on the task before them, but are just going about their business in a casual, relaxed manner. Once affected, the daydreamer pays little attention to his surroundings, making it much easier for someone to pick his pocket, slip past him unobserved, or otherwise escape his notice. Thieves gain a 20% bonus on their pick pockets, move silently, and hide in shadows scores. Other characters can perform these tasks as an average 4th level thief (pick pockets, 45%; move silently, 33%; hide in shadows, 25%). The DM can assign chances for success to other types of skulking and skullduggery. Power Score: Increase the bonuses to 30% for thieves and 5th level for others. 20: The victim realizes someone is toying with his mind."}},
+    {"id": "contact", "name": {"en": "Contact", "fr": "Contact"}, "discipline": "telepathy", "kind": "devotion", "score": {"ability": "wis", "modifier": 0}, "initial_cost": { "table": "contact_cost" }, "maintenance": {"cost": 1, "period": 1}, "prerequisites": [], "range": {"en": "special", "fr": "spécial"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "individual", "fr": "un individu"}, "description": {"en": "Contact must be established before virtually any telepathic power can be used on another character or creature. It is just what its name implies-contact between the minds of the tel-epath and another character or creature. Contact does not allow communication by itself; it is merely the conduit for other telepathic exchanges. Many telepathic powers list \"contact\" as their initial cost. That means contact must be established in a previous round before those powers can be used. As long as contact is maintained, the psionicist can use other powers which require it, and can even switch (using attraction and then mindlink on the same subject after contact was established, for example). A psionicist can maintain contact with more than one subject at a time, but he must contact each one individually, and pay a maintenance cost for each use of the power. For example, if a psionicist wishes to inspire awe in two subjects, he must establish and maintain contact with each one separately. Once contact is established, it costs 1 PSP per round to maintain. The psionicist can perform any other action while maintaining contact. If he uses another telepathic power on the same subject while maintaining contact, the contact power is \"free\". (The cost of maintaining contact is covered by the other power's cost.)\n\nEstablishing Contact: The initial cost of contact is based on the target's level or hit dice, as shown below.\n\nA psionicist cannot contact a subject that he knows nothing about. In other words, he can't use this power to scan around and \"see what's out there.\" He must either have his subject in sight or know specifically who or what he is looking for. He cannot, for example, try to contact any random ore which may or may not be standing behind a closed door. However, he can try to contact a particular ore which he has seen before. If a psionicist fails to establish contact, he can try again the next round. Failure doesn't necessarily mean the targets mind cannot be contacted. Rather, it means the target has not been found yet. The psionicist can continue searching. Several factors can make telepathic contact difficult to establish: ● how far the target is (distance) ● resistance by the target-especially if the target is a psionicist ● whether or not the target is an intelligent mammal Each factor is described below.\n\nDistance: The greater the distance between the two minds, the more difficult it usually becomes to make contact. If the psionicist can see the target-either with normal vision or by using psionic powers-distance is not a factor. If the psionicist cannot see his target, normal range modifiers apply. Simply knowing where to look does not constitute \"seeing the target\" The maximum range for establishing contact is 10,000 miles when a psionicist cannot view his subject. Contact can be maintained across any distance, however; it is not broken if a contacted subject moves out of range. There is one exception: contact cannot be extended beyond a crystal sphere. Resistance: An untrained character-i.e., a nonpsionicist-can actively resist intrusion, resulting in a-2 modifier to the psionicist's power score. To resist, the character fills his mind with a barrage of thoughts and emotions-much as a child avoids a lecture by plugging his ears and yelling. For example, a character might repeat a poem ad nauseam, or scream battle cries. However, even these efforts won't work unless 1) the character is specifically resisting psychic intrusion, and 2) resisting intrusion is his sole activity. If the character tries to fight or cast a spell, for example, his psychic defense has too many \"holes\" to be useful. Unless a wild talent knows a telepathic defense mode, he is as vulnerable to contact as any nonpsionicist. Psionicists (and psionic creatures) are much better at resisting contact. In fact, this power won't work against them unless they intentionally drop their natural defenses. They must allow another psionicist to use contact on them, and can exclude some contacts while remaining open to others. If a psionicist resists, contact can only be established through mental attacks: psychic crush, ego whip, id insinuation, mind thrust, or psionic blast. See Chapter 2, \"Psionic Combat,\" for more information. Unusual Subjects: Contact can also be established with nonhuman minds, even plants. The further the subject is removed from mammals, the more difficult it becomes to establish contact. Modifiers that affect power scores are listed on the following page.\n\nContact Score These modifiers are in addition to any distance modifiers that may apply. That means contacting a distant plant or monster is an uncertain proposition at best.\n\nBreaking Contact: Contact is not severed until the psionicist breaks it off (fails to maintain it). If the person contacted is a psionicist, he may also do something to sever it. A psionicist often can eject an unwanted intruder (see \"ejection\").\n\nOptional Rule: The minds of very intelligent beings are more difficult to latch onto. Increase the cost of contact by adding the creature's \"# of Languages,\" minus two, as shown on Table 4 in Chapter I of the Player's Handbook. For example, a creature with Intelligence 17 knows six languages. The cost of contacting this creatures mind is increased by four.", "fr": "Un contact doit être établi avant que tout pouvoir télépathique puisse être virtuellement utilisé sur un autre personnage ou une autre créature. Ce pouvoir n'est rien d'autre que ce que signifie son nom — un contact entre l'esprit du télépathe et celui d'un autre personnage ou d'une autre créature. Il ne permet pas en lui-même une communication ; il est simplement la condition indispensable pour d'autres échanges télépathiques.\n\nDe nombreux pouvoirs télépathiques indiquent \"contact\" en guise de coût initial. Cela signifie qu'un contact doit avoir été établi lors d'un round précédent pour que ces pouvoirs puissent ensuite être utilisés. Tant que le contact est maintenu, le psioniste peut utiliser d'autres pouvoirs l'exigeant, et même en changer (en utilisant attirance puis lien spirituel sur le même sujet une fois que le contact a été établi, par exemple).\n\nUn psioniste peut maintenir simultanément un contact avec plus d'un sujet à la fois, mais il doit établir chaque contact individuellement, et payer le coût de maintien pour chaque utilisation de ce pouvoir. Par exemple, si un psioniste souhaite inspirer la crainte à deux sujets, il doit établir et maintenir le contact avec chacun séparément.\n\nUne fois que le contact est établi, le coût de maintien est de 1 PFP par round. Le psioniste peut effectuer n'importe quelle autre action pendant qu'il maintient un contact. S'il utilise un autre pouvoir télépathique sur le même sujet pendant qu'il maintient un contact, le maintien de ce dernier pouvoir est gratuit (son coût de maintien est couvert par les autres coûts de pouvoir).\n\nEtablissement du contact : Le coût initial du contact dépend du niveau ou du nombre de dés de vie de la cible, comme cela est indiqué ci-dessous. 82 e Chapitre Sept 1 à 5 niveaux ou dés de vie 3 PFP/round 6 à 10 niveaux ou dés de vie 8 PFP/round 11 à 15 niveaux ou dés de vie 13 PFP/round 16 à 20 niveaux ou dés de vie 18 PFP/round Un psioniste ne peut contacter un sujet dont il ne sait rien. En d'autres termes, il ne peut utiliser ce pouvoir pour sonder les environs et voir ce qui s'y passe, Il doit soit avoir son sujet en vue, soit connaître particulièrement celle ou celui qu'il cherche. Il ne peut pas, par exemple, tenter de contacter n'importe quel orque pris au hasard qui peut ou non se tenir derrière une porte fermée. Cependant, il peut essayer de tenter de contacter un orque particulier qu'il a déjà vu auparavant.\n\nSi le psioniste échoue dans l'établissement du contact, il peut réessayer au prochain round. L'échec ne signifie pas nécessairement que l'esprit de la cible ne peut être contacté. Il signifie plutôt que la cible n'a pas été trouvée. Le psioniste peut continuer sa recherche.\n\nPlusieurs facteurs peuvent rendre un contact télépathique plus difficile à établir : * à quelle distance se trouve la cible. * résistance de la cible — en particulier si c'est un psioniste. e si la cible est ou non un mammifère intelligent.\n\nChaque facteur est décrit ci-dessous.\n\nDistance : Plus la distance est grande entre les deux esprits, plus, en général, le contact devient difficile à établir. Si le psioniste peut voir la cible — soit avec sa vision normale, soit par des pouvoirs psioniques — la distance n'est pas un facteur. Si le psioniste ne peut voir la cible, les modificateurs normaux de distance s'appliquent. La simple connaissance de l'endroit où il faut regarder ne constitue pas en soi le fait de \"voir la cible\". Distance Ajustement du score de pouvoir Champ de vision 0 1,6 km - 16 km 160 km - 1.600 km - 16.000 km = La distance maximale pour établir le contact est de 16.000 km si le psioniste ne peut pas voir son sujet. Mais le contact peut être maintenu à travers n'importe quelle distance ; il n'est pas rompu si le sujet contacté se déplace hors de portée. Il y a une exception : le contact ne peut être étendu au-delà d'une sphère de cristal.\n\nRésistance : Un personnage non entraîné — c'est-àdire un non psioniste — peut activement résister à l'intrusion, entraînant un ajustement de -2 au score du pouvoir du psioniste. Pour résister, le personnage remplit son esprit d'un barrage de pensées et d'émotions — un peu comme un enfant évite une leçon en se bouchant les oreilles et en hurlant. Par exemple, un personnage peut répéter un poème ad nauseam, ou pousser un cri de guerre. Cependant, même ces efforts ne seront pas efficaces sauf si 1) le personnage est particulièrement résistant à l'intrusion, et 2) la résistance à l'intrusion est sa seule activité. Si le personnage essaye, par exemple, de combattre ou de lancer un sort, sa défense psychique comporte trop de trous pour être utile. Sauf s'il connaît un mode de défense télépathique, quelqu'un ayant un talent natif est aussi vulnérable à ce pouvoir que n'importe quel non psioniste. Les psionistes (et les créatures ayant des pouvoirs psioniques) y sont bien plus résistants. En fait, ce pouvoir ne fonctionne pas contre eux à moins qu'ils ne baissent intentionnellement leurs défenses naturelles. Ils doivent permettre à un autre psioniste d'utiliser le contact sur eux, et peuvent exclure certains contacts tout en restant ouverts à d'autres. Si un psioniste résiste, le contact ne peut être établi que par des attaques mentales : écrasement psychique, cinglement de l'ego, excitation du ça, pression mentale, ou souffle psionique. Voir Chapitre 2, \"Combat Psionique\", pour plus d'informations. Sujets inhabituels : Le contact peut également être établi avec des esprits non humains, même des plantes. Plus le sujet est éloigné des mammifères, plus le contact devient difficile à établir. Les ajustements qui affectent les scores de pouvoir sont donnés ci-dessous.\n\nOrdre biologique Ajustement du score de pouvoir Mammifères (sauf marsupiaux) -l Oiseaux -3 Reptiles, amphibiens -4 Poissons -5 Arachnides, insectes 6 Monstres -7 Plantes 8 Ces ajustements viennent en supplément de tout ajustement applicable en fonction de la distance. Cela signifie que contacter une plante ou un monstre éloigné constitue au mieux une affaire incertaine. Rupture du contact : Le contact n'est pas coupé tant que le psioniste ne le rompt pas (échec dans le maintien). Si la personne contactée est un psioniste, elle peut également faire quelque chose pour le briser. Un psioniste peut souvent expulser un intrus non désiré (voir \"Expulsion\").\n\nRègle optionnelle : Les esprits des créatures très intelligentes sont plus difficiles à saisir. Augmenter le coût du contact en ajoutant le \"Nombre de langages\" moins deux, comme le montre la Table 4 du Chapitre 1 du Manuel des joueurs. Par exemple, une créature avec 17 en Intelligence connaît six langues. Le coût de contact de l'esprit de cette créature est augmenté de quatre points.\n\nScore de pouvoir — Le contact est maintenu gratuitement pendant quatre rounds. 20 — Un contact ultérieur avec cet esprit est impossible à ce niveau d'expérience."}, "power_score_result": {"en": "The contact is maintained for four rounds for free."}, "natural_20_result": {"en": "Further contact with this mind is impossible at this experience level. Daydream Power Score: Wis Initial Cost: contact Maintenance Cost: 3/round Range: unlimited Preparation Time: 0 Area of Effect: individual Prerequisite: mindlink, contact By using this power, the telepath causes someone's mind to wander. This is only effective against characters with Intelligence 14 or less who are not concentrating hard on the task before them, but are just going about their business in a casual, relaxed manner. Once affected, the daydreamer pays little attention to his surroundings, making it much easier for someone to pick his pocket, slip past him unobserved, or otherwise escape his notice. Thieves gain a 20% bonus on their pick pockets, move silently, and hide in shadows scores. Other characters can perform these tasks as an average 4th level thief (pick pockets, 45%; move silently, 33%; hide in shadows, 25%). The DM can assign chances for success to other types of skulking and skullduggery. Power Score: Increase the bonuses to 30% for thieves and 5th level for others. 20: The victim realizes someone is toying with his mind."}},
     {"id": "mind_blank", "name": {"en": "Mind Blank", "fr": "Néant spirituel"}, "discipline": "telepathy", "kind": "defence_mode", "score": {"ability": "wis", "modifier": -7}, "initial_cost": 0, "maintenance": {"cost": 0, "period": 1}, "prerequisites": [], "range": {"en": "0", "fr": "0"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "personal", "fr": "personnel"}, "description": {"en": "Mind blank is one of five telepathic defenses against unwanted contact. It attempts to hide the mind from attack, making its parts unidentifiable. This defense is particularly effective against a psionic blast and id insinuation. (See Chapter 2, \"Psionic Combat,\" for details.) Mind blank is unique. Unlike the other four defense modes, it costs nothing to maintain. In fact, a character can still recover PSPs while using this power. That's because mind blank is almost instinctual; if a character knows it, it's nearly always active, even when he's sleeping or meditating. The power is inactive only if 1) the player announces it, or 2) the character uses another defense mode. Even though mind blank has no PSP cost, it still constitutes psionic activity. If the power is active, a character is vulnerable to detection. He still may attract psionic feeders, or suffer some other unpleasant effect. A psionicist can use one other psionic power (but not another defense mode) in the same round that he uses mind blank.", "fr": "Le néant spirituel est l'une des cinq défenses télépathiques. Il tente de dissimuler l'esprit à une attaque, rendant ses composantes non identifiables. Cette défense est particulièrement efficace contre un souffle psionique ou une excitation du ça (voir Chapitre 2, \"Combat psionique\" pour plus de détails).\n\nLe néant spirituel est unique. À la différence des quatre autres modes de défense, son maintien ne coûte rien. En fait, un personnage peut toujours récupérer des PFP pendant qu'il utilise ce pouvoir. Ceci est dû au fait que le néant spirituel est pour sa plus grande partie instinctif ; si un personnage le connaît, ce pouvoir est presque toujours actif, même si le personnage dort ou médite. La pouvoir est inactif que si : 1) le joueur l'annonce ou 2) le personnage utilise un autre mode de défense. L'obstacle spirituel est le fléau du magicien et le compagnon du télépathe. Il donne au psioniste une résistance à la magie de 75% contre les sorts de charme, confusion, ESP, terreur, débilité mentale, sommeil et suggestion. Elle offre également une protection complète contre les possessions de toute sorte.\n\nDe plus, l'obstacle spirituel protège le psioniste contre tous les pouvoirs télépathiques, sauf les cinq attaques pouvant établir un contact. Aucun pouvoir télépathique ne peut affecter un esprit protégé par un obstacle à moins que l'attaque télépathique l'emporte dans un combat psychique (le défenseur utilise l'obstacle spirituel).\n\nScore de pouvoir — Le télépathe gagne un bonus de +5 à son score de pouvoir quand il se défend dans un combat psychique. 20 — Le jet de sauvegarde du télépathe contre les sorts énumérés ci-dessus subit une pénalité de - 4 pendant une heure.\n\nTélépathie * 89 As se"}, "power_score_result": {"en": "No other effect."}, "natural_20_result": {"en": "The character cannot use mind blank for 1d4 hours."}},
     {"id": "mind_thrust", "name": {"en": "Mind Thrust", "fr": "Pression mentale"}, "discipline": "telepathy", "kind": "attack_mode", "score": {"ability": "wis", "modifier": -2}, "initial_cost": 2, "prerequisites": ["mindlink", "contact"], "range": {"en": "30/60/90 yards", "fr": "30/60/90 m"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "individual", "fr": "un individu"}, "description": {"en": "Mind thrust is one of the five telepathic attacks used to establish contact with another psionicist's mind. It is a stabbing attack which seeks to \"short\" the synapses of the defender. If the subject's mind has already been contacted, and he has psionic powers, then this power can do some damage. The subject loses the use of one power, chosen randomly, for 2d6 days. Beyond establishing contact, mind thrust has no effect on creatures or characters without psionic powers. This power has three ranges: short, medium, and long. At medium range, the psionicist's power score is reduced by two. At long range, it's reduced by five. Power Score: No other effect. 20: The telepath loses all tangents, but not contacts.", "fr": "La pression mentale est l'une des cinq attaques spirituelles utilisées pour établir le contact avec un autre esprit de psioniste. C'est une attaque \"d'estoc\" qui cherche à court-circuiter les synapses du défenseur.\n\nSi l'esprit du sujet a déjà été contacté et qu'il a des pouvoirs psioniques, alors le pouvoir peut provoquer certains dégâts. Le sujet perd l'utilisation d'un pouvoir, choisi aléatoirement, pendant 1d6 rounds. La pression mentale n'a aucun autre effet sur les créatures ou les personnages sans pouvoir psionique, hormis l'établissement du contact. Ce pouvoir a trois portées : courte, moyenne, et longue. A moyenne portée, le score de pouvoir est réduit de deux. A longue portée, il est réduit de cinq.\n\nScore de pouvoir — Pas d'autre effet. 20 — Le télépathe perd toutes ses tangentes, mais pas ses contacts."}},
     {"id": "empower", "name": {"en": "Empower", "fr": "Octroi de pouvoir"}, "discipline": "metapsionics", "kind": "science", "score": {"ability": "wis", "modifier": -12}, "initial_cost": "variable", "prerequisites": [], "min_level": 10, "range": {"en": "touch", "fr": "touché"}, "preparation_time": {"en": "0", "fr": "0"}, "area": {"en": "1 item", "fr": "1 objet"}, "description": {"en": "This is not a tool for weak or inexperienced characters. Empower allows a psionicist to im- bue an item with rudimentary intelligence and psionic ability. The process, which requires extraodinary time and effort, is described below. Item Requirements. An item must meet two requirements before it can be empowered. First, it must be of exceptional quality-worth 250% to 500% of the normal cost for an item of its type. Second, it must be new. The process of empowering must begin within 48 hours after the item is manufactured. If it is delayed longer, the item cannot be empowered. (If the psionicist still tries, he automatically fails Step One below, expending 50 PSPs.) If the item meets these two requirements, the psionicist can begin the empowerment.\n\nStep One. At the start of each day, the psionicist must first prepare the item to receive psionic power. This costs 50 PSPs and requires a power check. If this check fails, the day is wasted; no further progress can be made until the next day.\n\nStep Two. If the item has been prepared, the psionicist can give it access to a discipline. It can have access to only one discipline, never more, and the psionicist himself must have access to it. This step costs 100 PSPs and requires a power check.\n\nStep Three. The psionicist can attempt to empower the item with any single power he knows within the chosen discipline. (The item must have been properly prepared on the same day.) The psionicist must make two successful power checks: first, a check for the chosen power (using the appropriate power score), and second, another empower check. If both checks succeed, the item has that psionic power, with a score two points below the psionicist's. If Step Three is successful, the psionicist expends another 100 PSPs. (Failure means he expends half that amount, as usual.)\n\nStep Four. The psionicist can imbue the item with other powers by repeating Step Three. The item can acquire one power per day, provided it has been properly prepared (see Step One). Step Five. When the item has acquired all the powers which the psionicist intends to give it, the psionicist can seal those powers within the item. To do this, he must prepare the item one more time (expending 50 PSPs), and make an endowment power check one last time. If the item is sealed successfully, it can never gain any additional powers-but it can't lose them, either. An item that has not been sealed will lose one power per month until it is just a normal object again. An empowered object has 8 PSPs per devotion and 12 per science. It has Intelligence equal to its maker's Intelligence minus 1d6 points, with a minimum of 12. Its ego is 2 points per devotion and 3 points per science. Unless it was empowered with another telepathic power, it communicates as indicated on Table 113, \"Weapon Intelligence and Capabilities\" in the AD&D 2nd Edition DMG (p. 186). Its alignment matches its creator's. The weapon has its own personality, however, and like all intelligent weapons, it will try to assert its independence at every opportunity. The empowering process must be unbroken. If a day passes in which the psionicist does not at least try to prepare the object, it is finished as is. He cannot even try to seal the powers; they will wear off over the course of time.", "fr": "Ce n'est pas un instrument pour les faibles ou les inexpérimentés. L'octroi de pouvoir permet au psioniste d'imprégner un objet d'une intelligence rudimentaire et de capacité psionique. Le procédé, qui nécessite un temps et un effort extraordinaires, est décrit ci-dessous.\n\nConditions pour les objets : Un objet doit satisfaire à deux conditions avant de pouvoir recevoir le pouvoir. Il doit être, d'une part, neuf et, d'autre part, d'une qualité extraordinaire — sa valeur devant être supérieure de 250% à 500% au prix normal d'un objet de ce type. Le processus d'octroi de pouvoir doit commencer dans les quarante huit heures suivant la fin de la fabrication de l'objet. Si ce délai est dépassé, l'objet ne peut plus recevoir le pouvoir (si le psioniste essaye tout de même, il échoue automatiquement à la première étape ci-dessous, dépensant 50 PFP). Si l'objet répond aux deux conditions, le psioniste peut commencer l'octroi de pouvoir. Première étape : Au début de chaque jour, le psioniste doit d'abord préparer l'objet à recevoir le pouvoir psionique. Cela coûte 50 PFP et nécessite un test de pouvoir. Si ce dernier échoue, le jour est perdu, aucun progrès supplémentaire ne pouvant être fait avant le jour suivant.\n\nDeuxième étape : Si l'objet a été préparé, le psioniste peut lui donner accès à une discipline. Il ne peut jamais avoir accès à plus d'une seule discipline, le psioniste lui-même devant y avoir accès. Cette étape coûte 100 PFP et nécessite un test de pouvoir. Troisième étape : Le psioniste peut tenter de conférer à l'objet un pouvoir unique qu'il connaît dans la discipline choisie (l'objet doit avoir été préparé de manière appropriée le même jour). Le psioniste doit faire deux tests de pouvoir : d'abord un test pour le pouvoir choisi (en utilisant le score de pouvoir approprié), et ensuite un autre pour conférer le pouvoir. Si les deux tests réussissent, l'objet possède le pouvoir psionique avec un score de deux points inférieur à celui du psioniste. Si la troisième étape est réussie, le psioniste dépense 100 autres PFP (comme d'habitude, un échec lui fait dépenser la moitié de cette somme).\n\nQuatrième étape : Le psioniste peut imprégner l'objet avec d'autres pouvoirs en répétant la troisième étape. L'objet peut acquérir un pouvoir par jour, pourvu qu'il ait été préparé de manière appropriée (voir première étape).\n\nCinquième étape : Quand l'objet a acquis tous les pouvoirs que le psioniste avait l'intention de lui donner, ce dernier peut les y sceller. Pour ce faire, il doit préparer l'objet une fois de plus (dépensant 50 PFP) et effectuer une dernière fois un test d'octroi de pouvoir sur l'objet. Si ce dernier est scellé avec succès, il ne pourra jamais avoir de pouvoir supplémentaire — mais il ne pourra pas non plus les perdre. Un objet, n'ayant pas été scellé, perdra un pouvoir par mois jusqu'à être de nouveau normal. Un objet, doté d'un pouvoir, possède 8 PFP par dévotion et 12 par science. Son Intelligence est égale à celle de son fabriquant moins 1d6 points, avec un minimum de 12. Son ego est de 2 points par dévotion et de 3 par science. À moins qu'il n'ait eut un autre pouvoir télépathique, il communique comme cela est indiqué sur la table 113 \"Intelligences et Capacités des Armes\", dans le Guide du maitre, (p. 218 AD&D 2ème Edition). Son alignement suit celui de son créateur. Cependant, l'arme a sa propre personnalité, et, comme toutes les armes intelligentes, essayera d'affirmer son indépendance à chaque occasion.\n\nLe processus d'octroi de pouvoir ne doit pas être interrompu. Si pendant un jour, le psioniste n'essaye pas au moins de préparer l'objet, le processus s'achève. Il ne peut même pas essayer de sceller les pouvoirs : ils s'évanouiront avec le temps. Score de pouvoir — Pas d'autre effet. 20 — Si trois \"20\" sont obtenus aux jets durant ce processus, l'objet est un échec complet et irrémédiable."}, "power_score_result": {"en": "No other effect."}, "natural_20_result": {"en": "If three 20's are rolled during the empowering process, the item is a complete and utter failure."}},
-    {"id": "intensify", "name": {"en": "Intensify", "fr": "Intensification"}, "discipline": "metapsionics", "kind": "devotion", "initial_cost": "variable", "maintenance": {"cost": 1, "period": 1}, "prerequisites": [], "min_level": 3, "range": {"en": "0", "fr": "0"}, "preparation_time": {"en": "I/increase", "fr": "1/augmentation"}, "area": {"en": "personal", "fr": "personnel"}, "description": {"en": "Intensify allows the psionicist to improve either his Constitution, his Intelligence, or his Wisdom for psionic applications. To improve one-for psionic purposes only-he must weaken the other two-for all purposes. Each point of increase in the targeted ability decreases the other two abilities by the same amount. In addition, each point of increase costs 5 PSPs. For example, Zenita is a psionicist with Con 15, Int 16, and Wis 17. She wants to intensify her Intelligence by 4 points. To do so, she must spend 20 PSPs initially (5 PSPs for each bonus point of Intelligence). Her Intelligence is raised 4 points to 20. Meanwhile, her Constitution and Wisdom scores drop 4 points (to II and 13, respectively). The increase in Intelligence affects psionic powers only. The drop in Constitution and Wisdom affects everything applicable except psionic strength points: psionic power scores, hps, system shock rolls, saving throws, spell bonuses, spell failure, etc. A psionicist can raise an ability score to a maximum of 25, provided he has enough PSPs and no other score is reduced below zero.", "fr": "L'intensification permet au personnage d'augmenter soit sa Constitution, soit son Intelligence, soit sa Sagesse pour des applications psioniques. Pour en augmenter une — dans des buts psioniques seulement — il doit affaiblir les deux autres, la diminution se répercutant dans tous les domaines. Chaque point d'augmentation dans le trait choisi diminue les deux autres du même montant. De plus, chaque augmentation d'un point coûte 5 PFP. Par exemple, Zenita est une psioniste avec une Con de 15, une Int de 16 et une Sag de 17. Elle désire intensifier son Int de 4 points. Pour ce faire, elle doit dépenser initialement 20 PFP (5 PFP pour chaque point supplémentaire d'Int). Son Intelligence est portée à 20. Mais, sa Constitution et sa Sagesse baissent de 4 points (passant respectivement à 11 et 13). L'augmentation de l'Intelligence n'affecte que les pouvoirs psioniques. La baisse de Constitution et de Sagesse affecte tous les éléments de jeu concernés, à l'exception des points de force psionique : les scores de pouvoir psionique, les pv, les jets de choc métabolique, les jets de sauvegarde, les bonus de sorts, les échecs de sort, etc. Un psioniste peut porter un score de caractéristique à 25 au maximum, pourvu qu'il ait assez de PFP et que les autres scores ne soient pas réduits en dessous de zéro.\n\nScore de pouvoir — La caractéristique du personnage est portée au niveau voulu, mais le coût de ce pouvoir est réduit à 3 PFP par point d'augmentation. 20 — Le psioniste doit faire un jet de choc métabolique ou la caractéristique dont l'augmentation était désirée, diminue d'un point pendant 24 heures."}, "power_score_result": {"en": "The character's ability is raised to the level he intended, but the cost of this power is reduced to 3 PSPs per increased point."}, "natural_20_result": {"en": "The psionicist must make a system shock roll or the ability he intended to boost decreases by I point for 24 hours."}}
+    {"id": "intensify", "name": {"en": "Intensify", "fr": "Intensification"}, "discipline": "metapsionics", "kind": "devotion", "initial_cost": "variable", "maintenance": {"cost": 1, "period": 1}, "prerequisites": [], "min_level": 3, "range": {"en": "0", "fr": "0"}, "preparation_time": {"en": "I/increase", "fr": "1/augmentation"}, "area": {"en": "personal", "fr": "personnel"}, "description": {"en": "Intensify allows the psionicist to improve either his Constitution, his Intelligence, or his Wisdom for psionic applications. To improve one-for psionic purposes only-he must weaken the other two-for all purposes. Each point of increase in the targeted ability decreases the other two abilities by the same amount. In addition, each point of increase costs 5 PSPs. For example, Zenita is a psionicist with Con 15, Int 16, and Wis 17. She wants to intensify her Intelligence by 4 points. To do so, she must spend 20 PSPs initially (5 PSPs for each bonus point of Intelligence). Her Intelligence is raised 4 points to 20. Meanwhile, her Constitution and Wisdom scores drop 4 points (to II and 13, respectively). The increase in Intelligence affects psionic powers only. The drop in Constitution and Wisdom affects everything applicable except psionic strength points: psionic power scores, hps, system shock rolls, saving throws, spell bonuses, spell failure, etc. A psionicist can raise an ability score to a maximum of 25, provided he has enough PSPs and no other score is reduced below zero.", "fr": "L'intensification permet au personnage d'augmenter soit sa Constitution, soit son Intelligence, soit sa Sagesse pour des applications psioniques. Pour en augmenter une — dans des buts psioniques seulement — il doit affaiblir les deux autres, la diminution se répercutant dans tous les domaines. Chaque point d'augmentation dans le trait choisi diminue les deux autres du même montant. De plus, chaque augmentation d'un point coûte 5 PFP. Par exemple, Zenita est une psioniste avec une Con de 15, une Int de 16 et une Sag de 17. Elle désire intensifier son Int de 4 points. Pour ce faire, elle doit dépenser initialement 20 PFP (5 PFP pour chaque point supplémentaire d'Int). Son Intelligence est portée à 20. Mais, sa Constitution et sa Sagesse baissent de 4 points (passant respectivement à 11 et 13). L'augmentation de l'Intelligence n'affecte que les pouvoirs psioniques. La baisse de Constitution et de Sagesse affecte tous les éléments de jeu concernés, à l'exception des points de force psionique : les scores de pouvoir psionique, les pv, les jets de choc métabolique, les jets de sauvegarde, les bonus de sorts, les échecs de sort, etc. Un psioniste peut porter un score de caractéristique à 25 au maximum, pourvu qu'il ait assez de PFP et que les autres scores ne soient pas réduits en dessous de zéro.\n\nScore de pouvoir — La caractéristique du personnage est portée au niveau voulu, mais le coût de ce pouvoir est réduit à 3 PFP par point d'augmentation. 20 — Le psioniste doit faire un jet de choc métabolique ou la caractéristique dont l'augmentation était désirée, diminue d'un point pendant 24 heures."}, "power_score_result": {"en": "The character's ability is raised to the level he intended, but the cost of this power is reduced to 3 PSPs per increased point."}, "natural_20_result": {"en": "The psionicist must make a system shock roll or the ability he intended to boost decreases by I point for 24 hours."}},
+    {
+      "id": "ego_whip",
+      "name": {
+        "en": "Ego Whip",
+        "fr": "Fouet de l'ego"
+      },
+      "discipline": "telepathy",
+      "kind": "attack_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -3
+      },
+      "initial_cost": 3,
+      "prerequisites": [
+        "mind_thrust"
+      ],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Ego Whip is a psionic combat mode.",
+        "fr": "Ego Whip est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "id_insinuation",
+      "name": {
+        "en": "Id Insinuation",
+        "fr": "Insinuation de l'id"
+      },
+      "discipline": "telepathy",
+      "kind": "attack_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -4
+      },
+      "initial_cost": 4,
+      "prerequisites": [
+        "ego_whip"
+      ],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Id Insinuation is a psionic combat mode.",
+        "fr": "Id Insinuation est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "psychic_crush",
+      "name": {
+        "en": "Psychic Crush",
+        "fr": "Écrasement psychique"
+      },
+      "discipline": "telepathy",
+      "kind": "attack_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -5
+      },
+      "initial_cost": 6,
+      "prerequisites": [
+        "id_insinuation"
+      ],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Psychic Crush is a psionic combat mode.",
+        "fr": "Psychic Crush est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "thought_shield",
+      "name": {
+        "en": "Thought Shield",
+        "fr": "Bouclier de pensée"
+      },
+      "discipline": "telepathy",
+      "kind": "defence_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -2
+      },
+      "initial_cost": 2,
+      "maintenance": {
+        "cost": 2,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Thought Shield is a psionic combat mode.",
+        "fr": "Thought Shield est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "mental_barrier",
+      "name": {
+        "en": "Mental Barrier",
+        "fr": "Barrière mentale"
+      },
+      "discipline": "telepathy",
+      "kind": "defence_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -3
+      },
+      "initial_cost": 3,
+      "maintenance": {
+        "cost": 3,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Mental Barrier is a psionic combat mode.",
+        "fr": "Mental Barrier est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "intellect_fortress",
+      "name": {
+        "en": "Intellect Fortress",
+        "fr": "Forteresse intellectuelle"
+      },
+      "discipline": "telepathy",
+      "kind": "defence_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -4
+      },
+      "initial_cost": 4,
+      "maintenance": {
+        "cost": 4,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Intellect Fortress is a psionic combat mode.",
+        "fr": "Intellect Fortress est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "tower_of_iron_will",
+      "name": {
+        "en": "Tower of Iron Will",
+        "fr": "Tour de volonté de fer"
+      },
+      "discipline": "telepathy",
+      "kind": "defence_mode",
+      "score": {
+        "ability": "wis",
+        "modifier": -5
+      },
+      "initial_cost": 5,
+      "maintenance": {
+        "cost": 5,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Tower of Iron Will is a psionic combat mode.",
+        "fr": "Tower of Iron Will est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "switch_personality",
+      "name": {
+        "en": "Switch Personality",
+        "fr": "Changement de personnalité"
+      },
+      "discipline": "telepathy",
+      "kind": "devotion",
+      "score": {
+        "ability": "wis",
+        "modifier": -3
+      },
+      "initial_cost": {
+        "kind": "contact",
+        "plus": 30
+      },
+      "prerequisites": [
+        "contact"
+      ],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "individual",
+        "fr": "un individu"
+      },
+      "description": {
+        "en": "Switch Personality is a psionic combat mode.",
+        "fr": "Switch Personality est un mode de combat psionique."
+      }
+    }
   ]
 }

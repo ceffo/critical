@@ -197,13 +197,13 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 	}
 }
 
-// TestSchema_Step24_OnlyFormat17IsValid (ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2, 22.2, 23.2 and 24.2):
-// the schema accepts format 17 only; every earlier format, retired, is refused whatever it carries (the API
-// refuses it as an unknown format), and so is an artifact without a part format 17 requires.
-func TestSchema_Step24_OnlyFormat17IsValid(t *testing.T) {
+// TestSchema_Step25_OnlyFormat18IsValid (ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2, 22.2, 23.2, 24.2 and 25.5):
+// the schema accepts format 18 only; every earlier format, retired, is refused whatever it carries (the API
+// refuses it as an unknown format), and so is an artifact without a part format 18 requires.
+func TestSchema_Step25_OnlyFormat18IsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 17")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 18")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -211,20 +211,20 @@ func TestSchema_Step24_OnlyFormat17IsValid(t *testing.T) {
 	for _, part := range []string{"equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 17 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 18 requires %s", part)
 	}
-	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery"} {
+	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 17 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 18 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 17 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 18 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 17 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 18 requires the spell immunities")
 	// ADR 0021 step 24.1: a class's multiclass flag is an optional boolean.
 	a = fixtureDoc(t)
 	classDef(a, 0)["multiclass"] = "no"

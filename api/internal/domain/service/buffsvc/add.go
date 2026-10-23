@@ -75,7 +75,7 @@ func renews(buff, b BuffEffect, stacks bool) bool {
 	// ADR 0044 step 3: a row holding a mind is named by the player's label;
 	// no buff of that name renews it.
 	return samePower || replacesDefence(buff, b) ||
-		!(stacks || b.OnOther || b.linkRow() || !strings.EqualFold(b.Name, buff.Name))
+		(!stacks && !b.OnOther && !b.linkRow() && strings.EqualFold(b.Name, buff.Name))
 }
 
 // replacesDefence reports whether the defence mode's row buff, put on,

@@ -58,6 +58,9 @@ fresh_report() { # the agent's report newer than the supervisor's last prompt fo
     "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
   [ -n "$p" ] || return 1
   for f in "$R"/"$item"-*.md "$R"/*-"$item".md "$R"/"$item".md; do
+    # The supervisor's archived copies of earlier rounds (<item>-dev-r4a.md, -r1-survey.md, -plan.md) are not
+    # reports: a plain cp gives them a fresh mtime, which re-fired NEEDS-SUPERVISOR on handled work (sup-80, sup-83).
+    case ${f##*/} in *-r[0-9]*.md|*-survey.md|*-plan.md) continue ;; esac
     [ -f "$f" ] && [ "$f" -nt "$p" ] && return 0
   done; return 1
 }

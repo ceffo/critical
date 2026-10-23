@@ -23,7 +23,9 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 ## Validation
 
 - Full gate, from the repo root: `just validate` (backend lint + tests + build, frontend lint +
-  typecheck + production build). Mandatory before any work item is reported done.
+  typecheck + production build). Mandatory before any work item is reported done. On success it stamps
+  the tree it ran on (`scripts/gate-stamp.sh`); the supervisor's `ship.sh` refuses a HEAD without that
+  stamp, so commit first and run the gate last: any commit after it (a comment, a fixture) needs a rerun.
 - Narrow checks while iterating: `just vet-api`, `just lint-api`, `just test-api`, `just lint-web`,
   `just typecheck-web`, `just build-api`, `just build-web`; `go test -run X ./path` from `api/` for
   a single test.

@@ -2,9 +2,9 @@ package charactersvc
 
 import (
 	"fmt"
-	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -241,21 +241,13 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 // a tie (two classes' bonuses against one tag do not add up, as two classes'
 // saves do not).
 func classSaveBonuses(es []classes.Entry, gs []classes.Grant) []ClassSaveBonus {
-	var out []ClassSaveBonus
+	var in []ClassSaveBonus
 	for _, g := range gs {
-		if dormant(es, g.Class.ID) {
-			continue
-		}
-		b := ClassSaveBonus{Class: g.Class.ID, Against: g.Feature.SaveBonus.Against, Bonus: g.Feature.SaveBonus.Bonus}
-		i := slices.IndexFunc(out, func(o ClassSaveBonus) bool { return o.Against == b.Against })
-		switch {
-		case i < 0:
-			out = append(out, b)
-		case b.Bonus > out[i].Bonus:
-			out[i] = b
+		if !dormant(es, g.Class.ID) {
+			in = append(in, ClassSaveBonus{Class: g.Class.ID, Against: g.Feature.SaveBonus.Against, Bonus: g.Feature.SaveBonus.Bonus})
 		}
 	}
-	return out
+	return saves.ClassBonuses(in)
 }
 
 // entryCalc is one class entry while it is derived: the entry, its class
@@ -396,6 +388,7 @@ func Share(amount, shares int) int {
 func bestCore(entries []entryCalc, rules Rules) (int, Saves, error) {
 	crossed := classes.Crossed(derivedEntries(entries))
 	var best *core
+	var rows []Saves
 	for _, e := range entries {
 		if e.entry.State != classes.EntryActive && !crossed {
 			continue
@@ -406,19 +399,14 @@ func bestCore(entries []entryCalc, rules Rules) (int, Saves, error) {
 		}
 		if best == nil {
 			best = &k
-			continue
 		}
 		best.thac0 = min(best.thac0, k.thac0)
-		best.saves = Saves{
-			ParaPoison: min(best.saves.ParaPoison, k.saves.ParaPoison), RodStaffWand: min(best.saves.RodStaffWand, k.saves.RodStaffWand),
-			PetriPoly: min(best.saves.PetriPoly, k.saves.PetriPoly), Breath: min(best.saves.Breath, k.saves.Breath),
-			Spell: min(best.saves.Spell, k.saves.Spell),
-		}
+		rows = append(rows, k.saves)
 	}
 	if best == nil {
 		return 0, Saves{}, fmt.Errorf("derive: no active class")
 	}
-	return best.thac0, best.saves, nil
+	return best.thac0, saves.Best(rows...), nil
 }
 
 // spellbookRules is step 20.1 for the grant of the spellbook feature (ADR
@@ -520,31 +508,7 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 	if err != nil {
 		return Saves{}, fmt.Errorf("derive %s save bonus: %w", c.Race, err)
 	}
-	var out Saves
-	for _, cat := range trait.Categories {
-		if p := saveField(&out, cat); p != nil {
-			*p = b
-		}
-	}
-	return out, nil
-}
-
-// saveField is the field of s for a save category code (classes.SaveCategories),
-// nil for a code that is none.
-func saveField(s *Saves, cat string) *int {
-	switch cat {
-	case classes.SaveCategories[0]:
-		return &s.ParaPoison
-	case classes.SaveCategories[1]:
-		return &s.RodStaffWand
-	case classes.SaveCategories[2]:
-		return &s.PetriPoly
-	case classes.SaveCategories[3]:
-		return &s.Breath
-	case classes.SaveCategories[4]:
-		return &s.Spell
-	}
-	return nil
+	return saves.RaceBonus(trait.Categories, b), nil
 }
 
 // SetSkillFigures sets d's skill sets (percentages, armour, budget and points of each) from

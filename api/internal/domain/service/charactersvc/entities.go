@@ -5,6 +5,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -175,14 +176,9 @@ func (c *Character) ProficiencyClasses() skills.Classes {
 }
 
 // Saves are the five saving throw numbers, one per category of ADR 0006 step
-// 1 (targets, or a bonus per category).
-type Saves struct {
-	ParaPoison   int
-	RodStaffWand int
-	PetriPoly    int
-	Breath       int
-	Spell        int
-}
+// 1 (targets, or a bonus per category): the saves owner's type (ADR 0046
+// step 3.1), an alias for one item.
+type Saves = saves.Saves
 
 // Sheet are the figures an imported character's sheet stated (Kelsen's seed):
 // kept as imported, never read as inputs (ADR 0030 step 24, retired); the level
@@ -367,11 +363,8 @@ type FeatureGrant struct {
 
 // ClassSaveBonus is one save_bonus grant (ADR 0043 step 3): Bonus on a save
 // whose request carries the effect tag Against, through the entry of Class.
-type ClassSaveBonus struct {
-	Class   string
-	Against string
-	Bonus   int
-}
+// The saves owner's type (ADR 0046 step 3.1), an alias for one item.
+type ClassSaveBonus = saves.ClassBonus
 
 // Grant is the first grant of kind (ADR 0042 step 12), false when no entry
 // grants it.

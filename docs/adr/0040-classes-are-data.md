@@ -10,7 +10,8 @@ is built for the class list, groups, races, prime requisites, ability minimums, 
 class registry, steps 5, 6, 8 and 9; see the as-built notes there). Step 11.3 is built for the class
 features and the spell progression (2026-10-22: every kind of step 3 is read through the
 lookup of step 5, the Go lists are gone; see the as-built notes of steps 3, 5, 8 and 11). The rest is
-not implemented: each step names the test its implementing item writes. Amends
+not implemented: each step names the test its implementing item writes. Steps 12 to 16 (skill sets and weapon
+specialization as feature parameters, one amendment) are accepted 2026-10-23 (the user accepted every open question's default: "ok with all"). Amends
 [ADR 0030](0030-classes-and-races.md) steps 1, 2, 4, 9 to 20, 22 and 23 and
 [ADR 0015](0015-experience.md) step 2, each on implementation. Builds on the vocabulary of
 [ADR 0036](0036-vocabulary.md) (`GLOSSARY.md`, `docs/domain-model.md`). The house rules live in the
@@ -160,12 +161,12 @@ writes `Test<name>` and adds the prefix here in the same PR.
    |---|---|---|---|
    | `exceptional_strength` | none | ADR 0030 steps 9 and 10 (18/xx, the warrior's scale over 18) | fighter |
    | `melee_attacks_per_round` | `table` (Table 15) | ADR 0030 step 11.1 | fighter |
-   | `weapon_specialization` | none (the cost is ADR 0037 step 9's) | ADR 0030 steps 11 and 12, ADR 0037 step 9 (Table 35) | fighter |
+   | `weapon_specialization` | none; _(amended: `default_slots`, `melee_column`, `missile_column`, `types`, step 13)_ | ADR 0030 steps 11 and 12, ADR 0037 step 9 (Table 35) | fighter |
    | `wisdom_bonus_spells` | none | ADR 0030 step 13 (Table 5) | cleric |
    | `spell_failure` | `ability` (`wis`) | ADR 0030 step 14 (Table 5) | cleric |
    | `sphere_access` | `major`, `minor` (sphere codes), `minor_max_level` (3) | ADR 0030 step 15 (format 6's access rows, moved here; read by `spheresvc`) | cleric |
    | `turn_undead` | `table` (Table 61) | ADR 0030 step 16 | cleric |
-   | `rogue_skills` | `set` (`thief` or `bard`: the skill list and base rows, Table 26 or 33), `budget` `{first, per_level, per_skill_first, per_skill_per_level}`, `armour` `[{code, column, extra}]` | ADR 0030 steps 17 and 18, ADR 0037 steps 10, 11 and 15 | thief (set `thief`, budget 60/30/30/15, one entry per armour `skill_column`); bard (set `bard`, budget 20/15/0/0, the same entries, `metal` on the elven chain column with an extra -5) |
+   | `rogue_skills` | `set` (the id of a `skill_sets` entry, step 12; the book's `thief` or `bard`: the skill list and base rows, Table 26 or 33), `budget` `{first, per_level, per_skill_first, per_skill_per_level}`, `armour` `[{code, column, extra}]` | ADR 0030 steps 17 and 18, ADR 0037 steps 10, 11 and 15 | thief (set `thief`, budget 60/30/30/15, one entry per armour `skill_column`); bard (set `bard`, budget 20/15/0/0, the same entries, `metal` on the elven chain column with an extra -5) |
    | `backstab` | `table` (Table 30) | ADR 0030 step 19 | thief |
    | `spellbook` | `max_spell_level`, `free_spell_per_new_spell_level` (bool) | ADR 0030 step 20 (20.1, 20.7, 20.8) | mage (9, true), bard (6, false) |
 
@@ -177,6 +178,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    3. The book constants that are the same for every class that has the kind (the backstab +4, the
       skill cap 95, the specialization costs) stay in the kind's code; only what differs between
       classes is a parameter.
+      _(Amended 2026-10-23, step 13: the specialization costs and Table 35 columns become parameters of
+      `weapon_specialization`; the skill set's identity becomes data, step 12.)_
    4. The starting spellbook stays a seed keyed by class (`seeds/starting_spellbook.json`, ADR 0030
       step 20.7): seeds are data.
    5. **A skill set per `rogue_skills` feature.** A class lists `rogue_skills` once per
@@ -426,6 +429,165 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc),
     `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt),
     `TestIdentity_Step2_TablesTenAndElevenFromTheCatalogue` (ruletablesvc).)_
+
+### Skill sets and weapon specialization as parameters
+
+_(Amendment, proposed 2026-10-23, awaiting the user's review; not implemented. Two class rules are still
+Go: which skills a `rogue_skills` set holds, and the numbers of `weapon_specialization`. This amendment
+moves both into the catalogue, under the rule of step 10. It answers the two TEMPORARY allowlist groups
+of `scripts/class-ids-allowlist.txt` that name the skill-set codes. The elf literal of `itemsvc/classwarn.go`
+is another item's. The implementing items cite these steps; each is testable on its own, in the order of
+step 16.)_
+
+```mermaid
+flowchart LR
+  subgraph Cat["Catalogue (next format)"]
+    SS["skill_sets: id, name, skills, base percentages"]
+    TB["skill tables keyed by skill: race, Dexterity, armour"]
+    CL["class features: rogue_skills, weapon_specialization"]
+  end
+  subgraph Dom["Domain"]
+    RS["rogue skills reader (step 12)"]
+    WS["specialization reader (step 13)"]
+  end
+  SS --> RS
+  TB --> RS
+  CL -->|"set id, budget, armour"| RS
+  CL -->|"slots, Table 35 columns"| WS
+  RS --> Web["skillSets in the derived block (step 15)"]
+```
+
+12. **A skill set is catalogue data.** The catalogue gains a top-level list `skill_sets`, one entry per set:
+    `{id, name, min_percent, skills}`. `id` is a language-neutral code and is what `rogue_skills.set`
+    (step 3) names; `name` is a language map (ADR 0023) the client shows as the section's heading;
+    `skills` is the set's ordered list of `{id, base, armour_free}`: `base` is the base percentage (PHB
+    Table 26 for the thief's set, Table 33 for the bard's), `armour_free` marks a skill a multi-class
+    character in body armour its class may not wear still uses (ADR 0042 step 16.3: today the Go list
+    `ArmourFreeSkills`, open locks and detect noise); `min_percent` is the least percentage a skill of
+    the set is used at (today the thief's 1, the bard's 0; the book gives no figure for the bard, so the
+    value stays what it is, Q3). The three tables that adjust a skill are shared by every set that has
+    the skill and are **rows keyed by skill**, never a column per skill: Table 27 by race (already rows),
+    Table 29 by armour column (already rows) and **Table 28 by Dexterity, reshaped** from one field per
+    skill to `{dex_min, dex_max, skill, adjustment}` (a skill with no row at a score adjusts by 0, as
+    today). `ruletablesvc.RogueSkills` reads the set named by the feature through these lists: the Go
+    constants `SkillSetThief` and `SkillSetBard`, the lists `ThiefSkills`, `BardSkills`, `SkillArmors` and
+    `ArmourFreeSkills`, the `switch` on the set in `SkillsOf` and `RogueSkills`, `CheckSkillSet` and the
+    `switch` on the skill in `dexterityColumn` are deleted. The start-up check (step 8) refuses a
+    `rogue_skills.set` naming no `skill_sets` entry, a set with a skill twice, a skill with no base, and
+    the shared tables when a skill of a set misses a race, armour or Dexterity coverage that the tables
+    promise today (every race x skill and armour x skill pair once; Dexterity rows ascending and not
+    overlapping). A new set (a class from a supplement with its own list) is a catalogue change only.
+    **Removes** the allowlist entries `api/internal/domain/service/ruletablesvc/bard.go:thief` and
+    `api/internal/domain/service/ruletablesvc/bard.go:bard`; the file's name goes too (`bard.go` becomes
+    `rogueskills.go`).
+    Tests: `SkillSets_Step12_ASetComesFromTheCatalogue` (ruletablesvc: a test set `test_scout` with two
+    skills and a base each, listed by a test class, gets its skills and percentages with no code change),
+    `SkillSets_Step12_TheFiveClassesKeepTodaysPercentages` (composition: the golden file of
+    `Classes_Golden_FeaturesDeriveWhatTheGoListsDid`, skills part, passes unchanged),
+    `Import_Step12_RefusesABrokenSkillSet` (ruletablesadpt: unknown set, skill twice, missing base, a
+    pair missing from a shared table), `SkillDexterity_Step12_RowsKeyedBySkill` (ruletablesadpt: the
+    reshaped Table 28 gives the old per-skill columns).
+
+13. **Weapon specialization carries its numbers.** The `weapon_specialization` feature (step 3) takes
+    parameters, replacing `specializationSlots`, `bowSpecializationSlots`, `bowTypes` and
+    `specialistColumns` of `ruletablesvc/fighter.go`:
+    - `default_slots`: the slots a specialization costs in all (PHB p.53, "Cost of Specialization":
+      `02-weapon-proficiencies.md`, two for a melee weapon or a crossbow: one to become proficient and
+      one to specialize), 2;
+    - `melee_column` and `missile_column`: the Table 35 column (`specialist_attacks.weapon`) a specialist
+      reads in melee, and in a missile type no row below names, `melee` and `other_missile`;
+    - `types`: `[{weapon_types, slots, column | rate_of_fire}]`, a row per kind of missile weapon that
+      differs: `{long_bow, short_bow}` costs 3 in all (a bow needs one slot for proficiency and two to
+      specialize, same section) and keeps its Table 45 rate of fire (`rate_of_fire: true`: "bow specialists
+      do not gain any additional attacks", ADR 0030 step 11.2); `light_crossbow` and `heavy_crossbow` read
+      their own column; `dagger` reads `thrown_dagger` and `dart` reads `thrown_dart`, 2 slots each (the
+      thrown and missile types the book does not name are the proposed reading of ADR 0037 step 9, kept).
+    `SpecializationSlots` and `AttackRateFor` read the class's feature params (the pick's class entry,
+    step 5) instead of the constants; a class listing the kind with other params gets other costs and
+    columns, whatever its id. The weapon type codes inside the params are catalogue codes (ADR 0030 step
+    23), not class ids. The start-up check refuses a `column` that is no Table 35 weapon, a `types` type
+    twice, a `rate_of_fire` type with no Table 45 row, and a count under 1. Step 3.3's statement that the
+    specialization costs stay in the kind's code is **withdrawn** for the two figures this step moves
+    (the cost and the column); the book constants that do not differ by class stay in code.
+    **Removes** no allowlist entry: none names it, the Go list was a per-entity constant under the
+    spirit of step 10, not a class-id literal that `check-no-class-ids` can see. Its proof is the test
+    that a class with other params behaves differently.
+    Tests: `WeaponSpecialization_Step13_ParamsDecideSlotsAndColumns` (ruletablesvc: a test class listing
+    the kind with bow = 2 slots and a crossbow on `other_missile` spends and reads those, and the
+    fixture's fighter spends 3 for a long bow and 2 for a long sword; fails on the old constants),
+    `WeaponSpecialization_Step13_TheFighterKeepsTodaysNumbers` (composition: the same golden file,
+    specialization part, unchanged), `Import_Step13_RefusesBrokenSpecializationParams`
+    (ruletablesadpt: unknown column, type twice, bow without a rate row, slots under 1).
+
+14. **The catalogue format.** Steps 12 and 13 change the artifact, so the catalogue **bumps to the next
+    format number** (the supervisor allots it; the API then reads that format only, as
+    [ADR 0021](0021-spell-catalogue.md) step 18.6 did). The bump holds: the `skill_sets` list; Table 28
+    as rows keyed by skill; the `weapon_specialization` params in the class features and their schema;
+    and it drops the tables the new list repeats, `thief_skill_base`, `bard_skill_base` and
+    `bard_armor_penalty` (the last is already `extra` in `rogue_skills.armour`), whose readers move with
+    step 12 (ADR 0021 step 18.4's "dropped by a later format, when the last reader moved"); the shared
+    skill tables keep their keys, renamed `skill_race`, `skill_dexterity` and `skill_armor` since the
+    `thief_` prefix would be false for a set that is not the thief's (Q2). The builder in
+    `critical-rulebooks` publishes it first; an ADR 0021 step for the format comes with the
+    implementation (this amendment does not edit ADR 0021). The fixture
+    `api/testdata/catalogue.json` is regenerated with it. No database migration: `characters.skill_sets`
+    already stores points by set id (step 3.5), and a stored set id (`thief`, `bard`) stays valid because
+    the catalogue keeps those ids.
+    **Removes** no allowlist entry by itself; it is the prerequisite of steps 12, 13 and 15.
+    Tests: `Schema_Step14_OnlyTheNextFormatIsValid` (cataloguecheck), `Parse_Step14_ReadsSkillSetsAndRefusesTheOldFormat`
+    (catalogueadpt); in `critical-rulebooks`: `check_skill_sets` in `scripts/check` (the sets equal Tables
+    26 and 33, the reshaped Table 28 equals the old one row for row, fault injection for each refusal of
+    step 12).
+
+15. **What the web reads.** The server serves each skill set as
+    `skillSets: [{set, name, skillArmor, budget, skills}]` in the derived block and in `GET /api/skills`
+    (step 3.5), with `name` the set's language map (step 12) and `skills[].usable` already decided by the
+    server (`min_percent`). The client renders one section per set with that name as its heading, a
+    test id built from `set`, and rolls with the `set` it was given; it holds no table of heading keys by
+    kind, no `kind === "thiefSkill"` test and no `"thief"` or `"bard"` literal. The logged check kind of
+    step 3.2 follows: a skill-set check logs the single kind `rogueSkill` with the `set` in its payload,
+    and the server's replay and the journal view keep reading the entries already stored as `thiefSkill`
+    or `bardSkill` (Q1). The roll endpoint's `kind` and `skillsvc.KindOfSet` go with the two per-set
+    kinds. The proficiency's own kind is unchanged. The specialization side needs no new reading: the
+    creation and level-up options already carry the cost as `specializationSlots`, now computed from the
+    params (step 13).
+    **Removes** the allowlist entries `web/src/components/actions/SkillsTab.tsx:thief` and
+    `web/src/components/actions/SkillsTab.tsx:bard`.
+    Tests: `SkillsTab` (web unit: two sets, one of them a test set the client has never heard of,
+    render two sections named by the server, with their test ids; fails on the old `kindPrefix`),
+    `SkillSets_Step15_TheDerivedBlockNamesEachSet` (charactersvc: `name` served from the catalogue),
+    `RollSkill_Step15_ALegacyKindStillReads` (skillsvc: a stored `thiefSkill` entry replays),
+    `just check-no-class-ids` with the two web entries struck.
+
+16. **Order.** Four items, each leaving `just validate` green: (1) step 14, the format and the builder
+    (the fixture carries both shapes of the reader's input until step 12 lands, or the two ship in one
+    item if the supervisor prefers); (2) step 12, the reader and the deletion of the Go lists, striking
+    the two `bard.go` allowlist lines; (3) step 13, independent of step 12 once step 14 is in; (4) step
+    15, the API shape and the web, striking the two `SkillsTab.tsx` lines and, in the same PR, the
+    TEMPORARY comment of the allowlist's skill-set group (the group is empty then). Steps 12 and 13 do not
+    touch each other's files.
+
+    _Questions for the user, each with the default applied until answered:_
+    - **Q1. The logged check kind.** The two kinds `thiefSkill` and `bardSkill` differ only by their
+      label and by the thief's minimum percentage; dice and success are identical (`ThiefSkillDie`,
+      `BardSkillDie`, both 100). Default: one kind `rogueSkill` plus the `set`; old entries still read.
+      Alternative: keep one logged kind per set id, a string the catalogue chooses.
+    - **Q2. Renaming the shared skill tables** (`thief_skill_race` to `skill_race`, and so on) in the
+      same bump. Default: rename, since Table 28 is reshaped anyway. Alternative: keep the names.
+    - **Q3. `min_percent`.** The thief's 1 comes from ADR 0030 step 17 (PHB p.39) and the bard has none.
+      Default: a set parameter, thief 1 and bard 0, as today. Alternative: drop the minimum from the set
+      and treat any percentage above 0 as usable for both.
+    - **Q4. The to-hit bonus of a ranged specialist.** `combatsvc.bowAndCrossbowTypes` lists the weapon
+      types whose specialist gets the point-blank range bonus (PHB p.53), another per-weapon-type list
+      that belongs to the same feature. Default: left in code, out of this amendment (it names weapon
+      types, not classes). Alternative: a `ranged_types` param of `weapon_specialization`, one more row
+      in step 13.
+    - **Q5. Specialization's numbers as parameters at all.** The issue asks for it, but step 3.3 kept
+      them in code because every class with the kind shares them, and no allowlist entry forces the
+      move. Default: parameters (this amendment). Alternative: leave step 13 out; then the cost is
+      still a Go constant by weapon type.
+    - **Q6. `armour_free` as a per-skill flag** instead of a list in code. Default: a flag in the set's
+      skill entry (a Go list of skills is the same per-entity constant).
 
 ## Consequences
 

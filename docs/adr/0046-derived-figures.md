@@ -1,8 +1,7 @@
 # ADR 0046: Derived figures: one owner each for AC, saves, slots and levels
 
-**Status**: proposed 2026-10-23 (design step; the user's goal, 2026-10-21: "a logical rule engine
-with locality"; triage 2026-10-22). Shape A below is the recommendation and every open question
-carries its default; the user rules in review. Not implemented. Builds on
+**Status**: accepted 2026-10-23 (the user accepted every open question's default: "defaults") (design step; the user's goal, 2026-10-21: "a logical rule engine
+with locality"; triage 2026-10-22). Shape A below is the chosen shape. Not implemented. Builds on
 [ADR 0045](0045-character-view.md) (the character view) and respects
 [ADR 0038](0038-domain-and-wire.md) (no transport tags in the domain). Amends, each on
 implementation: [ADR 0002](0002-attack-resolution.md) step 5, [ADR 0006](0006-saving-throws.md)
@@ -231,7 +230,7 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
    count (the hard rule for rules math). The composition tests over the real services and the memory
    store ([ADR 0045](0045-character-view.md) step 6.2) run unchanged and are the end-to-end proof.
 8. **Amendments of earlier ADRs** (written in place on implementation; the index rows are updated in
-   this ADR's PR, marked "(proposed)" until then):
+   this ADR's PR):
    1. [ADR 0033](0033-equipment.md) step 10: the Dexterity row of the AC is read from the view; the
       AC derivation is unchanged.
    2. [ADR 0002](0002-attack-resolution.md) step 5: the missile adjustment is read from the view.
@@ -245,9 +244,10 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
    6. [ADR 0045](0045-character-view.md): the view gains `DexMissile` and `DexDefence` (step 1 of
       this ADR); nothing else of it changes.
 
-## Open questions
+## Decided
 
-Each is a choice the ADR cannot settle alone; the steps are written with the default.
+The user accepted the default of every question on 2026-10-23 ("defaults"); the steps are written
+with them. The questions and their reasons:
 
 1. **Q1, the shape of the owners.** Shape A (a pure package per figure; AC and levels keep the
    owners they have), Shape B (the existing services own the figures and the others call a port) or

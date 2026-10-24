@@ -167,10 +167,10 @@ test("admin API: player refused, invite edge cases, root admin protected", async
   expect((await root.get("/api/admin/users")).ok()).toBe(true);
 });
 
-// A player's browser: no Admin and no Ruleset link in the cog menu. A fresh player
+// A player's browser: no Admin link, but the Ruleset link (read-only). A fresh player
 // has no character, so the root admin's sheet is shown with /api/auth/me answering role "player"
 // (the API's refusal of a real player is the test above).
-test("a player sees no Admin link and no Ruleset link", async ({ page }) => {
+test("a player sees the Ruleset link and no Admin link", async ({ page }) => {
   await page.route("**/api/auth/me", async (route) => {
     const res = await route.fetch();
     await route.fulfill({
@@ -183,7 +183,7 @@ test("a player sees no Admin link and no Ruleset link", async ({ page }) => {
   await expect(settings.getByTestId("settings-account")).toBeVisible();
   await expect(
     settings.getByRole("link", { name: /^Open the ruleset/ }),
-  ).toHaveCount(0);
+  ).toHaveCount(1);
   await expect(
     settings.getByRole("link", { name: /^Open the admin section/ }),
   ).toHaveCount(0);

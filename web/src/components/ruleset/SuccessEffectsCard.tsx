@@ -25,8 +25,15 @@ const num = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
  * The buff a successful check of a proficiency puts on the character (ADR 0041 step 2.4): the AC
  * change (descending AC, negative betters it) and the rounds it lasts. The proficiency is worded
  * from its id; its values are edited here and the server validates them on save.
+ * A player reads them (`editable` false): read-only fields, no save.
  */
-export function SuccessEffectsCard({ initial }: { initial: SuccessEffect[] }) {
+export function SuccessEffectsCard({
+  initial,
+  editable = true,
+}: {
+  initial: SuccessEffect[];
+  editable?: boolean;
+}) {
   const { t } = useTranslation();
   const [rows, setRows] = useState<Draft[]>(() => toDrafts(initial));
   const [error, setError] = useState("");
@@ -104,6 +111,7 @@ export function SuccessEffectsCard({ initial }: { initial: SuccessEffect[] }) {
                     inputMode="numeric"
                     aria-label={t(`ruleset.effects.${f}`)}
                     value={r[f]}
+                    readOnly={!editable}
                     onChange={(e) => edit(i, f, e.target.value)}
                   />
                 ))}
@@ -121,7 +129,7 @@ export function SuccessEffectsCard({ initial }: { initial: SuccessEffect[] }) {
             {t("ruleset.effects.saved")}
           </p>
         )}
-        {rows.length > 0 && (
+        {editable && rows.length > 0 && (
           <div className="flex gap-2">
             <Button
               type="button"

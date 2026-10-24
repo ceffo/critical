@@ -2370,6 +2370,58 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
   }
 });
 
+// The Ruleset screen as a player sees it (ADR 0041 step 8): every card shown read-only, the weapon
+// switch included, no edit control, uncut in fr and en at 1280 to 2560. /api/auth/me answers role
+// "player" for the root admin's sheet, as admin.spec does.
+test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.route("**/api/auth/me", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({
+      response: res,
+      json: { ...(await res.json()), role: "player" },
+    });
+  });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.goto("/ruleset");
+  const crit = page.getByTestId("crit-table");
+  const rules = page.getByTestId("ruleset-house-rules");
+  const effects = page.getByTestId("ruleset-success-effects");
+  await expect(crit.getByRole("group", { name: /^Plage 1$/ })).toBeVisible();
+  await expect(effects).toContainText("Acrobatie");
+  await expect(page.getByTestId("ruleset-weapon-lift")).toBeDisabled();
+  await expect(page.locator("main").getByRole("button")).toHaveCount(0);
+  await expect(
+    page.locator("main input:not([readonly]):not([disabled])"),
+  ).toHaveCount(0);
+
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") {
+      await page.goto("/");
+      await chooseLanguage(page, "en");
+      await page.goto("/ruleset");
+      await expect(effects).toContainText("Tumbling");
+    }
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `player, ${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(crit, `ruleset crit table, ${where}`);
+      await expectNoClippedText(rules, `ruleset house rules, ${where}`);
+      await expectNoClippedText(effects, `ruleset success effects, ${where}`);
+      expect(await escapedAbsolutes(page), `ruleset, ${where}`).toEqual([]);
+      await snap(page, `ruleset-player-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+});
+
 // The imported character lacks its alignment and sex (the roster cards' tag), the one created below has them.
 test.describe("roster cards", () => {
   test.use({ character: { alignment: "", sex: "" } });

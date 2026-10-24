@@ -112,13 +112,13 @@ describe("startFor", () => {
     expect(startFor("/admin", "", { kind: "out" })).toEqual({ go: "/login" });
   });
 
-  it("shows the ruleset screen to an admin only", () => {
+  it("shows the ruleset screen to every logged-in user", () => {
     const admin = {
       kind: "in" as const,
       me: { ...me.me, role: "admin" as const },
     };
     expect(startFor("/ruleset", "", admin)).toEqual({ show: "ruleset" });
-    expect(startFor("/ruleset", "", me)).toEqual({ go: "/" });
+    expect(startFor("/ruleset", "", me)).toEqual({ show: "ruleset" });
     expect(startFor("/ruleset", "", { kind: "out" })).toEqual({
       go: "/login",
     });

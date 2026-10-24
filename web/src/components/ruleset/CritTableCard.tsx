@@ -28,8 +28,15 @@ const num = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
  * The house crit table: D100 ranges and their multipliers, entered at the table when the DM
  * gives the values. The server validates the whole table on save (no gap, no overlap, 1-100,
  * multiplier ≥ 1, decimals allowed) and its message is shown as is; this component only edits and sends rows.
+ * A player reads the rows (`editable` false): read-only fields, no add, remove or save.
  */
-export function CritTableCard({ initial }: { initial: CritTable }) {
+export function CritTableCard({
+  initial,
+  editable = true,
+}: {
+  initial: CritTable;
+  editable?: boolean;
+}) {
   const { t } = useTranslation();
   const [table, setTable] = useState<CritTable>(initial);
   const [rows, setRows] = useState<Draft[]>(() => toDrafts(initial.rows));
@@ -116,21 +123,24 @@ export function CritTableCard({ initial }: { initial: CritTable }) {
                   inputMode={f === "multiplier" ? "decimal" : "numeric"}
                   aria-label={t(`critTable.${f}`)}
                   value={r[f]}
+                  readOnly={!editable}
                   onChange={(e) => edit(i, f, e.target.value)}
                 />
               ))}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={t("critTable.remove", { n: i + 1 })}
-                onClick={() => {
-                  setSaved(false);
-                  setRows((rs) => rs.filter((_, j) => j !== i));
-                }}
-              >
-                <Trash />
-              </Button>
+              {editable && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={t("critTable.remove", { n: i + 1 })}
+                  onClick={() => {
+                    setSaved(false);
+                    setRows((rs) => rs.filter((_, j) => j !== i));
+                  }}
+                >
+                  <Trash />
+                </Button>
+              )}
             </div>
           ))}
         </div>
@@ -144,26 +154,28 @@ export function CritTableCard({ initial }: { initial: CritTable }) {
             {t("critTable.saved")}
           </p>
         )}
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            title={t("critTable.add")}
-            aria-label={t("critTable.add")}
-            onClick={addRow}
-          >
-            <Plus />
-            {t("critTable.addShort")}
-          </Button>
-          <Button
-            type="button"
-            disabled={saving}
-            title={t("critTable.save")}
-            aria-label={t("critTable.save")}
-            onClick={() => void save()}
-          >
-            {t("critTable.saveShort")}
-          </Button>
-        </div>
+        {editable && (
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              title={t("critTable.add")}
+              aria-label={t("critTable.add")}
+              onClick={addRow}
+            >
+              <Plus />
+              {t("critTable.addShort")}
+            </Button>
+            <Button
+              type="button"
+              disabled={saving}
+              title={t("critTable.save")}
+              aria-label={t("critTable.save")}
+              onClick={() => void save()}
+            >
+              {t("critTable.saveShort")}
+            </Button>
+          </div>
+        )}
       </div>
     </section>
   );

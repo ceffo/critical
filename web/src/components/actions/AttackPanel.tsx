@@ -562,7 +562,10 @@ function StatsLine({
     rate && (
       <span
         data-testid="tile-rate"
-        title={t("attack.rateHint", { ...rate, count: rate.thisRound })}
+        title={t(
+          rate.rounds > 1 ? "attack.rateHint" : "attack.rateHintEveryRound",
+          { ...rate, count: rate.thisRound },
+        )}
       >
         {t(rate.rounds > 1 ? "attack.rateRound" : "attack.rate", {
           ...rate,

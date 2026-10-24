@@ -258,7 +258,8 @@
       "reason": "Reason",
       "rolled": "d20 {{d20}} vs {{target}}",
       "spent": "PSPs {{amount}}",
-      "keptUp": "kept up: {{cost}} PSPs every {{count}} rounds",
+      "keptUp_one": "kept up: {{cost}} PSPs every round",
+      "keptUp_other": "kept up: {{cost}} PSPs every {{count}} rounds",
       "outcome": {
         "success": "Success",
         "failure": "Failed",
@@ -487,6 +488,7 @@
     "rate": "{{attacks}}/{{rounds}} att.",
     "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} this round",
     "rateHint": "Attacks per round: {{attacks}} every {{rounds}} rounds; this round: {{count}}",
+    "rateHintEveryRound": "Attacks per round: {{attacks}} every round; this round: {{count}}",
     "pointBlank": "Point blank",
     "pointBlankHint": "Target at point-blank range: +2 to hit with a specialized bow or crossbow",
     "sizesShort": {
@@ -1786,7 +1788,8 @@
       "relearns_other": "+{{count}} relearned",
       "modifierWhy": "{{value}} {{reason}}",
       "halfCost": "paid {{spent}} of {{cost}} PSPs",
-      "maintained": "kept up: {{cost}} PSPs every {{count}} rounds",
+      "maintained_one": "kept up: {{cost}} PSPs every round",
+      "maintained_other": "kept up: {{cost}} PSPs every {{count}} rounds",
       "warning": {
         "second_power_this_round": "second power this round"
       },

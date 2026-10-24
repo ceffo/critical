@@ -12,7 +12,8 @@ rules are the data" (ADR 0043 step 8, "a power's rules are its data").
   `data.ts`, shaped as catalogue format 18: the powers and the rule-table rows (Table 6, 14, 29 to 31)
   are copied from the catalogue; two fixtures with different known powers. `?screen=<id>&lang=fr|en`.
 - **Review from another device**: `just design-serve psionics` serves `shots/` and its gallery
-  (`index.html`, written by the shots script) on the Tailscale address, port 8641.
+  (`index.html`, written by the shots script) through `tailscale serve`, tailnet only:
+  http://noether.tailb75c41.ts.net:8641/ (no firewall change; Ctrl-C stops it).
 - **Shots**: `just psionics-shots` writes `shots/<screen>--<fr|en>-<WxH>.png` at 1920x1080 and
   2560x1440, and fails on cut text or a page scroll (`--fr`, `--only=a,b`, `--self-test`).
 

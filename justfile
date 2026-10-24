@@ -529,10 +529,15 @@ psionics-shots *args:
     cd web && node e2e/check-browser.mjs
     node docs/design/psionics/shots.mjs {{args}}
 
-# Serve a design round's shots and gallery (docs/design/<round>/shots/index.html) on this machine's
-# Tailscale address only, for review from another device: just design-serve psionics [port].
+# Serve a design round's shots and gallery (docs/design/<round>/shots/index.html) for review from
+# another device of the tailnet: a server on 127.0.0.1 published by `tailscale serve` (tailnet only,
+# no firewall change) at http://<host>.<tailnet>.ts.net:<port>/. Ctrl-C stops both.
 design-serve round port="8641":
-    python3 -m http.server {{port}} --bind "$(tailscale ip -4)" --directory docs/design/{{round}}/shots
+    #!/usr/bin/env bash
+    set -euo pipefail
+    tailscale serve --bg --http {{port}} http://127.0.0.1:{{port}}
+    trap 'tailscale serve --http {{port}} off' EXIT
+    python3 -m http.server {{port}} --bind 127.0.0.1 --directory docs/design/{{round}}/shots
 
 # Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
 # Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.

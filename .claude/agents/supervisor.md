@@ -75,6 +75,7 @@ user to close an agent. Close by agent name, never by a remembered or guessed ta
 closed its own tab from a stale handoff note and died with no handoff) and the user's own sessions, and tells
 fleet-watch.sh not to wake you with "GONE" for an agent you closed (sup-51: four empty wake-ups in one session). Never type into an agent's tab other than through
 `herdr agent prompt`.
+After a dispatch the user interrupted or a tool call they rejected, run `herdr agent list` and `git worktree list` before retrying: a rejected call may already have started agents (sup-92 made two empty tabs by relaunching). Before launching a second reviewer or developer whose report file already exists from an earlier PR of the same item, `touch <wt>/supervisor/.prompt-<item>` so fleet-watch doesn't wake you on the old report (sup-92).
 
 ## Quota gate (before every dispatch or rework prompt)
 

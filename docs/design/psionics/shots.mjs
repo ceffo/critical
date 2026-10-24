@@ -4,7 +4,7 @@
 // Fails when any element cuts its text (wider or taller than the box that hides it) or the page
 // scrolls: the no-cut rule, checked rather than eyeballed. `--self-test` proves the audit catches
 // both. Run `just psionics-shots` (needs web/node_modules and Playwright's Chromium).
-import { mkdirSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -15,18 +15,20 @@ const web = path.join(root, "web");
 const { chromium } = createRequire(path.join(web, "package.json"))("@playwright/test");
 const { createServer } = await import(pathToFileURL(path.join(web, "node_modules/vite/dist/node/index.js")).href);
 
-const SCREENS = [
-  "act-attack",
-  "act-attack-result",
-  "act-defend",
-  "act-table-cost",
-  "act-variable",
-  "act-calm",
-  "act-other",
-  "rest-kept",
-  "rest-proficiency",
-  "lookup-powers",
+// Each screen with the line the review gallery (shots/index.html) shows above it.
+const GALLERY = [
+  ["act-attack", "Attaque : la barre d'action reçoit les deux jets du MJ contre la défense de la cible"],
+  ["act-attack-result", "Résultat d'attaque : 3e tangente = contact, le second jet n'est pas lancé"],
+  ["act-defend", "Attaque subie : défense dressée ce tour, mode et jets du MJ, résultat avec Garder"],
+  ["act-table-cost", "Coût lu dans une table : ligne par niveau, un contrôle par type de modificateur"],
+  ["act-variable", "Coût variable : le joueur saisit le coût (et le maintien variable)"],
+  ["act-calm", "Hors combat : défenses payantes en attente, pouvoir au contact sur un allié"],
+  ["act-other", "Second personnage (Ysolde) : ni mode d'attaque ni cible, mêmes gabarits"],
+  ["rest-kept", "Repos alors qu'un pouvoir payant est maintenu : un bouton l'arrête et récupère"],
+  ["rest-proficiency", "Repos avec la compétence Régénération : la ligne Méditation apparaît"],
+  ["lookup-powers", "Consultation : Sorts > Pouvoirs, catalogue et pouvoirs connus"],
 ];
+const SCREENS = GALLERY.map(([id]) => id);
 // `--fr` shoots French only (the quick loop while iterating); the default shoots both.
 const LANGS = process.argv.includes("--fr") ? ["fr"] : ["fr", "en"];
 // `--only=a,b` shoots those screens only.
@@ -115,7 +117,32 @@ for (const screen of SCREENS.filter((s) => !only || only.includes(s)))
     }
 await browser.close();
 await server.close();
+writeGallery();
 if (failed) {
   console.error(`${failed} screenshot(s) with cut text or a page scroll`);
   process.exit(1);
+}
+
+/** shots/index.html: every screen's French 1920x1080 shot under its line, with links to the
+ * other language and size, for review from another machine (`just design-serve psionics`). */
+function writeGallery() {
+  const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  const sections = GALLERY.map(([id, line]) => {
+    const f = (lang, size) => `${id}--${lang}-${size}.png`;
+    const links = [["en", "1920x1080"], ["fr", "2560x1440"], ["en", "2560x1440"]]
+      .map(([lang, size]) => `<a href="${f(lang, size)}">${lang} ${size}</a>`)
+      .join(" · ");
+    return `<section id="${id}"><h2><a href="#${id}">${id}</a> — ${esc(line)}</h2>
+<p class="links">${links}</p><a href="${f("fr", "1920x1080")}"><img src="${f("fr", "1920x1080")}" alt="${id}" loading="lazy"></a></section>`;
+  }).join("\n");
+  const toc = GALLERY.map(([id]) => `<a href="#${id}">${id}</a>`).join(" ");
+  writeFileSync(
+    path.join(outDir, "index.html"),
+    `<!doctype html><meta charset="utf-8"><title>Psionics design round</title>
+<style>body{background:#14121c;color:#e8e6f0;font:15px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1920px;padding:16px}
+a{color:#b9a8ff}h2{font-size:17px;margin:28px 0 4px}img{width:100%;border:1px solid #3a3550;border-radius:6px}
+.links{margin:0 0 8px;font-size:13px}nav{position:sticky;top:0;background:#14121c;padding:8px 0;font-size:13px}nav a{margin-right:10px}</style>
+<h1>Psionics design round</h1><nav>${toc}</nav>\n${sections}\n`,
+  );
+  console.log(`     ${path.relative(root, path.join(outDir, "index.html"))} (review gallery)`);
 }

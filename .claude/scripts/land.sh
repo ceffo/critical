@@ -18,9 +18,12 @@ j=$(gh pr view "$pr" -R "$repo" --json state,mergeable,mergeStateStatus,headRefO
 [ "$(jq -r .state <<<"$j")" = OPEN ] || refuse "state $(jq -r .state <<<"$j")"
 sha=$(jq -r .headRefOid <<<"$j")
 [ "$(jq '.statusCheckRollup|length' <<<"$j")" -gt 0 ] || refuse "no checks reported yet"
-pending=$(jq -r '[.statusCheckRollup[]|select((.status // "COMPLETED")!="COMPLETED")|.name]|join(",")' <<<"$j")
+# A check can report several runs on one head (a concurrency group cancels the first): judge each by its
+# latest run only, or a cancelled duplicate refuses a green PR.
+latest='[.statusCheckRollup|group_by(.name // .context)[]|max_by(.startedAt // .createdAt // "")]'
+pending=$(jq -r "$latest"'|[.[]|select((.status // "COMPLETED")!="COMPLETED")|.name]|join(",")' <<<"$j")
 [ -z "$pending" ] || refuse "checks pending: $pending"
-bad=$(jq -r '[.statusCheckRollup[]|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL"))|not)|(.name // .context)]|join(",")' <<<"$j")
+bad=$(jq -r "$latest"'|[.[]|select(((.conclusion // .state)|IN("SUCCESS","SKIPPED","NEUTRAL"))|not)|(.name // .context)]|join(",")' <<<"$j")
 [ -z "$bad" ] || refuse "checks not green: $bad"
 [ "$(jq -r .mergeable <<<"$j")" = MERGEABLE ] || refuse "mergeable=$(jq -r .mergeable <<<"$j")"
 [ "$(jq -r .mergeStateStatus <<<"$j")" = CLEAN ] || refuse "mergeStateStatus=$(jq -r .mergeStateStatus <<<"$j")"

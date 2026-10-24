@@ -209,7 +209,7 @@ export function SettingsPopover() {
               {t("settings.logout")}
             </Button>
           </div>
-          {me?.role === "admin" && (
+          {me && (
             <a
               href={RULESET_PATH}
               className={cn(buttonVariants({ variant: "quiet" }), "self-start")}

@@ -5,6 +5,7 @@ import { fetchRuleset } from "@/api/ruleset";
 import { buttonVariants } from "@/components/ui/button";
 import { VersionBadge } from "@/components/shell/VersionBadge";
 import { APP_NAME } from "@/lib/brand";
+import { useSessionStore } from "@/stores/session";
 import type { Ruleset } from "@/types/ruleset";
 import { CritTableCard } from "./CritTableCard";
 import { HouseRulesCard } from "./HouseRulesCard";
@@ -12,7 +13,7 @@ import { SuccessEffectsCard } from "./SuccessEffectsCard";
 
 /**
  * The ruleset's screen (ADR 0041 step 8), a page of its own at /ruleset reached from the cog menu by
- * admins only: the crit table on the left, the house-rule switches and the success effects on the
+ * every user (a player reads it, an admin edits it): the crit table on the left, the house-rule switches and the success effects on the
  * right. Back returns to the character sheet. The ruleset is the table's, not a character's, so
  * nothing here is on an action stack or in a journal.
  */
@@ -20,6 +21,7 @@ export function RulesetPage() {
   const { t } = useTranslation();
   const [ruleset, setRuleset] = useState<Ruleset | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const editable = useSessionStore((s) => s.me?.role === "admin");
 
   useEffect(() => {
     fetchRuleset()
@@ -57,14 +59,18 @@ export function RulesetPage() {
       )}
       {ruleset && (
         <main className="grid min-w-0 grid-cols-[minmax(20rem,32rem)_minmax(0,1fr)] items-start gap-3">
-          <CritTableCard initial={ruleset.critTable} />
+          <CritTableCard initial={ruleset.critTable} editable={editable} />
           <div className="flex min-w-0 flex-col gap-3">
             <HouseRulesCard
               initial={ruleset.racialLift}
               weaponLift={ruleset.weaponLift}
               levelLimits={ruleset.levelLimits}
+              editable={editable}
             />
-            <SuccessEffectsCard initial={ruleset.successEffects} />
+            <SuccessEffectsCard
+              initial={ruleset.successEffects}
+              editable={editable}
+            />
           </div>
         </main>
       )}

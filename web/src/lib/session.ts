@@ -49,7 +49,7 @@ export const ROSTER_PATH = "/characters";
 /** The admin section's page (ADR 0029 step 1.3). */
 export const ADMIN_PATH = "/admin";
 
-/** The ruleset's screen (ADR 0041 step 8): the crit table and the house rules, an admin's. */
+/** The ruleset's screen (ADR 0041 step 8): the crit table and the house rules, read by every user, edited by an admin. */
 export const RULESET_PATH = "/ruleset";
 
 /** True for the login page's path. */
@@ -87,9 +87,7 @@ export function startFor(
     return { show: "admin" };
   }
   if (path === RULESET_PATH) {
-    // Like the admin section, an admin's: a player who opens it goes to the app.
-    if (session.kind === "in" && session.me.role !== "admin")
-      return { go: "/" };
+    // Every logged-in user reads it; only an admin edits (the page hides the controls from a player).
     return { show: "ruleset" };
   }
   if (session.kind === "in" && session.me.currentCharacterId == null)

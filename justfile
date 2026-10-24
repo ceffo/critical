@@ -521,6 +521,14 @@ equipment-shots *args:
     cd web && node e2e/check-browser.mjs
     node docs/design/equipment/shots.mjs {{args}}
 
+# Psionics design round (docs/design/psionics/): the mock-ups of web/design/psionics/ served on the app's
+# Vite and screenshotted in French and English at 1920x1080 and 2560x1440 into docs/design/psionics/shots/;
+# fails on cut text or a page scroll (`--self-test` checks the audit, `--fr` shoots French only,
+# `--only=a,b` some screens). Not part of `just validate` nor `just e2e`.
+psionics-shots *args:
+    cd web && node e2e/check-browser.mjs
+    node docs/design/psionics/shots.mjs {{args}}
+
 # Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
 # Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.
 rulebooks:

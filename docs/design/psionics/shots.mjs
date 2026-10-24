@@ -16,13 +16,15 @@ const { chromium } = createRequire(path.join(web, "package.json"))("@playwright/
 const { createServer } = await import(pathToFileURL(path.join(web, "node_modules/vite/dist/node/index.js")).href);
 
 const SCREENS = [
-  "act-powers",
   "act-attack",
+  "act-attack-result",
   "act-defend",
-  "act-contact",
-  "act-single",
-  "rest",
-  "rest-blocked",
+  "act-table-cost",
+  "act-variable",
+  "act-calm",
+  "act-other",
+  "rest-kept",
+  "rest-proficiency",
   "lookup-powers",
 ];
 // `--fr` shoots French only (the quick loop while iterating); the default shoots both.

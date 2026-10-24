@@ -21,7 +21,16 @@ import { BrandIcon } from "@/components/shell/BrandMark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { lt, tr } from "./lang";
-import { CHAR, SAVES } from "./data";
+import type { Fixture } from "./data";
+
+const ABILITY_LABELS: [keyof Fixture["abilities"], string, string][] = [
+  ["str", "FOR", "STR"],
+  ["dex", "DEX", "DEX"],
+  ["con", "CON", "CON"],
+  ["int", "INT", "INT"],
+  ["wis", "SAG", "WIS"],
+  ["cha", "CHA", "CHA"],
+];
 
 export type Activity = "act" | "spells" | "inventory" | "xp";
 
@@ -60,7 +69,7 @@ export function Header({
               </span>
               {upkeep > 0 && (
                 <span className="text-label">
-                  {tr(`−${upkeep} PFP d'entretien`, `−${upkeep} PSP upkeep`)}
+                  {tr(`−${upkeep} PFP de maintien`, `−${upkeep} PSP maintenance`)}
                 </span>
               )}
             </Button>
@@ -76,13 +85,16 @@ export function Header({
         </div>
       </div>
       <div className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1">
-        <span className="section-label">{tr("Effets", "Effects")}</span>
+        <span className="section-label">
+          {tr("Effets", "Effects")}
+          {effects.length > 3 && <span className="ml-2 text-label text-ink-muted normal-case">+{effects.length - 3}</span>}
+        </span>
         <div className="grid grid-cols-5 text-center text-label text-ink-muted">
-          {["T3", "T4", "T5", "T6", "T7"].map((t) => (
+          {[0, 1, 2, 3, 4].map((i) => `T${Math.max(round, 1) + i}`).map((t) => (
             <span key={t}>{t}</span>
           ))}
         </div>
-        {effects.map((e) => (
+        {effects.slice(0, 3).map((e) => (
           <div key={e.name} className="contents">
             <span className="text-body">{e.name}</span>
             <div className="h-5">
@@ -176,35 +188,38 @@ export function PspBlock({
 }
 
 export function CharacterCard({
-  single,
+  who,
   psp,
   upkeep,
   restOpen,
 }: {
-  /** A single-class psionicist instead of the table's thief/psionicist. */
-  single?: boolean;
+  who: Fixture;
   psp: number;
   upkeep: number;
   restOpen?: boolean;
 }) {
-  const classes = single ? [CHAR.classes[1]] : CHAR.classes;
+  const classes = who.classes;
+  const abilities: [string, number][] = [
+    ...ABILITY_LABELS.map(([k, fr, en]): [string, number] => [tr(fr, en), who.abilities[k]]),
+    [tr("TAC0", "THAC0"), who.thac0],
+  ];
   return (
     <aside className="zone-card flex w-[clamp(280px,21vw,384px)] shrink-0 flex-col gap-5 overflow-y-auto px-4 pb-3.5">
       <div className="group-band bleed-x-4 flex items-start justify-between gap-2 pt-3 pb-2">
         <div className="flex flex-col">
-          <span className="text-title">{CHAR.name}</span>
+          <span className="text-title">{who.name}</span>
           <span className="text-body text-ink-muted">
             {classes.map((c) => `${lt(c.name)} ${c.level}`).join(" · ")}
           </span>
         </div>
       </div>
       <div className="grid grid-cols-[repeat(6,minmax(0,1fr))_auto] gap-1">
-        {CHAR.abilities.map(([n, v]) => (
+        {abilities.map(([n, v]) => (
           <div
-            key={n.en}
+            key={n}
             className="flex flex-col items-center rounded-md bg-raised px-1 py-1"
           >
-            <span className="text-label text-ink-muted">{lt(n)}</span>
+            <span className="text-label text-ink-muted">{n}</span>
             <span className="text-key tabular-nums">{v}</span>
           </div>
         ))}
@@ -216,9 +231,9 @@ export function CharacterCard({
           </span>
           <span className="text-body text-ink-muted">
             <b className="text-hero leading-none text-ink tabular-nums">
-              {CHAR.hp}
+              {who.hp}
             </b>{" "}
-            / {CHAR.hpMax}
+            / {who.hpMax}
           </span>
           <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-input">
             <div className="w-[92%] bg-success" />
@@ -234,13 +249,13 @@ export function CharacterCard({
             />
           </svg>
           <span className="relative -mt-1 text-key font-bold tabular-nums">
-            {CHAR.ac}
+            {who.ac}
           </span>
         </span>
       </div>
       <PspBlock
         current={psp}
-        max={CHAR.pspMax}
+        max={who.pspMax}
         upkeep={upkeep}
         restOpen={restOpen}
       />
@@ -264,7 +279,7 @@ export function CharacterCard({
         <span className="section-label">
           {tr("Jets de sauvegarde", "Saving throws")}
         </span>
-        {SAVES.map(([n, v]) => (
+        {who.saves.map(([n, v]) => (
           <div
             key={n.en}
             className="flex items-center justify-between rounded-md bg-raised px-2.5 py-1 text-body"
@@ -323,8 +338,8 @@ export function Dashboard({
   children,
   effects,
   upkeep,
-  psp = CHAR.psp,
-  single,
+  psp,
+  who,
   last,
   restOpen,
   overlay,
@@ -335,7 +350,7 @@ export function Dashboard({
   effects: Effect[];
   upkeep: number;
   psp?: number;
-  single?: boolean;
+  who: Fixture;
   last?: ReactNode;
   restOpen?: boolean;
   overlay?: ReactNode;
@@ -346,8 +361,8 @@ export function Dashboard({
       <Header effects={effects} upkeep={upkeep} last={last} round={round} />
       <div className="flex min-h-0 flex-1 gap-3">
         <CharacterCard
-          single={single}
-          psp={psp}
+          who={who}
+          psp={psp ?? who.psp}
           upkeep={upkeep}
           restOpen={restOpen}
         />

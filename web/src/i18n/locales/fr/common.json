@@ -258,7 +258,8 @@
       "reason": "Raison",
       "rolled": "d20 {{d20}} contre {{target}}",
       "spent": "PFP {{amount}}",
-      "keptUp": "maintenu : {{cost}} PFP tous les {{count}} tours",
+      "keptUp_one": "maintenu : {{cost}} PFP à chaque tour",
+      "keptUp_other": "maintenu : {{cost}} PFP tous les {{count}} tours",
       "outcome": {
         "success": "Réussi",
         "failure": "Échec",
@@ -487,6 +488,7 @@
     "rate": "{{attacks}}/{{rounds}} att.",
     "rateRound": "{{attacks}}/{{rounds}} att. · {{count}} ce tour",
     "rateHint": "Attaques par tour : {{attacks}} tous les {{rounds}} tours ; ce tour : {{count}}",
+    "rateHintEveryRound": "Attaques par tour : {{attacks}} à chaque tour ; ce tour : {{count}}",
     "pointBlank": "Bout portant",
     "pointBlankHint": "Cible à bout portant : +2 au toucher pour un spécialiste de l’arc ou de l’arbalète",
     "sizesShort": {
@@ -1786,7 +1788,8 @@
       "relearns_other": "+{{count}} réappris",
       "modifierWhy": "{{value}} {{reason}}",
       "halfCost": "{{spent}} PFP payés sur {{cost}}",
-      "maintained": "maintenu : {{cost}} PFP tous les {{count}} tours",
+      "maintained_one": "maintenu : {{cost}} PFP à chaque tour",
+      "maintained_other": "maintenu : {{cost}} PFP tous les {{count}} tours",
       "warning": {
         "second_power_this_round": "deuxième pouvoir ce tour"
       },

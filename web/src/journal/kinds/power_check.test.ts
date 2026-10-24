@@ -40,11 +40,11 @@ describeKind("power_check", fixtures, {
   // ADR 0044 step 9: the contact power on a level 7 bird, 10 miles away, resisting.
   contact: {
     en: {
-      text: "Power check (Contact): d20 5 vs 7, success, PSPs −8 (WIS 15 0, on Bird, target level 7, 10 miles −3, bird −3, resisting −2, kept up: 1 PSPs every 1 rounds, contact made)",
+      text: "Power check (Contact): d20 5 vs 7, success, PSPs −8 (WIS 15 0, on Bird, target level 7, 10 miles −3, bird −3, resisting −2, kept up: 1 PSPs every round, contact made)",
       short: "Power check · success",
     },
     fr: {
-      text: "Jet de pouvoir (Contact) : d20 5 contre 7, réussi, PFP −8 (SAG 15 0, sur Bird, cible de niveau 7, 10 milles −3, oiseau −3, résiste −2, maintenu : 1 PFP tous les 1 tours, contact établi)",
+      text: "Jet de pouvoir (Contact) : d20 5 contre 7, réussi, PFP −8 (SAG 15 0, sur Bird, cible de niveau 7, 10 milles −3, oiseau −3, résiste −2, maintenu : 1 PFP à chaque tour, contact établi)",
       short: "Jet de pouvoir · réussi",
     },
     value: { text: "5", tone: "pass" },
@@ -53,11 +53,11 @@ describeKind("power_check", fixtures, {
   // ADR 0044 step 10: a power paid on contact, on a mind held from an earlier round.
   costIsContact: {
     en: {
-      text: "Power check (Inflict Pain): d20 8 vs 12, success, PSPs 0 (CON 16 −4, on Orc, kept up: 2 PSPs every 1 rounds)",
+      text: "Power check (Inflict Pain): d20 8 vs 12, success, PSPs 0 (CON 16 −4, on Orc, kept up: 2 PSPs every round)",
       short: "Power check · success",
     },
     fr: {
-      text: "Jet de pouvoir (Infliger la douleur) : d20 8 contre 12, réussi, PFP 0 (CON 16 −4, sur Orc, maintenu : 2 PFP tous les 1 tours)",
+      text: "Jet de pouvoir (Infliger la douleur) : d20 8 contre 12, réussi, PFP 0 (CON 16 −4, sur Orc, maintenu : 2 PFP à chaque tour)",
       short: "Jet de pouvoir · réussi",
     },
     value: { text: "8", tone: "pass" },

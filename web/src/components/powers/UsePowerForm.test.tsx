@@ -110,4 +110,14 @@ describe("CheckResult", () => {
     expect(html).toContain("PFP −6");
     expect(html).not.toContain("maintenu");
   });
+
+  it("words an upkeep due every round without a count, in both languages", async () => {
+    const every = { ...check, maintenancePeriod: 1 };
+    expect(await render("en", <CheckResult result={every} />)).toContain(
+      "kept up: 3 PSPs every round",
+    );
+    expect(await render("fr", <CheckResult result={every} />)).toContain(
+      "maintenu : 3 PFP à chaque tour",
+    );
+  });
 });

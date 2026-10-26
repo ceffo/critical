@@ -115,6 +115,55 @@ func TestConfigValidate_Step8_3_InMemoryStorageOnlyOutsideFlyAndTheImage(t *test
 	}
 }
 
+// ADR 0025 step 8.5: a dice seed is e2e-only. It needs the in-memory storage,
+// so fly.io and the production image refuse it with that mode, and it must be
+// an unsigned integer.
+func TestConfigValidate_Step8_5_DiceSeedOnlyWithInMemoryStorage(t *testing.T) {
+	base := Config{DSN: "d", SeedsDir: "s", Addr: ":1", Catalogue: "c", Env: EnvDev}
+	with := func(f func(*Config)) Config {
+		c := base
+		f(&c)
+		return c
+	}
+	cases := []struct {
+		name string
+		cfg  Config
+		ok   bool
+	}{
+		{"no seed", with(func(c *Config) { c.Storage = StorageMemory }), true},
+		{"seed with memory", with(func(c *Config) { c.Storage, c.DiceSeed = StorageMemory, "42" }), true},
+		{"seed with the database", with(func(c *Config) { c.DiceSeed = "42" }), false},
+		{"seed not a number", with(func(c *Config) { c.Storage, c.DiceSeed = StorageMemory, "abc" }), false},
+		{"seed negative", with(func(c *Config) { c.Storage, c.DiceSeed = StorageMemory, "-1" }), false},
+		{"seed on fly", with(func(c *Config) {
+			c.Storage, c.DiceSeed, c.FlyApp, c.Env = StorageMemory, "42", "critical-hit", ""
+			c.GoogleClientID, c.GoogleClientSecret, c.PublicURL = "id", "secret", "https://critical-hit.fly.dev"
+		}), false},
+		{"seed in the production image", with(func(c *Config) { c.Storage, c.DiceSeed, c.WebDir = StorageMemory, "42", "/app/web" }), false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if err := c.cfg.Validate(); (err == nil) != c.ok {
+				t.Fatalf("Validate(%+v) = %v, want ok=%v", c.cfg, err, c.ok)
+			}
+		})
+	}
+}
+
+// The seed is read from CRITICAL_DICE_SEED.
+func TestLoadConfig_Step8_5_DiceSeed(t *testing.T) {
+	devEnv(t)
+	t.Setenv("CRITICAL_STORAGE", "memory")
+	t.Setenv("CRITICAL_DICE_SEED", "42")
+	cfg, err := loadConfig()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if seed, err := cfg.diceSeed(); err != nil || seed == nil || *seed != 42 {
+		t.Fatalf("diceSeed = %v, %v", seed, err)
+	}
+}
+
 // The storage and the fly marker are read from the environment, and the
 // refusal is loadConfig's, before anything is opened.
 func TestLoadConfig_InMemoryStorage(t *testing.T) {

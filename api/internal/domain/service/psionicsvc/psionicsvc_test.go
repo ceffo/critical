@@ -248,3 +248,33 @@ func TestRecover_ADR0047Item6_GatedActivityNeedsProficiency(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// ADR 0047 item 4: the paying rows ended come back with the pool, and the one
+// psp_recovery entry carries their snapshot and names them; with no paying
+// row it carries no snapshot.
+func TestStopAndRecover_ADR0047Item4_OneEntryWithTheEndedRows(t *testing.T) {
+	ended := []buffsvc.BuffEffect{{ID: "r", PowerID: "levitation", MaintenanceCost: 2, MaintenancePeriod: 1}}
+	for _, c := range []struct {
+		name  string
+		ended []buffsvc.BuffEffect
+		snaps int
+	}{{"a paying row", ended, 1}, {"none", nil, 0}} {
+		t.Run(c.name, func(t *testing.T) {
+			rates, log, buffs := mocks.NewMockTables(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
+			svc, err := psionicsvc.New(psionicsvc.Deps{
+				Buffs: buffs, Tables: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t),
+				Dice: mocks.NewMockDice(t), Book: psionics.NewBook(nil, nil), Tx: passTx{},
+			})
+			require.NoError(t, err)
+			rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Once()
+			buffs.EXPECT().EndMaintained(mock.Anything, int64(7)).Return(c.ended, actionlog.Snapshot{Key: "buffs"}, nil).Once()
+			log.EXPECT().AppendPSP(mock.Anything, mock.MatchedBy(func(e actionlog.NewEntry) bool {
+				return e.Kind == actionlog.KindPSPRecovery && e.PSPDelta == 18 && len(e.Snapshots) == c.snaps
+			})).Return(actionlog.PSPState{Current: 18, Max: 25}, nil).Once()
+			res, err := svc.StopAndRecover(context.Background(), 7, 3, "resting")
+			require.NoError(t, err)
+			assert.Equal(t, 18, res.PSP.Current)
+			assert.Equal(t, c.ended, res.Ended)
+		})
+	}
+}

@@ -44,6 +44,7 @@ type buffSvc interface {
 	SetRound(ctx context.Context, characterID int64, to int) (active []buffsvc.BuffEffect, round int, err error)
 	PassTime(ctx context.Context, characterID int64, hours float64) (active, expired []buffsvc.BuffEffect, rounds, round int, end buffsvc.EndResult, err error)
 	PreviewPassTime(ctx context.Context, characterID int64, hours float64) (rounds int, expiring []buffsvc.BuffEffect, pspSpent int, err error)
+	PreviewNextRound(ctx context.Context, characterID int64) (buffsvc.NextRoundPreview, error)
 	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 	ListSaved(ctx context.Context, characterID int64) ([]buffsvc.SavedBuff, error)
 	SaveBuff(ctx context.Context, characterID int64, saved buffsvc.SavedBuff) ([]buffsvc.SavedBuff, error)
@@ -66,6 +67,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc buffsvc.SVC) {
 	r.Post("/api/round/initiative/reroll", render.Handle(RerollInitiative(charID, svc)))
 	r.Put("/api/round", render.Handle(SetRound(charID, svc)))
 	r.Post("/api/round/pass-time", render.Handle(PassTime(charID, svc)))
+	r.Get("/api/round/advance/preview", render.Handle(PreviewNextRound(charID, svc)))
 	r.Get("/api/round/pass-time/preview", render.Handle(PreviewPassTime(charID, svc)))
 	r.Get("/api/stats/str", render.Handle(GetEffectiveStr(charID, svc)))
 }
@@ -342,6 +344,44 @@ func PreviewPassTime(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, PassTimePreviewDTO{Rounds: rounds, Expiring: toDTOs(expiring), PSPSpent: spent})
+		return nil
+	}
+}
+
+// NextRoundPreviewDTO is GET /api/round/advance/preview: what Next Round would
+// charge (ADR 0043 step 14), computed by the server, nothing written.
+type NextRoundPreviewDTO struct {
+	// PSPSpent is the total the maintained rows would be charged, PSPBefore the
+	// character's PSPs now and PSPAfter what Next Round leaves.
+	PSPSpent  int `json:"pspSpent"`
+	PSPBefore int `json:"pspBefore"`
+	PSPAfter  int `json:"pspAfter"`
+	// Rows has one line per maintained row (a power, a tangent, a contact), in
+	// the buff list's order.
+	Rows []RowChargeDTO `json:"rows"`
+}
+
+// RowChargeDTO is one maintained row's share: Charge is what it pays at the
+// next Next Round (0: its period is not due, or a contact is free while a
+// power uses it), Ends that the PSPs left cannot pay it, so it would end.
+type RowChargeDTO struct {
+	BuffID string `json:"buffId"`
+	Charge int    `json:"charge"`
+	Ends   bool   `json:"ends,omitempty"`
+}
+
+// PreviewNextRound answers what the next Next Round would charge.
+func PreviewNextRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		p, err := svc.PreviewNextRound(r.Context(), charID(r))
+		if err != nil {
+			return err
+		}
+		rows := make([]RowChargeDTO, len(p.Rows))
+		for i, row := range p.Rows {
+			rows[i] = RowChargeDTO{BuffID: row.BuffID, Charge: row.Cost, Ends: row.Ends}
+		}
+		render.OK(r.Context(), w, NextRoundPreviewDTO{PSPSpent: p.PSPSpent, PSPBefore: p.PSPBefore, PSPAfter: p.PSPAfter, Rows: rows})
 		return nil
 	}
 }

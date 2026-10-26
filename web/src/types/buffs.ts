@@ -234,3 +234,20 @@ export interface RoundAdvanceResponse {
   /** advance and pass-time: what the expired rows' end effects did (absent: none applied). */
   ended?: Ended;
 }
+
+/** One maintained row's share of the next Next Round (ADR 0043 step 14). */
+export interface RowCharge {
+  buffId: string;
+  /** PSPs it pays: 0 when its period is not due, or a contact is free while a power uses it. */
+  charge: number;
+  /** The PSPs left cannot pay it: it would end. */
+  ends?: boolean;
+}
+
+/** GET /api/round/advance/preview: what Next Round would charge, from the server, nothing written. */
+export interface NextRoundPreview {
+  pspSpent: number;
+  pspBefore: number;
+  pspAfter: number;
+  rows: RowCharge[];
+}

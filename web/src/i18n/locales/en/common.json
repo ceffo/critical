@@ -212,6 +212,20 @@
     }
   },
   "powers": {
+    "maintained": {
+      "title": "Maintained",
+      "stopNamed": "Stop {{name}}",
+      "tangent": "Tangent · {{target}}",
+      "contact": "Contact · {{target}}",
+      "free": "free",
+      "standing": "standing",
+      "freeWhileUsed": "free while a power uses it",
+      "notDue": "nothing next round",
+      "ends": "not enough PSPs: ends next round",
+      "balance": "Next round",
+      "balanceValue": "{{before}} → {{after}} PSPs",
+      "charge": "−{{count}}"
+    },
     "tab": {
       "attackModes": "Attack modes",
       "roundFree": "Power this round: free",

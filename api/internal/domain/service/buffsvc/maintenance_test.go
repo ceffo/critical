@@ -292,3 +292,52 @@ func TestMoveRound_Step14_ClosesTheActivationRound(t *testing.T) {
 		assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(f.entries[0]))
 	})
 }
+
+// ADR 0043 step 14: the preview is what the next Next Round charges, row by
+// row, with nothing written. A period of 2 charges on the due round only.
+func TestAdvanceRound_Step14_PreviewChargesWhatNextRoundCharges(t *testing.T) {
+	ctx := context.Background()
+	every := maintained("a", "levitation", 3, 1, 1)
+	second := maintained("b", "clairvoyance", 5, 2, 1)  // 1 kept: not due yet
+	due := maintained("c", "ballistic_attack", 4, 2, 2) // 2 kept: due
+	plain := buffsvc.BuffEffect{ID: "p", Name: "Bless", Duration: 5}
+
+	t.Run("each row's share, the total, and the due round only", func(t *testing.T) {
+		f := newFixture(t) // mocks fail on any Record or Save
+		f.pspIs(20)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every, second, plain, due}, nil).Once()
+
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+
+		require.NoError(t, err)
+		assert.Equal(t, 7, p.PSPSpent, "3 + 0 + 4")
+		assert.Equal(t, 20, p.PSPBefore)
+		assert.Equal(t, 13, p.PSPAfter)
+		assert.Equal(t, []buffsvc.RowCharge{{BuffID: "a", Cost: 3}, {BuffID: "b"}, {BuffID: "c", Cost: 4}}, p.Rows)
+		assert.Zero(t, f.tx.calls, "no transaction")
+	})
+
+	t.Run("a row the PSPs left cannot pay would end", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(2)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every}, nil).Once()
+
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+
+		require.NoError(t, err)
+		assert.Zero(t, p.PSPSpent)
+		assert.Equal(t, []buffsvc.RowCharge{{BuffID: "a", Ends: true}}, p.Rows)
+	})
+
+	t.Run("the preview equals the entry's charge", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(20)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every, second, due}, nil).Once()
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+		require.NoError(t, err)
+
+		_, _, e := f.advances(t, []buffsvc.BuffEffect{every, second, due}, 4)
+
+		assert.Equal(t, -p.PSPSpent, e.PSPDelta)
+	})
+}

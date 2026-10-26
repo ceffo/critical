@@ -1443,6 +1443,63 @@ func (_c *MockSVC_PassTime_Call) RunAndReturn(run func(context.Context, int64, f
 	return _c
 }
 
+// PreviewNextRound provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) PreviewNextRound(ctx context.Context, characterID int64) (buffsvc.NextRoundPreview, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PreviewNextRound")
+	}
+
+	var r0 buffsvc.NextRoundPreview
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (buffsvc.NextRoundPreview, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) buffsvc.NextRoundPreview); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(buffsvc.NextRoundPreview)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PreviewNextRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PreviewNextRound'
+type MockSVC_PreviewNextRound_Call struct {
+	*mock.Call
+}
+
+// PreviewNextRound is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) PreviewNextRound(ctx interface{}, characterID interface{}) *MockSVC_PreviewNextRound_Call {
+	return &MockSVC_PreviewNextRound_Call{Call: _e.mock.On("PreviewNextRound", ctx, characterID)}
+}
+
+func (_c *MockSVC_PreviewNextRound_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_PreviewNextRound_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PreviewNextRound_Call) Return(_a0 buffsvc.NextRoundPreview, _a1 error) *MockSVC_PreviewNextRound_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PreviewNextRound_Call) RunAndReturn(run func(context.Context, int64) (buffsvc.NextRoundPreview, error)) *MockSVC_PreviewNextRound_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // PreviewPassTime provides a mock function with given fields: ctx, characterID, hours
 func (_m *MockSVC) PreviewPassTime(ctx context.Context, characterID int64, hours float64) (int, []buffsvc.BuffEffect, int, error) {
 	ret := _m.Called(ctx, characterID, hours)

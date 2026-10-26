@@ -65,6 +65,9 @@ type SVC interface {
 	// (ADR 0013 steps 1 and 2) and what the expired rows' end effects did
 	// (ADR 0004 step 21).
 	AdvanceRound(ctx context.Context, characterID int64) (active, expired []BuffEffect, round int, initiative Initiative, end EndResult, err error)
+	// PreviewNextRound is what AdvanceRound's maintenance would charge now
+	// (ADR 0043 step 14), per maintained row and in total; nothing written.
+	PreviewNextRound(ctx context.Context, characterID int64) (NextRoundPreview, error)
 	// ResetRound ends combat: the counter goes back to 0 (Next Round then
 	// gives 1). Active buffs are untouched. Logged, voidable.
 	ResetRound(ctx context.Context, characterID int64) (active []BuffEffect, round int, err error)

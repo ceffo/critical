@@ -375,7 +375,7 @@ function UseBarForm({
         {need.score && (
           <Field label={t("powers.use.score")}>
             <input
-              className={`${fieldClass} !w-24`}
+              className={`${fieldClass} !w-60`}
               inputMode="numeric"
               autoComplete="off"
               aria-label={t("powers.use.score")}

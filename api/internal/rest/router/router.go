@@ -177,7 +177,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		r.Use(mw.CurrentCharacter(fresh))
 		charID := mw.CharacterID
 
-		characterhdl.RegisterRoutes(r, charID, bs.Character)
+		characterhdl.RegisterRoutes(r, charID, bs.Character, bs.Psionics)
 		hphdl.RegisterRoutes(r, charID, bs.Log)
 		psphdl.RegisterRoutes(r, charID, bs.Log, bs.Psionics, bs.Psionics, bs.Psionics, bs.Psionics)
 		actionloghdl.RegisterRoutes(r, charID, bs.Log)

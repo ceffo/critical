@@ -349,6 +349,63 @@ func (_c *MockSVC_Module_Call) RunAndReturn(run func() domain.Module) *MockSVC_M
 	return _c
 }
 
+// PowerThisRound provides a mock function with given fields: ctx, characterID
+func (_m *MockSVC) PowerThisRound(ctx context.Context, characterID int64) (string, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for PowerThisRound")
+	}
+
+	var r0 string
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (string, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) string); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		r0 = ret.Get(0).(string)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_PowerThisRound_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PowerThisRound'
+type MockSVC_PowerThisRound_Call struct {
+	*mock.Call
+}
+
+// PowerThisRound is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockSVC_Expecter) PowerThisRound(ctx interface{}, characterID interface{}) *MockSVC_PowerThisRound_Call {
+	return &MockSVC_PowerThisRound_Call{Call: _e.mock.On("PowerThisRound", ctx, characterID)}
+}
+
+func (_c *MockSVC_PowerThisRound_Call) Run(run func(ctx context.Context, characterID int64)) *MockSVC_PowerThisRound_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_PowerThisRound_Call) Return(_a0 string, _a1 error) *MockSVC_PowerThisRound_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_PowerThisRound_Call) RunAndReturn(run func(context.Context, int64) (string, error)) *MockSVC_PowerThisRound_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RaiseDefence provides a mock function with given fields: ctx, characterID, powerID
 func (_m *MockSVC) RaiseDefence(ctx context.Context, characterID int64, powerID string) (*psionicsvc.RaiseResult, error) {
 	ret := _m.Called(ctx, characterID, powerID)

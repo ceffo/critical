@@ -57,6 +57,9 @@ type SVC interface {
 	// buff row, free, logged and undoable. ErrNotPsionicist,
 	// ErrPowerNotMaintained when no row keeps the power up.
 	Stop(ctx context.Context, characterID int64, powerID string) ([]buffsvc.BuffEffect, error)
+	// PowerThisRound is the id of the power used in the current round (ADR
+	// 0043 step 12), "" when the round is free or out of combat.
+	PowerThisRound(ctx context.Context, characterID int64) (string, error)
 	// RaiseDefence raises a known defence mode (ADR 0044 steps 4 and 5): no
 	// roll, one defence_raised entry paying its initial cost and putting its
 	// row. The refusals are RaiseDefence's (defence.go).

@@ -354,7 +354,7 @@ func TestAttack_Step7_CountsTowardTheRoundsPowers(t *testing.T) {
 	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).
 		Return([]actionlog.Entry{{ID: 5, Round: 3, Kind: actionlog.KindRoundAdvance}}, nil)
 	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPsionicAttack, 1).
-		Return([]actionlog.Entry{{ID: 9, Round: 3, Kind: actionlog.KindPsionicAttack}}, nil)
+		Return([]actionlog.Entry{{ID: 9, Round: 3, Kind: actionlog.KindPsionicAttack, Payload: []byte(`{"power":"ego_whip"}`)}}, nil)
 	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
 		Tables: m.tables, Log: m.log, Characters: chars, Picks: mocks.NewMockPicks(t),

@@ -384,52 +384,74 @@ var roundMoves = []actionlog.Kind{
 }
 
 // secondPowerThisRound is step 12: in combat (the round counter above 0) a
-// power that is not a defence mode is the round's second when a power check
-// of one that is not a defence mode, or an attack mode's use (ADR 0044 step
-// 7.1), is logged in the same round, after the
-// round's start (its Next Round, or the End combat, Set round or passing
-// time that last moved the counter). Out of combat it is never.
+// power that is not a defence mode is the round's second when a power was
+// already used this round (powerThisRound). Out of combat it is never.
 func (s *service) secondPowerThisRound(ctx context.Context, characterID int64, p catalogue.Power) (bool, error) {
 	if p.Kind == catalogue.KindDefenceMode {
 		return false, nil
 	}
+	used, err := s.powerThisRound(ctx, characterID)
+	return used != "", err
+}
+
+// PowerThisRound is the power used this round (ADR 0043 step 12): see
+// powerThisRound. "" when the round is free.
+func (s *service) PowerThisRound(ctx context.Context, characterID int64) (string, error) {
+	return s.powerThisRound(ctx, characterID)
+}
+
+// powerThisRound is the id of the newest power used in the current round: in
+// combat (the round counter above 0) a power check of one that is not a
+// defence mode, or an attack mode's use (ADR 0044 step 7.1), logged in the
+// same round, after the round's start (its Next Round, or the End combat, Set
+// round or passing time that last moved the counter). "" out of combat and
+// when no power was used.
+func (s *service) powerThisRound(ctx context.Context, characterID int64) (string, error) {
 	round, err := s.buffs.GetRound(ctx, characterID)
 	if err != nil {
-		return false, fmt.Errorf("get round: %w", err)
+		return "", fmt.Errorf("get round: %w", err)
 	}
 	if round < 1 {
-		return false, nil
+		return "", nil
 	}
 	since, err := s.roundStart(ctx, characterID)
 	if err != nil {
-		return false, err
+		return "", err
 	}
-	// An attack mode's use counts (ADR 0044 step 7.1).
+	var attackID int64
+	var attackPower string
 	attacks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPsionicAttack, 1)
 	if err != nil {
-		return false, fmt.Errorf("psionic attacks: %w", err)
+		return "", fmt.Errorf("psionic attacks: %w", err)
 	}
 	if len(attacks) > 0 && attacks[0].ID > since && attacks[0].Round == round {
-		return true, nil
+		var rec AttackRecord
+		if err := json.Unmarshal(attacks[0].Payload, &rec); err != nil {
+			return "", fmt.Errorf("decode psionic attack %d: %w", attacks[0].ID, err)
+		}
+		attackID, attackPower = attacks[0].ID, rec.Power
 	}
 	checks, err := s.log.ActiveEntries(ctx, characterID, actionlog.KindPowerCheck, powerCheckLookback)
 	if err != nil {
-		return false, fmt.Errorf("power checks: %w", err)
+		return "", fmt.Errorf("power checks: %w", err)
 	}
 	for _, e := range checks {
 		if e.ID <= since || e.Round != round {
-			return false, nil
+			break
 		}
 		var rec CheckRecord
 		if err := json.Unmarshal(e.Payload, &rec); err != nil {
-			return false, fmt.Errorf("decode power check %d: %w", e.ID, err)
+			return "", fmt.Errorf("decode power check %d: %w", e.ID, err)
 		}
 		if q, ok := s.book.Power(rec.Power); ok && q.Kind == catalogue.KindDefenceMode {
 			continue
 		}
-		return true, nil
+		if e.ID > attackID {
+			return rec.Power, nil
+		}
+		break
 	}
-	return false, nil
+	return attackPower, nil
 }
 
 // roundStart is the id of the newest entry that moved the round counter (a

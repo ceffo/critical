@@ -362,3 +362,33 @@ func TestUse_Step10_PostTarget(t *testing.T) {
 	require.Equal(t, http.StatusConflict, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"code":"use_contact_route"`)
 }
+
+// GET /api/character carries the power used this round in a psionicist's
+// known powers (ADR 0043 step 12), omitted when the round is free; a sheet
+// with no known powers never asks.
+func TestCharacter_Step12_ServesThePowerUsedThisRound(t *testing.T) {
+	for _, c := range []struct {
+		name string
+		used string
+		want string
+	}{
+		{"a power was used", "lift", `"usedThisRound":"lift"`},
+		{"the round is free", "", ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			h, m := newRouter(t)
+			m.char.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(&charactersvc.Character{
+				ID: 1, Name: "Joran",
+				Derived: charactersvc.Derived{Powers: &charactersvc.PowerKnowledge{Primary: "telepathy"}},
+			}, nil).Once()
+			m.psionics.EXPECT().PowerThisRound(mock.Anything, int64(1)).Return(c.used, nil).Once()
+			rec := do(h, "GET", "/api/character", "")
+			require.Equal(t, http.StatusOK, rec.Code)
+			if c.want == "" {
+				assert.NotContains(t, rec.Body.String(), "usedThisRound")
+				return
+			}
+			assert.Contains(t, rec.Body.String(), c.want)
+		})
+	}
+}

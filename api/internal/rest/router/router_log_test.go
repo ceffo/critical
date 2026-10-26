@@ -11,7 +11,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 )
 
 var at = time.Date(2026, 10, 17, 20, 0, 0, 0, time.UTC)
@@ -270,5 +273,30 @@ func TestPSPRecover_Step6_WireShape(t *testing.T) {
 	assert.JSONEq(t, `{"current":30,"max":181}`, rec.Body.String())
 
 	rec = do(h, "POST", "/api/psp/recover", `{"hours":`)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+}
+
+// POST /api/psionics/stop-and-recover (ADR 0047 item 4): the body is the
+// recovery's, the answer the pool and the rows ended by catalogue id or mind.
+func TestPSPStopAndRecover_ADR0047Item4_WireShape(t *testing.T) {
+	h, m := newRouter(t)
+	m.psionics.EXPECT().StopAndRecover(mock.Anything, int64(1), 2.0, "resting").
+		Return(psionicsvc.StopRecoverResult{
+			PSP: actionlog.PSPState{Current: 30, Max: 181},
+			Ended: []buffsvc.BuffEffect{
+				{ID: "a", PowerID: "aura_sight", PowerName: localized.Text{"en": "Aura Sight"}, MaintenanceCost: 1},
+				{ID: "b", Target: "Grey Ogre", Tangents: 2, MaintenanceCost: 1},
+			},
+		}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/stop-and-recover", `{"hours":2,"activity":"resting"}`)
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"psp":{"current":30,"max":181},"powersEnded":["aura_sight"],"powerNames":{"aura_sight":{"en":"Aura Sight"}},"targetsEnded":["Grey Ogre"]}`, rec.Body.String())
+
+	m.psionics.EXPECT().StopAndRecover(mock.Anything, int64(1), 1.0, "resting").
+		Return(psionicsvc.StopRecoverResult{PSP: actionlog.PSPState{Current: 5, Max: 9}}, nil).Once()
+	rec = do(h, "POST", "/api/psionics/stop-and-recover", `{"hours":1,"activity":"resting"}`)
+	assert.JSONEq(t, `{"psp":{"current":5,"max":9},"powersEnded":[],"targetsEnded":[]}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/psionics/stop-and-recover", `{"hours":`)
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }

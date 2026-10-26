@@ -204,6 +204,12 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    delta is rounded down to whole PSPs (1.5 h walking gives 4); exertion logs the hours with a
    delta of 0; the payload carries `hours`, `activity` and `perHour`. While a buff row keeps a
    power up (step 13) the request answers 409 `psp_recovery_while_maintaining` and logs nothing.
+   As amended (ADR 0047 item 4): `POST /api/psionics/stop-and-recover` takes the same body and
+   refusals, ends every buff row that pays (maintenance cost above 0: powers, tangent and contact
+   rows) and recovers in one transaction, one `psp_recovery` entry carrying the ended rows' snapshot
+   (one undo restores both). It answers `{psp, powersEnded, powerNames, targetsEnded}`; rows that
+   cost nothing stay up and never refuse it. Test:
+   `TestStopAndRecover_ADR0047Item4_UndoRestoresBoth`.
    Tests: `TestRecover_Step6_HoursTimesTheActivityRate` (the new `psionicsvc`: 3 h resting gives
    18), `TestRecover_Step6_CappedAndUndone` (composition: capped at the max, undone exactly),
    `Recover_Step6_RefusedWhileMaintaining` (psionicsvc).

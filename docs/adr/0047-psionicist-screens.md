@@ -71,6 +71,13 @@ What the user fixed before the last round (rounds 1 and 2):
    request may name that activity only when the character knows it (otherwise refused, like an unknown
    activity); the field is generic, so another row may be gated the same way. Catalogue format 18
    needs the row (a data change in the rulebooks repo).
+   Contract (built 2026-10-26): `GET /api/characters/{id}`'s `psp` pool carries
+   `recovery: [{activity, perHour, requiresProficiency?}]`, every Table 6 row in the catalogue's
+   order, so the rest control reads the rates and gates with the character; the key is omitted when
+   the pool has none (a draft's). The answers of `POST /api/psp/*` stay `{current, max}`. No route
+   serves the table alone. The start refuses a `requires_proficiency` that is not an id of
+   `seeds/proficiencies.json` (`TestStartup_ADR0047Item6_RefusesAnUnknownRecoveryGate`); the gate
+   itself is `TestRecover_ADR0047Item6_GatedActivityNeedsProficiency`.
 7. **The character card reads, top to bottom: hit points, the HP change (field, Dégâts, Soins), then
    the PSP block** (_user_: "HP modifying should stay close to HP bar"). The PSP block holds the bar,
    the next round's balance, **Repos** and **Ajuster**.

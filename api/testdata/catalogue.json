@@ -1,5 +1,5 @@
 {
-  "format": 19,
+  "format": 20,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1413,7 +1413,8 @@
       {"activity": "exertion", "per_hour": 0},
       {"activity": "walking", "per_hour": 3},
       {"activity": "resting", "per_hour": 6},
-      {"activity": "sleeping", "per_hour": 12}
+      {"activity": "sleeping", "per_hour": 12},
+      {"activity": "meditating", "per_hour": 12, "requires_proficiency": "rejuvenation"}
     ],
     "attack_versus_defence": [
       {
@@ -1821,7 +1822,8 @@
     {"id": "running", "description": {"en": "Invented fixture text for running. It stands in for the book's description.", "fr": "Texte inventé pour running. Il remplace la description du livre."}},
     {"id": "survival", "description": {"en": "Invented fixture text for survival. It stands in for the book's description.", "fr": "Texte inventé pour survival. Il remplace la description du livre."}},
     {"id": "tracking", "description": {"en": "Invented fixture text for tracking. It stands in for the book's description.\n\nIt has a table:\n\n| Roll | Result |\n| --- | --- |\n| 1 | invented |\n| 2 | invented too |", "fr": "Texte inventé pour tracking. Il remplace la description du livre.\n\nIl contient un tableau:\n\n| Jet | Résultat |\n| --- | --- |\n| 1 | inventé |\n| 2 | inventé aussi |"}},
-    {"id": "weaponsmithing", "description": {"en": "Invented fixture text for weaponsmithing. It stands in for the book's description.", "fr": "Texte inventé pour weaponsmithing. Il remplace la description du livre."}}
+    {"id": "weaponsmithing", "description": {"en": "Invented fixture text for weaponsmithing. It stands in for the book's description.", "fr": "Texte inventé pour weaponsmithing. Il remplace la description du livre."}},
+    {"id": "rejuvenation", "description": {"en": "Invented fixture text for rejuvenation. It stands in for the book's description.", "fr": "Texte inventé pour rejuvenation. Il remplace la description du livre."}}
   ],
   "classes": [
     {"id": "fighter", "name": {"en": "Fighter", "fr": "Guerrier"}, "group": "warrior", "prime_requisites": ["str"], "ability_minimums": [{"ability": "str", "min": 9}], "equipment": {"shields": true}, "experience": [{"level": 1, "xp": 0}, {"level": 2, "xp": 2000}, {"level": 3, "xp": 4000}, {"level": 4, "xp": 8000}, {"level": 5, "xp": 16000}, {"level": 6, "xp": 32000}, {"level": 7, "xp": 64000}, {"level": 8, "xp": 125000}, {"level": 9, "xp": 250000}, {"level": 10, "xp": 500000}, {"level": 11, "xp": 750000}, {"level": 12, "xp": 1000000}, {"level": 13, "xp": 1250000}, {"level": 14, "xp": 1500000}, {"level": 15, "xp": 1750000}, {"level": 16, "xp": 2000000}, {"level": 17, "xp": 2250000}, {"level": 18, "xp": 2500000}, {"level": 19, "xp": 2750000}, {"level": 20, "xp": 3000000}], "hit_dice": {"die": 10, "dice_levels": 9, "after": 3, "bracketed_constitution": true}, "nonweapon_groups": ["warrior", "general"], "features": [{"kind": "exceptional_strength"}, {"kind": "melee_attacks_per_round", "params": {"table": "warrior_attacks"}}, {"kind": "weapon_specialization", "params": {"default_slots": 2, "melee_column": "melee", "missile_column": "other_missile", "types": [{"weapon_types": ["long_bow", "short_bow"], "slots": 3, "rate_of_fire": true}, {"weapon_types": ["light_crossbow"], "slots": 2, "column": "light_crossbow"}, {"weapon_types": ["heavy_crossbow"], "slots": 2, "column": "heavy_crossbow"}, {"weapon_types": ["dagger"], "slots": 2, "column": "thrown_dagger"}, {"weapon_types": ["dart"], "slots": 2, "column": "thrown_dart"}]}}]},

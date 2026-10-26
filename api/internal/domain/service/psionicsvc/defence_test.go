@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // defenceBook: thought shield (Wis -3, 1 PSP, not kept), mind blank (Wis
@@ -179,7 +180,7 @@ func TestRecover_Step5_AZeroCostRowAllowsRecovery(t *testing.T) {
 	m.buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return([]buffsvc.BuffEffect{
 		{ID: "s", PowerID: "mind_blank", Defence: buffsvc.DefenceStanding},
 	}, nil).Once()
-	m.tables.EXPECT().PSPRecoveryRate("resting").Return(3, nil).Once()
+	m.tables.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 3}, true, nil).Once()
 	m.log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{Current: 16, Max: 30}, nil).Once()
 	_, err := svc.Recover(context.Background(), 7, 2, "resting")
 	require.NoError(t, err)

@@ -60,7 +60,11 @@ func (s *service) setPSP(ctx context.Context, c *Character) error {
 	if err != nil {
 		return err
 	}
-	c.Derived.PSP = &PSPPool{Current: actionlog.CurrentPSP(c.PSPMax, total), Max: c.PSPMax}
+	rows, err := s.rules.PSPRecoveryRows()
+	if err != nil {
+		return err
+	}
+	c.Derived.PSP = &PSPPool{Current: actionlog.CurrentPSP(c.PSPMax, total), Max: c.PSPMax, Recovery: rows}
 	return nil
 }
 

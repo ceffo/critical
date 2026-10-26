@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // KnownPowersStateKey is the action-log state key of a character's known
@@ -105,8 +106,10 @@ type Dice interface {
 
 // Tables are the rule tables the service reads (ruletablesvc.Tables).
 type Tables interface {
-	// PSPRecoveryRate is the PSPs an hour of activity recovers (Table 6).
-	PSPRecoveryRate(activity string) (int, error)
+	// PSPRecoveryRowFor is Table 6's row for activity: the PSPs an hour of it
+	// recovers and the proficiency it requires, if any; false when the table
+	// has no such row.
+	PSPRecoveryRowFor(activity string) (ruletablesvc.PSPRecoveryRow, bool, error)
 	// AttackVersusDefence is Table 14's modifier to the attacker's score
 	// for an attack mode meeting a defence mode (ADR 0044 step 1.1).
 	AttackVersusDefence(attack, defence string) (int, error)
@@ -292,13 +295,26 @@ func (s *service) Recover(ctx context.Context, characterID int64, hours float64,
 	if hours > MaxRecoveryHours {
 		return actionlog.PSPState{}, domain.FieldErrorf("hours", "at most %d hours at a time", MaxRecoveryHours)
 	}
-	if !slices.Contains(ruletablesvc.PSPActivities, activity) {
-		return actionlog.PSPState{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
-	}
-	rate, err := s.rates.PSPRecoveryRate(activity)
+	row, found, err := s.rates.PSPRecoveryRowFor(activity)
 	if err != nil {
 		return actionlog.PSPState{}, fmt.Errorf("psp recovery rate: %w", err)
 	}
+	if !found {
+		return actionlog.PSPState{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
+	}
+	if row.RequiresProficiency != "" {
+		// ADR 0047 item 6: a gated row is recovered by only when the character
+		// knows the proficiency, whichever class granted the pick; otherwise it
+		// is refused like an unknown activity.
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return actionlog.PSPState{}, err
+		}
+		if !slices.ContainsFunc(c.Proficiencies.Nonweapon, func(p skills.Pick) bool { return p.ID == row.RequiresProficiency }) {
+			return actionlog.PSPState{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
+		}
+	}
+	rate := row.PerHour
 	payload, err := json.Marshal(recoveryRecord{Hours: hours, Activity: activity, PerHour: rate})
 	if err != nil {
 		return actionlog.PSPState{}, fmt.Errorf("psp recovery payload: %w", err)

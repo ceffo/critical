@@ -28,17 +28,23 @@ export function UsePowerForm({
   power,
   powerName,
   busy,
+  modifiers,
   onUse,
 }: {
   power: Power;
   powerName: string;
   busy: boolean;
+  /** The modifiers the form opens with. */
+  modifiers?: UseDraft["modifiers"];
   onUse: (
     req: NonNullable<ReturnType<typeof requestOf>>,
   ) => Promise<{ check: PowerCheckResult } | { refused: string }>;
 }) {
   const { t } = useTranslation();
-  const [draft, setDraft] = useState<UseDraft>(EMPTY_DRAFT);
+  const [draft, setDraft] = useState<UseDraft>({
+    ...EMPTY_DRAFT,
+    modifiers: modifiers ?? [],
+  });
   const [result, setResult] = useState<PowerCheckResult | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
   const need = asks(power);

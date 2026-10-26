@@ -212,6 +212,23 @@
     }
   },
   "powers": {
+    "tab": {
+      "attackModes": "Attack modes",
+      "roundFree": "Power this round: free",
+      "usedThisRound": "Power this round: {{name}}",
+      "adjustment": "Adjustment",
+      "adjustmentLess": "Lower the adjustment",
+      "adjustmentMore": "Raise the adjustment",
+      "myDefence": "My defence",
+      "noDefence": "No defence mode known.",
+      "standing": "standing",
+      "standingFree": "standing · 0",
+      "inCombat": "in combat",
+      "target": "Target",
+      "noMind": "No mind held yet; an attack names its target.",
+      "tangents": "{{count}} of 2 tangents",
+      "contact": "contact"
+    },
     "known": "Known powers",
     "picker": "Pick powers",
     "none": "None yet.",
@@ -444,6 +461,7 @@
     "tabs": {
       "weapons": "Weapons",
       "spells": "Spells",
+      "powers": "Powers",
       "items": "Items",
       "skills": "Skills",
       "turning": "Turning"

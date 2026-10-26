@@ -62,14 +62,20 @@ export function Header({
         </div>
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2">
-            <Button variant="main" className="h-auto flex-col items-start gap-0 py-1">
+            <Button
+              variant="main"
+              className="h-auto flex-col items-start gap-0 py-1"
+            >
               <span className="flex items-center gap-2">
                 {tr("Tour suivant", "Next turn")}
                 <ArrowRight aria-hidden />
               </span>
               {upkeep > 0 && (
                 <span className="text-label">
-                  {tr(`−${upkeep} PFP de maintien`, `−${upkeep} PSP maintenance`)}
+                  {tr(
+                    `−${upkeep} PFP de maintien`,
+                    `−${upkeep} PSP maintenance`,
+                  )}
                 </span>
               )}
             </Button>
@@ -87,12 +93,18 @@ export function Header({
       <div className="grid min-w-0 flex-1 grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1">
         <span className="section-label">
           {tr("Effets", "Effects")}
-          {effects.length > 3 && <span className="ml-2 text-label text-ink-muted normal-case">+{effects.length - 3}</span>}
+          {effects.length > 3 && (
+            <span className="ml-2 text-label text-ink-muted normal-case">
+              +{effects.length - 3}
+            </span>
+          )}
         </span>
         <div className="grid grid-cols-5 text-center text-label text-ink-muted">
-          {[0, 1, 2, 3, 4].map((i) => `T${Math.max(round, 1) + i}`).map((t) => (
-            <span key={t}>{t}</span>
-          ))}
+          {[0, 1, 2, 3, 4]
+            .map((i) => `T${Math.max(round, 1) + i}`)
+            .map((t) => (
+              <span key={t}>{t}</span>
+            ))}
         </div>
         {effects.slice(0, 3).map((e) => (
           <div key={e.name} className="contents">
@@ -200,7 +212,10 @@ export function CharacterCard({
 }) {
   const classes = who.classes;
   const abilities: [string, number][] = [
-    ...ABILITY_LABELS.map(([k, fr, en]): [string, number] => [tr(fr, en), who.abilities[k]]),
+    ...ABILITY_LABELS.map(([k, fr, en]): [string, number] => [
+      tr(fr, en),
+      who.abilities[k],
+    ]),
     [tr("TAC0", "THAC0"), who.thac0],
   ];
   return (
@@ -240,7 +255,11 @@ export function CharacterCard({
           </div>
         </div>
         <span className="relative flex size-16 shrink-0 items-center justify-center self-center">
-          <svg viewBox="0 0 48 56" className="absolute inset-1 size-14" aria-hidden>
+          <svg
+            viewBox="0 0 48 56"
+            className="absolute inset-1 size-14"
+            aria-hidden
+          >
             <path
               d="M24 2 L44 9 V27 C44 40 35 49 24 54 C13 49 4 40 4 27 V9 Z"
               fill="var(--amb-800)"
@@ -254,7 +273,9 @@ export function CharacterCard({
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="section-label">{tr("Modifier les PV", "HP change")}</span>
+        <span className="section-label">
+          {tr("Modifier les PV", "HP change")}
+        </span>
         <div className="flex gap-2">
           <span className="flex h-7 w-14 items-center rounded-md border border-input px-2 text-body text-ink-muted">
             {tr("PV", "HP")}

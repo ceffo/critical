@@ -56,31 +56,240 @@ const P = (
   modifier: number,
   initial_cost: InitialCost,
   maintenance?: Power["maintenance"],
-): Power => ({ id, name: l(fr, en), discipline, kind, score: { ability, modifier }, initial_cost, maintenance });
+): Power => ({
+  id,
+  name: l(fr, en),
+  discipline,
+  kind,
+  score: { ability, modifier },
+  initial_cost,
+  maintenance,
+});
 
 /** Catalogue rows (copied from format 18). */
 export const CATALOGUE: Power[] = [
-  P("mind_thrust", "Pression mentale", "Mind Thrust", "telepathy", "attack_mode", "wis", -2, 2),
-  P("ego_whip", "Cinglement de l'ego", "Ego Whip", "telepathy", "attack_mode", "wis", -3, 4),
-  P("psionic_blast", "Souffle psionique", "Psionic Blast", "telepathy", "attack_mode", "wis", -5, 10),
-  P("mind_blank", "Néant spirituel", "Mind Blank", "telepathy", "defence_mode", "wis", -7, 0, { cost: 0, period: 1 }),
-  P("thought_shield", "Bouclier de la pensée", "Thought Shield", "telepathy", "defence_mode", "wis", -3, 1),
-  P("mental_barrier", "Barrière mentale", "Mental Barrier", "telepathy", "defence_mode", "wis", -2, 3),
-  P("intellect_fortress", "Forteresse intellectuelle", "Intellect Fortress", "telepathy", "defence_mode", "wis", -3, 4),
-  P("tower_of_iron_will", "Tour de la volonté de fer", "Tower of Iron Will", "telepathy", "defence_mode", "wis", -2, 6),
-  P("contact", "Contact", "Contact", "telepathy", "devotion", "wis", 0, { table: "contact_cost" }, { cost: 1, period: 1 }),
-  P("mindlink", "Lien spirituel", "Mindlink", "telepathy", "science", "wis", -5, { kind: "contact" }, { cost: 8, period: 1 }),
-  P("switch_personality", "Echange de personnalité", "Switch Personality", "telepathy", "science", "con", -4, { kind: "contact", plus: 30 }),
-  P("aura_sight", "Vision de l'Aura", "Aura Sight", "clairsentience", "science", "wis", -5, 9, { cost: 9, period: 1 }),
-  P("danger_sense", "Sens du danger", "Danger Sense", "clairsentience", "devotion", "wis", -3, 4, { cost: 3, period: 10 }),
-  P("clairvoyance", "Clairvoyance", "Clairvoyance", "clairsentience", "science", "wis", -4, 7, { cost: 4, period: 1 }),
-  P("telekinesis", "Télékinésie", "Telekinesis", "psychokinesis", "science", "wis", -3, "variable", { cost: "variable", period: 1 }),
-  P("cell_adjustment", "Ajustement cellulaire", "Cell Adjustment", "psychometabolism", "devotion", "con", -3, 5, { cost: "variable", period: 1 }),
-  P("biofeedback", "Biorétroaction", "Biofeedback", "psychometabolism", "devotion", "con", -2, 6, { cost: 3, period: 1 }),
-  P("body_equilibrium", "Equilibre corporel", "Body Equilibrium", "psychometabolism", "devotion", "con", -3, 2, { cost: 2, period: 1 }),
-  P("flesh_armor", "Armure charnelle", "Flesh Armor", "psychometabolism", "devotion", "con", -3, 8, { cost: 4, period: 1 }),
-  P("displacement", "Eclipse", "Displacement", "psychometabolism", "devotion", "con", -3, 6, { cost: 3, period: 1 }),
-  P("teleport", "Téléportation", "Teleport", "psychoportation", "science", "int", 0, "variable"),
+  P(
+    "mind_thrust",
+    "Pression mentale",
+    "Mind Thrust",
+    "telepathy",
+    "attack_mode",
+    "wis",
+    -2,
+    2,
+  ),
+  P(
+    "ego_whip",
+    "Cinglement de l'ego",
+    "Ego Whip",
+    "telepathy",
+    "attack_mode",
+    "wis",
+    -3,
+    4,
+  ),
+  P(
+    "psionic_blast",
+    "Souffle psionique",
+    "Psionic Blast",
+    "telepathy",
+    "attack_mode",
+    "wis",
+    -5,
+    10,
+  ),
+  P(
+    "mind_blank",
+    "Néant spirituel",
+    "Mind Blank",
+    "telepathy",
+    "defence_mode",
+    "wis",
+    -7,
+    0,
+    { cost: 0, period: 1 },
+  ),
+  P(
+    "thought_shield",
+    "Bouclier de la pensée",
+    "Thought Shield",
+    "telepathy",
+    "defence_mode",
+    "wis",
+    -3,
+    1,
+  ),
+  P(
+    "mental_barrier",
+    "Barrière mentale",
+    "Mental Barrier",
+    "telepathy",
+    "defence_mode",
+    "wis",
+    -2,
+    3,
+  ),
+  P(
+    "intellect_fortress",
+    "Forteresse intellectuelle",
+    "Intellect Fortress",
+    "telepathy",
+    "defence_mode",
+    "wis",
+    -3,
+    4,
+  ),
+  P(
+    "tower_of_iron_will",
+    "Tour de la volonté de fer",
+    "Tower of Iron Will",
+    "telepathy",
+    "defence_mode",
+    "wis",
+    -2,
+    6,
+  ),
+  P(
+    "contact",
+    "Contact",
+    "Contact",
+    "telepathy",
+    "devotion",
+    "wis",
+    0,
+    { table: "contact_cost" },
+    { cost: 1, period: 1 },
+  ),
+  P(
+    "mindlink",
+    "Lien spirituel",
+    "Mindlink",
+    "telepathy",
+    "science",
+    "wis",
+    -5,
+    { kind: "contact" },
+    { cost: 8, period: 1 },
+  ),
+  P(
+    "switch_personality",
+    "Echange de personnalité",
+    "Switch Personality",
+    "telepathy",
+    "science",
+    "con",
+    -4,
+    { kind: "contact", plus: 30 },
+  ),
+  P(
+    "aura_sight",
+    "Vision de l'Aura",
+    "Aura Sight",
+    "clairsentience",
+    "science",
+    "wis",
+    -5,
+    9,
+    { cost: 9, period: 1 },
+  ),
+  P(
+    "danger_sense",
+    "Sens du danger",
+    "Danger Sense",
+    "clairsentience",
+    "devotion",
+    "wis",
+    -3,
+    4,
+    { cost: 3, period: 10 },
+  ),
+  P(
+    "clairvoyance",
+    "Clairvoyance",
+    "Clairvoyance",
+    "clairsentience",
+    "science",
+    "wis",
+    -4,
+    7,
+    { cost: 4, period: 1 },
+  ),
+  P(
+    "telekinesis",
+    "Télékinésie",
+    "Telekinesis",
+    "psychokinesis",
+    "science",
+    "wis",
+    -3,
+    "variable",
+    { cost: "variable", period: 1 },
+  ),
+  P(
+    "cell_adjustment",
+    "Ajustement cellulaire",
+    "Cell Adjustment",
+    "psychometabolism",
+    "devotion",
+    "con",
+    -3,
+    5,
+    { cost: "variable", period: 1 },
+  ),
+  P(
+    "biofeedback",
+    "Biorétroaction",
+    "Biofeedback",
+    "psychometabolism",
+    "devotion",
+    "con",
+    -2,
+    6,
+    { cost: 3, period: 1 },
+  ),
+  P(
+    "body_equilibrium",
+    "Equilibre corporel",
+    "Body Equilibrium",
+    "psychometabolism",
+    "devotion",
+    "con",
+    -3,
+    2,
+    { cost: 2, period: 1 },
+  ),
+  P(
+    "flesh_armor",
+    "Armure charnelle",
+    "Flesh Armor",
+    "psychometabolism",
+    "devotion",
+    "con",
+    -3,
+    8,
+    { cost: 4, period: 1 },
+  ),
+  P(
+    "displacement",
+    "Eclipse",
+    "Displacement",
+    "psychometabolism",
+    "devotion",
+    "con",
+    -3,
+    6,
+    { cost: 3, period: 1 },
+  ),
+  P(
+    "teleport",
+    "Téléportation",
+    "Teleport",
+    "psychoportation",
+    "science",
+    "int",
+    0,
+    "variable",
+  ),
 ];
 
 export const power = (id: string): Power => {
@@ -105,7 +314,11 @@ export const PSP_RECOVERY: RecoveryRow[] = [
   { activity: "sleeping", per_hour: 12 },
   // The book's Table 6 row "Rejuvenating** 12/hour" (** = the Rejuvenation proficiency): missing
   // from format 18 and ADR 0043 step 6. Drawn as a proposed row, gated by data, not by code.
-  { activity: "rejuvenating", per_hour: 12, requires_proficiency: "rejuvenation" },
+  {
+    activity: "rejuvenating",
+    per_hour: 12,
+    requires_proficiency: "rejuvenation",
+  },
 ];
 
 /** The web words the activity codes (ADR 0044 step 1.3: codes worded by the web). */
@@ -126,7 +339,11 @@ export const CONTACT_COST = [
 ];
 
 /** Tables 30, 31 and the resistance line. */
-export const CONTACT_MODIFIERS: { kind: string; code: string; modifier: number }[] = [
+export const CONTACT_MODIFIERS: {
+  kind: string;
+  code: string;
+  modifier: number;
+}[] = [
   { kind: "distance", code: "sight", modifier: 0 },
   { kind: "distance", code: "mile_1", modifier: -1 },
   { kind: "distance", code: "miles_10", modifier: -3 },
@@ -189,7 +406,13 @@ export interface Fixture {
   proficiencies: string[];
 }
 
-const SAVES = (a: string, b: string, c: string, d: string, e: string): [L, string][] => [
+const SAVES = (
+  a: string,
+  b: string,
+  c: string,
+  d: string,
+  e: string,
+): [L, string][] => [
   [l("Paralysie/Poison", "Paralyze/Poison"), a],
   [l("Bâton/Sceptre/Baguette", "Rod/Staff/Wand"), b],
   [l("Pétrification/Métamorphose", "Petrify/Polymorph"), c],
@@ -257,6 +480,7 @@ export const YSOLDE: Fixture = {
 };
 
 /** The power score: the ability plus the power's modifier (relearns omitted in the fixtures). */
-export const scoreOf = (f: Fixture, p: Power) => f.abilities[p.score.ability] + p.score.modifier;
+export const scoreOf = (f: Fixture, p: Power) =>
+  f.abilities[p.score.ability] + p.score.modifier;
 
 export const knownPowers = (f: Fixture) => f.known.map(power);

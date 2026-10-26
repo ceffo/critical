@@ -15,7 +15,13 @@ cd "$main"
 # The repo follows the checkout: CRITICAL_MAIN alone once looked up a rulebooks PR number in the app repo.
 repo="${CRITICAL_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
 refuse() { echo "REFUSED #$pr: $*"; exit 2; }
-j=$(gh pr view "$pr" -R "$repo" --json state,mergeable,mergeStateStatus,headRefOid,statusCheckRollup)
+view() { gh pr view "$pr" -R "$repo" --json state,mergeable,mergeStateStatus,headRefOid,statusCheckRollup; }
+j=$(view)
+# Right after another merge GitHub reports mergeable=UNKNOWN while it recomputes: poll up to ~60s.
+for _ in 1 2 3 4 5 6; do
+  [ "$(jq -r .mergeable <<<"$j")" = UNKNOWN ] || break
+  sleep 10; j=$(view)
+done
 [ "$(jq -r .state <<<"$j")" = OPEN ] || refuse "state $(jq -r .state <<<"$j")"
 sha=$(jq -r .headRefOid <<<"$j")
 [ "$(jq '.statusCheckRollup|length' <<<"$j")" -gt 0 ] || refuse "no checks reported yet"

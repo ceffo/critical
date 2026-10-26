@@ -203,9 +203,20 @@ flowchart TD
       [ADR 0019](0019-redo.md) say, and a stale stack top is refused as a 409.
    3. The mode can never be enabled in staging or production.
    4. The e2e fixtures start every API in that mode.
+   5. **Under e2e every random source runs on a fixed seed.** `CRITICAL_DICE_SEED=<unsigned integer>`
+      makes the dice port (the only way a die is rolled) a seeded generator instead of `crypto/rand`;
+      the same calls then give the same rolls on every run. The boot refuses a seed unless
+      `CRITICAL_STORAGE=memory`, so the guards of step 8.3 (fly.io, the production image) also guard it;
+      production and `just dev` set no seed and keep the cryptographic dice. The fixtures give every
+      API the same seed, and the API is per test: a test's sequence depends only on its own calls, not
+      on the other tests, the worker count or the order. The latency injector (`E2E_LAT`) draws its
+      delays from a generator seeded the same way. A spec needing a given roll relies on that
+      sequence, never on repeating a roll until it comes up.
 
    Tests: Go tests of the fakes for each contract of step 8.2; a test that the fly configuration
-   never enables the mode (step 8.3). Implemented as `CRITICAL_STORAGE=memory`
+   never enables the mode (step 8.3); `TestNewSeeded_Step8_5_` (same seed same sequence, die range,
+   concurrent use), `TestConfigValidate_Step8_5_DiceSeedOnlyWithInMemoryStorage`,
+   `TestLoadConfig_Step8_5_DiceSeed`. Implemented as `CRITICAL_STORAGE=memory`
    (`api/internal/storage/memory`, `docs/backend.md` "In-memory storage"): `TestStore_Step8_2_` (all
    or nothing, panic, nested and lone writes, writers serialised, append-only log, undo and redo, a
    stale top refused, a failed undo leaving nothing, keys), `TestStore_Step8_1_SeededLikeTheDatabase`,

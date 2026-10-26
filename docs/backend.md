@@ -785,6 +785,10 @@ or server.
 - **Config**: `CRITICAL_STORAGE=memory` selects it (unset: the database at `CRITICAL_DSN`, which is
   then never opened). Any other value is refused at boot. `web/e2e/fixtures.ts` starts every API this
   way; nothing else should.
+- **Seeded dice** (step 8.5): `CRITICAL_DICE_SEED=<unsigned integer>` rolls every die from
+  `diceadpt.NewSeeded` (a PCG generator behind a mutex) instead of `crypto/rand`; refused unless
+  `CRITICAL_STORAGE=memory`, so it inherits the guards below. `web/e2e/fixtures.ts` gives every API
+  the same seed (`diceSeed`): one sequence per test, since each test has its own API.
 - **Never in staging or production** (step 8.3), by two guards: the boot refuses the mode when
   `FLY_APP_NAME` is set (fly.io sets it on every machine, so a stray `fly secrets set` cannot enable
   it) or when `CRITICAL_WEB_DIR` is set (only the production image serves the built web app); and

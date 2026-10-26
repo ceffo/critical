@@ -112,6 +112,10 @@ type Config struct {
 	// Dice replaces the crypto dice (tests that need known rolls). Nil in
 	// production.
 	Dice Dice
+	// DiceSeed, when set, rolls a repeatable sequence from that seed instead
+	// of the crypto dice (the e2e runs; cmd/api refuses it outside the
+	// in-memory storage). Dice, when set, wins.
+	DiceSeed *uint64
 	// Google is the OAuth client of the Google login (ADR 0029 step 3). Nil
 	// runs the dev login instead (step 8.1); cmd/api refuses nil on a hosted
 	// app (step 8.2).
@@ -202,6 +206,9 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	characterDAL, hpDAL, logDAL, buffDAL, spellDAL := st.Character, st.HP, st.Log, st.Buff, st.Spell
 	var dice Dice = diceadpt.New()
+	if cfg.DiceSeed != nil {
+		dice = diceadpt.NewSeeded(*cfg.DiceSeed)
+	}
 	if cfg.Dice != nil {
 		dice = cfg.Dice
 	}

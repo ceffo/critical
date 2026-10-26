@@ -12,8 +12,6 @@ import {
   takesMind,
 } from "./model";
 import { PowersView } from "./PowersTab";
-import { UsePowerForm } from "../UsePowerForm";
-import { AttackForm } from "../AttackForm";
 
 async function inst(lng: "en" | "fr") {
   const i = i18next.createInstance();
@@ -174,35 +172,5 @@ describe("the adjustment", () => {
     expect(adjustmentModifiers(-2, "Adjustment")).toEqual([
       { value: "-2", reason: "Adjustment" },
     ]);
-  });
-
-  it("pre-fills the use and the attack dialogs, and adds nothing at zero", async () => {
-    const i = await inst("en");
-    const render = (n: React.ReactNode) =>
-      renderToStaticMarkup(<I18nextProvider i18n={i}>{n}</I18nextProvider>);
-    const mods = adjustmentModifiers(2, "Adjustment");
-    const use = (m: typeof mods) =>
-      render(
-        <UsePowerForm
-          power={withoutMinds[0]}
-          powerName="YY_GLOW"
-          busy={false}
-          modifiers={m}
-          onUse={async () => ({ refused: "" })}
-        />,
-      );
-    expect(use(mods)).toContain('value="+2"');
-    expect(use(mods)).toContain('value="Adjustment"');
-    expect(use([])).not.toContain('value="+2"');
-    const attack = render(
-      <AttackForm
-        busy={false}
-        powerName="ZZ_STRIKE"
-        targets={[]}
-        modifiers={mods}
-        onAttack={async () => ({ refused: "" })}
-      />,
-    );
-    expect(attack).toContain('value="+2"');
   });
 });

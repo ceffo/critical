@@ -226,7 +226,23 @@
       "target": "Target",
       "noMind": "No mind held yet; an attack names its target.",
       "tangents": "{{count}} of 2 tangents",
-      "contact": "contact"
+      "contact": "contact",
+      "heldMinds": "Opponents held",
+      "newTarget": "New opponent",
+      "levelLess": "Lower the opponent’s level",
+      "levelMore": "Raise the opponent’s level",
+      "bar": {
+        "incoming": "Incoming attack",
+        "close": "Close",
+        "less": "Lower {{label}}",
+        "more": "Raise {{label}}",
+        "noRolls": "No defence set: no roll to enter.",
+        "needTarget": "Name the opponent in the Target band.",
+        "initialCost": "Initial cost",
+        "maintenanceCost": "Upkeep per turn",
+        "confirm": "Cost set by the power.",
+        "resolve": "Resolve"
+      }
     },
     "known": "Known powers",
     "picker": "Pick powers",

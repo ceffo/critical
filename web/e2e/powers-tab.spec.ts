@@ -31,4 +31,32 @@ test.describe("the Powers tab of a psionicist", () => {
     await expect(page.getByTestId("psp-value")).toHaveText("39 / 40");
     await snap(page, "defence-raised");
   });
+
+  test("attack from the bar, see its result", async ({ page }) => {
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mindlink" },
+          { kind: "power", id: "mind_thrust" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await page.getByRole("tab", { name: "Powers" }).click();
+    const tab = page.getByTestId("powers-tab");
+    await tab.getByTestId("target-name").fill("Orc");
+    await tab
+      .getByRole("button", { name: "Attack with Mind Thrust" })
+      .first()
+      .click();
+    const bar = page.getByTestId("action-bar");
+    await bar.getByRole("button", { name: "Attack with Mind Thrust" }).click();
+    await expect(bar.getByTestId("attack-result")).toBeVisible();
+    await expect(bar.getByTestId("attack-tangents")).toContainText("Orc");
+    await snap(page, "powers-bar-attack-result");
+  });
 });

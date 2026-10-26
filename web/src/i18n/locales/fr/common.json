@@ -226,7 +226,23 @@
       "target": "Cible",
       "noMind": "Aucun esprit tenu ; une attaque nomme sa cible.",
       "tangents": "{{count}} tangente sur 2",
-      "contact": "contact"
+      "contact": "contact",
+      "heldMinds": "Adversaires tenus",
+      "newTarget": "Nouvel adversaire",
+      "levelLess": "Baisser le niveau de l’adversaire",
+      "levelMore": "Augmenter le niveau de l’adversaire",
+      "bar": {
+        "incoming": "Attaque subie",
+        "close": "Fermer",
+        "less": "Baisser {{label}}",
+        "more": "Augmenter {{label}}",
+        "noRolls": "Aucune défense choisie : pas de jet à saisir.",
+        "needTarget": "Nommez l’adversaire dans la bande Cible.",
+        "initialCost": "Coût initial",
+        "maintenanceCost": "Maintien par tour",
+        "confirm": "Coût fixé par le pouvoir.",
+        "resolve": "Résoudre"
+      }
     },
     "known": "Pouvoirs connus",
     "picker": "Choisir des pouvoirs",

@@ -74,6 +74,8 @@ const FIXED_TERMS = new Set([
   "settings.logout",
   // The details popover's action: "Take" alone does not say what is taken.
   "takeClass.open",
+  // The Powers tab's button for an attack the DM makes on the character: the user's own name for it.
+  "powers.tab.bar.incoming",
 ]);
 
 /** The i18n keys a button shows as its caption: `t("…")` calls among its children. */

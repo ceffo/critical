@@ -5221,6 +5221,8 @@ test.describe("Powers tab", () => {
           { kind: "power", id: "mind_thrust" },
           { kind: "power", id: "contact" },
           { kind: "power", id: "mindlink" },
+          { kind: "discipline", id: "metapsionics" },
+          { kind: "power", id: "intensify" },
         ],
       }),
     ).toBe(true);
@@ -5234,14 +5236,66 @@ test.describe("Powers tab", () => {
         .click();
       const tab = page.getByTestId("powers-tab");
       await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
+      await tab.getByTestId("target-name").fill("Orc");
+      // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
+      const rowBoxes = async () => {
+        const origin = (await tab.boundingBox())!;
+        return Promise.all(
+          (await tab.getByTestId("power-row").all()).map(async (r) => {
+            const b = (await r.boundingBox())!;
+            return { ...b, x: b.x - origin.x, y: b.y - origin.y };
+          }),
+        );
+      };
+      const select = (id: string) =>
+        tab
+          .locator(`[data-testid=power-row][data-id=${id}]`)
+          .getByRole("button")
+          .last()
+          .click();
+      const bar = page.getByTestId("action-bar");
+      const close = () => bar.getByRole("button").first().click();
       for (const vp of VIEWPORTS) {
         await page.setViewportSize(vp);
         const where = `${lang}, ${vp.width}x${vp.height}`;
+        await tab.getByTestId("target-band").locator("select").selectOption({
+          index: 1,
+        });
+        await expect(bar).toHaveCount(0);
         await expectNoClippedText(tab, `powers tab, ${where}`);
         await expectWholeWords(tab, `powers tab, ${where}`);
         await expectNoPageScroll(page);
+        const closed = await rowBoxes();
+        expect(closed.length).toBeGreaterThan(3);
+        const forms: [string, string][] = [
+          ["mind_thrust", "attack-form"],
+          ["intensify", "use-power"],
+        ];
+        for (const [id, form] of forms) {
+          await select(id);
+          await expect(bar.getByTestId(form)).toBeVisible();
+          expect(await rowBoxes(), `rows with ${form} open, ${where}`).toEqual(
+            closed,
+          );
+          await expectNoClippedText(tab, `${form}, ${where}`);
+          await expectWholeWords(tab, `${form}, ${where}`);
+          await expectNoPageScroll(page);
+          if (vp.width >= 1920)
+            await snap(page, `powers-${form}-${lang}-${vp.width}x${vp.height}`);
+          await close();
+          await expect(bar).toHaveCount(0);
+        }
+        await tab.getByTestId("incoming-attack").click();
+        await expect(bar.getByTestId("defend-form")).toBeVisible();
+        expect(await rowBoxes(), `rows with incoming open, ${where}`).toEqual(
+          closed,
+        );
+        await expectNoClippedText(tab, `incoming, ${where}`);
+        await expectWholeWords(tab, `incoming, ${where}`);
+        await expectNoPageScroll(page);
         if (vp.width >= 1920)
-          await snap(page, `powers-tab-${lang}-${vp.width}x${vp.height}`);
+          await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
+        await close();
       }
     }
   });

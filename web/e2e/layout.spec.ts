@@ -5237,6 +5237,19 @@ test.describe("Powers tab", () => {
       const tab = page.getByTestId("powers-tab");
       await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
       await tab.getByTestId("target-name").fill("Orc");
+      // The standing mind blank raised, so the band shows its Stop beside the chip.
+      const standing = tab.locator(
+        "[data-testid=defence-chip][data-defence=standing]",
+      );
+      if ((await standing.count()) === 0)
+        await tab
+          .getByTestId("defence-chip")
+          .filter({ hasText: /Mind Blank|Néant spirituel/ })
+          .click();
+      await expect(standing).toHaveCount(1);
+      await expect(
+        tab.getByRole("button", { name: /^(Stop maintaining|Arrêter)/ }),
+      ).toHaveCount(1);
       // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
       const rowBoxes = async () => {
         const origin = (await tab.boundingBox())!;

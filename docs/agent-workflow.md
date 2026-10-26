@@ -287,6 +287,9 @@ game's rules compute (combat, saves, spell and level arithmetic, effects stackin
 and its reviewer, and for a scoper whose items will amend a rules ADR. When unsure, Sonnet (user,
 2026-10-20: Opus was assigned too liberally and the weekly limit was projected to run out).
 
+A `designer` (a design round with the user) runs on Opus (user, 2026-10-24: "we need proper design").
+Building the approved design is UI work and stays on Sonnet.
+
 ## Parallelism
 
 Two items may run in parallel only if they add no migrations (or only to disjoint tables), touch no

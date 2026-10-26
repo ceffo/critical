@@ -29,6 +29,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
+	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
 	mw "github.com/ceffo/critical/api/internal/rest/middleware"
 	"github.com/ceffo/critical/api/internal/rest/router"
 )
@@ -448,4 +449,12 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		rec = as(h, "new", "POST", "/api/characters/draft", body)
 		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
 	}
+}
+
+// ADR 0047 item 6: a PSP pool built without Table 6 (a draft's) serialises with no recovery key, so
+// it reads absent, as in the answers of POST /api/psp/*.
+func TestCharacters_PSPPoolWithoutRecoveryOmitsTheKey(t *testing.T) {
+	raw, err := json.Marshal(characterhdl.PSPDTO{Current: 3, Max: 5})
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"current": 3, "max": 5}`, string(raw))
 }

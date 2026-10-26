@@ -417,8 +417,8 @@ type PSPDTO struct {
 	Current int `json:"current"`
 	Max     int `json:"max"`
 	// Recovery is CPsiH Table 6 (ADR 0047 item 6): each activity's PSPs an hour and, for a
-	// gated one, the proficiency it needs.
-	Recovery []PSPRecoveryDTO `json:"recovery"`
+	// gated one, the proficiency it needs. Absent where the pool is built without the table (a draft).
+	Recovery []PSPRecoveryDTO `json:"recovery,omitempty"`
 }
 
 // PSPRecoveryDTO is one row of Table 6.
@@ -500,9 +500,12 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		}
 	}
 	if p := d.PSP; p != nil {
-		out.PSP = &PSPDTO{Current: p.Current, Max: p.Max, Recovery: make([]PSPRecoveryDTO, len(p.Recovery))}
-		for i, r := range p.Recovery {
-			out.PSP.Recovery[i] = PSPRecoveryDTO{Activity: r.Activity, PerHour: r.PerHour, RequiresProficiency: r.RequiresProficiency}
+		out.PSP = &PSPDTO{Current: p.Current, Max: p.Max}
+		if p.Recovery != nil {
+			out.PSP.Recovery = make([]PSPRecoveryDTO, len(p.Recovery))
+			for i, r := range p.Recovery {
+				out.PSP.Recovery[i] = PSPRecoveryDTO{Activity: r.Activity, PerHour: r.PerHour, RequiresProficiency: r.RequiresProficiency}
+			}
 		}
 	}
 	if k := d.Powers; k != nil {

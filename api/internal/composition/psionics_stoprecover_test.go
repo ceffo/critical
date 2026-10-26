@@ -154,9 +154,111 @@ func TestStopAndRecover_ADR0047Item4_NoPoolRefused(t *testing.T) {
 		Classes: []classes.Entry{classes.SingleEntry("fighter", 3, 0)},
 	})
 	require.NoError(t, err)
+	_, _, err = bs.Buffs.AddTangents(ctx, fighter, "Grey Ogre", 1)
+	require.NoError(t, err)
 	_, err = bs.Psionics.StopAndRecover(ctx, fighter, 1, "resting")
 	require.ErrorIs(t, err, actionlogsvc.ErrNoPSPPool)
+	rows, err := bs.Buffs.ListActive(ctx, fighter)
+	require.NoError(t, err)
+	assert.Len(t, rows, 1, "the paying row is still up: the refusal rolled the write back")
 	_, found, err := bs.Log.TopID(ctx, fighter)
 	require.NoError(t, err)
 	assert.False(t, found)
+}
+
+// Item 4: Aura Sight kept up and charged by two Next Rounds, 40 PSPs spent:
+// the undo puts the row back with its rounds kept, so the Next Round after it
+// charges the same as it would have without the stop.
+func TestStopAndRecover_ADR0047Item4_UndoKeepsTheChargeRound(t *testing.T) {
+	ctx := context.Background()
+	bs, id, before := stopFixture(t)
+	var aura buffsvc.BuffEffect
+	for _, b := range before {
+		if b.PowerID == "aura_sight" {
+			aura = b
+		}
+	}
+	require.Equal(t, 2, aura.RoundsKept)
+	// The control: the same state with no stop, one Next Round later.
+	control, cid, _ := stopFixture(t)
+	_, _, _, _, _, err := control.Buffs.AdvanceRound(ctx, cid)
+	require.NoError(t, err)
+
+	_, err = bs.Psionics.StopAndRecover(ctx, id, 2, "resting")
+	require.NoError(t, err)
+	undoTop(t, bs, id)
+
+	var back buffsvc.BuffEffect
+	for _, b := range maintainedRows(t, bs.Buffs, id) {
+		if b.PowerID == "aura_sight" {
+			back = b
+		}
+	}
+	assert.Equal(t, aura, back, "the row as it was, rounds kept and all")
+	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, currentPSP(t, control, cid), currentPSP(t, bs, id), "the next charge falls on the same round")
+}
+
+// Item 4: a contact row that costs more than 0 pays, so it is ended and the
+// undo restores it.
+func TestStopAndRecover_ADR0047Item4_ContactRowEndedAndRestored(t *testing.T) {
+	ctx := context.Background()
+	bs, id := thiefPsionicistRolling(t, payingAndFree, fives(t))
+	_, _, err := bs.Buffs.MakeContact(ctx, id, "Grey Ogre")
+	require.NoError(t, err)
+	before := mindRows(t, bs.Buffs, id)
+	require.Len(t, before, 1)
+	require.True(t, before[0].ContactRow())
+	require.Greater(t, before[0].MaintenanceCost, 0)
+	spendPSP(t, bs, id, 30)
+
+	res, err := bs.Psionics.StopAndRecover(ctx, id, 1, "resting")
+	require.NoError(t, err)
+	require.Len(t, res.Ended, 1)
+	assert.Equal(t, "Grey Ogre", res.Ended[0].Target)
+	assert.Empty(t, mindRows(t, bs.Buffs, id))
+	undoTop(t, bs, id)
+	assert.Equal(t, before, mindRows(t, bs.Buffs, id))
+}
+
+// Item 4: undo then redo, twice: the pool and the rows are the same each time.
+func TestStopAndRecover_ADR0047Item4_UndoRedoTwiceIsStable(t *testing.T) {
+	ctx := context.Background()
+	bs, id, before := stopFixture(t)
+	pspBefore := currentPSP(t, bs, id)
+	_, err := bs.Psionics.StopAndRecover(ctx, id, 2, "resting")
+	require.NoError(t, err)
+	pspAfter := currentPSP(t, bs, id)
+	after, err := bs.Buffs.ListActive(ctx, id)
+	require.NoError(t, err)
+
+	for range 2 {
+		undoTop(t, bs, id)
+		assert.Equal(t, pspBefore, currentPSP(t, bs, id))
+		back, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, before, back)
+		redoTop(t, bs, id)
+		assert.Equal(t, pspAfter, currentPSP(t, bs, id))
+		again, err := bs.Buffs.ListActive(ctx, id)
+		require.NoError(t, err)
+		assert.ElementsMatch(t, after, again)
+	}
+}
+
+// Item 4 with ADR 0043 step 5: near max the recovery is capped, and the undo
+// takes off what was applied, not what was asked.
+func TestStopAndRecover_ADR0047Item4_CappedRecoveryUndoesTheAppliedAmount(t *testing.T) {
+	ctx := context.Background()
+	bs, id, _ := stopFixture(t)
+	pspBefore := currentPSP(t, bs, id)
+	res, err := bs.Psionics.StopAndRecover(ctx, id, 100, "resting")
+	require.NoError(t, err)
+	require.Equal(t, 181, res.PSP.Current, "capped at max")
+	require.Less(t, 181-pspBefore, 100*6, "asked for far more than applied")
+	undoTop(t, bs, id)
+	assert.Equal(t, pspBefore, currentPSP(t, bs, id), "the applied amount is taken off")
+	redoTop(t, bs, id)
+	assert.Equal(t, 181, currentPSP(t, bs, id))
 }

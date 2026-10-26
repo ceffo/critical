@@ -402,14 +402,7 @@ func (s *service) StopAndRecover(ctx context.Context, characterID int64, hours f
 			return fmt.Errorf("end maintained powers: %w", err)
 		}
 		rec := r.record
-		for _, b := range ended {
-			switch {
-			case b.PowerID != "":
-				rec.PowersEnded = append(rec.PowersEnded, b.PowerID)
-			case b.Target != "":
-				rec.TargetsEnded = append(rec.TargetsEnded, b.Target)
-			}
-		}
+		rec.PowersEnded, rec.TargetsEnded = buffsvc.SplitEnded(ended)
 		rec.PowerNames = buffsvc.PowerNames(ended)
 		payload, err := json.Marshal(rec)
 		if err != nil {

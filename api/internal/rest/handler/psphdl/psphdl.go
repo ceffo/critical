@@ -370,18 +370,11 @@ func StopAndRecover(charID CharacterIDFunc, svc recoverer) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
+		powers, targets := buffsvc.SplitEnded(res.Ended)
 		out := StopRecoverDTO{
 			PSP:         StateDTO{Current: res.PSP.Current, Max: res.PSP.Max},
-			PowersEnded: []string{}, TargetsEnded: []string{},
+			PowersEnded: append([]string{}, powers...), TargetsEnded: append([]string{}, targets...),
 			PowerNames: buffsvc.PowerNames(res.Ended),
-		}
-		for _, b := range res.Ended {
-			switch {
-			case b.PowerID != "":
-				out.PowersEnded = append(out.PowersEnded, b.PowerID)
-			case b.Target != "":
-				out.TargetsEnded = append(out.TargetsEnded, b.Target)
-			}
 		}
 		render.OK(r.Context(), w, out)
 		return nil

@@ -1,12 +1,15 @@
 import { test, expect } from "./fixtures";
 import { psionicist } from "./psionicist";
 import {
+  apiCall,
   logEntry,
   openActPowers,
   openDashboard,
   openSortsPowers,
+  reloadSettled,
   undoEntry,
 } from "./helpers";
+import { keepPowerUp } from "./keepPowerUp";
 
 // What only a browser proves for the PSP pool (ADR 0043 steps 4 to 6): the panel on the character card
 // shows current / maximum, a spend from the panel changes the pool through the real API, and the
@@ -38,25 +41,50 @@ test.describe("a psionicist", () => {
     await expect(value).toHaveText("40 / 40");
   });
 
-  test("recovering over 2 hours of rest adds 12 PSPs (Table 6)", async ({
+  test("resting with a paying power kept up stops it and recovers; Undo restores both", async ({
     page,
   }) => {
+    test.setTimeout(90_000);
     await openDashboard(page);
+    await keepPowerUp(page);
     const panel = page.getByTestId("psp-panel");
     const value = panel.getByTestId("psp-value");
-    await panel.getByTestId("psp-adjust").click();
-    const adjust = page.getByTestId("psp-adjust-popover");
-    await adjust.getByLabel("PSP amount").fill("30");
-    await adjust.getByRole("button", { name: "Spend" }).click();
-    await expect(value).toHaveText("10 / 40");
+    await expect(value).toHaveText("37 / 40");
+    expect(
+      await apiCall(page, "POST", "/api/psp/event", {
+        delta: -20,
+        source: "test",
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await expect(value).toHaveText("17 / 40");
 
     await panel.getByTestId("psp-rest").click();
     const rest = page.getByTestId("psp-rest-popover");
     await rest.getByRole("radio", { name: /resting/ }).click();
     await rest.getByRole("spinbutton", { name: "Hours" }).fill("2");
-    await expect(rest.getByTestId("psp-rest-preview")).toContainText("22");
-    await rest.getByTestId("psp-rest-go").click();
-    await expect(value).toHaveText("22 / 40");
+    await expect(rest.getByTestId("psp-rest-stops")).toContainText("Intensify");
+    await rest.getByRole("button", { name: /Stop Intensify/ }).click();
+    await expect(value).toHaveText("29 / 40");
+    await expect(logEntry(page, "PSPs recovered 12")).toBeVisible();
+
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    const row = page
+      .getByTestId("known-power")
+      .filter({ hasText: "Intensify" });
+    await expect(row.getByTestId("power-maintained")).toHaveCount(0);
+
+    await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
+    await undoEntry(page, "PSPs recovered 12");
+    await expect(value).toHaveText("17 / 40");
+    await page
+      .getByTestId("rail")
+      .getByRole("button", { name: "Powers" })
+      .click();
+    await expect(row.getByTestId("power-maintained")).toBeVisible();
   });
 });
 

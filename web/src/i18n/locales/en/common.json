@@ -188,7 +188,7 @@
     "lastExposure": "{{delta}} {{spell}}"
   },
   "psp": {
-    "title": "PSPs",
+    "title": "Psionic strength points",
     "amountPlaceholder": "PSP",
     "amount": "PSP amount",
     "spend": "Spend",

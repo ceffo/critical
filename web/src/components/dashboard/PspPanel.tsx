@@ -66,7 +66,7 @@ export function PspPanel() {
             className="flex items-baseline gap-1 tabular-nums"
             data-testid="psp-value"
           >
-            <span className="text-title">{pool.current}</span>
+            <span className="text-hero">{pool.current}</span>
             <span className="text-body text-muted-foreground">
               {" "}
               / {pool.max}
@@ -82,7 +82,7 @@ export function PspPanel() {
           aria-valuenow={pool.current}
         >
           <div
-            className="h-full bg-info transition-all duration-300"
+            className="h-full bg-magic transition-all duration-300"
             style={{ width: `${pct}%` }}
           />
         </div>

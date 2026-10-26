@@ -188,7 +188,7 @@
     "lastExposure": "{{delta}} {{spell}}"
   },
   "psp": {
-    "title": "PFP",
+    "title": "Points de force psionique",
     "amountPlaceholder": "PFP",
     "amount": "Nombre de PFP",
     "spend": "Dépenser",

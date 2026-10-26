@@ -261,9 +261,8 @@ export const useTableStore = create<TableStore>((set, get) => {
     stopAndRecoverPsp: (hours, activity) =>
       get().run(
         async () => setPsp((await stopAndRecoverPsp(hours, activity)).psp),
-        {
-          fresh: ["character", "buffs"],
-        },
+        // The answer sets the pool only: the rows it ended are read again.
+        { fresh: ["character"] },
       ),
     longRest: () =>
       get().run(() => useSpellStore.getState().resetSlots(), {

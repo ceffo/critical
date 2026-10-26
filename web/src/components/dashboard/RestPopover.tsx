@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Minus, Moon, Plus } from "@phosphor-icons/react";
+import { Minus, Moon, Plus, Warning } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Popover,
@@ -196,7 +196,10 @@ export function RestPopover() {
             className="flex flex-col gap-1 rounded-lg border border-warning/60 px-3 py-2 text-body"
             data-testid="psp-rest-stops"
           >
-            <p className="text-warning">{t("psp.rest.stopsTitle")}</p>
+            <p className="flex items-start gap-1.5 text-warning">
+              <Warning aria-hidden className="mt-0.5 shrink-0" />
+              {t("psp.rest.stopsTitle")}
+            </p>
             <ul className="flex flex-col">
               {paying.map((b) => (
                 <li key={b.id}>

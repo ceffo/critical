@@ -612,3 +612,23 @@ export async function keepATangent(page: Page, tab: Locator, target: string) {
   }
   throw new Error("no tangent after 8 attacks");
 }
+
+/** Sorts > Pouvoirs: browse the powers catalogue and the known powers (a psionicist's). */
+export async function openSortsPowers(page: Page) {
+  await page
+    .getByTestId("rail")
+    .getByRole("button", { name: /^(Spells|Sorts)$/ })
+    .click();
+  await page.getByRole("tab", { name: /^(Powers|Pouvoirs)$/ }).click();
+  return page.getByTestId("known-powers");
+}
+
+/** Act > Powers: the tab where the known powers are played. */
+export async function openActPowers(page: Page) {
+  await page
+    .getByTestId("rail")
+    .getByRole("button", { name: /^(Act|Agir)$/ })
+    .click();
+  await page.getByRole("tab", { name: /^(Powers|Pouvoirs)$/ }).click();
+  return page.getByTestId("powers-tab");
+}

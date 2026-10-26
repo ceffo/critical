@@ -6,7 +6,14 @@ import {
   type UIEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
-import { CircleNotch, MagnifyingGlass } from "@phosphor-icons/react";
+import {
+  Check,
+  CircleNotch,
+  MagnifyingGlass,
+  Plus,
+  X,
+} from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
@@ -18,8 +25,23 @@ import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
 /** Load the next page when the list is this close (px) to its bottom. */
 const LOAD_MORE_MARGIN = 400;
 
-/** The lookup's powers view (ADR 0043 step 8): the catalogue's psionic powers beside the spells. */
-export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
+/** The powers view of Sorts (ADR 0043 step 8, ADR 0047 step 12): the catalogue's psionic powers. */
+export function PowerLookup({
+  tabs,
+  aside,
+  known,
+}: {
+  /** The Sorts / Pouvoirs tabs, at the top of the filter band. */
+  tabs?: React.ReactNode;
+  /** Beside the list while no power's detail is open: the character's known powers. */
+  aside?: React.ReactNode;
+  /** Makes each row add its power, or say it is already known. */
+  known?: {
+    has: (id: string) => boolean;
+    add: (id: string) => void;
+    busy: boolean;
+  };
+}) {
   const { t, i18n } = useTranslation();
   const {
     query,
@@ -39,6 +61,8 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
     loadOptions,
   } = usePowerStore();
   const listRef = useRef<HTMLDivElement>(null);
+  // A search selects its first row; the detail opens only when the player picks a row.
+  const [detailOpen, setDetailOpen] = useState(false);
   const selected = items.find((p) => p.id === selectedId) ?? null;
 
   useEffect(() => {
@@ -68,6 +92,7 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       move(e.key === "ArrowDown" ? 1 : -1);
+      setDetailOpen(true);
     }
   };
 
@@ -86,6 +111,7 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
           aria-label={t("lookup.filters")}
           className="card-band flex shrink-0 flex-col gap-2 px-4 py-2.5"
         >
+          {tabs}
           <div className="relative min-w-0">
             <MagnifyingGlass className="pointer-events-none absolute top-1.5 left-2.5 h-4 w-4 text-muted-foreground" />
             <input
@@ -105,7 +131,6 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
               onKeyDown={onKeyDown}
             />
           </div>
-          {modeSwitch}
           <ChipGroup
             label={t("lookup.powers.disciplineLabel")}
             value={query.discipline}
@@ -165,8 +190,12 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
                 key={p.id}
                 power={p}
                 options={options}
-                selected={p.id === selectedId}
-                onSelect={() => select(p.id)}
+                selected={detailOpen && p.id === selectedId}
+                onSelect={() => {
+                  select(p.id);
+                  setDetailOpen(true);
+                }}
+                known={known}
               />
             ))
           )}
@@ -183,8 +212,15 @@ export function PowerLookup({ modeSwitch }: { modeSwitch: React.ReactNode }) {
         data-testid="power-detail"
         className="zone-card flex min-h-0 min-w-0 flex-col overflow-y-auto px-4 pb-3.5"
       >
-        {selected ? (
-          <PowerDetail key={selected.id} power={selected} options={options} />
+        {detailOpen && selected ? (
+          <PowerDetail
+            key={selected.id}
+            power={selected}
+            options={options}
+            onClose={aside ? () => setDetailOpen(false) : undefined}
+          />
+        ) : aside ? (
+          aside
         ) : (
           <p className="pt-3.5 text-body text-muted-foreground">
             {t("lookup.powers.noSelection")}
@@ -254,11 +290,17 @@ function PowerRow({
   options,
   selected,
   onSelect,
+  known,
 }: {
   power: Power;
   options: PowerFilterOptions | null;
   selected: boolean;
   onSelect: () => void;
+  known?: {
+    has: (id: string) => boolean;
+    add: (id: string) => void;
+    busy: boolean;
+  };
 }) {
   const { t, i18n } = useTranslation();
   return (
@@ -271,22 +313,49 @@ function PowerRow({
       data-discipline={power.discipline}
       data-kind={power.kind}
       className={cn(
-        "flex shrink-0 cursor-pointer flex-col rounded-md px-2 py-1.5 text-body",
+        "flex shrink-0 cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-body",
         selected ? "selected" : "hover:bg-raised",
       )}
       onClick={onSelect}
     >
-      <span
-        lang={i18n.language}
-        className="min-w-0 break-words"
-        data-testid="power-name"
-      >
-        {localized(i18n.language, power.name)}
+      <span className="flex min-w-0 flex-1 flex-col">
+        <span
+          lang={i18n.language}
+          className="min-w-0 break-words"
+          data-testid="power-name"
+        >
+          {localized(i18n.language, power.name)}
+        </span>
+        <span className="text-label text-muted-foreground">
+          {disciplineName(options, power.discipline, i18n.language)} ·{" "}
+          {t(`lookup.powers.kinds.${power.kind}`)}
+        </span>
       </span>
-      <span className="text-label text-muted-foreground">
-        {disciplineName(options, power.discipline, i18n.language)} ·{" "}
-        {t(`lookup.powers.kinds.${power.kind}`)}
-      </span>
+      {known &&
+        (known.has(power.id) ? (
+          <span
+            className="flex shrink-0 items-center gap-1 text-label text-muted-foreground"
+            data-testid="power-known"
+          >
+            <Check aria-hidden />
+            {t("lookup.powers.known")}
+          </span>
+        ) : (
+          <Button
+            className="shrink-0 gap-1 px-2"
+            disabled={known.busy}
+            aria-label={t("powers.add", {
+              name: localized(i18n.language, power.name),
+            })}
+            onClick={(e) => {
+              e.stopPropagation();
+              known.add(power.id);
+            }}
+          >
+            <Plus aria-hidden />
+            {t("powers.addShort")}
+          </Button>
+        ))}
     </div>
   );
 }
@@ -294,9 +363,12 @@ function PowerRow({
 function PowerDetail({
   power,
   options,
+  onClose,
 }: {
   power: Power;
   options: PowerFilterOptions | null;
+  /** Back to the known powers, when something else shares the pane. */
+  onClose?: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
@@ -338,9 +410,25 @@ function PowerDetail({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="card-band bleed-x-4 flex shrink-0 flex-col gap-1 py-2.5">
-        <h3 className="text-headline" lang={lang} data-testid="power-title">
-          {localized(lang, power.name)}
-        </h3>
+        <div className="flex items-start gap-2">
+          <h3
+            className="min-w-0 flex-1 text-headline"
+            lang={lang}
+            data-testid="power-title"
+          >
+            {localized(lang, power.name)}
+          </h3>
+          {onClose && (
+            <Button
+              className="shrink-0 px-2"
+              aria-label={t("lookup.powers.closeDetail")}
+              title={t("lookup.powers.closeDetail")}
+              onClick={onClose}
+            >
+              <X aria-hidden />
+            </Button>
+          )}
+        </div>
         <p className="text-body text-muted-foreground" data-testid="power-meta">
           {[
             disciplineName(options, power.discipline, lang),

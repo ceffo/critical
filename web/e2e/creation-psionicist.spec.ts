@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage } from "./helpers";
+import { openDashboard, chooseLanguage, openActPowers } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 // The psionicist's creation (ADR 0043 steps 4.4 and 9), end to end in French: what only a browser
@@ -127,11 +127,8 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
   await expect(sheet).toContainText("Psioniste");
   await expect(sheet).toContainText("Voleur");
   await snap(page, "sheet");
-  await page
-    .getByTestId("rail")
-    .getByRole("button", { name: "Pouvoirs" })
-    .click();
+  await openActPowers(page);
   await expect(
-    page.getByTestId("known-power").filter({ hasText: "Contact" }),
+    page.getByTestId("power-row").filter({ hasText: "Contact" }),
   ).toBeVisible();
 });

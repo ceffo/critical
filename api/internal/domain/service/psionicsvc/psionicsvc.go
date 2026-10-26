@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -44,6 +45,11 @@ type SVC interface {
 	// invalid hours or an unknown activity; actionlogsvc.ErrNoPSPPool for a
 	// character with no pool.
 	Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error)
+	// StopAndRecover ends every power row that pays PSPs and recovers as
+	// Recover does, as one undoable psp_recovery entry (ADR 0047 item 4). It
+	// returns the pool after it and the rows ended. The refusals are
+	// Recover's, but never ErrRecoveryWhileMaintaining.
+	StopAndRecover(ctx context.Context, characterID int64, hours float64, activity string) (StopRecoverResult, error)
 	// SetKnownPowers saves the whole list of picks (ADR 0043 step 9), checked
 	// against Table 4 at the psionics entry's level, as one psionic_pick entry
 	// with its snapshot. It returns the known powers as saved. A
@@ -80,6 +86,15 @@ type SVC interface {
 	Contact(ctx context.Context, characterID int64, req ContactRequest) (*UseResult, error)
 }
 
+// StopRecoverResult is a stop-and-recover's outcome.
+type StopRecoverResult struct {
+	// PSP is the pool after the recovery.
+	PSP actionlog.PSPState
+	// Ended are the rows it took off (powers by catalogue id, tangent and
+	// contact rows by target), as they were.
+	Ended []buffsvc.BuffEffect
+}
+
 // Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
 // 0043 step 13).
 type Buffs interface {
@@ -87,6 +102,9 @@ type Buffs interface {
 	// the power check's entry records the snapshot.
 	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
 	ListActive(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, error)
+	// EndMaintained takes the paying rows off inside the ctx transaction,
+	// without recording: the caller's entry records the snapshot.
+	EndMaintained(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)
 	// GetRound is the round counter (ADR 0005; 0: out of combat).
 	GetRound(ctx context.Context, characterID int64) (int, error)
 	Dismiss(ctx context.Context, characterID int64, buffID string, cause spelleffectsvc.EndCause) ([]buffsvc.BuffEffect, buffsvc.EndResult, error)
@@ -280,6 +298,52 @@ type recoveryRecord struct {
 	PerHour      int     `json:"perHour"`
 	PSPRequested *int    `json:"pspRequested,omitempty"`
 	PSPApplied   *int    `json:"pspApplied,omitempty"`
+	// PowersEnded, PowerNames and TargetsEnded are the rows a stop-and-recover
+	// ended (ADR 0047 item 4), worded as the long rest's (ADR 0043 step 7).
+	PowersEnded  []string                  `json:"powersEnded,omitempty"`
+	PowerNames   map[string]localized.Text `json:"powerNames,omitempty"`
+	TargetsEnded []string                  `json:"targetsEnded,omitempty"`
+}
+
+// recovery is a checked request: the rate read and the PSPs it is worth.
+type recovery struct {
+	record recoveryRecord
+	delta  int
+}
+
+// plan checks a recovery request and prices it. Recover and StopAndRecover
+// share it, so both honour the hours bounds, the unknown-activity refusal and
+// a row's required proficiency (ADR 0047 item 6) the same way.
+func (s *service) plan(ctx context.Context, characterID int64, hours float64, activity string) (recovery, error) {
+	if math.IsNaN(hours) || math.IsInf(hours, 0) || hours <= 0 {
+		return recovery{}, domain.FieldErrorf("hours", "hours must be more than 0")
+	}
+	if hours > MaxRecoveryHours {
+		return recovery{}, domain.FieldErrorf("hours", "at most %d hours at a time", MaxRecoveryHours)
+	}
+	row, found, err := s.rates.PSPRecoveryRowFor(activity)
+	if err != nil {
+		return recovery{}, fmt.Errorf("psp recovery rate: %w", err)
+	}
+	if !found {
+		return recovery{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
+	}
+	if row.RequiresProficiency != "" {
+		// ADR 0047 item 6: a gated row is recovered by only when the character
+		// knows the proficiency, whichever class granted the pick; otherwise it
+		// is refused like an unknown activity.
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return recovery{}, err
+		}
+		if !slices.ContainsFunc(c.Proficiencies.Nonweapon, func(p skills.Pick) bool { return p.ID == row.RequiresProficiency }) {
+			return recovery{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
+		}
+	}
+	return recovery{
+		record: recoveryRecord{Hours: hours, Activity: activity, PerHour: row.PerHour},
+		delta:  int(math.Floor(hours*float64(row.PerHour) + 1e-9)),
+	}, nil
 }
 
 // Recover is ADR 0043 step 6: hours of one of Table 6's activities recover
@@ -289,33 +353,11 @@ type recoveryRecord struct {
 // PSP. Refused with ErrRecoveryWhileMaintaining while a power is maintained:
 // the book recovers only in hours with no PSP spent.
 func (s *service) Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error) {
-	if math.IsNaN(hours) || math.IsInf(hours, 0) || hours <= 0 {
-		return actionlog.PSPState{}, domain.FieldErrorf("hours", "hours must be more than 0")
-	}
-	if hours > MaxRecoveryHours {
-		return actionlog.PSPState{}, domain.FieldErrorf("hours", "at most %d hours at a time", MaxRecoveryHours)
-	}
-	row, found, err := s.rates.PSPRecoveryRowFor(activity)
+	r, err := s.plan(ctx, characterID, hours, activity)
 	if err != nil {
-		return actionlog.PSPState{}, fmt.Errorf("psp recovery rate: %w", err)
+		return actionlog.PSPState{}, err
 	}
-	if !found {
-		return actionlog.PSPState{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
-	}
-	if row.RequiresProficiency != "" {
-		// ADR 0047 item 6: a gated row is recovered by only when the character
-		// knows the proficiency, whichever class granted the pick; otherwise it
-		// is refused like an unknown activity.
-		c, err := s.chars.GetCharacter(ctx, characterID)
-		if err != nil {
-			return actionlog.PSPState{}, err
-		}
-		if !slices.ContainsFunc(c.Proficiencies.Nonweapon, func(p skills.Pick) bool { return p.ID == row.RequiresProficiency }) {
-			return actionlog.PSPState{}, domain.FieldErrorf("activity", "unknown activity %q", activity)
-		}
-	}
-	rate := row.PerHour
-	payload, err := json.Marshal(recoveryRecord{Hours: hours, Activity: activity, PerHour: rate})
+	payload, err := json.Marshal(r.record)
 	if err != nil {
 		return actionlog.PSPState{}, fmt.Errorf("psp recovery payload: %w", err)
 	}
@@ -332,7 +374,7 @@ func (s *service) Recover(ctx context.Context, characterID int64, hours float64,
 			CharacterID: characterID,
 			Kind:        actionlog.KindPSPRecovery,
 			Payload:     payload,
-			PSPDelta:    int(math.Floor(hours*float64(rate) + 1e-9)),
+			PSPDelta:    r.delta,
 		})
 		return err
 	})
@@ -340,4 +382,50 @@ func (s *service) Recover(ctx context.Context, characterID int64, hours float64,
 		return actionlog.PSPState{}, err
 	}
 	return out, nil
+}
+
+// StopAndRecover is ADR 0047 item 4 (amending ADR 0043 steps 6 and 16): it
+// ends every row that pays PSPs (BuffEffect.Maintained: a maintenance cost
+// above 0; rows that cost nothing stay up and do not block the rest) and
+// recovers as Recover does, in one transaction and one psp_recovery entry. The
+// entry carries the ended rows as a buffs snapshot, so one undo puts the rows
+// back, with their rounds kept, and takes the PSPs off.
+func (s *service) StopAndRecover(ctx context.Context, characterID int64, hours float64, activity string) (StopRecoverResult, error) {
+	r, err := s.plan(ctx, characterID, hours, activity)
+	if err != nil {
+		return StopRecoverResult{}, err
+	}
+	var res StopRecoverResult
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		ended, snap, err := s.buffs.EndMaintained(ctx, characterID)
+		if err != nil {
+			return fmt.Errorf("end maintained powers: %w", err)
+		}
+		rec := r.record
+		rec.PowersEnded, rec.TargetsEnded = buffsvc.SplitEnded(ended)
+		rec.PowerNames = buffsvc.PowerNames(ended)
+		payload, err := json.Marshal(rec)
+		if err != nil {
+			return fmt.Errorf("psp recovery payload: %w", err)
+		}
+		e := actionlog.NewEntry{
+			CharacterID: characterID,
+			Kind:        actionlog.KindPSPRecovery,
+			Payload:     payload,
+			PSPDelta:    r.delta,
+		}
+		if len(ended) > 0 {
+			e.Snapshots = []actionlog.Snapshot{snap}
+		}
+		state, err := s.log.AppendPSP(ctx, e)
+		if err != nil {
+			return err
+		}
+		res = StopRecoverResult{PSP: state, Ended: ended}
+		return nil
+	})
+	if err != nil {
+		return StopRecoverResult{}, err
+	}
+	return res, nil
 }

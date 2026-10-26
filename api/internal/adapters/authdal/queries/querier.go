@@ -25,9 +25,12 @@ type Querier interface {
 	InsertUser(ctx context.Context, arg InsertUserParams) error
 	// Any invite, pending or not: a resend tells a cancelled or used one from an unknown one (step 2.7).
 	InviteByID(ctx context.Context, id uuid.UUID) (InviteByIDRow, error)
+	// Like ListUsers, ties go by email (unique among the pending invites), not by the random id.
 	ListPendingInvites(ctx context.Context) ([]ListPendingInvitesRow, error)
 	// The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
 	// and the pending invites.
+	// The tie of two users created in one instant is broken by the unique email, not the random id, so a
+	// listing never changes order from one run to the next.
 	ListUsers(ctx context.Context) ([]ListUsersRow, error)
 	// Every character of one user becomes another's (a root admin that never logged in moves).
 	MoveCharacters(ctx context.Context, arg MoveCharactersParams) error

@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -294,7 +295,7 @@ func (p Auth) ListUsers(ctx context.Context) ([]authsvc.UserSummary, error) {
 			if c := a.CreatedAt.Compare(b.CreatedAt); c != 0 {
 				return c
 			}
-			return slices.Compare(a.ID[:], b.ID[:])
+			return cmp.Compare(a.Email, b.Email)
 		})
 		out = make([]authsvc.UserSummary, 0, len(users))
 		for _, u := range users {
@@ -323,7 +324,7 @@ func (p Auth) ListPendingInvites(ctx context.Context) ([]authsvc.Invite, error) 
 			if c := a.CreatedAt.Compare(b.CreatedAt); c != 0 {
 				return c
 			}
-			return slices.Compare(a.ID[:], b.ID[:])
+			return cmp.Compare(a.Email, b.Email)
 		})
 		return nil
 	})

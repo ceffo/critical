@@ -2261,7 +2261,8 @@
       "running": "Running",
       "survival": "Survival",
       "tracking": "Tracking",
-      "weaponsmithing": "Weaponsmithing"
+      "weaponsmithing": "Weaponsmithing",
+      "rejuvenation": "Rejuvenation"
     },
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dexterity {{dexterity}}, armour {{armor}} ({{max}}% at most)",
     "budget": {

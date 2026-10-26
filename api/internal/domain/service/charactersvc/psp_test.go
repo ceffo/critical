@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // ADR 0043 steps 4 and 5 on a character, on the fixture catalogue's real
@@ -72,7 +73,11 @@ func TestGetCharacter_Step5_ThePSPPool(t *testing.T) {
 			ledger := &pspLedger{psp: map[int64]int{7: tc.total}}
 			got := readOn(t, thiefPsionicist(tc.pspMax), ledger)
 			require.NotNil(t, got.Derived.PSP)
-			assert.Equal(t, charactersvc.PSPPool{Current: tc.want, Max: tc.wMax}, *got.Derived.PSP)
+			assert.Equal(t, tc.want, got.Derived.PSP.Current)
+			assert.Equal(t, tc.wMax, got.Derived.PSP.Max)
+			// ADR 0047 item 6: Table 6 comes with the pool, the gated row's proficiency included.
+			assert.Contains(t, got.Derived.PSP.Recovery, ruletablesvc.PSPRecoveryRow{Activity: "meditating", PerHour: 12, RequiresProficiency: "rejuvenation"})
+			assert.Contains(t, got.Derived.PSP.Recovery, ruletablesvc.PSPRecoveryRow{Activity: "sleeping", PerHour: 12})
 			assert.Equal(t, 1, ledger.reads)
 		})
 	}

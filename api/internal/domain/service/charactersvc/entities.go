@@ -558,10 +558,12 @@ type LevelUp struct {
 
 // PSPPool is a character's PSPs (ADR 0043 step 5): Max is the stored
 // maximum (step 4.4), Current the maximum plus the ledger total, shown within
-// 0..Max.
+// 0..Max. Recovery is CPsiH Table 6 (ADR 0047 item 6), read with the pool
+// so a rest control can offer each activity and its gate; nil when not set.
 type PSPPool struct {
-	Current int
-	Max     int
+	Current  int
+	Max      int
+	Recovery []ruletablesvc.PSPRecoveryRow
 }
 
 // PowerKnowledge is a psionicist's known powers (ADR 0043 step 9): Table 4's

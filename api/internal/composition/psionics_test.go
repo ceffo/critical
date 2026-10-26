@@ -18,6 +18,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
 
@@ -45,6 +47,12 @@ func thiefPsionicistRolling(t *testing.T, picks []psionics.Pick, dice compositio
 // path.
 func thiefPsionicistOn(t *testing.T, picks []psionics.Pick, dice composition.Dice, path string) (*composition.BackingServices, int64) {
 	t.Helper()
+	return thiefPsionicistHolding(t, picks, dice, path, skills.Picks{})
+}
+
+// thiefPsionicistHolding is thiefPsionicistOn with the proficiency picks held.
+func thiefPsionicistHolding(t *testing.T, picks []psionics.Pick, dice composition.Dice, path string, held skills.Picks) (*composition.BackingServices, int64) {
+	t.Helper()
 	ctx := context.Background()
 	m := memory.New()
 	cfg := fixtureConfig()
@@ -55,7 +63,7 @@ func thiefPsionicistOn(t *testing.T, picks []psionics.Pick, dice composition.Dic
 	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
 	id, err := m.AddCharacter(ctx, charactersvc.Character{
 		Name: "Thief/psionicist", Race: "human", Class: "thief", RealizedLevel: 15,
-		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181, PsionicPicks: picks,
+		Str: 12, Dex: 17, Con: 16, Int: 15, Wis: 17, Cha: 10, HPMax: 50, PSPMax: 181, PsionicPicks: picks, Proficiencies: held,
 		Classes: []classes.Entry{classes.SingleEntry("thief", 15, 0), classes.SingleEntry("psionicist", 14, 0)},
 	})
 	require.NoError(t, err)
@@ -434,4 +442,31 @@ func TestLongRest_Step7_EndsMaintainedPowersUndone(t *testing.T) {
 	assert.Equal(t, 172, currentPSP(t, bs, id))
 	_, err = bs.Psionics.Recover(ctx, id, 1, "resting")
 	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining, "refused again: the power is kept up")
+}
+
+// ADR 0047 item 6 on a multi-class character (thief 15/psionicist 14), the real services and the
+// fixture's Table 6: the meditating row needs the Rejuvenation pick, whichever class took the slot,
+// and removing the pick refuses it again.
+func TestRecover_ADR0047Item6_MultiClassPickGatesMeditating(t *testing.T) {
+	ctx := context.Background()
+	t.Run("without the pick it is refused", func(t *testing.T) {
+		bs, id := thiefPsionicist(t)
+		spendPSP(t, bs, id, 100)
+		_, err := bs.Psionics.Recover(ctx, id, 2, "meditating")
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "activity", fe.Field)
+		assert.Equal(t, 81, currentPSP(t, bs, id))
+	})
+	t.Run("with the pick (picks belong to no class) it recovers 12 an hour", func(t *testing.T) {
+		held := skills.Picks{Nonweapon: []skills.Pick{{ID: "rejuvenation", Slots: 1}}}
+		bs, id := thiefPsionicistHolding(t, nil, nil, fixtureCatalogue, held)
+		spendPSP(t, bs, id, 100)
+		state, err := bs.Psionics.Recover(ctx, id, 2, "meditating")
+		require.NoError(t, err)
+		assert.Equal(t, 81+24, state.Current)
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		assert.Contains(t, c.Derived.PSP.Recovery, ruletablesvc.PSPRecoveryRow{Activity: "meditating", PerHour: 12, RequiresProficiency: "rejuvenation"})
+	})
 }

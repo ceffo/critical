@@ -18,13 +18,13 @@ import (
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
-// ADR 0037 step 2: seeds/proficiencies.json holds PHB Table 37 once, 65 rows, each with a known
+// ADR 0037 step 2: seeds/proficiencies.json holds PHB Table 37 once (65 rows) and the psionicist's Rejuvenation (ADR 0047 item 6), each with a known
 // ability (or none), its slots, its groups, and an en and a fr name in the web's locale files.
 func TestNonweaponCatalogue_Step2_Table37Rows(t *testing.T) {
 	p, err := ruletablesadpt.ReadProficiencies(seedsDir, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	rows := p.All()
-	require.Len(t, rows, 65)
+	require.Len(t, rows, 66)
 	byID := map[string]ruletablesvc.Proficiency{}
 	multi := map[int]int{}
 	for _, r := range rows {
@@ -33,7 +33,7 @@ func TestNonweaponCatalogue_Step2_Table37Rows(t *testing.T) {
 	}
 	// Table 37 prints 82 lines: 65 proficiencies, Ancient History and Navigation under three
 	// groups, thirteen others under two.
-	assert.Equal(t, map[int]int{1: 50, 2: 13, 3: 2}, multi)
+	assert.Equal(t, map[int]int{1: 51, 2: 13, 3: 2}, multi)
 	assert.Equal(t, []string{"priest", "rogue", "wizard"}, byID["ancient_history"].Groups)
 	assert.Equal(t, []string{"priest", "warrior", "wizard"}, byID["navigation"].Groups)
 
@@ -46,6 +46,8 @@ func TestNonweaponCatalogue_Step2_Table37Rows(t *testing.T) {
 		{ID: "languages_modern", Ability: "int", Modifier: 0, Slots: 1, Groups: []string{"general"}},
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
 		{ID: "mountaineering", Slots: 1, Groups: []string{"warrior"}},
+		// CPsiH Table 10 (ADR 0047 item 6).
+		{ID: "rejuvenation", Ability: "wis", Modifier: -1, Slots: 1, Groups: []string{"psionicist"}},
 	}
 	for _, want := range sample {
 		assert.Equal(t, want, byID[want.ID], want.ID)

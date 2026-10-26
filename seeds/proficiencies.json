@@ -79,6 +79,7 @@
     {"id": "running", "ability": "con", "modifier": -6, "slots": 1, "groups": ["warrior"]},
     {"id": "survival", "ability": "int", "modifier": 0, "slots": 2, "groups": ["warrior"]},
     {"id": "tracking", "ability": "wis", "modifier": 0, "slots": 2, "groups": ["warrior"]},
-    {"id": "weaponsmithing", "ability": "int", "modifier": -3, "slots": 3, "groups": ["warrior"]}
+    {"id": "weaponsmithing", "ability": "int", "modifier": -3, "slots": 3, "groups": ["warrior"]},
+    {"id": "rejuvenation", "ability": "wis", "modifier": -1, "slots": 1, "groups": ["psionicist"]}
   ]
 }

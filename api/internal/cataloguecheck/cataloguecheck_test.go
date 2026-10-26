@@ -198,12 +198,12 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 }
 
 // TestSchema_Step14_OnlyTheNextFormatIsValid (ADR 0040 step 14, ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2,
-// 22.2, 23.2, 24.2, 25.5 and 27.5): the schema accepts format 19 only; every earlier format, retired, is refused
-// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 19
+// 22.2, 23.2, 24.2, 25.5 and 27.5): the schema accepts format 20 only; every earlier format, retired, is refused
+// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 20
 // requires, or with a table or a shape of an earlier format.
 func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 19")
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 20")
 	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18} {
 		a := fixtureDoc(t)
 		a["format"] = f
@@ -212,20 +212,20 @@ func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	for _, part := range []string{"skill_sets", "equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 19 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 20 requires %s", part)
 	}
 	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 19 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 20 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 19 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 20 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 19 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 20 requires the spell immunities")
 	// ADR 0040 steps 12 to 14: the skill sets, Table 28 by skill and the specialization params.
 	refuseEach(t, map[string]func(a map[string]any){
 		"the thief skill base table back":   func(a map[string]any) { tables(a)["thief_skill_base"] = tables(a)["skill_race"] },
@@ -563,10 +563,10 @@ func TestSchema_Step16_Format9ProficiencyDescriptions(t *testing.T) {
 	desc := func(a map[string]any, i int) map[string]any {
 		return descs(a)[i].(map[string]any)["description"].(map[string]any)
 	}
-	assert.Len(t, descs(fixtureDoc(t)), 65, "the fixture holds 65 rows")
+	assert.Len(t, descs(fixtureDoc(t)), 66, "the fixture holds 66 rows")
 	refuseEach(t, map[string]func(map[string]any){
-		"64 rows": func(a map[string]any) { a["proficiency_descriptions"] = descs(a)[1:] },
-		"66 rows": func(a map[string]any) {
+		"65 rows": func(a map[string]any) { a["proficiency_descriptions"] = descs(a)[1:] },
+		"67 rows": func(a map[string]any) {
 			a["proficiency_descriptions"] = append(descs(a), map[string]any{"id": "extra", "description": map[string]any{"en": "x", "fr": "y"}})
 		},
 		"a row twice":            func(a map[string]any) { descs(a)[1] = descs(a)[0] },

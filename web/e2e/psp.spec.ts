@@ -68,22 +68,19 @@ test.describe("a psionicist", () => {
     await expect(value).toHaveText("29 / 40");
     await expect(logEntry(page, "PSPs recovered 12")).toBeVisible();
 
-    await page
-      .getByTestId("rail")
-      .getByRole("button", { name: "Powers" })
-      .click();
-    const row = page
-      .getByTestId("known-power")
+    const powers = await openActPowers(page);
+    const row = powers
+      .getByTestId("power-row")
       .filter({ hasText: "Intensify" });
     await expect(row.getByTestId("power-maintained")).toHaveCount(0);
 
-    await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
-    await undoEntry(page, "PSPs recovered 12");
-    await expect(value).toHaveText("17 / 40");
     await page
       .getByTestId("rail")
-      .getByRole("button", { name: "Powers" })
+      .getByRole("button", { name: /^(Act|Agir)$/ })
       .click();
+    await undoEntry(page, "PSPs recovered 12");
+    await expect(value).toHaveText("17 / 40");
+    await openActPowers(page);
     await expect(row.getByTestId("power-maintained")).toBeVisible();
   });
 });

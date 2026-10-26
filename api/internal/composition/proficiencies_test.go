@@ -22,7 +22,7 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 
 	var list []map[string]any
 	require.NoError(t, json.Unmarshal(raw["proficiencies"], &list))
-	require.Len(t, list, 65)
+	require.Len(t, list, 66)
 	byID := map[string]map[string]any{}
 	for _, p := range list {
 		byID[p["id"].(string)] = p
@@ -49,8 +49,10 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Equal(t, 2, costs["fighter"]["tumbling"], "tumbling is a rogue proficiency: a fighter pays one more")
 	assert.Equal(t, 1, costs["bard"]["tumbling"], "a bard learns the rogue group at the table's cost")
 	assert.Equal(t, 2, costs["thief"]["blind_fighting"], "rogue and warrior: the thief's rogue group, Table 37's 2")
+	assert.Equal(t, 1, costs["psionicist"]["rejuvenation"], "ADR 0047 item 6: Rejuvenation is a psionicist proficiency, one slot")
+	assert.Equal(t, 2, costs["fighter"]["rejuvenation"], "outside its group a pick costs one more")
 	for class, byID := range costs {
-		assert.Len(t, byID, 64, "every pickable catalogue proficiency has a cost for %s", class)
+		assert.Len(t, byID, 65, "every pickable catalogue proficiency has a cost for %s", class)
 		assert.NotContains(t, byID, "languages_modern", "step 6: a language is no pick of its own, so %s gets no cost for it", class)
 	}
 	assert.Len(t, costs, 6)

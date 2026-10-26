@@ -112,17 +112,22 @@ func (t *Tables) PSPMaxFor(rule classes.PSPRule, score func(ability string) int,
 }
 
 // PSPRecoveryRow is CPsiH Table 6 for an activity (ADR 0043 step 6): the PSPs
-// an hour of it recovers.
+// an hour of it recovers. RequiresProficiency, when set, is the non-weapon
+// proficiency a character must know to recover by it (ADR 0047 item 6).
 type PSPRecoveryRow struct {
-	Activity string
-	PerHour  int
+	Activity            string
+	PerHour             int
+	RequiresProficiency string
 }
 
-// PSPActivities are Table 6's activities (ADR 0043 step 6), each once.
+// PSPActivities are the activities every catalogue's Table 6 holds (ADR 0043
+// step 6), each once; a row beyond them (a gated one, ADR 0047 item 6) is
+// allowed once.
 var PSPActivities = []string{"exertion", "walking", "resting", "sleeping"}
 
-// checkPSPRecovery: each activity once with a rate of 0 or more, and rows
-// present when a class lists psionics (ADR 0040 step 8).
+// checkPSPRecovery: each activity once with a rate of 0 or more, the
+// activities of PSPActivities all present, and rows present when a class
+// lists psionics (ADR 0040 step 8).
 func checkPSPRecovery(rows []PSPRecoveryRow, defs *classes.Registry) error {
 	if len(rows) == 0 {
 		return readByPsionics(defs)
@@ -132,7 +137,34 @@ func checkPSPRecovery(rows []PSPRecoveryRow, defs *classes.Registry) error {
 			return fmt.Errorf("%s: %d PSPs an hour", r.Activity, r.PerHour)
 		}
 	}
-	return once(rows, func(r PSPRecoveryRow) string { return r.Activity }, PSPActivities)
+	seen := make(map[string]bool, len(rows))
+	for _, r := range rows {
+		if seen[r.Activity] {
+			return fmt.Errorf("%q twice", r.Activity)
+		}
+		seen[r.Activity] = true
+	}
+	for _, a := range PSPActivities {
+		if !seen[a] {
+			return fmt.Errorf("missing %q", a)
+		}
+	}
+	return nil
+}
+
+// PSPRecoveryRowFor is Table 6's row for activity (ADR 0043 step 6); false
+// when the table has none.
+func (t *Tables) PSPRecoveryRowFor(activity string) (PSPRecoveryRow, bool, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return PSPRecoveryRow{}, false, err
+	}
+	for _, r := range c.PSPRecovery {
+		if r.Activity == activity {
+			return r, true, nil
+		}
+	}
+	return PSPRecoveryRow{}, false, nil
 }
 
 // PSPRecoveryRate is Table 6's hourly rate for activity (ADR 0043 step 6).

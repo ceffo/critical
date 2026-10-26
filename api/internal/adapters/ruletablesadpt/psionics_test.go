@@ -92,7 +92,7 @@ func TestPSPRecoveryRate_Step6_Table6AsData(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, want, got, activity)
 	}
-	_, err := phb(t).PSPRecoveryRate("meditating")
+	_, err := phb(t).PSPRecoveryRate("dancing")
 	require.Error(t, err)
 }
 

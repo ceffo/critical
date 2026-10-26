@@ -5338,7 +5338,7 @@ test.describe("Maintained card", () => {
       tab,
       "Gardien des Mille Portes de la Citadelle Oubliée",
     );
-    const card = tab.getByTestId("maintained-card");
+    const card = page.getByTestId("maintained-card");
     await expect(card).toBeVisible();
     await expect(card.getByTestId("maintained-balance")).toBeVisible();
     for (const lang of ["fr", "en"] as const) {

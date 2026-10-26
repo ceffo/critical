@@ -84,9 +84,9 @@ test.describe("the Powers tab of a psionicist", () => {
     await nextRound(page);
     await page.getByRole("tab", { name: "Powers" }).click();
     const tab = page.getByTestId("powers-tab");
-    await expect(tab.getByTestId("maintained-card")).toHaveCount(0);
+    await expect(page.getByTestId("maintained-card")).toHaveCount(0);
     await keepATangent(page, tab, "Orc");
-    const card = tab.getByTestId("maintained-card");
+    const card = page.getByTestId("maintained-card");
     const pool = page.getByTestId("psp-value");
     await expect(card.getByTestId("maintained-row")).toContainText("Orc");
     const now = Number((await pool.innerText()).split("/")[0]);

@@ -12,6 +12,14 @@ import { useTableStore } from "@/stores/table";
 import type { NextRoundPreview } from "@/types/buffs";
 import type { Power } from "@/types/powers";
 import { maintainedRows, type MaintainedRow } from "./maintained";
+import { useKnownPowers } from "./useKnownPowers";
+
+/** The card for the character's known powers, for the Act stage's right column under the result. */
+export function MaintainedPanel() {
+  const known = useCharacterStore((s) => s.character?.derived?.knownPowers);
+  const powers = useKnownPowers(known?.picks ?? []);
+  return <MaintainedCard powers={powers} />;
+}
 
 /**
  * The "Maintained" card of Act > Powers (ADR 0047 item 10): every row that keeps a power, a tangent

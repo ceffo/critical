@@ -604,7 +604,7 @@ export async function keepATangent(page: Page, tab: Locator, target: string) {
   const attack = /^(Attack with|Attaquer avec) (Mind Thrust|Pression mentale)$/;
   await tab.getByRole("button", { name: attack }).first().click();
   const bar = page.getByTestId("action-bar");
-  const card = tab.getByTestId("maintained-card");
+  const card = page.getByTestId("maintained-card");
   for (let i = 0; i < 8; i++) {
     await bar.getByRole("button", { name: attack }).click();
     await apiSettled(page);

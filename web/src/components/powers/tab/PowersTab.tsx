@@ -21,7 +21,6 @@ import {
   rowTags,
   takesMind,
 } from "./model";
-import { MaintainedCard } from "./MaintainedCard";
 import { TargetBand } from "./TargetBand";
 import { useKnownPowers } from "./useKnownPowers";
 
@@ -82,7 +81,6 @@ export function PowersView({
           )
         }
       />
-      <MaintainedCard powers={powers} />
       {aimed && <TargetBand target={target} onChange={setTarget} />}
       {powers.length === 0 && (
         <p className="text-body text-muted-foreground">{t("powers.none")}</p>

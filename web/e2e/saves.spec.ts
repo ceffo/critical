@@ -69,15 +69,17 @@ test("a natural 1 or 20 save reads the same live and after a reload", async ({
 }) => {
   await openDashboard(page);
   const card = saveCard(page);
-  let live = { d20: 0, target: 0, margin: 0 };
-  for (let i = 0; i < 100 && live.d20 !== 1 && live.d20 !== 20; i++) {
-    await rollSpellSave(page);
-    await expect
-      .poll(async () => await logEntry(page, "Save vs Spells").count())
-      .toBe(Math.min(i + 1, 50)); // the page reads the journal's newest 50 (the default page)
-    live = await facts(card);
-  }
-  expect([1, 20], "no natural 1 or 20 in 100 saves").toContain(live.d20);
+  // The seeded dice (CRITICAL_DICE_SEED, fixtures.ts): this test's second save is a natural 1 or 20.
+  // No save is repeated to get it; the assertion fails loudly if the sequence changes.
+  await rollSpellSave(page);
+  await expect(logEntry(page, "Save vs Spells")).toHaveCount(1);
+  await rollSpellSave(page);
+  await expect(logEntry(page, "Save vs Spells")).toHaveCount(2);
+  const live = await facts(card);
+  expect(
+    [1, 20],
+    "the seed's second save is no longer a natural 1 or 20",
+  ).toContain(live.d20);
   const vs = await card.getByTestId("save-vs").textContent();
   const outcome = live.margin >= 0 ? "Passed" : "Failed";
   await expect(card).toContainText(outcome);

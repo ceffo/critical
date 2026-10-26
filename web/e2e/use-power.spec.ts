@@ -10,8 +10,9 @@ import { expectNoClippedText } from "./noClip";
 // Using a psionic power, end to end in French (ADR 0043 steps 10 to 16): a psionicist built through
 // the creation form uses a known power from the Powers panel (the dialog, the breakdown in the
 // journal, the PSPs spent), keeps it up across Next Round (the upkeep charged), and stops it. The
-// check's arithmetic, the maintenance order and the undo are Go tests; the d20 is the server's, so
-// a natural 20 (always a failure) is rolled again.
+// check's arithmetic, the maintenance order and the undo are Go tests; the d20 is the seeded one
+// (CRITICAL_DICE_SEED, fixtures.ts): the first use is not a natural 20 (always a failure), so the
+// power is kept up and the full cost is spent, and the assertions below fail loudly if that changes.
 
 const scores = [
   ["FOR", "12"],
@@ -95,35 +96,29 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   const pool = page.getByTestId("psp-value");
   const before = Number((await pool.innerText()).split("/")[0]);
   const bar = page.getByTestId("action-bar");
-  let resultText = "";
-  for (let attempt = 0; attempt < 6; attempt++) {
-    await row.getByRole("button", { name: "Utiliser Intensification" }).click();
-    await bar.getByLabel("Coût initial", { exact: true }).fill("3");
-    // A power with no score of its own takes the player's, set high so the check succeeds.
-    await bar.getByLabel("Score du pouvoir").fill("25");
-    // The tab's adjustment is the labelled modifier: +2.
-    const value = page.getByTestId("power-adjustment");
-    for (let i = 0; i < 2 && (await value.innerText()) !== "+2"; i++)
-      await page
-        .getByRole("button", { name: "Augmenter l’ajustement" })
-        .click();
-    for (const vp of [
-      { width: 1920, height: 1080 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      await expectNoClippedText(bar, `use bar ${vp.width}`);
-      if (attempt === 0)
-        await snap(page, `use-dialog-${vp.width}x${vp.height}`);
-    }
-    await bar.getByRole("button", { name: "Utiliser Intensification" }).click();
-    const result = bar.getByTestId("use-result");
-    await expect(result).toBeVisible();
-    resultText = await result.innerText();
-    await snap(page, `use-result-${attempt}`);
-    await bar.getByRole("button", { name: "Fermer" }).click();
-    if (!resultText.includes("20 naturel")) break;
+  await row.getByRole("button", { name: "Utiliser Intensification" }).click();
+  await bar.getByLabel("Coût initial", { exact: true }).fill("3");
+  // A power with no score of its own takes the player's, set high so the check succeeds.
+  await bar.getByLabel("Score du pouvoir").fill("25");
+  // The tab's adjustment is the labelled modifier: +2.
+  const value = page.getByTestId("power-adjustment");
+  for (let i = 0; i < 2 && (await value.innerText()) !== "+2"; i++)
+    await page.getByRole("button", { name: "Augmenter l’ajustement" }).click();
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expectNoClippedText(bar, `use bar ${vp.width}`);
+    await snap(page, `use-dialog-${vp.width}x${vp.height}`);
   }
+  await bar.getByRole("button", { name: "Utiliser Intensification" }).click();
+  const result = bar.getByTestId("use-result");
+  await expect(result).toBeVisible();
+  const resultText = await result.innerText();
+  await snap(page, "use-result");
+  await bar.getByRole("button", { name: "Fermer" }).click();
+  expect(resultText).not.toContain("20 naturel");
   expect(resultText).toContain("PFP");
   await expect(row.getByTestId("power-maintained")).toBeVisible();
   await page.setViewportSize({ width: 1280, height: 800 });

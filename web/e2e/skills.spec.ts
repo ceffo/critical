@@ -160,10 +160,15 @@ test("ability check: click DEX, adjust −2 on the card, the verdict changes, un
       await dex.focus();
       await page.keyboard.press(key);
     });
-  let d20 = 0;
-  for (let i = 0; i < 200 && d20 !== 16 && d20 !== 17; i++)
-    d20 = await roll(() => dex.click());
-  expect([16, 17]).toContain(d20);
+  // The seeded dice (CRITICAL_DICE_SEED, fixtures.ts): this test's fourth roll (the second click,
+  // after the two keyboard rolls and one click) is a 16 or 17, a success on the 17 that a −2
+  // adjustment turns into a failure. No roll is repeated to get an outcome; the assertion fails
+  // loudly if the sequence changes.
+  await roll(() => dex.click());
+  const d20 = await roll(() => dex.click());
+  expect([16, 17], "the seed's fourth roll is no longer a 16 or 17").toContain(
+    d20,
+  );
   await expect(card.getByTestId("card-header")).toContainText("Dexterity");
   await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);
   await expect(result.getByTestId("verdict")).toHaveText("Success");

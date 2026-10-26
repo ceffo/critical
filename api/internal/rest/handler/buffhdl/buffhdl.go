@@ -369,7 +369,7 @@ type RowChargeDTO struct {
 	Charge int    `json:"charge"`
 	// Free is a due contact row that pays nothing while a power uses its mind.
 	Free bool `json:"free,omitempty"`
-	Ends   bool   `json:"ends,omitempty"`
+	Ends bool `json:"ends,omitempty"`
 }
 
 // PreviewNextRound answers what the next Next Round would charge.

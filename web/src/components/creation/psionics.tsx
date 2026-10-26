@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { labelClass, fieldClass } from "@/components/dashboard/fieldStyles";
-import { KnownPowersEditor } from "@/components/powers/KnownPowersPanel";
+import { KnownPowersEditor } from "@/components/powers/KnownPowersEditor";
 import { ApiError } from "@/api/http";
 import { cn } from "@/lib/utils";
 import type { DraftRefusal } from "@/types/character";

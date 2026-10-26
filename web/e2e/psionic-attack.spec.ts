@@ -2,6 +2,7 @@ import { test, expect, snap } from "./fixtures";
 import { psionicist } from "./psionicist";
 import {
   apiCall,
+  openActPowers,
   expectUndoOn,
   chooseLanguage,
   logEntry,
@@ -34,13 +35,10 @@ test.describe("a psionicist attacking a closed mind", () => {
     ).toBe(true);
     await reloadSettled(page);
     await nextRound(page);
-    await page
-      .getByTestId("rail")
-      .getByRole("button", { name: "Powers" })
-      .click();
+    await openActPowers(page);
 
     const row = page
-      .getByTestId("known-power")
+      .getByTestId("power-row")
       .filter({ hasText: "Mind Thrust" });
     await row.getByRole("button", { name: "Attack with Mind Thrust" }).click();
     const dialog = page.getByRole("dialog");
@@ -95,12 +93,9 @@ test.describe("a psionicist attacking a closed mind", () => {
     // The same in French.
     await chooseLanguage(page, "fr");
     await expect(effect).toContainText(/tangentes?|contact/);
+    await openActPowers(page);
     await page
-      .getByTestId("rail")
-      .getByRole("button", { name: "Pouvoirs" })
-      .click();
-    await page
-      .getByTestId("known-power")
+      .getByTestId("power-row")
       .filter({ hasText: "Pression mentale" })
       .getByRole("button", { name: "Attaquer avec Pression mentale" })
       .click();
@@ -148,12 +143,12 @@ test.describe("a psionicist attacking the same mind again", () => {
     await reloadSettled(page);
     await nextRound(page);
     const rail = page.getByTestId("rail");
-    await rail.getByRole("button", { name: "Powers" }).click();
+    await openActPowers(page);
 
     // One attack with a +20 modifier (both checks pass), then the dialog closed.
     async function attack(target: string) {
       await page
-        .getByTestId("known-power")
+        .getByTestId("power-row")
         .filter({ hasText: "Mind Thrust" })
         .getByRole("button", { name: "Attack with Mind Thrust" })
         .click();
@@ -175,7 +170,7 @@ test.describe("a psionicist attacking the same mind again", () => {
 
     // The held mind is on the list.
     await page
-      .getByTestId("known-power")
+      .getByTestId("power-row")
       .filter({ hasText: "Mind Thrust" })
       .getByRole("button", { name: "Attack with Mind Thrust" })
       .click();
@@ -201,7 +196,7 @@ test.describe("a psionicist attacking the same mind again", () => {
 
     // Typed in lower case it is the same row, under the row's own label: more tangents until contact
     // (a first attack that won one leaves a second to make).
-    await rail.getByRole("button", { name: "Powers" }).click();
+    await openActPowers(page);
     let typed = await attack("orc");
     for (let i = 0; i < 3 && !typed.includes("contact made"); i++) {
       typed = await attack("orc");

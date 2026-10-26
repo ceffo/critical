@@ -1,6 +1,12 @@
 import { test, expect } from "./fixtures";
 import { psionicist } from "./psionicist";
-import { logEntry, openDashboard, undoEntry } from "./helpers";
+import {
+  logEntry,
+  openActPowers,
+  openDashboard,
+  openSortsPowers,
+  undoEntry,
+} from "./helpers";
 
 // What only a browser proves for the PSP pool (ADR 0043 steps 4 to 6): the panel on the character card
 // shows current / maximum, a spend from the panel changes the pool through the real API, and the
@@ -49,8 +55,8 @@ test.describe("a psionicist", () => {
   });
 });
 
-// What only a browser proves for the known powers (ADR 0043 step 9): the rail lists the Powers
-// activity for a psionicist only, a discipline and a power picked from the catalogue search are saved
+// What only a browser proves for the known powers (ADR 0043 step 9): Sorts > Powers
+// browses the catalogue and lists the known powers, a discipline and a power picked from the catalogue search are saved
 // whole and counted against Table 4's allowance, a pick over it is refused with the rule named and the
 // list kept, the list survives a reload, and the journal's Undo restores the previous list. The rules,
 // the refusals and the undo codec are Go tests (psionics, psionicsvc, composition psionics_test).
@@ -62,17 +68,16 @@ test.describe("a psionicist's known powers", () => {
   }) => {
     await openDashboard(page);
     const rail = page.getByTestId("rail");
-    await rail.getByRole("button", { name: "Powers" }).click();
-    const panel = page.getByTestId("known-powers");
+    const panel = await openSortsPowers(page);
     const count = (k: string) => panel.getByTestId(`powers-count-${k}`);
     await expect(count("disciplines")).toContainText("0 / 2");
 
     await panel.getByRole("button", { name: "Add Telepathy" }).click();
     await expect(count("disciplines")).toContainText("1 / 2");
     await panel
-      .getByRole("searchbox", { name: "Search powers..." })
+      .getByRole("combobox", { name: "Search powers..." })
       .fill("contact");
-    const row = panel.getByTestId("pick-row").filter({ hasText: "Contact" });
+    const row = panel.getByTestId("power-row").filter({ hasText: "Contact" });
     await expect(row).toHaveCount(1);
     await row.getByRole("button", { name: "Add Contact" }).click();
     await expect(count("devotions")).toContainText("1 / 10");
@@ -89,12 +94,12 @@ test.describe("a psionicist's known powers", () => {
     await expect(panel.getByTestId("known-discipline")).toHaveCount(2);
 
     await page.reload();
-    await rail.getByRole("button", { name: "Powers" }).click();
+    await openSortsPowers(page);
     await expect(count("disciplines")).toContainText("2 / 2");
 
     await rail.getByRole("button", { name: "Act" }).click();
     await undoEntry(page, "Known powers: 2 → 3 picks");
-    await rail.getByRole("button", { name: "Powers" }).click();
+    await openSortsPowers(page);
     await expect(count("disciplines")).toContainText("1 / 2");
     await expect(panel.getByTestId("known-discipline")).toHaveCount(1);
   });
@@ -103,17 +108,13 @@ test.describe("a psionicist's known powers", () => {
     page,
   }) => {
     await openDashboard(page);
-    await page
-      .getByTestId("rail")
-      .getByRole("button", { name: "Powers" })
-      .click();
-    const panel = page.getByTestId("known-powers");
+    const panel = await openSortsPowers(page);
     await panel.getByRole("button", { name: "Add Telepathy" }).click();
     await panel
-      .getByRole("searchbox", { name: "Search powers..." })
+      .getByRole("combobox", { name: "Search powers..." })
       .fill("contact");
     await panel
-      .getByTestId("pick-row")
+      .getByTestId("power-row")
       .filter({ hasText: "Contact" })
       .getByRole("button", { name: "Add Contact" })
       .click();
@@ -140,5 +141,25 @@ test.describe("a psionicist's known powers", () => {
     await expect(devotions).toContainText("0 / 10");
     await expect(rows).toHaveCount(0);
     await expect(panel.getByTestId("powers-refusal")).toHaveCount(0);
+  });
+
+  // The one path across both tabs: a power added under Sorts > Powers is played under Act > Powers.
+  test("a power added from Sorts shows in Act > Powers", async ({ page }) => {
+    await openDashboard(page);
+    const panel = await openSortsPowers(page);
+    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await panel
+      .getByRole("combobox", { name: "Search powers..." })
+      .fill("contact");
+    await panel
+      .getByTestId("power-row")
+      .filter({ hasText: "Contact" })
+      .getByRole("button", { name: "Add Contact" })
+      .click();
+    await expect(panel.getByTestId("power-known")).toHaveCount(1);
+    const tab = await openActPowers(page);
+    await expect(
+      tab.getByTestId("power-row").filter({ hasText: "Contact" }),
+    ).toHaveCount(1);
   });
 });

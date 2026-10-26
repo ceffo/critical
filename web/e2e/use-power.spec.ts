@@ -1,5 +1,10 @@
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage, undoEntry } from "./helpers";
+import {
+  openDashboard,
+  chooseLanguage,
+  openActPowers,
+  undoEntry,
+} from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 // Using a psionic power, end to end in French (ADR 0043 steps 10 to 16): a psionicist built through
@@ -79,12 +84,9 @@ test("use a known power, keep it up across Next Round, stop it", async ({
     .click();
   await expect(page.getByTestId("character")).toContainText("Aria");
 
-  await page
-    .getByTestId("rail")
-    .getByRole("button", { name: "Pouvoirs" })
-    .click();
+  await openActPowers(page);
   const row = page
-    .getByTestId("known-power")
+    .getByTestId("power-row")
     .filter({ hasText: "Intensification" });
   await expect(row).toBeVisible();
   await snap(page, "powers-panel");
@@ -155,10 +157,7 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   expect(afterRound).toBe(afterUse - 1);
 
   // Stop: free, the tag goes.
-  await page
-    .getByTestId("rail")
-    .getByRole("button", { name: "Pouvoirs" })
-    .click();
+  await openActPowers(page);
   await row
     .getByRole("button", {
       name: "Arrêter le maintien de Intensification",
@@ -178,9 +177,6 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   // Undo the stop from the journal: the tag is back, the PSPs unchanged, the stop line struck.
   await undoEntry(page, "Maintien arrêté : Intensification");
   expect(Number((await pool.innerText()).split("/")[0])).toBe(afterRound);
-  await page
-    .getByTestId("rail")
-    .getByRole("button", { name: "Pouvoirs" })
-    .click();
+  await openActPowers(page);
   await expect(row.getByTestId("power-maintained")).toBeVisible();
 });

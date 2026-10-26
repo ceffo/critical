@@ -346,3 +346,52 @@ func TestActivate_Step12_ASecondPowerInTheRoundWarns(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0043 step 12 (the character view): PowerThisRound names the newest
+// power used in the round, an attack mode's use included, and "" when the
+// round is free (a defence mode, an earlier round, out of combat).
+func TestPowerThisRound_Step12_NamesThePowerOfTheRound(t *testing.T) {
+	check := func(id int64, round int, power string) actionlog.Entry {
+		return actionlog.Entry{ID: id, Round: round, Kind: actionlog.KindPowerCheck, Payload: []byte(`{"power":"` + power + `"}`)}
+	}
+	attack := func(id int64, round int, power string) []actionlog.Entry {
+		return []actionlog.Entry{{ID: id, Round: round, Kind: actionlog.KindPsionicAttack, Payload: []byte(`{"power":"` + power + `"}`)}}
+	}
+	advance := []actionlog.Entry{{ID: 5, Round: 2, Kind: actionlog.KindRoundAdvance}}
+	for _, c := range []struct {
+		name    string
+		round   int
+		checks  []actionlog.Entry
+		attacks []actionlog.Entry
+		want    string
+	}{
+		{"a power of the round", 3, []actionlog.Entry{check(9, 3, "lift")}, nil, "lift"},
+		{"the newest of two powers", 3, []actionlog.Entry{check(9, 3, "thrust"), check(8, 3, "lift")}, nil, "thrust"},
+		{"a defence mode is skipped", 3, []actionlog.Entry{check(9, 3, "mind_blank"), check(8, 3, "lift")}, nil, "lift"},
+		{"a defence mode alone leaves the round free", 3, []actionlog.Entry{check(9, 3, "mind_blank")}, nil, ""},
+		{"an attack mode counts", 3, nil, attack(9, 3, "psychic_crush"), "psychic_crush"},
+		{"an attack newer than a check wins", 3, []actionlog.Entry{check(8, 3, "lift")}, attack(9, 3, "psychic_crush"), "psychic_crush"},
+		{"a check newer than an attack wins", 3, []actionlog.Entry{check(10, 3, "lift")}, attack(9, 3, "psychic_crush"), "lift"},
+		{"a check before the round's start is free", 3, []actionlog.Entry{check(4, 2, "lift")}, nil, ""},
+		{"out of combat is free", 0, []actionlog.Entry{check(9, 0, "lift")}, nil, ""},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			log, buffs := mocks.NewMockLog(t), mocks.NewMockBuffs(t)
+			buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(c.round, nil)
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).Return(c.checks, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPsionicAttack, 1).Return(c.attacks, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).Return(advance, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundSet, 1).Return(nil, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundReset, 1).Return(nil, nil).Maybe()
+			log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindTimePassed, 1).Return(nil, nil).Maybe()
+			svc, err := psionicsvc.New(psionicsvc.Deps{
+				Tables: mocks.NewMockTables(t), Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t),
+				Dice: mocks.NewMockDice(t), Buffs: buffs, Book: useBook(), Tx: passTx{},
+			})
+			require.NoError(t, err)
+			got, err := svc.PowerThisRound(context.Background(), 7)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, got)
+		})
+	}
+}

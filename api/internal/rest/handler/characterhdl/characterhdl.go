@@ -38,9 +38,16 @@ type characterGetter interface {
 	GetCharacter(ctx context.Context, id int64) (*charactersvc.Character, error)
 }
 
-// RegisterRoutes wires the current character's endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc charactersvc.SVC) {
-	r.Get("/api/character", render.Handle(GetCharacter(charID, svc)))
+// RoundPower is the power used in the current round (ADR 0043 step 12), "" when the round is free;
+// psionicsvc.SVC satisfies it.
+type RoundPower interface {
+	PowerThisRound(ctx context.Context, characterID int64) (string, error)
+}
+
+// RegisterRoutes wires the current character's endpoints onto r. round, when not nil, fills the
+// known powers' `usedThisRound` of a psionicist's sheet.
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc charactersvc.SVC, round RoundPower) {
+	r.Get("/api/character", render.Handle(GetCharacter(charID, svc, round)))
 }
 
 // RegisterUserRoutes wires the user's characters onto r: they need a
@@ -186,13 +193,20 @@ func SetCurrent(svc currentSetter) render.HandlerFunc {
 }
 
 // GetCharacter renders the character stats DTO.
-func GetCharacter(charID CharacterIDFunc, svc characterGetter) render.HandlerFunc {
+func GetCharacter(charID CharacterIDFunc, svc characterGetter, round RoundPower) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		c, err := svc.GetCharacter(r.Context(), charID(r))
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, toDTO(c))
+		dto := toDTO(c)
+		// Only a psionicist pays the log read (ADR 0043 step 12: one power a round, a warning).
+		if k := dto.Derived.KnownPowers; k != nil && round != nil {
+			if k.UsedThisRound, err = round.PowerThisRound(r.Context(), c.ID); err != nil {
+				return err
+			}
+		}
+		render.OK(r.Context(), w, dto)
 		return nil
 	}
 }
@@ -410,6 +424,9 @@ type KnownPowersDTO struct {
 	Used      PowerCountsDTO `json:"used"`
 	Primary   string         `json:"primary"`
 	Picks     []PowerPickDTO `json:"picks"`
+	// UsedThisRound is the id of the power used in the current round (ADR 0043 step 12), omitted
+	// when the round is free or out of combat. Only the character read fills it.
+	UsedThisRound string `json:"usedThisRound,omitempty"`
 }
 
 // PowerCountsDTO counts disciplines, sciences, devotions and defence modes.

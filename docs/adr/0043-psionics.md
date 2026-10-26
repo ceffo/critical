@@ -300,6 +300,9 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     carry the code when a non-voided check of a power that is not a defence mode is stamped with
     the current round and logged after the newest entry that moved the round counter (Next Round,
     End combat, Set round or passing time: changed 2026-10-22, was the newest Next Round only).
+    The character read carries the power used this round (`derived.knownPowers.usedThisRound`, the
+    newest non-defence check or attack mode of the round, omitted when free), for the Powers tab's
+    "Pouvoir du tour" (ADR 0047 item 3). Test: `PowerThisRound_Step12_NamesThePowerOfTheRound`.
     Tests: `Activate_Step12_ASecondPowerInTheRoundWarns`, `Use_Step12_SecondPowerOfTheRound`
     (composition: a defence mode then two powers in one round, only the third warns).
 

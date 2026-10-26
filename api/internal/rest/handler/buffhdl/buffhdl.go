@@ -367,6 +367,8 @@ type NextRoundPreviewDTO struct {
 type RowChargeDTO struct {
 	BuffID string `json:"buffId"`
 	Charge int    `json:"charge"`
+	// Free is a due contact row that pays nothing while a power uses its mind.
+	Free bool `json:"free,omitempty"`
 	Ends   bool   `json:"ends,omitempty"`
 }
 
@@ -379,7 +381,7 @@ func PreviewNextRound(charID CharacterIDFunc, svc buffSvc) render.HandlerFunc {
 		}
 		rows := make([]RowChargeDTO, len(p.Rows))
 		for i, row := range p.Rows {
-			rows[i] = RowChargeDTO{BuffID: row.BuffID, Charge: row.Cost, Ends: row.Ends}
+			rows[i] = RowChargeDTO{BuffID: row.BuffID, Charge: row.Cost, Free: row.Free, Ends: row.Ends}
 		}
 		render.OK(r.Context(), w, NextRoundPreviewDTO{PSPSpent: p.PSPSpent, PSPBefore: p.PSPBefore, PSPAfter: p.PSPAfter, Rows: rows})
 		return nil

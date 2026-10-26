@@ -18,8 +18,6 @@ export interface MaintainedRow {
   /** What the next Next Round charges the row (from the server). */
   charge: number;
   ends: boolean;
-  /** The row pays but nothing is charged next round: its period is not due. */
-  notDue: boolean;
   /** The buff row's stored name, the fallback label. */
   name: string;
 }
@@ -37,13 +35,8 @@ export function maintainedRows(
     const cost = b.maintenanceCost ?? 0;
     const charge = share?.charge ?? 0;
     const tangent = !!b.target && !!b.tangents;
-    const contact = !!b.target && !b.tangents;
     const kind: RowKind =
-      cost === 0
-        ? "standing"
-        : contact && charge === 0
-          ? "contact-free"
-          : "paid";
+      cost === 0 ? "standing" : share?.free ? "contact-free" : "paid";
     return {
       id: b.id,
       kind,
@@ -54,7 +47,6 @@ export function maintainedRows(
       period: Math.max(b.maintenancePeriod ?? 1, 1),
       charge,
       ends: !!share?.ends,
-      notDue: kind === "paid" && !share?.ends && charge === 0,
       name: b.name,
     };
   });

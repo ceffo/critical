@@ -59,7 +59,7 @@ const preview: NextRoundPreview = {
   pspAfter: 63,
   rows: [
     { buffId: "b1", charge: 4 },
-    { buffId: "b3", charge: 0 },
+    { buffId: "b3", charge: 0, free: true },
   ],
 };
 
@@ -74,16 +74,14 @@ describe("maintainedRows", () => {
     expect(r[0].charge).toBe(4);
   });
 
-  it("a row whose period is not due next round pays nothing then", () => {
-    const [r] = maintainedRows(rows, [{ buffId: "b1", charge: 0 }]);
+  it("a contact the server does not mark free reads as paid, even at charge 0", () => {
+    const [r] = maintainedRows([rows[2]], [{ buffId: "b3", charge: 0 }]);
     expect(r.kind).toBe("paid");
-    expect(r.notDue).toBe(true);
   });
 
-  it("a row the PSPs cannot pay is flagged, not counted as not due", () => {
+  it("a row the PSPs cannot pay is flagged", () => {
     const [r] = maintainedRows(rows, [{ buffId: "b1", charge: 0, ends: true }]);
     expect(r.ends).toBe(true);
-    expect(r.notDue).toBe(false);
   });
 });
 

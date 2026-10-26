@@ -220,7 +220,6 @@
       "free": "gratuit",
       "standing": "permanent",
       "freeWhileUsed": "gratuit tant qu’un pouvoir l’utilise",
-      "notDue": "rien au prochain tour",
       "ends": "PFP insuffisants : prend fin au prochain tour",
       "balance": "Tour suivant",
       "balanceValue": "{{before}} → {{after}} PFP",

@@ -220,7 +220,6 @@
       "free": "free",
       "standing": "standing",
       "freeWhileUsed": "free while a power uses it",
-      "notDue": "nothing next round",
       "ends": "not enough PSPs: ends next round",
       "balance": "Next round",
       "balanceValue": "{{before}} → {{after}} PSPs",

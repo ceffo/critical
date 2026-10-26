@@ -79,6 +79,9 @@ type maintenance struct {
 	// rows has one line per maintained row, in the list's order: what the
 	// round(s) charged it and whether it ended (the preview reads it).
 	rows []RowCharge
+	// start is the PSPs the charge began from, read only when a row was due.
+	start     int
+	startRead bool
 }
 
 // powerNames is the localized name of every power that paid or ended, by id;
@@ -147,9 +150,11 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 		if c.Derived.PSP != nil {
 			left = c.Derived.PSP.Current
 		}
+		m.start, m.startRead = left, true
 	}
 	rows := slices.Clone(active)
 	paid := make([]int, len(rows))
+	free := make([]bool, len(rows))
 	ended := make([]bool, len(rows))
 	// ADR 0044 step 10: a contact row is free in a round where a power kept
 	// up through it is still on, so each round the contact rows come after
@@ -169,7 +174,10 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 				if ended[i] || !b.Maintained() || b.ContactRow() != contacts {
 					continue
 				}
-				if b.MaintenanceDue() && (!contacts || !freeContact(*b)) {
+				if b.MaintenanceDue() && contacts && freeContact(*b) {
+					free[i] = true
+				}
+				if b.MaintenanceDue() && !free[i] {
 					if b.MaintenanceCost > left {
 						ended[i] = true
 						continue
@@ -183,7 +191,7 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 	}
 	for i, b := range rows {
 		if b.Maintained() {
-			m.rows = append(m.rows, RowCharge{BuffID: b.ID, Cost: paid[i], Ends: ended[i]})
+			m.rows = append(m.rows, RowCharge{BuffID: b.ID, Cost: paid[i], Free: free[i], Ends: ended[i]})
 		}
 		if paid[i] > 0 {
 			m.spent += paid[i]
@@ -223,7 +231,10 @@ func (b BuffEffect) firstDue(rounds int) int {
 type RowCharge struct {
 	BuffID string
 	Cost   int
-	Ends   bool
+	// Free is a due contact row that pays nothing because a power kept up
+	// through its mind is still on (ADR 0044 step 10).
+	Free bool
+	Ends bool
 }
 
 // NextRoundPreview is what Next Round would charge (ADR 0043 step 14): the
@@ -249,13 +260,15 @@ func (s *service) PreviewNextRound(ctx context.Context, characterID int64) (Next
 	if err != nil {
 		return NextRoundPreview{}, err
 	}
-	c, err := s.chars.GetCharacter(ctx, characterID)
-	if err != nil {
-		return NextRoundPreview{}, fmt.Errorf("get character: %w", err)
-	}
-	before := 0
-	if c.Derived.PSP != nil {
-		before = c.Derived.PSP.Current
+	before := m.start
+	if !m.startRead {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return NextRoundPreview{}, fmt.Errorf("get character: %w", err)
+		}
+		if c.Derived.PSP != nil {
+			before = c.Derived.PSP.Current
+		}
 	}
 	return NextRoundPreview{PSPBefore: before, PSPAfter: before - m.spent, PSPSpent: m.spent, Rows: m.rows}, nil
 }

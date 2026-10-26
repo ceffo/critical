@@ -238,8 +238,10 @@ export interface RoundAdvanceResponse {
 /** One maintained row's share of the next Next Round (ADR 0043 step 14). */
 export interface RowCharge {
   buffId: string;
-  /** PSPs it pays: 0 when its period is not due, or a contact is free while a power uses it. */
+  /** PSPs it pays: 0 when its period is not due, or it is free. */
   charge: number;
+  /** A due contact row that pays nothing: a power kept up through its mind is still on. */
+  free?: boolean;
   /** The PSPs left cannot pay it: it would end. */
   ends?: boolean;
 }

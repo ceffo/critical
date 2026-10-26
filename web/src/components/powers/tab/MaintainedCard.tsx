@@ -146,9 +146,7 @@ function RowNote({ row }: { row: MaintainedRow }) {
       ? t("powers.maintained.standing")
       : row.kind === "contact-free"
         ? t("powers.maintained.freeWhileUsed")
-        : row.notDue
-          ? t("powers.maintained.notDue")
-          : null;
+        : null;
   if (!note) return null;
   return (
     <span
@@ -166,11 +164,13 @@ function useNextRoundPreview(
 ): NextRoundPreview | null {
   const [preview, setPreview] = useState<NextRoundPreview | null>(null);
   useEffect(() => {
+    // A figure of the old rows never stays up while the new one is read, nor after a failed read.
+    setPreview(null);
     if (!on) return;
     const ctl = new AbortController();
     fetchNextRoundPreview({ signal: ctl.signal }).then(
       (p) => !ctl.signal.aborted && setPreview(p),
-      () => undefined,
+      () => !ctl.signal.aborted && setPreview(null),
     );
     return () => ctl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps

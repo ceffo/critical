@@ -11,7 +11,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { NextRoundPreview } from "@/types/buffs";
 import type { Power } from "@/types/powers";
-import { maintainedRows, type MaintainedRow } from "./maintained";
+import { keepsUp, maintainedRows, type MaintainedRow } from "./maintained";
 import { useKnownPowers } from "./useKnownPowers";
 
 /** The card for the character's known powers, for the Act stage's right column under the result. */
@@ -33,7 +33,7 @@ export function MaintainedCard({ powers }: { powers: Power[] }) {
   const busy = useTableStore((s) => s.busy);
   const run = useTableStore((s) => s.run);
   const dismiss = useTableStore((s) => s.dismissBuff);
-  const preview = useNextRoundPreview(buffs.length > 0, [buffs, round, psp]);
+  const preview = useNextRoundPreview(buffs.some(keepsUp), [buffs, round, psp]);
   const rows = maintainedRows(buffs, preview?.rows ?? []);
   if (rows.length === 0) return null;
   return (

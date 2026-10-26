@@ -42,7 +42,7 @@ func TestRealCatalogue_Step16_EveryDescriptionPresentInBothLanguages(t *testing.
 	a, err := catalogueadpt.LoadArtifact(catalogueFile)
 	require.NoError(t, err)
 	require.NoError(t, catalogue.CheckProficiencyDescriptions(a.Catalogue.ProficiencyDescriptions, proficiencyIDs(t, seedsDir)))
-	assert.Len(t, a.Catalogue.ProficiencyDescriptions, 65)
+	assert.Len(t, a.Catalogue.ProficiencyDescriptions, 66)
 }
 
 // ADR 0037 step 19.4: the descriptions are served from the catalogue, never from the seeds or the

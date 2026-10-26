@@ -239,6 +239,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := checkProficiencyDescriptions(cat, proficiencies); err != nil {
 		return nil, err
 	}
+	// A Table 6 row gated by a proficiency (ADR 0047 item 6) names one of that file.
+	if err := ruleTables.CheckRecoveryGates(func(id string) bool { _, ok := proficiencies.Get(id); return ok }); err != nil {
+		return nil, err
+	}
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment, defs); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}

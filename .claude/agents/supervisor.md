@@ -295,6 +295,11 @@ When the developer reports the full verification passed on HEAD:
   wait on its report file's mtime. Never relay design feedback yourself, never read approval into a
   message, never choose a design default for the user: the designer's `APPROVED: yes` report is the
   only approval, and the ADR is written from it.
+  A designer runs in its own worktree on `design/<id>-<slug>`, never in `<main>`: one launched there
+  switched `<main>` to its branch and its commits leaked into a process PR (sup-93). A user-facing
+  agent (designer, interactive scoper) idle past 150k while it waits on the user is rotated at once:
+  it writes a handoff file (artifacts, the user's words verbatim, its open questions), a fresh one
+  restates the questions from it (sup-93: a designer sat 40 hours at 241k).
 - UI change: visual QA is the fleet's job, never the user's (user, 2026-10-18: "it's your job, you
   and your agent, to qa visual changes before committing and deploying"). The developer proves it in
   a browser that looks like the user's (real scrollbars, not headless metrics alone, at 1920x1080

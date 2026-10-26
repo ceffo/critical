@@ -225,6 +225,72 @@ func (_c *MockBuffs_Dismiss_Call) RunAndReturn(run func(context.Context, int64, 
 	return _c
 }
 
+// EndMaintained provides a mock function with given fields: ctx, characterID
+func (_m *MockBuffs) EndMaintained(ctx context.Context, characterID int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error) {
+	ret := _m.Called(ctx, characterID)
+
+	if len(ret) == 0 {
+		panic("no return value specified for EndMaintained")
+	}
+
+	var r0 []buffsvc.BuffEffect
+	var r1 actionlog.Snapshot
+	var r2 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)); ok {
+		return rf(ctx, characterID)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) []buffsvc.BuffEffect); ok {
+		r0 = rf(ctx, characterID)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]buffsvc.BuffEffect)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) actionlog.Snapshot); ok {
+		r1 = rf(ctx, characterID)
+	} else {
+		r1 = ret.Get(1).(actionlog.Snapshot)
+	}
+
+	if rf, ok := ret.Get(2).(func(context.Context, int64) error); ok {
+		r2 = rf(ctx, characterID)
+	} else {
+		r2 = ret.Error(2)
+	}
+
+	return r0, r1, r2
+}
+
+// MockBuffs_EndMaintained_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'EndMaintained'
+type MockBuffs_EndMaintained_Call struct {
+	*mock.Call
+}
+
+// EndMaintained is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+func (_e *MockBuffs_Expecter) EndMaintained(ctx interface{}, characterID interface{}) *MockBuffs_EndMaintained_Call {
+	return &MockBuffs_EndMaintained_Call{Call: _e.mock.On("EndMaintained", ctx, characterID)}
+}
+
+func (_c *MockBuffs_EndMaintained_Call) Run(run func(ctx context.Context, characterID int64)) *MockBuffs_EndMaintained_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockBuffs_EndMaintained_Call) Return(_a0 []buffsvc.BuffEffect, _a1 actionlog.Snapshot, _a2 error) *MockBuffs_EndMaintained_Call {
+	_c.Call.Return(_a0, _a1, _a2)
+	return _c
+}
+
+func (_c *MockBuffs_EndMaintained_Call) RunAndReturn(run func(context.Context, int64) ([]buffsvc.BuffEffect, actionlog.Snapshot, error)) *MockBuffs_EndMaintained_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // GetRound provides a mock function with given fields: ctx, characterID
 func (_m *MockBuffs) GetRound(ctx context.Context, characterID int64) (int, error) {
 	ret := _m.Called(ctx, characterID)

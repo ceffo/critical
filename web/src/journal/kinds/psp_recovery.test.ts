@@ -40,4 +40,15 @@ describeKind("psp_recovery", fixtures, {
     },
     value: { text: "0", tone: "heal" },
   },
+  stoppedAndRested: {
+    en: {
+      text: "2 h resting: PSPs recovered 12 — powers ended: Aura Sight — holds ended: Grey Ogre",
+      short: "PSPs recovered",
+    },
+    fr: {
+      text: "2 h repos : PFP récupérés 12 — pouvoirs terminés : Vision de l'aura — emprises terminées : Grey Ogre",
+      short: "PFP récupérés",
+    },
+    value: { text: "+12", tone: "heal" },
+  },
 });

@@ -762,6 +762,65 @@ func (_c *MockSVC_Stop_Call) RunAndReturn(run func(context.Context, int64, strin
 	return _c
 }
 
+// StopAndRecover provides a mock function with given fields: ctx, characterID, hours, activity
+func (_m *MockSVC) StopAndRecover(ctx context.Context, characterID int64, hours float64, activity string) (psionicsvc.StopRecoverResult, error) {
+	ret := _m.Called(ctx, characterID, hours, activity)
+
+	if len(ret) == 0 {
+		panic("no return value specified for StopAndRecover")
+	}
+
+	var r0 psionicsvc.StopRecoverResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64, string) (psionicsvc.StopRecoverResult, error)); ok {
+		return rf(ctx, characterID, hours, activity)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, float64, string) psionicsvc.StopRecoverResult); ok {
+		r0 = rf(ctx, characterID, hours, activity)
+	} else {
+		r0 = ret.Get(0).(psionicsvc.StopRecoverResult)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, float64, string) error); ok {
+		r1 = rf(ctx, characterID, hours, activity)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_StopAndRecover_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'StopAndRecover'
+type MockSVC_StopAndRecover_Call struct {
+	*mock.Call
+}
+
+// StopAndRecover is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - hours float64
+//   - activity string
+func (_e *MockSVC_Expecter) StopAndRecover(ctx interface{}, characterID interface{}, hours interface{}, activity interface{}) *MockSVC_StopAndRecover_Call {
+	return &MockSVC_StopAndRecover_Call{Call: _e.mock.On("StopAndRecover", ctx, characterID, hours, activity)}
+}
+
+func (_c *MockSVC_StopAndRecover_Call) Run(run func(ctx context.Context, characterID int64, hours float64, activity string)) *MockSVC_StopAndRecover_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(float64), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_StopAndRecover_Call) Return(_a0 psionicsvc.StopRecoverResult, _a1 error) *MockSVC_StopAndRecover_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_StopAndRecover_Call) RunAndReturn(run func(context.Context, int64, float64, string) (psionicsvc.StopRecoverResult, error)) *MockSVC_StopAndRecover_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Use provides a mock function with given fields: ctx, characterID, powerID, req
 func (_m *MockSVC) Use(ctx context.Context, characterID int64, powerID string, req psionicsvc.UseRequest) (*psionicsvc.UseResult, error) {
 	ret := _m.Called(ctx, characterID, powerID, req)

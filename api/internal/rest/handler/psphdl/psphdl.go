@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -37,6 +38,7 @@ type changeAppender interface {
 // recoverer is the recovery's one method; psionicsvc.SVC satisfies it.
 type recoverer interface {
 	Recover(ctx context.Context, characterID int64, hours float64, activity string) (actionlog.PSPState, error)
+	StopAndRecover(ctx context.Context, characterID int64, hours float64, activity string) (psionicsvc.StopRecoverResult, error)
 }
 
 // knownSetter is the known powers' one method; psionicsvc.SVC satisfies it.
@@ -68,6 +70,7 @@ type CharacterIDFunc func(r *http.Request) int64
 func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec recoverer, known knownSetter, use user, def defender) {
 	r.Post("/api/psp/event", render.Handle(AppendChange(charID, svc)))
 	r.Post("/api/psp/recover", render.Handle(Recover(charID, rec)))
+	r.Post("/api/psionics/stop-and-recover", render.Handle(StopAndRecover(charID, rec)))
 	r.Put("/api/psionics/picks", render.Handle(SetKnownPowers(charID, known)))
 	r.Post("/api/psionics/powers/{id}/use", render.Handle(Use(charID, use)))
 	r.Post("/api/psionics/powers/{id}/stop", render.Handle(Stop(charID, use)))
@@ -383,6 +386,41 @@ func Recover(charID CharacterIDFunc, svc recoverer) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, StateDTO{Current: state.Current, Max: state.Max})
+		return nil
+	}
+}
+
+// StopRecoverDTO is a stop-and-recover: the pool after it and the rows it
+// ended, as the long rest's entry names them (ADR 0043 step 7). PowersEnded
+// are catalogue power ids, PowerNames their names in every language,
+// TargetsEnded the minds whose tangent or contact row ended.
+type StopRecoverDTO struct {
+	PSP          StateDTO                  `json:"psp"`
+	PowersEnded  []string                  `json:"powersEnded"`
+	PowerNames   map[string]localized.Text `json:"powerNames,omitempty"`
+	TargetsEnded []string                  `json:"targetsEnded"`
+}
+
+// StopAndRecover ends every row that pays PSPs and recovers hours of an
+// activity, as one undoable entry (ADR 0047 item 4). Same body and refusals as
+// Recover, but never psp_recovery_while_maintaining.
+func StopAndRecover(charID CharacterIDFunc, svc recoverer) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body recoverBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.StopAndRecover(r.Context(), charID(r), body.Hours, body.Activity)
+		if err != nil {
+			return err
+		}
+		powers, targets := buffsvc.SplitEnded(res.Ended)
+		out := StopRecoverDTO{
+			PSP:         StateDTO{Current: res.PSP.Current, Max: res.PSP.Max},
+			PowersEnded: append([]string{}, powers...), TargetsEnded: append([]string{}, targets...),
+			PowerNames: buffsvc.PowerNames(res.Ended),
+		}
+		render.OK(r.Context(), w, out)
 		return nil
 	}
 }

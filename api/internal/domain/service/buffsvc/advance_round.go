@@ -100,6 +100,21 @@ func PowerNames(rows []BuffEffect) map[string]localized.Text {
 	return out
 }
 
+// SplitEnded sorts ended rows the way the long rest and the stop-and-recover
+// word them: the power ids of the rows that carry one, and the minds of the
+// rest (a tangent or contact row), each in the list's order.
+func SplitEnded(rows []BuffEffect) (powers, targets []string) {
+	for _, b := range rows {
+		switch {
+		case b.PowerID != "":
+			powers = append(powers, b.PowerID)
+		case b.Target != "":
+			targets = append(targets, b.Target)
+		}
+	}
+	return powers, targets
+}
+
 // unpaidIDs are the unpaid powers' ids, in the list's order.
 func (m maintenance) unpaidIDs() []string {
 	var ids []string

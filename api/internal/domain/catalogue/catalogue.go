@@ -56,17 +56,23 @@ const FormatMultiClassFlag = 17
 // initial costs.
 const FormatPsionicCombat = 18
 
-// FormatSkillSets is format 19 (ADR 0021 step 27, ADR 0040 steps 12 to 14):
+// FormatSkillSets was format 19 (ADR 0021 step 27, ADR 0040 steps 12 to 14):
 // format 18 plus the top-level skill sets, the shared skill tables renamed
 // skill_race, skill_dexterity (rows keyed by skill) and skill_armor, without
 // the per-set base and penalty tables, and the parameters of the
-// weapon_specialization feature. It is the only format the API reads (step
-// 27.5): the formats 1 to 18 are refused like any unknown format, with the
-// advice to run `just catalogue`.
+// weapon_specialization feature.
 const FormatSkillSets = 19
 
-// Formats lists the formats this API reads: format 19 only (step 27.5).
-var Formats = []int{FormatSkillSets}
+// FormatMeditating is format 20 (ADR 0021 step 28, ADR 0047 item 6): format
+// 19 plus the meditating row of psp_recovery, whose requires_proficiency
+// names the proficiency that gates it, and that proficiency's description
+// (66 in all). It is the only format the API reads (step 28.4): the formats 1
+// to 19 are refused like any unknown format, with the advice to run `just
+// catalogue`.
+const FormatMeditating = 20
+
+// Formats lists the formats this API reads: format 20 only (step 28.4).
+var Formats = []int{FormatMeditating}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

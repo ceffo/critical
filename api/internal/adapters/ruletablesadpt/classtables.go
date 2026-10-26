@@ -81,6 +81,8 @@ type powerProgressionDTO struct {
 type pspRecoveryDTO struct {
 	Activity string `json:"activity"`
 	PerHour  int    `json:"per_hour"`
+	// RequiresProficiency is format 20's gate (ADR 0047 item 6).
+	RequiresProficiency string `json:"requires_proficiency"`
 }
 
 type inherentPotentialDTO struct {

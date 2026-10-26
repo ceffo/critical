@@ -121,7 +121,6 @@
     "activity": {
       "act": "Agir",
       "spells": "Sorts",
-      "powers": "Pouvoirs",
       "xp": "Expérience",
       "inventory": "Inventaire"
     },
@@ -755,6 +754,7 @@
     "classWizard": "Magicien",
     "classPriest": "Prêtre",
     "classAll": "Tous",
+    "browse": "Parcourir",
     "classPowers": "Pouvoirs",
     "levelsLabel": "Niveaux de sort",
     "levelShort": "Niv. {{level}}",
@@ -1249,6 +1249,8 @@
       "results": "Pouvoirs",
       "noMatch": "Aucun pouvoir ne correspond",
       "detail": "Détail du pouvoir",
+      "closeDetail": "Retour aux pouvoirs connus",
+      "known": "Connu",
       "noSelection": "Choisissez un pouvoir pour l'afficher ici.",
       "initialCost": "Coût initial",
       "maintenance": "Maintien",
@@ -2271,7 +2273,8 @@
       "running": "Course",
       "survival": "Survie",
       "tracking": "Pistage",
-      "weaponsmithing": "Forge d’armes"
+      "weaponsmithing": "Forge d’armes",
+      "rejuvenation": "Régénérescence"
     },
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
     "budget": {

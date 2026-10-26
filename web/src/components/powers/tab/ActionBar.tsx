@@ -30,7 +30,7 @@ import {
   type UseDraft,
 } from "../powerUse";
 import { useBuffsStore } from "@/stores/buffs";
-import { contactMinds } from "./model";
+import { contactMinds, labelledOf } from "./model";
 import { fixedCost, formOf, type TargetDraft } from "./bar";
 import {
   controlsOf,
@@ -439,15 +439,6 @@ function ContactBarForm({
   );
 }
 
-/** The labelled modifiers of the tab's adjustment, as the contact request carries them. */
-const labelledOf = (m: Modifiers) =>
-  m.flatMap((x) => {
-    const value = Number.parseInt(x.value, 10);
-    return Number.isNaN(value) || value === 0
-      ? []
-      : [{ value, reason: x.reason.trim() }];
-  });
-
 /** The controls of a table's modifier rows: a toggle for a kind with one row, a menu for several. */
 export function TableControls({
   controls,
@@ -780,8 +771,9 @@ function IncomingForm() {
   const [result, setResult] = useState<DefendResult | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
   const req = defendRequest(draft);
-  const modeName = (id: string) => {
-    const m = modes.find((x) => x.id === id);
+  const defences = useCatalogue("defence_mode");
+  const defenceName = (id: string) => {
+    const m = defences.find((x) => x.id === id);
     return m ? localized(i18n.language, m.name) : id;
   };
   const set = (patch: Partial<typeof draft>) => {
@@ -868,7 +860,7 @@ function IncomingForm() {
         </Button>
       </div>
       <Refusal text={refused} testId="defend-refused" />
-      {result && <DefendOutcome result={result} powerName={modeName} />}
+      {result && <DefendOutcome result={result} powerName={defenceName} />}
     </form>
   );
 }

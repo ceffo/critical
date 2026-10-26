@@ -212,6 +212,8 @@
   },
   "powers": {
     "tab": {
+      "score": "Score",
+      "scoreUnknown": "–",
       "attackModes": "Attack modes",
       "roundFree": "Power this round: free",
       "usedThisRound": "Power this round: {{name}}",

@@ -60,6 +60,62 @@ test.describe("the Powers tab of a psionicist", () => {
     await snap(page, "powers-bar-attack-result");
   });
 
+  // The one flow only a browser proves for the score to beat: the row shows the figure the server's
+  // preview gives for the defence the Target band names (nothing is computed in the page). The
+  // figures, the refusals and the cell are Go tests (the preview) and Vitest (the row).
+  test("attack row: the score to beat is the server's preview", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "thought_shield" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mindlink" },
+          { kind: "power", id: "mind_thrust" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await page.getByRole("tab", { name: "Powers" }).click();
+    const tab = page.getByTestId("powers-tab");
+    const shown = tab
+      .locator("[data-testid=power-row][data-id=mind_thrust]")
+      .getByTestId("attack-score-target");
+    const served = async (defence: string) => {
+      const res = await page.request.post("/api/psionics/attack/preview", {
+        data: { defence, modifiers: [] },
+        headers: { Origin: new URL(page.url()).origin },
+      });
+      expect(res.ok()).toBe(true);
+      const body = (await res.json()) as {
+        attacks: { power: string; target: number }[];
+      };
+      return body.attacks.find((a) => a.power === "mind_thrust")!.target;
+    };
+    await expect(shown).toHaveAttribute(
+      "data-target",
+      String(await served("")),
+    );
+    await tab
+      .getByTestId("target-band")
+      .locator("select")
+      .selectOption({ index: 1 });
+    const defence = await tab
+      .getByTestId("target-band")
+      .locator("select")
+      .inputValue();
+    expect(defence).not.toBe("");
+    await expect(shown).toHaveAttribute(
+      "data-target",
+      String(await served(defence)),
+    );
+    await snap(page, "attack-score-to-beat");
+  });
+
   // The one flow only a browser proves for a table-paid power: the controls come from the table's
   // modifier rows, the cost shown is the server's preview, and Use spends exactly that. The rules and
   // refusals are Go tests (the contact preview) and Vitest (the controls, the request).

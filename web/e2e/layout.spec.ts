@@ -5275,6 +5275,9 @@ test.describe("Powers tab", () => {
           index: 1,
         });
         await expect(bar).toHaveCount(0);
+        await expect(
+          tab.getByTestId("attack-score-target").first(),
+        ).toBeVisible();
         await expectNoClippedText(tab, `powers tab, ${where}`);
         await expectWholeWords(tab, `powers tab, ${where}`);
         await expectNoPageScroll(page);

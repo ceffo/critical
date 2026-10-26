@@ -11,7 +11,10 @@ import {
   rowTags,
   takesMind,
 } from "./model";
+import type { AttackScore } from "@/api/psionics";
 import { PowersView } from "./PowersTab";
+import { ScoreRefusal, ScoreToBeat } from "./ScoreToBeat";
+import type { AttackScores } from "./useAttackScores";
 
 async function inst(lng: "en" | "fr") {
   const i = i18next.createInstance();
@@ -172,5 +175,59 @@ describe("the adjustment", () => {
     expect(adjustmentModifiers(-2, "Adjustment")).toEqual([
       { value: "-2", reason: "Adjustment" },
     ]);
+  });
+});
+
+describe("the score to beat on an attack row", () => {
+  const ready = (rows: AttackScore[]): AttackScores => ({
+    status: "ready",
+    byPower: new Map(rows.map((r) => [r.power, r])),
+  });
+  async function row(lng: "en" | "fr", scores: AttackScores) {
+    const i = await inst(lng);
+    return renderToStaticMarkup(
+      <I18nextProvider i18n={i}>
+        <ScoreToBeat scores={scores} power="zz_strike" />
+        <ScoreRefusal scores={scores} power="zz_strike" />
+      </I18nextProvider>,
+    );
+  }
+
+  it("shows the server's target, with the score and the cell when there is one", async () => {
+    const out = await row(
+      "en",
+      ready([
+        { power: "zz_strike", score: 14, attackVersusDefence: -3, target: 11 },
+      ]),
+    );
+    expect(out).toContain('data-target="11"');
+    expect(out).toContain("(14");
+    expect(out).toMatch(/3\)/);
+    expect(out).not.toContain("attack-score-refusal");
+  });
+
+  it("shows the target alone with no cell, and in French too", async () => {
+    const out = await row(
+      "fr",
+      ready([{ power: "zz_strike", score: 14, target: 14 }]),
+    );
+    expect(out).toContain('data-target="14"');
+    expect(out).not.toContain("(14");
+  });
+
+  it("words a refused row through its apiError code, with no figure", async () => {
+    const out = await row(
+      "en",
+      ready([
+        {
+          power: "zz_strike",
+          refusal: { error: "server text", code: "no_such_code" },
+        },
+      ]),
+    );
+    expect(out).toContain('data-testid="attack-score-refusal"');
+    expect(out).toContain('data-code="no_such_code"');
+    expect(out).toContain("server text");
+    expect(out).not.toContain("attack-score-target");
   });
 });

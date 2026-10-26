@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -131,15 +132,11 @@ func (s *service) Attack(ctx context.Context, characterID int64, req AttackReque
 		if p.Kind != catalogue.KindAttackMode {
 			return ErrNotAnAttackMode
 		}
-		check, err := checkOf(c, p, UseRequest{Modifiers: mods}, mods)
+		rec, err := s.attackBase(c, p, mods)
 		if err != nil {
 			return err
 		}
-		rec := AttackRecord{
-			Power: p.ID, Name: p.Name, Ability: check.Ability, AbilityScore: check.AbilityScore,
-			PowerModifier: check.PowerModifier, Relearns: check.Relearns, Modifiers: mods,
-			Score: check.Target, Cost: check.Cost, Target: opp.Target, Mind: opp.Mind,
-		}
+		rec.Target, rec.Mind = opp.Target, opp.Mind
 		pool := charactersvc.PSPPool{}
 		if c.Derived.PSP != nil {
 			pool = *c.Derived.PSP
@@ -196,6 +193,114 @@ func (s *service) Attack(ctx context.Context, characterID int64, req AttackReque
 	return out, nil
 }
 
+// AttackScore is one known attack mode's score to beat against a defence.
+type AttackScore struct {
+	Power string `json:"power"`
+	// Score is the mode's score with its relearns and the request's
+	// modifiers, before Table 14's cell.
+	Score int `json:"score"`
+	// AttackVersusDefence is Table 14's cell against the defence; absent
+	// with none.
+	AttackVersusDefence *int `json:"attackVersusDefence,omitempty"`
+	// Target is the score each check rolls under: Score plus the cell.
+	Target int `json:"target"`
+	// Err is the refusal the attack itself would return for this mode
+	// before any roll (a variable cost, a score only in its text, a
+	// maintenance paid on contact); then Score, the cell and Target are
+	// unset. The handler words it with the error codes.
+	Err error `json:"-"`
+}
+
+// AttackScores are the character's known attack modes against one defence.
+type AttackScores struct {
+	// Defence is the defence asked about, "" for none.
+	Defence string        `json:"defence"`
+	Attacks []AttackScore `json:"attacks"`
+}
+
+// AttackPreview serves the score to beat of each known attack mode against
+// defence ("" for none) with the labelled modifiers, in the order the
+// character knows them, nothing rolled or written. It reads the figure from
+// attackRecord, the computation Attack rolls from (ADR 0044 step 7.1).
+// A mode the attack would refuse keeps its row with the refusal in Err;
+// the call is refused only for a *domain.FieldError on "defence" or
+// "modifiers" (before the character is read) and ErrNotPsionicist.
+func (s *service) AttackPreview(ctx context.Context, characterID int64, defence string, labelled []Modifier) (*AttackScores, error) {
+	if defence != "" {
+		if err := psionics.ValidateDefence(s.book, defence); err != nil {
+			return nil, err
+		}
+	}
+	mods, err := modifiers(labelled)
+	if err != nil {
+		return nil, err
+	}
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	if c.Derived.Powers == nil {
+		return nil, ErrNotPsionicist
+	}
+	out := &AttackScores{Defence: defence, Attacks: []AttackScore{}}
+	for _, pick := range c.PsionicPicks {
+		p, ok := s.book.Power(pick.ID)
+		if pick.Kind != psionics.PickPower || !ok || p.Kind != catalogue.KindAttackMode {
+			continue
+		}
+		rec, err := s.attackBase(c, p, mods)
+		if err != nil {
+			if !refusesTheMode(err) {
+				return nil, err
+			}
+			// The attack would refuse this mode before any roll: the row
+			// keeps its place and carries the refusal.
+			out.Attacks = append(out.Attacks, AttackScore{Power: p.ID, Err: err})
+			continue
+		}
+		if err := s.attackVersus(&rec, defence); err != nil {
+			return nil, err
+		}
+		out.Attacks = append(out.Attacks, AttackScore{
+			Power: p.ID, Score: rec.Score, AttackVersusDefence: rec.AttackVersusDefence, Target: rec.CheckTarget(),
+		})
+	}
+	return out, nil
+}
+
+// refusesTheMode says err is a refusal of the mode itself (what checkOf
+// returns for a power the attack cannot take as it is), not a fault.
+func refusesTheMode(err error) bool {
+	var fe *domain.FieldError
+	return errors.As(err, &fe) || errors.Is(err, ErrNeedsContact)
+}
+
+// attackBase is the attack of mode p before the roll, for character c: the
+// mode's score parts and cost with the labelled modifiers, before Table 14's
+// cell (attackVersus adds it). Attack rolls from it and AttackPreview serves
+// the same record's CheckTarget, so the figure shown is the one rolled
+// against.
+func (s *service) attackBase(c *charactersvc.Character, p catalogue.Power, mods []Modifier) (AttackRecord, error) {
+	check, err := checkOf(c, p, UseRequest{Modifiers: mods}, mods)
+	if err != nil {
+		return AttackRecord{}, err
+	}
+	return AttackRecord{
+		Power: p.ID, Name: p.Name, Ability: check.Ability, AbilityScore: check.AbilityScore,
+		PowerModifier: check.PowerModifier, Relearns: check.Relearns, Modifiers: mods,
+		Score: check.Target, Cost: check.Cost,
+	}, nil
+}
+
+// CheckTarget is the target each of the attack's checks rolls under: the
+// score plus Table 14's cell, when there is a defence (step 7.1).
+func (r AttackRecord) CheckTarget() int {
+	if r.AttackVersusDefence != nil {
+		return r.Score + *r.AttackVersusDefence
+	}
+	return r.Score
+}
+
 // attackVersus sets Table 14's cell for rec's mode against defence on rec
 // (step 7.1); none with no defence (Q14).
 func (s *service) attackVersus(rec *AttackRecord, defence string) error {
@@ -219,10 +324,7 @@ func (s *service) attackVersus(rec *AttackRecord, defence string) error {
 // returns the tangents won: a won contest against a closed mind not yet
 // contacted. The check that makes full contact is the last rolled (Q11).
 func (s *service) rollChecks(rec *AttackRecord, opp psionics.Opponent, held int) int {
-	target := rec.Score
-	if rec.AttackVersusDefence != nil {
-		target += *rec.AttackVersusDefence
-	}
+	target := rec.CheckTarget()
 	won, succeeded := 0, false
 	for i := range psionics.AttackChecks {
 		ac := AttackCheck{Check: psionics.CheckContest(target, s.dice.RollDie(psionics.CheckDie), false)}

@@ -66,12 +66,21 @@ func Handle(h HandlerFunc) http.HandlerFunc {
 // Error renders an error response, mapping known domain sentinels to specific
 // HTTP statuses. Anything unknown becomes a 500.
 func Error(ctx context.Context, w http.ResponseWriter, err error) {
-	status, code, msg := mapError(err)
+	status, body := ErrorBody(err)
 	if status >= 500 {
 		Logger(ctx).Error("internal error", "error", err)
 	} else {
 		Logger(ctx).Info("client error", "status", status, "error", err)
 	}
+	JSON(ctx, w, status, body)
+}
+
+// ErrorBody is the status and the body (error, code and the fields of a
+// field, budget or known-powers refusal) Error renders for err; a response
+// that embeds a refusal in a 200 uses it so the web words it through the
+// same apiError key.
+func ErrorBody(err error) (int, map[string]any) {
+	status, code, msg := mapError(err)
 	body := map[string]any{"error": msg, "code": code}
 	// A field error's message stays verbatim for the web: invalid_input is
 	// deliberately not localized, the message says what is wrong with the field.
@@ -93,7 +102,7 @@ func Error(ctx context.Context, w http.ResponseWriter, err error) {
 		body["power"], body["discipline"] = rf.Power, rf.Discipline
 		body["slot"], body["count"], body["limit"] = rf.Slot, rf.Count, rf.Limit
 	}
-	JSON(ctx, w, status, body)
+	return status, body
 }
 
 // CodeUnavailable is the error code of a request the database could not serve

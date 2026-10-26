@@ -18,10 +18,13 @@ import {
   adjustmentModifiers,
   groupsOf,
   isStanding,
+  labelledOf,
   rowTags,
   takesMind,
 } from "./model";
+import { ScoreRefusal, ScoreToBeat } from "./ScoreToBeat";
 import { TargetBand } from "./TargetBand";
+import { useAttackScores, type AttackScores } from "./useAttackScores";
 import { useKnownPowers } from "./useKnownPowers";
 
 /**
@@ -60,6 +63,15 @@ export function PowersView({
   const defences = powers.filter((p) => p.kind === "defence_mode");
   const groups = groupsOf(powers);
   const aimed = powers.some(takesMind);
+  const attackIds = powers
+    .filter((p) => formOf(p) === "attack")
+    .map((p) => p.id);
+  const scores = useAttackScores(
+    target.defence,
+    labelledOf(modifiers),
+    attackIds.length > 0,
+    attackIds.join(","),
+  );
   const disciplineName = (id: string) => {
     const d = options?.disciplines.find((x) => x.id === id);
     return d ? localized(lang, d.name) : id;
@@ -103,6 +115,7 @@ export function PowersView({
                 <PowerRow
                   key={p.id}
                   power={p}
+                  scores={scores}
                   selected={
                     selection?.kind === "power" && selection.power.id === p.id
                   }
@@ -344,10 +357,12 @@ const costOf = (p: Power) =>
 
 function PowerRow({
   power,
+  scores,
   selected,
   onSelect,
 }: {
   power: Power;
+  scores: AttackScores;
   selected: boolean;
   onSelect: () => void;
 }) {
@@ -378,6 +393,7 @@ function PowerRow({
           {rowTags(t, power).join(" · ")}
         </span>
       </span>
+      {attack && <ScoreToBeat scores={scores} power={power.id} />}
       {kept && (
         <>
           <span
@@ -409,6 +425,7 @@ function PowerRow({
       >
         {attack ? t("powers.attack.attack") : t("powers.use.use")}
       </Button>
+      {attack && <ScoreRefusal scores={scores} power={power.id} />}
     </li>
   );
 }

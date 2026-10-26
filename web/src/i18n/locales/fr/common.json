@@ -212,6 +212,8 @@
   },
   "powers": {
     "tab": {
+      "score": "Score",
+      "scoreUnknown": "–",
       "attackModes": "Modes d’attaque",
       "roundFree": "Pouvoir du tour : libre",
       "usedThisRound": "Pouvoir du tour : {{name}}",

@@ -154,17 +154,15 @@ export function attackPower(
   return post(`/api/psionics/powers/${encodeURIComponent(id)}/attack`, req);
 }
 
-/** What the contact power sends: the open mind, its level (Table 29's row), the distance and life-order codes (Tables 30 and 31), the DM's resisting call, the labelled modifiers. */
+/** What a power paid by a rule table sends (ADR 0044 step 9): the open mind, its level (the table's row, found by the server), the table's modifier rows picked (kind and code, each a row of the cost table), the labelled modifiers. */
 export interface ContactRequest {
   target: string;
   mind: "open" | "closed";
   level: number;
   /** The DM's cost, only for a level the contact table has no row for (level_out_of_table). */
   cost?: number;
-  distance: string;
-  lifeOrder: string;
-  resisting?: boolean;
-  modifiers: PowerModifier[];
+  modifiers: { kind: string; code: string }[];
+  labelled: PowerModifier[];
 }
 
 /** POST /api/psionics/powers/{id}/contact: uses the contact power on a mind (ADR 0044 step 9); the answer is the use's. */
@@ -185,6 +183,8 @@ export interface ContactPreview {
   lines: { kind: string; code: string; modifier: number }[];
   current: number;
   enough: boolean;
+  /** Warning codes: "second_power_this_round". */
+  warnings?: string[];
 }
 
 export function previewContact(
@@ -197,11 +197,9 @@ export function previewContact(
   );
 }
 
-/** GET /api/psionics/cost-tables/{table}: the rule table a power's `initial_cost_table` names, to build the form's controls from. */
+/** GET /api/psionics/cost-tables/{table}: the rule table a power's `initial_cost_table` names, to build the form's controls from (the cost for a level is the preview's). */
 export interface CostTable {
   table: string;
-  maxLevel: number;
-  bands: { minLevel: number; maxLevel: number; cost: number }[];
   /** One row per kind and code; the web words the code. */
   modifiers: { kind: string; code: string; modifier: number }[];
 }

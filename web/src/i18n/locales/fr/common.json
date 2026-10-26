@@ -244,6 +244,11 @@
         "initialCost": "Coût initial",
         "maintenanceCost": "Maintien par tour",
         "confirm": "Coût fixé par le pouvoir.",
+        "tableCost": "Coût {{cost}} PFP · score {{target}}",
+        "notEnough": "Pas assez de PFP ({{current}} restants).",
+        "needOpponent": "Nommez l’adversaire et son niveau dans la bande Cible.",
+        "dmCost": "Coût (MJ)",
+        "previewFailed": "Le coût n’a pas pu être lu.",
         "resolve": "Résoudre"
       }
     },
@@ -1833,6 +1838,11 @@
       "targetLevel": "cible de niveau {{level}}",
       "contactLine": "{{what}} {{modifier}}",
       "contactMade": "contact établi"
+    },
+    "contactKinds": {
+      "distance": "Distance",
+      "life_order": "Ordre de vie",
+      "resistance": "Résistance"
     },
     "contactWords": {
       "distance": {

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Minus, Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -6,9 +6,14 @@ import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { ApiError } from "@/api/http";
 import {
   attackPower,
+  contactPower,
   defend,
+  getCostTable,
   invokePower,
+  previewContact,
   type AttackResult,
+  type ContactPreview,
+  type CostTable,
   type DefendResult,
   type PowerCheckResult,
 } from "@/api/psionics";
@@ -27,6 +32,13 @@ import {
 import { useBuffsStore } from "@/stores/buffs";
 import { contactMinds } from "./model";
 import { fixedCost, formOf, type TargetDraft } from "./bar";
+import {
+  controlsOf,
+  initialPicks,
+  tableRequest,
+  type Control,
+  type Picks,
+} from "./tableCost";
 import { useCatalogue } from "./useCatalogue";
 import { AttackOutcome, DefendOutcome, UseOutcome } from "./outcomes";
 
@@ -82,6 +94,12 @@ export function ActionBar({
         <IncomingForm />
       ) : form === "attack" ? (
         <AttackBarForm
+          power={selection.power}
+          target={target}
+          modifiers={modifiers}
+        />
+      ) : form === "table" ? (
+        <TableBarForm
           power={selection.power}
           target={target}
           modifiers={modifiers}
@@ -415,6 +433,237 @@ function ContactBarForm({
           {t("powers.use.use")}
         </Button>
       </div>
+      <Refusal text={refused} testId="use-refused" />
+      {result && <UseOutcome result={result} />}
+    </form>
+  );
+}
+
+/** The labelled modifiers of the tab's adjustment, as the contact request carries them. */
+const labelledOf = (m: Modifiers) =>
+  m.flatMap((x) => {
+    const value = Number.parseInt(x.value, 10);
+    return Number.isNaN(value) || value === 0
+      ? []
+      : [{ value, reason: x.reason.trim() }];
+  });
+
+/** The controls of a table's modifier rows: a toggle for a kind with one row, a menu for several. */
+export function TableControls({
+  controls,
+  picks,
+  onPick,
+}: {
+  controls: Control[];
+  picks: Picks;
+  onPick: (kind: string, code: string) => void;
+}) {
+  const { t } = useTranslation();
+  const word = (kind: string, code: string) =>
+    t(`log.contactWords.${kind}.${code}`, { defaultValue: code });
+  const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
+  return (
+    <>
+      {controls.map((c) => {
+        const label = t(`log.contactKinds.${c.kind}`, { defaultValue: c.kind });
+        return c.as === "toggle" ? (
+          <label
+            key={c.kind}
+            className="flex items-center gap-1.5 self-end text-body"
+          >
+            <input
+              type="checkbox"
+              data-kind={c.kind}
+              checked={picks[c.kind] === c.rows[0].code}
+              onChange={(e) =>
+                onPick(c.kind, e.target.checked ? c.rows[0].code : "")
+              }
+            />
+            {word(c.kind, c.rows[0].code)} {signed(c.rows[0].modifier)}
+          </label>
+        ) : (
+          <Field key={c.kind} label={label}>
+            <select
+              className={fieldClass}
+              data-kind={c.kind}
+              aria-label={label}
+              value={picks[c.kind]}
+              onChange={(e) => onPick(c.kind, e.target.value)}
+            >
+              {c.rows.map((r) => (
+                <option key={r.code} value={r.code}>
+                  {word(c.kind, r.code)} {signed(r.modifier)}
+                </option>
+              ))}
+            </select>
+          </Field>
+        );
+      })}
+    </>
+  );
+}
+
+/** What the server's preview says: the cost and the score, whether the pool covers it, the warnings. */
+export function TablePreview({ preview }: { preview: ContactPreview }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex flex-col gap-0.5" data-testid="table-preview">
+      <span className="text-body tabular-nums">
+        {t("powers.tab.bar.tableCost", {
+          cost: preview.cost,
+          target: preview.target,
+        })}
+      </span>
+      {!preview.enough && (
+        <span className="text-label text-danger" data-testid="table-short">
+          {t("powers.tab.bar.notEnough", { current: preview.current })}
+        </span>
+      )}
+      {(preview.warnings ?? []).map((w) => (
+        <span key={w} className="text-label text-danger">
+          {t(`powers.use.warning.${w}`, { defaultValue: w })}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * A power whose cost a rule table gives: the opponent comes from the Target band, the controls from the
+ * table's modifier rows, and the cost and score from the server's preview after each change (the web
+ * finds no row itself). A level the table lacks shows the DM's cost field once the server says so.
+ */
+function TableBarForm({
+  power,
+  target,
+  modifiers,
+}: {
+  power: Power;
+  target: TargetDraft;
+  modifiers: Modifiers;
+}) {
+  const { t, i18n } = useTranslation();
+  const busy = useTableStore((s) => s.busy);
+  const tableName = power.initial_cost_table ?? "";
+  const [table, setTable] = useState<CostTable | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    let live = true;
+    getCostTable(tableName).then(
+      (tb) => live && setTable(tb),
+      () => live && setUnavailable(true),
+    );
+    return () => {
+      live = false;
+    };
+  }, [tableName]);
+  const controls = useMemo(() => (table ? controlsOf(table) : []), [table]);
+  const [chosen, setChosen] = useState<Picks>({});
+  const picks = { ...initialPicks(controls), ...chosen };
+  const [entered, setEntered] = useState("1");
+  const [pastLevel, setPastLevel] = useState<string | null>(null);
+  const levelKey = target.level.trim();
+  const dmCost = pastLevel === levelKey;
+  const req = table
+    ? tableRequest(
+        target,
+        controls,
+        picks,
+        labelledOf(modifiers),
+        dmCost ? entered : undefined,
+      )
+    : null;
+  const key = JSON.stringify(req);
+  const [view, setView] = useState<{
+    key: string;
+    preview?: ContactPreview;
+    refused?: string;
+  } | null>(null);
+  useEffect(() => {
+    if (!req) return;
+    let live = true;
+    previewContact(power.id, req).then(
+      (preview) => live && setView({ key, preview }),
+      (e: unknown) => {
+        if (!live) return;
+        if (e instanceof ApiError && e.status < 500) {
+          if (e.code === "level_out_of_table") setPastLevel(levelKey);
+          setView({ key, refused: e.message });
+          return;
+        }
+        setView({ key, refused: t("powers.tab.bar.previewFailed") });
+      },
+    );
+    return () => {
+      live = false;
+    };
+    // The request is its JSON: a new key is a new preview.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, power.id]);
+  const shown = req && view?.key === key ? view : null;
+  const [result, setResult] = useState<PowerCheckResult | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  const name = localized(i18n.language, power.name);
+
+  async function use() {
+    if (!req || !shown?.preview?.enough || busy) return;
+    setRefused(null);
+    const out = await send(
+      async () => (await contactPower(power.id, req)).check,
+    );
+    if ("done" in out) setResult(out.done);
+    else setRefused(out.refused);
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-2"
+      data-testid="table-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void use();
+      }}
+    >
+      <div className={row}>
+        <TableControls
+          controls={controls}
+          picks={picks}
+          onPick={(kind, code) => {
+            setChosen((c) => ({ ...c, [kind]: code }));
+            setResult(null);
+            setRefused(null);
+          }}
+        />
+        {dmCost && (
+          <Stepper
+            label={t("powers.tab.bar.dmCost")}
+            value={entered}
+            onChange={(v) => {
+              setEntered(v);
+              setResult(null);
+            }}
+          />
+        )}
+        {shown?.preview && <TablePreview preview={shown.preview} />}
+        <Button
+          type="submit"
+          variant="main"
+          className="ml-auto"
+          disabled={busy || !shown?.preview?.enough}
+          aria-label={t("powers.use.useNamed", { name })}
+        >
+          {t("powers.use.use")}
+        </Button>
+      </div>
+      {!req && table && (
+        <span className="text-label text-ink-muted" data-testid="table-need">
+          {t("powers.tab.bar.needOpponent")}
+        </span>
+      )}
+      {unavailable && (
+        <Refusal text={t("powers.tab.bar.previewFailed")} testId="table-down" />
+      )}
+      <Refusal text={shown?.refused ?? null} testId="table-refused" />
       <Refusal text={refused} testId="use-refused" />
       {result && <UseOutcome result={result} />}
     </form>

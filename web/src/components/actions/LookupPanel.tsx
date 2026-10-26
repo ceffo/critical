@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SpellDetail, SpellName } from "@/components/dashboard/SpellDetail";
 import { LearnSpell } from "@/components/actions/LearnSpell";
-import { PowerLookup } from "@/components/actions/PowerLookup";
+import { PowersBrowser } from "@/components/actions/PowersBrowser";
 import { usePowerStore } from "@/stores/powers";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import { useCharacterStore } from "@/stores/character";
@@ -43,7 +43,9 @@ export function LookupPanel() {
     move,
     loadOptions,
   } = useLookupStore();
-  const powersActive = usePowerStore((s) => s.active);
+  // The Pouvoirs tab is a psionicist's: the sheet carries a known-powers block (ADR 0047 step 12).
+  const psionic = useCharacterStore((s) => !!s.character?.derived?.knownPowers);
+  const powersActive = usePowerStore((s) => s.active) && psionic;
   const setPowersActive = usePowerStore((s) => s.setActive);
   const listRef = useRef<HTMLDivElement>(null);
   // "Mine" is the spellbook: only a class that has one is offered it (the server's derived block).
@@ -200,7 +202,7 @@ export function LookupPanel() {
     </div>
   );
 
-  // The list the lookup shows: the four spell lists, or the psionic powers (ADR 0043 step 8).
+  // The spell list: the classes the character can browse.
   const modeSwitch = (
     <div
       role="group"
@@ -211,38 +213,52 @@ export function LookupPanel() {
         <button
           key={value}
           type="button"
-          aria-pressed={!powersActive && query.cls === value}
+          aria-pressed={query.cls === value}
           className={cn(
             "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
-            !powersActive && query.cls === value
+            query.cls === value
               ? "chip-chosen"
               : "text-muted-foreground hover:text-foreground",
           )}
-          onClick={() => {
-            setPowersActive(false);
-            setQuery({ cls: value });
-          }}
+          onClick={() => setQuery({ cls: value })}
         >
           {t(`lookup.${key}`)}
         </button>
       ))}
-      <button
-        type="button"
-        aria-pressed={powersActive}
-        className={cn(
-          "rounded-md px-2.5 py-1 text-body font-medium transition-colors",
-          powersActive
-            ? "chip-chosen"
-            : "text-muted-foreground hover:text-foreground",
-        )}
-        onClick={() => setPowersActive(true)}
-      >
-        {t("lookup.classPowers")}
-      </button>
     </div>
   );
 
-  if (powersActive) return <PowerLookup modeSwitch={modeSwitch} />;
+  // Sorts and Pouvoirs, for a character with both (the tabs are a psionicist's).
+  const tabs = psionic ? (
+    <div
+      role="tablist"
+      aria-label={t("lookup.browse")}
+      className="flex shrink-0 gap-4 border-b border-border"
+    >
+      {[
+        { id: false, label: t("shell.activity.spells") },
+        { id: true, label: t("lookup.classPowers") },
+      ].map(({ id, label }) => (
+        <button
+          key={String(id)}
+          type="button"
+          role="tab"
+          aria-selected={powersActive === id}
+          className={cn(
+            "-mb-px border-b-2 px-0.5 pb-1.5 text-body font-medium transition-colors",
+            powersActive === id
+              ? "border-tint text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => setPowersActive(id)}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
+  if (powersActive) return <PowersBrowser tabs={tabs} />;
 
   // ADR 0022 step 2.5 (A2's pane): filter and list in one card on the left, the detail on the
   // right; the cards follow step 4 (outlined, 14 / 16 px padding, no rules).
@@ -255,6 +271,7 @@ export function LookupPanel() {
           aria-label={t("lookup.filters")}
           className="card-band flex shrink-0 flex-col gap-2 px-4 py-2.5"
         >
+          {tabs}
           <div className="relative min-w-0">
             <MagnifyingGlass className="pointer-events-none absolute top-1.5 left-2.5 h-4 w-4 text-muted-foreground" />
             <input

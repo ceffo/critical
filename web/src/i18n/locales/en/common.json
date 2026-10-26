@@ -121,7 +121,6 @@
     "activity": {
       "act": "Act",
       "spells": "Spells",
-      "powers": "Powers",
       "xp": "Experience",
       "inventory": "Inventory"
     },
@@ -748,6 +747,7 @@
     "classWizard": "Wizard",
     "classPriest": "Priest",
     "classAll": "All",
+    "browse": "Browse",
     "classPowers": "Powers",
     "levelsLabel": "Spell levels",
     "levelShort": "Lvl {{level}}",
@@ -1242,6 +1242,8 @@
       "results": "Powers",
       "noMatch": "No power matches",
       "detail": "Power details",
+      "closeDetail": "Back to the known powers",
+      "known": "Known",
       "noSelection": "Select a power to see it here.",
       "initialCost": "Initial cost",
       "maintenance": "Maintenance",

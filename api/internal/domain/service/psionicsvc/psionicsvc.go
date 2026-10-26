@@ -122,8 +122,6 @@ type Tables interface {
 	// ContactModifier is the contact power's score modifier for code of
 	// kind (ADR 0044 step 1.3).
 	ContactModifier(kind, code string) (int, error)
-	// ContactCostRows are Table 29's bands in level order.
-	ContactCostRows() ([]ruletablesvc.ContactCostRow, error)
 	// ContactModifierRows are the contact modifiers' rows.
 	ContactModifierRows() ([]ruletablesvc.ContactModifierRow, error)
 }

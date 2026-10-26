@@ -3,6 +3,7 @@ package psionicsvc_test
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -63,11 +64,23 @@ func telepath(current int) *charactersvc.Character {
 // newContactSvc is newAttackSvc on contactBook.
 func newContactSvc(t *testing.T, c *charactersvc.Character, rows []buffsvc.BuffEffect) (psionicsvc.SVC, attackMocks) {
 	t.Helper()
+	return newContactSvcChecks(t, c, rows, nil)
+}
+
+// newContactSvcChecks is newContactSvc with power checks already logged in
+// round 3 (after its Next Round).
+func newContactSvcChecks(t *testing.T, c *charactersvc.Character, rows []buffsvc.BuffEffect, checks []actionlog.Entry) (psionicsvc.SVC, attackMocks) {
+	t.Helper()
 	chars := mocks.NewMockCharacters(t)
 	m := attackMocks{dice: mocks.NewMockDice(t), log: mocks.NewMockLog(t), buffs: mocks.NewMockBuffs(t), tables: mocks.NewMockTables(t)}
 	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(c, nil).Maybe()
 	m.buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(3, nil).Maybe()
 	m.buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(rows, nil).Maybe()
+	if checks != nil {
+		m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindPowerCheck, mock.Anything).Return(checks, nil).Maybe()
+		m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), actionlog.KindRoundAdvance, 1).
+			Return([]actionlog.Entry{{ID: 5, Round: 2, Kind: actionlog.KindRoundAdvance}}, nil).Maybe()
+	}
 	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), mock.Anything, mock.Anything).Return(nil, nil).Maybe()
 	svc, err := psionicsvc.New(psionicsvc.Deps{
 		Tables: m.tables, Log: m.log, Characters: chars, Picks: mocks.NewMockPicks(t),
@@ -88,8 +101,10 @@ func openOrc(level int) psionics.Opponent {
 	return psionics.Opponent{Target: "Orc", Mind: psionics.MindOpen, Level: level}
 }
 
+var sightMammal = []psionicsvc.ContactPick{{Kind: ruletablesvc.ContactDistance, Code: "sight"}, {Kind: ruletablesvc.ContactLifeOrder, Code: "mammal"}}
+
 func contactReq(level int) psionicsvc.ContactRequest {
-	return psionicsvc.ContactRequest{Power: "contact", Opponent: openOrc(level), Distance: "sight", LifeOrder: "mammal"}
+	return psionicsvc.ContactRequest{Power: "contact", Opponent: openOrc(level), Picks: sightMammal}
 }
 
 var contactSnap = actionlog.Snapshot{Key: buffsvc.StateKeyBuffs, Before: json.RawMessage(`[]`), After: json.RawMessage(`[{"target":"Orc"}]`)}
@@ -155,8 +170,12 @@ func TestContact_Step9_DistanceLifeOrderAndResistance(t *testing.T) {
 	expectRecord(m.log, &got)
 
 	req := psionicsvc.ContactRequest{
-		Power: "contact", Opponent: openOrc(7), Distance: "miles_10", LifeOrder: "bird", Resisting: true,
-		Modifiers: []psionicsvc.Modifier{{Value: 1, Reason: "rested"}},
+		Power: "contact", Opponent: openOrc(7), Labelled: []psionicsvc.Modifier{{Value: 1, Reason: "rested"}},
+		Picks: []psionicsvc.ContactPick{
+			{Kind: ruletablesvc.ContactDistance, Code: "miles_10"},
+			{Kind: ruletablesvc.ContactLifeOrder, Code: "bird"},
+			{Kind: ruletablesvc.ContactResistance, Code: "resisting"},
+		},
 	}
 	_, err := svc.Contact(context.Background(), 7, req)
 	require.NoError(t, err)
@@ -252,6 +271,13 @@ func TestContact_Step9_ASuccessPutsTheContactRow(t *testing.T) {
 
 // ADR 0044 step 9 (Q15): the refusals, before any roll or write. A level
 // past Table 29's last row is ErrLevelOutOfTable.
+var unknownPick = []psionicsvc.ContactPick{{Kind: "weather", Code: "storm"}}
+
+func unknownPickMocks(m attackMocks) {
+	m.tables.EXPECT().ContactCost(7).Return(8, nil).Once()
+	m.tables.EXPECT().ContactModifier("weather", "storm").Return(0, ruletablesvc.ErrNoContactModifier).Once()
+}
+
 func TestContact_Step9_Refusals(t *testing.T) {
 	for _, c := range []struct {
 		name   string
@@ -281,10 +307,22 @@ func TestContact_Step9_Refusals(t *testing.T) {
 		},
 		{name: "no level", req: func(r *psionicsvc.ContactRequest) { r.Opponent.Level = 0 }, field: "level"},
 		{name: "a defence", req: func(r *psionicsvc.ContactRequest) { r.Opponent.Defence = "thought_shield" }, field: "defence"},
-		{name: "no distance", req: func(r *psionicsvc.ContactRequest) { r.Distance = "" }, field: "distance"},
-		{name: "an unknown life order", req: func(r *psionicsvc.ContactRequest) { r.LifeOrder = "dragon" }, field: "lifeOrder"},
+		{
+			name: "an unknown modifier code", req: func(r *psionicsvc.ContactRequest) { r.Picks = unknownPick },
+			tables: unknownPickMocks, field: "modifiers",
+		},
+		{
+			name: "two modifiers of a kind", req: func(r *psionicsvc.ContactRequest) {
+				r.Picks = []psionicsvc.ContactPick{sightMammal[0], {Kind: ruletablesvc.ContactDistance, Code: "mile_1"}}
+			},
+			tables: func(m attackMocks) {
+				m.tables.EXPECT().ContactCost(7).Return(8, nil).Once()
+				m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Once()
+			},
+			field: "modifiers",
+		},
 		{name: "no mind", req: func(r *psionicsvc.ContactRequest) { r.Opponent.Mind = "" }, field: "mind"},
-		{name: "a bad modifier", req: func(r *psionicsvc.ContactRequest) { r.Modifiers = []psionicsvc.Modifier{{Value: 99}} }, field: "modifiers"},
+		{name: "a bad modifier", req: func(r *psionicsvc.ContactRequest) { r.Labelled = []psionicsvc.Modifier{{Value: 99}} }, field: "modifiers"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			char := c.char
@@ -490,82 +528,177 @@ func TestUse_Step9_TheContactPowerGoesThroughContact(t *testing.T) {
 	require.ErrorIs(t, err, psionicsvc.ErrUseContactRoute)
 }
 
-// The preview is Contact's own computation without the roll: Table 29's cost,
-// the score with the lines (Wis 15, 0 and -1: 14), nothing written, and
-// whether the pool covers the cost.
-func TestContactPreview_ReportsTheCostAndScoreWithoutRolling(t *testing.T) {
-	svc, m := newContactSvc(t, telepath(5), nil)
-	m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
-	atSight(m)
-	got, err := svc.ContactPreview(context.Background(), 7, contactReq(7))
+// previewAndContact runs the preview then Contact for req: the preview and Contact on the same
+// mocks (the dice and the log answer only Contact).
+func previewAndContact(t *testing.T, svc psionicsvc.SVC, m attackMocks, req psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, *psionicsvc.UseResult) {
+	t.Helper()
+	pre, err := svc.ContactPreview(context.Background(), 7, req)
 	require.NoError(t, err)
-	assert.Equal(t, &psionicsvc.ContactPreview{
-		Cost: 8, FromTable: true, Target: 14, Current: 5, Enough: false,
-		Lines: []psionicsvc.ContactLine{
-			{Kind: ruletablesvc.ContactDistance, Code: "sight", Modifier: 0},
-			{Kind: ruletablesvc.ContactLifeOrder, Code: "mammal", Modifier: -1},
-		},
-	}, got)
+	rolls(m, 18)
+	var got actionlog.NewEntry
+	expectRecord(m.log, &got)
+	res, err := svc.Contact(context.Background(), 7, req)
+	require.NoError(t, err)
+	return pre, res
 }
 
-// Past the table the DM's cost is the preview's, flagged as not the table's;
-// the refusals before the roll are Contact's.
-func TestContactPreview_PastTheTableAndRefusals(t *testing.T) {
-	t.Run("the DM's cost", func(t *testing.T) {
+// The preview's cost, target, lines and warnings are Contact's for the same
+// body: on a table level, past the table with the DM's cost, and with a pick
+// of the resistance kind, one test on the same mocks.
+func TestContactPreview_EqualsContact(t *testing.T) {
+	t.Run("a table level", func(t *testing.T) {
+		svc, m := newContactSvc(t, telepath(20), nil)
+		m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactLifeOrder, "mammal").Return(-1, nil).Twice()
+		pre, res := previewAndContact(t, svc, m, contactReq(7))
+		assert.Equal(t, res.Check.Cost, pre.Cost)
+		assert.Equal(t, res.Check.Target, pre.Target)
+		assert.Equal(t, res.Check.ContactModifiers, pre.Lines)
+		assert.True(t, pre.FromTable)
+		assert.Equal(t, res.Check.Warnings, pre.Warnings)
+	})
+	t.Run("past the table, with the DM's cost", func(t *testing.T) {
 		svc, m := newContactSvc(t, telepath(20), nil)
 		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Twice()
-		atSight(m)
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactLifeOrder, "mammal").Return(-1, nil).Twice()
 		req := contactReq(21)
 		cost := 13
 		req.Cost = &cost
-		got, err := svc.ContactPreview(context.Background(), 7, req)
-		require.NoError(t, err)
-		assert.Equal(t, 13, got.Cost)
-		assert.False(t, got.FromTable)
-		assert.True(t, got.Enough)
+		pre, res := previewAndContact(t, svc, m, req)
+		assert.Equal(t, 13, pre.Cost)
+		assert.Equal(t, res.Check.Cost, pre.Cost)
+		assert.False(t, pre.FromTable)
 	})
-	t.Run("no row and no cost", func(t *testing.T) {
+	t.Run("past the table, with no cost: the same refusal", func(t *testing.T) {
 		svc, m := newContactSvc(t, telepath(20), nil)
-		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Once()
-		_, err := svc.ContactPreview(context.Background(), 7, contactReq(21))
-		assert.ErrorIs(t, err, psionicsvc.ErrLevelOutOfTable)
+		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Twice()
+		_, perr := svc.ContactPreview(context.Background(), 7, contactReq(21))
+		_, cerr := svc.Contact(context.Background(), 7, contactReq(21))
+		require.ErrorIs(t, perr, psionicsvc.ErrLevelOutOfTable)
+		require.ErrorIs(t, cerr, psionicsvc.ErrLevelOutOfTable)
 	})
-	t.Run("a closed mind", func(t *testing.T) {
-		svc, _ := newContactSvc(t, telepath(20), nil)
+	t.Run("with the resistance pick", func(t *testing.T) {
+		svc, m := newContactSvc(t, telepath(20), nil)
+		m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactLifeOrder, "mammal").Return(-1, nil).Twice()
+		m.tables.EXPECT().ContactModifier(ruletablesvc.ContactResistance, "resisting").Return(-2, nil).Twice()
 		req := contactReq(7)
-		req.Opponent.Mind = psionics.MindClosed
-		_, err := svc.ContactPreview(context.Background(), 7, req)
-		assert.ErrorIs(t, err, psionicsvc.ErrMindClosed)
-	})
-	t.Run("a power whose cost names no table", func(t *testing.T) {
-		svc, _ := newContactSvc(t, telepath(20), nil)
-		req := contactReq(7)
-		req.Power = "inflict_pain"
-		_, err := svc.ContactPreview(context.Background(), 7, req)
-		assert.ErrorIs(t, err, psionicsvc.ErrNotAContactPower)
-	})
-	t.Run("an unknown distance", func(t *testing.T) {
-		svc, _ := newContactSvc(t, telepath(20), nil)
-		req := contactReq(7)
-		req.Distance = "far"
-		_, err := svc.ContactPreview(context.Background(), 7, req)
-		var fe *domain.FieldError
-		require.ErrorAs(t, err, &fe)
-		assert.Equal(t, "distance", fe.Field)
+		req.Picks = append(slices.Clone(sightMammal), psionicsvc.ContactPick{Kind: ruletablesvc.ContactResistance, Code: "resisting"})
+		pre, res := previewAndContact(t, svc, m, req)
+		assert.Equal(t, 12, pre.Target, "15 + 0 - 1 - 2")
+		assert.Equal(t, res.Check.Target, pre.Target)
+		assert.Equal(t, res.Check.ContactModifiers, pre.Lines)
 	})
 }
 
-// The cost table is served from the rule tables' rows, whatever the web does
-// with them; a name no power's cost carries is not found.
-func TestCostTable_ServesTheBandsAndModifierRows(t *testing.T) {
+// A second power in the round warns in the preview as in Contact.
+func TestContactPreview_WarnsOfASecondPowerThisRound(t *testing.T) {
+	used := []actionlog.Entry{{ID: 9, Round: 3, Kind: actionlog.KindPowerCheck, Payload: []byte(`{"power":"inflict_pain"}`)}}
+	svc, m := newContactSvcChecks(t, telepath(20), nil, used)
+	m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+	m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+	m.tables.EXPECT().ContactModifier(ruletablesvc.ContactLifeOrder, "mammal").Return(-1, nil).Twice()
+	pre, res := previewAndContact(t, svc, m, contactReq(7))
+	assert.Equal(t, []string{psionicsvc.WarnSecondPowerThisRound}, pre.Warnings)
+	assert.Equal(t, res.Check.Warnings, pre.Warnings)
+}
+
+// The refusals before the roll are the same error for the preview and for
+// Contact: a closed mind, an unknown power, a character who is no
+// psionicist, no level, a cost entered on a table level, a pick that is no
+// row of the table, a second pick of a kind.
+func TestContactPreview_RefusesAsContactDoes(t *testing.T) {
+	one := 1
+	for _, c := range []struct {
+		name   string
+		char   *charactersvc.Character
+		req    func(*psionicsvc.ContactRequest)
+		tables func(m attackMocks)
+		err    error
+		field  string
+	}{
+		{name: "a closed mind", req: func(r *psionicsvc.ContactRequest) { r.Opponent.Mind = psionics.MindClosed }, err: psionicsvc.ErrMindClosed},
+		{name: "an unknown power", req: func(r *psionicsvc.ContactRequest) { r.Power = "mindlink" }, err: psionicsvc.ErrPowerNotKnown},
+		{name: "not the contact power", req: func(r *psionicsvc.ContactRequest) { r.Power = "inflict_pain" }, err: psionicsvc.ErrNotAContactPower},
+		{name: "not a psionicist", char: &charactersvc.Character{}, err: psionicsvc.ErrNotPsionicist},
+		{name: "no level", req: func(r *psionicsvc.ContactRequest) { r.Opponent.Level = 0 }, field: "level"},
+		{
+			name: "a cost entered on a table level", req: func(r *psionicsvc.ContactRequest) { r.Cost = &one },
+			tables: func(m attackMocks) { m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice() }, field: "cost",
+		},
+		{
+			name: "an unknown modifier row", req: func(r *psionicsvc.ContactRequest) { r.Picks = unknownPick },
+			tables: func(m attackMocks) {
+				m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+				m.tables.EXPECT().ContactModifier("weather", "storm").Return(0, ruletablesvc.ErrNoContactModifier).Twice()
+			}, field: "modifiers",
+		},
+		{
+			name: "two picks of a kind", req: func(r *psionicsvc.ContactRequest) {
+				r.Picks = []psionicsvc.ContactPick{sightMammal[0], {Kind: ruletablesvc.ContactDistance, Code: "mile_1"}}
+			},
+			tables: func(m attackMocks) {
+				m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+				m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+			}, field: "modifiers",
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			char := c.char
+			if char == nil {
+				char = telepath(20)
+			}
+			svc, m := newContactSvc(t, char, nil)
+			if c.tables != nil {
+				c.tables(m)
+			}
+			req := contactReq(7)
+			if c.req != nil {
+				c.req(&req)
+			}
+			_, perr := svc.ContactPreview(context.Background(), 7, req)
+			_, cerr := svc.Contact(context.Background(), 7, req)
+			require.Error(t, perr)
+			assert.Equal(t, cerr, perr, "the same error")
+			if c.err != nil {
+				require.ErrorIs(t, perr, c.err)
+				return
+			}
+			var fe *domain.FieldError
+			require.ErrorAs(t, perr, &fe)
+			assert.Equal(t, c.field, fe.Field)
+		})
+	}
+}
+
+// With the PSPs short the preview answers enough:false, no error; Contact on
+// the same body is refused with not_enough_psp.
+func TestContactPreview_ShortOfPSPsIsNotARefusal(t *testing.T) {
+	svc, m := newContactSvc(t, telepath(5), nil)
+	m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+	m.tables.EXPECT().ContactModifier(ruletablesvc.ContactDistance, "sight").Return(0, nil).Twice()
+	m.tables.EXPECT().ContactModifier(ruletablesvc.ContactLifeOrder, "mammal").Return(-1, nil).Twice()
+	pre, err := svc.ContactPreview(context.Background(), 7, contactReq(7))
+	require.NoError(t, err)
+	assert.False(t, pre.Enough)
+	assert.Equal(t, 5, pre.Current)
+	assert.Equal(t, 8, pre.Cost)
+	_, err = svc.Contact(context.Background(), 7, contactReq(7))
+	assert.ErrorIs(t, err, psionicsvc.ErrNotEnoughPSP)
+}
+
+// The cost table is served from the rule tables' modifier rows, whatever the
+// web does with them; a name no power's cost carries is not found.
+func TestCostTable_ServesTheModifierRows(t *testing.T) {
 	svc, m := newContactSvc(t, telepath(20), nil)
-	m.tables.EXPECT().ContactCostRows().Return([]ruletablesvc.ContactCostRow{{MinLevel: 1, MaxLevel: 2, Cost: 2}, {MinLevel: 3, MaxLevel: 4, Cost: 3}}, nil).Once()
 	m.tables.EXPECT().ContactModifierRows().Return([]ruletablesvc.ContactModifierRow{{Kind: "distance", Code: "sight", Modifier: 0}, {Kind: "resistance", Code: "resisting", Modifier: -2}}, nil).Once()
 	got, err := svc.CostTable(context.Background(), psionicsvc.ContactCostTable)
 	require.NoError(t, err)
 	assert.Equal(t, psionicsvc.CostTable{
-		Table: "contact_cost", MaxLevel: ruletablesvc.MaxContactLevel,
-		Bands:     []psionicsvc.CostBand{{MinLevel: 1, MaxLevel: 2, Cost: 2}, {MinLevel: 3, MaxLevel: 4, Cost: 3}},
+		Table:     "contact_cost",
 		Modifiers: []psionicsvc.ContactLine{{Kind: "distance", Code: "sight"}, {Kind: "resistance", Code: "resisting", Modifier: -2}},
 	}, got)
 

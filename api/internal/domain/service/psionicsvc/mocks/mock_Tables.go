@@ -134,63 +134,6 @@ func (_c *MockTables_ContactCost_Call) RunAndReturn(run func(int) (int, error)) 
 	return _c
 }
 
-// ContactCostRows provides a mock function with no fields
-func (_m *MockTables) ContactCostRows() ([]ruletablesvc.ContactCostRow, error) {
-	ret := _m.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for ContactCostRows")
-	}
-
-	var r0 []ruletablesvc.ContactCostRow
-	var r1 error
-	if rf, ok := ret.Get(0).(func() ([]ruletablesvc.ContactCostRow, error)); ok {
-		return rf()
-	}
-	if rf, ok := ret.Get(0).(func() []ruletablesvc.ContactCostRow); ok {
-		r0 = rf()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([]ruletablesvc.ContactCostRow)
-		}
-	}
-
-	if rf, ok := ret.Get(1).(func() error); ok {
-		r1 = rf()
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
-// MockTables_ContactCostRows_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContactCostRows'
-type MockTables_ContactCostRows_Call struct {
-	*mock.Call
-}
-
-// ContactCostRows is a helper method to define mock.On call
-func (_e *MockTables_Expecter) ContactCostRows() *MockTables_ContactCostRows_Call {
-	return &MockTables_ContactCostRows_Call{Call: _e.mock.On("ContactCostRows")}
-}
-
-func (_c *MockTables_ContactCostRows_Call) Run(run func()) *MockTables_ContactCostRows_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *MockTables_ContactCostRows_Call) Return(_a0 []ruletablesvc.ContactCostRow, _a1 error) *MockTables_ContactCostRows_Call {
-	_c.Call.Return(_a0, _a1)
-	return _c
-}
-
-func (_c *MockTables_ContactCostRows_Call) RunAndReturn(run func() ([]ruletablesvc.ContactCostRow, error)) *MockTables_ContactCostRows_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // ContactModifier provides a mock function with given fields: kind, code
 func (_m *MockTables) ContactModifier(kind string, code string) (int, error) {
 	ret := _m.Called(kind, code)

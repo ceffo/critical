@@ -190,11 +190,11 @@ type contactBody struct {
 	Defence string `json:"defence"`
 	// Cost is the DM's cost for a level Table 29 has no row for, and only
 	// then (Q15).
-	Cost      *int                  `json:"cost"`
-	Distance  string                `json:"distance"`
-	LifeOrder string                `json:"lifeOrder"`
-	Resisting bool                  `json:"resisting"`
-	Modifiers []psionicsvc.Modifier `json:"modifiers"`
+	Cost *int `json:"cost"`
+	// Modifiers are the cost table's modifier rows picked (kind, code), each
+	// validated against the table; Labelled are the DM's labelled modifiers.
+	Modifiers []psionicsvc.ContactPick `json:"modifiers"`
+	Labelled  []psionicsvc.Modifier    `json:"labelled"`
 }
 
 func (b contactBody) request(power string) psionicsvc.ContactRequest {
@@ -203,16 +203,15 @@ func (b contactBody) request(power string) psionicsvc.ContactRequest {
 		Opponent: psionics.Opponent{
 			Target: b.Target, Mind: b.Mind, Level: b.Level, Defence: b.Defence,
 		},
-		Cost:     b.Cost,
-		Distance: b.Distance, LifeOrder: b.LifeOrder, Resisting: b.Resisting,
-		Modifiers: b.Modifiers,
+		Cost:  b.Cost,
+		Picks: b.Modifiers, Labelled: b.Labelled,
 	}
 }
 
 // ContactPreview is POST /api/psionics/powers/{id}/contact/preview: the
 // contact's cost and score for the body Contact takes, from Contact's own
 // computation, with nothing rolled or written. It answers the psionicsvc
-// ContactPreview (cost, fromTable, target, lines, current, enough). The
+// ContactPreview (cost, fromTable, target, lines, current, enough, warnings). The
 // refusals are Contact's before the roll; not_enough_psp is not one, enough
 // says it.
 func ContactPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
@@ -231,9 +230,9 @@ func ContactPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 }
 
 // CostTable is GET /api/psionics/cost-tables/{table}: the rule table a
-// power's initial cost names (PowerDTO.initial_cost_table), its cost bands
-// by level and its modifier rows (kind, language-neutral code, modifier), for
-// the web to build its controls from. 404 for a name no power's cost carries.
+// power's initial cost names (PowerDTO.initial_cost_table) and its modifier
+// rows (kind, language-neutral code, modifier), for the web to build its
+// controls from; the cost for a level is the preview's. 404 for a name no power's cost carries.
 func CostTable(svc defender) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		t, err := svc.CostTable(r.Context(), chi.URLParam(r, "table"))

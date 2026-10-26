@@ -261,18 +261,18 @@ func TestAttack_Step7_Post(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, rec.Code)
 }
 
-// POST /api/psionics/powers/{id}/contact: the opponent, the distance, the
-// life order, the resisting flag and the modifiers reach the service as sent;
+// POST /api/psionics/powers/{id}/contact: the opponent, the picked modifier
+// rows and the labelled modifiers reach the service as sent;
 // the answer is the Use one with the contact lines (ADR 0044 step 9).
 func TestContact_Step9_Post(t *testing.T) {
 	h, m := newRouter(t)
 	want := psionicsvc.ContactRequest{
-		Power:     "contact",
-		Opponent:  psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
-		Distance:  "miles_10",
-		LifeOrder: "bird",
-		Resisting: true,
-		Modifiers: []psionicsvc.Modifier{{Value: 1, Reason: "calm"}},
+		Power:    "contact",
+		Opponent: psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
+		Picks: []psionicsvc.ContactPick{
+			{Kind: "distance", Code: "miles_10"}, {Kind: "life_order", Code: "bird"}, {Kind: "resistance", Code: "resisting"},
+		},
+		Labelled: []psionicsvc.Modifier{{Value: 1, Reason: "calm"}},
 	}
 	m.psionics.EXPECT().Contact(mock.Anything, int64(1), want).Return(&psionicsvc.UseResult{
 		Check: psionicsvc.CheckRecord{
@@ -287,8 +287,9 @@ func TestContact_Step9_Post(t *testing.T) {
 		PSP: actionlog.PSPState{Current: 20, Max: 40}, LogEntryID: 9,
 	}, nil).Once()
 	rec := do(h, "POST", "/api/psionics/powers/contact/contact",
-		`{"target":"Bird","mind":"open","level":7,"distance":"miles_10","lifeOrder":"bird","resisting":true,
-		"modifiers":[{"value":1,"reason":"calm"}]}`)
+		`{"target":"Bird","mind":"open","level":7,
+		"modifiers":[{"kind":"distance","code":"miles_10"},{"kind":"life_order","code":"bird"},{"kind":"resistance","code":"resisting"}],
+		"labelled":[{"value":1,"reason":"calm"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"check":{"power":"contact","ability":"wis","abilityScore":15,"target":7,"d20":10,
 		"outcome":"success","success":true,"cost":8,"spent":8,"opponent":"Bird","level":7,
@@ -316,19 +317,19 @@ func TestContact_Step9_Post(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"code":"level_out_of_table"`)
 
 	m.psionics.EXPECT().Contact(mock.Anything, int64(1), mock.Anything).
-		Return(nil, &domain.FieldError{Field: "distance", Message: "unknown distance"}).Once()
-	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":"Orc","mind":"open","distance":"far"}`)
+		Return(nil, &domain.FieldError{Field: "modifiers", Message: "no such row"}).Once()
+	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":"Orc","mind":"open","modifiers":[{"kind":"distance","code":"far"}]}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
-	assert.Contains(t, rec.Body.String(), `distance`)
+	assert.Contains(t, rec.Body.String(), `modifiers`)
 
 	// Q15: the DM's cost for a level past the table reaches the service.
 	cost := 13
 	m.psionics.EXPECT().Contact(mock.Anything, int64(1), psionicsvc.ContactRequest{
 		Power: "contact", Opponent: psionics.Opponent{Target: "Orc", Mind: "open", Level: 21}, Cost: &cost,
-		Distance: "sight", LifeOrder: "mammal",
+		Picks: []psionicsvc.ContactPick{{Kind: "distance", Code: "sight"}},
 	}).Return(&psionicsvc.UseResult{Check: psionicsvc.CheckRecord{Power: "contact", Cost: 13, Level: 21}}, nil).Once()
 	rec = do(h, "POST", "/api/psionics/powers/contact/contact",
-		`{"target":"Orc","mind":"open","level":21,"cost":13,"distance":"sight","lifeOrder":"mammal"}`)
+		`{"target":"Orc","mind":"open","level":21,"cost":13,"modifiers":[{"kind":"distance","code":"sight"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
 	rec = do(h, "POST", "/api/psionics/powers/x/contact", `{"target":`)
@@ -396,20 +397,20 @@ func TestCharacter_Step12_ServesThePowerUsedThisRound(t *testing.T) {
 func TestContactPreview_Step9_PostAndCostTableGet(t *testing.T) {
 	h, m := newRouter(t)
 	want := psionicsvc.ContactRequest{
-		Power:     "contact",
-		Opponent:  psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
-		Distance:  "sight",
-		LifeOrder: "bird",
+		Power:    "contact",
+		Opponent: psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
+		Picks:    []psionicsvc.ContactPick{{Kind: "distance", Code: "sight"}},
 	}
 	m.psionics.EXPECT().ContactPreview(mock.Anything, int64(1), want).Return(&psionicsvc.ContactPreview{
 		Cost: 8, FromTable: true, Target: 11, Current: 20, Enough: true,
-		Lines: []psionicsvc.ContactLine{{Kind: "distance", Code: "sight", Modifier: 0}},
+		Lines:    []psionicsvc.ContactLine{{Kind: "distance", Code: "sight", Modifier: 0}},
+		Warnings: []string{psionicsvc.WarnSecondPowerThisRound},
 	}, nil).Once()
 	rec := do(h, "POST", "/api/psionics/powers/contact/contact/preview",
-		`{"target":"Bird","mind":"open","level":7,"distance":"sight","lifeOrder":"bird"}`)
+		`{"target":"Bird","mind":"open","level":7,"modifiers":[{"kind":"distance","code":"sight"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"cost":8,"fromTable":true,"target":11,"lines":[{"kind":"distance","code":"sight","modifier":0}],
-		"current":20,"enough":true}`, rec.Body.String())
+		"current":20,"enough":true,"warnings":["second_power_this_round"]}`, rec.Body.String())
 
 	m.psionics.EXPECT().ContactPreview(mock.Anything, int64(1), mock.Anything).Return(nil, psionicsvc.ErrMindClosed).Once()
 	rec = do(h, "POST", "/api/psionics/powers/contact/contact/preview", `{"target":"Orc","mind":"closed"}`)
@@ -417,13 +418,12 @@ func TestContactPreview_Step9_PostAndCostTableGet(t *testing.T) {
 	assert.Contains(t, rec.Body.String(), `"code":"mind_closed"`)
 
 	m.psionics.EXPECT().CostTable(mock.Anything, "contact_cost").Return(psionicsvc.CostTable{
-		Table: "contact_cost", MaxLevel: 20,
-		Bands:     []psionicsvc.CostBand{{MinLevel: 1, MaxLevel: 2, Cost: 2}},
+		Table:     "contact_cost",
 		Modifiers: []psionicsvc.ContactLine{{Kind: "resistance", Code: "resisting", Modifier: -2}},
 	}, nil).Once()
 	rec = do(h, "GET", "/api/psionics/cost-tables/contact_cost", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"table":"contact_cost","maxLevel":20,"bands":[{"minLevel":1,"maxLevel":2,"cost":2}],
+	assert.JSONEq(t, `{"table":"contact_cost",
 		"modifiers":[{"kind":"resistance","code":"resisting","modifier":-2}]}`, rec.Body.String())
 
 	m.psionics.EXPECT().CostTable(mock.Anything, "nothing").Return(psionicsvc.CostTable{}, domain.ErrNotFound).Once()

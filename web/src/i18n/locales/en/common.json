@@ -188,26 +188,45 @@
     "lastExposure": "{{delta}} {{spell}}"
   },
   "psp": {
-    "title": "PSPs",
+    "title": "Psionic strength points",
     "amountPlaceholder": "PSP",
     "amount": "PSP amount",
     "spend": "Spend",
     "recover": "Add",
-    "recoverHours": "Recover",
     "spendHint": "Spend these PSPs (Enter)",
     "recoverHint": "Add these PSPs (Shift+Enter)",
     "keysHint": "Enter: spend · Shift+Enter: add",
     "source": "Source",
     "sourcePlaceholder": "Source (optional): power, potion...",
-    "recovery": "Recovery",
     "hours": "Hours",
     "activityLabel": "Activity",
-    "recoverOver": "Recover over time",
     "activity": {
       "exertion": "exertion",
       "walking": "walking",
       "resting": "resting",
-      "sleeping": "sleeping"
+      "sleeping": "sleeping",
+      "meditating": "meditating"
+    },
+    "adjust": "Adjust",
+    "adjustHint": "Spend or add PSPs by hand",
+    "rest": {
+      "open": "Rest",
+      "hint": "Recover PSPs over hours of rest",
+      "title": "Recover PSPs",
+      "perHour_one": "{{count}} / hour",
+      "perHour_other": "{{count}} / hour",
+      "less": "One hour less",
+      "more": "One hour more",
+      "preset": "{{hours}} h",
+      "previewLabel": "PSPs after the rest",
+      "stopsTitle": "PSPs only come back while nothing is being paid. These stop:",
+      "cost_one": "{{count}} PSP",
+      "cost_other": "{{count}} PSPs",
+      "staysUp": "Stays up, free: {{powers}}",
+      "recover": "Recover {{hours}} h",
+      "stopAndRecover": "Stop {{powers}} and recover {{hours}} h",
+      "longLine": "Long rest: 8 h of sleep, PSPs up to the maximum, spells and kept-up powers reset.",
+      "long": "Long rest"
     }
   },
   "powers": {

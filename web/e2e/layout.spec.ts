@@ -16,6 +16,7 @@ import {
   openWorkspace,
   recordHp,
   apiCall,
+  keepATangent,
   reloadSettled,
   openFold,
   openTypedAdd,
@@ -5303,6 +5304,57 @@ test.describe("Powers tab", () => {
         if (vp.width >= 1920)
           await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
         await close();
+      }
+    }
+  });
+});
+
+// The Maintained card of Act > Pouvoirs (ADR 0047 item 10): a tangent row with a long mind name, its
+// cost, Stop and the balance, uncut in French and English, 1280 to 2560. Screenshots at 1920x1080 and
+// 2560x1440, French first (ADR 0027 step 2).
+test.describe("Maintained card", () => {
+  test.use({ character: psionicist });
+  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mindlink" },
+          { kind: "power", id: "mind_thrust" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await chooseLanguage(page, "fr");
+    await page.keyboard.press("Escape");
+    await page.getByRole("tab", { name: "Pouvoirs" }).click();
+    const tab = page.getByTestId("powers-tab");
+    await keepATangent(
+      page,
+      tab,
+      "Gardien des Mille Portes de la Citadelle Oubliée",
+    );
+    const card = tab.getByTestId("maintained-card");
+    await expect(card).toBeVisible();
+    await expect(card.getByTestId("maintained-balance")).toBeVisible();
+    for (const lang of ["fr", "en"] as const) {
+      if (lang === "en") {
+        await chooseLanguage(page, "en");
+        await page.keyboard.press("Escape");
+      }
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expect(card.getByTestId("maintained-balance")).toBeVisible();
+        await expectNoClippedText(card, `maintained card, ${where}`);
+        await expectWholeWords(card, `maintained card, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(page, `maintained-${lang}-${vp.width}x${vp.height}`);
       }
     }
   });

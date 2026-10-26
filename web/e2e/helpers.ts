@@ -594,3 +594,21 @@ export async function openTypedAdd(
     .getByRole("tab", { name: lang === "fr" ? "Saisir" : "Type in" })
     .click();
 }
+
+/**
+ * Attacks the mind `target` from the Powers tab with Mind Thrust until a tangent row is kept up
+ * (the Maintained card shows): the d20 is the server's, so a defended attack is made again.
+ */
+export async function keepATangent(page: Page, tab: Locator, target: string) {
+  await tab.getByTestId("target-name").fill(target);
+  const attack = /^(Attack with|Attaquer avec) (Mind Thrust|Pression mentale)$/;
+  await tab.getByRole("button", { name: attack }).first().click();
+  const bar = page.getByTestId("action-bar");
+  const card = tab.getByTestId("maintained-card");
+  for (let i = 0; i < 8; i++) {
+    await bar.getByRole("button", { name: attack }).click();
+    await apiSettled(page);
+    if (await card.isVisible()) return;
+  }
+  throw new Error("no tangent after 8 attacks");
+}

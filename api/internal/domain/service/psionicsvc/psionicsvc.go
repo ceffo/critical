@@ -77,6 +77,12 @@ type SVC interface {
 	// entry making the contact row on a success. The refusals are
 	// Contact's (contact.go).
 	Contact(ctx context.Context, characterID int64, req ContactRequest) (*UseResult, error)
+	// ContactPreview is the contact's cost and score now, from Contact's own
+	// computation, nothing rolled or written (contact.go).
+	ContactPreview(ctx context.Context, characterID int64, req ContactRequest) (*ContactPreview, error)
+	// CostTable is the rule table a power's initial cost names, its bands and
+	// modifier rows; domain.ErrNotFound for another name (contact.go).
+	CostTable(ctx context.Context, table string) (CostTable, error)
 }
 
 // Buffs is the buff list a maintained power's row lives on (buffsvc, ADR
@@ -116,6 +122,10 @@ type Tables interface {
 	// ContactModifier is the contact power's score modifier for code of
 	// kind (ADR 0044 step 1.3).
 	ContactModifier(kind, code string) (int, error)
+	// ContactCostRows are Table 29's bands in level order.
+	ContactCostRows() ([]ruletablesvc.ContactCostRow, error)
+	// ContactModifierRows are the contact modifiers' rows.
+	ContactModifierRows() ([]ruletablesvc.ContactModifierRow, error)
 }
 
 // Log is the PSP ledger's writer (actionlogsvc).

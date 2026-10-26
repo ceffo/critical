@@ -156,6 +156,26 @@ func (t *Tables) ContactCost(level int) (int, error) {
 	return 0, ErrLevelOutOfTable
 }
 
+// ContactCostRows are Table 29's bands in level order (ADR 0044 step 1.2), a
+// copy the caller may keep.
+func (t *Tables) ContactCostRows() ([]ContactCostRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	return slices.Clone(c.ContactCost), nil
+}
+
+// ContactModifierRows are the contact power's score modifiers (Tables 30 and
+// 31 and the resistance, ADR 0044 step 1.3), a copy the caller may keep.
+func (t *Tables) ContactModifierRows() ([]ContactModifierRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	return slices.Clone(c.ContactModifiers), nil
+}
+
 // ContactModifier is the contact power's score modifier for code of kind
 // (ADR 0044 step 1.3: Table 30 by distance, Table 31 by life order, or the
 // resistance). An unknown kind or code is an error.

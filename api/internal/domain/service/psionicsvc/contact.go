@@ -74,20 +74,7 @@ type ContactLine struct {
 // (entered for a level the table has, or under 1) or "modifiers", ErrNotPsionicist, ErrPowerNotKnown, ErrNotAContactPower,
 // ErrMindClosed, ErrLevelOutOfTable, ErrNotEnoughPSP.
 func (s *service) Contact(ctx context.Context, characterID int64, req ContactRequest) (*UseResult, error) {
-	opp := req.Opponent
-	if err := opp.Validate(s.book); err != nil {
-		return nil, err
-	}
-	if opp.Defence != "" {
-		return nil, domain.FieldErrorf("defence", "a contact names no defence")
-	}
-	if !slices.Contains(ruletablesvc.ContactModifierCodes[ruletablesvc.ContactDistance], req.Distance) {
-		return nil, domain.FieldErrorf("distance", "unknown distance %q", req.Distance)
-	}
-	if !slices.Contains(ruletablesvc.ContactModifierCodes[ruletablesvc.ContactLifeOrder], req.LifeOrder) {
-		return nil, domain.FieldErrorf("lifeOrder", "unknown life order %q", req.LifeOrder)
-	}
-	mods, err := modifiers(req.Modifiers)
+	opp, mods, err := s.contactInput(req)
 	if err != nil {
 		return nil, err
 	}
@@ -97,32 +84,8 @@ func (s *service) Contact(ctx context.Context, characterID int64, req ContactReq
 		if err != nil {
 			return err
 		}
-		if c.Derived.Powers == nil {
-			return ErrNotPsionicist
-		}
-		p, ok := s.book.Power(req.Power)
-		if !ok || !psionics.Knows(c.PsionicPicks, req.Power) {
-			return ErrPowerNotKnown
-		}
-		if p.InitialCost.Table != ContactCostTable {
-			return ErrNotAContactPower
-		}
-		if opp.Mind == psionics.MindClosed {
-			return ErrMindClosed
-		}
-		if opp.Level < 1 {
-			return domain.FieldErrorf("level", "the contact's cost needs the target's level")
-		}
-		cost, err := contactCost(s.rates.ContactCost(opp.Level))(req.Cost)
+		p, rec, err := s.contactCheck(c, req, opp, mods)
 		if err != nil {
-			return err
-		}
-		rec, err := checkOf(c, p, UseRequest{Cost: &cost}, mods)
-		if err != nil {
-			return err
-		}
-		rec.Opponent, rec.Level = opp.Target, opp.Level
-		if err := s.contactLines(&rec, req); err != nil {
 			return err
 		}
 		pool := charactersvc.PSPPool{}
@@ -176,6 +139,148 @@ func (s *service) Contact(ctx context.Context, characterID int64, req ContactReq
 	})
 	if err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+// contactInput validates what the contact request holds without the
+// character: the opponent, the distance and life-order codes and the labelled
+// modifiers. Contact and ContactPreview share it.
+func (s *service) contactInput(req ContactRequest) (psionics.Opponent, []Modifier, error) {
+	opp := req.Opponent
+	if err := opp.Validate(s.book); err != nil {
+		return opp, nil, err
+	}
+	if opp.Defence != "" {
+		return opp, nil, domain.FieldErrorf("defence", "a contact names no defence")
+	}
+	if !slices.Contains(ruletablesvc.ContactModifierCodes[ruletablesvc.ContactDistance], req.Distance) {
+		return opp, nil, domain.FieldErrorf("distance", "unknown distance %q", req.Distance)
+	}
+	if !slices.Contains(ruletablesvc.ContactModifierCodes[ruletablesvc.ContactLifeOrder], req.LifeOrder) {
+		return opp, nil, domain.FieldErrorf("lifeOrder", "unknown life order %q", req.LifeOrder)
+	}
+	mods, err := modifiers(req.Modifiers)
+	return opp, mods, err
+}
+
+// contactCheck is the contact's check before the roll for character c: the
+// power must be known and the contact power's, the mind open, the cost
+// Table 29's (or the DM's past it), the score with the contact lines. Contact
+// rolls from it; ContactPreview only reports it.
+func (s *service) contactCheck(c *charactersvc.Character, req ContactRequest, opp psionics.Opponent, mods []Modifier) (catalogue.Power, CheckRecord, error) {
+	if c.Derived.Powers == nil {
+		return catalogue.Power{}, CheckRecord{}, ErrNotPsionicist
+	}
+	p, ok := s.book.Power(req.Power)
+	if !ok || !psionics.Knows(c.PsionicPicks, req.Power) {
+		return p, CheckRecord{}, ErrPowerNotKnown
+	}
+	if p.InitialCost.Table != ContactCostTable {
+		return p, CheckRecord{}, ErrNotAContactPower
+	}
+	if opp.Mind == psionics.MindClosed {
+		return p, CheckRecord{}, ErrMindClosed
+	}
+	if opp.Level < 1 {
+		return p, CheckRecord{}, domain.FieldErrorf("level", "the contact's cost needs the target's level")
+	}
+	cost, err := contactCost(s.rates.ContactCost(opp.Level))(req.Cost)
+	if err != nil {
+		return p, CheckRecord{}, err
+	}
+	rec, err := checkOf(c, p, UseRequest{Cost: &cost}, mods)
+	if err != nil {
+		return p, CheckRecord{}, err
+	}
+	rec.Opponent, rec.Level = opp.Target, opp.Level
+	if err := s.contactLines(&rec, req); err != nil {
+		return p, CheckRecord{}, err
+	}
+	return p, rec, nil
+}
+
+// ContactPreview is what the contact would cost and score now, from the same
+// computation as Contact's, nothing rolled or written.
+type ContactPreview struct {
+	// Cost is Table 29's for the level, or the DM's past the table.
+	Cost int `json:"cost"`
+	// FromTable is false when Cost is the DM's (Q15).
+	FromTable bool `json:"fromTable"`
+	// Target is the score to roll under: the power's own with the lines.
+	Target int `json:"target"`
+	// Lines are the contact modifiers in the order they are added.
+	Lines []ContactLine `json:"lines"`
+	// Current is the PSP pool now; Enough says it covers Cost.
+	Current int  `json:"current"`
+	Enough  bool `json:"enough"`
+}
+
+// ContactPreview reports the contact's cost and score for req without a
+// roll. Its refusals are Contact's before the roll, except not_enough_psp,
+// which Enough carries.
+func (s *service) ContactPreview(ctx context.Context, characterID int64, req ContactRequest) (*ContactPreview, error) {
+	opp, mods, err := s.contactInput(req)
+	if err != nil {
+		return nil, err
+	}
+	c, err := s.chars.GetCharacter(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	_, rec, err := s.contactCheck(c, req, opp, mods)
+	if err != nil {
+		return nil, err
+	}
+	cur := 0
+	if c.Derived.PSP != nil {
+		cur = c.Derived.PSP.Current
+	}
+	_, tableErr := s.rates.ContactCost(opp.Level)
+	return &ContactPreview{
+		Cost: rec.Cost, FromTable: tableErr == nil, Target: rec.Target, Lines: rec.ContactModifiers,
+		Current: cur, Enough: cur >= rec.Cost,
+	}, nil
+}
+
+// CostTable is a rule table a power's cost names, with the rows the web
+// builds its controls from (data, not code): the cost bands by level and the
+// modifier rows (kind, code, modifier) a use adds to its score.
+type CostTable struct {
+	Table     string        `json:"table"`
+	MaxLevel  int           `json:"maxLevel"`
+	Bands     []CostBand    `json:"bands"`
+	Modifiers []ContactLine `json:"modifiers"`
+}
+
+// CostBand is one band of the cost table: MinLevel to MaxLevel cost Cost.
+type CostBand struct {
+	MinLevel int `json:"minLevel"`
+	MaxLevel int `json:"maxLevel"`
+	Cost     int `json:"cost"`
+}
+
+// CostTable is the rule table named table, as a power's initial cost names it
+// (PowerDTO.initial_cost_table); domain.ErrNotFound for a name no power's cost
+// carries.
+func (s *service) CostTable(_ context.Context, table string) (CostTable, error) {
+	if table != ContactCostTable {
+		return CostTable{}, fmt.Errorf("cost table %q: %w", table, domain.ErrNotFound)
+	}
+	bands, err := s.rates.ContactCostRows()
+	if err != nil {
+		return CostTable{}, err
+	}
+	rows, err := s.rates.ContactModifierRows()
+	if err != nil {
+		return CostTable{}, err
+	}
+	out := CostTable{Table: table, MaxLevel: ruletablesvc.MaxContactLevel, Bands: make([]CostBand, 0, len(bands)), Modifiers: make([]ContactLine, 0, len(rows))}
+	for _, b := range bands {
+		out.Bands = append(out.Bands, CostBand(b))
+	}
+	for _, r := range rows {
+		out.Modifiers = append(out.Modifiers, ContactLine(r))
 	}
 	return out, nil
 }

@@ -67,12 +67,18 @@ type MaintenanceDTO struct {
 // PowerDTO is one catalogue power. Every text is a language map (ADR 0023);
 // the client picks its language and falls back to English per field.
 type PowerDTO struct {
-	ID               string          `json:"id"`
-	Name             localized.Text  `json:"name"`
-	Discipline       string          `json:"discipline"`
-	Kind             string          `json:"kind"`
-	Score            *ScoreDTO       `json:"score,omitempty"`
-	InitialCost      CostDTO         `json:"initial_cost"`
+	ID          string         `json:"id"`
+	Name        localized.Text `json:"name"`
+	Discipline  string         `json:"discipline"`
+	Kind        string         `json:"kind"`
+	Score       *ScoreDTO      `json:"score,omitempty"`
+	InitialCost CostDTO        `json:"initial_cost"`
+	// InitialCostTable names the rule table that gives the cost (read it at
+	// GET /api/psionics/cost-tables/{table}); InitialCostPlus is what a
+	// contact cost adds once contact is made. Both are omitted when empty;
+	// initial_cost keeps its word or number.
+	InitialCostTable string          `json:"initial_cost_table,omitempty"`
+	InitialCostPlus  int             `json:"initial_cost_plus,omitempty"`
 	Maintenance      *MaintenanceDTO `json:"maintenance,omitempty"`
 	Prerequisites    []string        `json:"prerequisites"`
 	MinLevel         int             `json:"min_level,omitempty"`
@@ -88,9 +94,10 @@ type PowerDTO struct {
 func ToDTO(p catalogue.Power) PowerDTO {
 	out := PowerDTO{
 		ID: p.ID, Name: wire.Text(p.Name), Discipline: p.Discipline, Kind: p.Kind,
-		InitialCost: CostDTO{p.InitialCost}, Prerequisites: append([]string{}, p.Prerequisites...),
-		MinLevel: p.MinLevel,
-		Range:    wire.Text(p.Range), PreparationTime: wire.Text(p.PreparationTime), Area: wire.Text(p.Area),
+		InitialCost: CostDTO{p.InitialCost}, InitialCostTable: p.InitialCost.Table, InitialCostPlus: p.InitialCost.Plus,
+		Prerequisites: append([]string{}, p.Prerequisites...),
+		MinLevel:      p.MinLevel,
+		Range:         wire.Text(p.Range), PreparationTime: wire.Text(p.PreparationTime), Area: wire.Text(p.Area),
 		Description:      wire.Text(p.Description),
 		PowerScoreResult: wire.Text(p.PowerScoreResult), Natural20Result: wire.Text(p.Natural20Result),
 	}

@@ -392,3 +392,41 @@ func TestCharacter_Step12_ServesThePowerUsedThisRound(t *testing.T) {
 		})
 	}
 }
+
+func TestContactPreview_Step9_PostAndCostTableGet(t *testing.T) {
+	h, m := newRouter(t)
+	want := psionicsvc.ContactRequest{
+		Power:     "contact",
+		Opponent:  psionics.Opponent{Target: "Bird", Mind: "open", Level: 7},
+		Distance:  "sight",
+		LifeOrder: "bird",
+	}
+	m.psionics.EXPECT().ContactPreview(mock.Anything, int64(1), want).Return(&psionicsvc.ContactPreview{
+		Cost: 8, FromTable: true, Target: 11, Current: 20, Enough: true,
+		Lines: []psionicsvc.ContactLine{{Kind: "distance", Code: "sight", Modifier: 0}},
+	}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/powers/contact/contact/preview",
+		`{"target":"Bird","mind":"open","level":7,"distance":"sight","lifeOrder":"bird"}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"cost":8,"fromTable":true,"target":11,"lines":[{"kind":"distance","code":"sight","modifier":0}],
+		"current":20,"enough":true}`, rec.Body.String())
+
+	m.psionics.EXPECT().ContactPreview(mock.Anything, int64(1), mock.Anything).Return(nil, psionicsvc.ErrMindClosed).Once()
+	rec = do(h, "POST", "/api/psionics/powers/contact/contact/preview", `{"target":"Orc","mind":"closed"}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"mind_closed"`)
+
+	m.psionics.EXPECT().CostTable(mock.Anything, "contact_cost").Return(psionicsvc.CostTable{
+		Table: "contact_cost", MaxLevel: 20,
+		Bands:     []psionicsvc.CostBand{{MinLevel: 1, MaxLevel: 2, Cost: 2}},
+		Modifiers: []psionicsvc.ContactLine{{Kind: "resistance", Code: "resisting", Modifier: -2}},
+	}, nil).Once()
+	rec = do(h, "GET", "/api/psionics/cost-tables/contact_cost", "")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"table":"contact_cost","maxLevel":20,"bands":[{"minLevel":1,"maxLevel":2,"cost":2}],
+		"modifiers":[{"kind":"resistance","code":"resisting","modifier":-2}]}`, rec.Body.String())
+
+	m.psionics.EXPECT().CostTable(mock.Anything, "nothing").Return(psionicsvc.CostTable{}, domain.ErrNotFound).Once()
+	rec = do(h, "GET", "/api/psionics/cost-tables/nothing", "")
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+}

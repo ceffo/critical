@@ -282,6 +282,14 @@ two power ids in its row of data.
     (mode, target picked from the rows or typed, open or closed, the opponent's defence and the
     DM's two rolls); a defend form (the DM's mode and rolls, keep); the tangent and contact rows
     with their target. Game logic stays in Go: the forms send intent and render the answer.
+    The forms read their controls and preview from the server: `GET /api/powers` adds
+    `initial_cost_table` and `initial_cost_plus` beside `initial_cost` (which keeps its word);
+    `GET /api/psionics/cost-tables/{table}` serves the named table's bands by level and its
+    modifier rows (kind, code, modifier; 404 for a name no cost carries); `POST
+    /api/psionics/powers/{id}/contact/preview` takes the contact's body and answers its cost, whether
+    that is the table's (`fromTable`), the score with its lines, and whether the pool covers it
+    (`enough`), from the same computation as the contact, nothing rolled or written. Test:
+    `ContactPreview_ReportsTheCostAndScoreWithoutRolling`.
     Tests: `PsionicCombat_Step11_Routes` (router: the wire shapes and refusals), the forms' unit
     tests, one e2e flow (raise a defence, attack twice to contact, defend once, undo) in
     `psionic-combat.spec`.

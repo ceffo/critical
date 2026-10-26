@@ -1,5 +1,5 @@
 import type { KnownPowers, PowerPick, PspPool } from "@/types/character";
-import { post, put } from "./http";
+import { post, put, request } from "./http";
 
 /** Saves the whole list of known powers (ADR 0043 step 9), one move the journal's Undo takes back.
  * Answers the known powers as saved; a list over Table 4 or breaking a rule is a 409 naming it. */
@@ -173,4 +173,39 @@ export function contactPower(
   req: ContactRequest,
 ): Promise<{ check: PowerCheckResult; psp: PspPool; logEntryId: number }> {
   return post(`/api/psionics/powers/${encodeURIComponent(id)}/contact`, req);
+}
+
+/** POST /api/psionics/powers/{id}/contact/preview: what the contact would cost and score for the request Contact takes, from the server's own computation; nothing is rolled or written. */
+export interface ContactPreview {
+  cost: number;
+  /** False when `cost` is the DM's (a level the table has no row for). */
+  fromTable: boolean;
+  /** The score to roll under, the contact lines included. */
+  target: number;
+  lines: { kind: string; code: string; modifier: number }[];
+  current: number;
+  enough: boolean;
+}
+
+export function previewContact(
+  id: string,
+  req: ContactRequest,
+): Promise<ContactPreview> {
+  return post(
+    `/api/psionics/powers/${encodeURIComponent(id)}/contact/preview`,
+    req,
+  );
+}
+
+/** GET /api/psionics/cost-tables/{table}: the rule table a power's `initial_cost_table` names, to build the form's controls from. */
+export interface CostTable {
+  table: string;
+  maxLevel: number;
+  bands: { minLevel: number; maxLevel: number; cost: number }[];
+  /** One row per kind and code; the web words the code. */
+  modifiers: { kind: string; code: string; modifier: number }[];
+}
+
+export function getCostTable(table: string): Promise<CostTable> {
+  return request(`/api/psionics/cost-tables/${encodeURIComponent(table)}`);
 }

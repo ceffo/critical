@@ -489,3 +489,86 @@ func TestUse_Step9_TheContactPowerGoesThroughContact(t *testing.T) {
 	_, err := svc.Use(context.Background(), 7, "contact", psionicsvc.UseRequest{Cost: &cost})
 	require.ErrorIs(t, err, psionicsvc.ErrUseContactRoute)
 }
+
+// The preview is Contact's own computation without the roll: Table 29's cost,
+// the score with the lines (Wis 15, 0 and -1: 14), nothing written, and
+// whether the pool covers the cost.
+func TestContactPreview_ReportsTheCostAndScoreWithoutRolling(t *testing.T) {
+	svc, m := newContactSvc(t, telepath(5), nil)
+	m.tables.EXPECT().ContactCost(7).Return(8, nil).Twice()
+	atSight(m)
+	got, err := svc.ContactPreview(context.Background(), 7, contactReq(7))
+	require.NoError(t, err)
+	assert.Equal(t, &psionicsvc.ContactPreview{
+		Cost: 8, FromTable: true, Target: 14, Current: 5, Enough: false,
+		Lines: []psionicsvc.ContactLine{
+			{Kind: ruletablesvc.ContactDistance, Code: "sight", Modifier: 0},
+			{Kind: ruletablesvc.ContactLifeOrder, Code: "mammal", Modifier: -1},
+		},
+	}, got)
+}
+
+// Past the table the DM's cost is the preview's, flagged as not the table's;
+// the refusals before the roll are Contact's.
+func TestContactPreview_PastTheTableAndRefusals(t *testing.T) {
+	t.Run("the DM's cost", func(t *testing.T) {
+		svc, m := newContactSvc(t, telepath(20), nil)
+		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Twice()
+		atSight(m)
+		req := contactReq(21)
+		cost := 13
+		req.Cost = &cost
+		got, err := svc.ContactPreview(context.Background(), 7, req)
+		require.NoError(t, err)
+		assert.Equal(t, 13, got.Cost)
+		assert.False(t, got.FromTable)
+		assert.True(t, got.Enough)
+	})
+	t.Run("no row and no cost", func(t *testing.T) {
+		svc, m := newContactSvc(t, telepath(20), nil)
+		m.tables.EXPECT().ContactCost(21).Return(0, ruletablesvc.ErrLevelOutOfTable).Once()
+		_, err := svc.ContactPreview(context.Background(), 7, contactReq(21))
+		assert.ErrorIs(t, err, psionicsvc.ErrLevelOutOfTable)
+	})
+	t.Run("a closed mind", func(t *testing.T) {
+		svc, _ := newContactSvc(t, telepath(20), nil)
+		req := contactReq(7)
+		req.Opponent.Mind = psionics.MindClosed
+		_, err := svc.ContactPreview(context.Background(), 7, req)
+		assert.ErrorIs(t, err, psionicsvc.ErrMindClosed)
+	})
+	t.Run("a power whose cost names no table", func(t *testing.T) {
+		svc, _ := newContactSvc(t, telepath(20), nil)
+		req := contactReq(7)
+		req.Power = "inflict_pain"
+		_, err := svc.ContactPreview(context.Background(), 7, req)
+		assert.ErrorIs(t, err, psionicsvc.ErrNotAContactPower)
+	})
+	t.Run("an unknown distance", func(t *testing.T) {
+		svc, _ := newContactSvc(t, telepath(20), nil)
+		req := contactReq(7)
+		req.Distance = "far"
+		_, err := svc.ContactPreview(context.Background(), 7, req)
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "distance", fe.Field)
+	})
+}
+
+// The cost table is served from the rule tables' rows, whatever the web does
+// with them; a name no power's cost carries is not found.
+func TestCostTable_ServesTheBandsAndModifierRows(t *testing.T) {
+	svc, m := newContactSvc(t, telepath(20), nil)
+	m.tables.EXPECT().ContactCostRows().Return([]ruletablesvc.ContactCostRow{{MinLevel: 1, MaxLevel: 2, Cost: 2}, {MinLevel: 3, MaxLevel: 4, Cost: 3}}, nil).Once()
+	m.tables.EXPECT().ContactModifierRows().Return([]ruletablesvc.ContactModifierRow{{Kind: "distance", Code: "sight", Modifier: 0}, {Kind: "resistance", Code: "resisting", Modifier: -2}}, nil).Once()
+	got, err := svc.CostTable(context.Background(), psionicsvc.ContactCostTable)
+	require.NoError(t, err)
+	assert.Equal(t, psionicsvc.CostTable{
+		Table: "contact_cost", MaxLevel: ruletablesvc.MaxContactLevel,
+		Bands:     []psionicsvc.CostBand{{MinLevel: 1, MaxLevel: 2, Cost: 2}, {MinLevel: 3, MaxLevel: 4, Cost: 3}},
+		Modifiers: []psionicsvc.ContactLine{{Kind: "distance", Code: "sight"}, {Kind: "resistance", Code: "resisting", Modifier: -2}},
+	}, got)
+
+	_, err = svc.CostTable(context.Background(), "nothing")
+	assert.ErrorIs(t, err, domain.ErrNotFound)
+}

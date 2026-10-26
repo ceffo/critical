@@ -11,8 +11,9 @@
 set -euo pipefail
 pr="${1:?usage: land.sh <pr> [tab]}"
 main="${CRITICAL_MAIN:-/home/moncef/code/critical}"
-repo="${CRITICAL_REPO:-ceffo/critical}"
 cd "$main"
+# The repo follows the checkout: CRITICAL_MAIN alone once looked up a rulebooks PR number in the app repo.
+repo="${CRITICAL_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
 refuse() { echo "REFUSED #$pr: $*"; exit 2; }
 j=$(gh pr view "$pr" -R "$repo" --json state,mergeable,mergeStateStatus,headRefOid,statusCheckRollup)
 [ "$(jq -r .state <<<"$j")" = OPEN ] || refuse "state $(jq -r .state <<<"$j")"

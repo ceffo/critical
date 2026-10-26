@@ -57,7 +57,8 @@ fresh_report() { # the agent's report newer than the supervisor's last prompt fo
   local nc; nc=$(shopt -p nocaseglob); shopt -s nocaseglob
   # The newest of all markers is the last prompt: a report must be newer than it.
   # Exact item only (a "-" or the end after it), so item 3 never matches item 34's files.
-  p=$(ls -td "$W"/.prompt-"$item" "$W"/.prompt-"$item"-* "$W"/.prompt-*-"$item" \
+  # A literal path is never globbed, so nocaseglob misses a lower-case .prompt-cri-n: name both cases (sup-94).
+  p=$(ls -td "$W"/.prompt-"$item" "$W"/.prompt-"${item,,}" "$W"/.prompt-"$item"-* "$W"/.prompt-*-"$item" \
     "$B"/*"$item"-[0-9]*.md "$B"/*"$item".md 2>/dev/null | head -1)
   [ -n "$p" ] || { $nc; return 1; }
   for f in "$R"/"$item"-*.md "$R"/*-"$item".md "$R"/"$item".md; do

@@ -94,35 +94,34 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   const journal = page.getByRole("region", { name: "Journal", exact: true });
   const pool = page.getByTestId("psp-value");
   const before = Number((await pool.innerText()).split("/")[0]);
-  const dialog = page.getByRole("dialog");
+  const bar = page.getByTestId("action-bar");
   let resultText = "";
   for (let attempt = 0; attempt < 6; attempt++) {
     await row.getByRole("button", { name: "Utiliser Intensification" }).click();
-    await dialog.getByLabel("Coût initial (PFP)").fill("3");
+    await bar.getByLabel("Coût initial", { exact: true }).fill("3");
     // A power with no score of its own takes the player's, set high so the check succeeds.
-    await dialog.getByLabel("Score du pouvoir").fill("25");
-    await dialog
-      .getByRole("button", { name: "Ajouter un modificateur" })
-      .click();
-    await dialog.getByLabel("Valeur du modificateur 1").fill("2");
-    await dialog.getByLabel("Raison du modificateur 1").fill("calme");
+    await bar.getByLabel("Score du pouvoir").fill("25");
+    // The tab's adjustment is the labelled modifier: +2.
+    const value = page.getByTestId("power-adjustment");
+    for (let i = 0; i < 2 && (await value.innerText()) !== "+2"; i++)
+      await page
+        .getByRole("button", { name: "Augmenter l’ajustement" })
+        .click();
     for (const vp of [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
-      await expectNoClippedText(dialog, `use dialog ${vp.width}`);
+      await expectNoClippedText(bar, `use bar ${vp.width}`);
       if (attempt === 0)
         await snap(page, `use-dialog-${vp.width}x${vp.height}`);
     }
-    await dialog
-      .getByRole("button", { name: "Utiliser Intensification" })
-      .click();
-    const result = dialog.getByTestId("use-result");
+    await bar.getByRole("button", { name: "Utiliser Intensification" }).click();
+    const result = bar.getByTestId("use-result");
     await expect(result).toBeVisible();
     resultText = await result.innerText();
     await snap(page, `use-result-${attempt}`);
-    await page.keyboard.press("Escape");
+    await bar.getByRole("button", { name: "Fermer" }).click();
     if (!resultText.includes("20 naturel")) break;
   }
   expect(resultText).toContain("PFP");
@@ -141,7 +140,7 @@ test("use a known power, keep it up across Next Round, stop it", async ({
     .getByRole("listitem")
     .filter({ hasText: "Intensification" })
     .first();
-  await expect(check).toContainText("calme");
+  await expect(check).toContainText("Ajustement");
   await snap(page, "after-use-1920");
 
   // Next Round charges the upkeep, named in French.

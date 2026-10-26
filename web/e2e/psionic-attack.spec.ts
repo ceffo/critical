@@ -12,6 +12,43 @@ import {
   undoEntry,
 } from "./helpers";
 import { expectNoClippedText } from "./noClip";
+import type { Page } from "@playwright/test";
+
+// The Act > Powers tab: the target and the adjustment are set on the tab, the attack is sent from the
+// action bar that opens under the rows.
+const rowOf = (page: Page, name: string) =>
+  page.getByTestId("power-row").filter({ hasText: name });
+const bar = (page: Page) => page.getByTestId("action-bar");
+
+/** Names the target on the Target band (and its level when given). */
+async function aim(page: Page, target: string, level?: string) {
+  const band = page.getByTestId("target-band");
+  await band.getByTestId("target-name").fill(target);
+  if (level) await band.getByLabel("Level", { exact: true }).fill(level);
+}
+
+/** Raises the tab's adjustment to +20 (both checks pass whatever the die, bar a natural 20). */
+async function adjustToMax(page: Page) {
+  const value = page.getByTestId("power-adjustment");
+  const more = page.getByRole("button", { name: "Raise the adjustment" });
+  for (let i = 0; i < 20 && (await value.innerText()) !== "+20"; i++)
+    await more.click();
+}
+
+/** Opens the bar of Mind Thrust and returns it. */
+async function openAttack(
+  page: Page,
+  name = "Mind Thrust",
+  verb = "Attack with",
+) {
+  // The row's button toggles the bar: leave it alone when this power's is already open.
+  if ((await bar(page).getByTestId("attack-form").count()) === 0)
+    await rowOf(page, name)
+      .getByRole("button", { name: `${verb} ${name}` })
+      .click();
+  await expect(bar(page).getByTestId("attack-form")).toBeVisible();
+  return bar(page);
+}
 
 // An attack mode used on a closed mind from the Powers panel (ADR 0044 step 7): the form, the answer
 // with its checks and the tangents, the opponent's row on the active effects and the journal line.
@@ -37,28 +74,23 @@ test.describe("a psionicist attacking a closed mind", () => {
     await nextRound(page);
     await openActPowers(page);
 
-    const row = page
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Thrust" });
-    await row.getByRole("button", { name: "Attack with Mind Thrust" }).click();
-    const dialog = page.getByRole("dialog");
-    const submit = dialog.getByRole("button", { name: "Attack with" });
+    const attackBar = await openAttack(page);
+    const submit = attackBar.getByRole("button", { name: "Attack with" });
+    // No target named: nothing to send.
     await expect(submit).toBeDisabled();
-    await dialog.getByLabel("Opponent").fill("Orc");
-    await dialog.getByLabel("Level").fill("5");
-    await dialog.getByLabel("Add a modifier").click();
-    await dialog.getByLabel("Modifier 1 value").fill("20");
-    await dialog.getByLabel("Modifier 1 reason").fill("test");
+    await aim(page, "Orc", "5");
+    await adjustToMax(page);
+    await expect(submit).toBeEnabled();
     for (const vp of [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
-      await expectNoClippedText(dialog, `attack dialog ${vp.width}`);
+      await expectNoClippedText(attackBar, `attack bar ${vp.width}`);
       await snap(page, `attack-form-${vp.width}x${vp.height}`);
     }
     await submit.click();
-    const result = dialog.getByTestId("attack-result");
+    const result = attackBar.getByTestId("attack-result");
     await expect(result).toContainText("Check 1");
     await expect(
       result.locator("[data-winner=attacker]").first(),
@@ -69,10 +101,9 @@ test.describe("a psionicist attacking a closed mind", () => {
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
-      await expectNoClippedText(dialog, `attack result ${vp.width}`);
+      await expectNoClippedText(attackBar, `attack result ${vp.width}`);
       await snap(page, `attack-result-${vp.width}x${vp.height}`);
     }
-    await page.keyboard.press("Escape");
 
     // The tangent row names the opponent on the active effects.
     await page.getByTestId("rail").getByRole("button", { name: "Act" }).click();
@@ -94,26 +125,18 @@ test.describe("a psionicist attacking a closed mind", () => {
     await chooseLanguage(page, "fr");
     await expect(effect).toContainText(/tangentes?|contact/);
     await openActPowers(page);
-    await page
-      .getByTestId("power-row")
-      .filter({ hasText: "Pression mentale" })
-      .getByRole("button", { name: "Attaquer avec Pression mentale" })
-      .click();
+    const frBar = await openAttack(page, "Pression mentale", "Attaquer avec");
     await expect(
-      page.getByRole("dialog").getByLabel("Adversaire"),
+      frBar.getByRole("button", { name: /^Attaquer avec/ }),
     ).toBeVisible();
     for (const vp of [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
-      await expectNoClippedText(
-        page.getByRole("dialog"),
-        `attack fr ${vp.width}`,
-      );
+      await expectNoClippedText(frBar, `attack fr ${vp.width}`);
       await snap(page, `attack-form-fr-${vp.width}x${vp.height}`);
     }
-    await page.keyboard.press("Escape");
     await page
       .getByTestId("rail")
       .getByRole("button", { name: "Agir" })
@@ -145,22 +168,16 @@ test.describe("a psionicist attacking the same mind again", () => {
     const rail = page.getByTestId("rail");
     await openActPowers(page);
 
-    // One attack with a +20 modifier (both checks pass), then the dialog closed.
+    // One attack with a +20 adjustment (both checks pass), then the bar closed.
     async function attack(target: string) {
-      await page
-        .getByTestId("power-row")
-        .filter({ hasText: "Mind Thrust" })
-        .getByRole("button", { name: "Attack with Mind Thrust" })
-        .click();
-      const dialog = page.getByRole("dialog");
-      await dialog.getByLabel("Opponent").fill(target);
-      await dialog.getByLabel("Add a modifier").click();
-      await dialog.getByLabel("Modifier 1 value").fill("20");
-      await dialog.getByRole("button", { name: "Attack with" }).click();
-      const tangents = dialog.getByTestId("attack-tangents");
+      await aim(page, target);
+      await adjustToMax(page);
+      const attackBar = await openAttack(page);
+      await attackBar.getByRole("button", { name: "Attack with" }).click();
+      const tangents = attackBar.getByTestId("attack-tangents");
       await expect(tangents).toBeVisible();
       const text = (await tangents.textContent()) ?? "";
-      await page.keyboard.press("Escape");
+      await attackBar.getByRole("button", { name: "Close" }).click();
       return text;
     }
 
@@ -168,17 +185,11 @@ test.describe("a psionicist attacking the same mind again", () => {
     // attack wins one or two tangents.
     expect(await attack("Orc")).toMatch(/Orc: tangents 0 → [12]/);
 
-    // The held mind is on the list.
-    await page
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Thrust" })
-      .getByRole("button", { name: "Attack with Mind Thrust" })
-      .click();
+    // The held mind is on the Target band.
     await expect(
-      page.getByRole("dialog").locator('#attack-targets option[value="Orc"]'),
+      page.getByTestId("held-mind").filter({ hasText: "Orc" }),
     ).toHaveCount(1);
     await snap(page, "attack-form-picker");
-    await page.keyboard.press("Escape");
 
     // Another target ends the first one's tangent row; the journal says so; Undo brings it back.
     expect(await attack("Goblin")).toContain("tangents on Orc ended");

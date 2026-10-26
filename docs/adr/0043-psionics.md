@@ -11,6 +11,8 @@ definitions, the feature kinds and the lookup of ADR 0040, the class entries of 
 racial lift of [ADR 0041](0041-ruleset.md). Layer 2 (psionic combat: attack and defence modes,
 contact) is named here as later steps (20 to 23), not decided.
 
+_Amended by [ADR 0047](0047-psionicist-screens.md) (the design round, accepted 2026-10-26), on implementation: step 6's Table 6 gains the rejuvenating row (12 an hour), shown and accepted only with the Rejuvenation proficiency (`requires_proficiency`), and a rest may stop the power it pays and recover in one transaction._
+
 ## Context
 
 The table's human thief/psionicist (multi-class, around level 15, ADR 0042 step 17) cannot be

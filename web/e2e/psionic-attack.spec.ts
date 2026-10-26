@@ -169,7 +169,9 @@ test.describe("a psionicist attacking the same mind again", () => {
       return text;
     }
 
-    expect(await attack("Orc")).toMatch(/Orc: tangents 0 → 2/);
+    // A natural 20 fails a check whatever the modifier (the dice are the server's), so the first
+    // attack wins one or two tangents.
+    expect(await attack("Orc")).toMatch(/Orc: tangents 0 → [12]/);
 
     // The held mind is on the list.
     await page
@@ -197,9 +199,13 @@ test.describe("a psionicist attacking the same mind again", () => {
     await expect(rows("Orc")).toHaveCount(1);
     await expect(rows("Goblin")).toHaveCount(0);
 
-    // Typed in lower case it is the same row, under the row's own label: the third tangent is contact.
+    // Typed in lower case it is the same row, under the row's own label: more tangents until contact
+    // (a first attack that won one leaves a second to make).
     await rail.getByRole("button", { name: "Powers" }).click();
-    const typed = await attack("orc");
+    let typed = await attack("orc");
+    for (let i = 0; i < 3 && !typed.includes("contact made"); i++) {
+      typed = await attack("orc");
+    }
     expect(typed).toContain("contact made");
     await rail.getByRole("button", { name: "Act" }).click();
     await expect(rows("Orc")).toHaveCount(1);

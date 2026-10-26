@@ -358,6 +358,12 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     `Maintenance_Step14_CountedOnTheRowAcrossEndCombat` (used in round 5, End combat, 3 Next
     Rounds charge 3 times, then 1 h charges 60 as previewed), `Maintenance_Step14_UnpaidNextRoundUndoRedo`,
     `Maintenance_Step13_CheckAndChargeUndoRedo`, `Maintenance_Step13_ReactivationResetsTheCount`.
+    As built (2026-10-26): `GET /api/round/advance/preview` answers what the next Next Round would
+    charge, from the same rule and writing nothing: the total, the PSPs before and after, and one line
+    per maintained row (its charge, 0 when its period is not due or a contact is free; `ends` when the
+    PSPs cannot pay it). The "Maintained" card (ADR 0047 item 10) shows it; no client does the sum.
+    Test: `AdvanceRound_Step14_PreviewChargesWhatNextRoundCharges` (buffsvc: a period of 2 charges on the
+    due round only, and the preview equals the entry's charge).
 
 15. **Passing time charges maintenance** (amends ADR 0005 steps 6 and 7). Passing `n` rounds
     charges each maintained power for every period due in them, in round order, ending a power at

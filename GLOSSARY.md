@@ -295,7 +295,8 @@ _Code_: Cost
 
 **Maintenance cost** (fr: coût de maintien):
 The PSPs a maintained power costs each round (or its period) to keep it working. A successful check puts the power on the buff list as an untimed row with its cost and period; Next Round charges it (never in the round it started), and the row ends when the PSPs left cannot pay; stopping it is dismissing the row. The catalogue holds the cost (or `variable`, entered with the use) and the period. [ADR 0043](docs/adr/0043-psionics.md) steps 13 to 16.
-_Code_: Maintenance, BuffEffect.MaintenanceCost
+The next Next Round's charge is previewed by the server, per maintained row and in total with the PSPs before and after (`GET /api/round/advance/preview`), so the "Maintained" card of Act > Powers shows what pressing Next Round will spend. [ADR 0047](docs/adr/0047-psionicist-screens.md) item 10.
+_Code_: Maintenance, BuffEffect.MaintenanceCost, NextRoundPreview, RowCharge
 
 **Defence mode** (fr: mode de défense) _(future)_:
 A telepathic power that defends against an attack mode in psionic combat. [ADR 0043](docs/adr/0043-psionics.md) step 20.

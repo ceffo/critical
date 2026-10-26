@@ -230,6 +230,19 @@
     }
   },
   "powers": {
+    "maintained": {
+      "title": "Maintained",
+      "stopNamed": "Stop {{name}}",
+      "tangent": "Tangent · {{target}}",
+      "contact": "Contact · {{target}}",
+      "free": "free",
+      "standing": "standing",
+      "freeWhileUsed": "free while a power uses it",
+      "ends": "not enough PSPs: ends next round",
+      "balance": "Next round",
+      "balanceValue": "{{before}} → {{after}} PSPs",
+      "charge": "−{{count}}"
+    },
     "tab": {
       "score": "Score",
       "scoreUnknown": "–",

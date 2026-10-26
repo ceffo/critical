@@ -230,6 +230,19 @@
     }
   },
   "powers": {
+    "maintained": {
+      "title": "Maintenus",
+      "stopNamed": "Arrêter {{name}}",
+      "tangent": "Tangente · {{target}}",
+      "contact": "Contact · {{target}}",
+      "free": "gratuit",
+      "standing": "permanent",
+      "freeWhileUsed": "gratuit tant qu’un pouvoir l’utilise",
+      "ends": "PFP insuffisants : prend fin au prochain tour",
+      "balance": "Tour suivant",
+      "balanceValue": "{{before}} → {{after}} PFP",
+      "charge": "−{{count}}"
+    },
     "tab": {
       "score": "Score",
       "scoreUnknown": "–",

@@ -76,6 +76,12 @@ type maintenance struct {
 	unpaid  []BuffEffect
 	charges []maintenanceCharge
 	spent   int
+	// rows has one line per maintained row, in the list's order: what the
+	// round(s) charged it and whether it ended (the preview reads it).
+	rows []RowCharge
+	// start is the PSPs the charge began from, read only when a row was due.
+	start     int
+	startRead bool
 }
 
 // powerNames is the localized name of every power that paid or ended, by id;
@@ -159,9 +165,11 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 		if c.Derived.PSP != nil {
 			left = c.Derived.PSP.Current
 		}
+		m.start, m.startRead = left, true
 	}
 	rows := slices.Clone(active)
 	paid := make([]int, len(rows))
+	free := make([]bool, len(rows))
 	ended := make([]bool, len(rows))
 	// ADR 0044 step 10: a contact row is free in a round where a power kept
 	// up through it is still on, so each round the contact rows come after
@@ -181,7 +189,10 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 				if ended[i] || !b.Maintained() || b.ContactRow() != contacts {
 					continue
 				}
-				if b.MaintenanceDue() && (!contacts || !freeContact(*b)) {
+				if b.MaintenanceDue() && contacts && freeContact(*b) {
+					free[i] = true
+				}
+				if b.MaintenanceDue() && !free[i] {
 					if b.MaintenanceCost > left {
 						ended[i] = true
 						continue
@@ -194,6 +205,9 @@ func (s *service) chargeMaintenance(ctx context.Context, characterID int64, acti
 		}
 	}
 	for i, b := range rows {
+		if b.Maintained() {
+			m.rows = append(m.rows, RowCharge{BuffID: b.ID, Cost: paid[i], Free: free[i], Ends: ended[i]})
+		}
 		if paid[i] > 0 {
 			m.spent += paid[i]
 			m.charges = append(m.charges, maintenanceCharge{PowerID: b.PowerID, Target: b.Target, Cost: paid[i]})
@@ -224,4 +238,52 @@ func (b BuffEffect) firstDue(rounds int) int {
 		return -1
 	}
 	return next - k
+}
+
+// RowCharge is what the next Next Round does to one maintained row: the PSPs
+// it charges (0 when its period is not due, or a contact row is free while a
+// power on its target is kept up) and whether it would end unpaid.
+type RowCharge struct {
+	BuffID string
+	Cost   int
+	// Free is a due contact row that pays nothing because a power kept up
+	// through its mind is still on (ADR 0044 step 10).
+	Free bool
+	Ends bool
+}
+
+// NextRoundPreview is what Next Round would charge (ADR 0043 step 14): the
+// total, and each maintained row's share, in the list's order.
+type NextRoundPreview struct {
+	// PSPBefore is the character's current PSPs and PSPAfter what Next Round
+	// leaves (PSPBefore - PSPSpent), so no client does that sum.
+	PSPBefore, PSPAfter int
+	PSPSpent            int
+	Rows                []RowCharge
+}
+
+// PreviewNextRound runs Next Round's maintenance on the current buffs,
+// writing and logging nothing: the same rule as AdvanceRound (ADR 0043 step
+// 14), so the PSPs shown before pressing it are the ones it charges.
+func (s *service) PreviewNextRound(ctx context.Context, characterID int64) (NextRoundPreview, error) {
+	buffs, err := s.dal.GetActiveBuffs(ctx, characterID)
+	if err != nil {
+		return NextRoundPreview{}, fmt.Errorf("get active buffs: %w", err)
+	}
+	active, _ := advanceRoundBuffs(buffs)
+	m, err := s.chargeMaintenance(ctx, characterID, active, 1)
+	if err != nil {
+		return NextRoundPreview{}, err
+	}
+	before := m.start
+	if !m.startRead {
+		c, err := s.chars.GetCharacter(ctx, characterID)
+		if err != nil {
+			return NextRoundPreview{}, fmt.Errorf("get character: %w", err)
+		}
+		if c.Derived.PSP != nil {
+			before = c.Derived.PSP.Current
+		}
+	}
+	return NextRoundPreview{PSPBefore: before, PSPAfter: before - m.spent, PSPSpent: m.spent, Rows: m.rows}, nil
 }

@@ -1,5 +1,6 @@
 import type {
   Initiative,
+  NextRoundPreview,
   PassTimePreview,
   RoundAdvanceResponse,
   RoundResponse,
@@ -12,6 +13,13 @@ export function fetchRound(): Promise<RoundResponse> {
 
 export function advanceRound(): Promise<RoundAdvanceResponse> {
   return post<RoundAdvanceResponse>("/api/round/advance");
+}
+
+/** What the next Next Round would charge, row by row and in total (ADR 0043 step 14). */
+export function fetchNextRoundPreview(
+  init?: RequestInit,
+): Promise<NextRoundPreview> {
+  return request<NextRoundPreview>("/api/round/advance/preview", init);
 }
 
 /** Pop the round's initiative entry and roll again (409 when another entry is newer). */

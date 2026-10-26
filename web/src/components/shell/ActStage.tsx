@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { ActionArea } from "@/components/actions/ActionArea";
 import { CombatLog } from "@/components/dashboard/CombatLog";
 import { JournalBar } from "@/components/dashboard/JournalBar";
+import { MaintainedPanel } from "@/components/powers/tab/MaintainedCard";
 import { ResultCard } from "@/components/dashboard/ResultCard";
 import {
   clampJournalHeight,
@@ -140,7 +141,10 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
         data-testid="now-band"
       >
         <ActionArea onOpenInventory={onOpenInventory} />
-        <ResultCard />
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+          <ResultCard />
+          <MaintainedPanel />
+        </div>
       </div>
       <div className="flex h-6 shrink-0 items-center justify-center">
         <div

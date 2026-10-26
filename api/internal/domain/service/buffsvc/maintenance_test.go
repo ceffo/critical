@@ -2,6 +2,8 @@ package buffsvc_test
 
 import (
 	"context"
+	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -291,4 +293,181 @@ func TestMoveRound_Step14_ClosesTheActivationRound(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, []string{buffsvc.StateKeyRound}, snapKeys(f.entries[0]))
 	})
+}
+
+// ADR 0043 step 14: the preview is what the next Next Round charges, row by
+// row, with nothing written. A period of 2 charges on the due round only.
+func TestAdvanceRound_Step14_PreviewChargesWhatNextRoundCharges(t *testing.T) {
+	ctx := context.Background()
+	every := maintained("a", "levitation", 3, 1, 1)
+	second := maintained("b", "clairvoyance", 5, 2, 1)  // 1 kept: not due yet
+	due := maintained("c", "ballistic_attack", 4, 2, 2) // 2 kept: due
+	plain := buffsvc.BuffEffect{ID: "p", Name: "Bless", Duration: 5}
+
+	t.Run("each row's share, the total, and the due round only", func(t *testing.T) {
+		f := newFixture(t) // mocks fail on any Record or Save
+		f.pspIs(20)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every, second, plain, due}, nil).Once()
+
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+
+		require.NoError(t, err)
+		assert.Equal(t, 7, p.PSPSpent, "3 + 0 + 4")
+		assert.Equal(t, 20, p.PSPBefore)
+		assert.Equal(t, 13, p.PSPAfter)
+		assert.Equal(t, []buffsvc.RowCharge{{BuffID: "a", Cost: 3}, {BuffID: "b"}, {BuffID: "c", Cost: 4}}, p.Rows)
+		assert.Zero(t, f.tx.calls, "no transaction")
+	})
+
+	t.Run("a row the PSPs left cannot pay would end", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(2)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every}, nil).Once()
+
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+
+		require.NoError(t, err)
+		assert.Zero(t, p.PSPSpent)
+		assert.Equal(t, []buffsvc.RowCharge{{BuffID: "a", Ends: true}}, p.Rows)
+	})
+
+	t.Run("the preview equals the entry's charge", func(t *testing.T) {
+		f := newFixture(t)
+		f.pspIs(20)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{every, second, due}, nil).Once()
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+		require.NoError(t, err)
+
+		_, _, e := f.advances(t, []buffsvc.BuffEffect{every, second, due}, 4)
+
+		assert.Equal(t, -p.PSPSpent, e.PSPDelta)
+	})
+}
+
+// contact is a contact row on a mind (no power, no tangent count).
+func contact(id, target string, cost, kept int) buffsvc.BuffEffect {
+	return buffsvc.BuffEffect{ID: id, Name: "Contact", Target: target, MaintenanceCost: cost, MaintenancePeriod: 1, RoundsKept: kept}
+}
+
+// onMind is a kept-up power that runs through a mind.
+func onMind(b buffsvc.BuffEffect, target string) buffsvc.BuffEffect {
+	b.Target = target
+	return b
+}
+
+// entryShares reads what Next Round's entry charged each row, by the ids the
+// preview uses: paid by buff id, and the ids that ended unpaid.
+func entryShares(t *testing.T, buffs []buffsvc.BuffEffect, e actionlog.NewEntry) (paid map[string]int, ended map[string]bool) {
+	t.Helper()
+	var p struct {
+		Maintenance []struct {
+			PowerID string `json:"powerId"`
+			Target  string `json:"target"`
+			Cost    int    `json:"cost"`
+		} `json:"maintenance"`
+		Unpaid        []string `json:"maintenanceUnpaid"`
+		UnpaidTargets []string `json:"unpaidTargets"`
+	}
+	require.NoError(t, json.Unmarshal(e.Payload, &p))
+	paid, ended = map[string]int{}, map[string]bool{}
+	for _, b := range buffs {
+		for _, c := range p.Maintenance {
+			if c.PowerID == b.PowerID && c.Target == b.Target {
+				paid[b.ID] = c.Cost
+			}
+		}
+		if b.PowerID != "" && slices.Contains(p.Unpaid, b.PowerID) {
+			ended[b.ID] = true
+		}
+		if b.PowerID == "" && b.Target != "" && slices.Contains(p.UnpaidTargets, b.Target) {
+			ended[b.ID] = true
+		}
+	}
+	return paid, ended
+}
+
+// The preview, row by row, is what the real Next Round then charges: the PSPs,
+// the free contact, and the rows that end unpaid.
+func TestPreviewNextRound_MatchesNextRoundPerRow(t *testing.T) {
+	ctx := context.Background()
+	cases := []struct {
+		name  string
+		buffs []buffsvc.BuffEffect
+		psp   int
+		free  map[string]bool
+	}{
+		{"a fresh contact with no power is not free (and not due)", []buffsvc.BuffEffect{contact("c", "Gardien", 2, 0)}, 20, nil},
+		{"a due contact with no power pays", []buffsvc.BuffEffect{contact("c", "Gardien", 2, 1)}, 20, nil},
+		{"a due contact beside a power on its mind is free", []buffsvc.BuffEffect{onMind(maintained("p", "mind_thrust", 3, 1, 1), "Gardien"), contact("c", "Gardien", 2, 1)}, 20, map[string]bool{"c": true}},
+		{"a contact on another mind than the power's pays", []buffsvc.BuffEffect{onMind(maintained("p", "mind_thrust", 3, 1, 1), "Autre"), contact("c", "Gardien", 2, 1)}, 20, nil},
+		{"period 2 at RoundsKept 0", []buffsvc.BuffEffect{maintained("p", "levitation", 4, 2, 0)}, 20, nil},
+		{"period 2 at RoundsKept 1", []buffsvc.BuffEffect{maintained("p", "levitation", 4, 2, 1)}, 20, nil},
+		{"period 2 at RoundsKept 2", []buffsvc.BuffEffect{maintained("p", "levitation", 4, 2, 2)}, 20, nil},
+		{"PSPs short: the power ends, a cheaper row still pays", []buffsvc.BuffEffect{maintained("a", "levitation", 5, 1, 1), maintained("b", "clairvoyance", 2, 1, 1)}, 3, nil},
+		{"PSPs short: an unpaid contact ends", []buffsvc.BuffEffect{contact("c", "Gardien", 4, 1)}, 3, nil},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.pspIs(tc.psp)
+			f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(tc.buffs, nil).Once()
+			p, err := f.svc.PreviewNextRound(ctx, charID)
+			require.NoError(t, err)
+
+			g := newFixture(t)
+			g.pspIs(tc.psp)
+			_, _, e := g.advances(t, tc.buffs, 4)
+			paid, ended := entryShares(t, tc.buffs, e)
+
+			assert.Equal(t, -p.PSPSpent, e.PSPDelta, "the total")
+			require.Len(t, p.Rows, len(tc.buffs))
+			for i, r := range p.Rows {
+				assert.Equal(t, tc.buffs[i].ID, r.BuffID)
+				assert.Equal(t, paid[r.BuffID], r.Cost, "row %s charge", r.BuffID)
+				assert.Equal(t, ended[r.BuffID], r.Ends, "row %s ends", r.BuffID)
+				assert.Equal(t, tc.free[r.BuffID], r.Free, "row %s free", r.BuffID)
+			}
+		})
+	}
+}
+
+// Stopping the power that kept a contact free makes the contact pay at the
+// next preview.
+func TestPreviewNextRound_ContactPaysOnceThePowerIsStopped(t *testing.T) {
+	ctx := context.Background()
+	power := onMind(maintained("p", "mind_thrust", 3, 1, 1), "Gardien")
+	link := contact("c", "Gardien", 2, 1)
+	preview := func(buffs ...buffsvc.BuffEffect) buffsvc.NextRoundPreview {
+		f := newFixture(t)
+		f.pspIs(20)
+		f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return(buffs, nil).Once()
+		p, err := f.svc.PreviewNextRound(ctx, charID)
+		require.NoError(t, err)
+		return p
+	}
+
+	with := preview(power, link)
+	assert.Equal(t, 3, with.PSPSpent, "the power only")
+	assert.True(t, with.Rows[1].Free)
+
+	without := preview(link)
+	assert.Equal(t, 2, without.PSPSpent)
+	assert.False(t, without.Rows[0].Free)
+	assert.Equal(t, 2, without.Rows[0].Cost)
+}
+
+// The PSPs the preview starts from are the ones the charge read: one read of
+// the character.
+func TestPreviewNextRound_ReadsTheCharacterOnce(t *testing.T) {
+	f := newFixture(t)
+	f.chars.EXPECT().GetCharacter(mock.Anything, charID).Return(&charactersvc.Character{
+		ID: charID, Derived: charactersvc.Derived{PSP: &charactersvc.PSPPool{Current: 9, Max: 50}},
+	}, nil).Once()
+	f.dal.EXPECT().GetActiveBuffs(mock.Anything, charID).Return([]buffsvc.BuffEffect{maintained("a", "levitation", 3, 1, 1)}, nil).Once()
+
+	p, err := f.svc.PreviewNextRound(context.Background(), charID)
+
+	require.NoError(t, err)
+	assert.Equal(t, 9, p.PSPBefore)
+	assert.Equal(t, 6, p.PSPAfter)
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/storage/memory"
 )
@@ -464,5 +465,8 @@ func TestRecover_ADR0047Item6_MultiClassPickGatesMeditating(t *testing.T) {
 		state, err := bs.Psionics.Recover(ctx, id, 2, "meditating")
 		require.NoError(t, err)
 		assert.Equal(t, 81+24, state.Current)
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		assert.Contains(t, c.Derived.PSP.Recovery, ruletablesvc.PSPRecoveryRow{Activity: "meditating", PerHour: 12, RequiresProficiency: "rejuvenation"})
 	})
 }

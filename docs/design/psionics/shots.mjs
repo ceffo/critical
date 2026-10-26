@@ -127,8 +127,10 @@ if (failed) {
  * other language and size, for review from another machine (`just design-serve psionics`). */
 function writeGallery() {
   const esc = (t) => t.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  // A version stamp per run: the server sends no cache headers, so a reload would keep old shots.
+  const v = Date.now().toString(36);
   const sections = GALLERY.map(([id, line]) => {
-    const f = (lang, size) => `${id}--${lang}-${size}.png`;
+    const f = (lang, size) => `${id}--${lang}-${size}.png?v=${v}`;
     const links = [["en", "1920x1080"], ["fr", "2560x1440"], ["en", "2560x1440"]]
       .map(([lang, size]) => `<a href="${f(lang, size)}">${lang} ${size}</a>`)
       .join(" · ");

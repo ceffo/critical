@@ -92,6 +92,67 @@ func (_c *MockSVC_Attack_Call) RunAndReturn(run func(context.Context, int64, psi
 	return _c
 }
 
+// AttackPreview provides a mock function with given fields: ctx, characterID, defence, modifiers
+func (_m *MockSVC) AttackPreview(ctx context.Context, characterID int64, defence string, modifiers []psionicsvc.Modifier) (*psionicsvc.AttackScores, error) {
+	ret := _m.Called(ctx, characterID, defence, modifiers)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AttackPreview")
+	}
+
+	var r0 *psionicsvc.AttackScores
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []psionicsvc.Modifier) (*psionicsvc.AttackScores, error)); ok {
+		return rf(ctx, characterID, defence, modifiers)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, []psionicsvc.Modifier) *psionicsvc.AttackScores); ok {
+		r0 = rf(ctx, characterID, defence, modifiers)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.AttackScores)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, []psionicsvc.Modifier) error); ok {
+		r1 = rf(ctx, characterID, defence, modifiers)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AttackPreview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AttackPreview'
+type MockSVC_AttackPreview_Call struct {
+	*mock.Call
+}
+
+// AttackPreview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - defence string
+//   - modifiers []psionicsvc.Modifier
+func (_e *MockSVC_Expecter) AttackPreview(ctx interface{}, characterID interface{}, defence interface{}, modifiers interface{}) *MockSVC_AttackPreview_Call {
+	return &MockSVC_AttackPreview_Call{Call: _e.mock.On("AttackPreview", ctx, characterID, defence, modifiers)}
+}
+
+func (_c *MockSVC_AttackPreview_Call) Run(run func(ctx context.Context, characterID int64, defence string, modifiers []psionicsvc.Modifier)) *MockSVC_AttackPreview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].([]psionicsvc.Modifier))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AttackPreview_Call) Return(_a0 *psionicsvc.AttackScores, _a1 error) *MockSVC_AttackPreview_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AttackPreview_Call) RunAndReturn(run func(context.Context, int64, string, []psionicsvc.Modifier) (*psionicsvc.AttackScores, error)) *MockSVC_AttackPreview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Close provides a mock function with given fields: ctx
 func (_m *MockSVC) Close(ctx context.Context) error {
 	ret := _m.Called(ctx)

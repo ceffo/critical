@@ -27,6 +27,7 @@ import {
 import { test as base, type Locator, type Page } from "@playwright/test";
 import { asMultiClass } from "./multiclass";
 import { psionicist } from "./psionicist";
+import { keepPowerUp } from "./keepPowerUp";
 import {
   brokenWords,
   clippedText,
@@ -5170,24 +5171,32 @@ test("proficiency pop-up: the Skills rows, the pop-up and the picker uncut in Fr
   }
 });
 
-// ADR 0043 step 5 and 6: the PSP panel in the character card's 280-384px column (the pool, the hand
-// edit and the recovery over hours), uncut in French and English, 1280 to 2560. Screenshots at
-// 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("PSP panel", () => {
+// ADR 0043 step 5 and ADR 0047 items 4, 5 and 11: the PSP block in the character card's 280-384px
+// column (below the HP and the HP change) and the rest popover over it, with a paying power kept up
+// so the warning and the stop-and-recover caption are on screen, uncut in French and English, 1280 to
+// 2560. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
+test.describe("PSP block and rest popover", () => {
   test.use({ character: psionicist });
   test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
     await openDashboard(page);
-    await page.getByTestId("psp-panel").getByLabel("PSP amount").fill("12");
-    await page
-      .getByTestId("psp-panel")
-      .getByRole("button", { name: "Spend" })
-      .click();
-    await expect(page.getByTestId("psp-value")).toHaveText("28 / 40");
+    await keepPowerUp(page);
+    const card = page.getByTestId("character");
+    const panel = page.getByTestId("psp-panel");
+    await expect(panel.getByTestId("psp-value")).toHaveText("37 / 40");
+
+    // The card reads HP, HP change, then the PSPs.
+    const top = async (l: Locator) => (await l.boundingBox())?.y ?? -1;
+    const hp = await top(card.getByTestId("hp-value"));
+    const change = await top(card.getByRole("group", { name: "HP change" }));
+    const psp = await top(panel);
+    expect(hp).toBeGreaterThan(0);
+    expect(change, "HP change under the HP").toBeGreaterThan(hp);
+    expect(psp, "PSP block under the HP change").toBeGreaterThan(change);
+
     for (const lang of ["fr", "en"] as const) {
       await chooseLanguage(page, lang);
       await page.keyboard.press("Escape");
-      const panel = page.getByTestId("psp-panel");
       for (const vp of VIEWPORTS) {
         await page.setViewportSize(vp);
         const where = `${lang}, ${vp.width}x${vp.height}`;
@@ -5195,9 +5204,35 @@ test.describe("PSP panel", () => {
         const box = await panel.boundingBox();
         expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
         expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
-        await expectNoClippedText(panel, `PSP panel, ${where}`);
-        await expectWholeWords(panel, `PSP panel, ${where}`);
+        await expectNoClippedText(panel, `PSP block, ${where}`);
+        await expectWholeWords(panel, `PSP block, ${where}`);
         await expectNoPageScroll(page);
+
+        await panel.getByTestId("psp-adjust").click();
+        const adjust = page.getByTestId("psp-adjust-popover");
+        await expect(adjust).toBeVisible();
+        await expectNoClippedText(adjust, `adjust popover, ${where}`);
+        await expectWholeWords(adjust, `adjust popover, ${where}`);
+        await page.keyboard.press("Escape");
+        await expect(adjust).toHaveCount(0);
+
+        await panel.getByTestId("psp-rest").click();
+        const rest = page.getByTestId("psp-rest-popover");
+        await expect(rest.getByTestId("psp-rest-stops")).toBeVisible();
+        await expectNoClippedText(rest, `rest popover, ${where}`);
+        await expectWholeWords(rest, `rest popover, ${where}`);
+        const inside = await rest.boundingBox();
+        expect(inside?.x, `rest popover left, ${where}`).toBeGreaterThanOrEqual(
+          0,
+        );
+        expect(
+          (inside?.x ?? 0) + (inside?.width ?? 0),
+          `rest popover right, ${where}`,
+        ).toBeLessThanOrEqual(vp.width);
+        if (vp.width >= 1920)
+          await snap(page, `psp-rest-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(rest).toHaveCount(0);
         if (vp.width >= 1920)
           await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
       }
@@ -5276,6 +5311,9 @@ test.describe("Powers tab", () => {
           index: 1,
         });
         await expect(bar).toHaveCount(0);
+        await expect(
+          tab.getByTestId("attack-score-target").first(),
+        ).toBeVisible();
         await expectNoClippedText(tab, `powers tab, ${where}`);
         await expectWholeWords(tab, `powers tab, ${where}`);
         await expectNoPageScroll(page);

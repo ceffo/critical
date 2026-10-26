@@ -125,3 +125,12 @@ export function adjustmentModifiers(
 /** The minds a contact row holds (no tangent count): the ones a power paid on contact can be used on. */
 export const contactMinds = (buffs: BuffEffect[]): HeldMind[] =>
   heldMinds(buffs.filter((b) => b.tangents === undefined));
+
+/** The labelled modifiers a request sends, from the bar's entries: the nonzero whole numbers. */
+export const labelledOf = (m: { value: string; reason: string }[]) =>
+  m.flatMap((x) => {
+    const value = Number.parseInt(x.value, 10);
+    return Number.isNaN(value) || value === 0
+      ? []
+      : [{ value, reason: x.reason.trim() }];
+  });

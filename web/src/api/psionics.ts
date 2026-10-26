@@ -197,6 +197,32 @@ export function previewContact(
   );
 }
 
+/** One known attack mode's score to beat (POST /api/psionics/attack/preview). */
+export interface AttackScore {
+  power: string;
+  /** The mode's score with its relearns and the labelled modifiers, before Table 14's cell. Absent with `refusal`. */
+  score?: number;
+  /** Table 14's cell against the defence; absent with none. */
+  attackVersusDefence?: number;
+  /** The score each check rolls under: `score` plus the cell, the attack's own target. Absent with `refusal`. */
+  target?: number;
+  /** Set when the attack itself would refuse this mode before any roll (variable cost, a score only in its text, maintenance paid on contact): the body that refusal has as an error, worded through its `apiError.<code>` key; no figure then. */
+  refusal?: { error: string; code: string; field?: string };
+}
+
+/** POST /api/psionics/attack/preview: the score to beat of each known attack mode against a defence ("" for none), from the server's own computation; nothing is rolled or written. */
+export interface AttackScores {
+  defence: string;
+  attacks: AttackScore[];
+}
+
+export function previewAttackScores(
+  defence: string,
+  modifiers: AttackRequest["modifiers"] = [],
+): Promise<AttackScores> {
+  return post("/api/psionics/attack/preview", { defence, modifiers });
+}
+
 /** GET /api/psionics/cost-tables/{table}: the rule table a power's `initial_cost_table` names, to build the form's controls from (the cost for a level is the preview's). */
 export interface CostTable {
   table: string;

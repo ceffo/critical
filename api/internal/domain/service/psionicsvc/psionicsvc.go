@@ -79,6 +79,10 @@ type SVC interface {
 	// step 7): two checks for one cost, one psionic_attack entry. The
 	// refusals are Attack's (attack.go).
 	Attack(ctx context.Context, characterID int64, req AttackRequest) (*AttackResult, error)
+	// AttackPreview is the score to beat of each known attack mode against a
+	// defence, from Attack's own computation, nothing rolled or written
+	// (attack.go).
+	AttackPreview(ctx context.Context, characterID int64, defence string, modifiers []Modifier) (*AttackScores, error)
 	// Contact uses the contact power on the request's open mind (ADR 0044
 	// step 9): one check, its cost by the target's level, one power_check
 	// entry making the contact row on a success. The refusals are

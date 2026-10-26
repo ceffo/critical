@@ -24,5 +24,18 @@
       "activity": "exertion",
       "perHour": 0
     }
+  },
+  "stoppedAndRested": {
+    "pspDelta": 12,
+    "payload": {
+      "hours": 2,
+      "activity": "resting",
+      "perHour": 6,
+      "powersEnded": ["aura_sight"],
+      "powerNames": {
+        "aura_sight": { "en": "Aura Sight", "fr": "Vision de l'aura" }
+      },
+      "targetsEnded": ["Grey Ogre"]
+    }
   }
 }

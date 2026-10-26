@@ -72,6 +72,9 @@ type Rules interface {
 	// PSPRecoveryRate is CPsiH Table 6's hourly rate for an activity (ADR
 	// 0043 step 6).
 	PSPRecoveryRate(activity string) (int, error)
+	// PSPRecoveryRows is the whole of Table 6, gates included (ADR 0047
+	// item 6).
+	PSPRecoveryRows() ([]ruletablesvc.PSPRecoveryRow, error)
 }
 
 // Derive computes the derived block of c (ADR 0030 steps 3 to 8, 17, 19,

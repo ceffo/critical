@@ -3,6 +3,7 @@ package ruletablesvc
 import (
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
@@ -165,6 +166,35 @@ func (t *Tables) PSPRecoveryRowFor(activity string) (PSPRecoveryRow, bool, error
 		}
 	}
 	return PSPRecoveryRow{}, false, nil
+}
+
+// PSPRecoveryRows is the whole of Table 6 (ADR 0043 step 6), a copy in the
+// catalogue's order, for the character read (ADR 0047 item 6).
+func (t *Tables) PSPRecoveryRows() ([]PSPRecoveryRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	return slices.Clone(c.PSPRecovery), nil
+}
+
+// CheckRecoveryGates refuses a Table 6 row whose requires_proficiency is not
+// a proficiency of the non-weapon catalogue (ADR 0047 item 6): known says
+// whether an id is one. A table never read (no class tables) has no gate.
+func (t *Tables) CheckRecoveryGates(known func(id string) bool) error {
+	rows, err := t.PSPRecoveryRows()
+	if errors.Is(err, ErrNoClassTables) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	for _, r := range rows {
+		if r.RequiresProficiency != "" && !known(r.RequiresProficiency) {
+			return fmt.Errorf("psp_recovery table: %s requires the unknown proficiency %q", r.Activity, r.RequiresProficiency)
+		}
+	}
+	return nil
 }
 
 // PSPRecoveryRate is Table 6's hourly rate for activity (ADR 0043 step 6).

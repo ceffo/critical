@@ -205,6 +205,14 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    Tests: `TestRecover_Step6_HoursTimesTheActivityRate` (the new `psionicsvc`: 3 h resting gives
    18), `TestRecover_Step6_CappedAndUndone` (composition: capped at the max, undone exactly),
    `Recover_Step6_RefusedWhileMaintaining` (psionicsvc).
+   Table 6 is read with the character (ADR 0047 item 6, 2026-10-26): `GET /api/characters/{id}`'s
+   `psp` gains `recovery: [{activity, perHour, requiresProficiency?}]`, every row of the table in
+   the catalogue's order (the gated meditating row included); the answers of `POST /api/psp/*`
+   stay `{current, max}`. No route serves the table alone. The start refuses a
+   `requires_proficiency` that is not an id of `seeds/proficiencies.json`.
+   Tests: `TestGetCharacter_Step5_ThePSPPool` (the rows ride the pool),
+   `TestCharacter_ServesTheDerivedBlock` (the wire shape),
+   `TestStartup_ADR0047Item6_RefusesAnUnknownRecoveryGate`.
 
 7. **The long rest recovers PSPs** (amends [ADR 0008](0008-spell-slots-and-long-rest.md) steps 11
    and 12; the triage's "refilled by rest"). The long rest's one transaction also ends every

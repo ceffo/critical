@@ -280,7 +280,10 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 				{Level: 11, FixedGain: 2, Grants: skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 2}, FreeSpells: []spellbook.FreeSpell{{Level: 11, SpellLevel: 6}}},
 			}, ToSpend: skills.LevelGrants{WeaponSlots: 3, NonweaponSlots: 1, SkillPoints: 45}, FreeSpellsOwed: []spellbook.FreeSpell{{Level: 9, SpellLevel: 5}}},
 			Spellbook: &charactersvc.SpellbookRules{ClassMaxSpellLevel: 6, IntMaxSpellLevel: 7, LearnChance: 60, MaxSpellsPerLevel: 9},
-			PSP:       &charactersvc.PSPPool{Current: 18, Max: 25},
+			PSP: &charactersvc.PSPPool{Current: 18, Max: 25, Recovery: []ruletablesvc.PSPRecoveryRow{
+				{Activity: "sleeping", PerHour: 12},
+				{Activity: "meditating", PerHour: 12, RequiresProficiency: "rejuvenation"},
+			}},
 		},
 		Details: charactersvc.Details{Alignment: "lawful_good", Languages: []string{}},
 		Warnings: []charactersvc.Warning{
@@ -321,7 +324,10 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"skillSets": [],
 		"backstab": 0,
 		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false},
-		"psp": {"current": 18, "max": 25},
+		"psp": {"current": 18, "max": 25, "recovery": [
+			{"activity": "sleeping", "perHour": 12},
+			{"activity": "meditating", "perHour": 12, "requiresProficiency": "rejuvenation"}
+		]},
 		"knownPowers": null
 	}`, string(derived))
 }

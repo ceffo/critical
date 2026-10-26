@@ -15,6 +15,10 @@ export interface Power {
   /** Absent where the book gives a formula in the text. */
   score?: { ability: string; modifier: number };
   initial_cost: PowerCost;
+  /** The rule table that gives the cost (read it with getCostTable); `initial_cost` keeps its word. */
+  initial_cost_table?: string;
+  /** What a "contact" cost adds once contact is made. */
+  initial_cost_plus?: number;
   maintenance?: { cost: PowerCost; period: number };
   /** Ids of the powers to know first. */
   prerequisites: string[];

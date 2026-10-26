@@ -129,3 +129,6 @@ SpecializationType  # Technical: a row of the weapon_specialization params
 Option  # Technical: the viewtest builder's functional option (tests only)
 InitiativeCorrector  # Technical: port, service or wiring type (clean architecture plumbing)
 CorrectionStore  # Technical: port, service or wiring type (clean architecture plumbing)
+ContactPick  # Technical: request part, one modifier row of the cost table picked (kind, code)
+ContactPreview  # Technical: read model, the contact's cost and score before the roll (ADR 0044 step 9)
+CostTable  # Technical: read model, the rule table a power's cost names, for the web's controls

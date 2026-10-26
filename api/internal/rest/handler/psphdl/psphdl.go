@@ -26,6 +26,7 @@ import (
 type Router interface {
 	Post(pattern string, h http.HandlerFunc)
 	Put(pattern string, h http.HandlerFunc)
+	Get(pattern string, h http.HandlerFunc)
 }
 
 // changeAppender is the one method the endpoint calls; actionlogsvc.SVC
@@ -58,6 +59,8 @@ type defender interface {
 	Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error)
 	Attack(ctx context.Context, characterID int64, req psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)
 	Contact(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.UseResult, error)
+	ContactPreview(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, error)
+	CostTable(ctx context.Context, table string) (psionicsvc.CostTable, error)
 }
 
 // CharacterIDFunc resolves the active character ID from the request context.
@@ -75,6 +78,8 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec re
 	r.Post("/api/psionics/defend", render.Handle(Defend(charID, def)))
 	r.Post("/api/psionics/powers/{id}/attack", render.Handle(Attack(charID, def)))
 	r.Post("/api/psionics/powers/{id}/contact", render.Handle(Contact(charID, def)))
+	r.Post("/api/psionics/powers/{id}/contact/preview", render.Handle(ContactPreview(charID, def)))
+	r.Get("/api/psionics/cost-tables/{table}", render.Handle(CostTable(def)))
 }
 
 // RaiseDTO is a defence mode's raise as logged: the payload of the
@@ -188,11 +193,58 @@ type contactBody struct {
 	Defence string `json:"defence"`
 	// Cost is the DM's cost for a level Table 29 has no row for, and only
 	// then (Q15).
-	Cost      *int                  `json:"cost"`
-	Distance  string                `json:"distance"`
-	LifeOrder string                `json:"lifeOrder"`
-	Resisting bool                  `json:"resisting"`
-	Modifiers []psionicsvc.Modifier `json:"modifiers"`
+	Cost *int `json:"cost"`
+	// Modifiers are the cost table's modifier rows picked (kind, code), each
+	// validated against the table; Labelled are the DM's labelled modifiers.
+	Modifiers []psionicsvc.ContactPick `json:"modifiers"`
+	Labelled  []psionicsvc.Modifier    `json:"labelled"`
+}
+
+func (b contactBody) request(power string) psionicsvc.ContactRequest {
+	return psionicsvc.ContactRequest{
+		Power: power,
+		Opponent: psionics.Opponent{
+			Target: b.Target, Mind: b.Mind, Level: b.Level, Defence: b.Defence,
+		},
+		Cost:  b.Cost,
+		Picks: b.Modifiers, Labelled: b.Labelled,
+	}
+}
+
+// ContactPreview is POST /api/psionics/powers/{id}/contact/preview: the
+// contact's cost and score for the body Contact takes, from Contact's own
+// computation, with nothing rolled or written. It answers the psionicsvc
+// ContactPreview (cost, fromTable, target, lines, current, enough, warnings). The
+// refusals are Contact's before the roll; not_enough_psp is not one, enough
+// says it.
+func ContactPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body contactBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.ContactPreview(r.Context(), charID(r), body.request(chi.URLParam(r, "id")))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, res)
+		return nil
+	}
+}
+
+// CostTable is GET /api/psionics/cost-tables/{table}: the rule table a
+// power's initial cost names (PowerDTO.initial_cost_table) and its modifier
+// rows (kind, language-neutral code, modifier), for the web to build its
+// controls from; the cost for a level is the preview's. 404 for a name no power's cost carries.
+func CostTable(svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		t, err := svc.CostTable(r.Context(), chi.URLParam(r, "table"))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, t)
+		return nil
+	}
 }
 
 // Contact uses the known contact power {id} on the opponent the body names
@@ -209,15 +261,7 @@ func Contact(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		res, err := svc.Contact(r.Context(), charID(r), psionicsvc.ContactRequest{
-			Power: chi.URLParam(r, "id"),
-			Opponent: psionics.Opponent{
-				Target: body.Target, Mind: body.Mind, Level: body.Level, Defence: body.Defence,
-			},
-			Cost:     body.Cost,
-			Distance: body.Distance, LifeOrder: body.LifeOrder, Resisting: body.Resisting,
-			Modifiers: body.Modifiers,
-		})
+		res, err := svc.Contact(r.Context(), charID(r), body.request(chi.URLParam(r, "id")))
 		if err != nil {
 			return err
 		}

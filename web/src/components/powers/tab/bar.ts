@@ -8,13 +8,18 @@ import { asks } from "../powerUse";
  * The form a power opens in the bar (ADR 0047 item 2), from the shape of its data:
  * - `attack`: an attack mode, used on an opponent with the DM's two rolls;
  * - `variable`: a variable initial cost or maintenance, the cost fields the data asks for;
+ * - `contact`: a cost paid on contact, used on a mind the character made contact with earlier;
+ * - `table`: a cost a rule table gives (`initial_cost_table`, whatever its name), used on an opponent
+ *   with the table's modifier rows picked;
  * - `confirm`: a numeric or by-level cost, the confirmation only (the score field still shows for a
  *   power the book gives no score).
  */
-export type BarForm = "attack" | "variable" | "confirm";
+export type BarForm = "attack" | "contact" | "table" | "variable" | "confirm";
 
 export function formOf(p: Power): BarForm {
   if (p.kind === "attack_mode") return "attack";
+  if (p.initial_cost_table) return "table";
+  if (p.initial_cost === "contact") return "contact";
   const need = asks(p);
   return need.cost || need.maintenanceCost ? "variable" : "confirm";
 }
@@ -27,13 +32,17 @@ export const fixedCost = (p: Power): number | undefined =>
 export type TargetDraft = Pick<
   AttackDraft,
   "target" | "mind" | "level" | "defence"
->;
+> & {
+  /** False until the band's mind was chosen: its "closed" is a default the player has not said. */
+  mindSaid: boolean;
+};
 
 export const NO_TARGET: TargetDraft = {
   target: "",
   mind: "closed",
   level: "",
   defence: "",
+  mindSaid: false,
 };
 
 /** The level stepper's bounds: a level is a whole number from 0 (unknown) up. */

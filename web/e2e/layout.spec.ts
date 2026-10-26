@@ -5314,6 +5314,82 @@ test.describe("Powers tab", () => {
   });
 });
 
+// The bar's two forms of a power paid on contact, uncut in French and English, 1280 to 2560: the
+// table-cost form (its controls from the table's rows, the server's cost) and the state with no contact
+// held. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
+test.describe("Powers tab, contact forms", () => {
+  test.use({ character: psionicist });
+  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mindlink" },
+          { kind: "power", id: "mind_thrust" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      await page
+        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+        .click();
+      const tab = page.getByTestId("powers-tab");
+      const band = tab.getByTestId("target-band");
+      const bar = page.getByTestId("action-bar");
+      const select = (id: string) =>
+        tab
+          .locator(`[data-testid=power-row][data-id=${id}]`)
+          .getByRole("button")
+          .last()
+          .click();
+      await band.getByTestId("target-name").fill("");
+      await select("mindlink");
+      await expect(bar.getByTestId("no-contact")).toBeVisible();
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(tab, `no contact, ${where}`);
+        await expectWholeWords(tab, `no contact, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(
+            page,
+            `powers-no-contact-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+      await bar.getByRole("button").first().click();
+      await band.getByTestId("target-name").fill("Orc");
+      await band
+        .getByRole("radio", { name: lang === "fr" ? "Ouvert" : "Open" })
+        .click();
+      await band.getByRole("textbox").nth(1).fill("3");
+      await select("contact");
+      const form = bar.getByTestId("table-form");
+      await expect(form.getByTestId("table-preview")).toBeVisible();
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(tab, `table form, ${where}`);
+        await expectWholeWords(tab, `table form, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(
+            page,
+            `powers-table-form-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+      await bar.getByRole("button").first().click();
+    }
+  });
+});
+
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
 // the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and

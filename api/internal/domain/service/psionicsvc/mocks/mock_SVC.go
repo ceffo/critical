@@ -198,6 +198,123 @@ func (_c *MockSVC_Contact_Call) RunAndReturn(run func(context.Context, int64, ps
 	return _c
 }
 
+// ContactPreview provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) ContactPreview(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ContactPreview")
+	}
+
+	var r0 *psionicsvc.ContactPreview
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, psionicsvc.ContactRequest) *psionicsvc.ContactPreview); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*psionicsvc.ContactPreview)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, psionicsvc.ContactRequest) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ContactPreview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ContactPreview'
+type MockSVC_ContactPreview_Call struct {
+	*mock.Call
+}
+
+// ContactPreview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req psionicsvc.ContactRequest
+func (_e *MockSVC_Expecter) ContactPreview(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_ContactPreview_Call {
+	return &MockSVC_ContactPreview_Call{Call: _e.mock.On("ContactPreview", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_ContactPreview_Call) Run(run func(ctx context.Context, characterID int64, req psionicsvc.ContactRequest)) *MockSVC_ContactPreview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(psionicsvc.ContactRequest))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ContactPreview_Call) Return(_a0 *psionicsvc.ContactPreview, _a1 error) *MockSVC_ContactPreview_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ContactPreview_Call) RunAndReturn(run func(context.Context, int64, psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, error)) *MockSVC_ContactPreview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CostTable provides a mock function with given fields: ctx, table
+func (_m *MockSVC) CostTable(ctx context.Context, table string) (psionicsvc.CostTable, error) {
+	ret := _m.Called(ctx, table)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CostTable")
+	}
+
+	var r0 psionicsvc.CostTable
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (psionicsvc.CostTable, error)); ok {
+		return rf(ctx, table)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) psionicsvc.CostTable); ok {
+		r0 = rf(ctx, table)
+	} else {
+		r0 = ret.Get(0).(psionicsvc.CostTable)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, table)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_CostTable_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CostTable'
+type MockSVC_CostTable_Call struct {
+	*mock.Call
+}
+
+// CostTable is a helper method to define mock.On call
+//   - ctx context.Context
+//   - table string
+func (_e *MockSVC_Expecter) CostTable(ctx interface{}, table interface{}) *MockSVC_CostTable_Call {
+	return &MockSVC_CostTable_Call{Call: _e.mock.On("CostTable", ctx, table)}
+}
+
+func (_c *MockSVC_CostTable_Call) Run(run func(ctx context.Context, table string)) *MockSVC_CostTable_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CostTable_Call) Return(_a0 psionicsvc.CostTable, _a1 error) *MockSVC_CostTable_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_CostTable_Call) RunAndReturn(run func(context.Context, string) (psionicsvc.CostTable, error)) *MockSVC_CostTable_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Defend provides a mock function with given fields: ctx, characterID, req
 func (_m *MockSVC) Defend(ctx context.Context, characterID int64, req psionicsvc.DefendRequest) (*psionicsvc.DefendResult, error) {
 	ret := _m.Called(ctx, characterID, req)

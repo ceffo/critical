@@ -5,10 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
+import type { BuffEffect } from "@/types/buffs";
 import type { Power } from "@/types/powers";
 import { attackRequest, EMPTY_ATTACK } from "../attack";
 import { requestOf, EMPTY_DRAFT } from "../powerUse";
 import { ActionBar, type Selection } from "./ActionBar";
+import { contactMinds } from "./model";
 import { NO_TARGET, formOf, stepLevel, type TargetDraft } from "./bar";
 
 async function html(
@@ -51,6 +53,12 @@ function power(over: Partial<Power> & Pick<Power, "id" | "kind">): Power {
   };
 }
 
+const rows = [
+  { id: "a", target: "Gardien" },
+  { id: "b", target: "Orc", tangents: 2 },
+  { id: "c" },
+] as BuffEffect[];
+
 // One power per shape, with ids no code has ever heard of: the form is a function of the data.
 const attackMode = power({ id: "zz_strike", kind: "attack_mode" });
 const variableBoth = power({
@@ -80,6 +88,11 @@ const byTable = power({
   kind: "devotion",
   initial_cost: { table: "t" } as unknown as Power["initial_cost"],
 });
+const onContact = power({
+  id: "zz_reach",
+  kind: "science",
+  initial_cost: "contact",
+});
 const noScore = power({ id: "zz_text", kind: "science", score: undefined });
 
 describe("the form the bar opens", () => {
@@ -91,6 +104,36 @@ describe("the form the bar opens", () => {
     expect(formOf(numeric)).toBe("confirm");
     expect(formOf(byTable)).toBe("confirm");
     expect(formOf(noScore)).toBe("confirm");
+    expect(formOf(onContact)).toBe("contact");
+  });
+
+  it("offers only the minds a contact row holds for a power paid on contact, and says so when there are none", async () => {
+    const none = await html("en", { kind: "power", power: onContact });
+    expect(none).toContain('data-form="contact"');
+    expect(none).toContain('data-testid="no-contact"');
+    expect(contactMinds(rows).map((m) => m.name)).toEqual(["Gardien"]);
+  });
+
+  it("words the form with no contact as a short label, and the server's refusal in both languages", async () => {
+    for (const lng of ["en", "fr"] as const) {
+      const out = await html(lng, { kind: "power", power: onContact });
+      const label = out.match(/data-testid="no-contact"[^>]*>([^<]*)</)?.[1];
+      expect(label).toBe(lng === "en" ? "No contact held" : "Aucun contact");
+      const common = resources[lng].common as unknown as {
+        apiError: Record<string, string>;
+      };
+      for (const code of ["no_contact", "mind_closed"]) {
+        expect(common.apiError[code]?.length).toBeGreaterThan(10);
+      }
+    }
+    // A mind the band names is still offered, so the server's no_contact refusal can show.
+    const named = await html(
+      "en",
+      { kind: "power", power: onContact },
+      { ...NO_TARGET, target: "Orc" },
+    );
+    expect(named).toContain("<option");
+    expect(named).not.toContain('data-testid="no-contact"');
   });
 
   it("shows the attack form with the target's roll fields only while a defence is set", async () => {

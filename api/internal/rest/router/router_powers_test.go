@@ -77,6 +77,22 @@ func TestPowers_Step8_ServedFromTheCatalogueAsLanguageMaps(t *testing.T) {
 	rec = do(h, "GET", "/api/powers/aura_sight", "")
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &raw))
 	assert.EqualValues(t, 9, raw["initial_cost"], "a numeric cost is a number")
+	assert.NotContains(t, raw, "initial_cost_table", "no table, no field")
+	assert.NotContains(t, raw, "initial_cost_plus")
+
+	// The table and the plus travel beside initial_cost, which keeps its word.
+	rec = do(h, "GET", "/api/powers/contact", "")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	raw = nil
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &raw))
+	assert.Equal(t, "variable", raw["initial_cost"])
+	assert.Equal(t, "contact_cost", raw["initial_cost_table"])
+	rec = do(h, "GET", "/api/powers/switch_personality", "")
+	raw = nil
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &raw))
+	assert.Equal(t, "contact", raw["initial_cost"])
+	assert.EqualValues(t, 30, raw["initial_cost_plus"])
+	assert.NotContains(t, raw, "initial_cost_table")
 
 	rec = do(h, "GET", "/api/powers/filters", "")
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

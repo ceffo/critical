@@ -2272,7 +2272,8 @@
       "running": "Course",
       "survival": "Survie",
       "tracking": "Pistage",
-      "weaponsmithing": "Forge d’armes"
+      "weaponsmithing": "Forge d’armes",
+      "rejuvenation": "Régénérescence"
     },
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
     "budget": {

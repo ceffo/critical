@@ -831,6 +831,12 @@ is only ever appended to by play.
     5. **Rollout, as step 18.6.** The API reads **format 19 only**; the builder publishes format 19 first.
     Tests: `TestSchema_Step14_OnlyTheNextFormatIsValid` (cataloguecheck), `TestParse_Step14_ReadsSkillSetsAndRefusesTheOldFormat` (catalogueadpt).
 
+28. **Format 20: the gated meditating row of Table 6** (**decided as built** 2026-10-26; [ADR 0047](0047-psionicist-screens.md) items 5 and 6).
+    1. A `psp_recovery` row may carry `requires_proficiency`, a non-weapon proficiency id; the artifact's Table 6 gains `{activity: meditating, per_hour: 12, requires_proficiency: rejuvenation}`.
+    2. `proficiency_descriptions` holds 66 rows: the PHB's 65 and the psionicist's Rejuvenation (en, fr); `seeds/proficiencies.json` holds it in the `psionicist` group (1 slot, Wisdom -1, CPsiH Table 10).
+    3. The API reads the field; `Recover` refuses a gated row's activity like an unknown one unless the character's non-weapon picks, whatever class granted them, include the proficiency (ADR 0047 item 6). Test: `TestRecover_ADR0047Item6_GatedActivityNeedsProficiency`.
+    4. **Rollout, as step 18.6.** The API reads **format 20 only** (formats 1 to 19 are refused); the builder publishes format 20 first.
+
 26. **The six spell stats are typed once, by the importer; the rest reads the typed value** (accepted 2026-10-23, design only; no code and no format change in this
     step; user triage 2026-10-22, "file 7"). The amendment of step 8 (typed stats) and step 5.6 (import rules). What it fixes is a
     reading of the code, not a new mechanism: the importer already types the six stats of every spell and stores them (`spells.stats`, JSON,

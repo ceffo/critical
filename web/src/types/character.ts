@@ -170,6 +170,9 @@ export interface KnownPowers {
   used: PowerCounts;
   primary: string;
   picks: PowerPick[];
+  /** The power (not a defence mode) checked this round; absent while the round's power is free. The
+   * character read serves it; the answer of the picks' PUT does not. */
+  usedThisRound?: string;
 }
 
 /** A character's PSPs (ADR 0043 step 5): the current PSPs (the maximum plus the ledger) and the

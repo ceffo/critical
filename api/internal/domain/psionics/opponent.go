@@ -81,8 +81,8 @@ func (o *Opponent) Validate(book Book) error {
 		}
 		return nil
 	}
-	if p, ok := book.Power(o.Defence); !ok || p.Kind != catalogue.KindDefenceMode {
-		return domain.FieldErrorf("defence", "not a defence mode: %q", o.Defence)
+	if err := ValidateDefence(book, o.Defence); err != nil {
+		return err
 	}
 	if len(o.Rolls) != AttackChecks {
 		return domain.FieldErrorf("rolls", "%d rolls against a defence", AttackChecks)
@@ -91,6 +91,15 @@ func (o *Opponent) Validate(book Book) error {
 		if r.Roll < 1 || r.Roll > CheckDie {
 			return domain.FieldErrorf("rolls", "a roll is 1 to %d", CheckDie)
 		}
+	}
+	return nil
+}
+
+// ValidateDefence checks that id is a defence_mode power of book; a
+// *domain.FieldError on "defence" otherwise.
+func ValidateDefence(book Book, id string) error {
+	if p, ok := book.Power(id); !ok || p.Kind != catalogue.KindDefenceMode {
+		return domain.FieldErrorf("defence", "not a defence mode: %q", id)
 	}
 	return nil
 }

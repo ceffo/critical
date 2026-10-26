@@ -60,6 +60,7 @@ type defender interface {
 	Attack(ctx context.Context, characterID int64, req psionicsvc.AttackRequest) (*psionicsvc.AttackResult, error)
 	Contact(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.UseResult, error)
 	ContactPreview(ctx context.Context, characterID int64, req psionicsvc.ContactRequest) (*psionicsvc.ContactPreview, error)
+	AttackPreview(ctx context.Context, characterID int64, defence string, modifiers []psionicsvc.Modifier) (*psionicsvc.AttackScores, error)
 	CostTable(ctx context.Context, table string) (psionicsvc.CostTable, error)
 }
 
@@ -77,6 +78,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc changeAppender, rec re
 	r.Post("/api/psionics/powers/{id}/raise", render.Handle(Raise(charID, def)))
 	r.Post("/api/psionics/defend", render.Handle(Defend(charID, def)))
 	r.Post("/api/psionics/powers/{id}/attack", render.Handle(Attack(charID, def)))
+	r.Post("/api/psionics/attack/preview", render.Handle(AttackPreview(charID, def)))
 	r.Post("/api/psionics/powers/{id}/contact", render.Handle(Contact(charID, def)))
 	r.Post("/api/psionics/powers/{id}/contact/preview", render.Handle(ContactPreview(charID, def)))
 	r.Get("/api/psionics/cost-tables/{table}", render.Handle(CostTable(def)))
@@ -182,6 +184,32 @@ func Attack(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 		render.OK(r.Context(), w, AttackDTO{
 			Attack: res.Attack, PSP: StateDTO{Current: res.PSP.Current, Max: res.PSP.Max}, LogEntryID: res.LogEntryID,
 		})
+		return nil
+	}
+}
+
+type attackPreviewBody struct {
+	Defence   string                `json:"defence"`
+	Modifiers []psionicsvc.Modifier `json:"modifiers"`
+}
+
+// AttackPreview is POST /api/psionics/attack/preview: the score to beat of
+// each known attack mode against the body's defence ("" for none) and
+// labelled modifiers, from Attack's own computation, with nothing rolled or
+// written. It answers psionicsvc.AttackScores (defence, attacks: power, score,
+// attackVersusDefence, target). 400 on a bad defence or modifier; 409
+// not_a_psionicist.
+func AttackPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		var body attackPreviewBody
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			return render.BadRequestError("invalid request body")
+		}
+		res, err := svc.AttackPreview(r.Context(), charID(r), body.Defence, body.Modifiers)
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, res)
 		return nil
 	}
 }

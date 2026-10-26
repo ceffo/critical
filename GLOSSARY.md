@@ -282,8 +282,8 @@ A step into a closed mind, made by an attack that wins its contest; a buff row h
 _Code_: TangentsChange
 
 **Psionic attack** (fr: attaque psionique):
-An attack mode's use on an opponent: one cost for two power checks, each a psychic contest against the opponent's defence (Table 14's cell on the score), half the cost when both fail; won contests are tangents on a closed mind, the mode's effect on an open or contacted one. Logged as a `psionic_attack` entry. [ADR 0044](docs/adr/0044-psionic-combat.md) step 7.
-_Code_: AttackRecord, AttackCheck
+An attack mode's use on an opponent: one cost for two power checks, each a psychic contest against the opponent's defence (Table 14's cell on the score), half the cost when both fail; won contests are tangents on a closed mind, the mode's effect on an open or contacted one. Logged as a `psionic_attack` entry. Its **score to beat** (the score plus Table 14's cell for a defence) is served for each known attack mode before the roll, from the attack's own computation. [ADR 0044](docs/adr/0044-psionic-combat.md) step 7.
+_Code_: AttackRecord, AttackCheck, AttackScore, AttackScores
 
 **Contact power** (fr: pouvoir de contact):
 The power that makes contact with an open mind (never a closed one): its cost is Table 29's row for the target's level, its score takes the distance, life-order and resisting lines (`contact_modifiers`), and a success puts the target's contact row. A power whose cost is `contact` then needs that row from an earlier round, costs only its plus amount, and keeps the contact free while it is kept up; ending the contact ends it. Logged as a `power_check` entry. [ADR 0044](docs/adr/0044-psionic-combat.md) steps 9 and 10.

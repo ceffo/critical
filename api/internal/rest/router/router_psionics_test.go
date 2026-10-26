@@ -430,3 +430,24 @@ func TestContactPreview_Step9_PostAndCostTableGet(t *testing.T) {
 	rec = do(h, "GET", "/api/psionics/cost-tables/nothing", "")
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 }
+
+func TestAttackPreview_Step7_Post(t *testing.T) {
+	h, m := newRouter(t)
+	cell := -5
+	m.psionics.EXPECT().AttackPreview(mock.Anything, int64(1), "tower_of_iron_will", []psionicsvc.Modifier{{Value: 2, Reason: "close"}}).
+		Return(&psionicsvc.AttackScores{Defence: "tower_of_iron_will", Attacks: []psionicsvc.AttackScore{
+			{Power: "mind_thrust", Score: 14, AttackVersusDefence: &cell, Target: 9},
+			{Power: "ego_whip", Score: 13, Target: 13},
+		}}, nil).Once()
+	rec := do(h, "POST", "/api/psionics/attack/preview",
+		`{"defence":"tower_of_iron_will","modifiers":[{"value":2,"reason":"close"}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"defence":"tower_of_iron_will","attacks":[
+		{"power":"mind_thrust","score":14,"attackVersusDefence":-5,"target":9},
+		{"power":"ego_whip","score":13,"target":13}]}`, rec.Body.String())
+
+	m.psionics.EXPECT().AttackPreview(mock.Anything, int64(1), "", []psionicsvc.Modifier(nil)).Return(nil, psionicsvc.ErrNotPsionicist).Once()
+	rec = do(h, "POST", "/api/psionics/attack/preview", `{}`)
+	require.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"not_a_psionicist"`)
+}

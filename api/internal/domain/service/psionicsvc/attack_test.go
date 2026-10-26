@@ -442,3 +442,101 @@ func TestAttack_Step7_RefusalsRollAndWriteNothing(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0047 (the Powers tab's score to beat) on ADR 0044 step 7.1: the figure
+// AttackPreview serves is the target Attack rolls each check against for the
+// same inputs, with and without a defence, with and without labelled
+// modifiers. Both read one computation, so the two cannot drift.
+func TestAttackPreview_Step7_ServedFigureIsTheAttacksTarget(t *testing.T) {
+	cells := map[[2]string]int{
+		{"ego_whip", "thought_shield"}:        -1,
+		{"ego_whip", "tower_of_iron_will"}:    -7,
+		{"mind_thrust", "thought_shield"}:     0,
+		{"mind_thrust", "tower_of_iron_will"}: -5,
+	}
+	cases := []struct {
+		name    string
+		defence string
+		mods    []psionicsvc.Modifier
+	}{
+		{"no defence", "", nil},
+		{"a defence", "tower_of_iron_will", nil},
+		{"a defence and modifiers", "thought_shield", []psionicsvc.Modifier{{Value: 2, Reason: "close"}, {Value: -1}}},
+		{"modifiers only", "", []psionicsvc.Modifier{{Value: 3}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, m := newAttackSvc(t, attacker(30), nil)
+			m.tables.EXPECT().AttackVersusDefence(mock.Anything, mock.Anything).RunAndReturn(func(a, d string) (int, error) {
+				return cells[[2]string{a, d}], nil
+			}).Maybe()
+			preview, err := svc.AttackPreview(context.Background(), 7, tc.defence, tc.mods)
+			require.NoError(t, err)
+			require.Len(t, preview.Attacks, 2, "the known attack modes only, in pick order")
+			assert.Equal(t, []string{"ego_whip", "mind_thrust"}, []string{preview.Attacks[0].Power, preview.Attacks[1].Power})
+			assert.Equal(t, tc.defence, preview.Defence)
+
+			for _, served := range preview.Attacks {
+				rolls(m, 7, 8)
+				m.buffs.EXPECT().AddTangents(mock.Anything, int64(7), "Orc", mock.Anything).
+					Return(buffsvc.TangentsChange{Target: "Orc"}, actionlog.Snapshot{}, nil).Once()
+				var got actionlog.NewEntry
+				expectRecord(m.log, &got)
+				opp := closedOrc()
+				opp.Defence = tc.defence
+				if tc.defence != "" {
+					opp.Rolls = []psionics.ContestSide{{Roll: 3, Success: true}, {Roll: 4, Success: true}}
+				}
+				_, err := svc.Attack(context.Background(), 7, psionicsvc.AttackRequest{Mode: served.Power, Opponent: opp, Modifiers: tc.mods})
+				require.NoError(t, err)
+				rec := attackOf(t, got)
+				require.Len(t, rec.Checks, 2)
+				for i, c := range rec.Checks {
+					assert.Equal(t, served.Target, c.Check.Target, "%s check %d", served.Power, i)
+				}
+				assert.Equal(t, served.Score, rec.Score, served.Power)
+				assert.Equal(t, served.AttackVersusDefence, rec.AttackVersusDefence, served.Power)
+			}
+		})
+	}
+}
+
+// The served parts: ego whip is Wis 16 - 3 = 13, Table 14's cell against the
+// defence beside it, the target their sum.
+func TestAttackPreview_Step7_ServesTheScoreTheCellAndTheTarget(t *testing.T) {
+	svc, m := newAttackSvc(t, attacker(10), nil)
+	m.tables.EXPECT().AttackVersusDefence("ego_whip", "tower_of_iron_will").Return(-7, nil).Once()
+	m.tables.EXPECT().AttackVersusDefence("mind_thrust", "tower_of_iron_will").Return(-5, nil).Once()
+	got, err := svc.AttackPreview(context.Background(), 7, "tower_of_iron_will", nil)
+	require.NoError(t, err)
+	cellA, cellB := -7, -5
+	assert.Equal(t, &psionicsvc.AttackScores{Defence: "tower_of_iron_will", Attacks: []psionicsvc.AttackScore{
+		{Power: "ego_whip", Score: 13, AttackVersusDefence: &cellA, Target: 6},
+		{Power: "mind_thrust", Score: 14, AttackVersusDefence: &cellB, Target: 9},
+	}}, got)
+
+	none, err := svc.AttackPreview(context.Background(), 7, "", nil)
+	require.NoError(t, err)
+	assert.Equal(t, 13, none.Attacks[0].Target)
+	assert.Nil(t, none.Attacks[0].AttackVersusDefence, "no defence, no cell")
+}
+
+// Refused as Attack's own input checks do: a defence that is no defence
+// mode, a bad modifier, a character with no psionics. Nothing is rolled.
+func TestAttackPreview_Step7_Refusals(t *testing.T) {
+	svc, _ := newAttackSvc(t, attacker(10), nil)
+	_, err := svc.AttackPreview(context.Background(), 7, "ego_whip", nil)
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "defence", fe.Field)
+
+	_, err = svc.AttackPreview(context.Background(), 7, "", []psionicsvc.Modifier{{Value: 99}})
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "modifiers", fe.Field)
+
+	plain := attacker(10)
+	plain.Derived.Powers = nil
+	svc, _ = newAttackSvc(t, plain, nil)
+	_, err = svc.AttackPreview(context.Background(), 7, "", nil)
+	assert.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
+}

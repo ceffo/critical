@@ -78,6 +78,15 @@ What the user fixed before the last round (rounds 1 and 2):
    serves the table alone. The start refuses a `requires_proficiency` that is not an id of
    `seeds/proficiencies.json` (`TestStartup_ADR0047Item6_RefusesAnUnknownRecoveryGate`); the gate
    itself is `TestRecover_ADR0047Item6_GatedActivityNeedsProficiency`.
+
+   Contract (built 2026-10-26): the attack rows' score to beat is served, never computed by the
+   web: `POST /api/psionics/attack/preview` with `{defence, modifiers}` (the defence the target
+   raised, "" for none; the labelled modifiers as an attack takes them) answers `{defence, attacks:
+   [{power, score, attackVersusDefence?, target}]}`, one entry per known attack mode in pick order:
+   `score` is the mode's score with relearns and modifiers, `attackVersusDefence` Table 14's cell
+   (absent with no defence), `target` their sum, the one each check of the attack rolls under. It
+   reads `attackRecord`, the computation `Attack` rolls from
+   (`TestAttackPreview_Step7_ServedFigureIsTheAttacksTarget`).
 7. **The character card reads, top to bottom: hit points, the HP change (field, Dégâts, Soins), then
    the PSP block** (_user_: "HP modifying should stay close to HP bar"). The PSP block holds the bar,
    the next round's balance, **Repos** and **Ajuster**.

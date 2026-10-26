@@ -17,8 +17,13 @@ reads your final report.
   (`docs/adr/README.md`). Look at the previous round's screenshots before anything else.
 - Build static pages from the project's real tokens and data, and a committed, rerunnable screenshot
   script (no throwaway code). Both layout viewports of the project. Important text is never cut.
-- Show, then ask. After each change: regenerate, tell the user **which file to open** (never open
-  windows on their desktop), and ask for their verdict. Quote back what you understood before you
+- A screen is a template over data, never a drawing of one case: key every element to a data field
+  (for game content, the catalogue's fields, never a power or spell id) and prove it with at least two
+  different fixtures (user, 2026-10-24: "the app should be DATA-DRIVEN. spells and their rules are the data").
+- Show, then ask. After each change: regenerate, then give the user **a link they can open remotely**
+  (the user often works over SSH and can't open files on this machine): `just design-serve <round>`
+  publishes the round's shots on the tailnet; version-stamp image links so a reload shows new shots.
+  Never open windows on their desktop. Ask for their verdict. Quote back what you understood before you
   change anything large.
 - Never decide for the user. A choice they didn't make is a proposal: show it as one and ask. Silence
   or "looks fine" on one page is not approval of another.

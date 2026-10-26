@@ -8,6 +8,8 @@ ADR 0043's "Layer 2, later" steps 20 to 22 and amends ADR 0043 steps 6, 7, 10 an
 [ADR 0004](0004-buffs.md) step 17 and [ADR 0021](0021-spell-catalogue.md) (a format 18), each on
 implementation.
 
+_Screens: [ADR 0047](0047-psionicist-screens.md) (the design round, accepted 2026-10-26) lays out steps 4 and 7 to 10 on the Powers tab; it changes no rule here._
+
 ## Context
 
 Layer 1 (ADR 0043, built on main and in the use-power item) gives the psionicist a PSP ledger,

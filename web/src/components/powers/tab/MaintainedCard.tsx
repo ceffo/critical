@@ -157,23 +157,30 @@ function RowNote({ row }: { row: MaintainedRow }) {
   );
 }
 
-/** The server's preview of the next Next Round, read again when `deps` change; null until it arrives or with no rows. */
+/**
+ * The server's preview of the next Next Round, read again when `deps` change. It is null until the
+ * read for the current `deps` arrives and after a failed one: a figure of the old rows never shows.
+ */
 function useNextRoundPreview(
   on: boolean,
   deps: unknown[],
 ): NextRoundPreview | null {
-  const [preview, setPreview] = useState<NextRoundPreview | null>(null);
+  const [read, setRead] = useState<{
+    deps: unknown[];
+    preview: NextRoundPreview | null;
+  } | null>(null);
   useEffect(() => {
-    // A figure of the old rows never stays up while the new one is read, nor after a failed read.
-    setPreview(null);
     if (!on) return;
     const ctl = new AbortController();
-    fetchNextRoundPreview({ signal: ctl.signal }).then(
-      (p) => !ctl.signal.aborted && setPreview(p),
-      () => !ctl.signal.aborted && setPreview(null),
-    );
+    const done = (preview: NextRoundPreview | null) =>
+      !ctl.signal.aborted && setRead({ deps, preview });
+    fetchNextRoundPreview({ signal: ctl.signal }).then(done, () => done(null));
     return () => ctl.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [on, ...deps]);
-  return on ? preview : null;
+  const current =
+    read !== null &&
+    read.deps.length === deps.length &&
+    read.deps.every((d, i) => Object.is(d, deps[i]));
+  return on && current ? read.preview : null;
 }

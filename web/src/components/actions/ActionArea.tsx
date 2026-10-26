@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Backpack,
+  Lightning,
   ListChecks,
   Skull,
   Sparkle,
@@ -16,23 +17,32 @@ import { SpellsPanel } from "./SpellsPanel";
 import { ItemsTab } from "./ItemsTab";
 import { SkillsTab } from "./SkillsTab";
 import { TurnUndeadPanel } from "./TurnUndeadPanel";
+import { PowersTab } from "@/components/powers/tab/PowersTab";
 import { useCharacterStore } from "@/stores/character";
 import { useSkillsEditor } from "@/stores/skillsEditor";
 import { combatItems } from "@/lib/combatItems";
 
 /**
  * The act panel of the Act activity (ADR 0022 step 2.5): tabs with icons and no panel title (the
- * rail names the activity): Weapons, Spells (with the spells left), Items (with how many there
+ * rail names the activity): Weapons, Spells (with the spells left), Powers for a character with known powers (ADR 0047), Items (with how many there
  * are), Skills (proficiency and bard skill checks), and Turning for a class that turns them (ADR 0030
  * step 16). Inventory and spell lookup are activities of
  * their own in the rail (App.tsx); saving throws live in the character card.
  */
-const TABS = ["weapons", "spells", "items", "skills", "turning"] as const;
+const TABS = [
+  "weapons",
+  "spells",
+  "powers",
+  "items",
+  "skills",
+  "turning",
+] as const;
 type TabId = (typeof TABS)[number];
 
 const TAB_ICONS: Record<TabId, Icon> = {
   weapons: Sword,
   spells: Sparkle,
+  powers: Lightning,
   items: Backpack,
   skills: ListChecks,
   turning: Skull,
@@ -59,7 +69,13 @@ export function ActionArea({
     setActive(id);
   };
   const turns = useCharacterStore((s) => s.character?.derived.turning != null);
-  const tabs = TABS.filter((id) => id !== "turning" || turns);
+  // The Powers tab is for a character with known powers (a psionicist), as Turning is for a class that turns.
+  const hasPowers = useCharacterStore(
+    (s) => s.character?.derived.knownPowers != null,
+  );
+  const tabs = TABS.filter(
+    (id) => (id !== "turning" || turns) && (id !== "powers" || hasPowers),
+  );
   const spellsLeft = useSpellStore(
     (s) => s.slots.filter((slot) => !slot.used).length,
   );
@@ -124,6 +140,7 @@ export function ActionArea({
       >
         {active === "weapons" && <AttackPanel />}
         {active === "spells" && <SpellsPanel />}
+        {active === "powers" && hasPowers && <PowersTab />}
         {active === "items" && <ItemsTab onManage={onOpenInventory} />}
         {active === "skills" && <SkillsTab />}
         {active === "turning" && turns && <TurnUndeadPanel />}

@@ -78,7 +78,14 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
             set({
               character: {
                 ...c,
-                derived: { ...c.derived, knownPowers: known },
+                derived: {
+                  ...c.derived,
+                  // The answer does not carry the round's power: the previous one stands.
+                  knownPowers: {
+                    usedThisRound: c.derived.knownPowers?.usedThisRound,
+                    ...known,
+                  },
+                },
               },
             });
           }

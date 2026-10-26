@@ -21,7 +21,14 @@ import { UsePowerForm } from "./UsePowerForm";
  * form over the power, and, while a buff row keeps it up, Stop (free, undone by the journal's Undo).
  * Every kind of power gets Use (the server checks and refuses). The row it sits in is the panel's.
  */
-export function PowerActions({ power }: { power: Power }) {
+export function PowerActions({
+  power,
+  modifiers,
+}: {
+  power: Power;
+  /** Modifiers the open form starts with (the Powers tab's adjustment); none by default. */
+  modifiers?: { value: string; reason: string }[];
+}) {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const busy = useTableStore((s) => s.busy);
@@ -161,6 +168,7 @@ export function PowerActions({ power }: { power: Power }) {
               busy={busy}
               powerName={name}
               targets={targets}
+              modifiers={modifiers}
               onAttack={attack}
             />
           ) : (
@@ -168,6 +176,7 @@ export function PowerActions({ power }: { power: Power }) {
               power={power}
               powerName={name}
               busy={busy}
+              modifiers={modifiers}
               onUse={use}
             />
           )}

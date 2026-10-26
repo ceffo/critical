@@ -105,7 +105,8 @@ export const INVALIDATES = {
   // The XP ledger's total and progress belong to the first active entry, so they change too.
   class_entries: [...LEVEL_SLICES, "hp", "xp"],
   realized_level: [...LEVEL_SLICES, "hp"],
-  round: ["round"],
+  // The character names the power used this round (ADR 0043 step 12), which a new round frees.
+  round: ["round", "character"],
   saved_buffs: ["savedBuffs"],
   skill_armor: ["skills", "character"],
   // The sheet warns about the budget.

@@ -5211,6 +5211,49 @@ test.describe("PSP panel", () => {
   });
 });
 
+// ADR 0047: Act > Pouvoirs (the round's power and the adjustment, the defence chips, the target band,
+// the groups of rows), uncut in French and English, 1280 to 2560, in combat so the chips are live.
+// Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
+test.describe("Powers tab", () => {
+  test.use({ character: psionicist });
+  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "mind_blank" },
+          { kind: "power", id: "thought_shield" },
+          { kind: "power", id: "mind_thrust" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mindlink" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      await page
+        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+        .click();
+      const tab = page.getByTestId("powers-tab");
+      await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
+      for (const vp of VIEWPORTS) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        await expectNoClippedText(tab, `powers tab, ${where}`);
+        await expectWholeWords(tab, `powers tab, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(page, `powers-tab-${lang}-${vp.width}x${vp.height}`);
+      }
+    }
+  });
+});
+
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
 // the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and

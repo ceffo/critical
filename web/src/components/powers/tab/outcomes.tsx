@@ -4,8 +4,10 @@ import type {
   DefendResult,
   PowerCheckResult,
 } from "@/api/psionics";
+import { localized } from "@/i18n/localized";
 import { formatSigned } from "@/lib/format";
 import { checkText } from "../defend";
+import { useCatalogue } from "./useCatalogue";
 
 const box = "flex flex-col gap-0.5 rounded-md bg-raised px-3 py-2 text-body";
 
@@ -93,17 +95,22 @@ export function AttackOutcome({ result: r }: { result: AttackResult }) {
 /** The contests just decided: who won each, the defence's check, the kept check, Table 14's cell. */
 export function DefendOutcome({
   result: r,
-  powerName,
 }: {
   result: DefendResult;
-  powerName: (id: string) => string;
+  /** Superseded: the defence's name is read from the defence modes here (the id is not an attack mode). */
+  powerName?: (id: string) => string;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const modes = useCatalogue("defence_mode");
+  const nameOf = (id: string) => {
+    const m = modes.find((x) => x.id === id);
+    return m ? localized(i18n.language, m.name) : id;
+  };
   return (
     <div className={box} role="status" data-testid="defend-result">
       <span className="text-label text-muted-foreground">
         {r.defence
-          ? t("powers.defence.against", { name: powerName(r.defence) })
+          ? t("powers.defence.against", { name: nameOf(r.defence) })
           : t("powers.defence.noDefence")}
         {r.modifier !== undefined &&
           ` · ${t("powers.defence.tableModifier", { modifier: formatSigned(r.modifier) })}`}

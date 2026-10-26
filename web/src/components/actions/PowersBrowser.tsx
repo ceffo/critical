@@ -53,7 +53,6 @@ export function PowersBrowser({ tabs }: { tabs: React.ReactNode }) {
             refusal={refusal}
             options={options}
             seen={items}
-            defence
             disciplineChips={
               <DisciplineChips
                 options={options}

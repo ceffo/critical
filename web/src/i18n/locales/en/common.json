@@ -238,7 +238,7 @@
         "less": "Lower {{label}}",
         "more": "Raise {{label}}",
         "contactMind": "Mind in contact",
-        "noContact": "No contact from an earlier round: name the mind in the Target band to see the server's answer.",
+        "noContact": "No contact held",
         "noRolls": "No defence set: no roll to enter.",
         "needTarget": "Name the opponent in the Target band.",
         "initialCost": "Initial cost",
@@ -246,7 +246,7 @@
         "confirm": "Cost set by the power.",
         "tableCost": "Cost {{cost}} PSPs · score {{target}}",
         "notEnough": "Not enough PSPs ({{current}} left).",
-        "needOpponent": "Name the opponent and its level in the Target band.",
+        "needOpponent": "Name the opponent, its mind and its level in the Target band.",
         "dmCost": "Cost (DM)",
         "previewFailed": "The cost could not be read.",
         "resolve": "Resolve"

@@ -32,13 +32,17 @@ export const fixedCost = (p: Power): number | undefined =>
 export type TargetDraft = Pick<
   AttackDraft,
   "target" | "mind" | "level" | "defence"
->;
+> & {
+  /** False until the band's mind was chosen: its "closed" is a default the player has not said. */
+  mindSaid: boolean;
+};
 
 export const NO_TARGET: TargetDraft = {
   target: "",
   mind: "closed",
   level: "",
   defence: "",
+  mindSaid: false,
 };
 
 /** The level stepper's bounds: a level is a whole number from 0 (unknown) up. */

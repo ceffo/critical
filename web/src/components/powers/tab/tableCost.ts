@@ -51,7 +51,7 @@ const whole = (s: string): number | null =>
   /^\d+$/.test(s.trim()) ? Number.parseInt(s.trim(), 10) : null;
 
 /**
- * The request the form makes, or null while the target is unnamed or its level is not a whole number
+ * The request the form makes, or null while the target is unnamed, its mind not said or its level is not a whole number
  * from 1 (the table's cost needs it). `cost` is the DM's, sent only once the server said the table
  * has no row for the level.
  */
@@ -64,7 +64,7 @@ export function tableRequest(
 ): ContactRequest | null {
   const name = target.target.trim();
   const level = whole(target.level);
-  if (!name || level === null || level < 1) return null;
+  if (!target.mindSaid || !name || level === null || level < 1) return null;
   const req: ContactRequest = {
     target: name,
     mind: target.mind,

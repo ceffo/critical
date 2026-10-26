@@ -59,4 +59,56 @@ test.describe("the Powers tab of a psionicist", () => {
     await expect(bar.getByTestId("attack-tangents")).toContainText("Orc");
     await snap(page, "powers-bar-attack-result");
   });
+
+  // The one flow only a browser proves for a table-paid power: the controls come from the table's
+  // modifier rows, the cost shown is the server's preview, and Use spends exactly that. The rules and
+  // refusals are Go tests (the contact preview) and Vitest (the controls, the request).
+  test("contact: pick the modifiers, see the server's cost, use it", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "contact" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await page.getByRole("tab", { name: "Powers" }).click();
+    const tab = page.getByTestId("powers-tab");
+    await tab.getByTestId("target-name").fill("Orc");
+    const band = tab.getByTestId("target-band");
+    await band.getByRole("radio", { name: "Open" }).click();
+    await band.getByLabel("Level", { exact: true }).fill("3");
+    await tab
+      .locator("[data-testid=power-row][data-id=contact]")
+      .getByRole("button")
+      .last()
+      .click();
+    const form = page.getByTestId("action-bar").getByTestId("table-form");
+    const preview = form.getByTestId("table-preview");
+    await expect(preview).toContainText("Cost 3 PSPs · score 15");
+    const toggle = form.locator("input[type=checkbox]").first();
+    await toggle.check();
+    // A row changes the score the server computes; the cost is the table's for the level.
+    await expect(preview).toContainText("score 13");
+    const shown = await preview.innerText();
+    const cost = Number(/Cost (\d+) PSPs/.exec(shown)![1]);
+    await snap(page, "contact-table-form");
+    await form.getByRole("button", { name: "Use Contact" }).click();
+    // The d20 is the server's: a failed check spends part of the cost the preview showed, a passed one
+    // all of it. Either way the pool falls by what the result card says, never past the previewed cost.
+    const result = form.getByTestId("use-result");
+    await expect(result).toBeVisible();
+    const spent = Number(/PSPs\s*\D?(\d+)/.exec(await result.innerText())![1]);
+    expect(spent).toBeGreaterThan(0);
+    expect(spent).toBeLessThanOrEqual(cost);
+    await expect(page.getByTestId("psp-value")).toHaveText(
+      `${40 - spent} / 40`,
+    );
+    await snap(page, "contact-table-used");
+  });
 });

@@ -6,6 +6,7 @@ import { resources } from "@/i18n";
 import type { CostTable } from "@/api/psionics";
 import type { Power } from "@/types/powers";
 import { NO_TARGET, formOf } from "./bar";
+import { takesMind } from "./model";
 import { TableControls, TablePreview } from "./ActionBar";
 import {
   controlsOf,
@@ -73,6 +74,7 @@ describe("the table-cost form", () => {
       ...NO_TARGET,
       target: "Orc",
       mind: "open" as const,
+      mindSaid: true,
       level: "7",
     };
     expect(tableRequest(target, controls, picks, [])).toEqual({
@@ -87,6 +89,10 @@ describe("the table-cost form", () => {
     ).toEqual([{ kind: "weather", code: "calm" }]);
     expect(
       tableRequest({ ...target, level: "" }, controls, picks, []),
+    ).toBeNull();
+    // The band's "closed" is a default until the player chose: no request, so no refusal for it.
+    expect(
+      tableRequest({ ...target, mindSaid: false }, controls, picks, []),
     ).toBeNull();
     expect(tableRequest(target, controls, picks, [], "13")?.cost).toBe(13);
   });
@@ -117,5 +123,7 @@ describe("the table-cost form", () => {
       initial_cost_table: "no_such_table",
     } as unknown as Power;
     expect(formOf(p)).toBe("table");
+    // Its opponent comes from the Target band, so the band must show for it.
+    expect(takesMind(p)).toBe(true);
   });
 });

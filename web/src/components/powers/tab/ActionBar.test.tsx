@@ -114,6 +114,28 @@ describe("the form the bar opens", () => {
     expect(contactMinds(rows).map((m) => m.name)).toEqual(["Gardien"]);
   });
 
+  it("words the form with no contact as a short label, and the server's refusal in both languages", async () => {
+    for (const lng of ["en", "fr"] as const) {
+      const out = await html(lng, { kind: "power", power: onContact });
+      const label = out.match(/data-testid="no-contact"[^>]*>([^<]*)</)?.[1];
+      expect(label).toBe(lng === "en" ? "No contact held" : "Aucun contact");
+      const common = resources[lng].common as unknown as {
+        apiError: Record<string, string>;
+      };
+      for (const code of ["no_contact", "mind_closed"]) {
+        expect(common.apiError[code]?.length).toBeGreaterThan(10);
+      }
+    }
+    // A mind the band names is still offered, so the server's no_contact refusal can show.
+    const named = await html(
+      "en",
+      { kind: "power", power: onContact },
+      { ...NO_TARGET, target: "Orc" },
+    );
+    expect(named).toContain("<option");
+    expect(named).not.toContain('data-testid="no-contact"');
+  });
+
   it("shows the attack form with the target's roll fields only while a defence is set", async () => {
     const none = await html("en", { kind: "power", power: attackMode });
     expect(none).toContain('data-form="attack"');

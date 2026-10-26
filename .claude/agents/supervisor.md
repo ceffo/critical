@@ -355,6 +355,7 @@ workflow doc's "Commits" and the project's `AGENTS.md` for branches you dispatch
 
 ## Stacked branches (an item blocked by an open PR)
 
+A child of an open PR stays a stacked child until the parent merges: never rebase it onto `<db>` to unstack it, sync it with merges; a force-push is the user's to approve first (user, 2026-10-26: "next time stack MRs", after sup-96 rebased a child onto main and the push needed a force).
 Don't idle waiting for a merge. Dependent PRs are a **GitHub native stack**, managed with `gh stack`
 (see `gh stack --help`). It works with one worktree per branch: its cascading rebase updates
 branches checked out in other worktrees in place.

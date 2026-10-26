@@ -253,12 +253,6 @@ export function CharacterCard({
           </span>
         </span>
       </div>
-      <PspBlock
-        current={psp}
-        max={who.pspMax}
-        upkeep={upkeep}
-        restOpen={restOpen}
-      />
       <div className="flex flex-col gap-2">
         <span className="section-label">{tr("Modifier les PV", "HP change")}</span>
         <div className="flex gap-2">
@@ -275,6 +269,12 @@ export function CharacterCard({
           </Button>
         </div>
       </div>
+      <PspBlock
+        current={psp}
+        max={who.pspMax}
+        upkeep={upkeep}
+        restOpen={restOpen}
+      />
       <div className="flex flex-col gap-1.5">
         <span className="section-label">
           {tr("Jets de sauvegarde", "Saving throws")}

@@ -8,6 +8,13 @@ attack, defence, power use, out-of-combat powers and an easy rest are required. 
 the user: "you can't design with specific powers. the app should be DATA-DRIVEN. spells and their
 rules are the data" (ADR 0043 step 8, "a power's rules are its data").
 
+Round 3, answered by the user: entries before a roll go in a bar docked under the Powers lists (the
+row stays highlighted); the tab header keeps "Pouvoir du tour" and the "Ajustement" stepper;
+"Attaque subie" sits in the "Ma défense" band and opens the same bar; resting while a paying power
+is kept up is one button that stops it and recovers; "Méditation 12 / heure" shows only with the
+Rejuvenation proficiency (`requires_proficiency` on Table 6 rows). "HP modifying should stay close
+to HP bar": the character card reads hit points, HP change, then the PSP block.
+
 - **Pages**: `web/design/psionics/` (React on the app's stylesheet, `Button`, Phosphor icons). Data in
   `data.ts`, shaped as catalogue format 18: the powers and the rule-table rows (Table 6, 14, 29 to 31)
   are copied from the catalogue; two fixtures with different known powers. `?screen=<id>&lang=fr|en`.

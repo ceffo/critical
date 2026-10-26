@@ -69,6 +69,11 @@ function lookup(lang: "en" | "fr", key: string): string | undefined {
 const FIXED_TERMS = new Set([
   "round.next",
   "spellSlots.longRest",
+  // The rest popover (ADR 0047 items 4 and 11, the user's "4A" wording): the button names what it
+  // stops and how long it rests, and the long rest is the same term as the spells' one.
+  "psp.rest.stopAndRecover",
+  "psp.rest.recover",
+  "psp.rest.long",
   // "Log in" / "Log out" (the user's caption for the cog menu's entry): no single word names them.
   "login.action",
   "settings.logout",

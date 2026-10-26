@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { appendHpEvent } from "@/api/hp";
-import { appendPspEvent, recoverPsp, type PspActivity } from "@/api/psp";
+import { appendPspEvent, recoverPsp, stopAndRecoverPsp } from "@/api/psp";
 import type { PspPool } from "@/types/character";
 import { ApiError, UNAVAILABLE } from "@/api/http";
 import { redoLogEntry, undoLogEntry } from "@/api/log";
@@ -72,7 +72,11 @@ interface TableStore {
   /** A PSP change by hand (ADR 0043 step 5); the answer is the pool, set on the character. */
   recordPsp: (delta: number, source: string) => Promise<boolean>;
   /** PSPs recovered over hours of an activity (ADR 0043 step 6). */
-  recoverPsp: (hours: number, activity: PspActivity) => Promise<boolean>;
+  recoverPsp: (hours: number, activity: string) => Promise<boolean>;
+  /** The same recovery after stopping every power that pays PSPs, one undoable entry (ADR 0047 item 4). */
+  stopAndRecoverPsp: (hours: number, activity: string) => Promise<boolean>;
+  /** The long rest (ADR 0043 step 7): slots, per-day items, powers kept up and a night's PSPs. */
+  longRest: () => Promise<boolean>;
   /** Pop the top of the action stack, any kind, as last read (ADR 0010). False when the server
    * refused (another action landed first) or there was nothing to pop. */
   undo: () => Promise<boolean>;
@@ -152,7 +156,11 @@ function setPsp(pool: PspPool) {
   const c = useCharacterStore.getState().character;
   if (c?.derived)
     useCharacterStore.setState({
-      character: { ...c, derived: { ...c.derived, psp: pool } },
+      // The answer holds {current, max} only: the Table 6 rows read with the character stay.
+      character: {
+        ...c,
+        derived: { ...c.derived, psp: { ...c.derived.psp, ...pool } },
+      },
     });
 }
 
@@ -249,6 +257,17 @@ export const useTableStore = create<TableStore>((set, get) => {
     recoverPsp: (hours, activity) =>
       get().run(async () => setPsp(await recoverPsp(hours, activity)), {
         fresh: ["character"],
+      }),
+    stopAndRecoverPsp: (hours, activity) =>
+      get().run(
+        async () => setPsp((await stopAndRecoverPsp(hours, activity)).psp),
+        {
+          fresh: ["character", "buffs"],
+        },
+      ),
+    longRest: () =>
+      get().run(() => useSpellStore.getState().resetSlots(), {
+        fresh: ["slots", "character", "buffs", "items"],
       }),
     // One undo system (ADR 0018 step 3), the journal's Undo button and Ctrl+Z: the global undo
     // with the top this client last read, so a stale top (another client acted since) is refused

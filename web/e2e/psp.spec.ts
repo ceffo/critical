@@ -23,8 +23,10 @@ test.describe("a psionicist", () => {
     const value = panel.getByTestId("psp-value");
     await expect(value).toHaveText("40 / 40");
 
-    await panel.getByLabel("PSP amount").fill("12");
-    await panel.getByRole("button", { name: "Spend" }).click();
+    await panel.getByTestId("psp-adjust").click();
+    const adjust = page.getByTestId("psp-adjust-popover");
+    await adjust.getByLabel("PSP amount").fill("12");
+    await adjust.getByRole("button", { name: "Spend" }).click();
     await expect(value).toHaveText("28 / 40");
     await expect(panel.getByRole("meter")).toHaveAttribute(
       "aria-valuenow",
@@ -42,15 +44,18 @@ test.describe("a psionicist", () => {
     await openDashboard(page);
     const panel = page.getByTestId("psp-panel");
     const value = panel.getByTestId("psp-value");
-    await panel.getByLabel("PSP amount").fill("30");
-    await panel.getByRole("button", { name: "Spend" }).click();
+    await panel.getByTestId("psp-adjust").click();
+    const adjust = page.getByTestId("psp-adjust-popover");
+    await adjust.getByLabel("PSP amount").fill("30");
+    await adjust.getByRole("button", { name: "Spend" }).click();
     await expect(value).toHaveText("10 / 40");
 
-    await panel.getByRole("spinbutton", { name: "Hours" }).fill("2");
-    await panel
-      .getByRole("combobox", { name: "Activity" })
-      .selectOption("resting");
-    await panel.getByRole("button", { name: "Recover", exact: true }).click();
+    await panel.getByTestId("psp-rest").click();
+    const rest = page.getByTestId("psp-rest-popover");
+    await rest.getByRole("radio", { name: /resting/ }).click();
+    await rest.getByRole("spinbutton", { name: "Hours" }).fill("2");
+    await expect(rest.getByTestId("psp-rest-preview")).toContainText("22");
+    await rest.getByTestId("psp-rest-go").click();
     await expect(value).toHaveText("22 / 40");
   });
 });

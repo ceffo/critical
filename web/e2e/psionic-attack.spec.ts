@@ -205,13 +205,11 @@ test.describe("a psionicist attacking the same mind again", () => {
     await expect(rows("Orc")).toHaveCount(1);
     await expect(rows("Goblin")).toHaveCount(0);
 
-    // Typed in lower case it is the same row, under the row's own label: more tangents until contact
-    // (a first attack that won one leaves a second to make).
+    // Typed in lower case it is the same row, under the row's own label: the seeded dice make the
+    // attack made here the one that completes contact (CRITICAL_DICE_SEED, fixtures.ts); no attack
+    // is repeated to get it, and the assertion fails loudly if the sequence changes.
     await openActPowers(page);
-    let typed = await attack("orc");
-    for (let i = 0; i < 3 && !typed.includes("contact made"); i++) {
-      typed = await attack("orc");
-    }
+    const typed = await attack("orc");
     expect(typed).toContain("contact made");
     await rail.getByRole("button", { name: "Act" }).click();
     await expect(rows("Orc")).toHaveCount(1);

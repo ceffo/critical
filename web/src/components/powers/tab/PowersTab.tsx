@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Lightning, Minus, Plus, ShieldCheck } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -233,6 +233,7 @@ function DefenceBand({
 }) {
   const { t, i18n } = useTranslation();
   const busy = useTableStore((s) => s.busy);
+  const run = useTableStore((s) => s.run);
   const inCombat = useBuffsStore((s) => s.round > 0);
   const rows = useBuffsStore((s) => s.buffs);
   const [refusal, setRefusal] = useState<string | null>(null);
@@ -265,38 +266,49 @@ function DefenceBand({
           const name = localized(i18n.language, p.name);
           const outOfCombat = !inCombat && !standing;
           return (
-            <button
-              key={p.id}
-              type="button"
-              data-testid="defence-chip"
-              data-defence={row?.defence ?? "down"}
-              role="switch"
-              aria-checked={!!row}
-              aria-label={t("powers.defence.raiseNamed", { name })}
-              disabled={busy || outOfCombat || (standing && !!row)}
-              className={cn(
-                "flex h-8 items-center gap-1.5 rounded-md px-2.5 text-body",
-                row ? "chip chip-chosen" : "chip",
-                outOfCombat && "border border-dashed text-ink-muted",
+            <Fragment key={p.id}>
+              <button
+                type="button"
+                data-testid="defence-chip"
+                data-defence={row?.defence ?? "down"}
+                role="switch"
+                aria-checked={!!row}
+                aria-label={t("powers.defence.raiseNamed", { name })}
+                disabled={busy || outOfCombat || (standing && !!row)}
+                className={cn(
+                  "flex h-8 items-center gap-1.5 rounded-md px-2.5 text-body",
+                  row ? "chip chip-chosen" : "chip",
+                  outOfCombat && "border border-dashed text-ink-muted",
+                )}
+                onClick={() => void raise(p.id)}
+              >
+                <ShieldCheck
+                  aria-hidden
+                  weight={row ? "fill" : "regular"}
+                  className="size-4"
+                />
+                <span lang={i18n.language}>{name}</span>
+                <span className="text-label text-ink-muted">
+                  {row
+                    ? t(`powers.defence.kind.${row.defence}`)
+                    : standing
+                      ? t("powers.tab.standingFree")
+                      : outOfCombat
+                        ? `${t("lookup.powers.psp", { count: costOf(p) })} · ${t("powers.tab.inCombat")}`
+                        : t("lookup.powers.psp", { count: costOf(p) })}
+                </span>
+              </button>
+              {standing && row && (
+                <Button
+                  className="px-2"
+                  disabled={busy}
+                  aria-label={t("powers.use.stopNamed", { name })}
+                  onClick={() => void run(() => stopPower(p.id))}
+                >
+                  {t("powers.use.stop")}
+                </Button>
               )}
-              onClick={() => void raise(p.id)}
-            >
-              <ShieldCheck
-                aria-hidden
-                weight={row ? "fill" : "regular"}
-                className="size-4"
-              />
-              <span lang={i18n.language}>{name}</span>
-              <span className="text-label text-ink-muted">
-                {row
-                  ? t(`powers.defence.kind.${row.defence}`)
-                  : standing
-                    ? t("powers.tab.standingFree")
-                    : outOfCombat
-                      ? `${t("lookup.powers.psp", { count: costOf(p) })} · ${t("powers.tab.inCombat")}`
-                      : t("lookup.powers.psp", { count: costOf(p) })}
-              </span>
-            </button>
+            </Fragment>
           );
         })}
         {defences.length === 0 && (

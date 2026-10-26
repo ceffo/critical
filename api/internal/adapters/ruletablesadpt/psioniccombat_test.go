@@ -119,3 +119,22 @@ func TestRuleTables_Step1_ContactCostAndModifiers(t *testing.T) {
 		require.ErrorContains(t, err, tc.want, name)
 	}
 }
+
+// The contact tables' rows read as data for the cost-table read: every modifier kind and code of
+// ADR 0044 step 1.3 is a row, and a caller's edit of the copy leaves the
+// table alone.
+func TestRuleTables_Step1_ContactRowsAsData(t *testing.T) {
+	tbl := phb(t)
+	rows, err := tbl.ContactModifierRows()
+	require.NoError(t, err)
+	want := 0
+	for _, codes := range ruletablesvc.ContactModifierCodes {
+		want += len(codes)
+	}
+	assert.Len(t, rows, want)
+
+	rows[0].Modifier = 999
+	again, err := tbl.ContactModifierRows()
+	require.NoError(t, err)
+	assert.NotEqual(t, 999, again[0].Modifier)
+}

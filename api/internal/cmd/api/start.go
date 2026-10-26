@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -50,6 +51,11 @@ type Config struct {
 	// StorageMemory, the in-memory storage of the e2e runs (ADR 0025 step 8),
 	// which opens no database and keeps nothing after the process exits.
 	Storage string `env:"CRITICAL_STORAGE"`
+	// DiceSeed, set, makes every die roll a repeatable sequence from that
+	// unsigned integer (the e2e runs, ADR 0025 step 8.5). Only with
+	// StorageMemory, so every guard of that mode (fly.io, the production
+	// image) also guards the seed; empty, the dice are cryptographic.
+	DiceSeed string `env:"CRITICAL_DICE_SEED"`
 	// FlyApp is set by fly.io on every machine it runs (FLY_APP_NAME): the
 	// in-memory storage is refused there (ADR 0025 step 8.3).
 	FlyApp string `env:"FLY_APP_NAME"`
@@ -214,6 +220,9 @@ func listenPort(addr string) string {
 // nowhere else) and in the production image (the only one serving the built
 // web app, CRITICAL_WEB_DIR). Its data would vanish at the next restart.
 func (c Config) validateStorage() error {
+	if _, err := c.diceSeed(); err != nil {
+		return err
+	}
 	switch c.Storage {
 	case "":
 		return nil
@@ -228,6 +237,24 @@ func (c Config) validateStorage() error {
 		return fmt.Errorf("CRITICAL_STORAGE=%s is for e2e runs only, refused in the production image (CRITICAL_WEB_DIR is set)", StorageMemory)
 	}
 	return nil
+}
+
+// diceSeed is the parsed CRITICAL_DICE_SEED, nil when unset. A seed is
+// refused unless the in-memory storage is selected (ADR 0025 step 8.5): that
+// mode is itself refused on fly.io and in the production image, so a seeded
+// die can never reach real data.
+func (c Config) diceSeed() (*uint64, error) {
+	if c.DiceSeed == "" {
+		return nil, nil
+	}
+	if c.Storage != StorageMemory {
+		return nil, fmt.Errorf("CRITICAL_DICE_SEED is for e2e runs only: it needs CRITICAL_STORAGE=%s", StorageMemory)
+	}
+	seed, err := strconv.ParseUint(c.DiceSeed, 10, 64)
+	if err != nil {
+		return nil, fmt.Errorf("CRITICAL_DICE_SEED must be an unsigned integer, got %q", c.DiceSeed)
+	}
+	return &seed, nil
 }
 
 // loadConfig parses env (defaults come from envDefault tags) and validates.
@@ -301,8 +328,13 @@ func Start() error {
 	if err != nil {
 		return err
 	}
+	diceSeed, err := cfg.diceSeed()
+	if err != nil {
+		return err
+	}
 	bs, err := composition.New(ctx, composition.Config{
-		DSN: cfg.DSN, InMemory: cfg.Storage == StorageMemory,
+		DiceSeed: diceSeed,
+		DSN:      cfg.DSN, InMemory: cfg.Storage == StorageMemory,
 		SeedsDir: cfg.SeedsDir, Catalogue: resolveFromRepoRoot(cfg.Catalogue, cwd),
 		Google: auth.google, Mail: mailer,
 	})

@@ -81,12 +81,14 @@ export function TargetBand({
             key={mind}
             type="button"
             role="radio"
-            aria-checked={target.mind === mind}
+            aria-checked={target.mindSaid && target.mind === mind}
             className={cn(
               "h-7 rounded-md px-2 text-body",
-              target.mind === mind ? "chip chip-chosen" : "chip",
+              target.mindSaid && target.mind === mind
+                ? "chip chip-chosen"
+                : "chip",
             )}
-            onClick={() => set({ mind })}
+            onClick={() => set({ mind, mindSaid: true })}
           >
             {t(`powers.attack.${mind}`)}
           </button>

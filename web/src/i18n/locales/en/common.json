@@ -249,11 +249,18 @@
         "close": "Close",
         "less": "Lower {{label}}",
         "more": "Raise {{label}}",
+        "contactMind": "Mind in contact",
+        "noContact": "No contact held",
         "noRolls": "No defence set: no roll to enter.",
         "needTarget": "Name the opponent in the Target band.",
         "initialCost": "Initial cost",
         "maintenanceCost": "Upkeep per turn",
         "confirm": "Cost set by the power.",
+        "tableCost": "Cost {{cost}} PSPs · score {{target}}",
+        "notEnough": "Not enough PSPs ({{current}} left).",
+        "needOpponent": "Name the opponent, its mind and its level in the Target band.",
+        "dmCost": "Cost (DM)",
+        "previewFailed": "The cost could not be read.",
         "resolve": "Resolve"
       }
     },
@@ -1846,6 +1853,11 @@
       "targetLevel": "target level {{level}}",
       "contactLine": "{{what}} {{modifier}}",
       "contactMade": "contact made"
+    },
+    "contactKinds": {
+      "distance": "Distance",
+      "life_order": "Life order",
+      "resistance": "Resistance"
     },
     "contactWords": {
       "distance": {

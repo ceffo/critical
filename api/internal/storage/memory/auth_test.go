@@ -68,3 +68,35 @@ func TestAuth_ConstraintsAndRollback(t *testing.T) {
 	_, err = a.UserByEmail(ctx, "c@example.com")
 	require.ErrorIs(t, err, domain.ErrNotFound)
 }
+
+// Users and pending invites created in one instant list in email order, never
+// in the order of their random ids, so the admin lists read the same on every
+// run (the e2e determinism of ADR 0025 step 8.5).
+func TestAuth_Step8_5_ListsTieBreakByEmailNotRandomId(t *testing.T) {
+	ctx := context.Background()
+	m := memory.New()
+	a := m.Auth()
+	at := time.Now()
+	// Ids in the reverse of the email order: an id tie-break would list "z" first.
+	hi := uuid.MustParse("ffffffff-0000-0000-0000-000000000000")
+	lo := uuid.MustParse("00000000-0000-0000-0000-000000000000")
+	require.NoError(t, a.InsertUser(ctx, authsvc.User{ID: hi, Email: "a@example.com", Role: authsvc.RoleAdmin, Root: true, CreatedAt: at}))
+	require.NoError(t, a.InsertUser(ctx, authsvc.User{ID: lo, Email: "z@example.com", Role: authsvc.RolePlayer, CreatedAt: at}))
+	users, err := a.ListUsers(ctx)
+	require.NoError(t, err)
+	require.Len(t, users, 2)
+	assert.Equal(t, []string{"a@example.com", "z@example.com"}, []string{users[0].Email, users[1].Email})
+
+	for _, in := range []struct {
+		id    uuid.UUID
+		email string
+	}{{hi, "m@example.com"}, {lo, "n@example.com"}} {
+		require.NoError(t, a.InsertInvite(ctx, authsvc.Invite{
+			ID: in.id, Email: in.email, InvitedBy: hi, CreatedAt: at, Language: authsvc.LanguageEnglish,
+		}))
+	}
+	invites, err := a.ListPendingInvites(ctx)
+	require.NoError(t, err)
+	require.Len(t, invites, 2)
+	assert.Equal(t, []string{"m@example.com", "n@example.com"}, []string{invites[0].Email, invites[1].Email})
+}

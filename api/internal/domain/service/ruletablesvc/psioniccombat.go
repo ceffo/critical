@@ -156,6 +156,19 @@ func (t *Tables) ContactCost(level int) (int, error) {
 	return 0, ErrLevelOutOfTable
 }
 
+// ContactModifierRows are the contact power's score modifiers (Tables 30 and
+// 31 and the resistance, ADR 0044 step 1.3), a copy the caller may keep.
+func (t *Tables) ContactModifierRows() ([]ContactModifierRow, error) {
+	c, err := t.classTables()
+	if err != nil {
+		return nil, err
+	}
+	return slices.Clone(c.ContactModifiers), nil
+}
+
+// ErrNoContactModifier is the error of a kind and code that is no contact modifier row.
+var ErrNoContactModifier = errors.New("contact modifiers: no such row")
+
 // ContactModifier is the contact power's score modifier for code of kind
 // (ADR 0044 step 1.3: Table 30 by distance, Table 31 by life order, or the
 // resistance). An unknown kind or code is an error.
@@ -169,7 +182,7 @@ func (t *Tables) ContactModifier(kind, code string) (int, error) {
 			return r.Modifier, nil
 		}
 	}
-	return 0, fmt.Errorf("contact modifiers: no row for %s %q", kind, code)
+	return 0, fmt.Errorf("%w: %s %q", ErrNoContactModifier, kind, code)
 }
 
 // CheckPowerKinds is the start-up check that ties the combat tables to the

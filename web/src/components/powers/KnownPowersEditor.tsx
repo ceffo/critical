@@ -9,7 +9,6 @@ import { localized } from "@/i18n/localized";
 import { cn } from "@/lib/utils";
 import type { KnownPowers, PowerPick } from "@/types/character";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
-import { DefencePanel } from "./DefencePanel";
 import { usePickEdits } from "./usePickEdits";
 
 const COUNT_KEYS = [
@@ -93,7 +92,6 @@ export function KnownPowersList({
   options,
   seen,
   disciplineChips,
-  defence = false,
   onChange,
 }: {
   known: KnownPowers;
@@ -101,8 +99,6 @@ export function KnownPowersList({
   refusal: ApiError | null;
   options: PowerFilterOptions | null;
   seen: Power[];
-  /** Show the current defence and Defend (the character's, not the creation's). */
-  defence?: boolean;
   /** Under the disciplines: the chips that add one (the picker of the creation has its own). */
   disciplineChips?: React.ReactNode;
   onChange: (next: PowerPick[]) => void | Promise<void>;
@@ -159,7 +155,6 @@ export function KnownPowersList({
             </div>
           ))}
         </dl>
-        {defence && <DefencePanel powerName={powerName} />}
         {refusal && (
           <Refusal
             error={refusal}

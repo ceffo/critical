@@ -239,9 +239,11 @@ two power ids in its row of data.
 
 9. **The contact power against an open mind** (Contact, `cpsh/ch07-telepathy/02-telepathy-tower-of-iron-will-onward.md`;
    Tables 29 to 31). A use of a power whose cost names `contact_cost` (step 1.4) takes the
-   opponent (step 2): the cost is Table 29's row for its level, the score takes the distance row,
-   the life-order row and, when the DM says so, `resisting` as labelled lines (from
-   `contact_modifiers`), then ADR 0043 steps 10 and 11 as for any power (half the cost on a
+   opponent (step 2): the cost is Table 29's row for its level, the score takes the
+   `contact_modifiers` rows the request picks (`modifiers: [{kind, code}]`: the distance row, the
+   life-order row, `resisting` when the DM says so), as labelled lines; a pick that is no row of
+   the table, or a second of a kind, is refused on `modifiers`, so a table with other kinds needs
+   no new field. Then ADR 0043 steps 10 and 11 as for any power (half the cost on a
    failure; a failure may be tried again next round). A success puts the target's contact row (step
    3). Refused `mind_closed` against a closed mind (the book: the power never works on one) and
    `level_out_of_table` for a level Table 29 has no row for, unless the request gives the DM's
@@ -282,6 +284,15 @@ two power ids in its row of data.
     (mode, target picked from the rows or typed, open or closed, the opponent's defence and the
     DM's two rolls); a defend form (the DM's mode and rolls, keep); the tangent and contact rows
     with their target. Game logic stays in Go: the forms send intent and render the answer.
+    The forms read their controls and preview from the server: `GET /api/powers` adds
+    `initial_cost_table` and `initial_cost_plus` beside `initial_cost` (which keeps its word);
+    `GET /api/psionics/cost-tables/{table}` serves the named table's modifier rows (kind, code,
+    modifier; 404 for a name no cost carries; no bands: the web never picks the level's cost); `POST
+    /api/psionics/powers/{id}/contact/preview` takes the contact's body and answers its cost, whether
+    that is the table's (`fromTable`), the score with its lines, whether the pool covers it
+    (`enough`) and the second-power warning, from the same computation as the contact, nothing
+    rolled or written. Tests: `ContactPreview_EqualsContact`, `ContactPreview_RefusesAsContactDoes`,
+    `ContactPreview_ShortOfPSPsIsNotARefusal`.
     Tests: `PsionicCombat_Step11_Routes` (router: the wire shapes and refusals), the forms' unit
     tests, one e2e flow (raise a defence, attack twice to contact, defend once, undo) in
     `psionic-combat.spec`.

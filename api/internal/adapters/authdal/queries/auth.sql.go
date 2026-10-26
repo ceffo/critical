@@ -212,7 +212,7 @@ func (q *Queries) InviteByID(ctx context.Context, id uuid.UUID) (InviteByIDRow, 
 const listPendingInvites = `-- name: ListPendingInvites :many
 SELECT id, email, invited_by, created_at, language FROM invites
 WHERE cancelled IS NULL AND accepted_by IS NULL
-ORDER BY created_at, id
+ORDER BY created_at, email
 `
 
 type ListPendingInvitesRow struct {
@@ -223,6 +223,7 @@ type ListPendingInvitesRow struct {
 	Language  string
 }
 
+// Like ListUsers, ties go by email (unique among the pending invites), not by the random id.
 func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesRow, error) {
 	rows, err := q.db.QueryContext(ctx, listPendingInvites)
 	if err != nil {
@@ -255,7 +256,7 @@ func (q *Queries) ListPendingInvites(ctx context.Context) ([]ListPendingInvitesR
 const listUsers = `-- name: ListUsers :many
 
 SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name FROM users
-ORDER BY created_at, id
+ORDER BY created_at, email
 `
 
 type ListUsersRow struct {
@@ -272,6 +273,8 @@ type ListUsersRow struct {
 
 // The admin section (ADR 0029 step 1.3): every user, the names of their characters (not the sheets),
 // and the pending invites.
+// The tie of two users created in one instant is broken by the unique email, not the random id, so a
+// listing never changes order from one run to the next.
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	rows, err := q.db.QueryContext(ctx, listUsers)
 	if err != nil {

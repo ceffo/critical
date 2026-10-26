@@ -367,7 +367,7 @@ branches checked out in other worktrees in place.
   (migrations, generated output) must stay after the parent's.
 - A GitHub native stack is a straight line: `gh stack link` with a second child of the same parent re-bases that child onto the first one. A sibling child stays out of the stack (plain `--base <parent-branch>`) and is restacked by hand after the parent merges (sup-71).
 - Publish: open the child's PR with `gh pr create --base <parent-branch> --body-file …` (keeps your
-  own body; say "stacked on #<parent>"), then `gh stack link <parent-pr> <child-pr>` to make it a
+  own body; say "stacked on #<parent>"), then `gh stack link <bottom-pr> … <child-pr>` (the whole stack, from the bottom: linking a middle PR first retargeted it to `<db>`, sup-96) to make it a
   stack on GitHub.
 - When `<db>` moves or the parent is squash-merged, **you** restack, but only while every developer
   in the stack is idle with a clean tree (a rebase under a working agent loses its edits):
@@ -386,7 +386,7 @@ branched, prompt the child's developer to merge the updated parent branch first.
 most.
 
 A catalogue format bump lands in two repos: once the rulebooks half merges, every open app PR fails CI until the app half lands, and after it lands `gh run rerun` is useless (it reuses the old merge sha): run `gh pr update-branch` on each open PR instead, and send a developer to the ones it reports as conflicting (sup-72).
-After the app half of a format bump merges, the rulebooks `ref/MANIFEST` re-pin is mechanical and yours: in the rulebooks worktree, `git switch -c chore/repin-... origin/main`, `scripts/fetch-ref --from <main> --rev origin/main`, `scripts/check`, commit, ship with `CRITICAL_MAIN`, land on green (sup-77: three calls, no developer).
+After the app half of a format bump merges, the rulebooks `ref/MANIFEST` re-pin is yours when `scripts/check` passes after it (when the app added data the rulebooks check validates, e.g. a new proficiency, it is a developer item: sup-96): in the rulebooks worktree, `git switch -c chore/repin-... origin/main`, `scripts/fetch-ref --from <main> --rev origin/main`, `scripts/check`, commit, ship and land with `CRITICAL_MAIN=~/code/critical-rulebooks`, land on green (sup-77: three calls, no developer).
 A format bump's first round is one repo and one layer: the app reader and fixture, then the rule-table checks, then the rulebooks builder, each its own round (sup-81: one Opus round on both repos ended at 131k with nothing committed; split into three Sonnet rounds it finished at 73k-102k each). Its brief says the app fixture carries the book's numbers copied from rulebooks dist/, never placeholders (ADR 0021; sup-81's reviewer caught invented contact costs).
 Work that builds on a docs-only PR (an accepted ADR) starts at once, stacked on its branch: never wait for the docs PR's CI or merge (user, 2026-10-23: "it's a waste of resource and time to run the ci just for a docs change and to wait for that before starting work base on this adr").
 A docs-only PR that is part of a larger item names the item only in words, never its id: Linear links any id in the body and moves the item to In Review, which the ready queue then flags as stalled (sup-81, the psionic combat ADR PR).

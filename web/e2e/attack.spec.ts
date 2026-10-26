@@ -438,7 +438,9 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
   const form = attackForm(page);
   await chooseWeapon(page, "Long Sword +2");
   // AC -20 can't be hit (effective THAC0 11 needs 31). AC 10 needs 1: a crit when
-  // d20 − check d100 ≥ 1 (ADR 0001 step 2). Roll until the dice make that a crit (~1 in 10).
+  // d20 − check d100 ≥ 1 (ADR 0001 step 2). The seeded dice (CRITICAL_DICE_SEED, fixtures.ts) make
+  // this test's first attack one that crits at AC 10; the assertion below fails loudly if the
+  // sequence ever changes (a new roll before it, a different seed), and no roll is repeated.
   await form.getByLabel("Target AC").fill("-20");
   const card = resultCard(page);
   const fact = async (label: string) =>
@@ -455,21 +457,15 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
           .querySelector('[data-testid="last-result"] [data-entry-id]')
           ?.getAttribute("data-entry-id") ?? null,
     );
-  let previous = await lastEntryId();
-  let d20 = 0;
-  let check = 100;
-  for (let i = 0; i < 100 && d20 - check < 1; i++) {
-    await form.getByRole("button", { name: "Attack", exact: true }).click();
-    // The new roll is the one the last-result line names: the journal lists only its 50 latest
-    // entries, so a count would stop growing on a long streak of misses.
-    await expect.poll(lastEntryId).not.toBe(previous);
-    previous = await lastEntryId();
-    d20 = await fact("d20");
-    check = await fact("Crit check d100");
-  }
+  const previous = await lastEntryId();
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
+  // The new roll is the one the last-result line names.
+  await expect.poll(lastEntryId).not.toBe(previous);
+  const d20 = await fact("d20");
+  const check = await fact("Crit check d100");
   expect(
     d20 - check,
-    "no roll in 100 makes AC 10 a crit",
+    "the seed's first attack no longer makes AC 10 a crit",
   ).toBeGreaterThanOrEqual(1);
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
   const mult = await fact("Multiplier d100");
@@ -685,8 +681,9 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
 });
 
 // docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 10 the stored dice make a crit.
-// The THAC0 is derived (ADR 0030 step 5), so roll until the dice crit AC 10: critsFromAc (effective
-// THAC0 − d20 + crit-check d100) at most 10, about 1 roll in 10.
+// The THAC0 is derived (ADR 0030 step 5): critsFromAc (effective THAC0 − d20 + crit-check d100) is
+// at most 10 for the seeded dice (CRITICAL_DICE_SEED, fixtures.ts) of this test's first attack, so
+// it is the one attack made; the assertion fails loudly if the sequence changes.
 test.describe("an attack whose dice crit AC 10", () => {
   test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({
     page,
@@ -694,16 +691,17 @@ test.describe("an attack whose dice crit AC 10", () => {
     await openAttack(page);
     const form = attackForm(page);
     await chooseWeapon(page, "Long Sword +2");
-    let critsFromAc = Infinity;
-    for (let i = 0; i < 100 && critsFromAc > 10; i++) {
-      const rolled = page.waitForResponse((res) =>
-        res.url().endsWith("/api/roll/attack"),
-      );
-      await form.getByRole("button", { name: "Attack", exact: true }).click();
-      critsFromAc = ((await (await rolled).json()) as { critsFromAc: number })
-        .critsFromAc;
-    }
-    expect(critsFromAc, "no roll in 100 crits AC 10").toBeLessThanOrEqual(10);
+    const rolled = page.waitForResponse((res) =>
+      res.url().endsWith("/api/roll/attack"),
+    );
+    await form.getByRole("button", { name: "Attack", exact: true }).click();
+    const { critsFromAc } = (await (await rolled).json()) as {
+      critsFromAc: number;
+    };
+    expect(
+      critsFromAc,
+      "the seed's first attack no longer crits AC 10",
+    ).toBeLessThanOrEqual(10);
 
     const card = resultCard(page);
     await expect(card.getByTestId("verdict")).toHaveText("?");

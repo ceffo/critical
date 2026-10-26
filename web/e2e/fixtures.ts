@@ -12,6 +12,21 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 const webDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const repoRoot = path.resolve(webDir, "..");
 const apiBinary = path.join(repoRoot, "bin", "critical-srv"); // `just build-api`
+/** The seed of every API's dice and of the latency injector: the same suite rolls the same dice. */
+export const diceSeed = 20;
+
+/** mulberry32: a small seeded generator in [0, 1), so no e2e path uses Math.random. */
+function seededRandom(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a = (a + 0x6d2b79f5) >>> 0;
+    let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
 // The frozen test fixture, never the campaign seeds/ (editing those must not break e2e).
 const seedsDir = path.join(repoRoot, "api", "testdata", "seeds");
 // The fixture spell catalogue (ADR 0021), always: counts and results stay deterministic, and CI has
@@ -312,6 +327,9 @@ export const test = base.extend<
         CRITICAL_STORAGE: "memory",
         // The dev login (ADR 0029 step 8.2): no OAuth settings in the e2e runs.
         CRITICAL_ENV: "dev",
+        // Every die of this API rolls the same sequence on every run (ADR 0025 step 8.5). One API per test,
+        // so a test's rolls depend on its own calls only, never on the other tests or the worker count.
+        CRITICAL_DICE_SEED: String(diceSeed),
         CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
         CRITICAL_CATALOGUE: await catalogueWith(tmp, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,
@@ -364,12 +382,13 @@ export const test = base.extend<
         document.head.appendChild(style),
       );
     });
-    // Flake hunting: `E2E_LAT=400 just e2e <spec>` delays every API answer by 0 to 400 ms (random), which
+    // Flake hunting: `E2E_LAT=400 just e2e <spec>` delays every API answer by 0 to 400 ms (from a fixed seed, so the delays repeat), which
     // exposes a spec that reads state before the page has it. Off by default.
     if (process.env.E2E_LAT) {
       const max = Number(process.env.E2E_LAT);
+      const random = seededRandom(diceSeed);
       await context.route("**/api/**", async (route) => {
-        await new Promise((r) => setTimeout(r, Math.random() * max));
+        await new Promise((r) => setTimeout(r, random() * max));
         await route.continue();
       });
     }

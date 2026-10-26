@@ -38,9 +38,11 @@ export function rowTags(t: TFunction, p: Power): string[] {
 /** A defence mode that costs nothing to keep up is standing: it needs no round. */
 export const isStanding = (p: Power) => p.maintenance?.cost === 0;
 
-/** A power that takes an opponent's mind: an attack mode, or one paid on contact. */
+/** A power that takes an opponent's mind: an attack mode, one paid on contact, or one whose cost a table gives from the opponent's level. */
 export const takesMind = (p: Power) =>
-  p.kind === "attack_mode" || p.initial_cost === "contact";
+  p.kind === "attack_mode" ||
+  p.initial_cost === "contact" ||
+  p.initial_cost_table !== undefined;
 
 /** One group of rows: the attack modes first, then each discipline in the order first learned. */
 export interface Group {
@@ -119,3 +121,7 @@ export function adjustmentModifiers(
     ? []
     : [{ value: adjustment > 0 ? `+${adjustment}` : `${adjustment}`, reason }];
 }
+
+/** The minds a contact row holds (no tangent count): the ones a power paid on contact can be used on. */
+export const contactMinds = (buffs: BuffEffect[]): HeldMind[] =>
+  heldMinds(buffs.filter((b) => b.tangents === undefined));

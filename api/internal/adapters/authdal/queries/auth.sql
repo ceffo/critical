@@ -78,8 +78,10 @@ UPDATE users SET current_character_id = NULL WHERE id = $1;
 -- and the pending invites.
 
 -- name: ListUsers :many
+-- The tie of two users created in one instant is broken by the unique email, not the random id, so a
+-- listing never changes order from one run to the next.
 SELECT id, email, google_subject, role, is_root, disabled, last_login, created_at, display_name FROM users
-ORDER BY created_at, id;
+ORDER BY created_at, email;
 
 -- name: OwnedCharacterNames :many
 -- The names of every owned character not retired, by owner, in creation order.
@@ -88,9 +90,10 @@ WHERE owner_user_id IS NOT NULL AND NOT retired
 ORDER BY id;
 
 -- name: ListPendingInvites :many
+-- Like ListUsers, ties go by email (unique among the pending invites), not by the random id.
 SELECT id, email, invited_by, created_at, language FROM invites
 WHERE cancelled IS NULL AND accepted_by IS NULL
-ORDER BY created_at, id;
+ORDER BY created_at, email;
 
 -- name: InsertInvite :exec
 INSERT INTO invites (id, email, invited_by, created_at, language) VALUES ($1, $2, $3, $4, $5);

@@ -1,34 +1,36 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Minus, Plus, ShieldCheck } from "@phosphor-icons/react";
+import { Lightning, Minus, Plus, ShieldCheck } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/api/http";
 import { getPower, getPowerFilterOptions } from "@/api/powers";
-import { raisePower } from "@/api/psionics";
+import { raisePower, stopPower } from "@/api/psionics";
 import { localized } from "@/i18n/localized";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { Power, PowerFilterOptions } from "@/types/powers";
-import { PowerActions } from "../PowerActions";
 import { MAX_MODIFIER } from "../powerUse";
+import { ActionBar, type Selection } from "./ActionBar";
+import { NO_TARGET, formOf, type TargetDraft } from "./bar";
 import {
   adjustmentModifiers,
   groupsOf,
-  heldMinds,
   isStanding,
   rowTags,
   takesMind,
 } from "./model";
+import { TargetBand } from "./TargetBand";
 import { useKnownPowers } from "./useKnownPowers";
 
 /**
  * Act > Powers (ADR 0047): the character's known powers as data. The header says which power the
  * round has used and holds the adjustment; "My defence" raises a defence mode in one tap; "Target"
  * lists the minds held, shown only when a known power takes one; the rows are grouped by
- * discipline, the attack modes first. What a row does is `PowerActions`' (the dialogs). Nothing here
- * names a power: a power added to the catalogue and learned shows with no change.
+ * discipline, the attack modes first. A row's action selects it and opens the action bar docked
+ * under the lists (its form follows the power's data). Nothing here names a power: a power added to
+ * the catalogue and learned shows with no change.
  */
 export function PowersTab() {
   const known = useCharacterStore((s) => s.character?.derived?.knownPowers);
@@ -52,6 +54,8 @@ export function PowersView({
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
   const [adjustment, setAdjustment] = useState(0);
+  const [selection, setSelection] = useState<Selection | null>(null);
+  const [target, setTarget] = useState<TargetDraft>(NO_TARGET);
   const modifiers = adjustmentModifiers(adjustment, t("powers.tab.adjustment"));
   const defences = powers.filter((p) => p.kind === "defence_mode");
   const groups = groupsOf(powers);
@@ -68,8 +72,16 @@ export function PowersView({
         adjustment={adjustment}
         onAdjust={setAdjustment}
       />
-      <DefenceBand defences={defences} />
-      {aimed && <TargetBand />}
+      <DefenceBand
+        defences={defences}
+        incoming={selection?.kind === "incoming"}
+        onIncoming={() =>
+          setSelection(
+            selection?.kind === "incoming" ? null : { kind: "incoming" },
+          )
+        }
+      />
+      {aimed && <TargetBand target={target} onChange={setTarget} />}
       {powers.length === 0 && (
         <p className="text-body text-muted-foreground">{t("powers.none")}</p>
       )}
@@ -88,12 +100,34 @@ export function PowersView({
             </h3>
             <ul className="flex list-none flex-col">
               {g.powers.map((p) => (
-                <PowerRow key={p.id} power={p} modifiers={modifiers} />
+                <PowerRow
+                  key={p.id}
+                  power={p}
+                  selected={
+                    selection?.kind === "power" && selection.power.id === p.id
+                  }
+                  onSelect={() =>
+                    setSelection(
+                      selection?.kind === "power" && selection.power.id === p.id
+                        ? null
+                        : { kind: "power", power: p },
+                    )
+                  }
+                />
               ))}
             </ul>
           </section>
         ))}
       </div>
+      {selection && (
+        <ActionBar
+          key={selection.kind === "power" ? selection.power.id : "incoming"}
+          selection={selection}
+          target={target}
+          modifiers={modifiers}
+          onClose={() => setSelection(null)}
+        />
+      )}
     </div>
   );
 }
@@ -188,7 +222,15 @@ function Header({
 }
 
 /** "My defence": one chip per known defence mode, raised in one tap, no roll. */
-function DefenceBand({ defences }: { defences: Power[] }) {
+function DefenceBand({
+  defences,
+  incoming,
+  onIncoming,
+}: {
+  defences: Power[];
+  incoming: boolean;
+  onIncoming: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const busy = useTableStore((s) => s.busy);
   const inCombat = useBuffsStore((s) => s.round > 0);
@@ -262,6 +304,15 @@ function DefenceBand({ defences }: { defences: Power[] }) {
             {t("powers.tab.noDefence")}
           </span>
         )}
+        <Button
+          className="ml-auto gap-1.5 px-2"
+          aria-pressed={incoming}
+          data-testid="incoming-attack"
+          onClick={onIncoming}
+        >
+          <Lightning aria-hidden />
+          {t("powers.tab.bar.incoming")}
+        </Button>
       </div>
       {refusal && (
         <p
@@ -279,62 +330,73 @@ function DefenceBand({ defences }: { defences: Power[] }) {
 const costOf = (p: Power) =>
   typeof p.initial_cost === "number" ? p.initial_cost : 0;
 
-/** "Target": the minds a tangent or contact row holds; the attack names the rest in its dialog. */
-function TargetBand() {
-  const { t } = useTranslation();
-  const minds = heldMinds(useBuffsStore((s) => s.buffs));
-  return (
-    <div
-      className="group-band flex flex-wrap items-center gap-2 rounded-lg px-3 py-2"
-      data-testid="target-band"
-    >
-      <span className="section-label mr-1">{t("powers.tab.target")}</span>
-      {minds.map((m) => (
-        <span
-          key={m.name}
-          className="chip flex h-8 items-center gap-2 rounded-md px-2.5 text-body"
-          data-testid="held-mind"
-        >
-          {m.name}
-          <span className="text-label text-ink-muted">
-            {m.tangents
-              ? t("powers.tab.tangents", { count: m.tangents })
-              : t("powers.tab.contact")}
-          </span>
-        </span>
-      ))}
-      {minds.length === 0 && (
-        <span className="text-body text-ink-muted">
-          {t("powers.tab.noMind")}
-        </span>
-      )}
-    </div>
-  );
-}
-
 function PowerRow({
   power,
-  modifiers,
+  selected,
+  onSelect,
 }: {
   power: Power;
-  modifiers: { value: string; reason: string }[];
+  selected: boolean;
+  onSelect: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const busy = useTableStore((s) => s.busy);
+  const run = useTableStore((s) => s.run);
+  // The buff row that keeps this power up, if any: Stop ends it (free; the journal's Undo takes it back).
+  const kept = useBuffsStore((s) =>
+    s.buffs.some((b) => b.powerId === power.id),
+  );
+  const name = localized(i18n.language, power.name);
+  const attack = formOf(power) === "attack";
   return (
     <li
-      className="flex flex-wrap items-center gap-3 rounded-md px-2.5 py-1 odd:bg-raised/50"
+      className={cn(
+        "flex flex-wrap items-center gap-3 rounded-md px-2.5 py-1 odd:bg-raised/50",
+        selected && "bg-selected odd:bg-selected ring-1 ring-ring",
+      )}
       data-testid="power-row"
       data-id={power.id}
+      data-selected={selected}
     >
       <span className="flex min-w-40 flex-1 basis-40 flex-col">
         <span lang={i18n.language} className="text-body font-medium">
-          {localized(i18n.language, power.name)}
+          {name}
         </span>
         <span className="text-label text-ink-muted">
           {rowTags(t, power).join(" · ")}
         </span>
       </span>
-      <PowerActions power={power} modifiers={modifiers} />
+      {kept && (
+        <>
+          <span
+            className="shrink-0 text-label whitespace-nowrap text-muted-foreground"
+            data-testid="power-maintained"
+          >
+            {t("powers.use.maintained")}
+          </span>
+          <Button
+            className="px-2"
+            disabled={busy}
+            aria-label={t("powers.use.stopNamed", { name })}
+            onClick={() => void run(() => stopPower(power.id))}
+          >
+            {t("powers.use.stop")}
+          </Button>
+        </>
+      )}
+      <Button
+        className="px-2"
+        disabled={busy}
+        aria-pressed={selected}
+        aria-label={
+          attack
+            ? t("powers.attack.attackNamed", { name })
+            : t("powers.use.useNamed", { name })
+        }
+        onClick={onSelect}
+      >
+        {attack ? t("powers.attack.attack") : t("powers.use.use")}
+      </Button>
     </li>
   );
 }

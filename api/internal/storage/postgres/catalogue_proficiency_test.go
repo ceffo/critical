@@ -42,7 +42,7 @@ func wantDescriptions(c catalogue.Catalogue) map[string]localized.Text {
 func TestImportCatalogue_Step16_DescriptionsInLocalizedTexts(t *testing.T) {
 	f := newFakeStore()
 	cat := fixtureCatalogue(t)
-	require.Len(t, cat.ProficiencyDescriptions, 65)
+	require.Len(t, cat.ProficiencyDescriptions, 66)
 	require.NoError(t, importOn(f, cat, nil))
 
 	got := storedDescriptions(t, f)
@@ -54,7 +54,7 @@ func TestImportCatalogue_Step16_DescriptionsInLocalizedTexts(t *testing.T) {
 	d := &DB{q: f}
 	read, err := d.ProficiencyDescriptions(context.Background())
 	require.NoError(t, err)
-	assert.Len(t, read, 65)
+	assert.Len(t, read, 66)
 	assert.Equal(t, cat.ProficiencyDescriptions[0].ID, read[0].ID)
 }
 

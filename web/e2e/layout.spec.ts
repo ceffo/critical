@@ -21,6 +21,7 @@ import {
   openTypedAdd,
   expectUndoOn,
   logEntry,
+  openSortsPowers,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import { asMultiClass } from "./multiclass";
@@ -1666,14 +1667,6 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
         .click();
       await expect(stage.getByTestId("lookup-group-tag")).toHaveCount(0);
     }
-    // ADR 0043 step 8: the powers list and a power's detail, in French, cut nowhere.
-    await stage.getByRole("button", { name: "Pouvoirs", exact: true }).click();
-    await stage.getByRole("option", { name: /Vision de l'Aura/ }).click();
-    await expectNoClippedText(stage, `lookup, powers, ${where}`);
-    await expectWholeWords(stage, `lookup, powers, ${where}`);
-    if (SHOTS.has(`${vp.width}x${vp.height}`))
-      await snap(page, `lookup-powers-fr-${vp.width}x${vp.height}`);
-    await stage.getByRole("button", { name: "Magicien", exact: true }).click();
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
     await rail.nth(3).click();
@@ -5317,38 +5310,46 @@ test.describe("Known powers", () => {
   test("uncut in French and English, 1280 to 2560", async ({ page }) => {
     test.setTimeout(90_000);
     await openDashboard(page);
-    const rail = page.getByTestId("rail");
-    await rail.getByRole("button", { name: "Powers" }).click();
-    const panel = page.getByTestId("known-powers");
+    const panel = await openSortsPowers(page);
     for (const name of ["Telepathy", "Clairsentience"])
       await panel.getByRole("button", { name: `Add ${name}` }).click();
     await panel
-      .getByRole("searchbox", { name: "Search powers..." })
+      .getByRole("combobox", { name: "Search powers..." })
       .fill("mind");
     await panel
-      .getByTestId("pick-row")
+      .getByTestId("power-row")
       .filter({ hasText: "Mind Blank" })
       .getByRole("button", { name: "Add Mind Blank" })
       .click();
     await panel
-      .getByTestId("pick-row")
+      .getByTestId("power-row")
       .filter({ hasText: "Mind Thrust" })
       .getByRole("button", { name: "Add Mind Thrust" })
       .click();
     await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
     await expect(panel.getByTestId("powers-refusal")).toBeVisible();
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expect(panel).toBeVisible();
-        await expectNoClippedText(panel, `known powers, ${where}`);
-        await expectWholeWords(panel, `known powers, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(page, `known-powers-${lang}-${vp.width}x${vp.height}`);
+    // The known list beside the browser, then a power's detail open in its place.
+    for (const view of ["list", "detail"] as const) {
+      if (view === "detail") {
+        await panel.getByTestId("power-row").first().click();
+        await expect(panel.getByTestId("power-detail")).toBeVisible();
+      }
+      for (const lang of ["fr", "en"] as const) {
+        await chooseLanguage(page, lang);
+        await page.keyboard.press("Escape");
+        for (const vp of VIEWPORTS) {
+          await page.setViewportSize(vp);
+          const where = `${view}, ${lang}, ${vp.width}x${vp.height}`;
+          await expect(panel).toBeVisible();
+          await expectNoClippedText(panel, `known powers, ${where}`);
+          await expectWholeWords(panel, `known powers, ${where}`);
+          await expectNoPageScroll(page);
+          if (vp.width >= 1920)
+            await snap(
+              page,
+              `known-powers-${view}-${lang}-${vp.width}x${vp.height}`,
+            );
+        }
       }
     }
   });

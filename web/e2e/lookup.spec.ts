@@ -16,9 +16,11 @@ import {
   chooseSetting,
   chooseTheme,
   openDashboard,
+  openSortsPowers,
   openWorkspace,
   receivePicker,
 } from "./helpers";
+import { psionicist } from "./psionicist";
 import type { Locator, Page } from "@playwright/test";
 import { expectNoClippedText, expectWholeWords } from "./noClip";
 
@@ -806,53 +808,69 @@ test("lookup: gameplay values are highlighted in one style in the text and the t
   }
 });
 
-// ADR 0043 step 8: the lookup lists the psionic powers beside the spells. Only a browser proves the
-// Powers entry of the list switch, the search over both languages and the detail in the player's
+// ADR 0043 step 8: Sorts > Powers browses the psionic powers (a psionicist only). Only a browser proves the
+// tab, the search over both languages and the detail in the player's
 // language; the ranking, the filters' rules and the costs are the API's Go tests.
-test("lookup powers: a power is found by its English or French name and its detail follows the language", async ({
-  page,
-}) => {
+test.describe("lookup powers", () => {
+  test.use({ character: psionicist });
+  test("a power is found by its English or French name and its detail follows the language", async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    await openSortsPowers(page);
+    const powerRows = page.getByTestId("power-row");
+    await expect(powerRows).toHaveCount(17);
+    await expect(page.getByTestId("lookup-count")).toHaveText("17 powers");
+    await powerRows.first().click();
+
+    await page
+      .getByRole("combobox", { name: "Search powers..." })
+      .fill("aura sight");
+    await expect(powerRows).toHaveCount(1);
+    await powerRows.first().click();
+    const detail = page.getByTestId("power-detail");
+    await expect(detail.getByRole("heading")).toHaveText("Aura Sight");
+    await expect(detail.getByTestId("power-meta")).toHaveText(
+      "Clairsentience · Science",
+    );
+    await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
+      "9 PSP",
+    );
+    await expect(detail.getByTestId("power-stat-score")).toContainText(
+      "WIS −5",
+    );
+    await expect(detail.getByTestId("power-description-text")).toContainText(
+      "A creature's aura reflects",
+    );
+    await snap(page, "power-detail");
+
+    // A discipline narrows the list; the French name finds the power in French.
+    await chooseLanguage(page, "fr");
+    await page
+      .getByRole("combobox", { name: "Rechercher des pouvoirs..." })
+      .fill("vision");
+    await expect(powerRows).toHaveCount(1);
+    await powerRows.first().click();
+    await expect(detail.getByRole("heading")).toHaveText("Vision de l'Aura");
+    await expect(detail.getByTestId("power-meta")).toHaveText(
+      "Clairsentience · Science",
+    );
+    await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
+      "9 PFP",
+    );
+    await expect(detail.getByTestId("power-description-text")).toContainText(
+      "Une aura est un halo brillant",
+    );
+    await snap(page, "power-detail-fr");
+  });
+});
+
+// Only a character with powers gets the Pouvoirs tab: the default (non-psionic) one sees spells alone.
+test("a non-psionic has no Powers tab under Spells", async ({ page }) => {
   await openLookup(page);
-  await classButton(page, "Powers").click();
-  const powerRows = page.getByTestId("power-row");
-  await expect(powerRows).toHaveCount(17);
-  await expect(page.getByTestId("lookup-count")).toHaveText("17 powers");
-
-  await page
-    .getByRole("combobox", { name: "Search powers..." })
-    .fill("aura sight");
-  await expect(powerRows).toHaveCount(1);
-  const detail = page.getByTestId("power-detail");
-  await expect(detail.getByRole("heading")).toHaveText("Aura Sight");
-  await expect(detail.getByTestId("power-meta")).toHaveText(
-    "Clairsentience · Science",
-  );
-  await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
-    "9 PSP",
-  );
-  await expect(detail.getByTestId("power-stat-score")).toContainText("WIS −5");
-  await expect(detail.getByTestId("power-description-text")).toContainText(
-    "A creature's aura reflects",
-  );
-  await snap(page, "power-detail");
-
-  // A discipline narrows the list; the French name finds the power in French.
-  await chooseLanguage(page, "fr");
-  await page
-    .getByRole("combobox", { name: "Rechercher des pouvoirs..." })
-    .fill("vision");
-  await expect(powerRows).toHaveCount(1);
-  await expect(detail.getByRole("heading")).toHaveText("Vision de l'Aura");
-  await expect(detail.getByTestId("power-meta")).toHaveText(
-    "Clairsentience · Science",
-  );
-  await expect(detail.getByTestId("power-stat-initialCost")).toContainText(
-    "9 PFP",
-  );
-  await expect(detail.getByTestId("power-description-text")).toContainText(
-    "Une aura est un halo brillant",
-  );
-  await snap(page, "power-detail-fr");
+  await expect(
+    page.getByRole("tab", { name: /^(Powers|Pouvoirs)$/ }),
+  ).toHaveCount(0);
 });
 
 // "Mine" is the spellbook: only a class that has one is offered it (the unit test lookupClasses holds

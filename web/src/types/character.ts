@@ -180,6 +180,15 @@ export interface KnownPowers {
 export interface PspPool {
   current: number;
   max: number;
+  /** ADR 0047 item 6: CPsiH Table 6, read with the character (`GET` only; absent from the answers of
+   * `POST /api/psp/event` and `/recover`). A row with `requiresProficiency` needs that proficiency. */
+  recovery?: PspRecoveryRow[];
+}
+
+export interface PspRecoveryRow {
+  activity: string;
+  perHour: number;
+  requiresProficiency?: string;
 }
 
 /** ADR 0042 steps 5 and 7: one class entry's figures. `xp` is its starting XP plus its share of the

@@ -1665,6 +1665,15 @@
         "Groups": [
           "warrior"
         ]
+      },
+      {
+        "ID": "rejuvenation",
+        "Ability": "wis",
+        "Modifier": -1,
+        "Slots": 1,
+        "Groups": [
+          "psionicist"
+        ]
       }
     ],
     "ProficiencyGroups": {
@@ -1741,6 +1750,7 @@
         "pottery": 1,
         "reading_lips": 2,
         "reading_writing": 1,
+        "rejuvenation": 2,
         "religion": 1,
         "riding_airborne": 2,
         "riding_land": 1,
@@ -1807,6 +1817,7 @@
         "pottery": 1,
         "reading_lips": 3,
         "reading_writing": 1,
+        "rejuvenation": 2,
         "religion": 1,
         "riding_airborne": 2,
         "riding_land": 1,
@@ -1873,6 +1884,7 @@
         "pottery": 1,
         "reading_lips": 3,
         "reading_writing": 2,
+        "rejuvenation": 2,
         "religion": 2,
         "riding_airborne": 2,
         "riding_land": 1,
@@ -1939,6 +1951,7 @@
         "pottery": 1,
         "reading_lips": 3,
         "reading_writing": 1,
+        "rejuvenation": 2,
         "religion": 1,
         "riding_airborne": 2,
         "riding_land": 1,
@@ -2005,6 +2018,7 @@
         "pottery": 1,
         "reading_lips": 3,
         "reading_writing": 2,
+        "rejuvenation": 1,
         "religion": 2,
         "riding_airborne": 2,
         "riding_land": 1,
@@ -2071,6 +2085,7 @@
         "pottery": 1,
         "reading_lips": 2,
         "reading_writing": 2,
+        "rejuvenation": 2,
         "religion": 2,
         "riding_airborne": 2,
         "riding_land": 1,

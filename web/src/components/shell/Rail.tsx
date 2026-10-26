@@ -3,19 +3,16 @@ import { useTranslation } from "react-i18next";
 import {
   Backpack,
   BookOpenText,
-  Brain,
   HandFist,
   TrendUp,
   type IconProps,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
-import { railActivities, type Activity } from "@/lib/activities";
-import { useCharacterStore } from "@/stores/character";
+import { ACTIVITIES, type Activity } from "@/lib/activities";
 
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
   act: HandFist,
   spells: BookOpenText,
-  powers: Brain,
   inventory: Backpack,
   xp: TrendUp,
 };
@@ -33,14 +30,13 @@ export function Rail({
   onSelect: (a: Activity) => void;
 }) {
   const { t } = useTranslation();
-  const psionic = useCharacterStore((s) => !!s.character?.derived?.knownPowers);
   return (
     <nav
       aria-label={t("shell.activities")}
       className="flex w-[4.25rem] shrink-0 flex-col items-stretch gap-1"
       data-testid="rail"
     >
-      {railActivities(psionic).map((a) => {
+      {ACTIVITIES.map((a) => {
         const Icon = ICONS[a];
         const on = active === a;
         return (

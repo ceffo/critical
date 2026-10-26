@@ -19,6 +19,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 func newSvc(t *testing.T) (psionicsvc.SVC, *mocks.MockTables, *mocks.MockLog) {
@@ -59,7 +61,7 @@ func TestRecover_Step6_HoursTimesTheActivityRate(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			svc, rates, log := newSvc(t)
-			rates.EXPECT().PSPRecoveryRate(c.activity).Return(c.rate, nil).Once()
+			rates.EXPECT().PSPRecoveryRowFor(c.activity).Return(ruletablesvc.PSPRecoveryRow{Activity: c.activity, PerHour: c.rate}, true, nil).Once()
 			var got actionlog.NewEntry
 			log.EXPECT().AppendPSP(mock.Anything, mock.Anything).
 				Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).
@@ -89,10 +91,11 @@ func TestRecover_Step6_Refusals(t *testing.T) {
 		{"no hours", "resting", "hours", 0},
 		{"negative hours", "resting", "hours", -1},
 		{"over the cap", "resting", "hours", psionicsvc.MaxRecoveryHours + 1},
-		{"unknown activity", "meditating", "activity", 1},
+		{"unknown activity", "dancing", "activity", 1},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			svc, _, _ := newSvc(t)
+			svc, rates, _ := newSvc(t)
+			rates.EXPECT().PSPRecoveryRowFor(c.activity).Return(ruletablesvc.PSPRecoveryRow{}, false, nil).Maybe()
 			_, err := svc.Recover(context.Background(), 7, c.hours, c.activity)
 			var fe *domain.FieldError
 			require.ErrorAs(t, err, &fe)
@@ -101,7 +104,7 @@ func TestRecover_Step6_Refusals(t *testing.T) {
 	}
 	t.Run("no pool", func(t *testing.T) {
 		svc, rates, log := newSvc(t)
-		rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Once()
+		rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Once()
 		log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{}, actionlogsvc.ErrNoPSPPool).Once()
 		_, err := svc.Recover(context.Background(), 7, 1, "resting")
 		assert.True(t, errors.Is(err, actionlogsvc.ErrNoPSPPool))
@@ -116,12 +119,12 @@ func TestRecover_Step6_RefusedWhileMaintaining(t *testing.T) {
 		{ID: "b", Name: "Bless"},
 		{ID: "r", Name: "Levitation", PowerID: "levitation", MaintenanceCost: 2, MaintenancePeriod: 1},
 	})
-	rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Maybe()
+	rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Maybe()
 	_, err := svc.Recover(context.Background(), 7, 3, "resting")
 	require.ErrorIs(t, err, psionicsvc.ErrRecoveryWhileMaintaining, "nothing logged: the log mock has no AppendPSP")
 
 	svc, rates, log := newSvcWithBuffs(t, []buffsvc.BuffEffect{{ID: "b", Name: "Bless"}})
-	rates.EXPECT().PSPRecoveryRate("resting").Return(6, nil).Once()
+	rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Once()
 	log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{Current: 18, Max: 25}, nil).Once()
 	_, err = svc.Recover(context.Background(), 7, 3, "resting")
 	require.NoError(t, err)
@@ -193,4 +196,85 @@ func TestSetKnownPowers_RefusalsWriteNothing(t *testing.T) {
 	other, _, _ := newKnownSvc(t, &charactersvc.Character{ID: 7})
 	_, err = other.SetKnownPowers(context.Background(), 7, nil)
 	require.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
+}
+
+// ADR 0047 item 6: a Table 6 row with requires_proficiency is recovered by
+// only when the character knows that proficiency, whichever class granted the
+// pick; otherwise it is refused like an unknown activity. An ungated row
+// never reads the character, and the gated one logs at its own rate (12 an
+// hour). The test fails on code that ignores the field.
+func TestRecover_ADR0047Item6_GatedActivityNeedsProficiency(t *testing.T) {
+	gated := ruletablesvc.PSPRecoveryRow{Activity: "gated", PerHour: 12, RequiresProficiency: "needed"}
+	build := func(t *testing.T, picks ...string) (psionicsvc.SVC, *mocks.MockLog) {
+		t.Helper()
+		rates, log, chars, buffs := mocks.NewMockTables(t), mocks.NewMockLog(t), mocks.NewMockCharacters(t), mocks.NewMockBuffs(t)
+		buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(nil, nil).Maybe()
+		rates.EXPECT().PSPRecoveryRowFor("gated").Return(gated, true, nil).Maybe()
+		rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Maybe()
+		var have skills.Picks
+		for _, id := range picks {
+			have.Nonweapon = append(have.Nonweapon, skills.Pick{ID: id, Slots: 1})
+		}
+		chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(&charactersvc.Character{Proficiencies: have}, nil).Maybe()
+		svc, err := psionicsvc.New(psionicsvc.Deps{
+			Buffs: buffs, Tables: rates, Log: log, Characters: chars, Picks: mocks.NewMockPicks(t), Dice: mocks.NewMockDice(t),
+			Book: psionics.NewBook(nil, nil), Tx: passTx{},
+		})
+		require.NoError(t, err)
+		return svc, log
+	}
+
+	t.Run("without the proficiency it is refused and nothing is logged", func(t *testing.T) {
+		svc, _ := build(t, "other")
+		_, err := svc.Recover(context.Background(), 7, 2, "gated")
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe)
+		assert.Equal(t, "activity", fe.Field)
+	})
+	t.Run("with the proficiency it logs at the row's rate", func(t *testing.T) {
+		svc, log := build(t, "other", "needed")
+		var got actionlog.NewEntry
+		log.EXPECT().AppendPSP(mock.Anything, mock.Anything).
+			Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).
+			Return(actionlog.PSPState{Current: 30, Max: 40}, nil).Once()
+		_, err := svc.Recover(context.Background(), 7, 2, "gated")
+		require.NoError(t, err)
+		assert.Equal(t, 24, got.PSPDelta)
+	})
+	t.Run("an ungated row is unaffected", func(t *testing.T) {
+		svc, log := build(t)
+		log.EXPECT().AppendPSP(mock.Anything, mock.Anything).Return(actionlog.PSPState{Current: 12, Max: 40}, nil).Once()
+		_, err := svc.Recover(context.Background(), 7, 2, "resting")
+		require.NoError(t, err)
+	})
+}
+
+// ADR 0047 item 4: the paying rows ended come back with the pool, and the one
+// psp_recovery entry carries their snapshot and names them; with no paying
+// row it carries no snapshot.
+func TestStopAndRecover_ADR0047Item4_OneEntryWithTheEndedRows(t *testing.T) {
+	ended := []buffsvc.BuffEffect{{ID: "r", PowerID: "levitation", MaintenanceCost: 2, MaintenancePeriod: 1}}
+	for _, c := range []struct {
+		name  string
+		ended []buffsvc.BuffEffect
+		snaps int
+	}{{"a paying row", ended, 1}, {"none", nil, 0}} {
+		t.Run(c.name, func(t *testing.T) {
+			rates, log, buffs := mocks.NewMockTables(t), mocks.NewMockLog(t), mocks.NewMockBuffs(t)
+			svc, err := psionicsvc.New(psionicsvc.Deps{
+				Buffs: buffs, Tables: rates, Log: log, Characters: mocks.NewMockCharacters(t), Picks: mocks.NewMockPicks(t),
+				Dice: mocks.NewMockDice(t), Book: psionics.NewBook(nil, nil), Tx: passTx{},
+			})
+			require.NoError(t, err)
+			rates.EXPECT().PSPRecoveryRowFor("resting").Return(ruletablesvc.PSPRecoveryRow{Activity: "resting", PerHour: 6}, true, nil).Once()
+			buffs.EXPECT().EndMaintained(mock.Anything, int64(7)).Return(c.ended, actionlog.Snapshot{Key: "buffs"}, nil).Once()
+			log.EXPECT().AppendPSP(mock.Anything, mock.MatchedBy(func(e actionlog.NewEntry) bool {
+				return e.Kind == actionlog.KindPSPRecovery && e.PSPDelta == 18 && len(e.Snapshots) == c.snaps
+			})).Return(actionlog.PSPState{Current: 18, Max: 25}, nil).Once()
+			res, err := svc.StopAndRecover(context.Background(), 7, 3, "resting")
+			require.NoError(t, err)
+			assert.Equal(t, 18, res.PSP.Current)
+			assert.Equal(t, c.ended, res.Ended)
+		})
+	}
 }

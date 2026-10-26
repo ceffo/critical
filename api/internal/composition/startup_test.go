@@ -273,7 +273,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 19")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 20")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -456,7 +456,7 @@ func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
 			delete(d, "proficiency_descriptions")
 		})
 		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 19", artifact, format))
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 20", artifact, format))
 		require.ErrorContains(t, err, "run `just catalogue`")
 	}
 }
@@ -473,6 +473,17 @@ func TestStartup_Step16_RefusesADescriptionIdMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "proficiency descriptions: the catalogue and seeds/proficiencies.json disagree")
 	require.ErrorContains(t, err, "proficiency swordplay: no such proficiency in seeds/proficiencies.json")
 	require.ErrorContains(t, err, "proficiency artistic_ability: no description in the catalogue")
+}
+
+// ADR 0047 item 6: a Table 6 row gated by a proficiency that seeds/proficiencies.json lacks refuses
+// the start before anything is seeded or imported, naming the row and the proficiency.
+func TestStartup_ADR0047Item6_RefusesAnUnknownRecoveryGate(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		rows := d["rule_tables"].(map[string]any)["psp_recovery"].([]any)
+		rows[len(rows)-1].(map[string]any)["requires_proficiency"] = "no_such_proficiency"
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, `psp_recovery table: meditating requires the unknown proficiency "no_such_proficiency"`)
 }
 
 // ADR 0021 step 16.3: a description missing for one seed id, or an empty French text, refuses the

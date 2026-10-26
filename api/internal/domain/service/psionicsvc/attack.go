@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -131,7 +132,7 @@ func (s *service) Attack(ctx context.Context, characterID int64, req AttackReque
 		if p.Kind != catalogue.KindAttackMode {
 			return ErrNotAnAttackMode
 		}
-		rec, err := s.attackRecord(c, p, opp.Defence, mods)
+		rec, err := s.attackBase(c, p, mods)
 		if err != nil {
 			return err
 		}
@@ -142,6 +143,9 @@ func (s *service) Attack(ctx context.Context, characterID int64, req AttackReque
 		}
 		if pool.Current < rec.Cost {
 			return ErrNotEnoughPSP
+		}
+		if err := s.attackVersus(&rec, opp.Defence); err != nil {
+			return err
 		}
 		second, err := s.secondPowerThisRound(ctx, characterID, p)
 		if err != nil {
@@ -200,6 +204,11 @@ type AttackScore struct {
 	AttackVersusDefence *int `json:"attackVersusDefence,omitempty"`
 	// Target is the score each check rolls under: Score plus the cell.
 	Target int `json:"target"`
+	// Err is the refusal the attack itself would return for this mode
+	// before any roll (a variable cost, a score only in its text, a
+	// maintenance paid on contact); then Score, the cell and Target are
+	// unset. The handler words it with the error codes.
+	Err error `json:"-"`
 }
 
 // AttackScores are the character's known attack modes against one defence.
@@ -213,8 +222,9 @@ type AttackScores struct {
 // defence ("" for none) with the labelled modifiers, in the order the
 // character knows them, nothing rolled or written. It reads the figure from
 // attackRecord, the computation Attack rolls from (ADR 0044 step 7.1).
-// Refused: a *domain.FieldError on "defence" or "modifiers",
-// ErrNotPsionicist.
+// A mode the attack would refuse keeps its row with the refusal in Err;
+// the call is refused only for a *domain.FieldError on "defence" or
+// "modifiers" (before the character is read) and ErrNotPsionicist.
 func (s *service) AttackPreview(ctx context.Context, characterID int64, defence string, labelled []Modifier) (*AttackScores, error) {
 	if defence != "" {
 		if err := psionics.ValidateDefence(s.book, defence); err != nil {
@@ -238,8 +248,17 @@ func (s *service) AttackPreview(ctx context.Context, characterID int64, defence 
 		if pick.Kind != psionics.PickPower || !ok || p.Kind != catalogue.KindAttackMode {
 			continue
 		}
-		rec, err := s.attackRecord(c, p, defence, mods)
+		rec, err := s.attackBase(c, p, mods)
 		if err != nil {
+			if !refusesTheMode(err) {
+				return nil, err
+			}
+			// The attack would refuse this mode before any roll: the row
+			// keeps its place and carries the refusal.
+			out.Attacks = append(out.Attacks, AttackScore{Power: p.ID, Err: err})
+			continue
+		}
+		if err := s.attackVersus(&rec, defence); err != nil {
 			return nil, err
 		}
 		out.Attacks = append(out.Attacks, AttackScore{
@@ -249,24 +268,28 @@ func (s *service) AttackPreview(ctx context.Context, characterID int64, defence 
 	return out, nil
 }
 
-// attackRecord is the attack of mode p before the roll, for character c
-// against defence ("" for none): the mode's score parts and cost, Table 14's
-// cell and the labelled modifiers. Attack rolls from it and AttackPreview
-// serves its CheckTarget, so the figure shown is the one rolled against.
-func (s *service) attackRecord(c *charactersvc.Character, p catalogue.Power, defence string, mods []Modifier) (AttackRecord, error) {
+// refusesTheMode says err is a refusal of the mode itself (what checkOf
+// returns for a power the attack cannot take as it is), not a fault.
+func refusesTheMode(err error) bool {
+	var fe *domain.FieldError
+	return errors.As(err, &fe) || errors.Is(err, ErrNeedsContact)
+}
+
+// attackBase is the attack of mode p before the roll, for character c: the
+// mode's score parts and cost with the labelled modifiers, before Table 14's
+// cell (attackVersus adds it). Attack rolls from it and AttackPreview serves
+// the same record's CheckTarget, so the figure shown is the one rolled
+// against.
+func (s *service) attackBase(c *charactersvc.Character, p catalogue.Power, mods []Modifier) (AttackRecord, error) {
 	check, err := checkOf(c, p, UseRequest{Modifiers: mods}, mods)
 	if err != nil {
 		return AttackRecord{}, err
 	}
-	rec := AttackRecord{
+	return AttackRecord{
 		Power: p.ID, Name: p.Name, Ability: check.Ability, AbilityScore: check.AbilityScore,
 		PowerModifier: check.PowerModifier, Relearns: check.Relearns, Modifiers: mods,
 		Score: check.Target, Cost: check.Cost,
-	}
-	if err := s.attackVersus(&rec, defence); err != nil {
-		return AttackRecord{}, err
-	}
-	return rec, nil
+	}, nil
 }
 
 // CheckTarget is the target each of the attack's checks rolls under: the

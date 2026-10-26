@@ -540,3 +540,116 @@ func TestAttackPreview_Step7_Refusals(t *testing.T) {
 	_, err = svc.AttackPreview(context.Background(), 7, "", nil)
 	assert.ErrorIs(t, err, psionicsvc.ErrNotPsionicist)
 }
+
+// attackSvcWith is the service over book with the character c, and the
+// mocks; the characters mock is returned so a test can forbid reading it.
+func attackSvcWith(t *testing.T, book psionics.Book, chars *mocks.MockCharacters) (psionicsvc.SVC, attackMocks) {
+	t.Helper()
+	m := attackMocks{dice: mocks.NewMockDice(t), log: mocks.NewMockLog(t), buffs: mocks.NewMockBuffs(t), tables: mocks.NewMockTables(t)}
+	m.buffs.EXPECT().GetRound(mock.Anything, int64(7)).Return(3, nil).Maybe()
+	m.buffs.EXPECT().ListActive(mock.Anything, int64(7)).Return(nil, nil).Maybe()
+	m.log.EXPECT().ActiveEntries(mock.Anything, int64(7), mock.Anything, mock.Anything).Return(nil, nil).Maybe()
+	svc, err := psionicsvc.New(psionicsvc.Deps{
+		Tables: m.tables, Log: m.log, Characters: chars, Picks: mocks.NewMockPicks(t),
+		Dice: m.dice, Buffs: m.buffs, Book: book, Tx: passTx{},
+	})
+	require.NoError(t, err)
+	return svc, m
+}
+
+// A mode the attack refuses before any roll keeps its row, with the refusal
+// the attack returns and no figure; the modes next to it are served.
+func TestAttackPreview_Step7_ARefusedModeKeepsItsRowBesideTheOthers(t *testing.T) {
+	book := psionics.NewBook(nil, []catalogue.Power{
+		{ID: "plain", Kind: catalogue.KindAttackMode, Score: &catalogue.PowerScore{Ability: "wis", Modifier: -3}, InitialCost: catalogue.Cost{Amount: 4}},
+		{ID: "paid_by_cost", Kind: catalogue.KindAttackMode, Score: &catalogue.PowerScore{Ability: "wis"}, InitialCost: catalogue.Cost{Kind: catalogue.CostVariable}},
+		{ID: "in_the_text", Kind: catalogue.KindAttackMode, InitialCost: catalogue.Cost{Amount: 2}},
+		{
+			ID: "on_contact", Kind: catalogue.KindAttackMode, Score: &catalogue.PowerScore{Ability: "wis"}, InitialCost: catalogue.Cost{Amount: 2},
+			Maintenance: &catalogue.Maintenance{Cost: catalogue.Cost{Kind: catalogue.CostContact}},
+		},
+		{ID: "after", Kind: catalogue.KindAttackMode, Score: &catalogue.PowerScore{Ability: "wis", Modifier: -2}, InitialCost: catalogue.Cost{Amount: 2}},
+	})
+	c := psionicist(
+		psionics.Pick{Kind: psionics.PickPower, ID: "plain"},
+		psionics.Pick{Kind: psionics.PickPower, ID: "paid_by_cost"},
+		psionics.Pick{Kind: psionics.PickPower, ID: "in_the_text"},
+		psionics.Pick{Kind: psionics.PickPower, ID: "on_contact"},
+		psionics.Pick{Kind: psionics.PickPower, ID: "after"},
+	)
+	c.Wis = 16
+	chars := mocks.NewMockCharacters(t)
+	chars.EXPECT().GetCharacter(mock.Anything, int64(7)).Return(c, nil)
+	svc, _ := attackSvcWith(t, book, chars)
+
+	got, err := svc.AttackPreview(context.Background(), 7, "", nil)
+	require.NoError(t, err)
+	require.Len(t, got.Attacks, 5, "no row is dropped")
+	assert.Equal(t, 13, got.Attacks[0].Target)
+	assert.NoError(t, got.Attacks[0].Err)
+	var fe *domain.FieldError
+	require.ErrorAs(t, got.Attacks[1].Err, &fe)
+	assert.Equal(t, "cost", fe.Field)
+	require.ErrorAs(t, got.Attacks[2].Err, &fe)
+	assert.Equal(t, "score", fe.Field)
+	assert.ErrorIs(t, got.Attacks[3].Err, psionicsvc.ErrNeedsContact)
+	for _, i := range []int{1, 2, 3} {
+		assert.Zero(t, got.Attacks[i].Target, got.Attacks[i].Power)
+		assert.Nil(t, got.Attacks[i].AttackVersusDefence)
+	}
+	assert.Equal(t, "after", got.Attacks[4].Power)
+	assert.Equal(t, 14, got.Attacks[4].Target, "the row after a refused one is served")
+}
+
+// Only a pick of kind power is a known power: a discipline pick with the id
+// of an attack mode is not a row.
+func TestAttackPreview_Step7_OnlyPowerPicksAreRows(t *testing.T) {
+	c := attacker(10)
+	c.PsionicPicks = append(c.PsionicPicks, psionics.Pick{Kind: psionics.PickDiscipline, ID: "mind_thrust"})
+	c.PsionicPicks = slicesWithout(c.PsionicPicks, psionics.Pick{Kind: psionics.PickPower, ID: "mind_thrust"})
+	svc, _ := newAttackSvc(t, c, nil)
+	got, err := svc.AttackPreview(context.Background(), 7, "", nil)
+	require.NoError(t, err)
+	require.Len(t, got.Attacks, 1)
+	assert.Equal(t, "ego_whip", got.Attacks[0].Power)
+}
+
+func slicesWithout(picks []psionics.Pick, drop psionics.Pick) []psionics.Pick {
+	var out []psionics.Pick
+	for _, p := range picks {
+		if p != drop {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// A defence that is unknown or no defence mode, or a bad modifier, is
+// refused before the character is read (the characters mock has no
+// expectation: a read fails the test).
+func TestAttackPreview_Step7_BadInputIsRefusedBeforeTheCharacterIsRead(t *testing.T) {
+	svc, _ := attackSvcWith(t, attackBook(), mocks.NewMockCharacters(t))
+	for _, defence := range []string{"nothing", "ego_whip", "thrust"} {
+		_, err := svc.AttackPreview(context.Background(), 7, defence, nil)
+		var fe *domain.FieldError
+		require.ErrorAs(t, err, &fe, defence)
+		assert.Equal(t, "defence", fe.Field)
+	}
+	_, err := svc.AttackPreview(context.Background(), 7, "", []psionicsvc.Modifier{{Value: 99}})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "modifiers", fe.Field)
+}
+
+// ADR 0044 step 7.1 (Q5): the pool check comes before the Table 14 lookup and
+// every roll, also against a defence: the table is not read, no die rolled.
+func TestAttack_Step7_NotEnoughPSPWithADefenceRollsAndLooksUpNothing(t *testing.T) {
+	svc, m := newAttackSvc(t, attacker(3), nil) // ego whip costs 4
+	opp := closedOrc()
+	opp.Defence = "thought_shield"
+	opp.Rolls = []psionics.ContestSide{{Roll: 3, Success: true}, {Roll: 4, Success: true}}
+	_, err := svc.Attack(context.Background(), 7, psionicsvc.AttackRequest{Mode: "ego_whip", Opponent: opp})
+	require.ErrorIs(t, err, psionicsvc.ErrNotEnoughPSP)
+	m.tables.AssertNotCalled(t, "AttackVersusDefence", mock.Anything, mock.Anything)
+	m.dice.AssertNotCalled(t, "RollDie", mock.Anything)
+}

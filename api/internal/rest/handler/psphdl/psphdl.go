@@ -196,8 +196,8 @@ type attackPreviewBody struct {
 // AttackPreview is POST /api/psionics/attack/preview: the score to beat of
 // each known attack mode against the body's defence ("" for none) and
 // labelled modifiers, from Attack's own computation, with nothing rolled or
-// written. It answers psionicsvc.AttackScores (defence, attacks: power, score,
-// attackVersusDefence, target). 400 on a bad defence or modifier; 409
+// written. It answers AttackScoresDTO (defence, attacks: power, score,
+// attackVersusDefence, target, or refusal for a mode the attack would refuse). 400 on a bad defence or modifier; 409
 // not_a_psionicist.
 func AttackPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -209,9 +209,41 @@ func AttackPreview(charID CharacterIDFunc, svc defender) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, res)
+		render.OK(r.Context(), w, attackScoresDTO(res))
 		return nil
 	}
+}
+
+// AttackScoreDTO is a row of the attack preview: the figures of a mode the
+// attack takes, or its refusal (error, code, field: the body an error would
+// have, for the web's apiError key) with no figure.
+type AttackScoreDTO struct {
+	Power               string         `json:"power"`
+	Score               *int           `json:"score,omitempty"`
+	AttackVersusDefence *int           `json:"attackVersusDefence,omitempty"`
+	Target              *int           `json:"target,omitempty"`
+	Refusal             map[string]any `json:"refusal,omitempty"`
+}
+
+// AttackScoresDTO is the attack preview's answer.
+type AttackScoresDTO struct {
+	Defence string           `json:"defence"`
+	Attacks []AttackScoreDTO `json:"attacks"`
+}
+
+func attackScoresDTO(res *psionicsvc.AttackScores) AttackScoresDTO {
+	out := AttackScoresDTO{Defence: res.Defence, Attacks: make([]AttackScoreDTO, 0, len(res.Attacks))}
+	for _, a := range res.Attacks {
+		row := AttackScoreDTO{Power: a.Power}
+		if a.Err != nil {
+			_, row.Refusal = render.ErrorBody(a.Err)
+		} else {
+			score, target := a.Score, a.Target
+			row.Score, row.AttackVersusDefence, row.Target = &score, a.AttackVersusDefence, &target
+		}
+		out.Attacks = append(out.Attacks, row)
+	}
+	return out
 }
 
 type contactBody struct {

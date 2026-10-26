@@ -438,13 +438,17 @@ func TestAttackPreview_Step7_Post(t *testing.T) {
 		Return(&psionicsvc.AttackScores{Defence: "tower_of_iron_will", Attacks: []psionicsvc.AttackScore{
 			{Power: "mind_thrust", Score: 14, AttackVersusDefence: &cell, Target: 9},
 			{Power: "ego_whip", Score: 13, Target: 13},
+			{Power: "drain", Err: domain.FieldErrorf("cost", "the power's cost is variable: give it, at least 1")},
+			{Power: "echo", Err: psionicsvc.ErrNeedsContact},
 		}}, nil).Once()
 	rec := do(h, "POST", "/api/psionics/attack/preview",
 		`{"defence":"tower_of_iron_will","modifiers":[{"value":2,"reason":"close"}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"defence":"tower_of_iron_will","attacks":[
 		{"power":"mind_thrust","score":14,"attackVersusDefence":-5,"target":9},
-		{"power":"ego_whip","score":13,"target":13}]}`, rec.Body.String())
+		{"power":"ego_whip","score":13,"target":13},
+		{"power":"drain","refusal":{"error":"the power's cost is variable: give it, at least 1","code":"invalid_input","field":"cost"}},
+		{"power":"echo","refusal":{"error":"the power needs contact","code":"needs_contact"}}]}`, rec.Body.String())
 
 	m.psionics.EXPECT().AttackPreview(mock.Anything, int64(1), "", []psionicsvc.Modifier(nil)).Return(nil, psionicsvc.ErrNotPsionicist).Once()
 	rec = do(h, "POST", "/api/psionics/attack/preview", `{}`)

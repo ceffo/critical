@@ -46,6 +46,19 @@ What the user fixed before the last round (rounds 1 and 2):
    - the action bar's form follows the shape of `initial_cost` (item 2), and a Table 6 row with
      `requires_proficiency` shows when the character knows that proficiency (item 6).
 
+   Contract for the attack rows' score to beat (built 2026-10-26): served, never computed by the web.
+   `POST /api/psionics/attack/preview` with `{defence, modifiers}` (the defence the target raised, ""
+   for none; the labelled modifiers as an attack takes them) answers `{defence, attacks: [{power,
+   score, attackVersusDefence?, target}]}`, one entry per known attack mode in pick order: `score`
+   is the mode's score with relearns and modifiers, `attackVersusDefence` Table 14's cell (absent
+   with no defence), `target` their sum, the one each check of the attack rolls under. A mode the
+   attack itself would refuse before any roll (a variable cost, a score only in its text, a
+   maintenance paid on contact) keeps its row, with no figure and `refusal: {error, code, field?}`,
+   the body that refusal has as an error, so the row words it through its `apiError` key; the call
+   itself is refused only for a bad `defence` or `modifiers` and `not_a_psionicist`. The figure
+   comes from the computation `Attack` rolls from
+   (`TestAttackPreview_Step7_ServedFigureIsTheAttacksTarget`).
+
 ### The user's decisions
 
 2. **One action bar, docked under the Powers lists, for every entry made before a roll** (_user_,
@@ -78,15 +91,6 @@ What the user fixed before the last round (rounds 1 and 2):
    serves the table alone. The start refuses a `requires_proficiency` that is not an id of
    `seeds/proficiencies.json` (`TestStartup_ADR0047Item6_RefusesAnUnknownRecoveryGate`); the gate
    itself is `TestRecover_ADR0047Item6_GatedActivityNeedsProficiency`.
-
-   Contract (built 2026-10-26): the attack rows' score to beat is served, never computed by the
-   web: `POST /api/psionics/attack/preview` with `{defence, modifiers}` (the defence the target
-   raised, "" for none; the labelled modifiers as an attack takes them) answers `{defence, attacks:
-   [{power, score, attackVersusDefence?, target}]}`, one entry per known attack mode in pick order:
-   `score` is the mode's score with relearns and modifiers, `attackVersusDefence` Table 14's cell
-   (absent with no defence), `target` their sum, the one each check of the attack rolls under. It
-   reads `attackRecord`, the computation `Attack` rolls from
-   (`TestAttackPreview_Step7_ServedFigureIsTheAttacksTarget`).
 7. **The character card reads, top to bottom: hit points, the HP change (field, Dégâts, Soins), then
    the PSP block** (_user_: "HP modifying should stay close to HP bar"). The PSP block holds the bar,
    the next round's balance, **Repos** and **Ajuster**.

@@ -119,3 +119,7 @@ export function adjustmentModifiers(
     ? []
     : [{ value: adjustment > 0 ? `+${adjustment}` : `${adjustment}`, reason }];
 }
+
+/** The minds a contact row holds (no tangent count): the ones a power paid on contact can be used on. */
+export const contactMinds = (buffs: BuffEffect[]): HeldMind[] =>
+  heldMinds(buffs.filter((b) => b.tangents === undefined));

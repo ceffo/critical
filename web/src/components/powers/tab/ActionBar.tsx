@@ -24,6 +24,8 @@ import {
   requestOf,
   type UseDraft,
 } from "../powerUse";
+import { useBuffsStore } from "@/stores/buffs";
+import { contactMinds } from "./model";
 import { fixedCost, formOf, type TargetDraft } from "./bar";
 import { useCatalogue } from "./useCatalogue";
 import { AttackOutcome, DefendOutcome, UseOutcome } from "./outcomes";
@@ -80,6 +82,12 @@ export function ActionBar({
         <IncomingForm />
       ) : form === "attack" ? (
         <AttackBarForm
+          power={selection.power}
+          target={target}
+          modifiers={modifiers}
+        />
+      ) : form === "contact" ? (
+        <ContactBarForm
           power={selection.power}
           target={target}
           modifiers={modifiers}
@@ -305,6 +313,110 @@ function AttackBarForm({
       )}
       <Refusal text={refused} testId="attack-refused" />
       {result && <AttackOutcome result={result} />}
+    </form>
+  );
+}
+
+/**
+ * A power paid on contact: used on one of the minds a contact row holds (made in an earlier round).
+ * With none, the bar says so; a mind the Target band names without a contact is still sent, and the
+ * server's refusal is shown.
+ */
+function ContactBarForm({
+  power,
+  target,
+  modifiers,
+}: {
+  power: Power;
+  target: TargetDraft;
+  modifiers: Modifiers;
+}) {
+  const { t, i18n } = useTranslation();
+  const busy = useTableStore((s) => s.busy);
+  const buffs = useBuffsStore((s) => s.buffs);
+  const minds = contactMinds(buffs).map((m) => m.name);
+  const named = target.target.trim();
+  const options = named && !minds.includes(named) ? [...minds, named] : minds;
+  const [chosen, setChosen] = useState("");
+  const mind = chosen || (minds.includes(named) ? named : (minds[0] ?? named));
+  const [result, setResult] = useState<PowerCheckResult | null>(null);
+  const [refused, setRefused] = useState<string | null>(null);
+  const need = asks(power);
+  const [score, setScore] = useState("");
+  const req = requestOf(power, { ...EMPTY_DRAFT, score, modifiers });
+  const name = localized(i18n.language, power.name);
+
+  async function use() {
+    if (!req || !mind || busy) return;
+    setRefused(null);
+    const out = await send(
+      async () => (await invokePower(power.id, { ...req, target: mind })).check,
+    );
+    if ("done" in out) setResult(out.done);
+    else setRefused(out.refused);
+  }
+
+  return (
+    <form
+      className="flex flex-col gap-2"
+      data-testid="contact-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        void use();
+      }}
+    >
+      <div className={row}>
+        {options.length > 0 ? (
+          <Field label={t("powers.tab.bar.contactMind")}>
+            <select
+              className={fieldClass}
+              value={mind}
+              aria-label={t("powers.tab.bar.contactMind")}
+              onChange={(e) => {
+                setChosen(e.target.value);
+                setResult(null);
+                setRefused(null);
+              }}
+            >
+              {options.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <span className="text-body text-ink-muted" data-testid="no-contact">
+            {t("powers.tab.bar.noContact")}
+          </span>
+        )}
+        {need.score && (
+          <Field label={t("powers.use.score")}>
+            <input
+              className={`${fieldClass} !w-60`}
+              inputMode="numeric"
+              autoComplete="off"
+              aria-label={t("powers.use.score")}
+              placeholder={t("powers.use.scoreHint", {
+                max: MAX_ENTERED_SCORE,
+              })}
+              value={score}
+              onChange={(e) => setScore(e.target.value)}
+            />
+          </Field>
+        )}
+        <Button
+          type="submit"
+          variant="main"
+          className="ml-auto"
+          disabled={busy || !req || !mind}
+          aria-label={t("powers.use.useNamed", { name })}
+        >
+          {t("powers.use.use")}
+        </Button>
+      </div>
+      <Refusal text={refused} testId="use-refused" />
+      {result && <UseOutcome result={result} />}
     </form>
   );
 }

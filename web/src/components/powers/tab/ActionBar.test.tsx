@@ -5,10 +5,12 @@ import { renderToStaticMarkup } from "react-dom/server";
 import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
+import type { BuffEffect } from "@/types/buffs";
 import type { Power } from "@/types/powers";
 import { attackRequest, EMPTY_ATTACK } from "../attack";
 import { requestOf, EMPTY_DRAFT } from "../powerUse";
 import { ActionBar, type Selection } from "./ActionBar";
+import { contactMinds } from "./model";
 import { NO_TARGET, formOf, stepLevel, type TargetDraft } from "./bar";
 
 async function html(
@@ -51,6 +53,12 @@ function power(over: Partial<Power> & Pick<Power, "id" | "kind">): Power {
   };
 }
 
+const rows = [
+  { id: "a", target: "Gardien" },
+  { id: "b", target: "Orc", tangents: 2 },
+  { id: "c" },
+] as BuffEffect[];
+
 // One power per shape, with ids no code has ever heard of: the form is a function of the data.
 const attackMode = power({ id: "zz_strike", kind: "attack_mode" });
 const variableBoth = power({
@@ -80,6 +88,11 @@ const byTable = power({
   kind: "devotion",
   initial_cost: { table: "t" } as unknown as Power["initial_cost"],
 });
+const onContact = power({
+  id: "zz_reach",
+  kind: "science",
+  initial_cost: "contact",
+});
 const noScore = power({ id: "zz_text", kind: "science", score: undefined });
 
 describe("the form the bar opens", () => {
@@ -91,6 +104,14 @@ describe("the form the bar opens", () => {
     expect(formOf(numeric)).toBe("confirm");
     expect(formOf(byTable)).toBe("confirm");
     expect(formOf(noScore)).toBe("confirm");
+    expect(formOf(onContact)).toBe("contact");
+  });
+
+  it("offers only the minds a contact row holds for a power paid on contact, and says so when there are none", async () => {
+    const none = await html("en", { kind: "power", power: onContact });
+    expect(none).toContain('data-form="contact"');
+    expect(none).toContain('data-testid="no-contact"');
+    expect(contactMinds(rows).map((m) => m.name)).toEqual(["Gardien"]);
   });
 
   it("shows the attack form with the target's roll fields only while a defence is set", async () => {

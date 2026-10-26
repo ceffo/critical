@@ -237,6 +237,8 @@
         "close": "Fermer",
         "less": "Baisser {{label}}",
         "more": "Augmenter {{label}}",
+        "contactMind": "Esprit en contact",
+        "noContact": "Aucun contact d’un tour précédent : nommez l’esprit dans la bande Cible pour voir la réponse du serveur.",
         "noRolls": "Aucune défense choisie : pas de jet à saisir.",
         "needTarget": "Nommez l’adversaire dans la bande Cible.",
         "initialCost": "Coût initial",

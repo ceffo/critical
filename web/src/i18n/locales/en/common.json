@@ -237,6 +237,8 @@
         "close": "Close",
         "less": "Lower {{label}}",
         "more": "Raise {{label}}",
+        "contactMind": "Mind in contact",
+        "noContact": "No contact from an earlier round: name the mind in the Target band to see the server's answer.",
         "noRolls": "No defence set: no roll to enter.",
         "needTarget": "Name the opponent in the Target band.",
         "initialCost": "Initial cost",

@@ -8,13 +8,15 @@ import { asks } from "../powerUse";
  * The form a power opens in the bar (ADR 0047 item 2), from the shape of its data:
  * - `attack`: an attack mode, used on an opponent with the DM's two rolls;
  * - `variable`: a variable initial cost or maintenance, the cost fields the data asks for;
+ * - `contact`: a cost paid on contact, used on a mind the character made contact with earlier;
  * - `confirm`: a numeric or by-level cost, the confirmation only (the score field still shows for a
  *   power the book gives no score).
  */
-export type BarForm = "attack" | "variable" | "confirm";
+export type BarForm = "attack" | "contact" | "variable" | "confirm";
 
 export function formOf(p: Power): BarForm {
   if (p.kind === "attack_mode") return "attack";
+  if (p.initial_cost === "contact") return "contact";
   const need = asks(p);
   return need.cost || need.maintenanceCost ? "variable" : "confirm";
 }

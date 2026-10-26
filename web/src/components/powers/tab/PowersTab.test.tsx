@@ -4,8 +4,16 @@ import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
 import type { Power, PowerFilterOptions } from "@/types/powers";
-import { groupsOf, inLearningOrder, rowTags, takesMind } from "./model";
+import {
+  adjustmentModifiers,
+  groupsOf,
+  inLearningOrder,
+  rowTags,
+  takesMind,
+} from "./model";
 import { PowersView } from "./PowersTab";
+import { UsePowerForm } from "../UsePowerForm";
+import { AttackForm } from "../AttackForm";
 
 async function inst(lng: "en" | "fr") {
   const i = i18next.createInstance();
@@ -154,5 +162,47 @@ describe("the tab's rules on a power's fields", () => {
       byId,
     );
     expect(out.map((p) => p.id)).toEqual(["zz_beam", "zz_link"]);
+  });
+});
+
+describe("the adjustment", () => {
+  it("is one named modifier while nonzero and nothing at zero", () => {
+    expect(adjustmentModifiers(0, "Adjustment")).toEqual([]);
+    expect(adjustmentModifiers(3, "Adjustment")).toEqual([
+      { value: "+3", reason: "Adjustment" },
+    ]);
+    expect(adjustmentModifiers(-2, "Adjustment")).toEqual([
+      { value: "-2", reason: "Adjustment" },
+    ]);
+  });
+
+  it("pre-fills the use and the attack dialogs, and adds nothing at zero", async () => {
+    const i = await inst("en");
+    const render = (n: React.ReactNode) =>
+      renderToStaticMarkup(<I18nextProvider i18n={i}>{n}</I18nextProvider>);
+    const mods = adjustmentModifiers(2, "Adjustment");
+    const use = (m: typeof mods) =>
+      render(
+        <UsePowerForm
+          power={withoutMinds[0]}
+          powerName="YY_GLOW"
+          busy={false}
+          modifiers={m}
+          onUse={async () => ({ refused: "" })}
+        />,
+      );
+    expect(use(mods)).toContain('value="+2"');
+    expect(use(mods)).toContain('value="Adjustment"');
+    expect(use([])).not.toContain('value="+2"');
+    const attack = render(
+      <AttackForm
+        busy={false}
+        powerName="ZZ_STRIKE"
+        targets={[]}
+        modifiers={mods}
+        onAttack={async () => ({ refused: "" })}
+      />,
+    );
+    expect(attack).toContain('value="+2"');
   });
 });

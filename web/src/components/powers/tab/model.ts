@@ -105,3 +105,17 @@ export function heldMinds(buffs: BuffEffect[]): HeldMind[] {
   }
   return out;
 }
+
+/**
+ * The modifier the tab's adjustment pre-fills in a use or attack dialog: one named for the
+ * adjustment, or none while it is 0. The request's own bounds are the server's; the tab only keeps
+ * the stepper inside them.
+ */
+export function adjustmentModifiers(
+  adjustment: number,
+  reason: string,
+): { value: string; reason: string }[] {
+  return adjustment === 0
+    ? []
+    : [{ value: adjustment > 0 ? `+${adjustment}` : `${adjustment}`, reason }];
+}

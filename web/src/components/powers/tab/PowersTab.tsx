@@ -12,7 +12,15 @@ import { useCharacterStore } from "@/stores/character";
 import { useTableStore } from "@/stores/table";
 import type { Power, PowerFilterOptions } from "@/types/powers";
 import { PowerActions } from "../PowerActions";
-import { groupsOf, heldMinds, isStanding, rowTags, takesMind } from "./model";
+import { MAX_MODIFIER } from "../powerUse";
+import {
+  adjustmentModifiers,
+  groupsOf,
+  heldMinds,
+  isStanding,
+  rowTags,
+  takesMind,
+} from "./model";
 import { useKnownPowers } from "./useKnownPowers";
 
 /**
@@ -43,6 +51,8 @@ export function PowersView({
 }) {
   const { t, i18n } = useTranslation();
   const lang = i18n.language;
+  const [adjustment, setAdjustment] = useState(0);
+  const modifiers = adjustmentModifiers(adjustment, t("powers.tab.adjustment"));
   const defences = powers.filter((p) => p.kind === "defence_mode");
   const groups = groupsOf(powers);
   const aimed = powers.some(takesMind);
@@ -53,7 +63,11 @@ export function PowersView({
 
   return (
     <div className="flex flex-col gap-3" data-testid="powers-tab">
-      <Header usedName={used ? localized(lang, used.name) : undefined} />
+      <Header
+        usedName={used ? localized(lang, used.name) : undefined}
+        adjustment={adjustment}
+        onAdjust={setAdjustment}
+      />
       <DefenceBand defences={defences} />
       {aimed && <TargetBand />}
       {powers.length === 0 && (
@@ -74,7 +88,7 @@ export function PowersView({
             </h3>
             <ul className="flex list-none flex-col">
               {g.powers.map((p) => (
-                <PowerRow key={p.id} power={p} />
+                <PowerRow key={p.id} power={p} modifiers={modifiers} />
               ))}
             </ul>
           </section>
@@ -117,9 +131,18 @@ function useDisciplines(): PowerFilterOptions | null {
 }
 
 /** The round's power (the book allows one a round: a warning, never a refusal) and the adjustment. */
-function Header({ usedName }: { usedName?: string }) {
+function Header({
+  usedName,
+  adjustment,
+  onAdjust,
+}: {
+  usedName?: string;
+  adjustment: number;
+  onAdjust: (next: number) => void;
+}) {
   const { t } = useTranslation();
-  const [adjustment, setAdjustment] = useState(0);
+  const setAdjustment = (f: (n: number) => number) =>
+    onAdjust(Math.max(-MAX_MODIFIER, Math.min(MAX_MODIFIER, f(adjustment))));
   return (
     <div className="flex flex-wrap items-center justify-end gap-3">
       <span
@@ -289,7 +312,13 @@ function TargetBand() {
   );
 }
 
-function PowerRow({ power }: { power: Power }) {
+function PowerRow({
+  power,
+  modifiers,
+}: {
+  power: Power;
+  modifiers: { value: string; reason: string }[];
+}) {
   const { t, i18n } = useTranslation();
   return (
     <li
@@ -305,7 +334,7 @@ function PowerRow({ power }: { power: Power }) {
           {rowTags(t, power).join(" · ")}
         </span>
       </span>
-      <PowerActions power={power} />
+      <PowerActions power={power} modifiers={modifiers} />
     </li>
   );
 }

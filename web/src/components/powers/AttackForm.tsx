@@ -27,6 +27,7 @@ export function AttackForm({
   busy,
   powerName,
   targets,
+  modifiers,
   onAttack,
 }: {
   busy: boolean;
@@ -34,13 +35,18 @@ export function AttackForm({
   powerName: string;
   /** The minds already held in a row, offered beside free text: the same label attacks the same row. */
   targets: string[];
+  /** The modifiers the form opens with. */
+  modifiers?: AttackDraft["modifiers"];
   onAttack: (
     req: NonNullable<ReturnType<typeof attackRequest>>,
   ) => Promise<{ result: AttackResult } | { refused: string }>;
 }) {
   const { t, i18n } = useTranslation();
   const [defences, setDefences] = useState<Power[]>([]);
-  const [draft, setDraft] = useState<AttackDraft>(EMPTY_ATTACK);
+  const [draft, setDraft] = useState<AttackDraft>({
+    ...EMPTY_ATTACK,
+    modifiers: modifiers ?? [],
+  });
   const [result, setResult] = useState<AttackResult | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
   const req = attackRequest(draft);

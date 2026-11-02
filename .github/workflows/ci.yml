@@ -7,7 +7,8 @@ on:
   push:
     branches: [main]
   # Also how main gets its run after a merge GitHub made with a workflow's GITHUB_TOKEN (the Dependabot
-  # auto-merge): such a merge starts no push run. Release follows a dispatched run on main like a push one.
+  # auto-merge): such a merge starts no push run, so main-catchup.yml dispatches one. A dispatched run does
+  # not start Release (workflow_run); the catch-up dispatches Release for the commit once this run is green.
   workflow_dispatch:
 
 permissions:

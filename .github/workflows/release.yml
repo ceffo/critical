@@ -29,6 +29,13 @@ on:
         type: string
         required: false
         default: ""
+      commit:
+        description: >-
+          Set by the Main catch-up workflow, not by hand: release this main commit under the normal release
+          rules (nothing forced), once CI is green on it. Empty: the manual run described above.
+        type: string
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -55,6 +62,7 @@ jobs:
       contents: write     # the version tag, created once staging passed (scripts/version-tag.sh)
       deployments: write  # the staging deployment record
       pull-requests: read # the labels of the merged PRs (no-release)
+      actions: read       # the CI result of a commit named by the catch-up
     # One job from the version to the tag, serialized and never cancelled once started (a newer run only
     # replaces a queued one): two runs computing a version at once would both take the same number. On the
     # job, not the workflow: every CI completion on a branch named main starts a run of this workflow, and a
@@ -63,7 +71,7 @@ jobs:
       group: release-staging
       cancel-in-progress: false
     env:
-      COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+      COMMIT: ${{ github.event.workflow_run.head_sha || inputs.commit || github.sha }}
       REDEPLOY: ${{ inputs.version }}
     steps:
       # main's head: the scripts, the action, the history and the tags. The release commit's tree is
@@ -73,12 +81,24 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      # A run for a named commit (the catch-up of a merge that started no CI-follow-up) deploys only a commit of
+      # main whose CI run succeeded: the gate a workflow_run gets from its `if`.
+      - name: Require green CI on the named commit
+        if: github.event_name == 'workflow_dispatch' && inputs.commit != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git merge-base --is-ancestor "$COMMIT" HEAD || { echo "::error::$COMMIT is not on main"; exit 1; }
+          gh run list --workflow ci.yml --commit "$COMMIT" --limit 50 --json event,conclusion \
+            --jq 'any(.[]; (.event == "push" or .event == "workflow_dispatch") and .conclusion == "success")' | grep -qx true \
+            || { echo "::error::CI has not succeeded on $COMMIT: nothing released"; exit 1; }
+
       # First: the version (or the version to redeploy). No release: a notice, and every later step is skipped.
       - name: Compute the version
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
-          FORCE: ${{ github.event_name == 'workflow_dispatch' && '--force' || '' }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.commit == '' && '--force' || '' }}
         run: |
           if [ -n "$REDEPLOY" ]; then
             sha="$(scripts/release-version.sh resolve "$REDEPLOY")"

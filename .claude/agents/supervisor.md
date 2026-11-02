@@ -415,7 +415,7 @@ GitHub security alerts (Dependabot, code scanning, secret scanning) come from `.
 A `Stop` hook (`.claude/hooks/supervisor-ci-guard.sh`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for main or a Dependabot PR, a rerun for a
-flake), then append the id it printed with one line on what you did. After a merge, check within 10 minutes that main's head has a CI run (`gh run list --commit <sha>`): when GitHub Actions is degraded the push starts none and ci-watch waits forever (sup-61 lost 48 minutes); `gh workflow run ci.yml --ref main` restarts the chain. The Release run
+flake), then append the id it printed with one line on what you did. After a merge, check within 10 minutes that main's head has a CI run (`gh run list --commit <sha>`): when GitHub Actions is degraded the push starts none and ci-watch waits forever (sup-61 lost 48 minutes); `gh workflow run ci.yml --ref main` restarts the chain (`main-catchup.yml` does it within ~15 minutes anyway, and also dispatches the Release a dispatched CI run does not start). The Release run
 it triggers is yours to see green: a deploy smoke failing on main is a red main. (2026-10-18: a
 supervisor left the Release run of a go-public fix to an idle developer; the user: "it's the
 supervisor's responsibility to monitor the ci and make sure it's in a good state".) A developer

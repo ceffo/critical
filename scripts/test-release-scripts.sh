@@ -77,13 +77,14 @@ if not errs:
     r = subprocess.run(["bash", "-e", "-c", refuse["run"]], capture_output=True, text=True)
     check(r.returncode != 0, "the manual refusal does not fail")
 check(job["concurrency"] == {"group": "release-staging", "cancel-in-progress": False}, "not serialized without cancelling")
-check(job["permissions"] == {"contents": "write", "deployments": "write", "pull-requests": "read"}, f"permissions {job['permissions']}")
+check(job["permissions"] == {"contents": "write", "deployments": "write", "pull-requests": "read", "actions": "read"}, f"permissions {job['permissions']}")
 check(wf["permissions"] == {"contents": "read"}, "workflow permissions are not read-only")
 on = wf.get(True) or wf.get("on")
 check(set(on) == {"workflow_run", "workflow_dispatch"}, "triggers are not CI completion + dispatch")
 check(on["workflow_run"] == {"workflows": ["CI"], "types": ["completed"], "branches": ["main"]}, "not after CI on main")
-check(list(on["workflow_dispatch"]["inputs"]) == ["version"] and on["workflow_dispatch"]["inputs"]["version"]["required"] is False,
-      "the manual run's only input is an optional version")
+check(list(on["workflow_dispatch"]["inputs"]) == ["version", "commit"]
+      and all(i["required"] is False for i in on["workflow_dispatch"]["inputs"].values()),
+      "the manual run's inputs are an optional version and an optional commit (the catch-up's)")
 cond = job["if"]
 for part in ("github.event.workflow_run.conclusion == 'success'", "contains(fromJSON('[\"push\",\"workflow_dispatch\"]'), github.event.workflow_run.event)",
              "github.event.workflow_run.head_branch == 'main'", "head_repository.full_name == github.repository",

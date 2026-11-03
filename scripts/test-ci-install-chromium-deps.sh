@@ -17,9 +17,12 @@ fails=0
 fail() { echo "test-ci-install-chromium-deps: FAIL: $*" >&2; fails=$((fails + 1)); }
 
 mkdir -p "$tmp/bin" "$tmp/state"
-# The fake apt-get: a symlink to sleep, so the process really has this name (a script would show as bash).
-# comm is cut at 15 characters; "fakeapt" + the pid stays under.
-ln -s "$(command -v sleep)" "$tmp/bin/$fake"
+# The fake apt-get: a copy of bash under this name, so the process really has it (a script would show as
+# bash) and it is a real executable, not a link into a multi-call binary: on ubuntu-26.04 sleep is a link to
+# coreutils, which dispatches on the name it is called by and exits at once for an unknown one, so the fake
+# never ran and the first attempt never timed out. comm is cut at 15 characters; "fakeapt" + the pid stays under.
+cp "$(command -v bash)" "$tmp/bin/$fake"
+fifo="$tmp/state/hold"; mkfifo "$fifo"
 # install: what npx would run. Fails at once while an apt-get is alive ("Could not get lock"); otherwise,
 # when slow, starts apt-get in its own session (as sudo's pty does, so timeout's group signal does not reach
 # it) and waits on it. Slow = the first attempt, or every attempt when state/always exists.
@@ -27,8 +30,10 @@ cat > "$tmp/bin/install" <<INST
 #!/usr/bin/env bash
 if pgrep -x "$fake" >/dev/null; then echo "E: Could not get lock" >&2; exit 100; fi
 n=\$(cat "$tmp/state/n" 2>/dev/null || echo 0); echo \$((n + 1)) > "$tmp/state/n"
+if [ "\$n" -eq 0 ] && [ -e "$tmp/state/dies" ]; then exit 1; fi
 if [ "\$n" -eq 0 ] || [ -e "$tmp/state/always" ]; then
-    setsid "$tmp/bin/$fake" 60 &
+    # Waits on a builtin read (no child process), so killing the fake leaves nothing behind.
+    setsid "$tmp/bin/$fake" -c 'read -t 60 <> "$fifo"' &
     wait \$!
 fi
 INST
@@ -48,6 +53,13 @@ if ! out="$(run 2>&1)"; then fail "attempt 2 did not proceed after a timed-out a
 grep -q "Could not get lock" <<<"$out" && fail "a retry hit the lock: $out"
 [ -e "$tmp/state/configured" ] || fail "dpkg --configure -a was not run after stopping apt-get"
 pgrep -x "$fake" >/dev/null && fail "an apt-get is still running after the run"
+
+# Attempt 1 fails and leaves no process behind (apt-get died on its own, perhaps mid-unpack): the packages
+# it left must still be configured before the retry.
+rm -f "$tmp/state/n" "$tmp/state/configured"; touch "$tmp/state/dies"
+if ! out="$(run 2>&1)"; then fail "a retry after an attempt that left no process failed: $out"; fi
+[ -e "$tmp/state/configured" ] || fail "dpkg --configure -a was not run after an attempt that left no apt process"
+rm -f "$tmp/state/dies"
 
 # The mirror is really down: every attempt hangs, the script fails after the bounded attempts.
 touch "$tmp/state/always"

@@ -62,6 +62,29 @@ type Maintenance struct {
 	Period int
 }
 
+// Weapon kinds a power effect may be limited to.
+const (
+	WeaponKindMelee   = "melee"
+	WeaponKindMissile = "missile"
+)
+
+// PowerEffect is what a power does to the psionicist who uses it (format 21,
+// ADR 0043 step 17), in the keys of a buff's effects: a zero number is an
+// absent key. AC is signed (negative is better). Rounds is how long a power
+// without maintenance lasts; a maintained power's row is untimed.
+type PowerEffect struct {
+	AC         int
+	ToHit      int
+	Damage     int
+	SaveBonus  int
+	StrBonus   int
+	Initiative int
+	// WeaponKind limits ToHit and Damage to melee or missile attacks; empty
+	// for either.
+	WeaponKind string
+	Rounds     int
+}
+
 // Power is one psionic power of the catalogue (format 13, ADR 0021 step 20.3,
 // ADR 0043 step 8). Every human-language text is a language map (ADR 0023);
 // an absent language has no entry, and the reader falls back to English.
@@ -88,11 +111,15 @@ type Power struct {
 	// PowerScoreResult and Natural20Result are the optional outcome texts.
 	PowerScoreResult localized.Text
 	Natural20Result  localized.Text
+	// Effect is the optional effect on the psionicist (format 21); nil when
+	// the power's result stays text.
+	Effect *PowerEffect
 }
 
 // CheckPowers is the import's check of ADR 0043 step 8: ids are unique, every
 // power names a known discipline and a known kind, and every prerequisite is
-// a power of the catalogue. Each refusal names the power.
+// a power of the catalogue; and (step 17) an effect is coherent with its
+// power. Each refusal names the power.
 func CheckPowers(disciplines []Discipline, powers []Power) error {
 	known := make(map[string]bool, len(disciplines))
 	var problems []error
@@ -125,8 +152,47 @@ func CheckPowers(disciplines []Discipline, powers []Power) error {
 			}
 		}
 	}
+	for _, p := range powers {
+		problems = append(problems, checkEffect(p)...)
+	}
 	if len(problems) > 0 {
 		return fmt.Errorf("psionic powers: %w", errors.Join(problems...))
 	}
 	return nil
+}
+
+// checkEffect is ADR 0043 step 17's start-up rule for a power's effect: it
+// has at least one effect key; rounds (>= 1) is on a power without
+// maintenance only, and a power without maintenance needs it (its effect would
+// never apply); str_bonus is >= 1 (the buff rule); and a contact power has
+// none (its row sits on a mind, so the effect would not land on the
+// psionicist).
+func checkEffect(p Power) []error {
+	e := p.Effect
+	if e == nil {
+		return nil
+	}
+	var out []error
+	if e.AC == 0 && e.ToHit == 0 && e.Damage == 0 && e.SaveBonus == 0 && e.StrBonus == 0 && e.Initiative == 0 {
+		out = append(out, fmt.Errorf("power %s: effect has no effect key", p.ID))
+	}
+	if e.StrBonus < 0 {
+		out = append(out, fmt.Errorf("power %s: effect str_bonus %d must be at least 1", p.ID, e.StrBonus))
+	}
+	if e.Rounds < 0 {
+		out = append(out, fmt.Errorf("power %s: effect rounds %d must be at least 1", p.ID, e.Rounds))
+	}
+	if e.WeaponKind != "" && e.WeaponKind != WeaponKindMelee && e.WeaponKind != WeaponKindMissile {
+		out = append(out, fmt.Errorf("power %s: effect weapon_kind %q is not melee or missile", p.ID, e.WeaponKind))
+	}
+	switch {
+	case p.Maintenance != nil && e.Rounds > 0:
+		out = append(out, fmt.Errorf("power %s: effect has rounds but the power is maintained (its row is untimed)", p.ID))
+	case p.Maintenance == nil && e.Rounds == 0:
+		out = append(out, fmt.Errorf("power %s: effect without rounds on a power without maintenance would never apply", p.ID))
+	}
+	if p.InitialCost.Kind == CostContact {
+		out = append(out, fmt.Errorf("power %s: a contact power has no effect on the psionicist", p.ID))
+	}
+	return out
 }

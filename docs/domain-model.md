@@ -296,6 +296,7 @@ attack mode's check against a defence mode's. The **opponent** is the request's 
 | Current HP | the action log | [ADR 0007](adr/0007-hp-ledger.md) |
 | PSP maximum, current PSPs | Wisdom, Intelligence, Constitution, the psionicist entry's level; the action log | [ADR 0043](adr/0043-psionics.md) steps 4 and 5 |
 | Power score | the power's ability and modifier, relearns, adjustments | [ADR 0043](adr/0043-psionics.md) step 10 |
+| Power effect | a power's buff effect keys and, without maintenance, its rounds (catalogue data, format 21) | [ADR 0043](adr/0043-psionics.md) step 17 |
 
 ## Ambiguities resolved
 

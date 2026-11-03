@@ -1,5 +1,5 @@
 {
-  "format": 20,
+  "format": 21,
   "version": "1970-01-01",
   "spells": [
     {
@@ -2127,6 +2127,91 @@
       "description": {
         "en": "Switch Personality is a psionic combat mode.",
         "fr": "Switch Personality est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "displacement",
+      "name": {
+        "en": "Displacement",
+        "fr": "Eclipse"
+      },
+      "discipline": "psychometabolism",
+      "kind": "devotion",
+      "score": {
+        "ability": "con",
+        "modifier": -3
+      },
+      "initial_cost": 6,
+      "maintenance": {
+        "cost": 3,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "personal",
+        "fr": "personnel"
+      },
+      "description": {
+        "en": "This power resembles the displacer beast's natural ability to make itself appear to be up to 3 feet from his actual location. The psionicist decides where this false image will appear. This is a very effective means of protecting oneself from attack, giving the psionicist a two-point bonus on his armor class (lowering it two points). True seeing will reveal the character's real location."
+      },
+      "effect": {
+        "ac": -2
+      },
+      "power_score_result": {
+        "en": "The AC bonus is +4."
+      },
+      "natural_20_result": {
+        "en": "No effect."
+      }
+    },
+    {
+      "id": "graft_weapon",
+      "name": {
+        "en": "Graft Weapon",
+        "fr": "Greffe d'arme"
+      },
+      "discipline": "psychometabolism",
+      "kind": "devotion",
+      "score": {
+        "ability": "con",
+        "modifier": -5
+      },
+      "initial_cost": 10,
+      "maintenance": {
+        "cost": 1,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "touch"
+      },
+      "preparation_time": {
+        "en": "0"
+      },
+      "area": {
+        "en": "personal"
+      },
+      "description": {
+        "en": "With this power the psionicist can graft any one-handed melee weapon directly onto his body. He picks up the weapon, activates this power, and the weapon becomes an extension of the character's arm. Assuming the character is proficient with that type of weapon, he gains a +1 bonus to attack rolls and damage. If he is not proficient with the weapon, he suffers the usual nonproficiency penalties, but still gets the +1 bonus."
+      },
+      "effect": {
+        "to_hit": 1,
+        "damage": 1,
+        "weapon_kind": "melee"
+      },
+      "power_score_result": {
+        "en": "The +1 bonus for attacks and damage increases to +4."
+      },
+      "natural_20_result": {
+        "en": "The weapon has been weakened; it will break on any attack roll of 1."
       }
     }
   ]

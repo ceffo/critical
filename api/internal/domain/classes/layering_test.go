@@ -17,11 +17,19 @@ import (
 // 0046 step 5 (the rule tables' and charactersvc's XPThreshold, xpsvc's Thresholds port).
 var thresholdNames = map[string]bool{"XPThreshold": true, "Thresholds": true}
 
+// isThresholdCall reports whether call is a method call named XPThreshold, <x>.XPThreshold(...).
+func isThresholdCall(call *ast.CallExpr) bool {
+	sel, ok := call.Fun.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "XPThreshold"
+}
+
 // ADR 0046 step 5: the class definition is the one owner of a level's threshold
 // (classes.Class.XPThreshold). Every non-test Go source under internal outside this package is
 // parsed (generated mocks included, so a mocked port is caught too): none declares a function, a
 // method, an interface method or a type named XPThreshold or Thresholds. A threshold is read by
 // calling the definition's method (def.XPThreshold), never re-served by a service or a port.
+// A wrapper under any other name is caught too: no function returns a call to XPThreshold, so a
+// Threshold(class, level) method or a LevelXP helper that just hands it back fails.
 // BardXPThreshold, the rulebook-check helper ADR 0046 step 5.2 keeps, is another name.
 func TestLevels_Step5_NoThresholdOutsideClasses(t *testing.T) {
 	root := filepath.Join("..", "..")
@@ -78,4 +86,27 @@ func TestLevels_Step5_NoThresholdOutsideClasses(t *testing.T) {
 	})
 	require.NoError(t, err)
 	assert.Greater(t, parsed, 100, "the sources under internal were parsed")
+}
+
+// TestLevels_Step5_GuardCatchesAWrapper plants a wrapper under another name and a plain use: the
+// return of the definition's threshold is the finding, the call whose value is used is not.
+func TestLevels_Step5_GuardCatchesAWrapper(t *testing.T) {
+	const src = `package p
+func LevelXP(def D, l int) (int, error) { return def.XPThreshold(l) }
+func use(def D, l int) int { x, _ := def.XPThreshold(l); return x }
+`
+	f, err := parser.ParseFile(token.NewFileSet(), "p.go", src, 0)
+	require.NoError(t, err)
+	var found []string
+	ast.Inspect(f, func(n ast.Node) bool {
+		if r, ok := n.(*ast.ReturnStmt); ok {
+			for _, res := range r.Results {
+				if call, ok := res.(*ast.CallExpr); ok && isThresholdCall(call) {
+					found = append(found, "return")
+				}
+			}
+		}
+		return true
+	})
+	assert.Equal(t, []string{"return"}, found)
 }

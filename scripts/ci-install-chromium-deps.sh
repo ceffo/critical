@@ -29,22 +29,23 @@ holders() { for p in $APT_PROCS; do pgrep -x "$p"; done; }
 
 # free_locks: stop what a timed-out attempt left running, then wait until nothing holds an apt lock.
 free_locks() {
-    [ -z "$(holders)" ] && return 0
-    echo "apt processes still running after the timed-out attempt; stopping them"
-    local p
-    # shellcheck disable=SC2086
-    for p in $APT_KILL; do $SUDO pkill -TERM -x "$p" || true; done
-    local waited=0
-    while [ -n "$(holders)" ] && [ "$waited" -lt "$SETTLE_SECONDS" ]; do
-        sleep 1
-        waited=$((waited + 1))
-        # After a few seconds of grace, stop asking politely.
-        if [ "$waited" -eq 3 ]; then
-            # shellcheck disable=SC2086
-            for p in $APT_KILL; do $SUDO pkill -KILL -x "$p" || true; done
-        fi
-    done
-    # A killed apt-get may have left packages unpacked but unconfigured; finish them before the next run.
+    local p waited=0
+    if [ -n "$(holders)" ]; then
+        echo "apt processes still running after the timed-out attempt; stopping them"
+        # shellcheck disable=SC2086
+        for p in $APT_KILL; do $SUDO pkill -TERM -x "$p" || true; done
+        while [ -n "$(holders)" ] && [ "$waited" -lt "$SETTLE_SECONDS" ]; do
+            sleep 1
+            waited=$((waited + 1))
+            # After a few seconds of grace, stop asking politely.
+            if [ "$waited" -eq 3 ]; then
+                # shellcheck disable=SC2086
+                for p in $APT_KILL; do $SUDO pkill -KILL -x "$p" || true; done
+            fi
+        done
+    fi
+    # An apt-get that was killed here, or died on its own, may have left packages unpacked but unconfigured;
+    # finish them before the next run, whether or not a process was left to stop.
     # shellcheck disable=SC2086
     $SUDO dpkg --configure -a || true
 }

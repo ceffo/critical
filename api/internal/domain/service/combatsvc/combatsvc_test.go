@@ -99,7 +99,7 @@ func newFixtureWithRules(t *testing.T, rules combatsvc.Rules) *fixture {
 		func(context.Context, int64) (ruleset.Ruleset, error) { return rulesetWithCrit(f.critRows), nil }).Maybe()
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
-		Items: f.items, Forms: f.forms, Rules: rules, Log: f.log, Tx: noTx{},
+		Items: f.items, Forms: f.forms, Rules: rules, Strength: phb(t).Strength(), Log: f.log, Tx: noTx{},
 	})
 	require.NoError(t, err)
 	f.svc = svc

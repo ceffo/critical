@@ -293,7 +293,13 @@ with them. The questions and their reasons:
    is possible but moves unrelated importer tests.
 6. **Q6, the same pattern for Strength.** `combatsvc.Rules.StrengthMods` is the sibling of the Dexterity
    copy (ADR 0002 step 4). Default: not in this ADR; filed as a follow-up item that applies step 2.1's pattern, with
-   the ADR 0002 step 4 amendment.
+   the ADR 0002 step 4 amendment. _(As built, 2026-11-03: owner `domain/strength` (`Table`, `Row`, `Mods`;
+   `NewTable` validates, `Table.Of` looks up); `ruletablesvc.Tables.Strength()` hands the table out, and
+   `ruletablesvc.Lookup.StrengthMods` and `combatsvc.Rules.StrengthMods` are gone. Not through the view, unlike
+   Dexterity: the score read is the effective one, with the buffs, which only combat has, so by step 1.4 the
+   consumer calls the owner's function; the table reaches combat as a value in `combatsvc.Deps`, not a port.
+   Tests: `strength` package tests, `TestStrengthMods` in `ruletablesadpt` (the PHB pages) and the unchanged
+   combat tests; `TestFigures_Step6_OwnersCarryNoTransportTags` covers the package.)_
 
 ## Consequences
 

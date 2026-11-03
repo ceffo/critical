@@ -232,7 +232,9 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       before the move and are frozen, with no `-update` flag; the levels golden checks the class
       definition against them. `TestLevels_Step5_NoThresholdOutsideClasses` (an `go/ast` walk of
       `internal/**` non-test sources, mocks included) fails if a function, method, interface method
-      or type named `XPThreshold` or `Thresholds` is declared outside `classes`.)_
+      or type named `XPThreshold` or `Thresholds` is declared outside `classes`, and if any function
+      outside `classes` returns a call to a method named `XPThreshold`, whatever the wrapper is called.
+      `charactersvc` bounds the table with `classes.MaxLevel`, the one constant.)_
 6. **A figure's breakdown reaches the wire without a tag in the domain** ([ADR 0038](0038-domain-and-wire.md)).
    1. The owners (`saves`, `slots`, `acsvc.Derive`, `classes`) have no `json` tag on any type. An
       owner's `Figure` is a domain value.

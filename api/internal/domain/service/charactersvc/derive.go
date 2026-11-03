@@ -318,7 +318,7 @@ func (ed *EntryDerived) setLevels(e classes.Entry, def classes.Class, shares, le
 		realized = target
 	}
 	ed.TargetLevel, ed.RealizedLevel = target, realized
-	if target < ruletablesvc.MaxLevel {
+	if target < classes.MaxLevel {
 		// ADR 0046 step 5.1: the next threshold is the class definition's.
 		next, err := def.XPThreshold(target + 1)
 		if err != nil {

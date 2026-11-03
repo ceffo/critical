@@ -90,7 +90,7 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: w.chars, Buffs: w.buffs, Dice: w.dice, Weapons: w.weapons, Rulesets: rulesets,
-		Items: w.items, Forms: mocks.NewMockFormStore(t), Rules: rules, Log: log, Tx: noTx{},
+		Items: w.items, Forms: mocks.NewMockFormStore(t), Rules: rules, Strength: rules.Strength(), Log: log, Tx: noTx{},
 	})
 	require.NoError(t, err)
 	r := chi.NewRouter()

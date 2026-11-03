@@ -7,10 +7,7 @@
 // here carries a transport tag (ADR 0046 step 6.1).
 package strength
 
-import (
-	"errors"
-	"fmt"
-)
+import "fmt"
 
 // ExceptionalMax is the exceptional percentile of 18/00. Exceptional strength
 // is the percentile of "18/xx": 0 for a plain 18, 1-99 for 18/01-18/99,
@@ -51,6 +48,10 @@ func NewTable(rows []Row) (Table, error) {
 	}
 	return Table{rows: append([]Row(nil), rows...)}, nil
 }
+
+// Valid is false for the zero Table (no rows, as a missing dependency leaves
+// it): only NewTable builds a usable one.
+func (t Table) Valid() bool { return len(t.rows) > 0 }
 
 // Of is the adjustments of a score. exceptional only matters when score is
 // 18 (it is ignored below and above); a score outside 1..MaxScore or an
@@ -99,7 +100,7 @@ func validate(rows []Row) error {
 		next = r.StrMax + 1
 	}
 	if next != MaxScore+1 {
-		return errors.New("must cover scores 1..25 (with 18/00 as the last 18 row)")
+		return fmt.Errorf("must cover scores 1..%d (with 18/00 as the last 18 row)", MaxScore)
 	}
 	return nil
 }

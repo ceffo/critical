@@ -101,6 +101,8 @@ func TestStrength_OutOfRangeRefused(t *testing.T) {
 	}
 	_, err := strength.Table{}.Of(12, 0)
 	assert.Error(t, err, "the zero table has no rows")
+	assert.False(t, strength.Table{}.Valid())
+	assert.True(t, tbl.Valid())
 }
 
 // NewTable refuses rows that leave a gap, overlap or run past 25.

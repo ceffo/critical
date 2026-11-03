@@ -160,7 +160,7 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 		return nil, fmt.Errorf("combatsvc: nil config")
 	}
 	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Rulesets == nil ||
-		d.Items == nil || d.Forms == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
+		d.Items == nil || d.Forms == nil || d.Rules == nil || !d.Strength.Valid() || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("combatsvc: nil dependency")
 	}
 	return &service{

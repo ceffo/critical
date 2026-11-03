@@ -31,6 +31,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 var (
@@ -108,7 +109,7 @@ func TestRealCatalogue_Step9_7_TheFixtureCarriesTheRealArtifactsTables(t *testin
 	// Compared by lookup, not row by row: the builder may group equal rows
 	// differently (one row per book line) for the same numbers.
 	for str := 1; str <= 25; str++ {
-		for exc := 0; exc <= ruletablesvc.ExceptionalMax; exc++ {
+		for exc := 0; exc <= strength.ExceptionalMax; exc++ {
 			rm, rerr := fromReal.Strength().Of(str, exc)
 			fm, ferr := fromFixture.Strength().Of(str, exc)
 			require.NoError(t, rerr)

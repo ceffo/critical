@@ -22,10 +22,6 @@ const MaxSpellLevel = 6
 // MaxBardLevel is the last level of Table 32.
 const MaxBardLevel = 20
 
-// ExceptionalMax is the exceptional percentile of 18/00 (strength.ExceptionalMax,
-// the Strength owner's).
-const ExceptionalMax = strength.ExceptionalMax
-
 // Lookup is the read port over the PHB rule tables.
 type Lookup interface {
 	// Strength is PHB Table 1, owned by the strength package: callers read

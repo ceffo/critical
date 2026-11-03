@@ -599,13 +599,15 @@ func TestPowerCatalogue_Step17_TheEffectParses(t *testing.T) {
 
 	a, err = ParseArtifact(artifact(t, func(d map[string]any) {
 		powerOf(d, "mind_thrust")["effect"] = map[string]any{
-			"ac": -1, "to_hit": 2, "damage": 3, "save_bonus": 4, "str_bonus": 5, "initiative": -6, "weapon_kind": "missile", "rounds": 7}
+			"ac": -1, "to_hit": 2, "damage": 3, "save_bonus": 4, "str_bonus": 5, "initiative": -6, "weapon_kind": "missile", "rounds": 7,
+		}
 	}))
 	require.NoError(t, err, "a power without maintenance carries every key, with rounds")
 	for _, p := range a.Powers {
 		if p.ID == "mind_thrust" {
 			assert.Equal(t, &catalogue.PowerEffect{
-				AC: -1, ToHit: 2, Damage: 3, SaveBonus: 4, StrBonus: 5, Initiative: -6, WeaponKind: catalogue.WeaponKindMissile, Rounds: 7}, p.Effect)
+				AC: -1, ToHit: 2, Damage: 3, SaveBonus: 4, StrBonus: 5, Initiative: -6, WeaponKind: catalogue.WeaponKindMissile, Rounds: 7,
+			}, p.Effect)
 		}
 	}
 

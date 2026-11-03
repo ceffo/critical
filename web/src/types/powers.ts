@@ -34,7 +34,7 @@ export interface Power {
   effect?: PowerEffect;
 }
 
-/** A power's effect: buff effect keys (AC negative betters it), the weapon kind that limits them, and the rounds a power without maintenance lasts. */
+/** A power's effect: buff effect keys (AC negative betters it), the weapon kind that limits them, applied while the power is maintained. */
 export type PowerEffect = Pick<
   BuffEffects,
   | "ac"
@@ -44,7 +44,7 @@ export type PowerEffect = Pick<
   | "str_bonus"
   | "initiative"
   | "weapon_kind"
-> & { rounds?: number };
+>;
 
 export interface PowerPage {
   items: Power[];

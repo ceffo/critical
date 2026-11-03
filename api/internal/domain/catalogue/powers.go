@@ -70,8 +70,8 @@ const (
 
 // PowerEffect is what a power does to the psionicist who uses it (format 21,
 // ADR 0043 step 17), in the keys of a buff's effects: a zero number is an
-// absent key. AC is signed (negative is better). Rounds is how long a power
-// without maintenance lasts; a maintained power's row is untimed.
+// absent key. AC is signed (negative is better). The effect applies while
+// the power is maintained: its row is untimed.
 type PowerEffect struct {
 	AC         int
 	ToHit      int
@@ -82,7 +82,6 @@ type PowerEffect struct {
 	// WeaponKind limits ToHit and Damage to melee or missile attacks; empty
 	// for either.
 	WeaponKind string
-	Rounds     int
 }
 
 // Power is one psionic power of the catalogue (format 13, ADR 0021 step 20.3,
@@ -161,11 +160,14 @@ func CheckPowers(disciplines []Discipline, powers []Power) error {
 	return nil
 }
 
-// checkEffect is ADR 0043 step 17's start-up rule for a power's effect: it
-// has at least one effect key; rounds (>= 1) is on a power without
-// maintenance only, and a power without maintenance needs it (its effect would
-// never apply); str_bonus is >= 1 (the buff rule); and a contact power has
-// none (its row sits on a mind, so the effect would not land on the
+// checkEffect is ADR 0043 step 17's start-up rule for a power's effect, which
+// applies only while the power is maintained: it has at least one effect key;
+// str_bonus is >= 1 (the buff rule); weapon_kind is melee or missile and
+// limits to_hit and damage only (the AC, the saves, the Strength and the
+// initiative do not read it); the power is maintained (an effect without
+// maintenance would never apply), is not a defence mode (a defence mode's use
+// is refused) and is not a contact or table-cost power (its row sits on a
+// mind, or its use is the contact route, so the effect would not land on the
 // psionicist).
 func checkEffect(p Power) []error {
 	e := p.Effect
@@ -179,20 +181,20 @@ func checkEffect(p Power) []error {
 	if e.StrBonus < 0 {
 		out = append(out, fmt.Errorf("power %s: effect str_bonus %d must be at least 1", p.ID, e.StrBonus))
 	}
-	if e.Rounds < 0 {
-		out = append(out, fmt.Errorf("power %s: effect rounds %d must be at least 1", p.ID, e.Rounds))
-	}
 	if e.WeaponKind != "" && e.WeaponKind != WeaponKindMelee && e.WeaponKind != WeaponKindMissile {
 		out = append(out, fmt.Errorf("power %s: effect weapon_kind %q is not melee or missile", p.ID, e.WeaponKind))
 	}
-	switch {
-	case p.Maintenance != nil && e.Rounds > 0:
-		out = append(out, fmt.Errorf("power %s: effect has rounds but the power is maintained (its row is untimed)", p.ID))
-	case p.Maintenance == nil && e.Rounds == 0:
-		out = append(out, fmt.Errorf("power %s: effect without rounds on a power without maintenance would never apply", p.ID))
+	if e.WeaponKind != "" && (e.AC != 0 || e.SaveBonus != 0 || e.StrBonus != 0 || e.Initiative != 0) {
+		out = append(out, fmt.Errorf("power %s: effect weapon_kind limits to_hit and damage only, not ac, save_bonus, str_bonus or initiative", p.ID))
 	}
-	if p.InitialCost.Kind == CostContact {
-		out = append(out, fmt.Errorf("power %s: a contact power has no effect on the psionicist", p.ID))
+	if p.Maintenance == nil {
+		out = append(out, fmt.Errorf("power %s: an effect on a power without maintenance would never apply", p.ID))
+	}
+	if p.Kind == KindDefenceMode {
+		out = append(out, fmt.Errorf("power %s: a defence mode has no effect on the psionicist", p.ID))
+	}
+	if p.InitialCost.Kind == CostContact || p.InitialCost.Table != "" {
+		out = append(out, fmt.Errorf("power %s: a contact or table-cost power has no effect on the psionicist", p.ID))
 	}
 	return out
 }

@@ -330,33 +330,26 @@ func maintenanceOf(rec *CheckRecord, p catalogue.Power, req UseRequest) error {
 	return nil
 }
 
-// rowName is the stored name of a maintained power's row: the catalogue's
-// English name (the client names the row from its power id).
 // rowOf is the buff row a successful check of power p puts on the
 // psionicist (ADR 0043 steps 13 and 17), false when it puts none: a
-// maintained power's row is untimed and carries the power's effect; a power
-// without maintenance puts a row only when its effect lasts rounds, timed by
-// them. A failed check puts none. Renewal is buffsvc.Add's (ADR 0004 step 6:
+// maintained power's row is untimed and carries the power's effect (ADR 0043
+// step 17: the effect applies only while maintained); a power without
+// maintenance puts none. A failed check puts none. Renewal is buffsvc.Add's (ADR 0004 step 6:
 // the same power renews its row).
 func rowOf(p catalogue.Power, rec CheckRecord, target string) (buffsvc.BuffEffect, bool) {
 	if !rec.Success {
 		return buffsvc.BuffEffect{}, false
 	}
 	row := buffsvc.BuffEffect{Name: rowName(p), PowerID: p.ID, PowerName: p.Name, Target: target, Effects: effectsOf(p.Effect)}
-	switch {
-	case rec.MaintenanceCost > 0:
-		row.MaintenanceCost, row.MaintenancePeriod = rec.MaintenanceCost, rec.MaintenancePeriod
-	case p.Effect != nil && p.Effect.Rounds > 0:
-		row.Duration = p.Effect.Rounds
-	default:
+	if rec.MaintenanceCost == 0 {
 		return buffsvc.BuffEffect{}, false
 	}
+	row.MaintenanceCost, row.MaintenancePeriod = rec.MaintenanceCost, rec.MaintenancePeriod
 	return row, true
 }
 
 // effectsOf maps a power's effect to the buff effect kinds (ADR 0043 step 17,
-// ADR 0004 step 11): a zero number is an absent key. Rounds is the row's
-// duration, not an effect.
+// ADR 0004 step 11): a zero number is an absent key.
 func effectsOf(e *catalogue.PowerEffect) buffsvc.BuffEffects {
 	if e == nil {
 		return buffsvc.BuffEffects{}
@@ -374,6 +367,8 @@ func nonZero(v int) *int {
 	return &v
 }
 
+// rowName is the stored name of a maintained power's row: the catalogue's
+// English name (the client names the row from its power id).
 func rowName(p catalogue.Power) string {
 	if n := p.Name.Any(); n != "" {
 		return n

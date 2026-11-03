@@ -3786,7 +3786,7 @@
       }
     },
     "power_effect": {
-      "description": "What a power does to the psionicist who uses it (ADR 0043 step 17), in the buff effect keys: ac (signed, negative is better), to_hit, damage, save_bonus, str_bonus (>= 1), initiative, weapon_kind (the bonus applies to that kind of attack only) and rounds (>= 1, only on a power without maintenance: how long it lasts).",
+      "description": "What a power does to the psionicist who uses it (ADR 0043 step 17), in the buff effect keys: ac (signed, negative is better), to_hit, damage, save_bonus, str_bonus (>= 1), initiative and weapon_kind (limits to_hit and damage to that kind of attack). It applies while the power is maintained.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -3814,10 +3814,6 @@
             "melee",
             "missile"
           ]
-        },
-        "rounds": {
-          "type": "integer",
-          "minimum": 1
         }
       },
       "if": {

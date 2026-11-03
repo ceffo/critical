@@ -262,7 +262,7 @@ A power's target: an ability score plus or minus the power's number; the catalog
 _Code_: PowerScore
 
 **Power effect** (fr: effet de pouvoir):
-What a power does to the psionicist who uses it, in the buff effect keys (AC, to-hit, damage, save bonus, Strength, initiative, weapon kind) and, for a power without maintenance, the rounds it lasts; optional catalogue data (format 21), read at start and checked against the power's maintenance and cost. A power's other results stay text. [ADR 0043](docs/adr/0043-psionics.md) step 17, [ADR 0021](docs/adr/0021-spell-catalogue.md) step 29.
+What a power does to the psionicist who uses it, in the buff effect keys (AC, to-hit, damage, save bonus, Strength, initiative, weapon kind), applied while the power is maintained; optional catalogue data (format 21), read at start and checked against the power's maintenance and kind. A power's other results stay text. [ADR 0043](docs/adr/0043-psionics.md) step 17, [ADR 0021](docs/adr/0021-spell-catalogue.md) step 29.
 _Code_: PowerEffect
 
 **Power check** (fr: jet de pouvoir):

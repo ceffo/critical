@@ -19,8 +19,9 @@ import (
 )
 
 // effectBook: displacement as the catalogue has it (Con -3, 6 PSPs, 3 a round,
-// AC -2); a test power without maintenance whose effect lasts 4 rounds (no
-// book power is one, ADR 0043 step 17); a maintained power without an effect.
+// AC -2); a test power with an effect and no maintenance (start-up refuses
+// one, ADR 0043 step 17, so its use puts no row); a maintained power without
+// an effect.
 func effectBook() psionics.Book {
 	return psionics.NewBook([]catalogue.Discipline{{ID: "psychometabolism"}}, []catalogue.Power{
 		{
@@ -32,7 +33,7 @@ func effectBook() psionics.Book {
 		{
 			ID: "steady_hand", Discipline: "psychometabolism", Kind: catalogue.KindDevotion, Name: localized.Text{"en": "Steady Hand"},
 			Score: &catalogue.PowerScore{Ability: "con"}, InitialCost: catalogue.Cost{Amount: 2},
-			Effect: &catalogue.PowerEffect{ToHit: 1, Damage: 2, WeaponKind: catalogue.WeaponKindMissile, Rounds: 4},
+			Effect: &catalogue.PowerEffect{ToHit: 1, Damage: 2, WeaponKind: catalogue.WeaponKindMissile},
 		},
 		{
 			ID: "hold", Discipline: "psychometabolism", Kind: catalogue.KindDevotion, Name: localized.Text{"en": "Hold"},
@@ -95,23 +96,17 @@ func TestActivate_Step17_AnEffectFromTheData(t *testing.T) {
 		assert.Equal(t, "row-1", res.BuffID)
 		assert.Equal(t, []actionlog.Snapshot{rowSnap}, got.Snapshots)
 	})
-	t.Run("a power without maintenance lasts its rounds", func(t *testing.T) {
-		svc, dice, log, buffs := newEffectSvc(t)
+	t.Run("a power without maintenance puts no row", func(t *testing.T) {
+		svc, dice, log, _ := newEffectSvc(t)
 		dice.EXPECT().RollDie(psionics.CheckDie).Return(3).Once()
-		var row buffsvc.BuffEffect
-		expectRowAdd(buffs, &row)
 		var got actionlog.NewEntry
 		expectRecord(log, &got)
 
 		res, err := svc.Use(context.Background(), 7, "steady_hand", psionicsvc.UseRequest{})
 		require.NoError(t, err)
-		assert.Equal(t, buffsvc.BuffEffect{
-			Name: "Steady Hand", PowerID: "steady_hand", PowerName: localized.Text{"en": "Steady Hand"}, Duration: 4,
-			Effects: buffsvc.BuffEffects{ToHit: intPtr(1), Damage: intPtr(2), WeaponKind: buffsvc.WeaponMissile},
-		}, row)
-		assert.True(t, row.Timed())
-		assert.Zero(t, row.MaintenanceCost, "nothing to pay at Next Round")
-		assert.Equal(t, "row-1", res.BuffID)
+		assert.True(t, res.Check.Success)
+		assert.Empty(t, res.BuffID, "the buffs mock refuses any Add")
+		assert.Empty(t, got.Snapshots)
 		assert.Equal(t, -2, got.PSPDelta)
 	})
 	t.Run("a failed check puts no row", func(t *testing.T) {

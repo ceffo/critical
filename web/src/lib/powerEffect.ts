@@ -13,7 +13,7 @@ const KEYS = [
   "initiative",
 ] as const;
 
-/** One line of the effect: the buff form's words for the key with its signed number in place of N. */
+/** One line of the effect: the words for the key with its signed number. */
 export interface PowerEffectLine {
   key: string;
   text: string;
@@ -23,8 +23,7 @@ export interface PowerEffectLine {
 const signed = (n: number) => (n < 0 ? `−${-n}` : `+${n}`);
 
 /**
- * The lines of a power's effect, then the condition (the weapon kind) and the duration when the
- * power has them. Empty when the power has no effect.
+ * The lines of a power's effect, then the condition (the weapon kind) when the power has one. Empty when the power has no effect.
  */
 export function powerEffectView(
   t: TFunction,
@@ -38,16 +37,13 @@ export function powerEffectView(
       : [
           {
             key,
-            text: t(`buffs.effects.${key}`).replace(/[±+]?N\b/, signed(n)),
+            text: t(`lookup.powers.effectLines.${key}`, { value: signed(n) }),
           },
         ];
   });
   const notes = [
     effect.weapon_kind
       ? t(`lookup.powers.effectWeaponKinds.${effect.weapon_kind}`)
-      : "",
-    effect.rounds
-      ? t("lookup.powers.effectRounds", { count: effect.rounds })
       : "",
   ].filter(Boolean);
   return { lines, notes };

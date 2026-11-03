@@ -240,7 +240,6 @@ type powerDTO struct {
 		StrBonus   int    `json:"str_bonus"`
 		Initiative int    `json:"initiative"`
 		WeaponKind string `json:"weapon_kind"`
-		Rounds     int    `json:"rounds"`
 	} `json:"effect"`
 }
 
@@ -262,7 +261,7 @@ func (p powerDTO) power() catalogue.Power {
 	if e := p.Effect; e != nil {
 		out.Effect = &catalogue.PowerEffect{
 			AC: e.AC, ToHit: e.ToHit, Damage: e.Damage, SaveBonus: e.SaveBonus, StrBonus: e.StrBonus,
-			Initiative: e.Initiative, WeaponKind: e.WeaponKind, Rounds: e.Rounds,
+			Initiative: e.Initiative, WeaponKind: e.WeaponKind,
 		}
 	}
 	return out

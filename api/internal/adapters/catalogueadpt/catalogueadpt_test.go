@@ -598,16 +598,14 @@ func TestPowerCatalogue_Step17_TheEffectParses(t *testing.T) {
 	assert.Nil(t, byID["aura_sight"].Effect, "a power without an effect has none")
 
 	a, err = ParseArtifact(artifact(t, func(d map[string]any) {
-		powerOf(d, "mind_thrust")["effect"] = map[string]any{
-			"ac": -1, "to_hit": 2, "damage": 3, "save_bonus": 4, "str_bonus": 5, "initiative": -6, "weapon_kind": "missile", "rounds": 7,
+		powerOf(d, "displacement")["effect"] = map[string]any{
+			"ac": -1, "to_hit": 2, "damage": 3, "save_bonus": 4, "str_bonus": 5, "initiative": -6,
 		}
 	}))
-	require.NoError(t, err, "a power without maintenance carries every key, with rounds")
+	require.NoError(t, err, "a maintained power carries every key")
 	for _, p := range a.Powers {
-		if p.ID == "mind_thrust" {
-			assert.Equal(t, &catalogue.PowerEffect{
-				AC: -1, ToHit: 2, Damage: 3, SaveBonus: 4, StrBonus: 5, Initiative: -6, WeaponKind: catalogue.WeaponKindMissile, Rounds: 7,
-			}, p.Effect)
+		if p.ID == "displacement" {
+			assert.Equal(t, &catalogue.PowerEffect{AC: -1, ToHit: 2, Damage: 3, SaveBonus: 4, StrBonus: 5, Initiative: -6}, p.Effect)
 		}
 	}
 
@@ -615,14 +613,16 @@ func TestPowerCatalogue_Step17_TheEffectParses(t *testing.T) {
 		return func(d map[string]any) { powerOf(d, id)["effect"] = e }
 	}
 	refuses(t, []refusal{
-		{"rounds on a maintained power", effect("displacement", map[string]any{"ac": -2, "rounds": 3}), []string{"power displacement", "maintained"}},
-		{"no rounds without maintenance", effect("mind_thrust", map[string]any{"ac": -2}), []string{"power mind_thrust", "without rounds"}},
-		{"a contact power", effect("switch_personality", map[string]any{"ac": -2, "rounds": 3}), []string{"power switch_personality", "contact"}},
-		{"str_bonus below 1 (schema)", effect("mind_thrust", map[string]any{"str_bonus": 0, "rounds": 3}), []string{"format 21 schema", "str_bonus"}},
-		{"rounds below 1 (schema)", effect("mind_thrust", map[string]any{"ac": 1, "rounds": 0}), []string{"format 21 schema", "rounds"}},
+		{"no maintenance", effect("mind_thrust", map[string]any{"ac": -2}), []string{"power mind_thrust", "without maintenance"}},
+		{"a defence mode", effect("mind_blank", map[string]any{"ac": -2}), []string{"power mind_blank", "defence mode"}},
+		{"a table-cost power", effect("contact", map[string]any{"ac": -2}), []string{"power contact", "table-cost"}},
+		{"a contact power", effect("switch_personality", map[string]any{"ac": -2}), []string{"power switch_personality", "contact"}},
+		{"a weapon kind with ac", effect("graft_weapon", map[string]any{"ac": -1, "to_hit": 1, "weapon_kind": "melee"}), []string{"power graft_weapon", "weapon_kind limits"}},
+		{"a weapon kind with initiative", effect("graft_weapon", map[string]any{"initiative": -1, "weapon_kind": "melee"}), []string{"power graft_weapon", "weapon_kind limits"}},
+		{"rounds (schema)", effect("displacement", map[string]any{"ac": -2, "rounds": 3}), []string{"format 21 schema", "rounds"}},
+		{"str_bonus below 1 (schema)", effect("displacement", map[string]any{"str_bonus": 0}), []string{"format 21 schema", "str_bonus"}},
 		{"an unknown key (schema)", effect("displacement", map[string]any{"ac": -2, "hp": 1}), []string{"format 21 schema", "hp"}},
 		{"a weapon kind outside melee and missile (schema)", effect("graft_weapon", map[string]any{"to_hit": 1, "weapon_kind": "thrown"}), []string{"format 21 schema", "weapon_kind"}},
-		{"no effect key (schema)", effect("displacement", map[string]any{"rounds": 3}), []string{"format 21 schema"}},
 		{"an empty effect (schema)", effect("displacement", map[string]any{}), []string{"format 21 schema"}},
 		{"a fractional ac (schema)", effect("displacement", map[string]any{"ac": 1.5}), []string{"format 21 schema", "ac"}},
 	})

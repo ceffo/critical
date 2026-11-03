@@ -24,21 +24,20 @@ describe("powerEffectView (ADR 0043 step 17)", () => {
     });
   });
 
-  it("words the weapon kind and the rounds beside the numbers (fr)", async () => {
+  it("words the weapon kind beside the numbers (fr)", async () => {
     const t = await makeT("fr");
     expect(
       powerEffectView(t, {
         to_hit: 1,
         damage: 1,
         weapon_kind: "melee",
-        rounds: 3,
       }),
     ).toEqual({
       lines: [
         { key: "to_hit", text: "Toucher +1" },
         { key: "damage", text: "Dégâts +1" },
       ],
-      notes: ["attaques au corps à corps seulement", "pendant 3 tours"],
+      notes: ["attaques au corps à corps seulement"],
     });
   });
 

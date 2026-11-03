@@ -2160,16 +2160,16 @@
         "fr": "personnel"
       },
       "description": {
-        "en": "This power resembles the displacer beast's natural ability to make itself appear to be up to 3 feet from his actual location. The psionicist decides where this false image will appear. This is a very effective means of protecting oneself from attack, giving the psionicist a two-point bonus on his armor class (lowering it two points). True seeing will reveal the character's real location."
+        "en": "Placeholder text for the test catalogue: the psionicist is harder to hit while this power is maintained."
       },
       "effect": {
         "ac": -2
       },
       "power_score_result": {
-        "en": "The AC bonus is +4."
+        "en": "Placeholder text: a larger bonus."
       },
       "natural_20_result": {
-        "en": "No effect."
+        "en": "Placeholder text: no effect."
       }
     },
     {
@@ -2200,7 +2200,7 @@
         "en": "personal"
       },
       "description": {
-        "en": "With this power the psionicist can graft any one-handed melee weapon directly onto his body. He picks up the weapon, activates this power, and the weapon becomes an extension of the character's arm. Assuming the character is proficient with that type of weapon, he gains a +1 bonus to attack rolls and damage. If he is not proficient with the weapon, he suffers the usual nonproficiency penalties, but still gets the +1 bonus."
+        "en": "Placeholder text for the test catalogue: a melee weapon becomes part of the psionicist while this power is maintained."
       },
       "effect": {
         "to_hit": 1,
@@ -2208,10 +2208,10 @@
         "weapon_kind": "melee"
       },
       "power_score_result": {
-        "en": "The +1 bonus for attacks and damage increases to +4."
+        "en": "Placeholder text: a larger bonus."
       },
       "natural_20_result": {
-        "en": "The weapon has been weakened; it will break on any attack roll of 1."
+        "en": "Placeholder text: a flaw."
       }
     }
   ]

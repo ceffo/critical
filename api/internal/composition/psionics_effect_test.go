@@ -12,6 +12,8 @@ import (
 
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
@@ -85,6 +87,35 @@ func TestMaintenance_Step17_TheEffectMovesTheDerivedAC(t *testing.T) {
 		require.Equal(t, 2, currentPSP(t, bs, id))
 		nextRound(t, bs, id)
 		assert.Empty(t, maintainedRows(t, bs.Buffs, id), "3 PSPs unpaid")
+		assert.Equal(t, base, derivedAC(t, bs, id))
+	})
+	t.Run("used twice while maintained: one row, not a doubled bonus", func(t *testing.T) {
+		bs, id := thiefPsionicistRolling(t, psychometabolist, fives(t))
+		base := derivedAC(t, bs, id)
+		use(t, bs, id, "displacement")
+		use(t, bs, id, "displacement")
+		assert.Len(t, maintainedRows(t, bs.Buffs, id), 1, "the second use renews the row")
+		assert.Equal(t, base-2, derivedAC(t, bs, id), "AC -2, not -4")
+	})
+	t.Run("beside a spell's AC buff: two rows, the power's named by its id", func(t *testing.T) {
+		bs, id := thiefPsionicistRolling(t, psychometabolist, fives(t))
+		base := derivedAC(t, bs, id)
+		_, _, err := bs.Buffs.Add(ctx, id, buffsvc.BuffEffect{Name: "Shield", SpellID: "shield", Effects: buffsvc.BuffEffects{AC: new(-1)}})
+		require.NoError(t, err)
+		use(t, bs, id, "displacement")
+		a, err := bs.AC.Get(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, base-3, a.Value)
+		assert.Contains(t, a.Rows, acsvc.Row{Term: acsvc.TermBuffs, Buff: "Shield", SpellID: "shield", Value: -1})
+		assert.Contains(t, a.Rows, acsvc.Row{Term: acsvc.TermBuffs, Buff: "Displacement", PowerID: "displacement", Value: -2})
+	})
+	t.Run("a long rest ends the row and its bonus", func(t *testing.T) {
+		bs, id := thiefPsionicistRolling(t, psychometabolist, fives(t))
+		base := derivedAC(t, bs, id)
+		use(t, bs, id, "displacement")
+		_, err := bs.Rest.LongRest(ctx, id)
+		require.NoError(t, err)
+		assert.Empty(t, maintainedRows(t, bs.Buffs, id))
 		assert.Equal(t, base, derivedAC(t, bs, id))
 	})
 	t.Run("graft weapon on a melee preview, not a missile one", func(t *testing.T) {

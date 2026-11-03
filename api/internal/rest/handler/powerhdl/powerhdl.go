@@ -94,12 +94,9 @@ type PowerDTO struct {
 	Effect *EffectDTO `json:"effect,omitempty"`
 }
 
-// EffectDTO is a power's effect: the buff effect keys it sets (the buff
-// row's `effects`) and, for a power without maintenance, the rounds it lasts.
-type EffectDTO struct {
-	wire.BuffEffectsDTO
-	Rounds int `json:"rounds,omitempty"`
-}
+// EffectDTO is a power's effect while it is maintained: the buff effect keys
+// it sets (the buff row's `effects`).
+type EffectDTO = wire.BuffEffectsDTO
 
 func nonZero(v int) *int {
 	if v == 0 {
@@ -127,11 +124,8 @@ func ToDTO(p catalogue.Power) PowerDTO {
 	}
 	if e := p.Effect; e != nil {
 		out.Effect = &EffectDTO{
-			BuffEffectsDTO: wire.BuffEffectsDTO{
-				AC: nonZero(e.AC), ToHit: nonZero(e.ToHit), Damage: nonZero(e.Damage), SaveBonus: nonZero(e.SaveBonus),
-				StrBonus: nonZero(e.StrBonus), Initiative: nonZero(e.Initiative), WeaponKind: buffsvc.WeaponKind(e.WeaponKind),
-			},
-			Rounds: e.Rounds,
+			AC: nonZero(e.AC), ToHit: nonZero(e.ToHit), Damage: nonZero(e.Damage), SaveBonus: nonZero(e.SaveBonus),
+			StrBonus: nonZero(e.StrBonus), Initiative: nonZero(e.Initiative), WeaponKind: buffsvc.WeaponKind(e.WeaponKind),
 		}
 	}
 	return out

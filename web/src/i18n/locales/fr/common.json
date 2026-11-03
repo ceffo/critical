@@ -1303,8 +1303,14 @@
       "noMaintenance": "Ne peut pas être maintenu",
       "scoreInText": "Donné dans le texte",
       "effect": "Effet sur vous",
-      "effectRounds_one": "pendant {{count}} tour",
-      "effectRounds_other": "pendant {{count}} tours",
+      "effectLines": {
+        "ac": "CA {{value}}",
+        "to_hit": "Toucher {{value}}",
+        "damage": "Dégâts {{value}}",
+        "save_bonus": "JS {{value}}",
+        "str_bonus": "FOR {{value}}",
+        "initiative": "Initiative {{value}}"
+      },
       "effectWeaponKinds": {
         "melee": "attaques au corps à corps seulement",
         "missile": "attaques à distance seulement"

@@ -232,7 +232,9 @@ below (AC, saves, slots, levels), and cites its number in the code and the commi
       before the move and are frozen, with no `-update` flag; the levels golden checks the class
       definition against them. `TestLevels_Step5_NoThresholdOutsideClasses` (an `go/ast` walk of
       `internal/**` non-test sources, mocks included) fails if a function, method, interface method
-      or type named `XPThreshold` or `Thresholds` is declared outside `classes`.)_
+      or type named `XPThreshold` or `Thresholds` is declared outside `classes`, and if any function
+      outside `classes` returns a call to a method named `XPThreshold`, whatever the wrapper is called.
+      `charactersvc` bounds the table with `classes.MaxLevel`, the one constant.)_
 6. **A figure's breakdown reaches the wire without a tag in the domain** ([ADR 0038](0038-domain-and-wire.md)).
    1. The owners (`saves`, `slots`, `acsvc.Derive`, `classes`) have no `json` tag on any type. An
       owner's `Figure` is a domain value.
@@ -293,7 +295,13 @@ with them. The questions and their reasons:
    is possible but moves unrelated importer tests.
 6. **Q6, the same pattern for Strength.** `combatsvc.Rules.StrengthMods` is the sibling of the Dexterity
    copy (ADR 0002 step 4). Default: not in this ADR; filed as a follow-up item that applies step 2.1's pattern, with
-   the ADR 0002 step 4 amendment.
+   the ADR 0002 step 4 amendment. _(As built, 2026-11-03: owner `domain/strength` (`Table`, `Row`, `Mods`;
+   `NewTable` validates, `Table.Of` looks up); `ruletablesvc.Tables.Strength()` hands the table out, and
+   `ruletablesvc.Lookup.StrengthMods` and `combatsvc.Rules.StrengthMods` are gone. Not through the view, unlike
+   Dexterity: the score read is the effective one, with the buffs, which only combat has, so by step 1.4 the
+   consumer calls the owner's function; the table reaches combat as a value in `combatsvc.Deps`, not a port.
+   Tests: `strength` package tests, `TestStrengthMods` in `ruletablesadpt` (the PHB pages) and the unchanged
+   combat tests; `TestFigures_Step6_OwnersCarryNoTransportTags` covers the package.)_
 
 ## Consequences
 

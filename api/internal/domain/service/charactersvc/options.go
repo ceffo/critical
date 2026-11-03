@@ -249,10 +249,10 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 		}
 		opt := ClassOption{
 			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
-			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, ruletablesvc.MaxLevel),
+			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, classes.MaxLevel),
 			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(def),
 		}
-		for level := 1; level <= ruletablesvc.MaxLevel; level++ {
+		for level := 1; level <= classes.MaxLevel; level++ {
 			// ADR 0046 step 5.1: the threshold is the class definition's.
 			xp, err := def.XPThreshold(level)
 			if err != nil {

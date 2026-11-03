@@ -97,15 +97,15 @@ func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *i
 	// always for melee and hurled weapons; for bows only with a strength
 	// bow, which the Bard's are not.
 	if !weapon.FiresAmmo() {
-		hit, dmg, err := s.rules.StrengthMods(mods.EffectiveStr, mods.EffectiveStrExceptional)
+		str, err := s.strength.Of(mods.EffectiveStr, mods.EffectiveStrExceptional)
 		if err != nil {
 			return attackMods{}, fmt.Errorf("strength table: %w", err)
 		}
 		detail := strconv.Itoa(mods.EffectiveStr)
 		exc := mods.EffectiveStrExceptional
-		add(Modifier{Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: hit})
-		out.strDmg = dmg
-		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: float64(dmg)})
+		add(Modifier{Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: str.Hit})
+		out.strDmg = str.Dmg
+		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: float64(str.Dmg)})
 	}
 	// ADR 0002 step 5: Dexterity missile adjustment (Table 2, from the view) for every
 	// missile attack, bow or hurled.

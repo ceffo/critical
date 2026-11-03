@@ -38,6 +38,9 @@ return a distinct value for each call and expect an exact number of calls.
    the Strength buffs, [ADR 0004](0004-buffs.md)), for melee and hurled weapons. A bow
    (a weapon that fires ammunition) gets none: PHB "Ability Modifiers in Missile Combat" gives
    Strength to a bow only when it is a strength bow, and the Bard's are not.
+   _(Amended by [ADR 0046](0046-derived-figures.md) Q6, 2026-11-03: the table, its validation and the lookup are
+   the `strength` package's (`strength.Table.Of(score, exceptional)`); combat is handed the table as a
+   value (`Deps.Strength`) and keeps no Strength port. The effective score still comes from the buffs.)_
    Tests: `TestResolveAttack` ("long sword +2 vs AC 5 at effective STR 18 hits on 5", "short bow
    +2 with a +3 arrow at DEX 17 hits on 4" at effective STR 18, "hurled darts take STR and DEX").
 5. **Dexterity.** The PHB Table 2 missile attack adjustment for every missile weapon, bow or

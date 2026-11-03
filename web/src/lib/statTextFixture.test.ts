@@ -1,7 +1,8 @@
 // Every spell of the API's fixture catalogue, its six stats worded in English and French
 // (ADR 0021 step 26.4: the words come from the typed stat and its label, so the texts must not
 // change). The snapshot is the table; `__fixtures__/spellStats.json` is `api/cmd/spellstats` run on
-// `api/testdata/catalogue.json`. Regenerate both with `vitest -u` after a deliberate change.
+// `api/testdata/catalogue.json` (`just spell-stats-fixture` regenerates it; `just validate` fails when it
+// is stale). Regenerate the snapshot with `vitest -u` after a deliberate change.
 import { describe, expect, it } from "vitest";
 import i18next from "i18next";
 import { resources } from "@/i18n";

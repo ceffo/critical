@@ -386,7 +386,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	bs.Combat, err = combatsvc.New(combatsvc.Deps{
 		Chars: charSvc, Buffs: bs.Buffs, Dice: dice, Weapons: weapons, Rulesets: bs.Rulesets,
-		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Log: logSvc, Tx: tx,
+		Items: bs.Items, Forms: st.Forms, Rules: ruleTables, Strength: ruleTables.Strength(), Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.Combat, err); err != nil {
 		return nil, err

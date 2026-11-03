@@ -14,6 +14,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 type fileDTO struct {
@@ -88,9 +89,9 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err := dec.Decode(&f); err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
-	str := make([]ruletablesvc.StrengthRow, len(f.Strength))
+	str := make([]strength.Row, len(f.Strength))
 	for i, d := range f.Strength {
-		str[i] = ruletablesvc.StrengthRow{
+		str[i] = strength.Row{
 			StrMin: d.StrMin, StrMax: d.StrMax, ExcMin: d.ExcMin, ExcMax: d.ExcMax, Hit: d.Hit, Dmg: d.Dmg,
 		}
 	}

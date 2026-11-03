@@ -6,7 +6,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 // MinAC and MaxAC bound an armour class number (DMG p.181: never better
@@ -119,7 +119,7 @@ func effectiveStrength(buffs []BuffEffect, base BaseStrength) StrScore {
 	}
 	past := sum - (strengthCap - base.Score)
 	if past > 0 {
-		out.Exceptional = min(baseExc+exceptionalPerPoint*past, ruletablesvc.ExceptionalMax)
+		out.Exceptional = min(baseExc+exceptionalPerPoint*past, strength.ExceptionalMax)
 	}
 	return out
 }

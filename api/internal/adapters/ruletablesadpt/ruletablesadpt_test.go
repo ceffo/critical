@@ -107,14 +107,14 @@ func TestStrengthMods(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hit, dmg, err := tbl.StrengthMods(tt.str, tt.exc)
+			mods, err := tbl.Strength().Of(tt.str, tt.exc)
 			if tt.wantError {
 				require.Error(t, err)
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.hit, hit, "hit")
-			assert.Equal(t, tt.dmg, dmg, "dmg")
+			assert.Equal(t, tt.hit, mods.Hit, "hit")
+			assert.Equal(t, tt.dmg, mods.Dmg, "dmg")
 		})
 	}
 }

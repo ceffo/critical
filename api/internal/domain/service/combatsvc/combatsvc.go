@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 // SVC is the driver port.
@@ -102,9 +103,9 @@ type FormStore interface {
 	Put(ctx context.Context, characterID int64, form AttackForm) error
 }
 
-// Rules is the PHB rule-table lookup (ruletablesvc.Lookup).
+// Rules is the PHB rule-table lookup (ruletablesvc.Lookup). Strength is not
+// read through it: the Strength owner's table is a value (Deps.Strength).
 type Rules interface {
-	StrengthMods(str, exceptional int) (hit, dmg int, err error)
 	// AttackRateFor is ADR 0030 step 11 (ruletablesvc.Tables.AttackRateFor).
 	AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error)
 }
@@ -128,6 +129,8 @@ type Deps struct {
 	Items    Items
 	Forms    FormStore
 	Rules    Rules
+	// Strength is PHB Table 1, the Strength owner's table (ADR 0002 step 4).
+	Strength strength.Table
 	Log      Log
 	Tx       domain.TxRunner
 }
@@ -141,6 +144,7 @@ type service struct {
 	items    Items
 	forms    FormStore
 	rules    Rules
+	strength strength.Table
 	log      Log
 	tx       domain.TxRunner
 }
@@ -156,12 +160,12 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 		return nil, fmt.Errorf("combatsvc: nil config")
 	}
 	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Rulesets == nil ||
-		d.Items == nil || d.Forms == nil || d.Rules == nil || d.Log == nil || d.Tx == nil {
+		d.Items == nil || d.Forms == nil || d.Rules == nil || !d.Strength.Valid() || d.Log == nil || d.Tx == nil {
 		return nil, fmt.Errorf("combatsvc: nil dependency")
 	}
 	return &service{
 		chars: d.Chars, buffs: d.Buffs, dice: d.Dice, weapons: d.Weapons, rulesets: d.Rulesets,
-		items: d.Items, forms: d.Forms, rules: d.Rules, log: d.Log, tx: d.Tx,
+		items: d.Items, forms: d.Forms, rules: d.Rules, strength: d.Strength, log: d.Log, tx: d.Tx,
 	}, nil
 }
 

@@ -738,7 +738,7 @@ same numbers.
 They are not loaded into the database: at every start (whatever catalogue version the database recorded) the
 `ruletablesadpt` parser reads them (a gap or overlap in a table is a startup error naming the table) into
 `ruletablesvc.Tables`, which implements `ruletablesvc.Lookup`:
-`StrengthMods(str, exceptional) (hit, dmg)`, `DexMods(dex) (missile, ac)` and
+`Strength() strength.Table` (PHB Table 1, read with `Of(str, exceptional)`; the `strength` package owns it), `DexMods(dex) (missile, ac)` and
 `BardSpellsPerDay(level) map[spellLevel]count`; `Tables` also has `BardXPThreshold(level)` (the
 XP ledger's port). `exceptional` is the 18/xx percentile (1-99, 100 for
 18/00). Values are returned as printed in the tables. The tests check

@@ -14,20 +14,17 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
-// strengthOnlyRules is the rule tables combat needs once Dexterity comes from
-// the view (ADR 0046 step 2.2): Strength and the attack rate, no Dexterity
-// table. It compiles only while combatsvc.Rules has no DexMods.
-type strengthOnlyRules struct{ t *ruletablesvc.Tables }
+// attackRateOnlyRules is the rule tables combat needs once Dexterity comes from
+// the view (ADR 0046 step 2.2) and Strength from the owner's table: the attack
+// rate only. It compiles only while combatsvc.Rules has no DexMods and no
+// Strength lookup.
+type attackRateOnlyRules struct{ t *ruletablesvc.Tables }
 
-func (r strengthOnlyRules) StrengthMods(str, exceptional int) (int, int, error) {
-	return r.t.StrengthMods(str, exceptional)
-}
-
-func (r strengthOnlyRules) AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error) {
+func (r attackRateOnlyRules) AttackRateFor(class string, level int, kind, weaponType string, specialized bool) (ruletablesvc.AttackRate, bool, error) {
 	return r.t.AttackRateFor(class, level, kind, weaponType, specialized)
 }
 
-var _ combatsvc.Rules = strengthOnlyRules{}
+var _ combatsvc.Rules = attackRateOnlyRules{}
 
 // dexRows are PHB Table 2's missile column read at the sheet's score, plus one
 // row that disagrees with the table (Dexterity 17 with +4) to show the view
@@ -40,7 +37,7 @@ var dexRows = []struct{ dex, missile int }{{3, -3}, {6, 0}, {14, 0}, {16, 1}, {1
 func TestAttack_Step2_MissileAdjustmentFromTheView(t *testing.T) {
 	for _, row := range dexRows {
 		t.Run(fmt.Sprintf("dex %d missile %+d", row.dex, row.missile), func(t *testing.T) {
-			f := newFixtureWithRules(t, strengthOnlyRules{phb(t)})
+			f := newFixtureWithRules(t, attackRateOnlyRules{phb(t)})
 			c := bard()
 			c.Dex, c.DexMissile = row.dex, row.missile
 			f.withChar(c)
@@ -67,7 +64,7 @@ func TestAttack_Step2_MissileAdjustmentFromTheView(t *testing.T) {
 func TestSpellAttack_Step2_MissileAdjustmentFromTheView(t *testing.T) {
 	for _, row := range dexRows {
 		t.Run(fmt.Sprintf("dex %d missile %+d", row.dex, row.missile), func(t *testing.T) {
-			f := newFixtureWithRules(t, strengthOnlyRules{phb(t)})
+			f := newFixtureWithRules(t, attackRateOnlyRules{phb(t)})
 			c := bard()
 			c.Dex, c.DexMissile = row.dex, row.missile
 			f.withChar(c)

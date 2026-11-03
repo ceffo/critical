@@ -132,3 +132,5 @@ CorrectionStore  # Technical: port, service or wiring type (clean architecture p
 ContactPick  # Technical: request part, one modifier row of the cost table picked (kind, code)
 ContactPreview  # Technical: read model, the contact's cost and score before the roll (ADR 0044 step 9)
 CostTable  # Technical: read model, the rule table a power's cost names, for the web's controls
+Mods  # Technical: the strength owner's value, the hit and damage adjustments of a Strength score (see Strength, PHB Table 1)
+Table  # Technical: the strength owner's validated PHB Table 1 rows (see Strength, Rule table)

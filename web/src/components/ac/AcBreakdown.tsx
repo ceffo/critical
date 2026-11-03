@@ -3,19 +3,24 @@ import { useItemsStore } from "@/stores/items";
 import { itemNamer } from "@/lib/itemPowers";
 import { buffName, useSpellName } from "@/i18n/spellName";
 import { acRowView, type AcNamers } from "@/lib/acView";
+import { usePowerNames } from "@/components/dashboard/usePowerNames";
 import { formatAc } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ArmourClass } from "@/types/ac";
 
 /** The namers of the breakdown's sources: pieces from the possessions, buffs like the buff list. */
-function useAcNamers(): AcNamers {
+function useAcNamers(ac: ArmourClass): AcNamers {
   const { i18n } = useTranslation();
   const items = useItemsStore((s) => s.items);
   const spellName = useSpellName();
   const named = itemNamer(items, i18n.language);
+  const powerName = usePowerNames(
+    ac.rows.flatMap((r) => (r.powerId ? [r.powerId] : [])),
+  );
   return {
     item: (id) => named(id) ?? id,
-    buff: (b) => buffName(spellName, b),
+    buff: (b) =>
+      (b.powerId ? powerName(b.powerId) : undefined) ?? buffName(spellName, b),
   };
 }
 
@@ -27,7 +32,7 @@ function useAcNamers(): AcNamers {
  */
 export function AcBreakdown({ ac }: { ac: ArmourClass }) {
   const { t } = useTranslation();
-  const names = useAcNamers();
+  const names = useAcNamers(ac);
   return (
     <dl
       className="grid grid-cols-[auto_minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 text-body"

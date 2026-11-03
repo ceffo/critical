@@ -11,6 +11,7 @@ export interface AcNamers {
     name: string;
     spellId?: string;
     proficiencyId?: string;
+    powerId?: string;
   }) => string;
 }
 
@@ -42,6 +43,7 @@ export function acRowView(
           name: row.buff,
           spellId: row.spellId,
           proficiencyId: row.proficiencyId,
+          powerId: row.powerId,
         })
       : row.term === "dexterity"
         ? String(row.dexterity ?? "")

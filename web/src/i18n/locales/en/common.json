@@ -1302,6 +1302,13 @@
       "maintenanceValue_other": "{{cost}} every {{count}} rounds",
       "noMaintenance": "Cannot be maintained",
       "scoreInText": "Given in the text",
+      "effect": "Effect on you",
+      "effectRounds_one": "for {{count}} round",
+      "effectRounds_other": "for {{count}} rounds",
+      "effectWeaponKinds": {
+        "melee": "melee attacks only",
+        "missile": "missile attacks only"
+      },
       "prerequisites": "Prerequisites:",
       "minLevel": "Level {{level}}+",
       "powerScoreResult": "On the power score",

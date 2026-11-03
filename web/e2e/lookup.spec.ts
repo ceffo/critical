@@ -819,8 +819,8 @@ test.describe("lookup powers", () => {
     await openDashboard(page);
     await openSortsPowers(page);
     const powerRows = page.getByTestId("power-row");
-    await expect(powerRows).toHaveCount(17);
-    await expect(page.getByTestId("lookup-count")).toHaveText("17 powers");
+    await expect(powerRows).toHaveCount(19);
+    await expect(page.getByTestId("lookup-count")).toHaveText("19 powers");
     await powerRows.first().click();
 
     await page
@@ -862,6 +862,18 @@ test.describe("lookup powers", () => {
       "Une aura est un halo brillant",
     );
     await snap(page, "power-detail-fr");
+
+    // A power with an effect shows it in the buff form's words, with its condition.
+    await page
+      .getByRole("combobox", { name: "Rechercher des pouvoirs..." })
+      .fill("greffe");
+    await expect(powerRows).toHaveCount(1);
+    await powerRows.first().click();
+    await expect(detail.getByRole("heading")).toHaveText("Greffe d'arme");
+    await expect(detail.getByTestId("power-effect")).toHaveText(
+      "Effet sur vous Toucher +1, Dégâts +1 (attaques au corps à corps seulement)",
+    );
+    await snap(page, "power-effect-fr");
   });
 });
 

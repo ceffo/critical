@@ -1302,6 +1302,13 @@
       "maintenanceValue_other": "{{cost}} tous les {{count}} tours",
       "noMaintenance": "Ne peut pas être maintenu",
       "scoreInText": "Donné dans le texte",
+      "effect": "Effet sur vous",
+      "effectRounds_one": "pendant {{count}} tour",
+      "effectRounds_other": "pendant {{count}} tours",
+      "effectWeaponKinds": {
+        "melee": "attaques au corps à corps seulement",
+        "missile": "attaques à distance seulement"
+      },
       "prerequisites": "Prérequis :",
       "minLevel": "Niveau {{level}} et plus",
       "powerScoreResult": "Selon le score de pouvoir",

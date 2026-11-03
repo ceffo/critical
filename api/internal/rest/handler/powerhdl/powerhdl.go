@@ -16,6 +16,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/powersvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -88,6 +89,23 @@ type PowerDTO struct {
 	Description      localized.Text  `json:"description"`
 	PowerScoreResult localized.Text  `json:"power_score_result,omitempty"`
 	Natural20Result  localized.Text  `json:"natural_20_result,omitempty"`
+	// Effect is what the power does to its user while it lasts (ADR 0043
+	// step 17), in the buff effect keys; omitted for a power without one.
+	Effect *EffectDTO `json:"effect,omitempty"`
+}
+
+// EffectDTO is a power's effect: the buff effect keys it sets (the buff
+// row's `effects`) and, for a power without maintenance, the rounds it lasts.
+type EffectDTO struct {
+	wire.BuffEffectsDTO
+	Rounds int `json:"rounds,omitempty"`
+}
+
+func nonZero(v int) *int {
+	if v == 0 {
+		return nil
+	}
+	return &v
 }
 
 // ToDTO is the wire form of a power.
@@ -106,6 +124,15 @@ func ToDTO(p catalogue.Power) PowerDTO {
 	}
 	if p.Maintenance != nil {
 		out.Maintenance = &MaintenanceDTO{Cost: CostDTO{p.Maintenance.Cost}, Period: p.Maintenance.Period}
+	}
+	if e := p.Effect; e != nil {
+		out.Effect = &EffectDTO{
+			BuffEffectsDTO: wire.BuffEffectsDTO{
+				AC: nonZero(e.AC), ToHit: nonZero(e.ToHit), Damage: nonZero(e.Damage), SaveBonus: nonZero(e.SaveBonus),
+				StrBonus: nonZero(e.StrBonus), Initiative: nonZero(e.Initiative), WeaponKind: buffsvc.WeaponKind(e.WeaponKind),
+			},
+			Rounds: e.Rounds,
+		}
 	}
 	return out
 }

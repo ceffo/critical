@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-api check-web
+validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture check-api check-web
     @echo "--- Project Validation Successful ---"
     @scripts/gate-stamp.sh write
 
@@ -575,6 +575,21 @@ catalogue: rulebooks
     chmod 644 "$tmp"
     mv "$tmp" .catalogue/catalogue.json
     echo "catalogue: .catalogue/catalogue.json from $dir at $(git -C "$dir" rev-parse --short "$ref")"
+
+# Fails when the committed web/src/lib/__fixtures__/spellStats.json differs from what the parser
+# generates (`just spell-stats-fixture` regenerates it). -count=1: the Go test cache does not track
+# a file outside the api module, so a cached pass could hide a stale fixture.
+check-spell-stats-fixture:
+    cd api && go test -count=1 -run TestCommittedWebFixtureMatchesParser ./cmd/spellstats
+
+# Regenerate web/src/lib/__fixtures__/spellStats.json: api/cmd/spellstats over the fixture catalogue,
+# formatted as the web formats it (check-spell-stats-fixture compares it with the parser).
+spell-stats-fixture:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    out="web/src/lib/__fixtures__/spellStats.json"
+    (cd api && go run ./cmd/spellstats "$PWD/testdata/catalogue.json") > "$out"
+    cd web && npx prettier --write src/lib/__fixtures__/spellStats.json >/dev/null
 
 # How the French UI words the six spell stats over a catalogue (ADR 0021 step 8): per field, how many
 # are worded from the typed value, shown as a listed label, or shown as the book's English text,

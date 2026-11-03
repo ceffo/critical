@@ -26,15 +26,11 @@ type spellOut struct {
 	Stats        spellstats.Stats `json:"stats"`
 }
 
-func main() {
-	if len(os.Args) != 2 {
-		fmt.Fprintln(os.Stderr, "usage: spellstats <catalogue.json>")
-		os.Exit(2)
-	}
-	cat, err := catalogueadpt.Load(os.Args[1])
+// build parses every spell of the catalogue artifact at path.
+func build(path string) ([]spellOut, error) {
+	cat, err := catalogueadpt.Load(path)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		return nil, err
 	}
 	out := make([]spellOut, 0, len(cat.Spells))
 	for _, s := range cat.Spells {
@@ -48,6 +44,19 @@ func main() {
 			AreaOfEffect: raw.AreaOfEffect, Components: raw.Components, SavingThrow: raw.SavingThrow,
 			Stats: spellstats.Parse(raw),
 		})
+	}
+	return out, nil
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Fprintln(os.Stderr, "usage: spellstats <catalogue.json>")
+		os.Exit(2)
+	}
+	out, err := build(os.Args[1])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", " ")

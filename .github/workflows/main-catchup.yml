@@ -1,0 +1,40 @@
+name: Main catch-up
+
+# Every commit on main gets a CI run and, on green, a Release run, even when no event started them. The
+# Dependabot auto-merge merges with a workflow's GITHUB_TOKEN, and GitHub starts no workflow from an event
+# that token caused (except workflow_dispatch): the push to main starts no CI, and a CI run dispatched
+# with that token does not start Release (workflow_run). So this workflow looks at main's head on a
+# schedule and starts what is missing, with the same token: a dispatched CI run, then a dispatched Release
+# run for the commit (scripts/main-catchup.sh). It waits for nothing, so a merge hours after the PR opened
+# is covered as well as an immediate one. No extra secret.
+#
+# A schedule can run late (GitHub delays it under load); a manual run (Actions > Main catch-up) does the
+# same at once.
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write   # dispatch CI and Release
+
+concurrency:
+  group: main-catchup
+  cancel-in-progress: false
+
+jobs:
+  catch-up:
+    name: catch up main
+    if: ${{ github.repository == 'ceffo/critical' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Start what main's head is missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: scripts/main-catchup.sh

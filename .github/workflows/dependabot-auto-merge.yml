@@ -11,14 +11,13 @@ name: Dependabot auto-merge
 # metadata and calls the GitHub API.
 #
 # The merge GitHub performs is attributed to this workflow's GITHUB_TOKEN, and events caused by GITHUB_TOKEN
-# start no workflow run (except workflow_dispatch): the push to main would get no CI run, hence no Release
-# run. So the job stays alive until the PR is merged, then dispatches CI on main itself (ci.yml accepts
-# workflow_dispatch; release.yml accepts a CI run it dispatched). No extra secret needed.
+# start no workflow run (except workflow_dispatch): the push to main gets no CI run, hence no Release run.
+# This job does not wait for the merge (it could come hours later); main-catchup.yml looks at main's head on
+# a schedule and starts the CI and Release runs that are missing.
 on:
   pull_request_target:
     types: [opened, reopened, synchronize]
 
-# A new push to the PR restarts the job, which would otherwise wait for a merge that is no longer coming.
 concurrency:
   group: dependabot-auto-merge-${{ github.event.pull_request.number }}
   cancel-in-progress: true
@@ -27,14 +26,13 @@ permissions:
   contents: write
   pull-requests: write
   issues: write
-  actions: write   # dispatch CI on main once the PR is merged
 
 jobs:
   auto-merge:
     name: enable auto-merge or label
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 10
     steps:
       - name: Read the Dependabot metadata
         id: meta
@@ -69,27 +67,3 @@ jobs:
           GH_REPO: ${{ github.repository }}
           PR: ${{ github.event.pull_request.number }}
         run: gh pr merge "$PR" --auto --squash
-      # Polls until GitHub merges the PR (CI plus the required checks take a few minutes), then starts
-      # main's CI run, which the merge itself did not. Gives up when the PR is closed unmerged or after an
-      # hour: the supervisor's PR watch then handles it.
-      - name: Start CI on main once merged
-        if: ${{ steps.kind.outputs.kind == 'routine' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GH_REPO: ${{ github.repository }}
-          PR: ${{ github.event.pull_request.number }}
-        run: |
-          for _ in $(seq 1 120); do
-            state="$(gh pr view "$PR" --json state --jq .state)"
-            case "$state" in
-              MERGED)
-                gh workflow run ci.yml --ref main
-                echo "PR #$PR merged: dispatched CI on main"
-                exit 0 ;;
-              CLOSED)
-                echo "PR #$PR closed without merging: nothing to start"
-                exit 0 ;;
-            esac
-            sleep 30
-          done
-          echo "::warning::PR #$PR not merged after an hour: no CI run started on main"

@@ -108,3 +108,32 @@ func TestPowers_Step8_ServedFromTheCatalogueAsLanguageMaps(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, do(h, "GET", "/api/powers?discipline=pyromancy", "").Code)
 	assert.Equal(t, http.StatusBadRequest, do(h, "GET", "/api/powers?page_size=900", "").Code)
 }
+
+// ADR 0043 step 17: a power's effect is served in the buff effect keys, with a
+// zero number an absent key; a power without an effect has no `effect` field.
+func TestPowers_Step17_EffectOnTheWire(t *testing.T) {
+	h, _ := powersRouter(t)
+	get := func(id string) map[string]any {
+		rec := do(h, "GET", "/api/powers/"+id, "")
+		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+		var raw map[string]any
+		require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &raw))
+		return raw
+	}
+	assert.Equal(t, map[string]any{"ac": float64(-2)}, get("displacement")["effect"], "AC is signed, the other keys are absent")
+	assert.Equal(t,
+		map[string]any{"to_hit": float64(1), "damage": float64(1), "weapon_kind": "melee"},
+		get("graft_weapon")["effect"], "the weapon kind rides with the effect")
+	assert.NotContains(t, get("aura_sight"), "effect", "no effect, no field")
+
+	rec := do(h, "GET", "/api/powers?q=displacement", "")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	var page struct {
+		Items []struct {
+			Effect map[string]any `json:"effect"`
+		} `json:"items"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &page))
+	require.NotEmpty(t, page.Items)
+	assert.Equal(t, map[string]any{"ac": float64(-2)}, page.Items[0].Effect, "the search serves it too")
+}

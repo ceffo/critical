@@ -63,16 +63,20 @@ const FormatPsionicCombat = 18
 // weapon_specialization feature.
 const FormatSkillSets = 19
 
-// FormatMeditating is format 20 (ADR 0021 step 28, ADR 0047 item 6): format
+// FormatMeditating was format 20 (ADR 0021 step 28, ADR 0047 item 6): format
 // 19 plus the meditating row of psp_recovery, whose requires_proficiency
 // names the proficiency that gates it, and that proficiency's description
-// (66 in all). It is the only format the API reads (step 28.4): the formats 1
-// to 19 are refused like any unknown format, with the advice to run `just
-// catalogue`.
+// (66 in all).
 const FormatMeditating = 20
 
-// Formats lists the formats this API reads: format 20 only (step 28.4).
-var Formats = []int{FormatMeditating}
+// FormatPowerEffects is format 21 (ADR 0021 step 29, ADR 0043 step 17):
+// format 20 plus the optional effect of a psionic power. It is the only
+// format the API reads (step 29.3): the formats 1 to 20 are refused like any
+// unknown format, with the advice to run `just catalogue`.
+const FormatPowerEffects = 21
+
+// Formats lists the formats this API reads: format 21 only (step 29.3).
+var Formats = []int{FormatPowerEffects}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

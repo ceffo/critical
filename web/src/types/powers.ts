@@ -1,3 +1,4 @@
+import type { BuffEffects } from "@/types/buffs";
 import type { LocalizedText } from "@/types/localized";
 
 /** What a power takes a slot of (ADR 0043 step 8). */
@@ -29,7 +30,21 @@ export interface Power {
   description: LocalizedText;
   power_score_result?: LocalizedText;
   natural_20_result?: LocalizedText;
+  /** What the power does to its user while it lasts (ADR 0043 step 17), in the buff effect keys. */
+  effect?: PowerEffect;
 }
+
+/** A power's effect: buff effect keys (AC negative betters it), the weapon kind that limits them, applied while the power is maintained. */
+export type PowerEffect = Pick<
+  BuffEffects,
+  | "ac"
+  | "to_hit"
+  | "damage"
+  | "save_bonus"
+  | "str_bonus"
+  | "initiative"
+  | "weapon_kind"
+>;
 
 export interface PowerPage {
   items: Power[];

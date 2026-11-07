@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { SpellDescription } from "@/components/dashboard/SpellDescription";
 import { getPower } from "@/api/powers";
+import { powerEffectView } from "@/lib/powerEffect";
 import { localized } from "@/i18n/localized";
 import { isPowerQuerySet, usePowerStore } from "@/stores/powers";
 import type { Power, PowerCost, PowerFilterOptions } from "@/types/powers";
@@ -406,6 +407,7 @@ function PowerDetail({
     },
     { key: "natural20Result", text: localized(lang, power.natural_20_result) },
   ].filter((r) => r.text);
+  const effect = powerEffectView(t, power.effect);
   const description = localized(lang, power.description);
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -461,6 +463,15 @@ function PowerDetail({
             {t("lookup.powers.prerequisites")}{" "}
           </span>
           {power.prerequisites.map((id) => names[id] ?? id).join(", ")}
+        </p>
+      )}
+      {effect.lines.length > 0 && (
+        <p className="text-body" data-testid="power-effect">
+          <span className="text-muted-foreground">
+            {t("lookup.powers.effect")}{" "}
+          </span>
+          {effect.lines.map((l) => l.text).join(", ")}
+          {effect.notes.length > 0 && ` (${effect.notes.join(", ")})`}
         </p>
       )}
       {description && (

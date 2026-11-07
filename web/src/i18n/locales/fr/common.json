@@ -1302,6 +1302,19 @@
       "maintenanceValue_other": "{{cost}} tous les {{count}} tours",
       "noMaintenance": "Ne peut pas être maintenu",
       "scoreInText": "Donné dans le texte",
+      "effect": "Effet sur vous",
+      "effectLines": {
+        "ac": "CA {{value}}",
+        "to_hit": "Toucher {{value}}",
+        "damage": "Dégâts {{value}}",
+        "save_bonus": "JS {{value}}",
+        "str_bonus": "FOR {{value}}",
+        "initiative": "Initiative {{value}}"
+      },
+      "effectWeaponKinds": {
+        "melee": "attaques au corps à corps seulement",
+        "missile": "attaques à distance seulement"
+      },
       "prerequisites": "Prérequis :",
       "minLevel": "Niveau {{level}} et plus",
       "powerScoreResult": "Selon le score de pouvoir",

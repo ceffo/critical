@@ -232,6 +232,15 @@ type powerDTO struct {
 	Description      localized.Text `json:"description"`
 	PowerScoreResult localized.Text `json:"power_score_result"`
 	Natural20Result  localized.Text `json:"natural_20_result"`
+	Effect           *struct {
+		AC         int    `json:"ac"`
+		ToHit      int    `json:"to_hit"`
+		Damage     int    `json:"damage"`
+		SaveBonus  int    `json:"save_bonus"`
+		StrBonus   int    `json:"str_bonus"`
+		Initiative int    `json:"initiative"`
+		WeaponKind string `json:"weapon_kind"`
+	} `json:"effect"`
 }
 
 func (p powerDTO) power() catalogue.Power {
@@ -248,6 +257,12 @@ func (p powerDTO) power() catalogue.Power {
 	}
 	if p.Maintenance != nil {
 		out.Maintenance = &catalogue.Maintenance{Cost: catalogue.Cost(p.Maintenance.Cost), Period: p.Maintenance.Period}
+	}
+	if e := p.Effect; e != nil {
+		out.Effect = &catalogue.PowerEffect{
+			AC: e.AC, ToHit: e.ToHit, Damage: e.Damage, SaveBonus: e.SaveBonus, StrBonus: e.StrBonus,
+			Initiative: e.Initiative, WeaponKind: e.WeaponKind,
+		}
 	}
 	return out
 }

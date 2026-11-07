@@ -327,8 +327,8 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     carrying the power's catalogue id (`power_id`, beside `spell_id`) and its maintenance cost and
     period, with the power's effect when it has one (step 17). Activating a power already
     maintained renews it (ADR 0004 step 6); a row on a mind is renewed only by the same power on
-    the same mind ([ADR 0044](0044-psionic-combat.md) step 10). A power without `maintenance` puts no row unless its
-    effect has rounds (step 17).
+    the same mind ([ADR 0044](0044-psionic-combat.md) step 10). A power without `maintenance` puts no row (its effect,
+    if any, applies only while maintained: step 17).
     Tests: `Activate_Step13_AMaintainedPowerIsAnUntimedRow` (psionicsvc: the row, its id and
     cost), `Activate_Step13_NoMaintenanceNoRow`.
 
@@ -387,14 +387,17 @@ Every warning and refusal is structured data (a code and its numbers), worded by
     the activation.
     Test: `Dismiss_Step16_StoppingIsFreeAndUndoable` (buffsvc).
 
-17. **A power's effect uses the existing kinds** (ADR 0008 step 8's effect data and ADR 0004 steps
-    11, 12 and 18). A power whose effect the existing kinds express (an AC, a to-hit, a damage, a
-    save bonus, a Strength) carries it in its catalogue `effect`; the row applies it while
-    maintained (step 13), or for its `rounds` when the power is not maintained but lasts. Every
-    other effect is the power's text, shown and not computed. No new effect kind in layer 1; a
-    power that needs one is a later amendment of ADR 0008 step 8 with its code.
-    Test: `Activate_Step17_AnEffectFromTheData` (psionicsvc: a fixture power with an `ac` effect
-    changes the derived AC while maintained and stops when dismissed).
+17. **A power's effect uses the existing kinds** (the buff effect kinds of ADR 0004 steps 11, 12
+    and 18; amended 2026-11-03 on implementation, was "ADR 0008 step 8's effect data"). A power
+    whose effect the existing kinds express (an AC, a to-hit, a damage, a save bonus, a Strength,
+    an initiative) carries it in its catalogue `effect`; the row applies it while the power is
+    maintained (step 13), and only then: a power without `maintenance` has no effect in its data (no
+    book power needs a lasting one, and a timed power row has no Stop). Every other effect
+    is the power's text, shown and not computed. No new effect kind in layer 1; a power that needs
+    one is a later amendment of ADR 0004 step 11 with its code.
+    Tests: `Activate_Step17_AnEffectFromTheData` (psionicsvc: the row handed to the buffs) and
+    `Maintenance_Step17_TheEffectMovesTheDerivedAC` (composition: the derived AC and the attack
+    preview); see "As built: a power's effect".
 
 ### Several classes
 
@@ -590,6 +593,34 @@ Step 9's backend: the rules, the store, the save with its undo and the route. Th
   `slot`, `count`, `limit`), and serves `knownPowers` with the picks as entered. The draft names the class that lists psionics
   (`psionicsClass`, "" for none), and the creation form adds a psionics step for it: the PSP maximum and the dashboard's
   known-powers editor, fed by the draft instead of the saves. Tests: `Create_Step9_ThePartyThiefPsionicistWithHisPowers`, `Create_Step9_PicksRefusedAsTheEditorRefuses` (composition).
+
+## As built: a power's effect (step 17, 2026-11-03)
+
+- **The keys are the buff effect kinds** (ADR 0004 step 11, the buff API's `effects`): `ac`, `to_hit`, `damage`, `save_bonus`,
+  `str_bonus`, `initiative`, with `weapon_kind` (`melee` or `missile`, ADR 0004 step 18) as the condition of `to_hit` and `damage`
+  only. One vocabulary covers buff templates, the wire and the catalogue. The spell seed's
+  `modifiers` keys were not taken: they spell the save key `save` and have no Strength. The format is catalogue format 21
+  ([ADR 0021](0021-spell-catalogue.md) step 29).
+- **Start-up checks** (`catalogue.CheckPowers`, ADR 0021 step 29.2): the power is maintained (an effect
+  without `maintenance` would never apply), `str_bonus` at least 1, `weapon_kind` only with `to_hit` and `damage`, and no effect on a
+  defence mode, on a power paid on contact or from a table (its row sits on a mind, or its use is the contact route).
+- **The rule is one generic mapping** in `psionicsvc.Use` (`rowOf`, `effectsOf`; no power id). On a successful check, a maintained
+  power's row is untimed, carries its maintenance and the effect. A power without maintenance puts no row, and a failed
+  check puts none. Every aggregate (AC, to-hit, damage, saves, Strength, initiative) already reads
+  every row on the bearer, so nothing downstream changed: Next Round, Stop, undo and an unpaid end treat the effects as part of the
+  row.
+- **The four powers with an effect** (the builder's `catalogue-inputs/POWER_EFFECTS`), all maintained devotions:
+  `displacement` (`ac: -2`), `biofeedback` (`ac: -1`; the damage reduction stays text), `graft_weapon`
+  (`to_hit: 1, damage: 1, weapon_kind: melee`; "the grafted weapon" read as a melee attack) and `combat_mind` (`initiative: -1`; the
+  power score's +1 AC stays text). The rest stays text: a chosen or entered amount, a check-result table, an effect on another
+  creature, a conditional bonus, and the optional power-score and natural-20 results (the DM's, step 10.3). No book power is
+  non-maintained and lasting with an expressible effect, so there is no `rounds`: a timed power row would have no Stop and the web
+  would show it as kept up for free (decided 2026-11-03, after review). A lasting power with an effect is a later amendment.
+- **Test placement.** psionicsvc's tests use mocks and see no derived AC, so `TestActivate_Step17_AnEffectFromTheData` asserts the
+  row handed to the buffs (displacement's `ac -2`, no row on a failure, no row for a power without maintenance, empty
+  effects for a power without one). `TestMaintenance_Step17_TheEffectMovesTheDerivedAC` (composition, the fixture's displacement and
+  graft_weapon) proves the behaviour: AC 2 better after the check and after a paid Next Round, back after Stop, after the check is
+  undone and after an unpaid Next Round; graft_weapon's +1 to hit and damage on a melee attack's preview, none on a missile one's.
 
 ## Consequences
 

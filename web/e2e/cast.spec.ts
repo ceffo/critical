@@ -113,7 +113,7 @@ test("Spells tab: Rary's adds slot dots, the arrow casts on an ally, a name open
     .getByRole("button", { name: "Cast Rary's Mnemonic Enhancer" })
     .click();
   await expectSlotDots(level4, 4, 0, 1);
-  await expectSlotDots(level1, 1, 1, 1);
+  await expectSlotDots(level1, 1, 3, 3);
 
   // The arrow: Strength on an ally, nothing applied to the Bard.
   await level2

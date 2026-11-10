@@ -55,7 +55,25 @@ function figuresOf(body: Record<string, unknown>): Record<string, number> {
   );
 }
 
-/** Message (and the field and code it comes with, if any) from an error response: the JSON body, else the raw text. */
+/** The code of an answer the web has no wording for, from the server (HTTP 5xx). */
+export const SERVER_ERROR = "server_error";
+
+/** The code of an answer the web has no wording for, a refusal (HTTP 4xx). */
+export const REQUEST_FAILED = "request_failed";
+
+/** The code of a request that got no answer at all (server unreachable, connection lost). */
+export const NETWORK_ERROR = "network_error";
+
+/** The worded fallback of an error with no known code: never the raw body, which may be `{}`,
+ * a proxy's HTML page or a stack trace. The raw text goes to the console for whoever debugs it. */
+function fallback(res: Response, raw: string) {
+  console.error(`${res.status} ${res.statusText} ${res.url}`, raw);
+  const code = res.status >= 500 ? SERVER_ERROR : REQUEST_FAILED;
+  return { message: codeMessage(code) ?? code, code };
+}
+
+/** Message (and the field and code it comes with, if any) from an error response: the JSON body
+ * when its code or field is one the web words, else a worded fallback (never the raw text). */
 async function errorBody(res: Response): Promise<{
   message: string;
   field?: string;
@@ -71,12 +89,14 @@ async function errorBody(res: Response): Promise<{
     } & Record<string, unknown>;
     if (typeof body.error === "string" && body.error) {
       const code = typeof body.code === "string" ? body.code : undefined;
-      return {
+      const worded =
+        codeMessage(code, figuresOf(body)) ??
         // A field error's text can itself be a code the web words (`skill_blocked_by_armour`).
-        message:
-          codeMessage(code, figuresOf(body)) ??
-          (typeof body.field === "string" ? codeMessage(body.error) : null) ??
-          body.error,
+        (typeof body.field === "string" ? codeMessage(body.error) : null);
+      // A server failure the web has no wording for keeps no raw text: its fallback stands.
+      if (!worded && res.status >= 500) return fallback(res, text);
+      return {
+        message: worded ?? body.error,
         field: typeof body.field === "string" ? body.field : undefined,
         code,
         body,
@@ -85,7 +105,7 @@ async function errorBody(res: Response): Promise<{
   } catch {
     // not JSON
   }
-  return { message: text.trim() || `${res.status} ${res.statusText}` };
+  return fallback(res, text);
 }
 
 /** The code of a save refused over a budget (ADR 0037 step 10, HTTP 409): it names the field, and
@@ -251,6 +271,14 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
     } catch (e) {
       // The write may or may not have landed: what it changed is unknown.
       if (!read) noteWrite(null);
+      // fetch rejects with a TypeError when nothing answered; an abort is the caller's own.
+      if (e instanceof TypeError)
+        throw new ApiError(
+          codeMessage(NETWORK_ERROR) ?? NETWORK_ERROR,
+          0,
+          undefined,
+          NETWORK_ERROR,
+        );
       throw e;
     }
     // What a write changed, for the action module's refetch (ADR 0018 step 11).

@@ -5533,3 +5533,39 @@ test.describe("Known powers", () => {
     }
   });
 });
+
+// The Long rest confirmation (a fight running): the dialog's text is whole and uncut, French first
+// then English (ADR 0027 step 2), 1280 to 2560. Screenshots at 1920x1080 and 2560x1440.
+test("long rest confirmation: uncut in French and English, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openDashboard(page);
+  await nextRound(page);
+  await page.getByRole("tab", { name: "Spells" }).click();
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("button", {
+        name: lang === "fr" ? "Repos long" : "Long rest",
+      })
+      .click();
+    const dialog = page.getByTestId("long-rest-confirm");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(lang === "fr" ? "tour 1" : "round 1");
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(dialog, `long rest confirmation, ${where}`);
+      await expectWholeWords(dialog, `long rest confirmation, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920 && lang === "fr")
+        await snap(page, `long-rest-confirm-fr-${vp.width}x${vp.height}`);
+      if (vp.width >= 1920 && lang === "en")
+        await snap(page, `long-rest-confirm-en-${vp.width}x${vp.height}`);
+    }
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  }
+});

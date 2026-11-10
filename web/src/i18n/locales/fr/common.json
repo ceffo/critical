@@ -670,6 +670,13 @@
   "spellSlots": {
     "longRest": "Repos long",
     "longRestLabel": "Repos long : réinitialiser les emplacements de sorts",
+    "restConfirm": {
+      "title": "Repos long en plein combat ?",
+      "lead": "Un combat est en cours (tour {{round}}). Se reposer quand même ?",
+      "refills": "Chaque emplacement de sort est rechargé (la préparation reste) ainsi que les objets quotidiens. Vous pouvez annuler depuis le journal.",
+      "cancel": "Annuler",
+      "confirm": "Se reposer"
+    },
     "none": "Aucun emplacement de sort disponible.",
     "level": "Niveau {{level}}",
     "used": "Utilisé",

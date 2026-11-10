@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { CaretDown, Moon, Sparkle } from "@phosphor-icons/react";
+import { CaretDown, Sparkle } from "@phosphor-icons/react";
 import { localized } from "@/i18n/localized";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,6 +21,7 @@ import { planCast } from "@/lib/castInputs";
 import { slotDots } from "@/lib/slotDots";
 import { Dots } from "./Dots";
 import type { CastOptions } from "@/api/spells";
+import { LongRestButton } from "./LongRestButton";
 import { PrepareEditor } from "./PrepareEditor";
 import { SpellDetailsDialog } from "./SpellDetailsDialog";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
@@ -263,16 +264,10 @@ export function SpellsPanel() {
         >
           {t("spellSlots.prepareShort")}
         </Button>
-        <Button
-          size="sm"
-          title={t("spellSlots.longRestLabel")}
-          aria-label={t("spellSlots.longRestLabel")}
-          onClick={() => void run(resetSlots, { fresh: ["slots"] })}
-          disabled={busy}
-        >
-          <Moon aria-hidden />
-          {t("spellSlots.longRest")}
-        </Button>
+        <LongRestButton
+          busy={busy}
+          onRest={() => void run(resetSlots, { fresh: ["slots"] })}
+        />
       </div>
       {levels.length === 0 && !loading && (
         <p className="text-body text-muted-foreground">

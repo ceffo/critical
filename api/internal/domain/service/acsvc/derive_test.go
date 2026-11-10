@@ -294,3 +294,13 @@ func TestAC_Step12_OneOfTwoPiecesOfACodeCounts(t *testing.T) {
 	}, rowsOf(ac, acsvc.TermProtection))
 	assert.Equal(t, 5, ac.Value, "10 - 3 - 1 - 1")
 }
+
+// ADR 0043 step 17: a buff row a psionic power put on names the power, so the
+// web words the source from the catalogue; no power, no id.
+func TestAC_Step17_PowerRowNamesThePower(t *testing.T) {
+	ac := acsvc.Derive(acsvc.Inputs{Buffs: []buffsvc.BuffStatus{
+		{BuffEffect: buffsvc.BuffEffect{Name: "Displacement", PowerID: "displacement", Effects: buffsvc.BuffEffects{AC: ptr(-2)}}, Applies: true},
+	}})
+	assert.Equal(t, 8, ac.Value)
+	assert.Equal(t, acsvc.Row{Term: acsvc.TermBuffs, Buff: "Displacement", PowerID: "displacement", Value: -2}, ac.Rows[len(ac.Rows)-1])
+}

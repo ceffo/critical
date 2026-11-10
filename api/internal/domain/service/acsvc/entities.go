@@ -57,7 +57,10 @@ type Row struct {
 	// ProficiencyID names a buff a successful proficiency check put on
 	// (ADR 0037 step 20.1): the web names it from the proficiency.
 	ProficiencyID string
-	Value         int
+	// PowerID names a buff a psionic power's use put on (ADR 0043 step 17):
+	// the web names it from the catalogue's power.
+	PowerID string
+	Value   int
 	// MissileValue is the shield row's value against missiles when it
 	// differs from Value (a body shield, step 10); nil otherwise.
 	MissileValue *int

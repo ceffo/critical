@@ -261,6 +261,10 @@ A minor psionic power, learned within a discipline; at least twice as many as th
 A power's target: an ability score plus or minus the power's number; the catalogue holds the pair, the roll against it is planned. [ADR 0043](docs/adr/0043-psionics.md) step 10.
 _Code_: PowerScore
 
+**Power effect** (fr: effet de pouvoir):
+What a power does to the psionicist who uses it, in the buff effect keys (AC, to-hit, damage, save bonus, Strength, initiative, weapon kind), applied while the power is maintained; optional catalogue data (format 21), read at start and checked against the power's maintenance and kind. A power's other results stay text. [ADR 0043](docs/adr/0043-psionics.md) step 17, [ADR 0021](docs/adr/0021-spell-catalogue.md) step 29.
+_Code_: PowerEffect
+
 **Power check** (fr: jet de pouvoir):
 The d20 roll at or under the power score that decides whether a psionic power works; logged as a `power_check` entry with its breakdown and the PSPs spent. [ADR 0043](docs/adr/0043-psionics.md) steps 10 and 11. _Avoid_: check (alone).
 _Code_: CheckRecord

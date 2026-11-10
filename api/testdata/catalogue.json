@@ -1,5 +1,5 @@
 {
-  "format": 20,
+  "format": 21,
   "version": "1970-01-01",
   "spells": [
     {
@@ -2127,6 +2127,91 @@
       "description": {
         "en": "Switch Personality is a psionic combat mode.",
         "fr": "Switch Personality est un mode de combat psionique."
+      }
+    },
+    {
+      "id": "displacement",
+      "name": {
+        "en": "Displacement",
+        "fr": "Eclipse"
+      },
+      "discipline": "psychometabolism",
+      "kind": "devotion",
+      "score": {
+        "ability": "con",
+        "modifier": -3
+      },
+      "initial_cost": 6,
+      "maintenance": {
+        "cost": 3,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "0",
+        "fr": "0"
+      },
+      "preparation_time": {
+        "en": "0",
+        "fr": "0"
+      },
+      "area": {
+        "en": "personal",
+        "fr": "personnel"
+      },
+      "description": {
+        "en": "Placeholder text for the test catalogue: the psionicist is harder to hit while this power is maintained."
+      },
+      "effect": {
+        "ac": -2
+      },
+      "power_score_result": {
+        "en": "Placeholder text: a larger bonus."
+      },
+      "natural_20_result": {
+        "en": "Placeholder text: no effect."
+      }
+    },
+    {
+      "id": "graft_weapon",
+      "name": {
+        "en": "Graft Weapon",
+        "fr": "Greffe d'arme"
+      },
+      "discipline": "psychometabolism",
+      "kind": "devotion",
+      "score": {
+        "ability": "con",
+        "modifier": -5
+      },
+      "initial_cost": 10,
+      "maintenance": {
+        "cost": 1,
+        "period": 1
+      },
+      "prerequisites": [],
+      "range": {
+        "en": "touch"
+      },
+      "preparation_time": {
+        "en": "0"
+      },
+      "area": {
+        "en": "personal"
+      },
+      "description": {
+        "en": "Placeholder text for the test catalogue: a melee weapon becomes part of the psionicist while this power is maintained."
+      },
+      "effect": {
+        "to_hit": 1,
+        "damage": 1,
+        "weapon_kind": "melee"
+      },
+      "power_score_result": {
+        "en": "Placeholder text: a larger bonus."
+      },
+      "natural_20_result": {
+        "en": "Placeholder text: a flaw."
       }
     }
   ]

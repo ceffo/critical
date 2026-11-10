@@ -1302,6 +1302,19 @@
       "maintenanceValue_other": "{{cost}} every {{count}} rounds",
       "noMaintenance": "Cannot be maintained",
       "scoreInText": "Given in the text",
+      "effect": "Effect on you",
+      "effectLines": {
+        "ac": "AC {{value}}",
+        "to_hit": "To hit {{value}}",
+        "damage": "Damage {{value}}",
+        "save_bonus": "Saves {{value}}",
+        "str_bonus": "STR {{value}}",
+        "initiative": "Initiative {{value}}"
+      },
+      "effectWeaponKinds": {
+        "melee": "melee attacks only",
+        "missile": "missile attacks only"
+      },
       "prerequisites": "Prerequisites:",
       "minLevel": "Level {{level}}+",
       "powerScoreResult": "On the power score",

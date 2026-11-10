@@ -56,10 +56,13 @@ type RowDTO struct {
 	// ProficiencyID: a buff a successful proficiency check put on (ADR
 	// 0037 step 20.1), named by the web from the proficiency.
 	ProficiencyID string `json:"proficiencyId,omitempty"`
-	Value         int    `json:"value"`
-	MissileValue  *int   `json:"missileValue,omitempty"`
-	Dexterity     int    `json:"dexterity,omitempty"`
-	Off           string `json:"off,omitempty"`
+	// PowerID: a buff a psionic power's use put on (ADR 0043 step 17),
+	// named by the web from the catalogue's power.
+	PowerID      string `json:"powerId,omitempty"`
+	Value        int    `json:"value"`
+	MissileValue *int   `json:"missileValue,omitempty"`
+	Dexterity    int    `json:"dexterity,omitempty"`
+	Off          string `json:"off,omitempty"`
 }
 
 // OverrideDTO is the override: a number -10 to 10 and the label the player
@@ -96,7 +99,7 @@ func ToDTO(a *acsvc.AC) ACDTO {
 	out := ACDTO{AC: a.Value, Missile: a.Missile, Floored: a.Floored, Rows: make([]RowDTO, 0, len(a.Rows)), Warnings: make([]WarningDTO, 0, len(a.Warnings))}
 	for _, r := range a.Rows {
 		out.Rows = append(out.Rows, RowDTO{
-			Term: string(r.Term), ItemID: r.ItemID, Buff: r.Buff, SpellID: r.SpellID, ProficiencyID: r.ProficiencyID, Value: r.Value,
+			Term: string(r.Term), ItemID: r.ItemID, Buff: r.Buff, SpellID: r.SpellID, ProficiencyID: r.ProficiencyID, PowerID: r.PowerID, Value: r.Value,
 			MissileValue: r.MissileValue, Dexterity: r.Dexterity, Off: string(r.Off),
 		})
 	}

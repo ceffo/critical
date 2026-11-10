@@ -106,3 +106,21 @@ describe("acRowView (ADR 0033 step 10, ADR 0035 item 8)", () => {
     expect(shownAc({ ...base, override: { value: 4, label: "" } })).toBe(4);
   });
 });
+
+describe("acRowView, a power's buff row (ADR 0043 step 17)", () => {
+  it("hands the power id to the buff namer so the catalogue names it", async () => {
+    const t = await makeT("fr");
+    const row: AcRow = {
+      term: "buffs",
+      buff: "Displacement",
+      powerId: "displacement",
+      value: -2,
+    };
+    const view = acRowView(t, row, {
+      ...names,
+      buff: (b) => (b.powerId === "displacement" ? "Déplacement" : b.name),
+    });
+    expect(view.source).toBe("Déplacement");
+    expect(view.value).toBe("−2");
+  });
+});

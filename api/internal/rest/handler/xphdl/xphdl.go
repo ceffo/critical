@@ -91,21 +91,32 @@ type LevelDTO struct {
 	Status    string `json:"status"`
 }
 
+// BonusClassDTO is an active class and its prime requisites (ability codes).
+type BonusClassDTO struct {
+	Class  string   `json:"class"`
+	Primes []string `json:"primes"`
+}
+
 // LedgerDTO is the wire shape of every /api/xp answer. nextLevel and
 // nextThreshold are null at the last level of the table.
 type LedgerDTO struct {
-	Opening         int        `json:"opening"`
-	Total           int        `json:"total"`
-	Level           int        `json:"level"`
-	CurrentFloor    int        `json:"currentFloor"`
-	NextLevel       *int       `json:"nextLevel"`
-	NextThreshold   *int       `json:"nextThreshold"`
-	ToNext          int        `json:"toNext"`
-	Progress        float64    `json:"progress"`
-	ProgressPercent int        `json:"progressPercent"`
-	BonusEligible   bool       `json:"bonusEligible"`
-	Levels          []LevelDTO `json:"levels"`
-	Entries         []EntryDTO `json:"entries"`
+	Opening         int     `json:"opening"`
+	Total           int     `json:"total"`
+	Level           int     `json:"level"`
+	CurrentFloor    int     `json:"currentFloor"`
+	NextLevel       *int    `json:"nextLevel"`
+	NextThreshold   *int    `json:"nextThreshold"`
+	ToNext          int     `json:"toNext"`
+	Progress        float64 `json:"progress"`
+	ProgressPercent int     `json:"progressPercent"`
+	BonusEligible   bool    `json:"bonusEligible"`
+	// BonusClasses are the active classes with their prime requisites and
+	// BonusMinScore the score each needs (ADR 0042 step 6); the web words the
+	// rule from them. Empty when no active class has a bonus rule.
+	BonusClasses  []BonusClassDTO `json:"bonusClasses"`
+	BonusMinScore int             `json:"bonusMinScore"`
+	Levels        []LevelDTO      `json:"levels"`
+	Entries       []EntryDTO      `json:"entries"`
 }
 
 // ToDTO maps a ledger to its wire shape.
@@ -114,11 +125,15 @@ func ToDTO(l *xpsvc.Ledger) LedgerDTO {
 		Opening: l.Opening, Total: l.Total, Level: l.Level, CurrentFloor: l.CurrentFloor,
 		NextThreshold: l.NextThreshold, ToNext: l.ToNext, Progress: l.Progress.Progress,
 		ProgressPercent: l.ProgressPercent, BonusEligible: l.BonusEligible,
+		BonusClasses: make([]BonusClassDTO, 0, len(l.BonusClasses)), BonusMinScore: xpsvc.BonusMinScore,
 		Levels: make([]LevelDTO, 0, len(l.Levels)), Entries: make([]EntryDTO, 0, len(l.Entries)),
 	}
 	if l.NextLevel > 0 {
 		n := l.NextLevel
 		out.NextLevel = &n
+	}
+	for _, b := range l.BonusClasses {
+		out.BonusClasses = append(out.BonusClasses, BonusClassDTO{Class: b.Class, Primes: b.Primes})
 	}
 	for _, c := range l.Levels {
 		out.Levels = append(out.Levels, LevelDTO{Level: c.Level, Threshold: c.Threshold, Status: string(c.Status)})

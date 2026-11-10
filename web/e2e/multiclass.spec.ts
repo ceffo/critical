@@ -1,5 +1,11 @@
-import { test, expect } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace } from "./helpers";
+import { test, expect, snap } from "./fixtures";
+import {
+  chooseLanguage,
+  logEntry,
+  openDashboard,
+  openWorkspace,
+} from "./helpers";
+import { expectNoClippedText } from "./noClip";
 import { asMultiClass } from "./multiclass";
 
 // What only a browser proves for a multi-class character: the card's class lines, the Experience
@@ -88,4 +94,39 @@ test("dual-class: the old class is shown frozen beside the active one", async ({
     "active",
   );
   await expect(character.getByTestId("class-xp-fighter")).toHaveCount(0);
+});
+
+test("multi-class: the XP bonus rule names every active class's prime requisites, in French then English", async ({
+  page,
+}) => {
+  await asMultiClass(page);
+  await openDashboard(page);
+  await openWorkspace(page, "Experience");
+  const top = page.getByTestId("xp-top");
+  // The bonus rule is the union of the active classes' prime requisites, French first, at the
+  // two large layout viewports (the sentence wraps, never cut).
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(top.getByTestId("xp-bonus-hint")).toHaveText(
+      "+10 % sur les XP gagnés quand la Force et la Dextérité sont tous à 16 ou plus",
+    );
+    await expectNoClippedText(top, `add XP, fr ${vp.width}`);
+    await snap(page, `multi-xp-fr-${vp.width}`);
+  }
+  await chooseLanguage(page, "en");
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(top.getByTestId("xp-bonus-hint")).toHaveText(
+      "+10% on XP earned when Strength and Dexterity are all 16 or more",
+    );
+    await expectNoClippedText(top, `add XP, en ${vp.width}`);
+    await snap(page, `multi-xp-en-${vp.width}`);
+  }
 });

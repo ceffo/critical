@@ -2216,7 +2216,16 @@
     "levelTitle": "Niveau {{level}} : {{xp}} XP",
     "levelLinkTitle": "{{xp}} XP · {{percent}} % vers le niveau {{level}}",
     "bonus": "+10 %",
-    "bonusHint": "+10 % sur les XP gagnés quand la Dextérité et le Charisme sont tous deux à 16 ou plus",
+    "bonusRule_one": "+10 % sur les XP gagnés quand {{abilities}} est à {{min}} ou plus",
+    "bonusRule_other": "+10 % sur les XP gagnés quand {{abilities}} sont tous à {{min}} ou plus",
+    "bonusAbility": {
+      "str": "la Force",
+      "dex": "la Dextérité",
+      "con": "la Constitution",
+      "int": "l’Intelligence",
+      "wis": "la Sagesse",
+      "cha": "le Charisme"
+    },
     "defaultReason": "XP gagnés",
     "add": {
       "title": "Ajouter des XP",

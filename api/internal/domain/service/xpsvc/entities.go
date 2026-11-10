@@ -82,6 +82,13 @@ type Progress struct {
 	Levels          []LevelCell
 }
 
+// BonusClass is an active entry's class and its prime requisites (ability
+// codes).
+type BonusClass struct {
+	Class  string
+	Primes []string
+}
+
 // Ledger is the whole XP state: the sheet's starting XP, the total, the
 // progress, whether the bonus applies by default and the entries, newest
 // first.
@@ -89,6 +96,9 @@ type Ledger struct {
 	Opening       int
 	Total         int
 	BonusEligible bool
+	// BonusClasses is each active entry's class with its prime requisites
+	// (ADR 0042 step 6), what the bonus rule reads; the web words it.
+	BonusClasses []BonusClass
 	Progress
 	Entries []Entry
 }

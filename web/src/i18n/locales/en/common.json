@@ -1404,6 +1404,11 @@
         "instance_other": "{{count}} rolls in round"
       },
       "noDamage": "no damage",
+      "cardHeal": "Healed",
+      "cardHealCapped": "{{total}} rolled, capped at max HP",
+      "cardHealRange": "HP {{before}} → {{after}}",
+      "cardHealOther": "Heals {{total}}, not on you: no HP changed.",
+      "cardHealOtherFull": "Heals every lost HP, not on you: no HP changed.",
       "save": "Target's save: {{type}}, {{effect}}",
       "saveEffects": {
         "half": "half damage",
@@ -1667,6 +1672,10 @@
       "spellFailed": "spell failed (d100 {{roll}} ≤ {{chance}}%)",
       "spellHeld": "no spell failure (d100 {{roll}} > {{chance}}%)",
       "onOther": "{{counters}}, not on you",
+      "heal": "heals {{applied}} HP",
+      "healCapped": "heals {{applied}} HP ({{total}} rolled, capped at max HP)",
+      "healOther": "heals {{total}}, not on you",
+      "healOtherFull": "full heal, not on you",
       "immune": "immune (Wisdom {{score}})"
     },
     "item": {

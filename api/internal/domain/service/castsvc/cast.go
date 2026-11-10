@@ -121,6 +121,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, name: name, level: slot.Level,
 			casterLevel: casterLevel, groups: c.Groups(), source: SourceCast, onSelf: req.OnSelf, req: req, extraSlots: extra, mode: mode,
+			hpMax: c.HPMax,
 		})
 		if err != nil {
 			return err
@@ -252,6 +253,7 @@ func (s *service) Receive(ctx context.Context, characterID int64, req ReceiveReq
 		var err error
 		res, snaps, err = s.resolve(ctx, characterID, effectReq{
 			spellID: id, casterLevel: req.CasterLevel, groups: c.Groups(), source: SourceReceived, mode: mode,
+			hpMax: c.HPMax,
 		})
 		if err != nil {
 			return err
@@ -369,6 +371,9 @@ type effectReq struct {
 	req        CastRequest          // the cast request (item to spend, target AC)
 	extraSlots []int                // the extra slots this cast granted
 	mode       *spelleffectsvc.Mode // the cast-time mode picked (nil: the spell has none)
+	// hpMax is the max HP of the character the effect is about, for the
+	// current HP around a heal on him (ADR 0008 step 17.7).
+	hpMax int
 }
 
 // modeFor resolves the cast-time mode a cast of spell id names (ADR 0008
@@ -513,6 +518,11 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		return res, snaps, nil
 	}
 	switch entry.Kind {
+	case spelleffectsvc.KindHeal:
+		if res.Heal, err = s.heal(ctx, characterID, r, entry); err != nil {
+			return CastResult{}, nil, err
+		}
+		return res, snaps, nil
 	case spelleffectsvc.KindDamage:
 		damage := entry.CastDamage(r.mode)
 		switch {
@@ -580,12 +590,18 @@ func (s *service) record(ctx context.Context, characterID int64, res CastResult,
 	if err != nil {
 		return 0, fmt.Errorf("encode cast payload: %w", err)
 	}
-	id, err := s.Log.Record(ctx, actionlog.NewEntry{
+	e := actionlog.NewEntry{
 		CharacterID: characterID,
 		Kind:        actionlog.KindCast,
 		Payload:     payload,
 		Snapshots:   snaps,
-	})
+	}
+	// ADR 0008 step 17.5: a heal on the bearer is the entry's own HP delta,
+	// capped by the recording path.
+	if res.Heal != nil {
+		e.HPDelta = res.Heal.HPDelta
+	}
+	id, err := s.Log.Record(ctx, e)
 	if err != nil {
 		return 0, fmt.Errorf("record cast: %w", err)
 	}

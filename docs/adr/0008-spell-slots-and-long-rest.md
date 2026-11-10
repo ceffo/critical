@@ -1,7 +1,7 @@
 # ADR 0008: Spell slots and long rest
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.10,
-critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level). Step 17 (a cast-time heal through the HP ledger) proposed 2026-11-09, not implemented.
+critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level). Step 17 (a cast-time heal through the HP ledger) proposed 2026-11-09; its rules and cast implemented 2026-11-09, seeds, wire and UI pending.
 
 ## Context
 
@@ -234,7 +234,8 @@ named otherwise.
     `TestExpose_Handler` (rest/handler/casthdl), `TestRecord_FloorsDamage` (actionlogsvc: the floor
     cuts the applied HP), `TestSpecialSentinels` (rest/router).
 
-17. **Cast-time heal.** _(proposed 2026-11-09, design step; not implemented)_ A spell whose effect
+17. **Cast-time heal.** _(proposed 2026-11-09; rules and cast implemented 2026-11-09, seeds, wire
+    and UI pending)_ A spell whose effect
     is hit points regained at once, when it is cast, is an entry of the kind `heal` with a `heal`
     block in its data. It is generic: the data says which spell heals and how much, never a branch
     on a spell id. Only instant heals are in this step (the item's default): healing over time is
@@ -282,9 +283,11 @@ named otherwise.
          Wounds 3d8+3, none of them by level, and Heal every lost point (`full`). Their reverses
          (cause wounds, harm) are not spells of their own in the catalogue: no reversed cast is
          modelled.
-    Tests: named on implementation, one per sub-step, each failing on the old code (the loader's
-    refusals; a cast, a receive and a cast on someone else with exact dice and call counts; the
-    cap, the 0 at full HP and the undo through the ledger).
+    Tests: `TestParse_Heal`, `TestParse_HealRefused` (adapters/spelleffectsadpt, 17.1),
+    `TestEntry_TargetChoiceAt_Heal` (spelleffectsvc, 17.3), `TestReceive_Heal_AtTheCastersLevel`,
+    `TestCast_Heal_SpellFailureHealsNothing`, `TestAddEffect_Heal_Refused` (17.2),
+    `TestCast_Heal_FullAsksTheGap` (17.4), `TestCast_Heal_OnTheCasterThroughTheLedger` (17.5),
+    `TestCast_Heal_OnSomeoneElseChangesNoHP` (17.6), `TestCast_Heal_Payload` (castsvc, 17.7).
 
 ## Consequences
 

@@ -16,6 +16,7 @@ const (
 	KindBuff    Kind = "buff"    // modifies a creature for a while (includes debuffs)
 	KindDamage  Kind = "damage"  // deals hit-point damage
 	KindUtility Kind = "utility" // nothing the engine tracks numerically
+	KindHeal    Kind = "heal"    // hit points regained at once, when cast (ADR 0008 step 17)
 )
 
 // Confidence says how far the extraction can be trusted.
@@ -227,6 +228,9 @@ type Entry struct {
 	// leaves deals, rolled on request (nil: none; ADR 0008 step 16).
 	Exposure *Exposure
 	Buff     *Buff
+	// Heal is the hit points a heal entry gives back when it is cast or
+	// received (only on kind heal; ADR 0008 step 17).
+	Heal *Heal
 	// Cast mechanics, applied when the Bard casts the spell (not when it is
 	// received from someone else): GrantSlots adds extra slots, ConsumeItem
 	// spends an inventory item and AttackRoll rolls a spell to-hit (one d20,

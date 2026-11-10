@@ -56,6 +56,10 @@ type CastBreakdown struct {
 	// dual_class_old_ability, the old class in class; step 16.2:
 	// spell_in_armour); absent for none and on casts logged before them.
 	Warnings []string `json:"warnings,omitempty"`
+	// Heal is the heal of a heal spell (ADR 0008 step 17.7); absent for any
+	// other spell. The ledger's hpRequested / hpApplied sit beside it at the
+	// top of the entry's payload when the heal moved the bearer's HP.
+	Heal *CastHeal `json:"heal,omitempty"`
 
 	// Level to Untracked are absent on casts logged before the payload was
 	// the answer (ADR 0018: add fields). Level is the spell's level; SlotIndex the slot spent (a
@@ -76,6 +80,39 @@ type CastBreakdown struct {
 	// LogEntryID is the entry recording the cast: set on the endpoints'
 	// answer, never in the payload (the entry carries its own id).
 	LogEntryID int64 `json:"logEntryId,omitempty"`
+}
+
+// CastHeal is a cast-time heal (ADR 0008 step 17.7): the formula rolled and
+// every die as rolls, the constant and the total, or full (nothing rolled);
+// onOther when it landed on someone else (no HP changed); on the bearer, his
+// current HP before and after it.
+type CastHeal struct {
+	Dice     string                   `json:"dice,omitempty"`
+	Rolls    []combatsvc.BreakdownDie `json:"rolls,omitempty"`
+	Constant int                      `json:"constant"`
+	Total    int                      `json:"total"`
+	Full     bool                     `json:"full,omitempty"`
+	OnOther  bool                     `json:"onOther,omitempty"`
+	HPBefore *int                     `json:"hpBefore,omitempty"`
+	HPAfter  *int                     `json:"hpAfter,omitempty"`
+}
+
+// toCastHeal is the payload of a heal; the constant is what the total adds
+// to the dice (the loader keeps heal dice a sum of dice plus a constant).
+func toCastHeal(h *HealResult) *CastHeal {
+	if h == nil {
+		return nil
+	}
+	out := &CastHeal{Total: h.Total, Full: h.Full, OnOther: h.OnOther, HPBefore: h.HPBefore, HPAfter: h.HPAfter}
+	if r := h.Roll; r != nil {
+		out.Dice, out.Constant = r.Formula, r.Total
+		out.Rolls = make([]combatsvc.BreakdownDie, len(r.Dice))
+		for i, d := range r.Dice {
+			out.Rolls[i] = combatsvc.BreakdownDie(d)
+			out.Constant -= d.Value
+		}
+	}
+	return out
 }
 
 // CastSave is the target's saving throw (the DM's side).
@@ -212,6 +249,7 @@ func toBreakdown(res CastResult) CastBreakdown {
 		}
 	}
 	r.Damage = toCastDamage(res.Damage)
+	r.Heal = toCastHeal(res.Heal)
 	r.Exposure = res.Exposure.Wire()
 	if s := res.Save; s != nil {
 		r.Save = &CastSave{Type: string(s.Type), Effect: string(s.Effect)}

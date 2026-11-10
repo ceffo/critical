@@ -206,6 +206,9 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
 - **Duration** and **end effect**: a spell's effect entry gives its duration and may list end
   effects, each applied once when the buff row ends by one of its end causes; the **end result**
   reports the effects rolled and the HP before and after (the ledger caps a heal at max HP).
+- **Cast-time heal**: a heal spell's effect entry gives dice rolled at the caster level, or every lost
+  hit point; a **cast** or a spell received on its bearer heals through the cast entry's own HP
+  delta (capped at max HP, one undo), and a cast on someone else only rolls and shows it.
 - **Level-up**: a **pending level** is taken into a **taken level**, with the **level grants**
   (slots and skill points) it gives beyond hit points; the **XP table** places each level cell
   against the sheet's level, and the **level limits** of a race cap what a class entry may reach.

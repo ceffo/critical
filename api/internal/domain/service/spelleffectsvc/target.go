@@ -27,8 +27,10 @@ type TargetChoice struct {
 // spell that only lasts (it gets a row with no effects, ADR 0004 step 20)
 // offers the choice too, since its row reads "not on you" when cast on
 // someone else (step 20.5), except a damage spell, which hurts its target.
+// A heal lands as a friendly buff does (ADR 0008 step 17.3): it offers the
+// choice when its target allows both.
 func (e Entry) TargetChoiceAt(level int) (*TargetChoice, error) {
-	if !e.AddsBuff() {
+	if !e.AddsBuff() && !e.Heals() {
 		return e.rowTargetChoice(), nil
 	}
 	switch e.Target {

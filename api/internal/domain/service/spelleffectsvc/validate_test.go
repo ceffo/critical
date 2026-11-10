@@ -42,7 +42,7 @@ func TestValidate(t *testing.T) {
 		want string // empty = valid
 	}{
 		"valid utility":      {func(*spelleffectsvc.Entry) {}, ""},
-		"bad kind":           {func(e *spelleffectsvc.Entry) { e.Kind = "heal" }, "kind"},
+		"bad kind":           {func(e *spelleffectsvc.Entry) { e.Kind = "summon" }, "kind"},
 		"bad level":          {func(e *spelleffectsvc.Entry) { e.Level = 10 }, "level"},
 		"id not slug":        {func(e *spelleffectsvc.Entry) { e.ID = "Light" }, "slug"},
 		"id of another name": {func(e *spelleffectsvc.Entry) { e.ID = "light_source" }, "slug"},

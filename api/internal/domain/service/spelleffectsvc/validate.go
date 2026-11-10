@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	validKinds       = []Kind{KindBuff, KindDamage, KindUtility}
+	validKinds       = []Kind{KindBuff, KindDamage, KindUtility, KindHeal}
 	validConfidences = []Confidence{ConfidenceHigh, ConfidenceLow}
 	// validSaveTypes mirror the AD&D 2e saving throw categories, plus "none".
 	validSaveTypes   = []SaveType{"none", "spell", "poison", "paralyzation", "death", "petrification", "breath", "rod_staff_wand", "polymorph"}
@@ -123,6 +123,9 @@ func (e Entry) Validate(groups []string) error {
 	if e.Exposure != nil && e.Kind != KindDamage {
 		return fmt.Errorf("only a damage spell can have an exposure")
 	}
+	if e.Heal != nil && e.Kind != KindHeal {
+		return fmt.Errorf("only a heal spell can have a heal block")
+	}
 	hasBuff := e.Buff != nil && (len(e.Buff.Modifiers) > 0 || len(e.Buff.AbilityGain) > 0 || len(e.Buff.AbilitySet) > 0)
 	switch e.Kind {
 	case KindBuff:
@@ -158,6 +161,8 @@ func (e Entry) Validate(groups []string) error {
 			return fmt.Errorf("damage%w", err)
 		}
 		return nil
+	case KindHeal:
+		return e.validateHeal(hasBuff)
 	default: // utility
 		if hasBuff || e.Charges != nil || e.Damage != nil {
 			return fmt.Errorf("a utility spell cannot have buff, charges or damage fields")

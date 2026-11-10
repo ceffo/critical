@@ -489,6 +489,10 @@ _Code_: CastAttack, CastBreakdown, CastDamage, CastDamagePart, CastFailure, Cast
 One round of damage to whoever stands in a spell's area. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) step 16.
 _Code_: ExposureAt, ExposureAtWire, ExposureBreakdown, ExposureRequest, ExposureResult
 
+**Cast-time heal** (fr: soin à l'incantation):
+Hit points a heal spell gives back at once when it is cast or received, through the HP ledger on its bearer. [ADR 0008](docs/adr/0008-spell-slots-and-long-rest.md) step 17. _Avoid_: end effect (a heal when a row ends).
+_Code_: Heal, HealResult, CastHeal
+
 **Turn undead** (fr: renvoi des morts-vivants):
 A cleric's turning roll against an undead type. [ADR 0030](docs/adr/0030-classes-and-races.md) step 16. _Avoid_: turn (alone).
 _Code_: TurningTarget, TurningCell

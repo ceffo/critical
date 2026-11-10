@@ -4,6 +4,7 @@ import { useInventoryName } from "@/i18n/inventoryName";
 import type { TFunction } from "i18next";
 import { Badge } from "@/components/ui/badge";
 import type {
+  CastHeal,
   CastResult,
   DamagePartSave,
   ExposureResult,
@@ -98,6 +99,13 @@ function PartsView({
       <span className="text-body font-semibold">Σ {total}</span>
     </span>
   );
+}
+
+/** The HP a heal gained: after the max-HP cap on the bearer, the roll otherwise. */
+function healGained(h: CastHeal): number {
+  return h.hpBefore !== undefined && h.hpAfter !== undefined
+    ? h.hpAfter - h.hpBefore
+    : h.total;
 }
 
 /** An effect label; unknown keys fall back to "key value". */
@@ -386,6 +394,68 @@ export function CastResultView({ result: r }: { result: CastResult }) {
                 </li>
               ))}
             </ul>
+          )}
+        </div>
+      )}
+
+      {r.heal && (
+        <div className="flex flex-col gap-2" data-testid="cast-heal">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0">
+              {r.heal.rolls && r.heal.rolls.length > 0 && (
+                <RollView
+                  roll={{
+                    formula: r.heal.dice ?? "",
+                    dice: r.heal.rolls,
+                    total: r.heal.total,
+                  }}
+                />
+              )}
+            </div>
+            {!r.heal.onOther && (
+              <div className="text-right">
+                <div className={labelClass}>{t("result.cast.cardHeal")}</div>
+                <div
+                  className="text-headline tabular-nums text-success"
+                  data-testid="cast-heal-total"
+                >
+                  {healGained(r.heal)}
+                </div>
+              </div>
+            )}
+          </div>
+          {r.heal.onOther ? (
+            <p className="text-body" data-testid="cast-heal-other">
+              {t(
+                r.heal.full
+                  ? "result.cast.cardHealOtherFull"
+                  : "result.cast.cardHealOther",
+                { total: r.heal.total },
+              )}
+            </p>
+          ) : (
+            <>
+              {r.heal.hpBefore !== undefined &&
+                r.heal.hpAfter !== undefined && (
+                  <p
+                    className="text-body tabular-nums text-muted-foreground"
+                    data-testid="cast-heal-range"
+                  >
+                    {t("result.cast.cardHealRange", {
+                      before: r.heal.hpBefore,
+                      after: r.heal.hpAfter,
+                    })}
+                  </p>
+                )}
+              {!r.heal.full && healGained(r.heal) < r.heal.total && (
+                <p
+                  className="text-body text-muted-foreground"
+                  data-testid="cast-heal-capped"
+                >
+                  {t("result.cast.cardHealCapped", { total: r.heal.total })}
+                </p>
+              )}
+            </>
           )}
         </div>
       )}

@@ -1,7 +1,7 @@
 # ADR 0008: Spell slots and long rest
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.10,
-critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level). Step 17 (a cast-time heal through the HP ledger) proposed 2026-11-09; its rules and cast implemented 2026-11-09, seeds, wire and UI pending.
+critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level). Step 17 (a cast-time heal through the HP ledger) proposed 2026-11-09; implemented 2026-11-09 (rules, cast, seeds, wire and UI).
 
 ## Context
 
@@ -234,8 +234,8 @@ named otherwise.
     `TestExpose_Handler` (rest/handler/casthdl), `TestRecord_FloorsDamage` (actionlogsvc: the floor
     cuts the applied HP), `TestSpecialSentinels` (rest/router).
 
-17. **Cast-time heal.** _(proposed 2026-11-09; rules and cast implemented 2026-11-09, seeds, wire
-    and UI pending)_ A spell whose effect
+17. **Cast-time heal.** _(proposed 2026-11-09; implemented 2026-11-09: rules, cast, seeds, wire
+    and UI)_ A spell whose effect
     is hit points regained at once, when it is cast, is an entry of the kind `heal` with a `heal`
     block in its data. It is generic: the data says which spell heals and how much, never a branch
     on a spell id. Only instant heals are in this step (the item's default): healing over time is

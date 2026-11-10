@@ -110,4 +110,47 @@ describe("CastResultView immunity", () => {
       "Votre Sagesse (19) vous immunise contre ce sort : rien n’est appliqué.",
     );
   });
+
+  // ADR 0008 step 17: the card of a cast heal, in French (it is the cast answer: no hpApplied).
+  const heal = (h: NonNullable<CastResult["heal"]>): CastResult => ({
+    logEntryId: 2,
+    action: "cast",
+    spellId: "cure_light_wounds",
+    spell: "Cure Light Wounds",
+    level: 1,
+    casterLevel: 3,
+    kind: "heal",
+    untracked: [],
+    heal: h,
+  });
+
+  it("shows a heal cut by the max HP: the dice, the HP gained and the cap", async () => {
+    const html = await render(
+      heal({
+        dice: "1d8",
+        rolls: [{ sides: 8, value: 6 }],
+        constant: 0,
+        total: 6,
+        hpBefore: 20,
+        hpAfter: 24,
+      }),
+    );
+    expect(html).toContain('data-testid="cast-heal-total">4<');
+    expect(html).toContain("PV 20 → 24");
+    expect(html).toContain("6 obtenus, plafonnés aux PV max");
+  });
+
+  it("says a heal on someone else changed no HP", async () => {
+    const html = await render(
+      heal({
+        dice: "1d8",
+        rolls: [{ sides: 8, value: 6 }],
+        constant: 0,
+        total: 6,
+        onOther: true,
+      }),
+    );
+    expect(html).toContain("Soigne 6, pas sur vous");
+    expect(html).not.toContain("cast-heal-total");
+  });
 });

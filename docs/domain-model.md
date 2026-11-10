@@ -129,7 +129,9 @@ erDiagram
   ([ADR 0040](adr/0040-classes-are-data.md) step 10).
 
 The **prime requisites** of a class are the abilities it is built on; 16 or more in every one
-gives the 10% XP bonus ([ADR 0015](adr/0015-experience.md), [ADR 0040](adr/0040-classes-are-data.md) step 6).
+gives the 10% XP bonus ([ADR 0015](adr/0015-experience.md), [ADR 0040](adr/0040-classes-are-data.md) step 6). The XP
+ledger lists each active class with its prime requisites (`BonusClass`) and the minimum score, so the
+client words the rule for the character's own classes ([ADR 0042](adr/0042-multi-class-and-dual-class.md) step 6).
 
 ## Multi-class and dual-class (planned)
 

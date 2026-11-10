@@ -44,6 +44,34 @@ func TestBonusEligible_Step6_EveryActiveClassesPrimeRequisites(t *testing.T) {
 	}
 }
 
+// ADR 0042 step 6: the ledger lists each active entry's class with its own
+// prime requisites, so the web words the rule from them; a frozen entry's class
+// is not listed.
+func TestBonusClasses_Step6_EachActiveClassWithItsOwnPrimeRequisites(t *testing.T) {
+	active := func(class string) classes.Entry { return classes.SingleEntry(class, 3, 0) }
+	frozen := classes.Entry{Class: "fighter", RealizedLevel: 4, State: classes.EntryFrozen, LeftAtLevel: 4}
+	for _, tc := range []struct {
+		name    string
+		entries []classes.Entry
+		want    []xpsvc.BonusClass
+	}{
+		{"a mage", []classes.Entry{active("mage")}, []xpsvc.BonusClass{{Class: "mage", Primes: []string{"int"}}}},
+		{"a mage/fighter", []classes.Entry{active("mage"), active("fighter")}, []xpsvc.BonusClass{
+			{Class: "mage", Primes: []string{"int"}}, {Class: "fighter", Primes: []string{"str"}},
+		}},
+		{"a dual-class mage over a frozen fighter", []classes.Entry{frozen, active("mage")}, []xpsvc.BonusClass{{Class: "mage", Primes: []string{"int"}}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewOf(tc.entries, viewtest.WithScores(10, 0, 0, 10, 0, 0)), nil).Once()
+			f.dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil).Once()
+			got, err := f.svc.Get(context.Background(), 1)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, got.BonusClasses)
+		})
+	}
+}
+
 // ADR 0042 step 5.1: a multi-class character's award goes in equal shares to
 // every active entry, floored; a preview and a ledger entry carry the split so
 // the web words it without dividing.

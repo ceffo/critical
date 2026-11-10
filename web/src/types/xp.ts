@@ -44,6 +44,11 @@ export interface XpLedger {
   progressPercent: number;
   /** Default of the +10% checkbox (ADR 0015 step 2). */
   bonusEligible: boolean;
+  /** The active classes and their prime requisites (ability codes), ADR 0042 step 6; empty when no
+   * active class has a bonus rule. */
+  bonusClasses: { class: string; primes: string[] }[];
+  /** The score every prime requisite needs for the bonus. */
+  bonusMinScore: number;
   levels: XpLevel[];
   entries: XpEntry[];
 }

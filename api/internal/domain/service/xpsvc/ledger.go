@@ -3,6 +3,7 @@ package xpsvc
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode/utf8"
 
@@ -60,17 +61,20 @@ func (s *service) Get(ctx context.Context, characterID int64) (*Ledger, error) {
 	}
 	// ADR 0042 step 6: the prime requisites of every active entry's class.
 	var primes []string
+	var bonusClasses []BonusClass
 	for _, e := range classes.Active(entryList) {
 		d, err := defs.Get(e.Class)
 		if err != nil {
 			return nil, fmt.Errorf("xp ledger: %w", err)
 		}
 		primes = append(primes, d.PrimeRequisites...)
+		bonusClasses = append(bonusClasses, BonusClass{Class: e.Class, Primes: slices.Clone(d.PrimeRequisites)})
 	}
 	return &Ledger{
 		Opening:       c.Primary().StartingXP,
 		Total:         total,
 		BonusEligible: BonusEligible(primes, c),
+		BonusClasses:  bonusClasses,
 		Progress:      progress,
 		Entries:       entries,
 	}, nil

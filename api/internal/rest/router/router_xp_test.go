@@ -15,6 +15,7 @@ func intPtr(n int) *int { return &n }
 
 var ledger = &xpsvc.Ledger{
 	Opening: 1000, Total: 1017, BonusEligible: true,
+	BonusClasses: []xpsvc.BonusClass{{Class: "bard", Primes: []string{"dex", "cha"}}},
 	Progress: xpsvc.Progress{
 		Level: 15, CurrentFloor: 1_100_000, NextLevel: 16, NextThreshold: intPtr(1_320_000),
 		ToNext: 1000, Progress: 0.5, ProgressPercent: 50,
@@ -25,6 +26,7 @@ var ledger = &xpsvc.Ledger{
 
 const ledgerJSON = `{"opening":1000,"total":1017,"level":15,"currentFloor":1100000,"nextLevel":16,
 	"nextThreshold":1320000,"toNext":1000,"progress":0.5,"progressPercent":50,"bonusEligible":true,
+	"bonusClasses":[{"class":"bard","primes":["dex","cha"]}],"bonusMinScore":16,
 	"levels":[{"level":15,"threshold":1100000,"status":"current"}],
 	"entries":[{"id":2,"date":"2026-10-17","session":"S42","reason":"dragon","base":15,"bonus":true,"bonusAmount":2,"total":17}]}`
 
@@ -44,7 +46,7 @@ func TestXP_GetAtLastLevelHasNullCeiling(t *testing.T) {
 	rec := do(h, "GET", "/api/xp", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `{"opening":0,"total":0,"level":20,"currentFloor":2200000,"nextLevel":null,"nextThreshold":null,
-		"toNext":0,"progress":1,"progressPercent":100,"bonusEligible":false,"levels":[],"entries":[]}`, rec.Body.String())
+		"toNext":0,"progress":1,"progressPercent":100,"bonusEligible":false,"bonusClasses":[],"bonusMinScore":16,"levels":[],"entries":[]}`, rec.Body.String())
 }
 
 func TestXP_Preview(t *testing.T) {

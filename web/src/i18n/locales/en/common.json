@@ -2209,7 +2209,16 @@
     "levelTitle": "Level {{level}}: {{xp}} XP",
     "levelLinkTitle": "{{xp}} XP · {{percent}}% toward level {{level}}",
     "bonus": "+10%",
-    "bonusHint": "+10% on XP earned when Dexterity and Charisma are both 16 or more",
+    "bonusRule_one": "+10% on XP earned when {{abilities}} is {{min}} or more",
+    "bonusRule_other": "+10% on XP earned when {{abilities}} are all {{min}} or more",
+    "bonusAbility": {
+      "str": "Strength",
+      "dex": "Dexterity",
+      "con": "Constitution",
+      "int": "Intelligence",
+      "wis": "Wisdom",
+      "cha": "Charisma"
+    },
     "defaultReason": "XP earned",
     "add": {
       "title": "Add XP",

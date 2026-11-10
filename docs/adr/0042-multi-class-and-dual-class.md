@@ -265,6 +265,11 @@ Every warning is structured data (a code and its numbers), worded by the web.
    fighter's Str is 15 eligible).
    _(As built, 2026-10-22: `xpsvc` Get collects the prime requisites of every active entry's class and
    `BonusEligible` tests them all, one flag for the award.)_
+   _(As built, 2026-11-10: the ledger answer also carries `bonusClasses` (each active entry's class with
+   its prime requisites) and `bonusMinScore`, so the web words the rule from the character's own
+   classes: the union of their prime requisites, "all" at the minimum. A class without prime requisites
+   would show no sentence and no bonus checkbox. Test: `BonusClasses_Step6_EachActiveClassWithItsOwnPrimeRequisites`
+   (xpsvc); the web's `xpBonus.test.ts` checks a hint names only its prime requisites.)_
 
 7. **Target level and level-ups per entry** (amends [ADR 0030](0030-classes-and-races.md) steps 3
    and 7). Each active entry has its own target level, from its XP and its class's thresholds

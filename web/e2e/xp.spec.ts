@@ -44,6 +44,14 @@ test("experience: add with the bonus, edit, delete, then undo each", async ({
   // Add 1,205 XP with the +10% (default on for the eligible Bard): the server previews 1,326.
   const add = ws.getByRole("region", { name: "Add XP" });
   await expect(add.getByRole("checkbox")).toBeChecked();
+  // The sentence is the Bard's own prime requisites, as the checkbox's tooltip too.
+  const rule =
+    "+10% on XP earned when Dexterity and Charisma are all 16 or more";
+  await expect(add.getByTestId("xp-bonus-hint")).toHaveText(rule);
+  await expect(add.getByRole("checkbox").locator("..")).toHaveAttribute(
+    "title",
+    rule,
+  );
   await add.getByLabel("Amount").fill("1205");
   await add.getByLabel("Reason").fill("Troll bridge");
   await expect(add.getByRole("button", { name: "Add 1,326" })).toBeVisible();

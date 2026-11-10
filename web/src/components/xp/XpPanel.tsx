@@ -13,6 +13,7 @@ import type { DerivedClass } from "@/types/character";
 import { useTableStore } from "@/stores/table";
 import type { XpEntry, XpLedger, XpLevel } from "@/types/xp";
 import type { ApiError } from "@/api/http";
+import { bonusHint } from "@/lib/xpBonus";
 import { useXpPreview } from "./useXpPreview";
 
 /** Number formatters in the UI language (display only). */
@@ -97,7 +98,7 @@ export function XpPanel() {
           <h2 className="section-label">{t("xp.add.title")}</h2>
         </div>
         <Progress ledger={ledger} entries={multi ? entries : undefined} />
-        <AddForm bonusDefault={ledger.bonusEligible} />
+        <AddForm ledger={ledger} />
       </div>
       <Ledger ledger={ledger} />
     </div>
@@ -281,8 +282,11 @@ function FieldMessage({
   );
 }
 
-function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
-  const { t } = useTranslation();
+function AddForm({ ledger }: { ledger: XpLedger }) {
+  const { t, i18n } = useTranslation();
+  // One sentence for the tooltip and the paragraph, the checkbox's default from the same ledger.
+  const hint = bonusHint(t, i18n.language, ledger);
+  const bonusDefault = hint !== null && ledger.bonusEligible;
   const f = useFormats();
   const add = useXpStore((s) => s.add);
   const busy = useTableStore((s) => s.busy);
@@ -356,19 +360,21 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
           />
           <FieldMessage error={error} field="session" />
         </label>
-        <label
-          className="flex h-7 cursor-pointer items-center gap-2 text-body"
-          title={t("xp.bonusHint")}
-        >
-          <input
-            type="checkbox"
-            className="size-4 accent-tint"
-            checked={bonus}
-            onChange={(e) => setBonus(e.target.checked)}
-            onKeyDown={onKey}
-          />
-          {t("xp.bonus")}
-        </label>
+        {hint && (
+          <label
+            className="flex h-7 cursor-pointer items-center gap-2 text-body"
+            title={hint}
+          >
+            <input
+              type="checkbox"
+              className="size-4 accent-tint"
+              checked={bonus}
+              onChange={(e) => setBonus(e.target.checked)}
+              onKeyDown={onKey}
+            />
+            {t("xp.bonus")}
+          </label>
+        )}
         <Button
           className="h-7"
           disabled={busy || base === null || base < 1}
@@ -392,13 +398,21 @@ function AddForm({ bonusDefault }: { bonusDefault: boolean }) {
         </p>
       )}
       {/* The bonus rule in full, without a hover (ADR 0022 step 1.2). */}
-      <p className="text-body text-muted-foreground">{t("xp.bonusHint")}</p>
+      {hint && (
+        <p
+          className="text-body text-muted-foreground"
+          data-testid="xp-bonus-hint"
+        >
+          {hint}
+        </p>
+      )}
     </section>
   );
 }
 
 function Ledger({ ledger }: { ledger: XpLedger }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  const hint = bonusHint(t, i18n.language, ledger);
   const [editing, setEditing] = useState<number | null>(null);
   const cols =
     "grid grid-cols-[minmax(0,1fr)_5.5rem_4.5rem_6rem_4.5rem] items-center gap-2";
@@ -434,6 +448,7 @@ function Ledger({ ledger }: { ledger: XpLedger }) {
               key={e.id}
               entry={e}
               cols={cols}
+              hint={hint}
               onDone={() => setEditing(null)}
             />
           ) : (
@@ -566,10 +581,12 @@ function Row({
 function EditRow({
   entry: e,
   cols,
+  hint,
   onDone,
 }: {
   entry: XpEntry;
   cols: string;
+  hint: string | null;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -628,19 +645,23 @@ function EditRow({
         />
         <FieldMessage error={error} field="base" />
       </span>
-      <label
-        className="flex cursor-pointer items-center justify-end gap-1 text-label"
-        title={t("xp.bonusHint")}
-      >
-        <input
-          type="checkbox"
-          className="size-4 accent-tint"
-          checked={bonus}
-          onChange={(ev) => setBonus(ev.target.checked)}
-          onKeyDown={onKey}
-          aria-label={t("xp.bonus")}
-        />
-      </label>
+      {hint ? (
+        <label
+          className="flex cursor-pointer items-center justify-end gap-1 text-label"
+          title={hint}
+        >
+          <input
+            type="checkbox"
+            className="size-4 accent-tint"
+            checked={bonus}
+            onChange={(ev) => setBonus(ev.target.checked)}
+            onKeyDown={onKey}
+            aria-label={t("xp.bonus")}
+          />
+        </label>
+      ) : (
+        <span />
+      )}
       <span className="text-right font-semibold" data-testid="xp-edit-total">
         {preview ? f.n(preview.total) : "–"}
       </span>

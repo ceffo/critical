@@ -31,6 +31,13 @@ const split = (total: number, classes: string[]) =>
     amount: Math.floor(total / classes.length),
   }));
 
+/** The prime requisites of the classes the specs use (catalogue data, served as `bonusClasses`). */
+const PRIMES: Record<string, string[]> = {
+  fighter: ["str"],
+  thief: ["dex"],
+  mage: ["int"],
+};
+
 /** The class codes sharing an award: the active entries. */
 export function sharing(opts: MultiClassOptions): string[] {
   return opts.dual ? ["mage"] : [opts.longClass ?? "fighter", "thief"];
@@ -127,11 +134,16 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
   await page.route(
     (url) => url.pathname === "/api/xp",
     (route) =>
-      patched(route, (l) =>
+      patched(route, (l) => {
         (l.entries ?? []).forEach(
           (e: Json) => (e.split = split(e.total, classes)),
-        ),
-      ),
+        );
+        // What the server serves for the active classes (xpsvc BonusClasses).
+        l.bonusClasses = classes.map((c) => ({
+          class: c,
+          primes: PRIMES[c] ?? ["str"],
+        }));
+      }),
   );
   await page.route(
     (url) => url.pathname === "/api/log",

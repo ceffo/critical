@@ -136,8 +136,8 @@ Taking one pending level. A **pending level** carries what the roll needs (the h
 _Code_: PendingLevel, TakenLevel, LevelGrants
 
 **XP** and the **XP ledger** (fr: XP, registre):
-Experience points, and the entries that add to the starting XP (an **award** is one entry’s amount, base plus bonus; a class entry taken later ignores the awards up to its cut-off). [ADR 0015](docs/adr/0015-experience.md).
-_Code_: XPLedger, LevelXP, Award
+Experience points, and the entries that add to the starting XP (an **award** is one entry’s amount, base plus bonus; a class entry taken later ignores the awards up to its cut-off). The **bonus classes** are the active classes with the prime requisites the +10% bonus reads, served so the web words the rule. [ADR 0015](docs/adr/0015-experience.md), [ADR 0042](docs/adr/0042-multi-class-and-dual-class.md) step 6.
+_Code_: XPLedger, LevelXP, Award, BonusClass
 
 **XP table** (fr: table d'expérience):
 PHB Table 25: the XP that reaches each level of a class; a **level cell** is one row, placed against the sheet's level as past, current or future. [ADR 0015](docs/adr/0015-experience.md).

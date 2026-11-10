@@ -702,7 +702,7 @@
     {
       "id": "flame_walk",
       "class": "Priest",
-      "level": 4,
+      "level": 3,
       "school": "Alteration",
       "sphere": "Elemental Fire",
       "spheres": ["elemental_fire"],
@@ -2103,7 +2103,7 @@
       "kind": "devotion",
       "score": {
         "ability": "wis",
-        "modifier": -3
+        "modifier": -4
       },
       "initial_cost": {
         "kind": "contact",

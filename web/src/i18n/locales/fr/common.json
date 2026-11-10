@@ -675,7 +675,7 @@
       "lead": "Un combat est en cours (tour {{round}}). Se reposer quand même ?",
       "refills": "Chaque emplacement de sort est rechargé (la préparation reste) ainsi que les objets quotidiens. Vous pouvez annuler depuis le journal.",
       "cancel": "Annuler",
-      "confirm": "Se reposer"
+      "confirm": "Repos"
     },
     "none": "Aucun emplacement de sort disponible.",
     "level": "Niveau {{level}}",

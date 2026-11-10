@@ -840,7 +840,7 @@ test.describe("lookup powers", () => {
       "WIS −5",
     );
     await expect(detail.getByTestId("power-description-text")).toContainText(
-      "A creature's aura reflects",
+      "Placeholder text for the test catalogue: what Aura Sight does",
     );
     await snap(page, "power-detail");
 
@@ -859,7 +859,7 @@ test.describe("lookup powers", () => {
       "9 PFP",
     );
     await expect(detail.getByTestId("power-description-text")).toContainText(
-      "Une aura est un halo brillant",
+      "Texte de test du catalogue : ce que fait Vision de l'Aura",
     );
     await snap(page, "power-detail-fr");
 

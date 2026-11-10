@@ -1404,6 +1404,11 @@
         "instance_other": "{{count}} jets successifs"
       },
       "noDamage": "pas de dégâts",
+      "cardHeal": "Soins",
+      "cardHealCapped": "{{total}} obtenus, plafonnés aux PV max",
+      "cardHealRange": "PV {{before}} → {{after}}",
+      "cardHealOther": "Soigne {{total}}, pas sur vous : aucun PV modifié.",
+      "cardHealOtherFull": "Soigne tous les PV perdus, pas sur vous : aucun PV modifié.",
       "save": "Sauvegarde de la cible : {{type}}, {{effect}}",
       "saveEffects": {
         "half": "moitié des dégâts",
@@ -1667,6 +1672,10 @@
       "spellFailed": "échec du sort (d100 {{roll}} ≤ {{chance}} %)",
       "spellHeld": "pas d'échec du sort (d100 {{roll}} > {{chance}} %)",
       "onOther": "{{counters}}, pas sur vous",
+      "heal": "soigne {{applied}} PV",
+      "healCapped": "soigne {{applied}} PV ({{total}} obtenus, plafonnés aux PV max)",
+      "healOther": "soigne {{total}}, pas sur vous",
+      "healOtherFull": "soin complet, pas sur vous",
       "immune": "immunité (Sagesse {{score}})"
     },
     "item": {

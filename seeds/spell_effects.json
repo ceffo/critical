@@ -6568,6 +6568,21 @@
     }
   },
   {
+    "id": "cure_light_wounds",
+    "name": "Cure Light Wounds",
+    "level": 1,
+    "kind": "heal",
+    "confidence": "high",
+    "note": "Heals 1d8 hit points by touch, at once. The reverse, cause light wounds, is not modelled.",
+    "target": "self_or_other",
+    "duration": {
+      "kind": "permanent"
+    },
+    "heal": {
+      "dice": "1d8"
+    }
+  },
+  {
     "id": "ebony_hand",
     "name": "Ebony Hand",
     "level": 1,
@@ -6819,6 +6834,21 @@
     }
   },
   {
+    "id": "cure_serious_wounds",
+    "name": "Cure Serious Wounds",
+    "level": 4,
+    "kind": "heal",
+    "confidence": "high",
+    "note": "Heals 2d8+1 hit points by touch, at once. The reverse, cause serious wounds, is not modelled.",
+    "target": "self_or_other",
+    "duration": {
+      "kind": "permanent"
+    },
+    "heal": {
+      "dice": "2d8+1"
+    }
+  },
+  {
     "id": "produce_fire",
     "name": "Produce Fire",
     "level": 4,
@@ -6867,6 +6897,21 @@
     "modifiers": {
       "to_hit": 2,
       "save": 2
+    }
+  },
+  {
+    "id": "cure_critical_wounds",
+    "name": "Cure Critical Wounds",
+    "level": 5,
+    "kind": "heal",
+    "confidence": "high",
+    "note": "Heals 3d8+3 hit points by touch, at once. The reverse, cause critical wounds, is not modelled.",
+    "target": "self_or_other",
+    "duration": {
+      "kind": "permanent"
+    },
+    "heal": {
+      "dice": "3d8+3"
     }
   },
   {
@@ -7011,6 +7056,21 @@
         }
       }
     ]
+  },
+  {
+    "id": "heal",
+    "name": "Heal",
+    "level": 6,
+    "kind": "heal",
+    "confidence": "high",
+    "note": "Cures every hit point the creature has lost. The reverse, harm, is not modelled.",
+    "target": "self_or_other",
+    "duration": {
+      "kind": "permanent"
+    },
+    "heal": {
+      "full": true
+    }
   },
   {
     "id": "sols_searing_orb",

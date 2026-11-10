@@ -159,6 +159,14 @@ type entryDTO struct {
 	ConsumeItem *consumeItemDTO           `json:"consume_item"`
 	AttackRoll  bool                      `json:"attack_roll"`
 	EndEffects  []endEffectDTO            `json:"end_effects"`
+	Heal        *healDTO                  `json:"heal"`
+}
+
+// healDTO is the heal of a heal entry (ADR 0008 step 17): its dice, or full
+// (every lost hit point).
+type healDTO struct {
+	Dice flexString `json:"dice"`
+	Full bool       `json:"full"`
 }
 
 // endEffectDTO is one effect applied when the spell's row ends (ADR 0004
@@ -322,6 +330,12 @@ func (d entryDTO) toDomain() (spelleffectsvc.Entry, error) {
 	}
 	if e.EndEffects, err = endEffectsToDomain(d.EndEffects); err != nil {
 		return e, err
+	}
+	if d.Heal != nil {
+		e.Heal = &spelleffectsvc.Heal{Full: d.Heal.Full}
+		if e.Heal.Dice, err = optFormula("heal.dice", d.Heal.Dice); err != nil {
+			return e, err
+		}
 	}
 	return e, nil
 }

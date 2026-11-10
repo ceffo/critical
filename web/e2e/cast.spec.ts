@@ -17,7 +17,9 @@ import {
   undoNextRound,
   expectSlotDots,
   readsAfter,
+  combatLog,
 } from "./helpers";
+import { expectNoClippedText } from "./noClip";
 import type { Page } from "@playwright/test";
 
 // Dice are random on the real stack: assert what the cast did, not the rolled numbers
@@ -641,6 +643,92 @@ test("cast, heal, cast: the journal Undo pops the cast on top, then the heal", a
   await expect(redo).toBeDisabled();
   await expectUndoOn(page, "Cast Stoneskin");
   await snap(page, "redone-heal-then-cast");
+});
+
+// ADR 0008 step 17: a cast heal goes through the HP ledger. Dice are random: the card says what was
+// gained, the HP follows it, and one undo gives the slot and the HP back (castsvc's Go tests pin the
+// rolls and the cap).
+test.describe("a priest healing", () => {
+  test.use({
+    character: {
+      class: "cleric",
+      race: "human",
+      alignment: "neutral_good",
+      wis: 15,
+      level: 1,
+      xp_total: 0,
+      hp_max: 30,
+      skill_points: {},
+      proficiencies: [],
+      weapon_proficiencies: [],
+    },
+  });
+
+  test("casting Cure Light Wounds on a wounded character raises the HP; one undo restores it, in French at the big viewports", async ({
+    page,
+    stack,
+  }) => {
+    await prepare(stack.apiUrl, ["cure_light_wounds"]);
+    await openSpells(page);
+    const max = await currentHp(page);
+    const level1 = page.getByRole("region", { name: "Level 1" });
+    await recordHp(page, "damage", 8, "e2e wound");
+    await expect.poll(() => currentHp(page)).toBe(max - 8);
+    await expectSlotDots(level1, 1, 1, 1);
+
+    // A heal that lands on the bearer by default: the arrow offers the other target.
+    await level1
+      .getByRole("button", { name: "Choose the target of Cure Light Wounds" })
+      .click();
+    await expect(page.getByRole("menuitem")).toHaveCount(1);
+    await page.keyboard.press("Escape");
+
+    await level1
+      .getByRole("button", { name: "Cast Cure Light Wounds" })
+      .click();
+    const card = resultCard(page).getByTestId("cast-result");
+    const heal = card.getByTestId("cast-heal");
+    await expect(heal).toBeVisible();
+    const gained = Number(
+      await heal.getByTestId("cast-heal-total").textContent(),
+    );
+    expect(gained).toBeGreaterThanOrEqual(1);
+    expect(gained).toBeLessThanOrEqual(8);
+    await expect(heal.getByTestId("cast-heal-range")).toHaveText(
+      `HP ${max - 8} → ${max - 8 + gained}`,
+    );
+    await expect.poll(() => currentHp(page)).toBe(max - 8 + gained);
+    await expectSlotDots(level1, 1, 0, 1);
+    await expect(logEntry(page, "Cast Cure Light Wounds")).toBeVisible();
+    await snap(page, "cure-light-wounds");
+
+    for (const lng of ["fr", "en"] as const) {
+      await chooseLanguage(page, lng);
+      for (const vp of [
+        { width: 1920, height: 1080 },
+        { width: 2560, height: 1440 },
+      ]) {
+        await page.setViewportSize(vp);
+        await expectNoClippedText(
+          page.getByRole("region", {
+            name: lng === "fr" ? "Détail" : "Detail",
+            exact: true,
+          }),
+          `the heal card (${lng} ${vp.width})`,
+        );
+        await expectNoClippedText(
+          combatLog(page),
+          `the heal in the journal (${lng} ${vp.width})`,
+        );
+        await snap(page, `cure-light-wounds-${lng}-${vp.width}x${vp.height}`);
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await undoEntry(page, "Cast Cure Light Wounds");
+    await expect.poll(() => currentHp(page)).toBe(max - 8);
+    await expectSlotDots(level1, 1, 1, 1);
+  });
 });
 
 // ADR 0004 step 20: a spell that lasts rounds gets a timeline row whether or not the engine models

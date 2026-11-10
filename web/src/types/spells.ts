@@ -374,6 +374,23 @@ export interface CastDamagePart {
   save: DamagePartSave;
 }
 
+/**
+ * Mirrors castsvc.CastHeal (ADR 0008 step 17.7): a cast-time heal. `dice`, `rolls` and `constant`
+ * are absent for a full heal (nothing rolled); `total` is what it is worth (a full heal on the
+ * bearer: the gap to max HP; 0 on someone else); `onOther` when it landed on someone else (no HP
+ * changed, no HP before or after); on the bearer, his HP around it, the max-HP cap applied.
+ */
+export interface CastHeal {
+  dice?: string;
+  rolls?: { sides: number; value: number }[];
+  constant: number;
+  total: number;
+  full?: boolean;
+  onOther?: boolean;
+  hpBefore?: number;
+  hpAfter?: number;
+}
+
 /** An effect the engine does not track (seed modifier key, or "<ability>_gain"/"_set"). */
 export interface CastUntracked {
   key: string;
@@ -413,6 +430,12 @@ export interface CastBreakdown {
   mode?: string;
   buff?: CastBuff;
   damage?: CastDamage;
+  /** The heal of a heal spell (ADR 0008 step 17.7); absent for any other spell. */
+  heal?: CastHeal;
+  /** Merged by the server into the journal entry of a heal on the bearer: the heal asked for and
+   * the part logged after the max-HP cap. Not in the cast endpoint's answer. */
+  hpRequested?: number;
+  hpApplied?: number;
   /** Levels of the extra slots this cast added. */
   extraSlots?: number[];
   /** The inventory item the cast spent. */
@@ -433,7 +456,7 @@ export interface CastBreakdown {
   level?: number;
   /** The slot spent (a cast only). */
   slotIndex?: number;
-  kind?: "buff" | "damage" | "utility";
+  kind?: "buff" | "damage" | "heal" | "utility";
   confidence?: "high" | "low";
   target?: string;
   textOnly?: CastTextOnly;

@@ -11,7 +11,7 @@
       "id": { "type": "string", "pattern": "^[a-z0-9]+(_[a-z0-9]+)*$", "description": "Slug of name, e.g. melfs_acid_arrow" },
       "name": { "type": "string", "description": "Spell name exactly as in spells.json" },
       "level": { "type": "integer", "minimum": 1, "maximum": 9 },
-      "kind": { "enum": ["buff", "damage", "utility"], "description": "buff = modifies a creature for a while (debuffs included); damage = deals hit-point damage; utility = nothing the engine tracks numerically" },
+      "kind": { "enum": ["buff", "damage", "utility", "heal"], "description": "buff = modifies a creature for a while (debuffs included); damage = deals hit-point damage; utility = nothing the engine tracks numerically; heal = hit points regained at once when cast or received (needs heal)" },
       "confidence": { "enum": ["high", "low"], "description": "low = extraction partial or unsure; a note is then required" },
       "note": { "type": "string", "description": "Caveats, what is not modelled, source ambiguities. Required when confidence is low." },
       "target": { "enum": ["self", "other", "self_or_other", "area", "none"] },
@@ -194,6 +194,15 @@
         "properties": { "type": { "type": "string" } }
       },
       "attack_roll": { "type": "boolean", "description": "Cast mechanic: casting needs a target AC and rolls one spell to-hit d20, never a crit (docs/adr/0002 Consequences)." },
+      "heal": {
+        "type": "object",
+        "additionalProperties": false,
+        "description": "Only on a heal spell, which then has no damage, modes, exposure, buff fields, charges, cast mechanics or end effects, and an instant or permanent duration (docs/adr/0008 step 17). Set exactly one of dice and full. Cast on the caster or received, the heal goes through the HP ledger, capped at max HP; cast on someone else it is only rolled and shown.",
+        "properties": {
+          "dice": { "$ref": "#/definitions/formula", "description": "A sum of dice plus a constant, rolled at the caster level; never below 0 at any level from 1 to 40." },
+          "full": { "const": true, "description": "Every lost hit point; nothing rolled." }
+        }
+      },
       "end_effects": {
         "type": "array",
         "minItems": 1,

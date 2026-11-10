@@ -177,5 +177,29 @@
     "note": "Each creature in the cloud takes 1 point of damage for each round it remains in it (the exposure). The insects also obscure vision, make spellcasting in the cloud impossible and drive creatures of 2 or fewer Hit Dice away (not modelled).",
     "duration": { "kind": "rounds", "rounds": "2*level" },
     "exposure": { "damage": { "dice": "1", "type": "piercing" } }
+  },
+  "cure_light_wounds": {
+    "kind": "heal", "confidence": "high", "target": "self_or_other",
+    "note": "Heals 1d8 hit points by touch, at once. The reverse, cause light wounds, is not modelled.",
+    "duration": { "kind": "permanent" },
+    "heal": { "dice": "1d8" }
+  },
+  "cure_serious_wounds": {
+    "kind": "heal", "confidence": "high", "target": "self_or_other",
+    "note": "Heals 2d8+1 hit points by touch, at once. The reverse, cause serious wounds, is not modelled.",
+    "duration": { "kind": "permanent" },
+    "heal": { "dice": "2d8+1" }
+  },
+  "cure_critical_wounds": {
+    "kind": "heal", "confidence": "high", "target": "self_or_other",
+    "note": "Heals 3d8+3 hit points by touch, at once. The reverse, cause critical wounds, is not modelled.",
+    "duration": { "kind": "permanent" },
+    "heal": { "dice": "3d8+3" }
+  },
+  "heal": {
+    "kind": "heal", "confidence": "high", "target": "self_or_other",
+    "note": "Cures every hit point the creature has lost. The reverse, harm, is not modelled.",
+    "duration": { "kind": "permanent" },
+    "heal": { "full": true }
   }
 }

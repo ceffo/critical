@@ -65,6 +65,135 @@
     },
     "roll": true
   },
+  "healCapped": {
+    "payload": {
+      "action": "cast",
+      "spellId": "cure_serious_wounds",
+      "spell": "Cure Serious Wounds",
+      "casterLevel": 5,
+      "heal": {
+        "dice": "2d8+1",
+        "rolls": [
+          {
+            "sides": 8,
+            "value": 8
+          },
+          {
+            "sides": 8,
+            "value": 6
+          }
+        ],
+        "constant": 1,
+        "total": 15,
+        "hpBefore": 12,
+        "hpAfter": 20
+      },
+      "level": 2,
+      "slotIndex": 0,
+      "kind": "heal",
+      "confidence": "high",
+      "target": "self_or_other",
+      "untracked": null,
+      "hpRequested": 15,
+      "hpApplied": 8
+    },
+    "roll": true
+  },
+  "healFull": {
+    "payload": {
+      "action": "received",
+      "spellId": "heal",
+      "spell": "Heal",
+      "casterLevel": 12,
+      "heal": {
+        "constant": 0,
+        "total": 14,
+        "full": true,
+        "hpBefore": 6,
+        "hpAfter": 20
+      },
+      "level": 6,
+      "kind": "heal",
+      "confidence": "high",
+      "target": "self_or_other",
+      "untracked": null,
+      "hpRequested": 14,
+      "hpApplied": 14
+    },
+    "roll": true
+  },
+  "healOther": {
+    "payload": {
+      "action": "cast",
+      "spellId": "cure_light_wounds",
+      "spell": "Cure Light Wounds",
+      "casterLevel": 5,
+      "heal": {
+        "dice": "1d8",
+        "rolls": [
+          {
+            "sides": 8,
+            "value": 5
+          }
+        ],
+        "constant": 0,
+        "total": 5,
+        "onOther": true
+      },
+      "level": 1,
+      "slotIndex": 0,
+      "kind": "heal",
+      "confidence": "high",
+      "target": "self_or_other",
+      "untracked": null
+    },
+    "roll": true
+  },
+  "immune": {
+    "payload": {
+      "action": "received",
+      "spellId": "charm_person",
+      "spell": "Charm Person",
+      "casterLevel": 5,
+      "immunity": {
+        "source": "wisdom",
+        "score": 19
+      },
+      "level": 1,
+      "textOnly": "immune",
+      "untracked": []
+    },
+    "roll": true
+  },
+  "onOther": {
+    "payload": {
+      "action": "cast",
+      "spellId": "sleep",
+      "spell": "Sleep",
+      "casterLevel": 15,
+      "buff": {
+        "name": "Sleep",
+        "rounds": 75,
+        "applied": false,
+        "onOther": true,
+        "id": "row-1",
+        "durationRoll": {
+          "formula": "5*level",
+          "dice": [],
+          "total": 75
+        },
+        "effects": {}
+      },
+      "level": 1,
+      "slotIndex": 0,
+      "kind": "utility",
+      "confidence": "high",
+      "target": "area",
+      "textOnly": "utility",
+      "untracked": []
+    },
+    "roll": true
+  },
   "received": {
     "payload": {
       "action": "received",
@@ -100,51 +229,6 @@
       },
       "level": 0,
       "untracked": null
-    },
-    "roll": true
-  },
-  "onOther": {
-    "payload": {
-      "action": "cast",
-      "spellId": "sleep",
-      "spell": "Sleep",
-      "casterLevel": 15,
-      "buff": {
-        "name": "Sleep",
-        "rounds": 75,
-        "applied": false,
-        "onOther": true,
-        "id": "row-1",
-        "durationRoll": {
-          "formula": "5*level",
-          "dice": [],
-          "total": 75
-        },
-        "effects": {}
-      },
-      "level": 1,
-      "slotIndex": 0,
-      "kind": "utility",
-      "confidence": "high",
-      "target": "area",
-      "textOnly": "utility",
-      "untracked": []
-    },
-    "roll": true
-  },
-  "immune": {
-    "payload": {
-      "action": "received",
-      "spellId": "charm_person",
-      "spell": "Charm Person",
-      "casterLevel": 5,
-      "immunity": {
-        "source": "wisdom",
-        "score": 19
-      },
-      "level": 1,
-      "textOnly": "immune",
-      "untracked": []
     },
     "roll": true
   }

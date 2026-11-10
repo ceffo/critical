@@ -41,6 +41,64 @@ describeKind("cast", fixtures, {
     value: null,
     rolled: false,
   },
+  // ADR 0008 step 17: a heal on the bearer, cut by the max-HP cap (15 rolled, 8 applied).
+  healCapped: {
+    en: {
+      text: "Cast Cure Serious Wounds: heals 8 HP (15 rolled, capped at max HP)",
+      short: "Cure Serious Wounds",
+      subtitle: "Cure Serious Wounds",
+      card: [
+        'data-testid="cast-entry-heal"',
+        "HP 12 → 20",
+        "15 rolled, capped at max HP",
+      ],
+    },
+    fr: {
+      text: "Lancé : Cure Serious Wounds: soigne 8 PV (15 obtenus, plafonnés aux PV max)",
+      short: "Cure Serious Wounds",
+      subtitle: "Cure Serious Wounds",
+      card: ["PV 12 → 20", "15 obtenus, plafonnés aux PV max"],
+    },
+    value: { text: "+8", tone: "heal" },
+    rolled: true,
+  },
+  // A full heal received: nothing rolled, the gap is the heal.
+  healFull: {
+    en: {
+      text: "Heal received (caster level 12): heals 14 HP",
+      short: "Heal",
+      subtitle: "Heal",
+      card: ['data-testid="cast-entry-heal-total"', "HP 6 → 20"],
+    },
+    fr: {
+      text: "Sort reçu : Heal (niveau du lanceur 12): soigne 14 PV",
+      short: "Heal",
+      subtitle: "Heal",
+      card: ["PV 6 → 20"],
+    },
+    value: { text: "+14", tone: "heal" },
+    rolled: false,
+  },
+  // Cast on someone else: rolled and shown, no HP changed.
+  healOther: {
+    en: {
+      text: "Cast Cure Light Wounds: heals 5, not on you",
+      short: "Cure Light Wounds",
+      subtitle: "Cure Light Wounds",
+      card: [
+        'data-testid="cast-entry-heal-other"',
+        "Heals 5, not on you: no HP changed.",
+      ],
+    },
+    fr: {
+      text: "Lancé : Cure Light Wounds: soigne 5, pas sur vous",
+      short: "Cure Light Wounds",
+      subtitle: "Cure Light Wounds",
+      card: ["Soigne 5, pas sur vous : aucun PV modifié."],
+    },
+    value: null,
+    rolled: true,
+  },
   // ADR 0006 step 10.3: received by a character immune to it, nothing applied or rolled.
   immune: {
     en: {

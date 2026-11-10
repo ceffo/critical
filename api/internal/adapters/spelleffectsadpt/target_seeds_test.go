@@ -142,6 +142,8 @@ func TestRepoSeeds_EveryRowOnlySpellTargetChoice(t *testing.T) {
 		"protection_from_paralysis", "protection_from_poison", "protection_from_vermin",
 		"rarys_telepathic_bond", "ride_the_wind", "seeming", "sertens_spell_immunity", "spider_climb",
 		"statue", "ultravision", "vocalize", "water_breathing",
+		// ADR 0008 step 17.3: a heal is cast on the caster or on another.
+		"cure_light_wounds", "cure_serious_wounds", "cure_critical_wounds", "heal",
 	}
 
 	var gotOnAlly, gotOnMe []string

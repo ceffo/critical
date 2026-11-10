@@ -34,6 +34,35 @@ export function decodeCast(e: LogEntry): CastBreakdown | null {
     : null;
 }
 
+/** The HP a heal moved on the bearer: the ledger's applied part when the entry has it (the journal),
+ * else the HP around it (the endpoint's answer), else the total. */
+export function healApplied(c: CastBreakdown): number {
+  const h = c.heal;
+  if (!h) return 0;
+  if (typeof c.hpApplied === "number") return c.hpApplied;
+  if (h.hpBefore !== undefined && h.hpAfter !== undefined)
+    return h.hpAfter - h.hpBefore;
+  return h.total;
+}
+
+/** The heal as one phrase of the entry's text (ADR 0008 step 17). */
+function healText(c: CastBreakdown, t: TFunction): string | null {
+  const h = c.heal;
+  if (!h) return null;
+  if (h.onOther)
+    return t(h.full ? "log.cast.healOtherFull" : "log.cast.healOther", {
+      total: h.total,
+    });
+  const applied = healApplied(c);
+  return t(
+    !h.full && applied < h.total ? "log.cast.healCapped" : "log.cast.heal",
+    {
+      applied,
+      total: h.total,
+    },
+  );
+}
+
 function castText(
   p: CastBreakdown,
   t: TFunction,
@@ -64,6 +93,8 @@ function castText(
     details.push(
       t("log.cast.damage", { total: p.damage.total, type: p.damage.type }),
     );
+  const heal = healText(p, t);
+  if (heal) details.push(heal);
   if (p.extraSlots && p.extraSlots.length > 0)
     details.push(
       t("log.cast.extraSlots", { slots: splitText(t, p.extraSlots) }),
@@ -151,6 +182,8 @@ export const castKind: KindView<CastPayload, CastResult> = {
     if (c.failure?.failed)
       return { text: String(c.failure.d100), tone: "fail" };
     if (c.damage) return { text: String(c.damage.total), tone: "ink" };
+    if (c.heal && !c.heal.onOther)
+      return { text: `+${healApplied(c)}`, tone: "heal" };
     if (c.attack)
       return {
         text: String(c.attack.d20),
@@ -158,10 +191,12 @@ export const castKind: KindView<CastPayload, CastResult> = {
       };
     return null;
   },
-  // A cast is in the Rolls filter when it rolled damage or a to-hit d20.
+  // A cast is in the Rolls filter when it rolled damage, a heal's dice or a to-hit d20.
   rolled: (p) =>
     p !== null &&
-    (p.breakdown.damage !== undefined || p.breakdown.attack !== undefined),
+    (p.breakdown.damage !== undefined ||
+      p.breakdown.attack !== undefined ||
+      (p.breakdown.heal?.rolls?.length ?? 0) > 0),
   subtitle: ({ breakdown: c }, w) => w.spellName(c.spellId, c.spell),
   short: ({ breakdown: c }, w, _e, value) => ({
     value,
@@ -346,6 +381,7 @@ function CastEntry({
           </div>
         </div>
       )}
+      {c.heal && <HealBlock cast={c} />}
       {c.save && (
         <p className="text-body" data-testid="cast-entry-save">
           {t("result.cast.save", {
@@ -370,6 +406,76 @@ function CastEntry({
           casterLevel={c.casterLevel}
           exposure={c.exposure}
         />
+      )}
+    </div>
+  );
+}
+
+/** A heal on the card (ADR 0008 step 17): its dice and total; on the bearer the HP it moved and
+ * whether the max-HP cap cut it, on someone else a note that no HP changed. */
+function HealBlock({ cast: c }: { cast: CastBreakdown }) {
+  const { t } = useTranslation();
+  const h = c.heal;
+  if (!h) return null;
+  const dice = chips(h.rolls ?? []);
+  const applied = healApplied(c);
+  return (
+    <div className="flex flex-col gap-2" data-testid="cast-entry-heal">
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          {dice.length > 0 && (
+            <>
+              <ul className="flex flex-wrap gap-2">
+                {dice.map((d, i) => (
+                  <DieChip key={i} value={d.value} tone={d.tone} />
+                ))}
+              </ul>
+              {h.constant !== 0 && (
+                <span className="text-body tabular-nums">
+                  {h.constant > 0 ? "+" : "−"} {Math.abs(h.constant)}
+                </span>
+              )}
+            </>
+          )}
+        </div>
+        {!h.onOther && (
+          <Total
+            label={t("result.cast.cardHeal")}
+            value={applied}
+            testId="cast-entry-heal-total"
+          />
+        )}
+      </div>
+      {h.onOther ? (
+        <p className="text-body" data-testid="cast-entry-heal-other">
+          {t(
+            h.full
+              ? "result.cast.cardHealOtherFull"
+              : "result.cast.cardHealOther",
+            {
+              total: h.total,
+            },
+          )}
+        </p>
+      ) : (
+        <>
+          {h.hpBefore !== undefined && h.hpAfter !== undefined && (
+            <p className="text-body text-muted-foreground tabular-nums">
+              {t("result.cast.cardHealRange", {
+                before: h.hpBefore,
+                after: h.hpAfter,
+              })}
+            </p>
+          )}
+          {!h.full && applied < h.total && (
+            <p
+              className="text-body text-muted-foreground"
+              data-testid="cast-entry-heal-capped"
+            >
+              {t("result.cast.cardHealCapped", { total: h.total })}
+            </p>
+          )}
+        </>
       )}
     </div>
   );

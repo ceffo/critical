@@ -211,6 +211,31 @@ type CastResult struct {
 	// Immunity is why a spell received applied and rolled nothing (ADR 0006
 	// step 10.3; nil: the character is not immune).
 	Immunity *combatsvc.Immunity
+	// Heal is the heal of a heal spell (nil: the spell heals nothing; ADR
+	// 0008 step 17).
+	Heal *HealResult
+}
+
+// HealResult is a cast-time heal (ADR 0008 step 17): the dice rolled at the
+// caster level, or Full (nothing rolled), and where it landed. On the
+// bearer, HPDelta is the HP the cast entry asks the ledger for and HPBefore
+// and HPAfter the current HP around it, the cap applied; cast on someone
+// else, OnOther and no HP change (17.6).
+type HealResult struct {
+	// Roll is the dice rolled (nil: Full).
+	Roll *Roll
+	Full bool
+	// Total is what the heal is worth: the roll's total, or for Full on the
+	// bearer the gap to max HP (0 on someone else, whose HP the app does not
+	// know).
+	Total   int
+	OnOther bool
+	// HPDelta is the cast entry's HP delta before the ledger's cap: Total on
+	// the bearer, 0 on someone else.
+	HPDelta int
+	// HPBefore and HPAfter are the bearer's current HP before and after the
+	// heal (nil on someone else).
+	HPBefore, HPAfter *int
 }
 
 // SpellFailure is one d100 against the caster's chance of spell failure

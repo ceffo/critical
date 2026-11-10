@@ -12,14 +12,14 @@ Each Priest spell is exactly one of:
 
 | Level | Spells | Mapped | Utility | Missing kind |
 |---|---|---|---|---|
-| 1 | 57 | 7 | 43 | 7 |
+| 1 | 57 | 8 | 43 | 6 |
 | 2 | 47 | 5 | 34 | 8 |
 | 3 | 70 | 3 | 54 | 13 |
-| 4 | 62 | 3 | 48 | 11 |
-| 5 | 57 | 4 | 44 | 9 |
-| 6 | 43 | 3 | 26 | 14 |
-| 7 | 39 | 1 | 24 | 14 |
-| all | 375 | 26 | 273 | 76 |
+| 4 | 62 | 4 | 48 | 10 |
+| 5 | 57 | 5 | 44 | 8 |
+| 6 | 43 | 4 | 26 | 13 |
+| 7 | 39 | 1 | 25 | 13 |
+| all | 375 | 30 | 274 | 71 |
 
 ## Missing kinds
 
@@ -27,11 +27,11 @@ A new effect kind is a separate item. Spells per missing kind:
 
 - **summoned or animated creature that fights for the caster** (19): `skeletal_servant`, `dust_devil`, `wyvern_watch`, `summon_animal_spirit`, `summon_insects`, `animal_summoning_i`, `call_woodland_beings`, `giant_insect`, `sticks_to_snakes`, `animal_summoning_ii`, `aerial_servant`, `animal_summoning_iii`, `animate_object`, `conjure_animals_priest`, `conjure_fire_elemental`, `summon_undead`, `animate_rock`, `conjure_air_or_water_elemental`, `conjure_earth_elemental`
 - **damage from a trap, a barrier or terrain, varying with the distance moved, the target's AC or its kind** (15): `glyph_of_warding`, `line_of_protection`, `snare`, `spike_growth`, `wind_servant`, `repel_insects`, `produce_ice`, `spike_stones`, `asphyxiate`, `crushing_walls`, `forbiddance`, `wall_of_thorns`, `whirlwind`, `creeping_doom`, `tentacle_walls`
-- **hit point recovery or loss done at once (cure and cause wounds, healing, regeneration)** (9): `cure_light_wounds`, `goodberry`, `accelerate_healing`, `cure_serious_wounds`, `cure_critical_wounds`, `undead_regeneration`, `heal`, `heroes_feast`, `regenerate`
 - **damage resistance, absorption or immunity by damage type** (7): `endure_cold_endure_heat`, `resist_fire_resist_cold`, `flame_walk`, `negative_plane_protection`, `protection_from_fire`, `blessed_warmth`, `protection_from_lightning`
 - **life, level or ability restored (raise dead, resurrection, restoration)** (6): `atonement`, `raise_dead`, `breath_of_life`, `reincarnate`, `restoration`, `resurrection`
 - **damage rolled again at the caster's call during the duration (a bolt, a blade or a missile per use)** (5): `magical_stone`, `flame_blade`, `produce_flame`, `spiritual_hammer`, `call_lightning`
 - **effect that depends on the target's kind or Hit Dice (undead, evil, a table by Hit Dice)** (4): `dispel_evil`, `holy_word`, `sunray`, `symbol_priest`
+- **hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration)** (4): `goodberry`, `accelerate_healing`, `undead_regeneration`, `heroes_feast`
 - **weapon or item enchanted for the caster's use** (4): `shillelagh`, `adamantite_mace`, `rainbow`, `changestaff`
 - **bonus that depends on how many creatures share the spell** (2): `ring_of_hands`, `defensive_harmony`
 - **cooperative casting by several casters at once** (2): `unearthly_choir`, `spiritual_wrath`
@@ -57,7 +57,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `command` | Command | utility: nothing to track |
 | `courage` | Courage | utility: nothing to track |
 | `create_water` | Create Water | utility: nothing to track |
-| `cure_light_wounds` | Cure Light Wounds | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `cure_light_wounds` | Cure Light Wounds | mapped: heal (heal dice) |
 | `detect_evil_priest` | Detect Evil | utility: nothing to track |
 | `detect_magic_priest` | Detect Magic | utility: nothing to track |
 | `detect_poison` | Detect Poison | utility: nothing to track |
@@ -122,7 +122,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `fire_trap_priest` | Fire Trap | utility: nothing to track |
 | `flame_blade` | Flame Blade | missing kind: damage rolled again at the caster's call during the duration (a bolt, a blade or a missile per use) |
 | `frisky_chest` | Frisky Chest | utility: nothing to track |
-| `goodberry` | Goodberry | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `goodberry` | Goodberry | missing kind: hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration) |
 | `hear_heartbeat` | Hear Heartbeat | utility: nothing to track |
 | `heat_metal` | Heat Metal | mapped: damage (damage steps) |
 | `hesitation` | Hesitation | mapped: buff (initiative, save negates) |
@@ -157,7 +157,7 @@ A new effect kind is a separate item. Spells per missing kind:
 
 | Id | Name | Status |
 |---|---|---|
-| `accelerate_healing` | Accelerate Healing | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `accelerate_healing` | Accelerate Healing | missing kind: hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration) |
 | `adaptation` | Adaptation | utility: nothing to track |
 | `animate_dead_priest` | Animate Dead | utility: nothing to track |
 | `astral_window` | Astral Window | utility: nothing to track |
@@ -247,7 +247,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `cloak_of_bravery` | Cloak of Bravery | utility: nothing to track |
 | `compulsive_order` | Compulsive Order | utility: nothing to track |
 | `control_temperature_10_radius` | Control Temperature, 10' Radius | utility: nothing to track |
-| `cure_serious_wounds` | Cure Serious Wounds | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `cure_serious_wounds` | Cure Serious Wounds | mapped: heal (heal dice) |
 | `defensive_harmony` | Defensive Harmony | missing kind: bonus that depends on how many creatures share the spell |
 | `detect_lie` | Detect Lie | utility: nothing to track |
 | `dimensional_anchor` | Dimensional Anchor | utility: nothing to track |
@@ -316,7 +316,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `commune_with_nature` | Commune With Nature | utility: nothing to track |
 | `consequence` | Consequence | utility: nothing to track |
 | `control_winds` | Control Winds | utility: nothing to track |
-| `cure_critical_wounds` | Cure Critical Wounds | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `cure_critical_wounds` | Cure Critical Wounds | mapped: heal (heal dice) |
 | `dimensional_translocation` | Dimensional Translocation | utility: nothing to track |
 | `disguise` | Disguise | utility: nothing to track |
 | `dispel_evil` | Dispel Evil | missing kind: effect that depends on the target's kind or Hit Dice (undead, evil, a table by Hit Dice) |
@@ -352,7 +352,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `transmute_rock_to_mud_priest` | Transmute Rock to Mud | utility: nothing to track |
 | `true_seeing_priest` | True Seeing | utility: nothing to track |
 | `unceasing_vigilance_of_the_holy_sentinel` | Unceasing Vigilance of the Holy Sentinel | utility: nothing to track |
-| `undead_regeneration` | Undead Regeneration | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `undead_regeneration` | Undead Regeneration | missing kind: hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration) |
 | `undead_spell_focus` | Undead Spell Focus | utility: nothing to track |
 | `undead_ward` | Undead Ward | utility: nothing to track |
 | `wall_of_fire_priest` | Wall of Fire | mapped: damage (exposure) |
@@ -380,8 +380,8 @@ A new effect kind is a separate item. Spells per missing kind:
 | `forbiddance` | Forbiddance | missing kind: damage from a trap, a barrier or terrain, varying with the distance moved, the target's AC or its kind |
 | `gravity_variation` | Gravity Variation | utility: nothing to track |
 | `group_mind` | Group Mind | utility: nothing to track |
-| `heal` | Heal | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
-| `heroes_feast` | Heroes' Feast | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `heal` | Heal | mapped: heal (heal full) |
+| `heroes_feast` | Heroes' Feast | missing kind: hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration) |
 | `land_of_stability` | Land of Stability | utility: nothing to track |
 | `legal_thoughts` | Legal Thoughts | utility: nothing to track |
 | `liveoak` | Liveoak | utility: nothing to track |
@@ -432,7 +432,7 @@ A new effect kind is a separate item. Spells per missing kind:
 | `illusory_fortification` | Illusory Fortification | utility: nothing to track |
 | `impervious_sanctity_of_mind` | Impervious Sanctity of Mind | utility: nothing to track |
 | `mind_tracker` | Mind Tracker | utility: nothing to track |
-| `regenerate` | Regenerate | missing kind: hit point recovery or loss done at once (cure and cause wounds, healing, regeneration) |
+| `regenerate` | Regenerate | utility: nothing to track |
 | `reincarnate` | Reincarnate | missing kind: life, level or ability restored (raise dead, resurrection, restoration) |
 | `restoration` | Restoration | missing kind: life, level or ability restored (raise dead, resurrection, restoration) |
 | `resurrection` | Resurrection | missing kind: life, level or ability restored (raise dead, resurrection, restoration) |

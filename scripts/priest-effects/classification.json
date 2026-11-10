@@ -1,13 +1,8 @@
 {
   "missing": {
-    "hit point recovery or loss done at once (cure and cause wounds, healing, regeneration)": [
-      "cure_light_wounds",
-      "cure_serious_wounds",
-      "cure_critical_wounds",
-      "heal",
+    "hit points regained over time, later or as items (healing over time, a feast, berries, an undead's regeneration)": [
       "goodberry",
       "heroes_feast",
-      "regenerate",
       "undead_regeneration",
       "accelerate_healing"
     ],
@@ -317,6 +312,7 @@
     "pass_plant",
     "plane_shift",
     "quest",
+    "regenerate",
     "repeat_action",
     "scourge",
     "shrieking_walls",

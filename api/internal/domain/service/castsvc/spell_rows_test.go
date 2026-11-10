@@ -154,7 +154,7 @@ func TestBuffs_Step20_NoRow(t *testing.T) {
 		dice     []int
 		charges  int // the buff an until-discharged spell puts on
 	}{
-		{name: "permanent", spellID: "cure_light_wounds", duration: "Permanent"},
+		{name: "permanent", spellID: "detect_magic_priest", duration: "Permanent"},
 		{name: "instantaneous", spellID: "flame_strike", duration: "Instantaneous"},
 		{name: "concentration", spellID: "thought_capture", duration: "Concentration"},
 		{name: "special", spellID: "animal_friendship", duration: "Special"},

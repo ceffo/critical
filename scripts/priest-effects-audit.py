@@ -34,9 +34,9 @@ HERE = Path(__file__).resolve().parent / "priest-effects"
 ENTRY_KEYS = [
     "id", "name", "level", "kind", "confidence", "note", "target", "duration", "charges", "save",
     "damage", "modes", "exposure", "modifiers", "ability_gain", "ability_set", "condition",
-    "condition_keys", "grant_slots", "consume_item", "attack_roll", "end_effects",
+    "condition_keys", "grant_slots", "consume_item", "attack_roll", "end_effects", "heal",
 ]
-MAPPED_KINDS = ("buff", "damage")
+MAPPED_KINDS = ("buff", "damage", "heal")
 
 
 def fail(msg):
@@ -80,7 +80,7 @@ def classify(spells, effects, classification):
         if unknown:
             fail("%s: unknown entry keys %s" % (sid, unknown))
         if e.get("kind") not in MAPPED_KINDS:
-            fail("%s: a mapped spell is a buff or a damage spell (a utility spell goes in classification.json)" % sid)
+            fail("%s: a mapped spell is a buff, a damage or a heal spell (a utility spell goes in classification.json)" % sid)
         put(sid, ("mapped", e))
     for label, sids in classification.get("missing", {}).items():
         if not label.strip():
@@ -167,6 +167,9 @@ def features(e):
             f.append("exposure")
         if e.get("attack_roll"):
             f.append("attack_roll")
+        h = e.get("heal")
+        if h:
+            f.append("heal full" if h.get("full") else "heal dice")
     sv = e.get("save")
     if sv and sv["effect"] != "none":
         f.append("save " + sv["effect"])

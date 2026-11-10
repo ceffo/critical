@@ -576,6 +576,12 @@ catalogue: rulebooks
     mv "$tmp" .catalogue/catalogue.json
     echo "catalogue: .catalogue/catalogue.json from $dir at $(git -C "$dir" rev-parse --short "$ref")"
 
+# Compare the numbers of the fixture api/testdata/catalogue.json with the real catalogue (`just catalogue`):
+# every number they share must be equal. Plain `just test-api` skips the comparison when the private catalogue
+# is absent; this recipe fetches it and fails if it cannot. Not part of validate (the catalogue is private).
+check-fixture-numbers: catalogue
+    cd api && CRITICAL_REQUIRE_REAL_CATALOGUE=1 go test -count=1 -run TestFixture_NumbersMatchTheBuiltCatalogue ./internal/cataloguecheck
+
 # Fails when the committed web/src/lib/__fixtures__/spellStats.json differs from what the parser
 # generates (`just spell-stats-fixture` regenerates it). -count=1: the Go test cache does not track
 # a file outside the api module, so a cached pass could hide a stale fixture.

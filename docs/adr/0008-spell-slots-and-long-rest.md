@@ -1,7 +1,7 @@
 # ADR 0008: Spell slots and long rest
 
 **Status**: accepted, 2026-10-15 (critical-qki.37; collects the rules shipped in critical-qki.10,
-critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level).
+critical-qki.16, critical-qki.41 and critical-qki.42, until then in `docs/backend.md`). Steps 2 and 3 amended by [ADR 0030](0030-classes-and-races.md) (slots and preparation per class), on its implementation; step 2 implemented 2026-10-18 for the bard and the mage (ADR 0030 step 8: the limits are the derived slots of the derived level). Step 17 (a cast-time heal through the HP ledger) proposed 2026-11-09, not implemented.
 
 ## Context
 
@@ -234,9 +234,67 @@ named otherwise.
     `TestExpose_Handler` (rest/handler/casthdl), `TestRecord_FloorsDamage` (actionlogsvc: the floor
     cuts the applied HP), `TestSpecialSentinels` (rest/router).
 
+17. **Cast-time heal.** _(proposed 2026-11-09, design step; not implemented)_ A spell whose effect
+    is hit points regained at once, when it is cast, is an entry of the kind `heal` with a `heal`
+    block in its data. It is generic: the data says which spell heals and how much, never a branch
+    on a spell id. Only instant heals are in this step (the item's default): healing over time is
+    not modelled (Consequences).
+    17.1 **Data.** The `heal` block is exactly one of `dice` (a formula of the grammar of
+         `api/pkg/formula`: a sum of dice plus a constant, which may read the caster level and
+         never goes below 0 at any level from 1 to 40) and `full: true` (every lost hit point,
+         nothing rolled). A `heal` entry has a target, a duration that puts no row (instant or
+         permanent, [ADR 0004](0004-buffs.md) step 20.2), an optional save and note, and nothing
+         else: no damage, modes, exposure, buff modifiers, cast mechanics or end effects. A `heal`
+         block on another kind, a `heal` entry without one, a block with both or neither, and dice
+         that fail the rules above are refused by the loader at start-up.
+    17.2 **Which actions apply it.** A cast (step 6, the slot spent) and a spell received (step 8,
+         at the caster level the player gives) apply it. Adding it as an effect is refused as any
+         spell with no row is (`spell_not_an_effect`, ADR 0004 step 19). A spell that fails (ADR
+         0030 step 14) heals nothing; a receiver immune to the spell
+         ([ADR 0006](0006-saving-throws.md) step 10.3) rolls and heals nothing.
+    17.3 **Where it lands.** As a friendly buff does (step 7 and ADR 0004 step 20.5): a self-only
+         spell lands on the caster; else the caster's explicit choice (`onSelf`); else the entry's
+         default (`self_or_other` on him, `other` not). The cast box offers the choice for a heal
+         entry whose target allows both (`TargetChoiceAt`). A spell received always lands on the
+         receiver.
+    17.4 **The roll.** The dice are rolled once, at the caster level, through the dice port, after
+         the spell-failure d100 when there is one; nothing else of a heal cast rolls. `full` rolls
+         nothing: the amount asked is the gap to max HP, read in the cast's transaction from the
+         ledger (`-total`, at least 0, `total` being the SUM before the entry).
+    17.5 **On the bearer: through the ledger, one transaction, one undo.** The amount is the HP
+         delta of the action's own entry (the `cast` entry, of a cast or a receive), recorded by
+         the one recording path, so the heal cap applies ([ADR 0007](0007-hp-ledger.md) steps 4
+         and 5, [ADR 0018](0018-transactions-and-undo.md) step 4): never above max HP, logged as 0
+         at full HP, `hpRequested` and `hpApplied` in the payload. It is written in the transaction
+         that spends the slot, so one undo gives the slot and the hit points back. No new snapshot
+         key: the HP is the ledger's sum.
+    17.6 **Not on the bearer.** A heal cast on someone else is rolled and shown for the one it
+         landed on, and changes no HP of the caster: his entry's HP delta is 0 and its payload marks
+         the heal as on someone else. That character's own side, when the app tracks him, applies
+         it by receiving the spell (17.2), which rolls its own dice at the caster level, as every
+         received spell does (step 8); the caster's roll is not carried over.
+    17.7 **What the entry and the answer carry.** The cast result and the entry's payload have
+         `heal`: the dice (every die as `rolls`, the `constant`, the `total`) or `full`, whether it
+         landed on the caster (`onOther` when not), and, on the bearer, the HP around it
+         (`hpBefore`, `hpAfter`) beside the ledger's `hpRequested` / `hpApplied`. The client words
+         the journal entry and the cast notice in the player's language; the backend sends no text.
+    17.8 **The spells.** Per the PHB: Cure Light Wounds 1d8, Cure Serious Wounds 2d8+1, Cure Critical
+         Wounds 3d8+3, none of them by level, and Heal every lost point (`full`). Their reverses
+         (cause wounds, harm) are not spells of their own in the catalogue: no reversed cast is
+         modelled.
+    Tests: named on implementation, one per sub-step, each failing on the old code (the loader's
+    refusals; a cast, a receive and a cast on someone else with exact dice and call counts; the
+    cap, the 0 at full HP and the undo through the ledger).
+
 ## Consequences
 
 - A spell with no catalogued effect still spends its slot: the cast is logged and its text shown.
+- A cast-time heal (step 17) is instant only. Healing over time is not modelled and its spells
+  stay missing in the Priest audit: Accelerate Healing (a faster natural healing over days),
+  Heroes' Feast (1d4+4 after an hour-long feast, with a 12-hour bless and immunities) and Goodberry
+  (berries that cure 1 point each, at most 8 a day). Healing an undead (Undead Regeneration) is
+  out of scope (an effect by the target's kind); Regenerate regrows limbs and restores no hit
+  points. A reversed cast (cause wounds, harm, with its touch attack) is not modelled.
 - Time passing never refills anything ([ADR 0005](0005-rounds-and-time.md) step 7): only the
   long rest does.
 - Not covered: memorisation time, preparing from scrolls or other books, and spells per day

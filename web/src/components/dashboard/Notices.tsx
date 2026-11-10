@@ -8,7 +8,10 @@ import { useDatabaseStore } from "@/stores/database";
 import { isUnavailableMessage } from "@/api/http";
 import { endEffectsText } from "@/journal/kinds/buff";
 
-/** Server errors (verbatim, role=alert) and round notices (role=status), bottom-left. */
+/** How long an error toast stays before it goes by itself. */
+export const ERROR_MS = 10_000;
+
+/** Server errors (worded, role=alert) and round notices (role=status), bottom-left. */
 export function Notices() {
   const { t } = useTranslation();
   const spellName = useSpellName();
@@ -28,6 +31,20 @@ export function Notices() {
     const id = setTimeout(clearNotice, 8000);
     return () => clearTimeout(id);
   }, [notice, clearNotice]);
+
+  // An error does not stay over the settings and the dice bar: it goes by itself, or on Escape.
+  useEffect(() => {
+    if (!error) return;
+    const id = setTimeout(clearError, ERROR_MS);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") clearError();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      clearTimeout(id);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [error, clearError]);
 
   return (
     <div className="pointer-events-none fixed bottom-3 left-3 z-50 flex w-[420px] flex-col gap-2">

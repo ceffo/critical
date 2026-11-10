@@ -670,6 +670,13 @@
   "spellSlots": {
     "longRest": "Long rest",
     "longRestLabel": "Long rest: reset the spell slots",
+    "restConfirm": {
+      "title": "Long rest during a fight?",
+      "lead": "A fight is running (round {{round}}). Rest now anyway?",
+      "refills": "Every spell slot is refilled (the preparation stays) and the per-day items too. You can undo it from the journal.",
+      "cancel": "Cancel",
+      "confirm": "Rest"
+    },
     "none": "No spell slots available.",
     "level": "Level {{level}}",
     "used": "Used",

@@ -1,5 +1,11 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, expectSlotDots, logEntry, openDashboard } from "./helpers";
+import {
+  combatLog,
+  expectSlotDots,
+  logEntry,
+  nextRound,
+  openDashboard,
+} from "./helpers";
 import type { Page } from "@playwright/test";
 
 async function openSpells(page: Page) {
@@ -355,4 +361,68 @@ test("a repeated spell shows once with a count that drops as copies are cast; ro
   await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
   await expectSlotDots(level1, 1, 1, 3);
   await snap(page, "grouped-spells");
+});
+
+// Long rest asks first when a fight is running (round above 0), and only then. The rule is one
+// comparison on the round counter; what only a browser proves is the dialog's wiring: nothing sent
+// before the answer, Cancel and Escape leave the slots, focus returns to the button, the confirmed
+// rest is one journal entry and one Undo.
+test("Long rest: one click out of combat, a confirmation in a fight (cancel, Escape, confirm, undo)", async ({
+  page,
+  stack,
+}) => {
+  expect((await put(stack.apiUrl, ["haste"])).ok).toBe(true);
+  await openSpells(page);
+  const level3 = page.getByRole("region", {
+    name: "Level 3",
+    includeHidden: true,
+  });
+  const rest = page.getByTestId("long-rest");
+  const dialog = page.getByTestId("long-rest-confirm");
+  const cast = async () => {
+    await level3.getByRole("button", { name: "Cast Haste" }).click();
+    await expectSlotDots(level3, 3, 0, 1);
+  };
+
+  // Round 0: no confirmation.
+  await cast();
+  await rest.click();
+  await expect(dialog).toHaveCount(0);
+  await expectSlotDots(level3, 3, 1, 1);
+  await expect(logEntry(page, "Long rest: 1 spell slots")).toHaveCount(1);
+  await cast();
+
+  // Round 1: the confirmation says what is refilled; Cancel, then Escape, change nothing.
+  await nextRound(page);
+  await rest.click();
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("round 1");
+  await expect(dialog).toContainText("spell slot");
+  await expectSlotDots(level3, 3, 0, 1);
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(rest).toBeFocused();
+  await expectSlotDots(level3, 3, 0, 1);
+  await rest.click();
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(rest).toBeFocused();
+  await expectSlotDots(level3, 3, 0, 1);
+  await expect(logEntry(page, "Long rest")).toHaveCount(1); // only the round 0 one
+
+  // Confirm by keyboard: one rest, one journal entry, one Undo step.
+  await rest.click();
+  await dialog.getByRole("button", { name: "Rest", exact: true }).focus();
+  await page.keyboard.press("Enter");
+  await expect(dialog).toHaveCount(0);
+  await expectSlotDots(level3, 3, 1, 1);
+  await snap(page, "long-rest-confirmed-in-a-fight");
+  await expect(logEntry(page, "Long rest")).toHaveCount(2);
+  await page.getByTestId("undo").click();
+  await expect(logEntry(page, "Long rest").first()).toHaveAttribute(
+    "data-status",
+    "voided",
+  );
+  await expectSlotDots(level3, 3, 0, 1);
 });

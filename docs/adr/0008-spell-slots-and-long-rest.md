@@ -285,8 +285,9 @@ named otherwise.
          modelled.
     Tests: `TestParse_Heal`, `TestParse_HealRefused` (adapters/spelleffectsadpt, 17.1),
     `TestEntry_TargetChoiceAt_Heal` (spelleffectsvc, 17.3), `TestReceive_Heal_AtTheCastersLevel`,
-    `TestCast_Heal_SpellFailureHealsNothing`, `TestAddEffect_Heal_Refused` (17.2),
-    `TestCast_Heal_FullAsksTheGap` (17.4), `TestCast_Heal_OnTheCasterThroughTheLedger` (17.5),
+    `TestCast_Heal_SpellFailureHealsNothing`, `TestReceive_Heal_ImmuneReceivesNothing`, `TestAddEffect_Heal_Refused` (17.2),
+    `TestCast_Heal_FullAsksTheGap` (17.4), `TestCast_Heal_OnTheCasterThroughTheLedger` (17.5, castsvc) and
+    `TestCast_Step17_5_HealThroughTheLedgerAndUndo` (composition, the real recorder and one undo),
     `TestCast_Heal_OnSomeoneElseChangesNoHP` (17.6), `TestCast_Heal_Payload` (castsvc, 17.7).
 
 ## Consequences

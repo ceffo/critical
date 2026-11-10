@@ -104,6 +104,25 @@ func TestReceive_Heal_AtTheCastersLevel(t *testing.T) {
 	assert.Equal(t, 11, f.entries[len(f.entries)-1].HPDelta)
 }
 
+// ADR 0008 step 17.2: a character immune to the spell receives no heal: the
+// immunity answers first, no die is rolled, no HP moves and the answer
+// carries no heal.
+func TestReceive_Heal_ImmuneReceivesNothing(t *testing.T) {
+	v := casterOf("bard")
+	v.SpellImmunities = []string{"cure_light_wounds"}
+	f := healFixtureOf(t, v, 15) // no die queued: any roll fails the test
+	res, err := f.svc.Receive(context.Background(), charID, castsvc.ReceiveRequest{SpellID: "cure_light_wounds", CasterLevel: 9})
+	require.NoError(t, err)
+	assert.Equal(t, castsvc.TextOnlyImmune, res.TextOnly)
+	assert.Nil(t, res.Heal)
+	assert.Empty(t, f.dice.sides, "no die")
+	for _, e := range f.entries {
+		if e.Kind == actionlog.KindCast {
+			assert.Zero(t, e.HPDelta, "no HP on the entry")
+		}
+	}
+}
+
 // ADR 0008 step 17.6: cast on someone else (by choice or by the spell's
 // default) the heal is rolled once and shown, the caster's entry moves no HP
 // and the ledger is not read; full rolls nothing and has no amount.

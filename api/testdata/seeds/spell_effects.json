@@ -687,5 +687,19 @@
    },
    "type": "fire"
   }
+ },
+ {
+  "id": "cure_light_wounds",
+  "name": "Cure Light Wounds",
+  "level": 1,
+  "kind": "heal",
+  "confidence": "high",
+  "target": "self_or_other",
+  "duration": {
+   "kind": "permanent"
+  },
+  "heal": {
+   "dice": "1d8"
+  }
  }
 ]

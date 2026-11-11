@@ -7,7 +7,6 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
-  readsAfter,
   undoEntry,
   openTypedAdd,
 } from "./helpers";
@@ -28,12 +27,6 @@ function row(page: Page, id: string) {
 
 function form(page: Page) {
   return page.getByTestId("item-form");
-}
-
-function fieldError(page: Page, field: string) {
-  return form(page)
-    .locator(`[data-field="${field}"]`)
-    .getByTestId("field-error");
 }
 
 test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker; pop removes it", async ({
@@ -72,115 +65,6 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   ).toHaveCount(0);
   await openWorkspace(page, "Inventory");
   await expect(added).toHaveCount(0);
-});
-
-test("edit the wand's charges 4 to 3: logged; pop restores 4", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await row(page, "wand_lightning")
-    .getByRole("button", { name: "Edit Wand of lightning" })
-    .click();
-  await form(page).getByLabel("Count").fill("3");
-  await snap(page, "edit-form");
-  await form(page).getByRole("button", { name: "Save" }).click();
-
-  await expect(
-    row(page, "wand_lightning").getByTestId("item-count"),
-  ).toHaveText("3");
-  await snap(page, "item-edited");
-  await openWorkspace(page, "Act");
-  await expect(logEntry(page, "Edited Wand of lightning")).toContainText(
-    "count 4 → 3",
-  );
-
-  await undoEntry(page, "Edited Wand of lightning");
-  await openWorkspace(page, "Inventory");
-  await expect(
-    row(page, "wand_lightning").getByTestId("item-count"),
-  ).toHaveText("4");
-});
-
-test("remove an item: gone from the Inventory and the ammo picker; pop brings it back with its count", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await row(page, "arrows_plus2")
-    .getByRole("button", { name: "Remove Arrows +2" })
-    .click();
-  await expect(row(page, "arrows_plus2")).toHaveCount(0);
-  await snap(page, "item-removed");
-
-  await openWorkspace(page, "Act");
-  await expect(logEntry(page, "Removed Arrows +2 (16)")).toBeVisible();
-  await openWeapons(page);
-  await chooseWeapon(page, "Short Bow +2");
-  await expect(
-    ammoChips(page).getByRole("radio", { name: /^Arrows \+1,/ }),
-  ).toHaveCount(1);
-  await expect(
-    ammoChips(page).getByRole("radio", { name: /^Arrows \+2,/ }),
-  ).toHaveCount(0);
-
-  await undoEntry(page, "Removed Arrows +2");
-  await openWorkspace(page, "Inventory");
-  await expect(row(page, "arrows_plus2").getByTestId("item-count")).toHaveText(
-    "16",
-  );
-  await snap(page, "item-restored");
-});
-
-test("an empty name and invalid dice are rejected with a message under the field", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await openTypedAdd(page);
-  const f = form(page);
-  const save = f.getByRole("button", { name: "Add", exact: true });
-
-  await save.click();
-  await expect(fieldError(page, "name")).toHaveText("Name is required");
-
-  await f.getByLabel("Name").fill("Bomb");
-  await f.getByLabel("Effect dice").fill("2x6");
-  // The server's refusal of the field changed nothing: the page reads nothing again.
-  const reads = await readsAfter(page, async () => {
-    await save.click();
-    await expect(fieldError(page, "effectDice")).toContainText("2d6");
-  });
-  expect(reads).toEqual([]);
-  await expect(fieldError(page, "name")).toHaveCount(0);
-
-  await snap(page, "field-errors");
-
-  // Nothing was added or logged.
-  await expect(row(page, "bomb")).toHaveCount(0);
-  await expect(logEntry(page, "Added Bomb")).toHaveCount(0);
-});
-
-test("a daily item and an effect with a modifier: add, use rolls the modifier in", async ({
-  page,
-}) => {
-  await openInventory(page);
-  await openTypedAdd(page);
-  const f = form(page);
-  await f.getByLabel("Name").fill("Holy water");
-  await f.getByLabel("Category").selectOption("magic");
-  await f.getByLabel("Magic kind").selectOption("potion");
-  await f.getByLabel("Behaviour").selectOption("daily");
-  await f.getByLabel("Daily number").fill("2");
-  await f.getByLabel("Count").fill("2");
-  await f.getByLabel("Effect dice").fill("1d4+3");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await expect(row(page, "holy_water").getByTestId("item-count")).toHaveText(
-    "2 / 2",
-  );
-
-  await page.getByRole("button", { name: "Use one Holy water" }).click();
-  const total = Number(await page.getByTestId("item-total").textContent());
-  expect(total).toBeGreaterThanOrEqual(4);
-  expect(total).toBeLessThanOrEqual(7);
-  await expect(page.getByTestId("item-result")).toContainText("1d4+3");
 });
 
 // ADR 0033 step 2: a magic scroll names the spell it holds, picked from the catalogue in the

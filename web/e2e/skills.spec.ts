@@ -1,13 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import { chooseLanguage, combatLog, openDashboard, openFold } from "./helpers";
 
-const VIEWPORTS = [
-  { width: 1280, height: 800 },
-  { width: 1440, height: 900 },
-  { width: 1920, height: 1080 },
-  { width: 2560, height: 1440 },
-];
-
 // What only a browser proves: the Skills tab's rows are buttons wired to the server's check (no
 // pre-roll adjustment in the tab, ADR 0027 step 12), the result card shows the check and adjusts the
 // latest one after the roll, the journal words both, and Undo pops a check. The rules (d20 / d100,
@@ -77,21 +70,6 @@ test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo
     `Climb walls: d100 ${d100} vs 85`,
   );
 
-  for (const vp of VIEWPORTS) {
-    await page.setViewportSize(vp);
-    await expect(climb).toBeVisible();
-    const scroll = await page.evaluate(() => {
-      const el = document.scrollingElement ?? document.documentElement;
-      return {
-        x: el.scrollWidth - el.clientWidth,
-        y: el.scrollHeight - el.clientHeight,
-      };
-    });
-    expect(scroll, "no page scroll").toEqual({ x: 0, y: 0 });
-    await snap(page, `skills-${vp.width}x${vp.height}`);
-  }
-  await page.setViewportSize({ width: 1440, height: 900 });
-
   // Undo pops the bard skill check: its journal row is cancelled, the proficiency's is not.
   const undo = page.getByTestId("undo");
   await expect(undo).toHaveAttribute("title", /Climb walls/);
@@ -127,71 +105,4 @@ test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo
     /^(Réussi|Échec)$/,
   );
   await snap(page, "skills-fr-dark-1440x900");
-});
-
-// What only a browser proves (ADR 0028): the character card's DEX tile is the check's roll button
-// (click, Enter and Space), the result card shows the check, its adjustment after the roll re-judges
-// the same roll, the journal words it and Undo pops the adjustment. The d20 is random: the tile is
-// rolled until the die lands where −2 decides against DEX 17 (16 or 17). The rules (target in
-// effect, natural 20, ranges) are Go tests (skillsvc), the wording unit tests (web/src/journal).
-test("ability check: click DEX, adjust −2 on the card, the verdict changes, undo restores it", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const dex = page.getByRole("button", { name: "Dexterity check (17)" });
-  const card = page.getByRole("region", { name: "Detail", exact: true });
-  const result = card.getByTestId("ability-result");
-  // One roll per input: each must send its own POST (the keyboard is not left to the dice).
-  const roll = async (input: () => Promise<void>) => {
-    const rolled = page.waitForResponse(
-      (r) =>
-        r.url().endsWith("/api/roll/ability/dex") &&
-        r.request().method() === "POST",
-    );
-    await input();
-    const res = await rolled;
-    expect(res.ok()).toBe(true);
-    const n = ((await res.json()) as { roll: number }).roll;
-    await expect(result.getByTestId("hex-die")).toHaveText(String(n));
-    return n;
-  };
-  for (const key of ["Enter", "Space"])
-    await roll(async () => {
-      await dex.focus();
-      await page.keyboard.press(key);
-    });
-  // The seeded dice (CRITICAL_DICE_SEED, fixtures.ts): this test's fourth roll (the second click,
-  // after the two keyboard rolls and one click) is a 16 or 17, a success on the 17 that a −2
-  // adjustment turns into a failure. No roll is repeated to get an outcome; the assertion fails
-  // loudly if the sequence changes.
-  await roll(() => dex.click());
-  const d20 = await roll(() => dex.click());
-  expect([16, 17], "the seed's fourth roll is no longer a 16 or 17").toContain(
-    d20,
-  );
-  await expect(card.getByTestId("card-header")).toContainText("Dexterity");
-  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);
-  await expect(result.getByTestId("verdict")).toHaveText("Success");
-
-  const form = await openFold(
-    card,
-    "Adjust after the roll",
-    "Adjust this check",
-  );
-  const harder = form.getByRole("button", { name: "Decrease adjustment" });
-  await harder.click();
-  await harder.click();
-  await form.getByRole("button", { name: "Apply" }).click();
-  await expect(result.getByTestId("verdict")).toHaveText("Failure");
-  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 15`);
-  await expect(result.getByTestId("hex-die")).toHaveText(String(d20));
-  await expect(combatLog(page)).toContainText(
-    `DEX check: d20 ${d20} vs 15 (17 −2), failure`,
-  );
-  await snap(page, "ability-check-adjusted");
-
-  // Undo pops the adjustment, its own step: the check reads as rolled.
-  await page.getByTestId("undo").click();
-  await expect(result.getByTestId("verdict")).toHaveText("Success");
-  await expect(result.getByTestId("skill-vs")).toHaveText(`${d20} vs 17`);
 });

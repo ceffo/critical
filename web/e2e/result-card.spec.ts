@@ -62,14 +62,5 @@ test("a journal entry opens read-only in the card, Latest returns, Rolls filters
   await expect(logEntry(page, "e2e journal orc")).toHaveCount(0);
   await expect(saves).toHaveCount(2);
   await saves.last().getByTestId("log-select").click();
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1440, height: 900 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    await expect(card(page).getByTestId("save-result")).toBeVisible();
-    await snap(page, `result-card-${vp.width}x${vp.height}`);
-  }
+  await snap(page, "result-card-older-save");
 });

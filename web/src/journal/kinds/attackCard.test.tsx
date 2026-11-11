@@ -31,7 +31,7 @@ async function render(r: RollResult, lng: "en" | "fr") {
     <I18nextProvider i18n={inst}>
       {attackKind.card?.({
         payload: r,
-        entry: undefined,
+        entry: null,
         text: "",
         interactive: false,
       })}

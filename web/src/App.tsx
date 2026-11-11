@@ -140,7 +140,6 @@ function App() {
         >
           <Identity
             onOpenXp={() => focus("xp")}
-            onOpenSkills={() => focus("act")}
             onOpenSpells={() => focus("spells")}
           />
           <div className="flex flex-col gap-3">

@@ -15,6 +15,7 @@ import {
   openWorkspace,
   undoEntry,
   openTypedAdd,
+  openSpend,
 } from "./helpers";
 
 // Creating a character through the creation route (ADR 0034), then switching, renaming and retiring
@@ -378,12 +379,13 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   // the options' cost), on the server's pool (a level 1 fighter: 4 slots).
   await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Skills" }).click();
-  const skills = page.getByRole("tabpanel", { name: "Skills" });
-  await expect(skills.getByTestId("weapon-slots-line")).toHaveText(
-    "Slots: 0 of 4 · 4 slots to spend",
+  await page.getByTestId("to-spend-tag").click();
+  await expect(page.getByTestId("grant-weaponSlots")).toContainText(
+    "4 weapon proficiency slots",
   );
-  await skills.getByTestId("weapon-edit").click();
-  const editor = skills.getByTestId("weapon-editor");
+  await page.keyboard.press("Escape");
+  await openSpend(page, "weapon");
+  const editor = page.getByTestId("weapon-editor");
   const row = editor.getByTestId("weapon-row-long_sword");
   await row
     .getByRole("button", { name: /^Become proficient with Long sword/ })
@@ -405,11 +407,6 @@ test("create a fighter with 18/50, specialize in a long sword, attack", async ({
   await snap(page, "weapon-editor");
   await editor.getByTestId("weapon-save").click();
   await expect(editor).toBeHidden();
-  await expect(
-    skills
-      .getByTestId("weapon-pick-long_sword")
-      .getByTestId("weapon-pick-specialized"),
-  ).toBeVisible();
   await expectUndoOn(
     page,
     "Weapon proficiency slots: Long sword 0 → 2 (specialization)",
@@ -569,7 +566,7 @@ test("create a thief, roll a skill, backstab", async ({ page }) => {
   // the typed points; points over the budget are refused (ADR 0037 step 10), by the preview and by
   // Save alike, the message under the editor; points within it are saved, and the journal's Undo
   // gives them back.
-  await page.getByTestId("thief-points-edit").click();
+  await openSpend(page, "skillPoints");
   const editor = page.getByTestId("thief-points-editor");
   await editor.getByTestId("thief-points-open_locks").fill("25");
   await expect(editor.getByTestId("skill-points-left")).toContainText(

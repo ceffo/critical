@@ -15,13 +15,14 @@ import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
 import { useLookupStore } from "@/stores/lookup";
-import { useSkillsEditor, type SkillsEditor } from "@/stores/skillsEditor";
+import { useSkillsEditor } from "@/stores/skillsEditor";
 import type { FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
 import { CharacterDetails } from "./CharacterDetails";
 import { ClassEntries } from "./ClassEntries";
 import { LevelUpPrompt } from "./LevelUpPrompt";
-import { ToSpendTag } from "./ToSpendTag";
+import { SpendDialog } from "./SpendDialog";
+import { ToSpendTag, type SpendPools } from "./ToSpendTag";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
@@ -41,12 +42,9 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
  */
 export function Identity({
   onOpenXp,
-  onOpenSkills,
   onOpenSpells,
 }: {
   onOpenXp: () => void;
-  /** Focuses the Act activity, whose Skills tab holds the proficiency and skill point editors. */
-  onOpenSkills: () => void;
   /** Focuses the Spells activity, the spell lookup (a free spell's link, ADR 0030 step 20.8). */
   onOpenSpells: () => void;
 }) {
@@ -72,12 +70,8 @@ export function Identity({
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useTableStore((s) => s.busy);
-  const openEditor = useSkillsEditor((s) => s.open);
-  // ADR 0037 step 15's links: the editor, in the Act activity's Skills tab.
-  const openSkillsEditor = (editor: SkillsEditor) => {
-    openEditor(editor);
-    onOpenSkills();
-  };
+  // ADR 0037 step 15's links: the editor, in the dialog the card hosts.
+  const openSkillsEditor = useSkillsEditor((s) => s.open);
   // ADR 0030 step 20.8's link: the lookup on the free spell's spell level, Ajouter claiming it.
   const openFreeSpellLookup = useLookupStore((s) => s.openFreeSpell);
   const openFreeSpell = (fs: FreeSpell) => {
@@ -85,8 +79,19 @@ export function Identity({
     onOpenSpells();
   };
 
+  // The pools the character has: the entry stays while there is one, even at 0 left (ADR 0037 step
+  // 15, amended).
+  const slots = character?.derived.proficiencySlots;
+  const pools: SpendPools = {
+    weaponSlots: slots?.weapon ?? undefined,
+    nonWeaponSlots: slots?.nonWeapon,
+    skillPoints:
+      (character?.derived.skillSets.length ?? 0) > 0 ? {} : undefined,
+  };
+
   return (
     <div className="flex min-w-0 flex-col gap-2">
+      <SpendDialog />
       {/* The identity's sub-band at the card's top, in place of its top padding (ADR 0026 6.3, 6.5). */}
       <div
         className={cn(
@@ -115,6 +120,7 @@ export function Identity({
               )}
               <ToSpendTag
                 toSpend={character.derived.levelUp.toSpend}
+                pools={pools}
                 onOpenEditor={openSkillsEditor}
                 onOpenFreeSpell={openFreeSpell}
               />

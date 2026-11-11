@@ -7,6 +7,7 @@ import {
   openDashboard,
   openWorkspace,
   reloadSettled,
+  openSpend,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -88,12 +89,9 @@ test("thief 1 to 3: the tag by keyboard, the panel follows each level, undo and 
   await expect(firstLink).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(pop).toBeHidden();
-  await expect(page.getByRole("tab", { name: "Skills" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
   await expect(
     page
+      .getByTestId("spend-dialog")
       .getByTestId("weapon-editor")
       .or(page.getByTestId("proficiency-editor"))
       .or(page.getByTestId("thief-points-editor")),
@@ -156,12 +154,10 @@ test("spend every slot and point in the editors: the tag goes with no reload", a
     await page.keyboard.press("Escape");
     return text;
   };
-  await page.getByRole("tab", { name: "Skills" }).click();
-  const skills = page.getByRole("tabpanel", { name: "Skills" });
 
   // Weapons: both slots on one type.
-  await skills.getByTestId("weapon-edit").click();
-  const weapon = skills.getByTestId("weapon-editor");
+  await openSpend(page, "weapon");
+  const weapon = page.getByTestId("weapon-editor");
   const add = weapon.getByTestId("weapon-add").first();
   await add.click();
   await add.click();
@@ -173,8 +169,8 @@ test("spend every slot and point in the editors: the tag goes with no reload", a
   expect(await left()).not.toContain("weapon proficiency");
 
   // Non-weapon: one cost-1 proficiency with all seven slots.
-  await skills.getByTestId("proficiency-edit").click();
-  const prof = skills.getByTestId("proficiency-editor");
+  await openSpend(page, "nonWeapon");
+  const prof = page.getByTestId("proficiency-editor");
   await prof
     .locator("[data-testid^=proficiency-add-]:not([disabled])")
     .first()
@@ -191,8 +187,8 @@ test("spend every slot and point in the editors: the tag goes with no reload", a
   expect(afterProf).toContain("60 skill points");
 
   // Points: 30 on each of two skills; the tag goes with the last point.
-  await skills.getByTestId("thief-points-edit").click();
-  const pts = skills.getByTestId("thief-points-editor");
+  await openSpend(page, "skillPoints");
+  const pts = page.getByTestId("thief-points-editor");
   const inputs = pts.locator("input");
   await inputs.nth(0).fill("30");
   await inputs.nth(1).fill("30");
@@ -201,11 +197,13 @@ test("spend every slot and point in the editors: the tag goes with no reload", a
   );
   await pts.getByTestId("thief-points-save").click();
   await expect(pts).toBeHidden();
-  await expect(tag).toHaveCount(0);
+  // The entry stays with the pools, nothing owed any more (ADR 0037 step 15, amended).
+  await expect(tag).toBeVisible();
+  expect(await left()).not.toContain("skill points");
   await expectNoReload(page);
 });
 
-test("an editor opened from the card, from another tab and another activity", async ({
+test("an editor opened from the card is a dialog over any tab and any activity", async ({
   page,
 }) => {
   await makeCharacter(page, "thief", "Vex", 0);
@@ -214,29 +212,30 @@ test("an editor opened from the card, from another tab and another activity", as
     await tag.click();
     await page.getByTestId(link).click();
   };
-  const skillsTab = page.getByRole("tab", { name: "Skills" });
+  const dialog = page.getByTestId("spend-dialog");
 
-  // From the Weapons tab.
+  // Over the Weapons tab: the tab stays, Escape closes the dialog.
   await page.getByRole("tab", { name: "Weapons" }).click();
   await open("grant-open-weapon");
-  await expect(skillsTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByTestId("weapon-editor")).toBeVisible();
-  // Leaving the tab closes the editor.
-  await page.getByRole("tab", { name: "Weapons" }).click();
-  await expect(page.getByTestId("weapon-editor")).toHaveCount(0);
+  await expect(dialog.getByTestId("weapon-editor")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole("tab", { name: "Weapons" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
 
-  // From the Experience activity: Act is focused, the tab and the editor are right.
+  // Over the Experience activity: it stays focused, the editor is in the dialog.
   await openWorkspace(page, "Experience");
   await open("grant-open-skillPoints");
+  await expect(dialog.getByTestId("thief-points-editor")).toBeVisible();
+  await dialog.getByTestId("thief-points-cancel").click();
+  await expect(dialog).toHaveCount(0);
   await expect(
     page
       .getByRole("navigation", { name: "Activities" })
-      .getByRole("button", { name: "Act", exact: true }),
+      .getByRole("button", { name: "Experience", exact: true }),
   ).toHaveAttribute("aria-current", "page");
-  await expect(skillsTab).toHaveAttribute("aria-selected", "true");
-  await expect(page.getByTestId("thief-points-editor")).toBeVisible();
-  await page.getByRole("tab", { name: "Weapons" }).click();
-  await expect(page.getByTestId("thief-points-editor")).toHaveCount(0);
 });
 
 test("a fighter at 4 has no grants and no panel; a mage at 3 shows only the non-weapon row", async ({

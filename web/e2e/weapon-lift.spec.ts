@@ -1,5 +1,10 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard, openWorkspace } from "./helpers";
+import {
+  chooseLanguage,
+  openDashboard,
+  openWorkspace,
+  openSpend,
+} from "./helpers";
 
 // What only a browser proves for the multi-class weapon lift (ADR 0041 step 2.5): the admin's switch
 // on the Ruleset screen reaches the weapon picker of a real multi-class cleric/fighter. Whether a
@@ -85,10 +90,8 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   // Switch off (the default): the cleric's limit holds and the long sword is not offered.
   const openEditor = async () => {
     await openWorkspace(page, "Act");
-    await page.getByRole("tab", { name: "Skills" }).click();
-    const skills = page.getByRole("tabpanel", { name: "Skills" });
-    await skills.getByTestId("weapon-edit").click();
-    return skills.getByTestId("weapon-editor");
+    await openSpend(page, "weapon");
+    return page.getByTestId("weapon-editor");
   };
   let editor = await openEditor();
   let row = editor.getByTestId("weapon-row-long_sword");

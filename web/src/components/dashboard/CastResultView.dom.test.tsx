@@ -207,6 +207,7 @@ describe("ExposureResultView", () => {
   it("shows what came off the Bard's HP", async () => {
     await renderApp(
       <ExposureResultView
+        interactive={false}
         result={{ ...exposure, onSelf: true, hpDelta: -9 }}
       />,
     );

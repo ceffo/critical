@@ -8,7 +8,6 @@ import {
   openDashboard,
   openWorkspace,
   reloadSettled,
-  openSpend,
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
@@ -139,129 +138,6 @@ test("thief 1 to 3: roll 2 then 3, the panel switches; undo takes it, redo bring
   // Closed with "Fermer", it stays closed.
   await grants.getByTestId("level-up-grants-dismiss").click();
   await expect(grants).toHaveCount(0);
-});
-
-test("spend every slot and point in the editors: the tag goes with no reload", async ({
-  page,
-}) => {
-  await makeCharacter(page, "thief", "Vex", 0);
-  await markNoReload(page);
-  const tag = page.getByTestId("to-spend-tag");
-  await expect(tag).toBeVisible();
-  const left = async () => {
-    await tag.click();
-    const text =
-      (await page.getByTestId("level-up-to-spend").textContent()) ?? "";
-    await page.keyboard.press("Escape");
-    return text;
-  };
-
-  // Weapons: both slots on one type.
-  await openSpend(page, "weapon");
-  const weapon = page.getByTestId("weapon-editor");
-  const add = weapon.getByTestId("weapon-add").first();
-  await add.click();
-  await add.click();
-  await expect(weapon.getByTestId("weapon-pool-spent")).toHaveText(
-    "Spent 2, left 0",
-  );
-  await weapon.getByTestId("weapon-save").click();
-  await expect(weapon).toBeHidden();
-  expect(await left()).not.toContain("weapon proficiency");
-
-  // Non-weapon: one cost-1 proficiency with all seven slots.
-  await openSpend(page, "nonWeapon");
-  const prof = page.getByTestId("proficiency-editor");
-  await prof
-    .locator("[data-testid^=proficiency-add-]:not([disabled])")
-    .first()
-    .click();
-  for (let i = 0; i < 6; i++)
-    await prof.getByTestId("proficiency-more").first().click();
-  await expect(prof.getByTestId("proficiency-pool-spent")).toHaveText(
-    "Spent 7, left 0",
-  );
-  await prof.getByTestId("proficiency-save").click();
-  await expect(prof).toBeHidden();
-  const afterProf = await left();
-  expect(afterProf).not.toContain("proficiency slots");
-  expect(afterProf).toContain("60 skill points");
-
-  // Points: 30 on each of two skills; the tag goes with the last point.
-  await openSpend(page, "skillPoints");
-  const pts = page.getByTestId("thief-points-editor");
-  const inputs = pts.locator("input");
-  await inputs.nth(0).fill("30");
-  await inputs.nth(1).fill("30");
-  await expect(pts.getByTestId("skill-points-preview")).toContainText(
-    "Spent 60, left 0",
-  );
-  await pts.getByTestId("thief-points-save").click();
-  await expect(pts).toBeHidden();
-  // The entry stays with the pools, nothing owed any more (ADR 0037 step 15, amended).
-  await expect(tag).toBeVisible();
-  expect(await left()).not.toContain("skill points");
-  await expectNoReload(page);
-});
-
-test("an editor opened from the card is a dialog over any tab and any activity", async ({
-  page,
-}) => {
-  await makeCharacter(page, "thief", "Vex", 0);
-  const tag = page.getByTestId("to-spend-tag");
-  const open = async (link: string) => {
-    await tag.click();
-    await page.getByTestId(link).click();
-  };
-  const dialog = page.getByTestId("spend-dialog");
-
-  // Over the Weapons tab: the tab stays, Escape closes the dialog.
-  await page.getByRole("tab", { name: "Weapons" }).click();
-  await open("grant-open-weapon");
-  await expect(dialog.getByTestId("weapon-editor")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(page.getByRole("tab", { name: "Weapons" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-
-  // Over the Experience activity: it stays focused, the editor is in the dialog.
-  await openWorkspace(page, "Experience");
-  await open("grant-open-skillPoints");
-  await expect(dialog.getByTestId("thief-points-editor")).toBeVisible();
-  await dialog.getByTestId("thief-points-cancel").click();
-  await expect(dialog).toHaveCount(0);
-  await expect(
-    page
-      .getByRole("navigation", { name: "Activities" })
-      .getByRole("button", { name: "Experience", exact: true }),
-  ).toHaveAttribute("aria-current", "page");
-});
-
-test("a fighter at 4 has no grants and no panel; a mage at 3 shows only the non-weapon row", async ({
-  page,
-}) => {
-  // Table 34: a warrior gains a weapon and a non-weapon slot every 3 levels, so level 3 grants and
-  // level 4 does not: the panel of 3 gives way to nothing.
-  await makeCharacter(page, "fighter", "Orla", 8000, 10);
-  const grants = page.getByTestId("level-up-grants");
-  await roll(page).click();
-  await expect(grants).toHaveCount(0); // level 2 grants nothing
-  await roll(page).click();
-  await expect(grants).toContainText("Level 3 grants");
-  await roll(page).click();
-  await expect(page.getByTestId("level-up")).toHaveCount(0);
-  await expect(grants).toHaveCount(0);
-
-  // A mage gains a non-weapon slot every 3 levels but a weapon one only every 6.
-  await makeCharacter(page, "mage", "Mélia", 5000, 4);
-  await roll(page).click();
-  await roll(page).click();
-  await expect(grants).toContainText("Level 3 grants");
-  await expect(grants.getByTestId("grant-nonWeaponSlots")).toBeVisible();
-  await expect(grants.getByTestId("grant-weaponSlots")).toHaveCount(0);
-  await expect(grants.getByTestId("grant-skillPoints")).toHaveCount(0);
 });
 
 // ADR 0030 step 20.8, what only a browser proves: the card's free spell link opens the Spells

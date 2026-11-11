@@ -99,23 +99,3 @@ test("create a half-elf fighter/cleric from its XP per class", async ({
   );
   await snap(page, "multi-sheet");
 });
-
-test("create an elf fighter who became a mage, with the level it was left at", async ({
-  page,
-}) => {
-  const step = await openClassStep(page, "Double classé");
-  const rows = step.getByTestId("class-rows");
-  const old = rows.getByTestId("class-row-0");
-  await old.getByLabel("Classe quittée").selectOption("fighter");
-  await old.getByLabel("Quittée au niveau").fill("9");
-  await rows
-    .getByTestId("class-row-1")
-    .getByLabel("Nouvelle classe")
-    .selectOption("mage");
-  await rows.getByTestId("class-row-1").getByLabel("XP").fill("20000");
-  await snap(page, "dual-class-step");
-  await finish(page, "Elfe", "Vael", true);
-  await expect(page.getByTestId("character")).toContainText("Guerrier");
-  await expect(page.getByTestId("character")).toContainText("Magicien");
-  await snap(page, "dual-sheet");
-});

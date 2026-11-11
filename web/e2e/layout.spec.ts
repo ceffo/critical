@@ -138,7 +138,7 @@ async function expectNoScroll(column: Locator, what: string) {
 }
 
 /**
- * ADR 0027 step 9 on the journal: a one-line entry is a 22 px row (at most 24), turn blocks touch
+ * ADR 0027 step 9 on the journal: a one-line entry is a 24 px row, turn blocks touch
  * (no vertical gap), the turn marker is at most 3rem wide, the entry text starts close to the left,
  * every time ends at the same right edge (9.4) and a turn's opening rows are not framed (9.6).
  * `long` holds the texts whose entries may wrap.
@@ -605,7 +605,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       ] as const)
         await expectInside(el, character, what);
       await openWorkspace(page, "Act");
-      // ADR 0022 step 5.1, ADR 0027 step 9: an entry is one 22 px line; only a long one wraps.
+      // ADR 0022 step 5.1, ADR 0027 step 9: an entry is one 24 px line; only a long one wraps.
       const row = (text: string) =>
         combatLog(page).getByRole("listitem").filter({ hasText: text });
       await expectCompactJournal(page, [LONG_SOURCE], size);
@@ -6083,4 +6083,114 @@ test("weapon in hand: labelled stat chips and other weapons as chips, then a men
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("Enter");
   await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
+});
+
+// ADR 0022 step 2.4 (amended by ADR 0026 step 5.1 and this change): in the journal an undo group
+// is a left bracket and nothing else, a selected row is a fill and nothing else, the latest row
+// keeps its outline, damage is a drop and healing a heart, every row is a 24 px target with a
+// visible focus ring, and nothing is cut in en and fr at the three large viewports. Only a browser
+// paints these; the ratios of the colours themselves are the theme unit tests' (theme.test).
+test("journal rows: undo group, selected, latest and the damage drop, 24 px, en and fr", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await openDashboard(page);
+  await recordHp(page, "damage", 7, "Orc axe");
+  await recordHp(page, "heal", 3, "Potion sip");
+  // An attack is the latest result.
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const form = attackForm(page);
+  await form.getByLabel("Target AC").fill("5");
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
+  // Adding a catalogue item and equipping it at once is one transaction: the undo group.
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Add item" }).click();
+  await page.getByTestId("add-row-long_sword").click();
+  await page.getByTestId("add-submit").click();
+  await expect(page.getByTestId("add-piece")).toHaveCount(0);
+  await openWorkspace(page, "Act");
+  const log = combatLog(page);
+  const group = log.getByTestId("log-transaction").first();
+  await expect(group).toBeVisible();
+
+  const look = (el: Locator) =>
+    el.evaluate((node) => {
+      const s = getComputedStyle(node);
+      const clear = (c: string) =>
+        c === "rgba(0, 0, 0, 0)" || c === "transparent";
+      return {
+        bracket: s.borderLeftWidth,
+        fill: !clear(s.backgroundColor),
+        bar: s.boxShadow !== "none",
+        outline: s.outlineStyle === "none" ? "0px" : s.outlineWidth,
+      };
+    });
+  // The undo group: a 2 px bracket, no fill.
+  expect(await look(group)).toMatchObject({ bracket: "2px", fill: false });
+
+  const damage = logEntry(page, "Orc axe");
+  const heal = logEntry(page, "Potion sip");
+  const icon = (row: Locator) => row.locator("svg").first().innerHTML();
+  expect(await icon(damage), "damage and healing icons differ").not.toBe(
+    await icon(heal),
+  );
+
+  // The newest result is the latest: the outline, no fill, no bar.
+  const latestRow = log.locator('[data-latest="true"]');
+  await expect(latestRow).toHaveCount(1);
+  expect(await look(latestRow)).toMatchObject({
+    fill: false,
+    bar: false,
+    outline: "2px",
+  });
+  await snap(page, "journal-rows-latest-en");
+  // A row the player picks: the fill, no bar, no outline; a row of the group does not copy it.
+  await damage.click();
+  await expect(damage).toHaveAttribute("data-selected", "true");
+  expect(await look(damage)).toMatchObject({
+    fill: true,
+    bar: false,
+    outline: "0px",
+  });
+  for (const row of await group.getByRole("listitem").all())
+    expect(await look(row)).toMatchObject({ fill: false });
+  await snap(page, "journal-rows-en");
+
+  // Every row is at least a 24 px target; keyboard focus shows a ring.
+  for (const row of await log.getByRole("listitem").all())
+    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  await heal.getByTestId("log-select").focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  expect(
+    await heal
+      .getByTestId("log-select")
+      .evaluate((el) => getComputedStyle(el).boxShadow),
+    "focus ring",
+  ).not.toBe("none");
+
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      const where = `${lang} ${vp.width}x${vp.height}`;
+      await expectNoClippedText(log, `journal rows, ${where}`);
+      await snap(page, `journal-rows-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+  for (const [mode, theme] of [
+    ["Sombre", "Arcane"],
+    ["Clair", "Parchemin"],
+  ] as const) {
+    await chooseSetting(page, mode);
+    await chooseTheme(page, theme);
+    await page.waitForTimeout(150);
+    await expectNoClippedText(log, `journal rows, ${theme}`);
+    await snap(page, `journal-rows-fr-${theme.toLowerCase()}`);
+  }
 });

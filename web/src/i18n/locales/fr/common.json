@@ -1992,10 +1992,7 @@
     "row": "Plage {{n}}",
     "remove": "Supprimer la plage {{n}}",
     "add": "Ajouter une plage",
-    "addShort": "Ajouter",
-    "save": "Enregistrer la table",
-    "saveShort": "Enregistrer",
-    "saved": "Enregistré. Le prochain critique l'utilise."
+    "addShort": "Ajouter"
   },
   "ruleset": {
     "open": "Règles",
@@ -2003,6 +2000,13 @@
     "title": "Règles de la partie",
     "back": "Retour",
     "backHint": "Retour à la feuille de personnage",
+    "save": "Enregistrer",
+    "saveHint": "Enregistrer tous les changements de cette page",
+    "discard": "Annuler",
+    "discardHint": "Annuler les changements pas encore enregistrés",
+    "saved": "Enregistré. Le prochain critique et la prochaine réussite l'utilisent.",
+    "unsaved": "Non enregistré",
+    "unsavedChanges": "Changements pas encore enregistrés",
     "loadFailed": "Impossible de charger les règles : {{message}}",
     "houseRules": {
       "title": "Règles maison",
@@ -2011,7 +2015,6 @@
       "dualclassAnyRace": "Double-classé : toute race",
       "weaponHelp": "Un personnage à plusieurs classes peut utiliser toute arme qu'une de ses autres classes permet, même si l'une d'elles est limitée aux armes contondantes (le clerc). Désactivé par défaut. La spécialisation d'arme n'est pas modifiée.",
       "multiclassAnyWeapon": "Multi-classé : toute arme",
-      "saved": "Enregistré.",
       "levelLimits": "Limites de niveau",
       "levelLimitsMode": {
         "warn": "Avertir : un niveau au-delà de la limite de la race est signalé, jamais refusé."
@@ -2023,10 +2026,7 @@
       "none": "Aucun effet de réussite.",
       "proficiency": "Compétence",
       "ac": "CA",
-      "rounds": "Tours",
-      "save": "Enregistrer",
-      "saveHint": "Enregistrer les effets de réussite",
-      "saved": "Enregistré. La prochaine réussite les utilise."
+      "rounds": "Tours"
     }
   },
   "weapons": {

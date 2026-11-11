@@ -16,8 +16,9 @@ import type { ChangelogVersion } from "@/types/changelog";
 const NEAR_END_PX = 240;
 
 /**
- * The changelog window (ADR 0039 step 7), opened from the version badge: a modal overlay of two
- * thirds of the viewport's width and height, so no screen's height changes. Versions newest first,
+ * The changelog window (ADR 0039 step 7), opened from the version badge: a modal overlay sized to
+ * its content, up to 40 rem wide and two thirds of the viewport high (it scrolls inside past that),
+ * so no screen's height changes. Versions newest first,
  * loaded by infinite scroll. The bullets are English as served (step 5); the chrome is translated.
  */
 export function ChangelogPanel({
@@ -32,7 +33,7 @@ export function ChangelogPanel({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent
         data-testid="changelog-panel"
-        className="h-[66.667dvh] max-h-none w-[66.667vw] max-w-none gap-3"
+        className="max-h-[66.667dvh] w-fit max-w-[min(40rem,calc(100vw-2rem))] min-w-[min(20rem,calc(100vw-2rem))] gap-3"
       >
         <div className="flex items-center gap-2">
           <DialogTitle className="section-label flex-1">

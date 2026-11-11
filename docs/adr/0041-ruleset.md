@@ -108,7 +108,13 @@ characters)." And: "we lifted racial restriction for multi and dual class in our
    the level limits mode is read-only while it has one value). `/api/crit-table` is removed outright, with
    no alias, and its callers move in the same change. The crit table editor leaves the Attack panel for a
    **Ruleset** screen in the cog menu, visible to admins to edit and to players to read (read-only
-   for players); the Attack panel keeps only the roll. New refusals get a row in
+   for players); the Attack panel keeps only the roll.
+   The screen has one save model (2026-11-11, the user accepted the item's fallback on 2026-11-10: the
+   crit table is one object the server validates whole, so it cannot save per cell): every card is edited
+   in a draft, a card with unsaved edits is tagged, and one page-level Save sends each changed part
+   through its own PUT, then says "Saved"; Discard returns the drafts to the saved state. A refused part
+   shows the refusal at its card and keeps its edits; the parts already accepted stay saved (no
+   undo, step 7; each PUT is its own transaction and audit line). New refusals get a row in
    `internal/render` and an `apiError.<code>` key in both locales. Test needed: an e2e-free API
    test per refusal; one Playwright flow (an admin edits a crit row on the Ruleset screen and the
    next attack uses it), the rest in Go.

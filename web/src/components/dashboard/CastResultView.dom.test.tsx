@@ -190,7 +190,10 @@ describe("ExposureResultView", () => {
 
   it("names the option and tells the DM when the damage is not on the Bard", async () => {
     await renderApp(
-      <ExposureResultView result={{ ...exposure, onSelf: false }} />,
+      <ExposureResultView
+        interactive={false}
+        result={{ ...exposure, onSelf: false }}
+      />,
     );
     expect(screen.getByTestId("exposure-mode")).toHaveTextContent(
       "Option: Passing through",

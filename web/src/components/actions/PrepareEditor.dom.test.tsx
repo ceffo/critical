@@ -96,9 +96,7 @@ describe("PrepareEditor", () => {
 
   it("a spell's name opens its details", async () => {
     const { user } = await editor(["alarm"]);
-    await user.click(
-      within(draft(1)).getByRole("button", { name: "Alarm", exact: true }),
-    );
+    await user.click(within(draft(1)).getByRole("button", { name: /^Alarm$/ }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Alarm");
   });
 

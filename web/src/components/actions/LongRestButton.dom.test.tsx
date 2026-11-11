@@ -43,7 +43,7 @@ describe("LongRestButton", () => {
     expect(onRest).not.toHaveBeenCalled();
 
     await user.click(rest());
-    await user.click(screen.getByRole("button", { name: "Rest", exact: true }));
+    await user.click(screen.getByRole("button", { name: /^Rest$/ }));
     expect(onRest).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("long-rest-confirm")).toBeNull();
   });

@@ -293,9 +293,12 @@ async function startWebServer(): Promise<{
  * proxied to this API). Never touches .dev/ or fixed ports.
  */
 export const test = base.extend<
-  { stack: Stack } & StackOptions,
+  { stack: Stack; journalAll: boolean } & StackOptions,
   { webServer: WebServer }
 >({
+  // The journal's saved filter: specs look their setup rows up, so they start on "All"; the one
+  // that proves the default (setup hidden) sets this to false.
+  journalAll: [true, { option: true }],
   character: [{}, { option: true }],
   extraSpells: [{ rows: [] }, { option: true }],
 
@@ -358,7 +361,7 @@ export const test = base.extend<
 
   // The browser starts logged in (the harness's dev login): the session cookie is host-only, so it
   // also reaches the API on its own port.
-  context: async ({ context, stack }, provide) => {
+  context: async ({ context, stack, journalAll }, provide) => {
     trackApi(context);
     await context.addCookies([
       {
@@ -370,6 +373,13 @@ export const test = base.extend<
         sameSite: "Lax",
       },
     ]);
+    if (journalAll) {
+      await context.addInitScript(() => {
+        const key = "critical.settings.v1";
+        if (localStorage.getItem(key) === null)
+          localStorage.setItem(key, JSON.stringify({ journalFilter: "all" }));
+      });
+    }
     // No animation or transition: a popover or dialog that fades out stays in the DOM for its
     // duration, and every `toBeHidden` / `toHaveCount(0)` / click-while-stable waited for it (about a
     // fifth of the sweeps' time). What the specs check is the final state, never the motion; the

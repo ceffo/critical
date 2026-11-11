@@ -2055,8 +2055,13 @@
     "castBuff": "{{buff}} : {{counters}}",
     "castBuffOther": "{{buff}} : {{counters}}, pas sur vous",
     "noRollsThisRound": "Aucun jet ce tour-ci.",
+    "setupHidden_one": "{{count}} entrée de mise en place masquée",
+    "setupHidden_other": "{{count}} entrées de mise en place masquées",
+    "onlySetupHidden": "Seulement de la mise en place pour l'instant : choisissez Tout pour la voir.",
     "filter": {
       "label": "Filtre du journal",
+      "hideSetup": "Sans mise en place",
+      "hideSetupTitle": "Masquer la mise en place (grimoire, objets, équipement, compétences, tours réglés à la main) ; jets, sorts lancés, dégâts et progression restent",
       "all": "Tout",
       "rolls": "Jets"
     },

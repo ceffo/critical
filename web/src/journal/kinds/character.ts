@@ -213,6 +213,7 @@ export function decodeSpellAdd(e: LogEntry): SpellAdded | null {
 }
 
 export const spellAddKind: KindView<SpellAdded> = {
+  bookkeeping: true,
   decode: decodeSpellAdd,
   icon: BookOpen,
   // A spell written in the spellbook with no roll.
@@ -232,6 +233,7 @@ interface SkillPointsPayload {
 }
 
 export const skillPointsKind: KindView<SkillPointsPayload> = {
+  bookkeeping: true,
   decode(e) {
     const p = e.payload as Partial<SkillPointsPayload> | null;
     return p && p.before && p.after
@@ -303,6 +305,7 @@ const changed = (
   );
 
 export const proficienciesKind: KindView<PicksPayload> = {
+  bookkeeping: true,
   decode(e) {
     const p = e.payload as { before?: PickList; after?: PickList } | null;
     const before = bySlots(p?.before);
@@ -393,6 +396,7 @@ export const proficienciesKind: KindView<PicksPayload> = {
 };
 
 export const skillArmorKind: KindView<{ before?: string; after: string }> = {
+  bookkeeping: true,
   decode(e) {
     const p = e.payload as { before?: string; after?: string } | null;
     return p && typeof p.after === "string"
@@ -418,6 +422,7 @@ interface PsionicPickPayload {
 }
 
 export const psionicPickKind: KindView<PsionicPickPayload> = {
+  bookkeeping: true,
   decode(e) {
     const p = e.payload as Partial<PsionicPickPayload> | null;
     return p && Array.isArray(p.before?.picks) && Array.isArray(p.after?.picks)
@@ -439,6 +444,7 @@ interface AcOverridePayload {
 }
 
 export const acOverrideKind: KindView<AcOverridePayload> = {
+  bookkeeping: true,
   decode: (e) => e.payload as AcOverridePayload | null,
   icon: ShieldChevron,
   // "AC overridden: 4 (Shield spell)" / "AC override cleared".
@@ -459,6 +465,7 @@ interface PrepPayload {
 }
 
 export const spellPrepKind: KindView<PrepPayload> = {
+  bookkeeping: true,
   decode(e) {
     const p = e.payload as Partial<PrepPayload> | null;
     return p && Array.isArray(p.spells) ? { spells: p.spells } : null;

@@ -4,6 +4,7 @@ import { Campfire } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useJournalStore } from "@/stores/journal";
+import { useSettingsStore } from "@/stores/settings";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { groupByRound, isUndone, opensRound } from "@/lib/groupByRound";
@@ -17,8 +18,8 @@ import {
   filterEntries,
   rerollFormula,
   rowValue,
-  type LogFilter,
 } from "@/journal/entry";
+import { LOG_FILTERS } from "@/journal/filter";
 import { EntryIcon } from "@/journal/EntryIcon";
 import { roundLabel, roundMarker } from "@/journal/rounds";
 import { cn } from "@/lib/utils";
@@ -28,10 +29,9 @@ import { UndoButton } from "./UndoButton";
 import { VALUE_TONES } from "./journalStyle";
 import { useDiceStore } from "@/stores/dice";
 
-const FILTERS: LogFilter[] = ["all", "rolls"];
-
 /**
- * The journal (GET /api/log, ADR 0022 step 5): a head with the All / Rolls filter, the entry count,
+ * The journal (GET /api/log, ADR 0022 step 5): a head with the Hide setup / All / Rolls filter (saved with the display settings; the default hides the
+ * kinds whose view says `bookkeeping`), the entry count,
  * Undo and Redo, then the entries grouped by round, newest first, one 22 px line each: value · icon
  * · entry, the time right-aligned last (ADR 0027 step 9). A narrow marker ("T3", an icon out of
  * combat) sits beside a round's first entry, the current round's in the tint; round blocks touch and
@@ -44,9 +44,13 @@ export function CombatLog() {
   const entries = useLogStore((s) => s.entries);
   const round = useBuffsStore((s) => s.round);
   const last = useRollStore((s) => s.last);
-  const { selectedId, filter, setFilter, select } = useJournalStore();
+  const { selectedId, select } = useJournalStore();
+  const filter = useSettingsStore((s) => s.journalFilter);
+  const update = useSettingsStore((s) => s.update);
   const shownId = cardEntryId(cardSource(last, entries, selectedId));
-  const groups = groupByRound(filterEntries(entries, filter), round);
+  const shown = filterEntries(entries, filter);
+  const hidden = filter === "hideSetup" ? entries.length - shown.length : 0;
+  const groups = groupByRound(shown, round);
 
   return (
     <section
@@ -61,13 +65,18 @@ export function CombatLog() {
           aria-label={t("journal.filter.label")}
           className="flex rounded-lg bg-raised p-0.5"
         >
-          {FILTERS.map((f) => (
+          {LOG_FILTERS.map((f) => (
             <button
               key={f}
               type="button"
               role="radio"
               aria-checked={filter === f}
-              onClick={() => setFilter(f)}
+              title={
+                f === "hideSetup"
+                  ? t("journal.filter.hideSetupTitle")
+                  : undefined
+              }
+              onClick={() => update({ journalFilter: f })}
               className={cn(
                 "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
                 filter === f
@@ -85,6 +94,14 @@ export function CombatLog() {
         >
           {t("shell.journal.count", { count: entries.length })}
         </span>
+        {hidden > 0 && (
+          <span
+            className="text-body text-muted-foreground"
+            data-testid="journal-hidden"
+          >
+            {t("journal.setupHidden", { count: hidden })}
+          </span>
+        )}
         <span className="ml-auto flex gap-1">
           <UndoButton />
           <RedoButton />
@@ -130,7 +147,9 @@ export function CombatLog() {
                     ? t("log.empty")
                     : filter === "rolls"
                       ? t("journal.noRollsThisRound")
-                      : t("log.nothingThisRound")}
+                      : hidden > 0 && shown.length === 0
+                        ? t("journal.onlySetupHidden")
+                        : t("log.nothingThisRound")}
                 </p>
               ) : (
                 <div className="flex min-w-0 flex-col">

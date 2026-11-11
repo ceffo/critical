@@ -289,16 +289,17 @@ function buffText(
   }
 }
 
-function buffKind(icon: Icon): KindView<BuffLogPayload> {
+function buffKind(icon: Icon, bookkeeping = false): KindView<BuffLogPayload> {
   return {
     decode: decodeBuff,
     icon,
+    bookkeeping,
     text: (p, w, e) => buffText(p, w.t, w.spellName, e, w.names),
   };
 }
 
 export const buffChangeKind = buffKind(Sparkle);
 export const roundAdvanceKind = buffKind(Hourglass);
-export const roundResetKind = buffKind(Hourglass);
-export const roundSetKind = buffKind(Hourglass);
+export const roundResetKind = buffKind(Hourglass, true);
+export const roundSetKind = buffKind(Hourglass, true);
 export const timePassedKind = buffKind(Clock);

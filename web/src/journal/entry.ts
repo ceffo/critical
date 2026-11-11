@@ -6,10 +6,8 @@ import { englishSpellName, type SpellNamer } from "@/i18n/spellName";
 import { type InventoryNamer, recordedNames } from "@/i18n/inventoryName";
 import type { HpBreakdown, LogEntry } from "@/types/log";
 import type { AnyKindView, RowValue, ShortResult, Words } from "./kindView";
+import type { LogFilter } from "./filter";
 import { viewOf } from "./registry";
-
-/** The journal filter: everything, or rolls only. */
-export type LogFilter = "all" | "rolls";
 
 /** An entry's view and its decoded payload (null: an unknown kind, or a payload it cannot read). */
 export function readEntry(e: LogEntry): {
@@ -82,11 +80,18 @@ export function isRolledEntry(e: LogEntry): boolean {
   return view?.rolled?.(payload) ?? false;
 }
 
+/** Setup and bookkeeping: the kind's view says so (a kind this web does not know is not). */
+export function isBookkeeping(e: LogEntry): boolean {
+  return viewOf(e.kind)?.bookkeeping === true;
+}
+
 export function filterEntries(
   entries: LogEntry[],
   filter: LogFilter,
 ): LogEntry[] {
-  return filter === "all" ? entries : entries.filter(isRolledEntry);
+  if (filter === "all") return entries;
+  if (filter === "rolls") return entries.filter(isRolledEntry);
+  return entries.filter((e) => !isBookkeeping(e));
 }
 
 /** The header's last result in short (ADR 0027 step 4.5), from the entry's structured payload. */

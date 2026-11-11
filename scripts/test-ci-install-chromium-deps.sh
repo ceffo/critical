@@ -100,27 +100,33 @@ if INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" AP
     fail "an install that failed offline and online reported success"
 fi
 
-# Dead default mirror: the first entry of the mirror list does not answer, the first fallback that does goes to
-# the top and the original entries stay; with a healthy default mirror, or with every fallback dead, the list is
-# left untouched. The probe is a fake that answers by host name.
+# Dead default mirror: the first entry of the mirror list does not answer, so the sources files (not the list:
+# apt's mirror method ignores its order) get the first fallback that answers in place of `mirror+file:`; with a
+# healthy default mirror, or with every fallback dead, they are left untouched. The probe is a fake that answers
+# by host name; the sources are the runner's deb822 file and a legacy one-line file.
 printf '#!/usr/bin/env bash\ncase "$1" in *dead*) exit 1;; *) exit 0;; esac\n' > "$tmp/bin/probe"
 chmod +x "$tmp/bin/probe"
-mirrors() { printf '%s\n' "$@" > "$tmp/mirrors.txt"; }
-mirrors http://dead-azure.example/ubuntu/ http://dead-canonical.example/ubuntu/
-rm -f "$tmp/state/n"
-if ! out="$(MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://dead-a.example/u/ http://good.example/u/ http://good2.example/u/" run 2>&1)"; then
+sources() {
+    printf 'Types: deb\nURIs: mirror+file:/etc/apt/apt-mirrors.txt\nSuites: resolute\n' > "$tmp/ubuntu.sources"
+    printf 'deb mirror+file:/etc/apt/apt-mirrors.txt resolute main\n' > "$tmp/sources.list"
+    printf '%s\n' "$@" > "$tmp/mirrors.txt"
+    rm -f "$tmp/state/n"
+}
+runm() { MIRRORS_FILE="$tmp/mirrors.txt" SOURCES_FILES="$tmp/ubuntu.sources $tmp/sources.list" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="$1" run 2>&1; }
+sources http://dead-azure.example/ubuntu/ http://dead-canonical.example/ubuntu/
+if ! out="$(runm "http://dead-a.example/u/ http://good.example/u/ http://good2.example/u/")"; then
     fail "the script failed with a dead default mirror: $out"
 fi
-[ "$(head -1 "$tmp/mirrors.txt")" = "http://good.example/u/" ] || fail "the first answering fallback is not at the top: $(cat "$tmp/mirrors.txt")"
-[ "$(wc -l < "$tmp/mirrors.txt")" -eq 3 ] || fail "the original mirrors were not kept below it: $(cat "$tmp/mirrors.txt")"
-mirrors http://good-azure.example/ubuntu/ http://other.example/ubuntu/
-rm -f "$tmp/state/n"
-MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://good.example/u/" run >/dev/null 2>&1 || true
-[ "$(wc -l < "$tmp/mirrors.txt")" -eq 2 ] && [ "$(head -1 "$tmp/mirrors.txt")" = "http://good-azure.example/ubuntu/" ] || fail "a healthy default mirror was changed: $(cat "$tmp/mirrors.txt")"
-mirrors http://dead-azure.example/ubuntu/
-rm -f "$tmp/state/n"
-MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://dead-x.example/u/" run >/dev/null 2>&1 || true
-[ "$(cat "$tmp/mirrors.txt")" = "http://dead-azure.example/ubuntu/" ] || fail "the list changed although no fallback answers: $(cat "$tmp/mirrors.txt")"
+grep -qx 'URIs: http://good.example/u/' "$tmp/ubuntu.sources" || fail "the deb822 sources do not use the first answering fallback: $(cat "$tmp/ubuntu.sources")"
+grep -qx 'deb http://good.example/u/ resolute main' "$tmp/sources.list" || fail "the legacy sources do not use the fallback: $(cat "$tmp/sources.list")"
+grep -q 'mirror+file' "$tmp/ubuntu.sources" "$tmp/sources.list" && fail "a mirror+file reference is left"
+grep -q 'URIs: http://good.example/u/' <<<"$out" || fail "the log does not name the mirror apt will use: $out"
+sources http://good-azure.example/ubuntu/ http://other.example/ubuntu/
+runm "http://good.example/u/" >/dev/null || true
+grep -qx 'URIs: mirror+file:/etc/apt/apt-mirrors.txt' "$tmp/ubuntu.sources" || fail "a healthy default mirror changed the sources: $(cat "$tmp/ubuntu.sources")"
+sources http://dead-azure.example/ubuntu/
+runm "http://dead-x.example/u/" >/dev/null || true
+grep -qx 'URIs: mirror+file:/etc/apt/apt-mirrors.txt' "$tmp/ubuntu.sources" || fail "the sources changed although no fallback answers: $(cat "$tmp/ubuntu.sources")"
 
 [ "$fails" -eq 0 ] && echo "test-ci-install-chromium-deps: ok"
 exit "$fails"

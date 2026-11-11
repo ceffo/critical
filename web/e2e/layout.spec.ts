@@ -4118,6 +4118,7 @@ test("Ajouter: the catalogue rows and the copy panel uncut, fr and en, 1280 to 2
           vp.width >= 1920 &&
           (category === "Armures" ||
             category === "Armes" ||
+            category === "Weapons" ||
             category === "Armour")
         )
           await snap(

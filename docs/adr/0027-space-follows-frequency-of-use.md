@@ -256,7 +256,8 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    1. **Turn blocks follow each other with no gap**; turns alternate between the card's tone and the
       sub-band tone (ADR 0026 step 6.3) to tell them apart. The current turn keeps one mark (the
       turn marker's tint), not a tinted group.
-   2. **Compact rows: 22 px** for a one-line entry (`text-body`'s 18 px line and 2 px above and
+   2. **Compact rows: 24 px** (*amended 2026-11-11, user accepted the item's defaults 2026-11-10: was
+      22 px; 24 px is the target-size minimum, the select, expand and reroll controls are 24 px tall*) for a one-line entry (`text-body`'s 18 px line and 2 px above and
       below), no gap between rows (*proposed, user OK on the PR*; about 26 px today). Still one line
       per entry (step 5.1); a long entry wraps inside its row.
    3. **A narrow turn marker** (at most 3rem, *proposed, user OK on the PR*): "T3" on a turn's first
@@ -277,7 +278,15 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       open, under its marker, on the block's tone (ADR 0026 step 6.3); each undone one carries its
       own Undone tag. Undo still pops them together. Other multi-entry transactions keep their frame.
 
-   *Checked by* `layout.spec`'s journal checks: a row's height at most 24 px for a one-line entry,
+   7. **Three marks, three looks** (*2026-11-11, user accepted the item's defaults 2026-11-10*): an
+      undo group (a multi-entry transaction other than a turn's opening) is a 2 px left bracket in
+      the tint (muted when undone) and no fill; a row the player picked is the selected tone and no
+      bar; the latest result's row keeps the 2 px tint outline (ADR 0026 step 5.2), never the fill.
+      A focused row control shows a 2 px ring in the ring colour. An HP change's icon is a drop for
+      damage and a heart for healing only (the HP buttons' icons).
+
+   *Checked by* `layout.spec`'s journal checks: a row's height at most 24 px for a one-line entry (at least 24 px for every row, and step 9.7's
+   three looks, the drop and the focus ring: the `journal rows` test),
    no vertical gap between two turn groups, every time ending at the same right edge (9.4), no frame
    around the turn's opening rows (9.6), and the no-cut audit in French and English; the opening
    transaction by `groupByRound.test.ts` (`opensTurn`).

@@ -205,6 +205,10 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    1. **One selection mark**: a selected row, item or rail entry is the **selected tone** (`amb-800`)
       with ink text and a **3 px tint bar** on its left edge. The rail uses it too (replaces step
       2.4's `bg-amb-900 text-tint` pill), as do the lookup list and the journal's selected entry.
+      *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* in the journal the selected row is the selected tone only, with no bar: the
+      left bar there is an undo group's bracket (ADR 0027 step 9.7), and the latest result's row has
+      the step 5.2 outline instead of the fill. The tint on the card and the ink on `amb-800` keep
+      the ratios the theme tests already hold in every theme.
    2. **One "latest" mark**: the result card (the latest result) has a **2 px tint outline**
       (replaces step 4.1's `border-amb-700`).
    3. **One chip family**: a chip is filled with the raised tone (`neu-900`) and no outline; a

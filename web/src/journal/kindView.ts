@@ -64,6 +64,8 @@ export interface KindView<P, L = never> {
   decode(e: LogEntry): P | null;
   /** The kind's icon in the journal, its bar and the result card. */
   icon: Icon;
+  /** The icon for one entry when it differs within the kind (an HP change: damage or healing). */
+  iconOf?(e: LogEntry): Icon;
   /** The journal's text in the player's language. */
   text(p: P, w: Words, e: LogEntry): string;
   /**

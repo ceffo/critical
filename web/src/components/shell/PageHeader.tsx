@@ -29,7 +29,7 @@ export function PageHeader({
       data-testid="page-header"
     >
       <BrandMark />
-      <h1 className="text-title" data-testid="page-title">
+      <h1 className="section-label" data-testid="page-title">
         {title}
       </h1>
       <span className="flex-1" />

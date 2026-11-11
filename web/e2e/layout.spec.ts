@@ -5754,7 +5754,7 @@ const CLASS_STEPS: [string, Step][] = [
   ["thief", thiefStep],
 ];
 
-for (const size of [VIEWPORTS[0], VIEWPORTS[4]]) {
+for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
   test(`class screens walk at ${size.width}x${size.height}`, async ({
     page,
     stack,
@@ -5803,7 +5803,7 @@ const PSIONICIST_STEPS: [string, Step][] = (
 
 test.describe("psionicist walks", () => {
   test.use({ character: psionicist });
-  for (const size of [VIEWPORTS[0], VIEWPORTS[4]]) {
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
     test(`psionicist walk at ${size.width}x${size.height}`, async ({
       page,
       stack,

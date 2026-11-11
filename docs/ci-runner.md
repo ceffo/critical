@@ -50,7 +50,7 @@ repository.
    `qm start 106`. Give the VM a DHCP reservation (nothing depends on its address). Add a 4 GB `/swapfile`
    (and its `fstab` line).
 2. **Tools** (as `ci`, `sudo` for the installs):
-   - apt: `ca-certificates curl git jq build-essential postgresql-client xvfb docker.io docker-compose-v2 unzip
+   - apt: `ca-certificates curl git jq build-essential postgresql-client xvfb docker.io docker-buildx docker-compose-v2 unzip
      gh shellcheck python3`; `sudo usermod -aG docker ci`.
    - Go: the version in `api/go.mod`, from `https://go.dev/dl/`, unpacked in `/usr/local/go`.
    - Node: the current LTS (NodeSource `setup_lts.x`, then `apt install nodejs`).

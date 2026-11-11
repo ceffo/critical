@@ -21,10 +21,11 @@ import { TurnUndeadPanel } from "./TurnUndeadPanel";
 import { PowersTab } from "@/components/powers/tab/PowersTab";
 import { useCharacterStore } from "@/stores/character";
 import { combatItems } from "@/lib/combatItems";
+import { useActFeatures } from "@/lib/actFeatures";
 
 /**
  * The act panel of the Act activity (ADR 0022 step 2.5): tabs with icons and no panel title (the
- * rail names the activity): Weapons, Spells (with the spells left), Powers for a character with known powers (ADR 0047), Items (with how many there
+ * rail names the activity): Weapons, Spells (with the spells left; only for a character with spell slots or a per-day item, ADR 0022 steps 2.4 and 2.5), Powers for a character with known powers (ADR 0047), Items (with how many there
  * are), Skills (proficiency and bard skill checks), and Turning for a class that turns them (ADR 0030
  * step 16). Inventory and spell lookup are activities of
  * their own in the rail (App.tsx); saving throws live in the character card.
@@ -54,16 +55,19 @@ export function ActionArea({
   onOpenInventory: () => void;
 }) {
   const { t } = useTranslation();
-  const [active, setActive] = useState<TabId>("weapons");
+  const [chosen, setActive] = useState<TabId>("weapons");
   const select = (id: TabId) => setActive(id);
   const turns = useCharacterStore((s) => s.character?.derived.turning != null);
   // The Powers tab is for a character with known powers (a psionicist), as Turning is for a class that turns.
-  const hasPowers = useCharacterStore(
-    (s) => s.character?.derived.knownPowers != null,
-  );
+  const { hasPowers, showSpellsTab } = useActFeatures();
   const tabs = TABS.filter(
-    (id) => (id !== "turning" || turns) && (id !== "powers" || hasPowers),
+    (id) =>
+      (id !== "turning" || turns) &&
+      (id !== "powers" || hasPowers) &&
+      (id !== "spells" || showSpellsTab),
   );
+  // The tab set can shrink under the active tab (a per-day item sold, a level change): back to Weapons.
+  const active: TabId = tabs.includes(chosen) ? chosen : "weapons";
   const spellsLeft = useSpellStore(
     (s) => s.slots.filter((slot) => !slot.used).length,
   );

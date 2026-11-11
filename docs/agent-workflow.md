@@ -41,7 +41,7 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 - **e2e budget (hard rule):** the whole suite stays under 5 minutes on CI, absolute (the job times out
   at 6). e2e is for what only a browser proves: wiring, navigation, persistence across reload, one
   happy path per user flow, plus the screenshots. Rules, edge cases and error branches belong in Go
-  or unit tests; add the lower-level test first, then drop the e2e one it makes redundant. Tests
+  or unit tests, and UI edge cases (marks, hidden blocks, disabled states, both languages) in component tests (`*.dom.test.tsx`, `docs/frontend.md` "Testing"); add the lower-level test first, then drop the e2e one it makes redundant. Tests
   that only call the API belong in Go. A new spec justifies itself in the report: what only a
   browser proves there, and why no Go or unit test can. Layout screenshots stay in `layout.spec`.
 - **Local dev gate (hard rule):** a change to the justfile, `docker-compose.yml`, `api/.air.toml`,

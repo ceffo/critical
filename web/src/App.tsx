@@ -20,6 +20,7 @@ import { Rail } from "@/components/shell/Rail";
 import { SettingsPopover } from "@/components/shell/SettingsPopover";
 import { XpPanel } from "@/components/xp/XpPanel";
 import type { Activity } from "@/lib/activities";
+import { lookupLabelKey, useActFeatures } from "@/lib/actFeatures";
 import { cn } from "@/lib/utils";
 import { useTableStore } from "@/stores/table";
 import { useLanguagesStore } from "@/stores/languages";
@@ -92,6 +93,7 @@ function App() {
   const refresh = useTableStore((s) => s.refresh);
   const loadSpellNames = useSpellNamesStore((s) => s.load);
   const loadLanguages = useLanguagesStore((s) => s.load);
+  const lookupKey = lookupLabelKey(useActFeatures());
   const [activity, setActivity] = useState<Activity>("act");
   const [visited, setVisited] = useState<ReadonlySet<Activity>>(
     () => new Set(["act"]),
@@ -174,7 +176,7 @@ function App() {
             id="spells"
             active={activity}
             visited={visited}
-            label={t("shell.activity.spells")}
+            label={t(`shell.activity.${lookupKey}`)}
           >
             <LookupPanel />
           </Pane>

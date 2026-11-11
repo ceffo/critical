@@ -319,6 +319,10 @@ export async function effectiveStr(page: Page): Promise<number> {
   return Number((await page.getByTestId("str-value").textContent()) ?? "NaN");
 }
 
+/** The rail's lookup activity, whatever the character's content names it (ADR 0022 step 2.4). */
+export const LOOKUP_RAIL =
+  /^(Spells|Powers|Spells and powers|Reference|Sorts|Pouvoirs|Sorts et pouvoirs|Référence)$/;
+
 /** Focus an activity from the rail (English labels). */
 export async function openWorkspace(
   page: Page,
@@ -326,7 +330,10 @@ export async function openWorkspace(
 ) {
   await page
     .getByRole("navigation", { name: "Activities" })
-    .getByRole("button", { name, exact: true })
+    .getByRole("button", {
+      name: name === "Spells" ? LOOKUP_RAIL : name,
+      exact: true,
+    })
     .click();
 }
 
@@ -628,7 +635,7 @@ export async function keepATangent(page: Page, tab: Locator, target: string) {
 export async function openSortsPowers(page: Page) {
   await page
     .getByTestId("rail")
-    .getByRole("button", { name: /^(Spells|Sorts)$/ })
+    .getByRole("button", { name: LOOKUP_RAIL })
     .click();
   await page.getByRole("tab", { name: /^(Powers|Pouvoirs)$/ }).click();
   return page.getByTestId("known-powers");

@@ -14,11 +14,11 @@ import { useSpellStore, validEntry } from "@/stores/spells";
 import { useClassName } from "@/lib/useClassName";
 import { useTableStore } from "@/stores/table";
 import { spellId, useSpellName } from "@/i18n/spellName";
-import type { CastOn, CastTarget, SpellSlot } from "@/types/spells";
+import type { CastTarget, SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import { planCast } from "@/lib/castInputs";
+import { castMenu, planCast } from "@/lib/castInputs";
 import { slotDots } from "@/lib/slotDots";
 import { Dots } from "./Dots";
 import type { CastOptions } from "@/api/spells";
@@ -95,17 +95,6 @@ function SlotDots({
       testId={`dots-${level}`}
     />
   );
-}
-
-/**
- * The targets the arrow's menu lists, from the served `cast_target` only: where the main part lands
- * (`default`) first, then the other one. A menu that would hold a single entry is no menu: the
- * button has no arrow then.
- */
-export function castMenu(target?: CastTarget): CastOn[] {
-  if (!target) return [];
-  const entries = [target.default, target.alternate];
-  return entries.filter((on, i) => entries.indexOf(on) === i);
 }
 
 /**

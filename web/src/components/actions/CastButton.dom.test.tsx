@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderApp } from "@/test/render";
 import type { CastTarget } from "@/types/spells";
-import { CastButton, castMenu } from "./SpellsPanel";
+import { castMenu } from "@/lib/castInputs";
+import { CastButton } from "./SpellsPanel";
 
 const render = (target: CastTarget | undefined, onCast = vi.fn()) =>
   renderApp(

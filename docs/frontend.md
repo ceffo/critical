@@ -732,9 +732,28 @@ outside `ui/`).
 
 ## Testing
 
-- **Layers:** `vitest` for units (`just test-web`, part of `just validate`); Playwright e2e against the
-  real Go API + Vite (`just e2e`, local only, not part of `just validate`). No pixel-diff snapshots, no
-  component-test layer. Screenshots are artifacts for visual review, not assertions.
+- **Layers:** `vitest` for units and component tests (`just test-web`, part of `just validate`);
+  Playwright e2e against the real Go API + Vite (`just e2e`, local only, not part of `just validate`).
+  No pixel-diff snapshots. Screenshots are artifacts for visual review, not assertions.
+- **Component tests** (the place for UI edge cases: a field marked required, a card hidden on a miss, a
+  disabled button and its reason, a message in both languages): a file named `<Component>.dom.test.tsx`
+  next to its component. The name is the opt-in: vitest runs it in the `dom` project (happy-dom, jest-dom
+  matchers, DOM cleaned between tests: `vite.config.ts`, `src/test/setup.ts`); every other `*.test.ts(x)`
+  stays in the `node` project, with no DOM to start.
+  - Render with `renderApp(ui, { lng })` from `src/test/render.tsx`: the real catalogues in a fresh
+    i18n instance (English unless `lng: "fr"`), and a `user` (`@testing-library/user-event`) back.
+    `await renderApp(...)`, then act like the player: `await user.click(...)`, `await user.type(...)`.
+  - Query as the player sees it, in this order: `getByRole` with the accessible name (the English or
+    French text), `getByLabelText`, `getByText`; `getByTestId` only where the e2e specs already use one.
+    Assert with the jest-dom matchers (`toBeDisabled`, `toBeRequired`, `toHaveTextContent`). Never a CSS
+    class, never a catalogue key: the visible text proves the key exists in that language.
+  - Stores are module singletons: seed with `useXStore.setState(...)` and reset it in `afterEach`. A
+    component that fetches gets its `@/api/*` module mocked with `vi.mock`. The component under test is
+    rendered as is, wrapped in a small harness (a `useState`) when the page owns its state.
+  - A component test does not cover what only a browser proves: layout, scrolling, focus order across
+    the page, persistence across a reload, the wiring to the real API. That stays in Playwright.
+  - Example: `components/powers/tab/requiredFields.dom.test.tsx` (marks, the reason beside the disabled
+    action, in both languages).
 - **First run:** `just e2e-install` once (downloads Playwright Chromium); `just e2e` says so if it's missing.
   `just e2e smoke.spec.ts` passes args through to `playwright test`.
 - **Stack per test:** the `test` fixture from `web/e2e/fixtures.ts` starts the API binary (`just build-api`

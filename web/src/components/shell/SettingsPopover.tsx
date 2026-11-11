@@ -177,6 +177,13 @@ export function SettingsPopover() {
           ))}
         </Choice>
 
+        <div className="flex flex-col gap-2" data-testid="settings-keyboard">
+          <span className="text-label text-muted-foreground">
+            {t("settings.keyboard")}
+          </span>
+          <span className="text-body">{t("settings.keyboardKeys")}</span>
+        </div>
+
         <div className="flex flex-col gap-2" data-testid="settings-account">
           <span className="text-label text-muted-foreground">
             {t("settings.account")}

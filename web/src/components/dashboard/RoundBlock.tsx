@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ArrowRight, ArrowsClockwise, DotsThree } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import {
   previewFor,
   type KeyedAnswer,
 } from "@/lib/passTimePreview";
+import { useKeyClicks } from "@/lib/shortcuts";
 import { useBuffsStore } from "@/stores/buffs";
 import { useTableStore } from "@/stores/table";
 import { fieldClass } from "./fieldStyles";
@@ -42,6 +43,9 @@ export function RoundBlock() {
   const { nextRound, rerollInitiative, busy } = useTableStore();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("menu");
+  // N is Next round from anywhere on the page that is not typing or an open popup.
+  const nextRef = useRef<HTMLButtonElement>(null);
+  useKeyClicks("n", nextRef);
 
   return (
     // A banded cell of the header card (ADR 0026 step 6.3): the sub-band tone, never a line.
@@ -62,9 +66,12 @@ export function RoundBlock() {
       <div className="flex flex-col items-start gap-1">
         <div className="flex gap-1">
           <Button
+            ref={nextRef}
             size="lg"
             variant="main"
             disabled={busy}
+            title={t("shortcut.hint", { label: t("round.next"), key: "N" })}
+            aria-keyshortcuts="N"
             onClick={() => void nextRound()}
           >
             {t("round.next")}

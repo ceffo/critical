@@ -203,7 +203,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   const entry = logEntry(page, "Short Bow +2 (Arrows +2)");
   await expect(card).toContainText("vs AC -20");
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
-  await expect(card.getByTestId("total-damage")).toHaveText("–");
+  await expect(card.getByTestId("total-damage")).toHaveCount(0);
   await expect(acField).toHaveValue("-20");
   await expect(apply).toBeDisabled();
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
@@ -254,7 +254,7 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await acField.fill("-20");
   await apply.click();
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
-  await expect(card.getByTestId("total-damage")).toHaveText("–");
+  await expect(card.getByTestId("total-damage")).toHaveCount(0);
   await expect(card.getByTestId("ac-corrected")).toHaveCount(0);
   await expect(entry).toContainText("Short Bow +2 (Arrows +2) vs AC -20: miss");
   await expect(entry).not.toContainText("→ -20");

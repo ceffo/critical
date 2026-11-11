@@ -350,63 +350,63 @@ function AttackCard({
         </p>
       )}
 
-      <div className="flex items-end justify-between gap-3">
-        <div
-          className={cn("flex min-w-0 flex-col gap-2", !r.hit && "opacity-50")}
-        >
-          <span className={labelClass}>{t("result.damage")}</span>
-          {diceChips ? (
-            <div
-              className="flex flex-wrap items-center gap-2"
-              data-testid="damage-dice"
-            >
-              <span className="text-body tabular-nums text-muted-foreground">
-                {r.damageDice}
-              </span>
-              <ul
-                className="flex flex-wrap gap-2"
-                data-testid="damage-dice-chips"
+      {/* A settled miss or fumble has no damage to show (nor to roll); a hit, a crit or an
+          unsettled attack ("if it hits") keeps the row. */}
+      {(r.hit || !settled) && (
+        <div className="flex items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-2">
+            <span className={labelClass}>{t("result.damage")}</span>
+            {diceChips ? (
+              <div
+                className="flex flex-wrap items-center gap-2"
+                data-testid="damage-dice"
               >
-                {diceChips.map((c, i) => (
-                  <DieChip key={i} value={c.value} tone={c.tone} />
-                ))}
-              </ul>
-              <span className="text-body font-semibold tabular-nums">
-                = {r.baseDamage}
+                <span className="text-body tabular-nums text-muted-foreground">
+                  {r.damageDice}
+                </span>
+                <ul
+                  className="flex flex-wrap gap-2"
+                  data-testid="damage-dice-chips"
+                >
+                  {diceChips.map((c, i) => (
+                    <DieChip key={i} value={c.value} tone={c.tone} />
+                  ))}
+                </ul>
+                <span className="text-body font-semibold tabular-nums">
+                  = {r.baseDamage}
+                </span>
+              </div>
+            ) : (
+              <span
+                className="chip w-fit px-2 py-0.5 text-body font-semibold tabular-nums"
+                data-testid="damage-dice"
+              >
+                {t("journal.diceRolled", {
+                  dice: r.damageDice,
+                  total: r.baseDamage,
+                })}
               </span>
-            </div>
-          ) : (
-            <span
-              className="chip w-fit px-2 py-0.5 text-body font-semibold tabular-nums"
-              data-testid="damage-dice"
-            >
-              {t("journal.diceRolled", {
-                dice: r.damageDice,
-                total: r.baseDamage,
-              })}
-            </span>
-          )}
-          {(r.hit || !settled) && (
+            )}
             <span
               className="text-label break-words text-muted-foreground tabular-nums"
               data-testid="damage-formula"
             >
               {damageFormula(r, i18n.language)}
             </span>
-          )}
+          </div>
+          <Total
+            label={
+              settled
+                ? t("result.totalDamage")
+                : t("result.unknownAc.damageIfHit")
+            }
+            value={r.totalDamage}
+            testId="total-damage"
+            dim={!r.hit}
+            gold={r.hit && r.isCrit}
+          />
         </div>
-        <Total
-          label={
-            settled
-              ? t("result.totalDamage")
-              : t("result.unknownAc.damageIfHit")
-          }
-          value={r.hit || !settled ? r.totalDamage : "–"}
-          testId="total-damage"
-          dim={!r.hit}
-          gold={r.hit && r.isCrit}
-        />
-      </div>
+      )}
 
       {correctable && r.acKnown === false && (
         <DmVerdict result={r} entryId={r.logEntryId as number} />

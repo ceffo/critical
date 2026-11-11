@@ -42,7 +42,8 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   ([ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)); the run step times out at 6, which is the
   regression tripwire, not the budget. e2e is for what only a browser proves: wiring, navigation,
   persistence across reload, one happy path per user flow, plus the screenshots. Rules, edge cases and
-  error branches belong in Go or unit tests; add the lower-level test first, then drop the e2e one it
+  error branches belong in Go or unit tests, and UI edge cases (marks, hidden blocks, disabled states,
+  both languages) in component tests (`*.dom.test.tsx`, `docs/frontend.md` "Testing"); add the lower-level test first, then drop the e2e one it
   makes redundant. Tests that only call the API belong in Go. A new spec justifies itself in the report:
   what only a browser proves there, and why no Go or unit test can. Layout screenshots stay in
   `layout.spec`. A PR that changes route refusals (`api/internal/render/**`, the handlers) or any UI path

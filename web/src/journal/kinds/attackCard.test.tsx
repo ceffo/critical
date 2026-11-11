@@ -73,3 +73,34 @@ describe("attack card damage block", () => {
     }
   }
 });
+
+// A natural 20 or 1 gets its own treatment on the card: a bordered roll row and a chip with words
+// and an icon, never colour alone. Other dice show neither. Driven by the served d20Roll only.
+describe("attack card natural 20 and natural 1", () => {
+  for (const [lng, n20, n1] of [
+    ["en", "Natural 20", "Natural 1"],
+    ["fr", "20 naturel", "1 naturel"],
+  ] as const) {
+    it(`a natural 20 shows the gold border and its chip (${lng})`, async () => {
+      const html = await render(autoHit, lng);
+      expect(html).toContain('data-natural="20"');
+      expect(html).toContain("border-highlight");
+      expect(html).toContain('data-testid="natural-chip"');
+      expect(html).toContain(n20);
+      expect(html).toContain("<svg");
+    });
+    it(`a natural 1 shows the danger border and its chip (${lng})`, async () => {
+      const html = await render(fumble, lng);
+      expect(html).toContain('data-natural="1"');
+      expect(html).toContain("border-danger");
+      expect(html).toContain(n1);
+    });
+  }
+  it("an ordinary roll shows no natural treatment", async () => {
+    for (const r of [hit, miss, crit]) {
+      const html = await render({ ...r, d20Roll: 12 }, "en");
+      expect(html).not.toContain("data-natural");
+      expect(html).not.toContain('data-testid="natural-chip"');
+    }
+  });
+});

@@ -132,6 +132,13 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    4. Main versus quiet: each zone has at most one main (filled) button, the every-turn action of
       that zone (Attaquer on Act's Weapons tab, Tour suivant in the header, Lancer for a spell);
       the others are quiet (the shared pieces of the colour epic). Add buttons are quiet.
+      *Amended 2026-11-11 (user accepted the defaults):* "Lancer for a spell" is **not** main: a
+      row action repeated down a list is quiet, so the Spells tab shows no column of filled
+      buttons; at most one filled button per panel, never two side by side. A **disabled** button
+      is drawn the same in every look without a dashed edge: the raised tone as a flat fill (ΔL
+      >= .07 off the card, [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 2.1),
+      muted ink (AA, step 2.3), no edge, no hover; `ghost` stays transparent. The dashed frame is
+      the roster's Créer card alone. Written in `button.tsx`'s doc comment.
 4. **Header** (amends ADR 0022 steps 2.2, 3.4 and 7, ADR 0017 step 6, ADR 0026 step 5.9).
    1. **The turn is stacked**: its label ("TOUR") over its number. The number is `text-headline`
       (24 px), no longer `text-hero`.
@@ -249,6 +256,17 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       AC correction stay reachable, folded.
    5. The card is filled by its content: no third of it left empty at 1440x900 or 1707x1300 for an
       attack or a save.
+   6. **A natural 20 and a natural 1 get their own card treatment** (*amended 2026-11-11, user
+      accepted the defaults of the item: a card treatment only, no motion, no sound, the natural 1 in
+      a negative tone*). An attack whose d20 shows 20 or 1 (the `d20Roll` the server already serves;
+      no API change) puts a 2 px border round its roll row (die, verdict, chip) and a chip beside the
+      verdict: a natural 20 is gold (`border-highlight`, chip `highlight-fill` with `on-highlight`,
+      a sparkle icon, "Natural 20" / "20 naturel"), a natural 1 is danger (`border-danger`, chip
+      `danger` with `on-accent`, a skull icon, "Natural 1" / "1 naturel"). The words and the icon
+      carry it, never the colour alone; the tokens are the ladder's (ADR 0026 steps 1 and 5.5), so
+      the contrast holds in every theme. Nothing animates. The rules and the journal's wording are
+      untouched (ADR 0001: a natural 20 or 1 is plain arithmetic, so a natural 20 can show beside a
+      Miss and a natural 1 beside a Hit when the modifiers say so).
 
    *Checked by* the saves and skills specs' adjust flow (one happy path each) and `layout.spec`'s
    adjusted-card test in French and English.
@@ -282,7 +300,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    around the turn's opening rows (9.6), and the no-cut audit in French and English; the opening
    transaction by `groupByRound.test.ts` (`opensTurn`).
 10. **Spells tab** (new; the act panel's Sorts tab, no ADR 0022 step drew it).
-    1. **"Lancer" is a split button**: the main part casts with the server's default target (today's
+    1. **"Lancer" is a split button** (quiet since 2026-11-11, step 3.4): the main part casts with the server's default target (today's
        call, no `onSelf`); the arrow opens the other target (`onSelf: false`, or what the server
        offers). The global "on an ally" checkbox goes.
        1. **The arrow is for a defensive spell only** (ruling from the user's words: _"cast on self
@@ -368,8 +386,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
     *Checked by* the lookup spec and `layout.spec`'s French audit of the lookup; a unit test of the
     levels derived from the catalogue.
 14. **Inventory and Experience** (amends ADR 0022 step 2.5 "Experience" and "Inventory").
-    1. **Item rows**: the name, its dice right after it, the quantity stepper, then edit / delete on
-       hover and focus. The meta line shows the behaviour in the UI language ("Stock", "Charges",
+    1. **Item rows**: the name, its dice right after it, the quantity stepper, then edit / delete.
+       *Amended 2026-11-11 (user, accepting the critique's default): the buttons are **always
+       visible**, low-emphasis icon buttons (ghost, muted), at least 24 px, each named for its item
+       ("Edit Long sword", "Remove Long sword"); they were shown on hover and focus only (step 1.4),
+       which nobody found. Step 1.4's hover rule stays for the other rows (effects, journal).* The meta line shows the behaviour in the UI language ("Stock", "Charges",
        "Quotidien"); the free-text type stays in the edit form.
     2. **Add buttons are quiet and one word** ("Ajouter").
     3. **Items and weapons side by side** when the stage is at least 1200 px wide (1707x1300 and up),

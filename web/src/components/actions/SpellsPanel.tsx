@@ -101,7 +101,8 @@ function SlotDots({
  * target (no `onSelf`); the arrow offers the other target the server serves for the spell
  * (`cast_target.alternate`), and shows only when the server serves one. Every Cast is the same
  * width, split or not (the main part plus the 24 px arrow), so the buttons line up down a column;
- * it leads with the Spells icon, as Attack leads with its sword and Next turn carries its arrow.
+ * it is a quiet button (one filled button per panel: Attack is the Weapons tab's), and leads with
+ * the Spells icon, as Attack leads with its sword and Next turn carries its arrow.
  */
 function CastButton({
   name,
@@ -119,14 +120,13 @@ function CastButton({
     <span className="flex shrink-0">
       <Button
         size="lg"
-        variant="main"
         className={cn(target ? "min-w-22 rounded-r-none" : "min-w-28")}
         disabled={disabled}
         aria-label={t("spellSlots.castLabel", { name })}
         title={t("spellSlots.castLabel", { name })}
         onClick={() => onCast()}
       >
-        <Sparkle aria-hidden data-icon="inline-start" weight="fill" />
+        <Sparkle aria-hidden data-icon="inline-start" />
         {t("spellSlots.cast")}
       </Button>
       {target && (
@@ -136,8 +136,7 @@ function CastButton({
             render={
               <Button
                 size="icon-lg"
-                variant="main"
-                className="w-6 rounded-l-none border-l-on-accent/40"
+                className="-ml-px w-6 rounded-l-none"
                 aria-label={t("spellSlots.castTarget", { name })}
                 title={t("spellSlots.castTarget", { name })}
               />

@@ -48,6 +48,10 @@ test.describe("a human fighter taking a new class", () => {
       .getByRole("region", { name: "Experience", exact: true })
       .getByTestId("xp-total");
     await expect(xp).toHaveText("21,000");
+    // Once dual-class, the standing is the active class's, on its own bar.
+    const mageXp = page
+      .getByRole("region", { name: "Experience", exact: true })
+      .getByTestId("xp-class-xp-mage");
 
     await page.getByTestId("details-trigger").click();
     await page.getByTestId("take-class-open").click();
@@ -83,7 +87,7 @@ test.describe("a human fighter taking a new class", () => {
     );
     await expect(detail.getByTestId("class-level-mage")).toHaveText("Level 1");
     await page.keyboard.press("Escape");
-    await expect(xp).toHaveText("0");
+    await expect(mageXp).toHaveText("0 XP");
     // The journal lives in the Act workspace.
     await openWorkspace(page, "Act");
     const entry = logEntry(page, "Mage");
@@ -107,7 +111,7 @@ test.describe("a human fighter taking a new class", () => {
       "Fighter 6 / Mage 1",
     );
     await openWorkspace(page, "Experience");
-    await expect(xp).toHaveText("0");
+    await expect(mageXp).toHaveText("0 XP");
   });
 });
 

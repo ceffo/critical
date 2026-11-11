@@ -193,7 +193,8 @@ export interface PspRecoveryRow {
 
 /** ADR 0042 steps 5 and 7: one class entry's figures. `xp` is its starting XP plus its share of the
  * ledger, `targetLevel` the level that XP gives and `nextLevelXp` the XP that reaches the next one
- * (0 and null for a frozen entry), `level` the level taken. */
+ * (0 and null for a frozen entry), `currentFloor` the XP that reaches `targetLevel` (the ledger's
+ * `currentFloor`, per entry; null for a frozen entry), `level` the level taken. */
 export interface DerivedClass {
   class: string;
   state: "active" | "frozen";
@@ -201,6 +202,7 @@ export interface DerivedClass {
   targetLevel: number;
   level: number;
   nextLevelXp: number | null;
+  currentFloor: number | null;
 }
 
 /** ADR 0037 step 3: available = initial (Table 34) + levelGained (one slot every `perLevels`

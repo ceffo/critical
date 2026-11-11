@@ -318,6 +318,10 @@ type EntryDerived struct {
 	// NextLevelXP is the XP that reaches TargetLevel + 1; nil at the last
 	// level and for a frozen entry.
 	NextLevelXP *int
+	// CurrentFloor is the XP that reaches TargetLevel (the floor of the
+	// entry's progress bar, as xpsvc.Progress.CurrentFloor is for the
+	// ledger); nil for a frozen entry.
+	CurrentFloor *int
 	// SpellSlots are the class's slots at RealizedLevel (ADR 0042 step 14),
 	// empty for a class without a spell progression.
 	SpellSlots map[int]int

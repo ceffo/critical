@@ -122,8 +122,9 @@ jobs:
       #    refreshed as the mirror moves on; restore-keys falls back to the previous bucket, which still
       #    covers most packages.
       # 2. A cold or stale cache downloads with bounded, retried attempts. Debs fetched by a timed-out
-      #    attempt stay in /var/cache/apt/archives, so each retry resumes where the last stopped, and the
-      #    cache is saved even when the step fails, so the next run starts warmer.
+      #    attempt stay in /var/cache/apt/archives, so each retry resumes where the last stopped. The cache
+      #    is saved only after a successful install and holds only the debs that install used, so a hit is
+      #    always installable offline (a stale hit that is not falls back to the archive).
       - name: Pick the apt cache bucket
         id: apt-week
         run: echo "week=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
@@ -132,33 +133,47 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ~/apt-debs
-          key: apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
+          key: apt-chromium-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
           restore-keys: |
-            apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-
-            apt-chromium-${{ runner.os }}-
+            apt-chromium-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-
+            apt-chromium-v2-${{ runner.os }}-
       - name: Install Chromium system dependencies
         timeout-minutes: 8
         run: |
           mkdir -p "$HOME/apt-debs"
+          # Debs already in the archive dir (the runner image's, not ours) are never saved: only what this
+          # step restores or downloads is, so the cache is exactly what Chromium's packages need.
+          touch "$RUNNER_TEMP/apt-start"
+          sleep 1
           sudo cp -n "$HOME"/apt-debs/*.deb /var/cache/apt/archives/ 2>/dev/null || true
           # Fail a stalled connection fast and let apt retry it.
           printf 'Acquire::Retries "5";\nAcquire::http::Timeout "20";\nAcquire::https::Timeout "20";\n' \
             | sudo tee /etc/apt/apt.conf.d/99-ci-network >/dev/null
-          # Bounded attempts; a timed-out one has its leftover apt-get stopped before the next starts, so it
-          # does not hold the apt lock (scripts/ci-install-chromium-deps.sh).
+          # With cached debs the packages are installed from them first, by name and without any download, so
+          # an Ubuntu archive or DNS outage does not fail a job that has its packages; without them, or if
+          # that fails, bounded attempts use the archive. A timed-out attempt has its leftover apt-get
+          # stopped before the next starts, so it does not hold the apt lock
+          # (scripts/ci-install-chromium-deps.sh).
           ok=0
           scripts_dir="$(git rev-parse --show-toplevel)/scripts"
-          "$scripts_dir/ci-install-chromium-deps.sh" && ok=1
-          sudo cp -n /var/cache/apt/archives/*.deb "$HOME/apt-debs/" 2>/dev/null || true
-          sudo chown -R "$USER" "$HOME/apt-debs"
+          offline=""
+          if ls "$HOME"/apt-debs/*.deb >/dev/null 2>&1; then offline=1; fi
+          OFFLINE="$offline" "$scripts_dir/ci-install-chromium-deps.sh" && ok=1
+          # Save only on success (a set the install could not use is not worth keeping), and only the debs
+          # this run restored or downloaded.
+          if [ "$ok" = 1 ]; then
+            sudo find /var/cache/apt/archives -maxdepth 1 -name '*.deb' -newer "$RUNNER_TEMP/apt-start" \
+              -exec cp -n -t "$HOME/apt-debs/" {} +
+            sudo chown -R "$USER" "$HOME/apt-debs"
+          fi
           [ "$ok" = 1 ]
         working-directory: web
       - name: Save apt packages for Chromium
-        if: ${{ !cancelled() && steps.apt-cache.outputs.cache-hit != 'true' }}
+        if: ${{ success() && steps.apt-cache.outputs.cache-hit != 'true' }}
         uses: actions/cache/save@v6
         with:
           path: ~/apt-debs
-          key: apt-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
+          key: apt-chromium-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
       - name: Run the e2e suite
         # The suite's budget is 5 minutes (docs/agent-workflow.md); 6 here makes a regression fail on this
         # step instead of the job timeout hiding which step was slow.

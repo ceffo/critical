@@ -68,6 +68,17 @@ test.describe("the Powers tab of a psionicist", () => {
       "Still needed: the opponent’s name.",
     );
     await expect(name).toHaveAttribute("aria-required", "true");
+    // The mind is optional here: Closed shows chosen, as it is sent.
+    const mind = tab.getByTestId("target-band").getByRole("radio");
+    await expect(mind.filter({ hasText: "Closed" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(mind.filter({ hasText: "Open" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await snap(page, "attack-mind-default-en");
     await expect(tab.getByTestId("target-band")).toContainText("required");
     await name.fill("Orc");
     await expect(attack).toBeEnabled();
@@ -77,6 +88,11 @@ test.describe("the Powers tab of a psionicist", () => {
     await expect(bar.getByTestId("attack-result")).toBeVisible();
     await expect(bar.getByTestId("attack-tangents")).toContainText("Orc");
     await snap(page, "powers-bar-attack-result");
+    await chooseLanguage(page, "fr");
+    await expect(
+      tab.getByTestId("target-band").getByRole("radio", { name: "Fermé" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await snap(page, "attack-mind-default-fr");
   });
 
   test("keep a tangent up, see the balance, Next turn charges it", async ({

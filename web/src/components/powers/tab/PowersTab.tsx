@@ -101,6 +101,9 @@ export function PowersView({
               ? targetNeeds(formOf(selection.power), target)
               : []
           }
+          mindDefaults={
+            selection?.kind === "power" && formOf(selection.power) === "attack"
+          }
           onChange={setTarget}
         />
       )}

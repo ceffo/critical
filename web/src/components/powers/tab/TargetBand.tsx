@@ -19,16 +19,20 @@ import { heldMinds } from "./model";
 export function TargetBand({
   target,
   needs,
+  mindDefaults = false,
   onChange,
 }: {
   target: TargetDraft;
   /** The fields the open form still lacks: marked, and announced as required. */
   needs: TargetNeed[];
+  /** The open form takes "closed" when no mind was said (the attack): shown chosen, as it is sent. */
+  mindDefaults?: boolean;
   onChange: (next: TargetDraft) => void;
 }) {
   const { t, i18n } = useTranslation();
   const minds = heldMinds(useBuffsStore((s) => s.buffs));
   const defences = useCatalogue("defence_mode");
+  const shownMind = target.mindSaid || mindDefaults;
   const set = (patch: Partial<TargetDraft>) =>
     onChange({ ...target, ...patch });
   return (
@@ -98,12 +102,10 @@ export function TargetBand({
             key={mind}
             type="button"
             role="radio"
-            aria-checked={target.mindSaid && target.mind === mind}
+            aria-checked={shownMind && target.mind === mind}
             className={cn(
               "h-7 rounded-md px-2 text-body",
-              target.mindSaid && target.mind === mind
-                ? "chip chip-chosen"
-                : "chip",
+              shownMind && target.mind === mind ? "chip chip-chosen" : "chip",
             )}
             onClick={() => set({ mind, mindSaid: true })}
           >

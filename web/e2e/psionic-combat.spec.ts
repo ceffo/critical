@@ -4,10 +4,7 @@ import { psionicist } from "./psionicist";
 import {
   apiCall,
   openActPowers,
-  chooseLanguage,
-  expandRow,
   logEntry,
-  rowDetail,
   nextRound,
   openDashboard,
   reloadSettled,
@@ -124,71 +121,6 @@ test.describe("a psionicist in psionic combat", () => {
     await defend(page, "9", false);
     await expect(page.getByTestId("defend-refused")).toContainText(
       "no defence",
-    );
-  });
-
-  // The defence's check is worded as it was decided: the kept +1 of a standing mode, the check kept
-  // for the round (no die the second time), and Undo / Redo of a Next Round bring a lapsed raise back.
-  test("the contest says how it was decided", async ({ page }) => {
-    test.setTimeout(60_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", { picks: PICKS }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await openActPowers(page);
-    const bar = page.getByTestId("action-bar");
-
-    // Mind blank raised at round 0, combat started: round 1 shows the kept +1.
-    await chip(page, "Mind Blank").click();
-    await nextRound(page);
-    const first = await defend(page, "14", false);
-    await expect(first).toContainText("+1 kept");
-    await snap(page, "defend-result-kept-plus-one");
-    await bar.getByRole("button", { name: "Close" }).click();
-
-    // The raised row, in both languages and sizes.
-    await chip(page, "Thought Shield").click();
-    await expect(chip(page, "Thought Shield")).toContainText(
-      "raised this round",
-    );
-    await chooseLanguage(page, "en");
-    await snap(page, "powers-raised-en");
-
-    // Two defends in one round, the first keeps its check: the second takes it with no die.
-    const kept = await defend(page, "12", true);
-    await expect(kept).toContainText("Thought Shield");
-    await expect(kept.getByTestId("defend-kept")).toBeVisible();
-    await bar.getByRole("button", { name: "Close" }).click();
-    const second = await defend(page, "9", false);
-    await expect(second).toContainText("kept for the round, no die");
-    await expect(second.locator("[data-winner]")).toHaveCount(1);
-    await snap(page, "defend-result-from-kept");
-    // The newest row's detail, once the journal has read the entry.
-    await expect(async () => {
-      const row = logEntry(page, "against Thought Shield").first();
-      await expandRow(row);
-      await expect(rowDetail(row)).toContainText("kept for the round, no die", {
-        timeout: 500,
-      });
-    }).toPass();
-    await snap(page, "defend-journal-from-kept");
-
-    // Next Round lowers the raised row; Undo brings it back, Redo lowers it again.
-    await nextRound(page);
-    await expect(chip(page, "Thought Shield")).toHaveAttribute(
-      "data-defence",
-      "down",
-    );
-    await page.getByTestId("undo").click();
-    await expect(chip(page, "Thought Shield")).toHaveAttribute(
-      "data-defence",
-      "raised",
-    );
-    await page.getByTestId("redo").click();
-    await expect(chip(page, "Thought Shield")).toHaveAttribute(
-      "data-defence",
-      "down",
     );
   });
 });

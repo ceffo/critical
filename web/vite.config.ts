@@ -11,7 +11,29 @@ export default defineConfig({
     },
   },
   // Playwright specs live in e2e/ and run via `just e2e`, not vitest.
-  test: { include: ["src/**/*.test.{ts,tsx}"] },
+  // Two projects: the pure-logic tests stay in node (no DOM to start); only `*.dom.test.tsx`
+  // files get happy-dom, Testing Library and the jest-dom matchers (docs/frontend.md, "Testing").
+  test: {
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "node",
+          include: ["src/**/*.test.{ts,tsx}"],
+          exclude: ["src/**/*.dom.test.tsx"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "dom",
+          environment: "happy-dom",
+          include: ["src/**/*.dom.test.tsx"],
+          setupFiles: ["src/test/setup.ts"],
+        },
+      },
+    ],
+  },
   server: {
     // All interfaces (IPv4 too: a tunnel to 127.0.0.1:5173 must work); browsable by tailnet name.
     host: true,

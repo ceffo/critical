@@ -8,6 +8,7 @@ import {
   openWorkspace,
   undoEntry,
 } from "./helpers";
+import { openClassDetail } from "./multiclass";
 
 const VIEWPORTS = [
   { width: 1920, height: 1080 },
@@ -75,11 +76,13 @@ test.describe("a human fighter taking a new class", () => {
     await dialog.getByTestId("take-class-confirm-button").click();
     await expect(dialog).toHaveCount(0);
 
-    await expect(card.getByTestId("class-entry-fighter")).toHaveAttribute(
+    const detail = await openClassDetail(page);
+    await expect(detail.getByTestId("class-entry-fighter")).toHaveAttribute(
       "data-state",
       "frozen",
     );
-    await expect(card.getByTestId("class-level-mage")).toHaveText("Level 1");
+    await expect(detail.getByTestId("class-level-mage")).toHaveText("Level 1");
+    await page.keyboard.press("Escape");
     await expect(xp).toHaveText("0");
     // The journal lives in the Act workspace.
     await openWorkspace(page, "Act");
@@ -93,14 +96,16 @@ test.describe("a human fighter taking a new class", () => {
 
     await undoEntry(page, "Took a new class");
     await expect(card.getByTestId("class")).toHaveText("Fighter");
-    await expect(card.getByTestId("class-entries")).toHaveCount(0);
+    await expect(card.getByTestId("class-summary")).toHaveCount(0);
     await expect(logEntry(page, "Took a new class")).toContainText("Undone");
     await openWorkspace(page, "Experience");
     await expect(xp).toHaveText("21,000");
 
     await openWorkspace(page, "Act");
     await page.getByTestId("redo").click();
-    await expect(card.getByTestId("class-level-mage")).toHaveText("Level 1");
+    await expect(card.getByTestId("class-summary")).toHaveText(
+      "Fighter 6 / Mage 1",
+    );
     await openWorkspace(page, "Experience");
     await expect(xp).toHaveText("0");
   });
@@ -149,7 +154,7 @@ test.describe("a character who may not take a class", () => {
     await expectNoClippedText(dialog, "the refusal");
     // Nothing changed.
     await dialog.getByRole("button", { name: "Annuler" }).click();
-    await expect(card.getByTestId("class-entries")).toHaveCount(0);
+    await expect(card.getByTestId("class-summary")).toHaveCount(0);
 
     // The lift on again (the default): the same elf is accepted.
     expect(
@@ -165,7 +170,8 @@ test.describe("a character who may not take a class", () => {
     await snap(page, "confirm-fr");
     await dialog.getByTestId("take-class-confirm-button").click();
     await expect(dialog).toHaveCount(0);
-    await expect(card.getByTestId("class-entry-fighter")).toHaveAttribute(
+    const detail = await openClassDetail(page);
+    await expect(detail.getByTestId("class-entry-fighter")).toHaveAttribute(
       "data-state",
       "frozen",
     );
@@ -201,7 +207,7 @@ test.describe("a human whose new prime requisite is too low", () => {
     await snap(page, "refusal-en");
     await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(card.getByTestId("class")).toHaveText("Fighter");
-    await expect(card.getByTestId("class-entries")).toHaveCount(0);
+    await expect(card.getByTestId("class-summary")).toHaveCount(0);
     await expect(logEntry(page, "Took a new class")).toHaveCount(0);
   });
 });

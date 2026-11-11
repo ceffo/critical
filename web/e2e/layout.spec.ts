@@ -25,7 +25,7 @@ import {
   openSortsPowers,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
-import { asMultiClass } from "./multiclass";
+import { asMultiClass, openClassDetail } from "./multiclass";
 import { psionicist } from "./psionicist";
 import { keepPowerUp } from "./keepPowerUp";
 import {
@@ -717,7 +717,7 @@ test("saves label line with a spell set: heading one line, tag uncut, 1440 to 25
 // level-limit warning, a pending level per class, a frozen old class) and the Experience activity's
 // class standings and split preview, in French first then English (ADR 0027 step 2), 1280 to 2560.
 // Screenshots at 1920x1080 and 2560x1440 (visual QA).
-for (const mode of ["multi", "dual"] as const) {
+for (const mode of ["multi", "three", "dual"] as const) {
   test(`class lines (${mode}-class): uncut in French and English, 1280 to 2560`, async ({
     page,
   }) => {
@@ -729,7 +729,9 @@ for (const mode of ["multi", "dual"] as const) {
             pending: true,
             longClass: "Warden of the Northern Marches and Sunken Citadels",
           }
-        : { dual: true },
+        : mode === "three"
+          ? { three: true, pending: true }
+          : { dual: true },
     );
     await openDashboard(page);
     for (const lang of ["fr", "en"] as const) {
@@ -738,20 +740,45 @@ for (const mode of ["multi", "dual"] as const) {
       const character = page.getByRole("complementary", {
         name: lang === "fr" ? "Personnage" : "Character",
       });
-      await expect(character.getByTestId("class-entries")).toBeVisible();
+      const summary = character.getByTestId("class-summary");
+      await expect(summary).toBeVisible();
       for (const vp of VIEWPORTS) {
         await page.setViewportSize(vp);
         const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
+        // The classes are one line from 1440 wide; a long class name, or three French names in the
+        // 1280 card, wrap between classes instead of being cut. The detail is behind the line.
+        if (mode !== "multi")
+          expect(
+            (await summary.boundingBox())!.height,
+            `class summary lines, ${where}`,
+          ).toBeLessThanOrEqual(vp.width >= 1440 ? 34 : 50);
+        await expect(character.getByTestId("class-entries")).toHaveCount(0);
         await expectNoClippedText(character, `class lines, ${where}`);
         await expectWholeWords(character, `class lines, ${where}`);
         await expectNoPageScroll(page);
-        if (mode === "multi")
+        if (mode !== "dual")
           await expectNoClippedText(
             page.getByTestId("level-up").first(),
             `level-up prompt, ${where}`,
           );
         if (vp.width >= 1920 && lang === "fr")
           await snap(page, `${mode}-card-${vp.width}x${vp.height}`);
+        // The detail, opened by keyboard: every class, uncut, inside the viewport.
+        const detail = await openClassDetail(page);
+        await expectNoClippedText(detail, `class detail, ${where}`);
+        await expectWholeWords(detail, `class detail, ${where}`);
+        const box = (await detail.boundingBox())!;
+        expect(box.x, `class detail inside, ${where}`).toBeGreaterThanOrEqual(
+          0,
+        );
+        expect(
+          box.x + box.width,
+          `class detail inside, ${where}`,
+        ).toBeLessThanOrEqual(vp.width);
+        if (lang === "fr" || vp.width === 1280)
+          await snap(page, `${mode}-detail-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(detail).toHaveCount(0);
       }
       // The Experience activity: the standings (and, for a multi-class, the split preview).
       await page

@@ -94,7 +94,9 @@ test("create a half-elf fighter/cleric from its XP per class", async ({
   await finish(page, "Demi-elfe", "Morrison");
   await expect(page.getByTestId("character")).toContainText("Guerrier");
   await expect(page.getByTestId("character")).toContainText("Clerc");
-  await expect(page.getByTestId("character")).toContainText(/niveau 3/i);
+  await expect(page.getByTestId("class-summary")).toHaveText(
+    "Guerrier 3 / Clerc 3",
+  );
   await snap(page, "multi-sheet");
 });
 

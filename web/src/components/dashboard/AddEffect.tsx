@@ -68,7 +68,7 @@ export function AddEffect() {
                 key={id}
                 value={id}
                 className={cn(
-                  "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "flex-1 rounded-md px-2 py-1 text-body",
                   tab === id
                     ? "chip-chosen font-medium"
                     : "text-muted-foreground hover:text-foreground",

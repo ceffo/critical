@@ -83,7 +83,7 @@ export function CombatLog() {
               }
               onClick={() => update({ journalFilter: f })}
               className={cn(
-                "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "h-6 rounded-md px-3 text-body transition-colors",
                 filter === f
                   ? "chip-chosen font-medium"
                   : "text-muted-foreground hover:text-foreground",
@@ -281,7 +281,7 @@ function LogRow({
     >
       <button
         type="button"
-        className="flex min-h-6 min-w-0 flex-1 items-start gap-x-2 rounded-sm py-[3px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="flex min-h-6 min-w-0 flex-1 items-start gap-x-2 rounded-sm py-[3px] text-left"
         aria-pressed={selected || latest}
         data-testid="log-select"
         onClick={onSelect}
@@ -345,7 +345,7 @@ function LogRow({
       {short && (
         <button
           type="button"
-          className="flex h-6 shrink-0 items-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex h-6 shrink-0 items-center rounded-sm text-muted-foreground hover:text-foreground"
           aria-expanded={open}
           aria-label={t(open ? "log.summary.collapse" : "log.summary.expand")}
           title={t(open ? "log.summary.collapse" : "log.summary.expand")}

@@ -272,7 +272,7 @@ function LevelGroup({
               <li key={r.id}>
                 <button
                   type="button"
-                  className="flex min-h-7 w-full items-center gap-1.5 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                  className="flex min-h-7 w-full items-center gap-1.5 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors hover:bg-raised-hover disabled:text-ink-muted"
                   disabled={has}
                   aria-label={label}
                   title={label}

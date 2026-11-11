@@ -87,7 +87,7 @@ export function RoundBlock() {
             <PopoverTrigger
               aria-label={t("round.menu")}
               title={t("round.menu")}
-              className="flex size-7 items-center justify-center rounded-lg border border-input text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4"
+              className="flex size-7 items-center justify-center rounded-lg border border-input text-foreground transition-colors hover:bg-raised-hover [&_svg]:size-4"
             >
               <DotsThree weight="bold" />
             </PopoverTrigger>
@@ -126,7 +126,7 @@ export function RoundBlock() {
                     title={t("round.initiativeReroll")}
                     disabled={busy}
                     onClick={() => void rerollInitiative()}
-                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted [&_svg]:size-4"
+                    className="flex size-6 items-center justify-center rounded-md text-foreground transition-colors hover:bg-raised-hover disabled:text-ink-muted [&_svg]:size-4"
                   >
                     <ArrowsClockwise />
                   </button>
@@ -174,7 +174,7 @@ function InitiativeValue({ initiative }: { initiative: Initiative }) {
           <span
             tabIndex={0}
             aria-label={`${t("round.initiative")} ${initiative.value} (${lines.join(", ")})`}
-            className="rounded-md text-hero text-foreground tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="rounded-md text-hero text-foreground tabular-nums"
             data-testid="initiative-value"
             data-entry-id={initiative.logEntryId}
           />
@@ -201,7 +201,7 @@ function InitiativeValue({ initiative }: { initiative: Initiative }) {
 }
 
 const menuItem =
-  "flex h-7 w-full items-center rounded-md px-2 text-left text-body outline-none hover:bg-raised-hover focus-visible:bg-raised-hover";
+  "flex h-7 w-full items-center rounded-md px-2 text-left text-body hover:bg-raised-hover";
 
 function RoundMenu({ onPick }: { onPick: (m: Mode) => void }) {
   const { t } = useTranslation();

@@ -51,6 +51,8 @@ import {
   LONG_REASON,
   LONG_SPELL,
   sizesAt,
+  expectMinTarget,
+  expectOneFocusRing,
   expectNoPageScroll,
   escapedAbsolutes,
   expectZones,
@@ -2452,9 +2454,9 @@ async function journalRowsStep(page: Page, size: Viewport) {
   expect(
     await heal
       .getByTestId("log-select")
-      .evaluate((el) => getComputedStyle(el).boxShadow),
+      .evaluate((el) => getComputedStyle(el).outlineStyle),
     "focus ring",
-  ).not.toBe("none");
+  ).toBe("solid");
 
   for (const lang of ["en", "fr"] as const) {
     await chooseLanguage(page, lang);
@@ -2478,6 +2480,36 @@ async function journalRowsStep(page: Page, size: Viewport) {
     await page.waitForTimeout(150);
     await expectNoClippedText(log, `journal rows, ${theme}`);
     await snap(page, `journal-rows-fr-${theme.toLowerCase()}`);
+  }
+}
+
+// One focus ring on every tab stop in every theme (ADR 0026 step 2.2), and the 24 px targets of the
+// small controls (the name, the level, the version, the mind-affecting checkbox).
+async function focusRingTargetsStep(page: Page) {
+  await openDashboard(page);
+  await expectMinTarget(page.getByTestId("details-trigger"), "character name");
+  await expectMinTarget(page.getByTestId("level-open"), "level");
+  await expectMinTarget(page.getByTestId("version-open"), "version badge");
+  await expectMinTarget(
+    page.getByTestId("save-mind-affecting"),
+    "against the mind",
+  );
+  for (const [mode, themes] of [
+    ["Dark", ["Arcane", "Deep", "Plain", "Forest", "Ember", "Amber"]],
+    ["Light", ["Arcane", "Parchment", "Plain", "Forest"]],
+  ] as const) {
+    await chooseSetting(page, mode);
+    for (const name of themes) {
+      await chooseTheme(page, name);
+      await expectOneFocusRing(page, `${mode} ${name}`);
+      if (name === "Arcane" || name === "Parchment") {
+        await page.getByTestId("version-open").focus();
+        await snap(
+          page,
+          `focus-ring-${mode.toLowerCase()}-${name.toLowerCase()}`,
+        );
+      }
+    }
   }
 }
 
@@ -2519,6 +2551,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["effects timeline", effectsTimelineStep],
   ["long rest", longRestStep],
   ["settings popover", settingsPopoverStep],
+  ["focus ring and targets", focusRingTargetsStep],
   ["non-proficiency", nonProficiencyStep],
   ["weapon in hand", weaponInHandStep],
   ["class warnings", classWarningsStep],
@@ -4010,6 +4043,7 @@ async function levelUpGrantsStep(page: Page, size: Viewport) {
     await expectNoClippedText(grants, `level-up grants, ${where}`);
     await expectWholeWords(grants, `level-up grants, ${where}`);
     await expectNoClippedText(tag, `to-spend tag, ${where}`);
+    await expectMinTarget(tag, `to-spend tag, ${where}`);
     await snap(page, `level-up-grants-fr-${vp.width}x${vp.height}`);
     await tag.click();
     await expect(popover).toContainText("35 points de talent");

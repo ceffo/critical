@@ -355,7 +355,7 @@ export function SpellsPanel() {
                           <button
                             type="button"
                             className={cn(
-                              "min-w-32 flex-1 cursor-pointer rounded-sm text-left text-body break-words outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+                              "min-w-32 flex-1 cursor-pointer rounded-sm text-left text-body break-words hover:underline",
                               slot.used && "text-muted-foreground line-through",
                             )}
                             title={t("spellSlots.details", { name: baseName })}

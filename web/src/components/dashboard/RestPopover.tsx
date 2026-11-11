@@ -115,7 +115,7 @@ export function RestPopover() {
                 data-testid="psp-rest-row"
                 onClick={() => setChosen(r.activity)}
                 className={cn(
-                  "flex min-w-[5.5rem] flex-1 flex-col rounded-lg border px-2.5 py-1.5 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "flex min-w-[5.5rem] flex-1 flex-col rounded-lg border px-2.5 py-1.5 text-left",
                   on
                     ? "border-transparent bg-selected shadow-[inset_0_0_0_1.5px_var(--tint)]"
                     : "border-input hover:bg-raised-hover",
@@ -144,7 +144,7 @@ export function RestPopover() {
             <Minus aria-hidden />
           </Button>
           <input
-            className="h-7 w-14 rounded-lg border border-input bg-surface px-2 text-center text-body tabular-nums outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="h-7 w-14 rounded-lg border border-input bg-surface px-2 text-center text-body tabular-nums"
             type="number"
             min={0}
             step="any"

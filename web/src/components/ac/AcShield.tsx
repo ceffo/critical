@@ -44,7 +44,7 @@ export function AcShield({ onOpenInventory }: { onOpenInventory: () => void }) {
     >
       <PopoverTrigger
         className={cn(
-          "relative flex size-16 shrink-0 items-center justify-center self-center rounded-lg outline-none transition-colors hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50",
+          "relative flex size-16 shrink-0 items-center justify-center self-center rounded-lg transition-colors hover:bg-raised-hover",
           open && "bg-raised-hover",
         )}
         title={t("ac.title")}

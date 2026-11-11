@@ -145,7 +145,7 @@ export function IdentityStep(props: StepProps) {
                 }
                 onClick={() => update({ details: { alignment: code } })}
                 className={cn(
-                  "flex min-h-8 min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "flex min-h-8 min-w-0 items-center gap-1.5 rounded-md px-2 py-1 text-left text-body",
                   on && !ok
                     ? "bg-raised text-danger shadow-[inset_0_0_0_1.5px_var(--danger)]"
                     : on
@@ -201,7 +201,7 @@ export function IdentityStep(props: StepProps) {
               tabIndex={sexKeys.tabIndex(code)}
               onClick={() => update({ details: { sex: code } })}
               className={cn(
-                "flex min-h-7 items-center rounded-md px-3 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "flex min-h-7 items-center rounded-md px-3 py-1 text-body",
                 draft.details.sex === code
                   ? "chip-chosen"
                   : "chip hover:bg-raised-hover",

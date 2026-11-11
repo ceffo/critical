@@ -113,7 +113,7 @@ function App() {
   }, [refresh, loadSpellNames, loadLanguages]);
 
   return (
-    <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
+    <div className="relative flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
       <a
         href="#stage"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-body focus:text-foreground"

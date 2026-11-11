@@ -26,10 +26,11 @@ function Card({ onOpenEditor }: { onOpenEditor: (e: string) => void }) {
         onOpenEditor={onOpenEditor}
         onOpenFreeSpell={() => {}}
       />
-      <button onClick={() => setLeft({ ...left, weaponSlots: 0 })}>
-        spend slot
-      </button>
-      <button onClick={() => setLeft(none)}>spend all</button>
+      <button
+        data-testid="spend-slot"
+        onClick={() => setLeft({ ...left, weaponSlots: 0 })}
+      />
+      <button data-testid="spend-all" onClick={() => setLeft(none)} />
     </>
   );
 }
@@ -45,14 +46,14 @@ describe("to-spend tag", () => {
     await user.click(within(pop).getByRole("button", { name: /weapon/i }));
     expect(onOpenEditor).toHaveBeenCalledWith("weapon");
 
-    await user.click(screen.getByText("spend slot"));
+    await user.click(screen.getByTestId("spend-slot"));
     await user.click(screen.getByTestId("to-spend-tag"));
     expect(
       within(screen.getByTestId("level-up-to-spend")).getAllByRole("listitem"),
     ).toHaveLength(1);
 
     await user.keyboard("{Escape}");
-    await user.click(screen.getByText("spend all"));
+    await user.click(screen.getByTestId("spend-all"));
     expect(screen.queryByTestId("to-spend-tag")).toBeNull();
   });
 });

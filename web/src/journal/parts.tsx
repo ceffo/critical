@@ -38,12 +38,14 @@ export function HexDie({ value, label }: { value: number; label: string }) {
 export function Fact({
   label,
   children,
+  className,
 }: {
   label: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
-    <div className="rounded-lg bg-raised px-3 py-2">
+    <div className={cn("rounded-lg bg-raised px-3 py-2", className)}>
       <dt className={labelClass}>{label}</dt>
       <dd className="text-body font-semibold tabular-nums">{children}</dd>
     </div>

@@ -36,16 +36,12 @@ function form(page: Page) {
   return page.getByTestId("item-form");
 }
 
-/** Every weapon not in hand: the previous weapon's button and the drop-down's options. */
+/** Every weapon not in hand: the chips of the other weapons. */
 async function otherWeapons(page: Page) {
   const group = attackForm(page).getByRole("group", { name: "Other weapons" });
-  const previous = await group
+  return group
     .getByRole("button")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-weapon") ?? ""));
-  const listed = await group
-    .locator("option:not([disabled])")
-    .evaluateAll((els) => els.map((e) => e.textContent ?? ""));
-  return [...previous, ...listed];
 }
 
 async function rollAttack(page: Page, weapon: string) {
@@ -118,11 +114,12 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
 
   await openWorkspace(page, "Act");
   await openWeapons(page);
-  const group = attackForm(page)
-    .getByRole("combobox", { name: "Other weapon" })
-    .locator('optgroup[label="Not equipped"] option');
-  await expect(group).toHaveText(["Long Bow"]);
-  await snap(page, "drop-down-not-equipped");
+  const unequipped = attackForm(page)
+    .getByRole("group", { name: "Other weapons" })
+    .locator('[data-equipped="false"]');
+  await expect(unequipped).toHaveAttribute("data-weapon", "Long Bow");
+  await expect(unequipped).toContainText("not equipped");
+  await snap(page, "chip-not-equipped");
   await chooseWeapon(page, "Long Bow");
   await expect(logEntry(page, "Equipped: Long Bow")).toBeVisible();
   await expect(

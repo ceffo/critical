@@ -409,23 +409,23 @@ export async function openWeapons(page: Page) {
 }
 
 /**
- * Put a weapon in hand unless it already is: the previous weapon's button when it is that one, else
- * the drop-down of the other weapons; never attacks.
+ * Put a weapon in hand unless it already is: its chip among the other weapons, else the menu the
+ * chips fall back to when there are more than four; never attacks.
  */
 export async function chooseWeapon(page: Page, name: string) {
   const held = attackForm(page).getByTestId("weapon-in-hand");
   await expect(held).not.toBeEmpty();
   if ((await held.textContent()) === name) return;
   const group = attackForm(page).getByRole("group", { name: "Other weapons" });
-  const previous = group.getByRole("button", {
+  const chip = group.getByRole("button", {
     name: `Switch to ${name}`,
     exact: true,
   });
-  if (await previous.count()) await previous.click();
-  else
-    await group
-      .getByRole("combobox", { name: "Other weapon" })
-      .selectOption({ label: name });
+  if (await chip.count()) await chip.click();
+  else {
+    await group.getByRole("button", { name: "Other weapon" }).click();
+    await page.getByRole("menuitem", { name }).click();
+  }
   await expect(held).toHaveText(name);
 }
 

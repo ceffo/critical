@@ -114,6 +114,22 @@ function App() {
 
   return (
     <div className="flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
+      <a
+        href="#stage"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-body focus:text-foreground"
+        data-testid="skip-link"
+        onClick={(ev) => {
+          // To the stage's selected tab when the focused activity has tabs, else to the stage itself.
+          ev.preventDefault();
+          const stage = document.getElementById("stage");
+          const tab = stage?.querySelector<HTMLElement>(
+            "section:not([hidden]) [role=tab][aria-selected=true]",
+          );
+          (tab ?? stage)?.focus();
+        }}
+      >
+        {t("shell.skipToStage")}
+      </a>
       <DatabaseBanner />
       <Header />
       <div className="flex min-h-0 flex-1 gap-3">
@@ -142,7 +158,9 @@ function App() {
         <Rail active={activity} onSelect={focus} />
 
         <main
-          className="flex min-h-0 min-w-0 flex-1 flex-col"
+          id="stage"
+          tabIndex={-1}
+          className="flex min-h-0 min-w-0 flex-1 flex-col outline-none"
           data-testid="stage"
         >
           <Pane

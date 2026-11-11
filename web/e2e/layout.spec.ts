@@ -26,7 +26,12 @@ import {
   openSortsPowers,
   openSpend,
 } from "./helpers";
-import { test as base, type Locator, type Page } from "@playwright/test";
+import {
+  test as base,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { asMultiClass, openClassDetail } from "./multiclass";
 import { psionicist } from "./psionicist";
 import { keepPowerUp } from "./keepPowerUp";
@@ -2476,7 +2481,12 @@ async function journalRowsStep(page: Page, size: Viewport) {
   }
 }
 
-type Step = (page: Page, size: Viewport, stack: Stack) => Promise<void>;
+type Step = (
+  page: Page,
+  size: Viewport,
+  stack: Stack,
+  context: BrowserContext,
+) => Promise<void>;
 
 /**
  * The dashboard walk: every screen and state of the dashboard in turn, in one test on one stack, at one
@@ -2524,10 +2534,23 @@ async function runWalk(
   steps: [string, Step][],
   stack: Stack,
 ) {
-  await page.setViewportSize(size);
+  const context = page.context();
   for (const [name, step] of steps) {
+    // Each step starts from the walk's size, signed in, with no route of an earlier step left.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    await context.addCookies([
+      {
+        name: stack.session.name,
+        value: stack.session.value,
+        domain: new URL(stack.webUrl).hostname,
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+    await page.setViewportSize(size);
     await test.step(name, async () => {
-      await step(page, size, stack);
+      await step(page, size, stack, context);
     });
     // Local storage holds the language and the theme: the next step starts from the defaults.
     await page.evaluate(() => localStorage.clear()).catch(() => undefined);
@@ -3002,10 +3025,12 @@ test.describe("workspaces to the dice composer", () => {
 // The login page (ADR 0022 step 1, ADR 0027 step 2): with both login buttons and the longest
 // refusal message, no text is cut in French and English at every layout viewport; screenshots in
 // French. The e2e API has no OAuth settings, so its login options are answered here with both.
-test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", async ({
-  page,
-  context,
-}) => {
+async function loginStep(
+  page: Page,
+  size: Viewport,
+  _stack: Stack,
+  context: BrowserContext,
+) {
   await context.clearCookies();
   await page.route("**/api/auth/options", (r) =>
     r.fulfill({ json: { google: true, devLogin: true } }),
@@ -3018,7 +3043,7 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
       .click();
     await expect(card.getByTestId("login-error")).toBeVisible();
     await expect(card.getByRole("link")).toBeVisible();
-    for (const vp of VIEWPORTS) {
+    for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
       await expectNoClippedText(card, `login page ${lang} ${vp.width}`);
       await expectWholeWords(card, `login page ${lang} ${vp.width}`);
@@ -3047,15 +3072,13 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
     await expectNoClippedText(card, `login page dark ${dark}`);
     await snap(page, `login-fr-dark-${dark}`);
   }
-});
+}
 
 // ADR 0022 step 1 for the database banner (ADR 0025 step 10.4), French first: with both of its
 // lines (a write whose outcome is unknown), it wraps and is never cut, fr and en, 1280x800 to
 // 2560x1440.
-test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function dbBannerStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const unavailable = {
     status: 503,
@@ -3074,10 +3097,10 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
   );
   for (const lang of ["fr", "en"] as const) {
     await chooseLanguage(page, lang);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(banner, `database banner, ${where}`);
@@ -3085,17 +3108,17 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
         await snap(page, `database-banner-${where.replace(", ", "-")}`);
     }
   }
-});
+}
 
 // The admin section (ADR 0029 step 1.3), French first: a player with a long email and two
 // characters' worth of names, a disabled user and a long pending invite; the invites and users cards
 // are never cut, fr and en, 1280x800 to 2560x1440.
-test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
-  page,
-  context,
-  stack,
-}) => {
-  test.setTimeout(60_000);
+async function adminStep(
+  page: Page,
+  size: Viewport,
+  stack: Stack,
+  context: BrowserContext,
+) {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const api = (method: string, url: string, body: unknown) =>
     fetch(`${stack.apiUrl}${url}`, {
@@ -3138,7 +3161,7 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
     }
     await route.fulfill({ response: res, json: body });
   });
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/admin");
@@ -3174,11 +3197,11 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       })
       .click();
     await expect(invites.getByTestId("admin-mail-hint")).toBeVisible();
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(invites, `admin invites, ${where}`);
@@ -3188,17 +3211,14 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       await snap(page, `admin-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The Ruleset screen (ADR 0041 step 8), French first: the crit table with a long error from the
 // server, the house-rule switches with the level limits mode and the success effects are never
 // cut, fr and en, 1280x800 to 2560x1440. The page may scroll as a page, but nothing escapes its
 // scrollers.
-test("ruleset screen: crit table, house rules and success effects uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function rulesetAdminStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/ruleset");
@@ -3237,11 +3257,11 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       .first()
       .boundingBox();
     expect(toBox!.width, "crit field width").toBeLessThan(80);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
@@ -3255,15 +3275,12 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       await snap(page, `ruleset-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The Ruleset screen as a player sees it (ADR 0041 step 8): every card shown read-only, the weapon
 // switch included, no edit control, uncut in fr and en at 1280 to 2560. /api/auth/me answers role
 // "player" for the root admin's sheet, as admin.spec does.
-test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
+async function rulesetPlayerStep(page: Page, size: Viewport) {
   await page.route("**/api/auth/me", async (route) => {
     const res = await route.fetch();
     await route.fulfill({
@@ -3271,7 +3288,7 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       json: { ...(await res.json()), role: "player" },
     });
   });
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/ruleset");
@@ -3293,11 +3310,11 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       await page.goto("/ruleset");
       await expect(effects).toContainText("Tumbling");
     }
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `player, ${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
@@ -3307,221 +3324,211 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       await snap(page, `ruleset-player-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The imported character lacks its alignment and sex (the roster cards' tag), the one created below has them.
-test.describe("roster cards", () => {
-  test.use({ character: { alignment: "", sex: "" } });
 
-  // The roster, "Vos personnages" (ADR 0034 step 7), and the intro of a user with no character (step
-  // 1), French first: the roster with a long name, its rename and retire dialogs, the character card's
-  // header with the roster's way in, the details with Nom first (step 7.2) and the cog menu left with
-  // no character action (step 8) are never cut, fr and en, 1280x800, 1920x1080 and 2560x1440, and the
-  // page never scrolls. The current character retired elsewhere (another tab) leaves a usable screen:
-  // back in the game the page loads on the next one.
-  test("roster, character card and intro uncut, fr and en, 1280 to 2560", async ({
-    page,
-  }) => {
-    test.setTimeout(90_000);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await openDashboard(page);
-    await chooseLanguage(page, "fr");
-    const call = (method: string, url: string, body: unknown) =>
-      page.evaluate(
-        async ([m, u, b]) => {
-          const r = await fetch(u as string, {
-            method: m as string,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(b),
-          });
-          return {
-            ok: r.ok,
-            body: (await r.json()) as {
-              characters: { id: number }[];
-              currentId: number | null;
-            },
-          };
-        },
-        [method, url, body] as const,
-      );
-    const created = await call("POST", "/api/characters", {
-      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
-      class: "bard",
-      raceCode: "half_elf",
-      details: { alignment: "chaotic_neutral", sex: "male" },
-      str: 10,
-      dex: 15,
-      con: 12,
-      int: 14,
-      wis: 9,
-      cha: 16,
-      hpMax: 6,
-      xp: 0,
-    });
-    expect(created.ok).toBe(true);
-    await reloadSettled(page);
-    const sizes = [
-      { width: 1280, height: 800 },
-      { width: 1920, height: 1080 },
-      { width: 2560, height: 1440 },
-    ];
-    const dialog = page.getByTestId("character-dialog");
-    const roster = page.getByTestId("roster");
-    const character = page.getByTestId("character");
-
-    for (const lang of ["fr", "en"] as const) {
-      await page.setViewportSize(sizes[0]!);
-      if (lang === "en") await chooseLanguage(page, "en");
-      const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
-      for (const vp of sizes) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        // The cog menu: settings and account, no character action.
-        const settings = await openSettings(page);
-        await expect(
-          settings.getByRole("button", {
-            name: tr("Créer un nouveau personnage", "Create a new character"),
-          }),
-        ).toHaveCount(0);
-        await expectNoClippedText(settings, `cog menu, ${where}`);
-        await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        // The card's header: the long name wraps beside the level and the roster's button.
-        await expectNoClippedText(
-          character.locator(".group-band"),
-          `character card header, ${where}`,
-        );
-        await page.getByTestId("details-trigger").click();
-        const pop = page.getByTestId("details-popover");
-        await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
-        await expect(
-          pop.getByLabel(tr("Nom", "Name"), { exact: true }),
-        ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
-        await expectNoClippedText(pop, `details with Nom, ${where}`);
-        await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(pop).toBeHidden();
-
-        await page.getByTestId("roster-open").click();
-        await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-        // Each card shows its HP; race · alignment and no tag on the one with a complete identity,
-        // the tag on the one still to choose (the imported sheet).
-        await expect(roster.getByTestId("roster-hp")).toHaveCount(2);
-        const complete = roster
-          .getByTestId("roster-card")
-          .filter({ hasText: "Aldéric" });
-        await expect(complete.getByTestId("roster-identity")).toHaveText(
-          tr("Demi-elfe · Chaotique neutre", "Half-elf · Chaotic neutral"),
-        );
-        await expect(complete.getByTestId("roster-missing")).toHaveCount(0);
-        await expect(complete.getByTestId("roster-hp")).toHaveText(
-          tr("PV 6/6", "HP 6/6"),
-        );
-        await expect(roster.getByTestId("roster-missing")).toHaveCount(1);
-        await expect(roster.getByTestId("roster-missing")).toHaveText(
-          tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
-        );
-        await expectNoClippedText(page.locator("body"), `roster, ${where}`);
-        await expectNoPageScroll(page);
-        await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
-
-        await roster
-          .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
-          .click();
-        await expect(dialog.getByTestId("rename-form")).toBeVisible();
-        await expectNoClippedText(dialog, `rename dialog, ${where}`);
-        await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(dialog).toBeHidden();
-        await roster
-          .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
-          .click();
-        await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
-        await expectNoClippedText(dialog, `retire dialog, ${where}`);
-        await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(dialog).toBeHidden();
-        await page
-          .getByRole("button", {
-            name: tr("Revenir à la partie", "Back to the game"),
-          })
-          .click();
-        await expect(character).toBeVisible();
-      }
-    }
-
-    // The current character retired elsewhere while the roster shows: back in the game, the server
-    // says the character changed and the page loads on the one it made current.
-    await page.setViewportSize(sizes[0]!);
-    await page.getByTestId("roster-open").click();
-    await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-    const retired = await call(
-      "PATCH",
-      `/api/characters/${created.body.currentId}`,
-      { retired: true },
+// The roster, "Vos personnages" (ADR 0034 step 7), and the intro of a user with no character (step
+// 1), French first: the roster with a long name, its rename and retire dialogs, the character card's
+// header with the roster's way in, the details with Nom first (step 7.2) and the cog menu left with
+// no character action (step 8) are never cut, fr and en, 1280x800, 1920x1080 and 2560x1440, and the
+// page never scrolls. The current character retired elsewhere (another tab) leaves a usable screen:
+// back in the game the page loads on the next one.
+async function rosterStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return {
+          ok: r.ok,
+          body: (await r.json()) as {
+            characters: { id: number }[];
+            currentId: number | null;
+          },
+        };
+      },
+      [method, url, body] as const,
     );
-    expect(retired.ok).toBe(true);
-    await page.getByRole("button", { name: "Back to the game" }).click();
-    await expect(character).toContainText("Test Bard");
+  const created = await call("POST", "/api/characters", {
+    name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+    class: "bard",
+    raceCode: "half_elf",
+    details: { alignment: "chaotic_neutral", sex: "male" },
+    str: 10,
+    dex: 15,
+    con: 12,
+    int: 14,
+    wis: 9,
+    cha: 16,
+    hpMax: 6,
+    xp: 0,
+  });
+  expect(created.ok).toBe(true);
+  await reloadSettled(page);
+  const sizes = sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]);
+  const dialog = page.getByTestId("character-dialog");
+  const roster = page.getByTestId("roster");
+  const character = page.getByTestId("character");
 
-    // The last character retired: the intro (no character left), then Commencer opens the flow.
-    const list = await call("GET", "/api/characters", undefined);
-    for (const c of list.body.characters)
-      expect(
-        (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
-      ).toBe(true);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    // Not a goto: a request the page had in flight answers "character changed" now and reloads the
-    // page itself, which interrupts a navigation.
-    await reloadSettled(page);
-    const intro = page.getByTestId("intro");
-    await expect(intro).toBeVisible();
-    for (const lang of ["fr", "en"] as const) {
+  for (const lang of ["fr", "en"] as const) {
+    await page.setViewportSize(sizes[0]!);
+    if (lang === "en") await chooseLanguage(page, "en");
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      // The cog menu: settings and account, no character action.
+      const settings = await openSettings(page);
+      await expect(
+        settings.getByRole("button", {
+          name: tr("Créer un nouveau personnage", "Create a new character"),
+        }),
+      ).toHaveCount(0);
+      await expectNoClippedText(settings, `cog menu, ${where}`);
+      await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      // The card's header: the long name wraps beside the level and the roster's button.
+      await expectNoClippedText(
+        character.locator(".group-band"),
+        `character card header, ${where}`,
+      );
+      await page.getByTestId("details-trigger").click();
+      const pop = page.getByTestId("details-popover");
+      await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
+      await expect(
+        pop.getByLabel(tr("Nom", "Name"), { exact: true }),
+      ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
+      await expectNoClippedText(pop, `details with Nom, ${where}`);
+      await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(pop).toBeHidden();
+
+      await page.getByTestId("roster-open").click();
+      await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+      // Each card shows its HP; race · alignment and no tag on the one with a complete identity,
+      // the tag on the one still to choose (the imported sheet).
+      await expect(roster.getByTestId("roster-hp")).toHaveCount(2);
+      const complete = roster
+        .getByTestId("roster-card")
+        .filter({ hasText: "Aldéric" });
+      await expect(complete.getByTestId("roster-identity")).toHaveText(
+        tr("Demi-elfe · Chaotique neutre", "Half-elf · Chaotic neutral"),
+      );
+      await expect(complete.getByTestId("roster-missing")).toHaveCount(0);
+      await expect(complete.getByTestId("roster-hp")).toHaveText(
+        tr("PV 6/6", "HP 6/6"),
+      );
+      await expect(roster.getByTestId("roster-missing")).toHaveCount(1);
+      await expect(roster.getByTestId("roster-missing")).toHaveText(
+        tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
+      );
+      await expectNoClippedText(page.locator("body"), `roster, ${where}`);
+      await expectNoPageScroll(page);
+      await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
+
+      await roster
+        .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
+        .click();
+      await expect(dialog.getByTestId("rename-form")).toBeVisible();
+      await expectNoClippedText(dialog, `rename dialog, ${where}`);
+      await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await roster
+        .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
+        .click();
+      await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
+      await expectNoClippedText(dialog, `retire dialog, ${where}`);
+      await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
       await page
-        .getByRole("radio", {
-          name: lang === "fr" ? "Français" : "English",
-          exact: true,
+        .getByRole("button", {
+          name: tr("Revenir à la partie", "Back to the game"),
         })
         .click();
-      for (const vp of [
-        { width: 1280, height: 800 },
-        { width: 2560, height: 1440 },
-      ]) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(page.locator("body"), `intro, ${where}`);
-        await expectWholeWords(intro, `intro, ${where}`);
-        await expectNoPageScroll(page);
-        await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
-      }
+      await expect(character).toBeVisible();
     }
+  }
+
+  // The current character retired elsewhere while the roster shows: back in the game, the server
+  // says the character changed and the page loads on the one it made current.
+  await page.setViewportSize(sizes[0]!);
+  await page.getByTestId("roster-open").click();
+  await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+  const retired = await call(
+    "PATCH",
+    `/api/characters/${created.body.currentId}`,
+    { retired: true },
+  );
+  expect(retired.ok).toBe(true);
+  await page.getByRole("button", { name: "Back to the game" }).click();
+  await expect(character).toContainText("Test Bard");
+
+  // The last character retired: the intro (no character left), then Commencer opens the flow.
+  const list = await call("GET", "/api/characters", undefined);
+  for (const c of list.body.characters)
+    expect(
+      (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
+    ).toBe(true);
+  await page.setViewportSize(size);
+  // Not a goto: a request the page had in flight answers "character changed" now and reloads the
+  // page itself, which interrupts a navigation.
+  await reloadSettled(page);
+  const intro = page.getByTestId("intro");
+  await expect(intro).toBeVisible();
+  for (const lang of ["fr", "en"] as const) {
     await page
-      .getByRole("button", { name: "Start creating your character" })
+      .getByRole("radio", {
+        name: lang === "fr" ? "Français" : "English",
+        exact: true,
+      })
       .click();
-    await expect(page.getByTestId("creation-step")).toBeVisible();
-    // Quitter with nothing entered goes straight back to the intro.
-    await page.getByRole("button", { name: "Leave the creation" }).click();
-    await expect(intro).toBeVisible();
-  });
-});
+    for (const vp of sizesAt(size, [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(page.locator("body"), `intro, ${where}`);
+      await expectWholeWords(intro, `intro, ${where}`);
+      await expectNoPageScroll(page);
+      await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+  await page
+    .getByRole("button", { name: "Start creating your character" })
+    .click();
+  await expect(page.getByTestId("creation-step")).toBeVisible();
+  // Quitter with nothing entered goes straight back to the intro.
+  await page.getByRole("button", { name: "Leave the creation" }).click();
+  await expect(intro).toBeVisible();
+}
 
 // The creation route (ADR 0034 steps 2 to 4), judged in French first (ADR 0027 step 2) and audited
 // in English: each step, filled as a level 5 half-elf bard with the server's rolls (the longest
 // content: method V's six totals, five HP rows, the bard's skills), is never cut at 1280x800,
 // 1920x1080 and 2560x1440, the page never scrolls (the step card does) and the frame is capped at
 // 1680 px on wide screens (step 2.2). A refusal opens its step with the field's error.
-test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function creationStep(page: Page, size: Viewport) {
   // Leaving a filled-in flow asks the browser's beforeunload question: accept it.
-  page.on("dialog", (d) => void d.accept());
   await openDashboard(page);
-  const sizes = [
+  const sizes = sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   for (const lang of ["fr", "en"] as const) {
     await page.setViewportSize(sizes[0]!);
     await page.goto("/");
@@ -3707,7 +3714,7 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       `creation languages refusal, ${lang}`,
     );
     if (lang === "fr")
-      for (const vp of [sizes[1]!, sizes[2]!]) {
+      for (const vp of sizes.filter((v) => v.width >= 1920)) {
         await page.setViewportSize(vp);
         await snap(
           page,
@@ -3785,22 +3792,18 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       await audit("refusal");
     }
   }
-});
+}
 
 // The class step's multi-class and dual-class rows (ADR 0042 steps 1 and 4): three classes with a
 // long XP, and a dual-class character refused at Créer (Intelligence 14 is under the 17 the new
 // class needs), whose refusal opens the class step; never cut, French first, 1280 to 2560.
-test("creation route: multi-class rows and a class refusal uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  page.on("dialog", (d) => void d.accept());
+async function creationMultiStep(page: Page, size: Viewport) {
   await openDashboard(page);
-  const sizes = [
+  const sizes = sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   for (const lang of ["fr", "en"] as const) {
     await page.setViewportSize(sizes[0]!);
     await page.goto("/");
@@ -3913,7 +3916,7 @@ test("creation route: multi-class rows and a class refusal uncut, fr and en, 128
     await expect(step.getByTestId("field-error").first()).toBeVisible();
     await audit("classes-dual-refused");
   }
-});
+}
 
 // ADR 0030 step 7 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the level-up prompt on
 // the character card, at its widest (a hit die to roll, a second level owed, the manual entry
@@ -4098,10 +4101,7 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
 // de vie et talents" step at 1920x1080 and 2560x1440: a human fighter of Strength 18 is offered the
 // 18/xx field, a human mage of Strength 18 is not. The form has no rule of its own: the field
 // follows the draft's exceptionalStrength (the cases are Go's, composition draft_exceptional_test).
-test("creation extras: the 18/xx field follows the server, fighter and mage, 1920 and 2560", async ({
-  page,
-}) => {
-  page.on("dialog", (d) => void d.accept());
+async function creationExtrasStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const step = page.getByTestId("creation-step");
@@ -4139,10 +4139,10 @@ test("creation extras: the 18/xx field follows the server, fighter and mage, 192
     expect(draft.exceptionalStrength, name).toBe(offered);
     const field = step.getByLabel("Pourcentage (18/xx)");
     await expect(field).toHaveCount(offered ? 1 : 0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${name} extras, ${vp.width}x${vp.height}`;
       await expectNoClippedText(step, where);
@@ -4152,7 +4152,7 @@ test("creation extras: the 18/xx field follows the server, fighter and mage, 192
       );
     }
   }
-});
+}
 
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
@@ -4918,16 +4918,18 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
 // card. No page scroll or cut text at 1920x1080 and 2560x1440. The e2e API is a local build, so the
 // real answer shows the dev pill and a version with its commit; staging and production are the
 // health answers given here. Screenshots in French.
-test("version badge: inside the footer or the screen's card, three environments, 1920 and 2560", async ({
-  page,
-  context,
-}) => {
-  test.setTimeout(90_000);
-  page.on("dialog", (d) => void d.accept());
-  const sizes = [
+async function versionBadgeStep(
+  page: Page,
+  size: Viewport,
+  _stack: Stack,
+  context: BrowserContext,
+) {
+  // Judged at 1920x1080 and 2560x1440 only (the creation page at 1280x800 reaches past the window).
+  if (size.width < 1920) return;
+  const sizes = sizesAt(size, [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   const badge = page.getByTestId("version-badge");
   const expectBadgeIn = async (
     host: Locator,
@@ -5068,7 +5070,7 @@ test("version badge: inside the footer or the screen's card, three environments,
         );
     }
   }
-});
+}
 
 // The "update available" button beside the version badge: it shows after two consecutive health
 // answers with a newer version (the rule's cases are unit-tested; here the wiring), takes no band
@@ -5656,11 +5658,8 @@ test.describe("Known powers", () => {
 // brand (mark and wordmark in full, with its accessible name), the title, the version and the way
 // out, at the same height and the same place, uncut, fr and en, 1280x800 to 2560x1440 (ADR 0027
 // step 4.6). Only a browser lays the header out, so no Go or unit test can hold this.
-test("page header: the same brand header on every full-screen page, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  const sizes = [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]];
+async function pageHeaderStep(page: Page, size: Viewport) {
+  const sizes = sizesAt(size, [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]);
   const pages = [
     {
       name: "roster",
@@ -5730,14 +5729,11 @@ test("page header: the same brand header on every full-screen page, fr and en, 1
     await page.setViewportSize(sizes[0]);
     await page.goto("/");
   }
-});
+}
 
 // The same header in every theme and mode (French, 1920x1080), on the Ruleset page.
-test("page header: every theme and mode shows the brand uncut", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize(VIEWPORTS[3]);
+async function pageHeaderThemesStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   for (const [mode, which, themes] of [
@@ -5761,5 +5757,40 @@ test("page header: every theme and mode shows the brand uncut", async ({
       await page.goto("/");
       await expect(page.getByTestId("brand")).toBeVisible();
     }
+  }
+}
+
+/**
+ * The full-screen pages walk: the pages that are not the dashboard, one size per walk. The roster step
+ * retires every character, so it comes last; the steps that clear the session (login, the version badge's
+ * login card) get it back from `runWalk`.
+ */
+const PAGES_STEPS: [string, Step][] = [
+  ["page header", pageHeaderStep],
+  ["page header themes", pageHeaderThemesStep],
+  ["ruleset, admin", rulesetAdminStep],
+  ["ruleset, player", rulesetPlayerStep],
+  ["admin section", adminStep],
+  ["database banner", dbBannerStep],
+  ["version badge", versionBadgeStep],
+  ["creation route", creationStep],
+  ["creation, multi-class", creationMultiStep],
+  ["creation extras", creationExtrasStep],
+  ["login page", loginStep],
+  ["roster", rosterStep],
+];
+
+test.describe("pages walks", () => {
+  test.use({ character: { alignment: "", sex: "" } });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+    test(`pages walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      // Leaving a filled-in flow asks the browser's beforeunload question: accept it.
+      page.on("dialog", (d) => void d.accept());
+      await runWalk(page, size, PAGES_STEPS, stack);
+    });
   }
 });

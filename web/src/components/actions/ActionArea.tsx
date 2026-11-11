@@ -10,6 +10,7 @@ import {
   type Icon,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import { useItemsStore } from "@/stores/items";
 import { useSpellStore } from "@/stores/spells";
 import { AttackPanel } from "./AttackPanel";
@@ -89,29 +90,29 @@ export function ActionArea({
 
   return (
     // The focused card of the Act activity (ADR 0026 step 6.1), its tabs in the header band (6.2).
-    <section
+    <Tabs
+      value={active}
+      onValueChange={(id) => select(id as TabId)}
+      render={<section />}
       className="stage-card flex min-h-0 min-w-0 flex-col"
       aria-label={t("actions.label")}
     >
-      <div
-        role="tablist"
+      <TabsList
         aria-label={t("actions.label")}
         className="card-band flex shrink-0 flex-wrap items-center gap-1 px-4"
       >
         {tabs.map((id) => {
           const TabIcon = TAB_ICONS[id];
           return (
-            <button
+            <TabsTab
               key={id}
-              role="tab"
+              value={id}
               id={`tab-${id}`}
-              aria-selected={active === id}
               aria-controls={`panel-${id}`}
               className={cn(
                 "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
                 active === id && "border-tint text-foreground",
               )}
-              onClick={() => select(id)}
             >
               <TabIcon
                 aria-hidden
@@ -128,10 +129,10 @@ export function ActionArea({
                   {counts[id]}
                 </span>
               )}
-            </button>
+            </TabsTab>
           );
         })}
-      </div>
+      </TabsList>
       <div
         role="tabpanel"
         id={`panel-${active}`}
@@ -145,6 +146,6 @@ export function ActionArea({
         {active === "skills" && <SkillsTab />}
         {active === "turning" && turns && <TurnUndeadPanel />}
       </div>
-    </section>
+    </Tabs>
   );
 }

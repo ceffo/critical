@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import { MagnifyingGlass, Minus, Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
@@ -82,30 +83,32 @@ export function AddPiece({
         <h2 id={titleId} className="section-label">
           {t("equipment.add.title")}
         </h2>
-        <div
-          role="tablist"
-          aria-label={t("equipment.add.title")}
-          className="flex gap-1 rounded-lg bg-raised p-1"
+        <Tabs
+          value={tab}
+          onValueChange={(id) => setTab(id as typeof tab)}
+          className="contents"
         >
-          {(["catalogue", "typed"] as const).map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              title={t(`equipment.add.tabHint.${id}`)}
-              className={cn(
-                "rounded-md px-2 py-0.5 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                tab === id
-                  ? "chip-chosen font-medium"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setTab(id)}
-            >
-              {t(`equipment.add.tab.${id}`)}
-            </button>
-          ))}
-        </div>
+          <TabsList
+            aria-label={t("equipment.add.title")}
+            className="flex gap-1 rounded-lg bg-raised p-1"
+          >
+            {(["catalogue", "typed"] as const).map((id) => (
+              <TabsTab
+                key={id}
+                value={id}
+                title={t(`equipment.add.tabHint.${id}`)}
+                className={cn(
+                  "rounded-md px-2 py-0.5 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  tab === id
+                    ? "chip-chosen font-medium"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`equipment.add.tab.${id}`)}
+              </TabsTab>
+            ))}
+          </TabsList>
+        </Tabs>
         <span className="flex-1" />
         <Button
           size="sm"

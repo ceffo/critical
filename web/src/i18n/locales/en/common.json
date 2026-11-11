@@ -117,6 +117,7 @@
     }
   },
   "shell": {
+    "skipToStage": "Skip to the action panel",
     "activities": "Activities",
     "activity": {
       "act": "Act",

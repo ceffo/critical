@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import { Plus, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,29 +54,31 @@ export function AddEffect() {
         data-testid="add-effect-popover"
       >
         <PopoverTitle className="sr-only">{t("buffs.add")}</PopoverTitle>
-        <div
-          role="tablist"
-          aria-label={t("buffs.add")}
-          className="flex gap-1 rounded-lg bg-raised p-1"
+        <Tabs
+          value={tab}
+          onValueChange={(id) => setTab(id as typeof tab)}
+          className="contents"
         >
-          {TABS.map((id) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={cn(
-                "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                tab === id
-                  ? "chip-chosen font-medium"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setTab(id)}
-            >
-              {t(`buffs.tab.${id}`)}
-            </button>
-          ))}
-        </div>
+          <TabsList
+            aria-label={t("buffs.add")}
+            className="flex gap-1 rounded-lg bg-raised p-1"
+          >
+            {TABS.map((id) => (
+              <TabsTab
+                key={id}
+                value={id}
+                className={cn(
+                  "flex-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  tab === id
+                    ? "chip-chosen font-medium"
+                    : "text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {t(`buffs.tab.${id}`)}
+              </TabsTab>
+            ))}
+          </TabsList>
+        </Tabs>
         {tab === "spell" && <ReceiveSpell onDone={() => setOpen(false)} />}
         {tab === "saved" && <SavedEffects onDone={() => setOpen(false)} />}
         {tab === "new" && <AddBuffForm onDone={() => setOpen(false)} />}

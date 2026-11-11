@@ -1,5 +1,6 @@
 import { useEffect, useRef, type KeyboardEvent, type UIEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import { CircleNotch, Funnel, MagnifyingGlass, X } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
@@ -230,32 +231,34 @@ export function LookupPanel() {
 
   // Sorts and Pouvoirs, for a character with both (the tabs are a psionicist's).
   const tabs = psionic ? (
-    <div
-      role="tablist"
-      aria-label={t("lookup.browse")}
-      className="flex shrink-0 gap-4 border-b border-border"
+    <Tabs
+      value={powersActive ? "powers" : "spells"}
+      onValueChange={(v) => setPowersActive(v === "powers")}
+      className="shrink-0"
     >
-      {[
-        { id: false, label: t("shell.activity.spells") },
-        { id: true, label: t("lookup.classPowers") },
-      ].map(({ id, label }) => (
-        <button
-          key={String(id)}
-          type="button"
-          role="tab"
-          aria-selected={powersActive === id}
-          className={cn(
-            "-mb-px border-b-2 px-0.5 pb-1.5 text-body font-medium transition-colors",
-            powersActive === id
-              ? "border-tint text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => setPowersActive(id)}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
+      <TabsList
+        aria-label={t("lookup.browse")}
+        className="flex gap-4 border-b border-border"
+      >
+        {[
+          { id: "spells", label: t("shell.activity.spells") },
+          { id: "powers", label: t("lookup.classPowers") },
+        ].map(({ id, label }) => (
+          <TabsTab
+            key={id}
+            value={id}
+            className={cn(
+              "-mb-px border-b-2 px-0.5 pb-1.5 text-body font-medium transition-colors",
+              powersActive === (id === "powers")
+                ? "border-tint text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {label}
+          </TabsTab>
+        ))}
+      </TabsList>
+    </Tabs>
   ) : null;
 
   if (powersActive) return <PowersBrowser tabs={tabs} />;

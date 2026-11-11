@@ -8,6 +8,7 @@ import {
   type IconProps,
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
+import { VerticalButton, VerticalButtons } from "@/components/ui/tabs";
 import { ACTIVITIES, type Activity } from "@/lib/activities";
 
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
@@ -33,30 +34,34 @@ export function Rail({
   return (
     <nav
       aria-label={t("shell.activities")}
-      className="flex w-[4.25rem] shrink-0 flex-col items-stretch gap-1"
+      className="flex w-[4.25rem] shrink-0 flex-col"
       data-testid="rail"
     >
-      {ACTIVITIES.map((a) => {
-        const Icon = ICONS[a];
-        const on = active === a;
-        return (
-          <button
-            key={a}
-            type="button"
-            aria-current={on ? "page" : undefined}
-            className={cn(
-              "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
-              on
-                ? "selected font-medium"
-                : "text-muted-foreground hover:bg-raised-hover hover:text-foreground",
-            )}
-            onClick={() => onSelect(a)}
-          >
-            <Icon weight={on ? "fill" : "regular"} aria-hidden />
-            <span className="max-w-full">{t(`shell.activity.${a}`)}</span>
-          </button>
-        );
-      })}
+      <VerticalButtons
+        aria-label={t("shell.activities")}
+        className="flex flex-col items-stretch gap-1"
+      >
+        {ACTIVITIES.map((a) => {
+          const Icon = ICONS[a];
+          const on = active === a;
+          return (
+            <VerticalButton
+              key={a}
+              aria-current={on ? "page" : undefined}
+              className={cn(
+                "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
+                on
+                  ? "selected font-medium"
+                  : "text-muted-foreground hover:bg-raised-hover hover:text-foreground",
+              )}
+              onClick={() => onSelect(a)}
+            >
+              <Icon weight={on ? "fill" : "regular"} aria-hidden />
+              <span className="max-w-full">{t(`shell.activity.${a}`)}</span>
+            </VerticalButton>
+          );
+        })}
+      </VerticalButtons>
     </nav>
   );
 }

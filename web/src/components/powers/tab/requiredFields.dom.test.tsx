@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { screen, within } from "@testing-library/react";
+import { useTranslation } from "react-i18next";
 import { renderApp } from "@/test/render";
 import { Needs } from "./Required";
 import { TargetBand } from "./TargetBand";
@@ -13,13 +14,14 @@ vi.mock("@/api/powers", () => ({
 
 /** The band and the reason beside the action, fed by the one condition the Contact form uses. */
 function ContactTarget() {
+  const { t } = useTranslation();
   const [target, setTarget] = useState<TargetDraft>(NO_TARGET);
   const needs = targetNeeds("table", target);
   return (
     <>
       <TargetBand target={target} needs={needs} onChange={setTarget} />
       <Needs needs={needs} testId="table-need" />
-      <button disabled={needs.length > 0}>Use</button>
+      <button disabled={needs.length > 0}>{t("powers.use.use")}</button>
     </>
   );
 }

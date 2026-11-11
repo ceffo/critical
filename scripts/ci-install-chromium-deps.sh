@@ -6,14 +6,20 @@
 # /var/lib/apt/lists/lock, and every later attempt then fails at once on the lock. So after a failed
 # attempt this script reaps the leftover apt processes and waits for the lock to be free before retrying.
 #
-# Cache hit, no network: when OFFLINE_CMD is set it runs first, once. It installs the cached debs without
-# contacting any mirror (apt-get --no-download), so an Ubuntu archive or DNS outage cannot fail the job that
-# has its packages already. If it fails (no cache, a stale one missing a package) the bounded online
-# attempts below run as before: a cold cache still uses the archive.
+# Cache hit, no network: when OFFLINE=1 the packages Chromium needs are installed first, once, from the debs
+# already in /var/cache/apt/archives, by name and with `apt-get --no-download`, so no mirror is contacted and an
+# Ubuntu archive or DNS outage cannot fail the job that has its packages. The names are the ones Playwright
+# itself would install (read by running PACKAGES_CMD against a recording apt-get, nothing is installed by that),
+# never "every cached .deb": a stray cached deb can depend on packages that are not cached (firefox, xfconf)
+# and the install would then try to download them. If the offline install fails (no cache, a cache older than
+# the package lists) the bounded online attempts below run as before: a cold cache still uses the archive.
 #
 # Environment (defaults are the CI values; scripts/test-ci-install-chromium-deps.sh overrides them):
 #   INSTALL_CMD      the install command                       (npx playwright install-deps chromium)
-#   OFFLINE_CMD     cache-only install, tried once first      (empty: skip)
+#   OFFLINE         1: try the cache-only install first       (unset: skip)
+#   PACKAGES_CMD    command whose apt-get install line names  ($INSTALL_CMD)
+#                   the packages
+#   APT_GET         the apt-get used for the offline install   (apt-get)
 #   OFFLINE_TIMEOUT seconds the offline install may run       (120)
 #   ATTEMPTS         number of attempts                        (3)
 #   ATTEMPT_TIMEOUT  seconds one attempt may run               (135)
@@ -24,7 +30,8 @@
 set -uo pipefail
 
 INSTALL_CMD="${INSTALL_CMD:-npx playwright install-deps chromium}"
-OFFLINE_CMD="${OFFLINE_CMD:-}"
+OFFLINE="${OFFLINE:-}"
+APT_GET="${APT_GET:-apt-get}"
 OFFLINE_TIMEOUT="${OFFLINE_TIMEOUT:-120}"
 ATTEMPTS="${ATTEMPTS:-3}"
 ATTEMPT_TIMEOUT="${ATTEMPT_TIMEOUT:-135}"
@@ -32,6 +39,23 @@ SETTLE_SECONDS="${SETTLE_SECONDS:-15}"
 SUDO="${SUDO-sudo}"
 APT_PROCS="${APT_PROCS:-apt-get apt dpkg}"
 APT_KILL="${APT_KILL:-apt-get apt}"
+
+PACKAGES_CMD="${PACKAGES_CMD:-$INSTALL_CMD}"
+
+# package_names: the package names of the `apt-get install` that PACKAGES_CMD would run. apt-get and sudo are
+# replaced by recorders for that one run, so nothing is installed and no network is used.
+package_names() {
+    local shim rec
+    shim="$(mktemp -d)"
+    rec="$shim/args"
+    printf '#!/usr/bin/env bash\n[ "$1" = install ] && printf "%%s\\n" "$@" > "%s"\nexit 0\n' "$rec" > "$shim/apt-get"
+    printf '#!/usr/bin/env bash\nexec "$@"\n' > "$shim/sudo"
+    chmod +x "$shim/apt-get" "$shim/sudo"
+    # shellcheck disable=SC2086
+    PATH="$shim:$PATH" $PACKAGES_CMD >/dev/null 2>&1 || true
+    [ -s "$rec" ] && grep -v -e '^install$' -e '^-' "$rec"
+    rm -rf "$shim"
+}
 
 # shellcheck disable=SC2086 # APT_PROCS and SUDO are word lists on purpose.
 holders() { for p in $APT_PROCS; do pgrep -x "$p"; done; }
@@ -59,9 +83,10 @@ free_locks() {
     $SUDO dpkg --configure -a || true
 }
 
-if [ -n "$OFFLINE_CMD" ]; then
+if [ "$OFFLINE" = 1 ]; then
+    pkgs="$(package_names | tr '\n' ' ')"
     # shellcheck disable=SC2086
-    if timeout "$OFFLINE_TIMEOUT" $OFFLINE_CMD; then
+    if [ -n "$pkgs" ] && timeout "$OFFLINE_TIMEOUT" $SUDO $APT_GET install -y --no-install-recommends --no-download $pkgs; then
         echo "installed from the cached debs, no network needed"
         exit 0
     fi

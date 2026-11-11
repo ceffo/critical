@@ -67,27 +67,36 @@ touch "$tmp/state/always"
 if ATTEMPTS=2 run >/dev/null 2>&1; then fail "a permanently stalled install reported success"; fi
 
 # Cache hit, archive unreachable: the online install (INSTALL_CMD, whose `apt-get update` needs the mirrors)
-# always fails and records that it ran; the offline install works. The script must succeed without ever
-# running the online one.
-rm -f "$tmp/state/always" "$tmp/state/n" "$tmp/state/online-ran" "$tmp/state/offline-ran"
+# always fails and records that it ran. The offline install is `apt-get install --no-download <names>` with
+# the names Playwright would install (PACKAGES_CMD prints them through the recording apt-get); the fake apt-get
+# records what it was asked. The script must succeed without running the online install, and must name
+# exactly Playwright's packages, never anything else that is in the cache.
+rm -f "$tmp/state/always" "$tmp/state/n" "$tmp/state/online-ran" "$tmp/state/offline-args"
 printf '#!/usr/bin/env bash\ntouch "%s/state/online-ran"; echo "Err: azure.archive.ubuntu.com unreachable" >&2; exit 100\n' "$tmp" > "$tmp/bin/online-down"
-printf '#!/usr/bin/env bash\ntouch "%s/state/offline-ran"\n' "$tmp" > "$tmp/bin/offline-ok"
-printf '#!/usr/bin/env bash\ntouch "%s/state/offline-ran"; exit 100\n' "$tmp" > "$tmp/bin/offline-bad"
-chmod +x "$tmp/bin/online-down" "$tmp/bin/offline-ok" "$tmp/bin/offline-bad"
-if ! out="$(INSTALL_CMD="$tmp/bin/online-down" OFFLINE_CMD="$tmp/bin/offline-ok" run 2>&1)"; then
+printf '#!/usr/bin/env bash\napt-get update\nsudo apt-get install -y --no-install-recommends libnss3 xvfb fonts-liberation\n' > "$tmp/bin/playwright-like"
+printf '#!/usr/bin/env bash\necho "$*" > "%s/state/offline-args"\n' "$tmp" > "$tmp/bin/apt-ok"
+printf '#!/usr/bin/env bash\necho "$*" > "%s/state/offline-args"; exit 100\n' "$tmp" > "$tmp/bin/apt-bad"
+chmod +x "$tmp/bin/online-down" "$tmp/bin/playwright-like" "$tmp/bin/apt-ok" "$tmp/bin/apt-bad"
+if ! out="$(INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-ok" OFFLINE=1 run 2>&1)"; then
     fail "a cache hit with the archive unreachable failed: $out"
 fi
-[ -e "$tmp/state/offline-ran" ] || fail "the offline install did not run on a cache hit"
+[ "$(cat "$tmp/state/offline-args" 2>/dev/null)" = "install -y --no-install-recommends --no-download libnss3 xvfb fonts-liberation" ] \
+    || fail "the offline install was not Playwright's package names without download: $(cat "$tmp/state/offline-args" 2>/dev/null)"
 [ -e "$tmp/state/online-ran" ] && fail "the online install ran although the offline one succeeded"
 
-# Cold cache (the offline install fails) with the archive reachable: falls back to the online install.
-rm -f "$tmp/state/online-ran" "$tmp/state/offline-ran" "$tmp/state/n"
-if ! out="$(OFFLINE_CMD="$tmp/bin/offline-bad" run 2>&1)"; then fail "a cold cache did not fall back to the online install: $out"; fi
-[ -e "$tmp/state/offline-ran" ] || fail "the offline install was not tried first"
+# Not on a cache hit (OFFLINE unset): no offline attempt at all.
+rm -f "$tmp/state/online-ran" "$tmp/state/offline-args" "$tmp/state/n"
+if ! out="$(PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-ok" run 2>&1)"; then fail "a cold run failed: $out"; fi
+[ -e "$tmp/state/offline-args" ] && fail "the offline install was tried without a cache hit"
+
+# Cache hit that does not cover the packages (the offline install fails), archive reachable: falls back.
+rm -f "$tmp/state/offline-args" "$tmp/state/n"
+if ! out="$(PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-bad" OFFLINE=1 run 2>&1)"; then fail "a stale cache did not fall back to the online install: $out"; fi
+[ -e "$tmp/state/offline-args" ] || fail "the offline install was not tried first"
 grep -q "falling back to the archive" <<<"$out" || fail "the fallback was not announced: $out"
 
 # Neither works: the script fails.
-if INSTALL_CMD="$tmp/bin/online-down" OFFLINE_CMD="$tmp/bin/offline-bad" ATTEMPTS=1 run >/dev/null 2>&1; then
+if INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-bad" OFFLINE=1 ATTEMPTS=1 run >/dev/null 2>&1; then
     fail "an install that failed offline and online reported success"
 fi
 

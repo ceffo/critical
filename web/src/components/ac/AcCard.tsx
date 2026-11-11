@@ -21,7 +21,7 @@ export function AcCard() {
   return (
     <section
       aria-labelledby="ac-card-title"
-      className="zone-card flex w-[clamp(300px,22vw,420px)] min-h-0 shrink-0 flex-col overflow-y-auto"
+      className="zone-card flex w-[clamp(300px,22vw,420px)] max-[1279px]:w-64 min-h-0 shrink-0 flex-col overflow-y-auto"
       data-testid="ac-card"
     >
       <div className="card-band flex min-h-10 shrink-0 items-center justify-between gap-3 px-4 py-1.5">

@@ -43,11 +43,13 @@ import { pieceStats, piecesIn, equipped } from "@/lib/equipment";
 /**
  * Possessions grid (ADR 0035 item 2): icon | name, tags and stats | dice chip | count | Equip /
  * Unequip | edit / delete on hover. The name wraps, never cut (ADR 0022 step 1); the rows share the
- * columns through `subgrid`.
+ * columns through `subgrid`. Below 1280 px the list is too narrow beside the AC card for six
+ * columns: each row wraps its controls under the name instead.
  */
 const ITEM_COLS =
-  "grid grid-cols-[auto_minmax(10rem,1fr)_auto_auto_auto_auto] items-center gap-x-3";
-const ITEM_ROW = "col-span-full grid grid-cols-subgrid items-center";
+  "grid grid-cols-[auto_minmax(10rem,1fr)_auto_auto_auto_auto] items-center gap-x-3 max-[1279px]:flex max-[1279px]:flex-col";
+const ITEM_ROW =
+  "col-span-full grid grid-cols-subgrid items-center max-[1279px]:flex max-[1279px]:flex-wrap max-[1279px]:gap-x-3 max-[1279px]:gap-y-1";
 
 /** The icon of a piece's category (a wand has its own). */
 function CategoryIcon({ item }: { item: Item }) {
@@ -369,7 +371,7 @@ function ItemRow({
       data-category={i.category}
     >
       <CategoryIcon item={i} />
-      <div className="flex min-w-0 flex-col">
+      <div className="flex min-w-0 flex-col max-[1279px]:flex-1 max-[1279px]:basis-40">
         <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
           <span className="min-w-0 break-words font-medium">{name}</span>
           {i.category === "ammunition" && i.magicalBonus !== 0 && (
@@ -497,7 +499,7 @@ function ItemRow({
           </Button>
         )}
       </div>
-      <div className={ROW_ACTIONS}>
+      <div className={cn(ROW_ACTIONS, "max-[1279px]:ml-auto")}>
         <Button
           size="icon-sm"
           variant="ghost"

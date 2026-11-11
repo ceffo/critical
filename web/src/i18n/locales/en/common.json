@@ -597,14 +597,17 @@
     "otherWeapons": "Other weapons",
     "otherWeapon": "Other weapon",
     "otherWeaponPlaceholder": "Other weapon…",
+    "notEquipped": "stowed",
     "modifiers": "Situational modifier",
     "tags": {
       "situational": "Situational {{value}}"
     },
     "line": {
-      "sm": "S/M",
-      "l": "L",
-      "bonus": "to hit / dmg",
+      "damageSm": "Damage S/M",
+      "damageL": "Damage L",
+      "speed": "Speed",
+      "toHit": "To hit",
+      "dmgBonus": "Dmg bonus",
       "thac0": "THAC0"
     },
     "backstab": "Backstab ×{{n}}",

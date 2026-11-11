@@ -597,14 +597,17 @@
     "otherWeapons": "Autres armes",
     "otherWeapon": "Autre arme",
     "otherWeaponPlaceholder": "Autre arme…",
+    "notEquipped": "rangée",
     "modifiers": "Modificateur situationnel",
     "tags": {
       "situational": "Situationnel {{value}}"
     },
     "line": {
-      "sm": "P/M",
-      "l": "G",
-      "bonus": "toucher / dégâts",
+      "damageSm": "Dégâts P/M",
+      "damageL": "Dégâts G",
+      "speed": "Vitesse",
+      "toHit": "Toucher",
+      "dmgBonus": "Bonus dég.",
       "thac0": "TAC0"
     },
     "backstab": "Dans le dos ×{{n}}",

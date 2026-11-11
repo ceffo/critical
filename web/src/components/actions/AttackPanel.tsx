@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
 import {
   ArrowsLeftRight,
+  CaretDown,
   Minus,
   Plus,
   SlidersHorizontal,
@@ -23,6 +24,13 @@ import { ClassWarningTag, NonproficientTag } from "@/components/ClassWarning";
 import { useBuffsStore } from "@/stores/buffs";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
+import { Fact } from "@/journal/parts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { SizeChips } from "@/components/actions/SizeChips";
 import { formatSigned } from "@/lib/format";
@@ -40,6 +48,8 @@ import type {
 const BOUND = 20;
 /** From this count down, an ammunition chip turns amber. */
 const LOW_AMMO = 3;
+/** Up to this many other weapons show as chips; more go in a menu. */
+const MAX_CHIPS = 4;
 
 /**
  * Weapons tab of the Act panel (ADR 0022 step 2.5, ADR 0027 step 7): the target bar on one line (AC,
@@ -124,92 +134,102 @@ export function AttackPanel() {
           // the only control in the row (step 3.3).
           <section
             aria-label={t("attack.inHand")}
-            className="flex items-center gap-4 rounded-lg border-2 border-tint bg-selected px-4 py-3"
+            className="flex flex-col gap-3 rounded-lg border-2 border-tint bg-selected px-4 py-3"
           >
-            <div className="flex min-w-0 flex-1 flex-col gap-1">
-              <span className="section-label">{t("attack.inHand")}</span>
-              <h3 className="text-key break-words" data-testid="weapon-in-hand">
-                {localized(i18n.language, weapon.name)}
-              </h3>
-              {items
-                .find((i) => i.id === weapon.id)
-                ?.warnings.map((code) => (
-                  <ClassWarningTag key={code} code={code} />
-                ))}
-              <NonproficientTag penalty={weapon.nonproficientPenalty} />
-              {preview && (
-                <StatsLine weapon={weapon} view={view} preview={preview} />
-              )}
-              {view.preview?.pointBlank && (
-                <label
-                  className="flex w-fit items-center gap-2 text-body"
-                  title={t("attack.pointBlankHint")}
+            <div className="flex items-center gap-4">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="section-label">{t("attack.inHand")}</span>
+                <h3
+                  className="text-key break-words"
+                  data-testid="weapon-in-hand"
                 >
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    checked={pointBlank}
-                    onChange={(e) => setPointBlank(e.target.checked)}
-                    data-testid="point-blank"
-                  />
-                  {t("attack.pointBlank")}
-                </label>
-              )}
-              {view.preview?.backstab && (
-                <label
-                  className="flex w-fit items-center gap-2 text-body"
-                  title={t("attack.backstabHint", {
-                    n: backstabMultiplier,
-                    // The +4 is the server's: the backstab modifier of its preview.
-                    toHit: formatSigned(
-                      view.preview.backstab.modifiers.find(
-                        (m) => m.kind === "backstab",
-                      )?.value ?? 0,
-                    ),
-                  })}
-                >
-                  <input
-                    type="checkbox"
-                    className="size-4"
-                    checked={backstab}
-                    onChange={(e) => setBackstab(e.target.checked)}
-                    data-testid="backstab"
-                  />
-                  {t("attack.backstab", { n: backstabMultiplier })}
-                </label>
-              )}
-            </div>
-            <Button
-              ref={attackRef}
-              type="submit"
-              variant="main"
-              title={t("shortcut.hint", { label: t("attack.roll"), key: "A" })}
-              aria-keyshortcuts="A"
-              className="h-11 shrink-0 gap-0 py-0 pr-4 pl-0 whitespace-normal"
-              disabled={rolling || !ready}
-              aria-label={t("attack.roll")}
-              aria-busy={rolling}
-              aria-describedby={needs ? needsId : undefined}
-            >
-              <span
-                aria-hidden
-                className="grid size-11 shrink-0 place-items-center"
-              >
-                <Sword className="size-5" />
-              </span>
-              <span className="flex flex-col items-start text-left">
-                <span className="text-title leading-4">{t("attack.roll")}</span>
-                {needs && (
-                  <span
-                    id={needsId}
-                    className="text-label leading-4"
-                    data-testid="attack-needs"
+                  {localized(i18n.language, weapon.name)}
+                </h3>
+                {items
+                  .find((i) => i.id === weapon.id)
+                  ?.warnings.map((code) => (
+                    <ClassWarningTag key={code} code={code} />
+                  ))}
+                <NonproficientTag penalty={weapon.nonproficientPenalty} />
+                {view.preview?.pointBlank && (
+                  <label
+                    className="flex w-fit items-center gap-2 text-body"
+                    title={t("attack.pointBlankHint")}
                   >
-                    {needs}
-                  </span>
+                    <input
+                      type="checkbox"
+                      className="size-4"
+                      checked={pointBlank}
+                      onChange={(e) => setPointBlank(e.target.checked)}
+                      data-testid="point-blank"
+                    />
+                    {t("attack.pointBlank")}
+                  </label>
                 )}
-              </span>
-            </Button>
+                {view.preview?.backstab && (
+                  <label
+                    className="flex w-fit items-center gap-2 text-body"
+                    title={t("attack.backstabHint", {
+                      n: backstabMultiplier,
+                      // The +4 is the server's: the backstab modifier of its preview.
+                      toHit: formatSigned(
+                        view.preview.backstab.modifiers.find(
+                          (m) => m.kind === "backstab",
+                        )?.value ?? 0,
+                      ),
+                    })}
+                  >
+                    <input
+                      type="checkbox"
+                      className="size-4"
+                      checked={backstab}
+                      onChange={(e) => setBackstab(e.target.checked)}
+                      data-testid="backstab"
+                    />
+                    {t("attack.backstab", { n: backstabMultiplier })}
+                  </label>
+                )}
+              </div>
+              <Button
+                ref={attackRef}
+                type="submit"
+                variant="main"
+                title={t("shortcut.hint", {
+                  label: t("attack.roll"),
+                  key: "A",
+                })}
+                aria-keyshortcuts="A"
+                className="h-11 shrink-0 gap-0 py-0 pr-4 pl-0 whitespace-normal"
+                disabled={rolling || !ready}
+                aria-label={t("attack.roll")}
+                aria-busy={rolling}
+                aria-describedby={needs ? needsId : undefined}
+              >
+                <span
+                  aria-hidden
+                  className="grid size-11 shrink-0 place-items-center"
+                >
+                  <Sword className="size-5" />
+                </span>
+                <span className="flex flex-col items-start text-left">
+                  <span className="text-title leading-4">
+                    {t("attack.roll")}
+                  </span>
+                  {needs && (
+                    <span
+                      id={needsId}
+                      className="text-label leading-4"
+                      data-testid="attack-needs"
+                    >
+                      {needs}
+                    </span>
+                  )}
+                </span>
+              </Button>
+            </div>
+            {preview && (
+              <WeaponStats weapon={weapon} view={view} preview={preview} />
+            )}
           </section>
         )}
         {weapon && needsAmmo && (
@@ -234,65 +254,13 @@ export function AttackPanel() {
             {t("attack.noWeaponInHand")}
           </p>
         )}
-        {(previous || equipped.length > 0 || unequipped.length > 0) && (
-          // ADR 0027 step 7.1: one click back to the previous weapon, the others in a drop-down.
-          <div
-            role="group"
-            aria-label={t("attack.otherWeapons")}
-            className="flex flex-wrap items-center gap-2"
-            data-testid="other-weapons"
-          >
-            {previous && (
-              <Button
-                type="button"
-                className="h-auto min-h-7 py-1 whitespace-normal"
-                aria-label={t("attack.switchTo", { name: nameOf(previous) })}
-                title={t("attack.switchTo", { name: nameOf(previous) })}
-                data-weapon={nameOf(previous)}
-                onClick={() => void update({ weaponId: previous.id })}
-              >
-                <ArrowsLeftRight aria-hidden />
-                <span className="break-words">{nameOf(previous)}</span>
-              </Button>
-            )}
-            {(equipped.length > 0 || unequipped.length > 0) && (
-              // ADR 0035 item 12: the equipped weapons, then the others; picking one of those equips it.
-              <select
-                aria-label={t("attack.otherWeapon")}
-                title={
-                  unequipped.length > 0
-                    ? `${t("attack.otherWeapon")} — ${t("attack.pickEquips")}`
-                    : t("attack.otherWeapon")
-                }
-                className={cn(fieldClass, "w-auto max-w-56")}
-                value=""
-                onChange={(e) => void update({ weaponId: e.target.value })}
-              >
-                <option value="" disabled>
-                  {t("attack.otherWeaponPlaceholder")}
-                </option>
-                {equipped.length > 0 && (
-                  <optgroup label={t("attack.equippedWeapons")}>
-                    {equipped.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {nameOf(w)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-                {unequipped.length > 0 && (
-                  <optgroup label={t("attack.otherWeaponsGroup")}>
-                    {unequipped.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {nameOf(w)}
-                      </option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            )}
-          </div>
-        )}
+        <OtherWeapons
+          previous={previous}
+          equipped={equipped}
+          unequipped={unequipped}
+          nameOf={nameOf}
+          onPick={(id) => void update({ weaponId: id })}
+        />
       </form>
     </div>
   );
@@ -517,11 +485,21 @@ function Stepper({
   );
 }
 
+type StatChip = {
+  key: string;
+  label: string;
+  testId: string;
+  value: ReactNode;
+  dim?: boolean;
+};
+
 /**
- * The weapon's numbers on one line of text (ADR 0022 step 2.5), from the server's preview (ADR 0002
- * step 12): "Melee · 1d8 S/M · 1d12 L · +2 / +2 to hit / dmg · THAC0 11", the size not in use dimmed.
+ * The weapon's numbers as labelled chips (ADR 0022 step 2.5), the result card's tile (`Fact`), from
+ * the server's preview (ADR 0002 step 12): the damage dice for a small/medium and a large target
+ * (the size not in use dimmed), the speed factor, to-hit and damage bonus, THAC0. What is not a
+ * number (kind, two-handed, specialized, attack rate) stays as one short line under them.
  */
-function StatsLine({
+function WeaponStats({
   weapon,
   view,
   preview,
@@ -533,45 +511,60 @@ function StatsLine({
   const { t } = useTranslation();
   const rate = view.attackRate;
   const size = view.form.targetSize;
-  // Each segment stays on one line; the line breaks between segments when the row is narrow.
-  const segments: ReactNode[] = [
+  const chips: StatChip[] = [];
+  // ADR 0033 step 4: a bow's dice are its arrow's; none shown when there are none.
+  if (preview.damageSm) {
+    chips.push(
+      {
+        key: "sm",
+        label: t("attack.line.damageSm"),
+        testId: "tile-damage-sm",
+        value: preview.damageSm,
+        dim: size !== "sm",
+      },
+      {
+        key: "l",
+        label: t("attack.line.damageL"),
+        testId: "tile-damage-l",
+        value: preview.damageL || preview.damageSm,
+        dim: size !== "l",
+      },
+    );
+  }
+  // ADR 0033 step 3: the speed factor, when the piece has one.
+  if (weapon.speed > 0)
+    chips.push({
+      key: "speed",
+      label: t("attack.line.speed"),
+      testId: "tile-speed",
+      value: weapon.speed,
+    });
+  chips.push(
+    {
+      key: "hit",
+      label: t("attack.line.toHit"),
+      testId: "tile-bonus",
+      value: formatSigned(preview.toHit),
+    },
+    {
+      key: "dmg",
+      label: t("attack.line.dmgBonus"),
+      testId: "tile-damage-bonus",
+      value: formatSigned(preview.damageBonus),
+    },
+    {
+      key: "thac0",
+      label: t("attack.line.thac0"),
+      testId: "tile-thac0",
+      value: preview.effectiveThac0,
+    },
+  );
+  const words = [
     t(`attack.kinds.${weapon.kind}`),
-    // ADR 0033 step 3: the speed factor, when the piece has one.
-    weapon.speed > 0 && (
-      <span data-testid="tile-speed">
-        {t("equipment.stats.speed", { speed: weapon.speed })}
-      </span>
-    ),
     weapon.two_handed && t("attack.twoHanded"),
     weapon.specialized && (
       <span data-testid="tile-specialized">{t("attack.specialized")}</span>
     ),
-    // The dice the attack rolls, from the server (ADR 0033 step 4: a bow's are its arrow's); none
-    // shown when there are none.
-    preview.damageSm && (
-      <span className={cn(size !== "sm" && "opacity-60")}>
-        <Value testId="tile-damage-sm">{preview.damageSm}</Value>{" "}
-        {t("attack.line.sm")}
-      </span>
-    ),
-    preview.damageSm && (
-      <span className={cn(size !== "l" && "opacity-60")}>
-        <Value testId="tile-damage-l">
-          {preview.damageL || preview.damageSm}
-        </Value>{" "}
-        {t("attack.line.l")}
-      </span>
-    ),
-    <>
-      <Value testId="tile-bonus">
-        {`${formatSigned(preview.toHit)} / ${formatSigned(preview.damageBonus)}`}
-      </Value>{" "}
-      {t("attack.line.bonus")}
-    </>,
-    <>
-      {t("attack.line.thac0")}{" "}
-      <Value testId="tile-thac0">{preview.effectiveThac0}</Value>
-    </>,
     // ADR 0030 step 11: the rate, in the PHB's notation, and this round's count for a half rate.
     rate && (
       <span
@@ -589,25 +582,126 @@ function StatsLine({
     ),
   ].filter(Boolean);
   return (
-    <p className="text-body text-muted-foreground" data-testid="weapon-stats">
-      {segments.map((seg, i) => (
-        <Fragment key={i}>
-          {i > 0 && " · "}
-          <span className="whitespace-nowrap">{seg}</span>
-        </Fragment>
-      ))}
-    </p>
+    <div className="flex flex-col gap-2" data-testid="weapon-stats">
+      <p className="text-body text-muted-foreground">
+        {words.map((w, i) => (
+          <Fragment key={i}>
+            {i > 0 && " · "}
+            <span className="whitespace-nowrap">{w}</span>
+          </Fragment>
+        ))}
+      </p>
+      <dl className="grid grid-cols-[repeat(auto-fit,minmax(4.5rem,1fr))] gap-2">
+        {chips.map((c) => (
+          <Fact
+            key={c.key}
+            label={c.label}
+            className={cn(c.dim && "opacity-60")}
+          >
+            <span data-testid={c.testId}>{c.value}</span>
+          </Fact>
+        ))}
+      </dl>
+    </div>
   );
 }
 
-function Value({ testId, children }: { testId: string; children: ReactNode }) {
-  return (
-    <b
-      className="font-semibold whitespace-nowrap text-foreground tabular-nums"
-      data-testid={testId}
+/**
+ * The other weapons (ADR 0027 step 7.1, ADR 0035 item 12): up to MAX_CHIPS of them as chips, the
+ * previous weapon first with its arrows; with more, the previous weapon keeps its chip and the rest
+ * go in a menu (equipped first, then the others; picking a not-equipped one equips it, on the server).
+ */
+function OtherWeapons({
+  previous,
+  equipped,
+  unequipped,
+  nameOf,
+  onPick,
+}: {
+  previous: Weapon | null;
+  equipped: Weapon[];
+  unequipped: Weapon[];
+  nameOf: (w: Weapon) => string;
+  onPick: (id: string) => void;
+}) {
+  const { t } = useTranslation();
+  const rest = [...equipped, ...unequipped];
+  if (!previous && rest.length === 0) return null;
+  const asChips = (previous ? 1 : 0) + rest.length <= MAX_CHIPS;
+  const chip = (w: Weapon, isPrevious: boolean) => (
+    <button
+      key={w.id}
+      type="button"
+      className="chip flex min-h-7 items-center gap-1.5 px-3 py-0.5 text-left text-body"
+      aria-label={t("attack.switchTo", { name: nameOf(w) })}
+      title={
+        w.wielded
+          ? t("attack.switchTo", { name: nameOf(w) })
+          : `${t("attack.switchTo", { name: nameOf(w) })} — ${t("attack.pickEquips")}`
+      }
+      data-weapon={nameOf(w)}
+      data-equipped={w.wielded}
+      onClick={() => onPick(w.id)}
     >
-      {children}
-    </b>
+      {isPrevious && (
+        <ArrowsLeftRight aria-hidden className="size-4 shrink-0" />
+      )}
+      <span className="break-words">{nameOf(w)}</span>
+      {!w.wielded && (
+        <span className="text-label text-muted-foreground">
+          {t("attack.notEquipped")}
+        </span>
+      )}
+    </button>
+  );
+  return (
+    <div
+      role="group"
+      aria-label={t("attack.otherWeapons")}
+      className="flex flex-wrap items-center gap-2"
+      data-testid="other-weapons"
+    >
+      {previous && chip(previous, true)}
+      {asChips ? (
+        rest.map((w) => chip(w, false))
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                className="h-auto min-h-7 py-1 whitespace-normal"
+                aria-label={t("attack.otherWeapon")}
+                title={
+                  unequipped.length > 0
+                    ? `${t("attack.otherWeapon")} — ${t("attack.pickEquips")}`
+                    : t("attack.otherWeapon")
+                }
+                data-testid="other-weapon-menu"
+              />
+            }
+          >
+            {t("attack.otherWeaponPlaceholder")} <CaretDown aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {rest.map((w) => (
+              <DropdownMenuItem
+                key={w.id}
+                data-weapon={nameOf(w)}
+                onClick={() => onPick(w.id)}
+              >
+                <span className="break-words">{nameOf(w)}</span>
+                {!w.wielded && (
+                  <span className="text-label text-muted-foreground">
+                    {t("attack.notEquipped")}
+                  </span>
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+    </div>
   );
 }
 

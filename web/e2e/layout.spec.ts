@@ -1714,6 +1714,30 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await rail.nth(2).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
+    // ADR 0027 step 14.1: every row's edit and delete are visible at rest (no hover), at least
+    // 24 px, named for their item, and inside the stage's width (the list scrolls vertically).
+    await page.mouse.move(0, 0);
+    const rowButtons = stage.getByRole("button", {
+      name: /^(Modifier|Retirer) /,
+    });
+    expect(await rowButtons.count(), `row actions, ${where}`).toBeGreaterThan(
+      1,
+    );
+    for (const b of await rowButtons.all()) {
+      await expect(b).toBeVisible();
+      await expect(b.locator("xpath=..")).toHaveCSS("opacity", "1");
+      const box = (await b.boundingBox())!;
+      expect(
+        Math.min(box.width, box.height),
+        `${where}`,
+      ).toBeGreaterThanOrEqual(24);
+      const st = (await stage.boundingBox())!;
+      expect(box.x, `row action left, ${where}`).toBeGreaterThanOrEqual(st.x);
+      expect(
+        box.x + box.width,
+        `row action right, ${where}`,
+      ).toBeLessThanOrEqual(st.x + st.width);
+    }
     // ADR 0027 step 14.3 and ADR 0035 item 2: one possessions card, inside the stage (the page never
     // scrolls; a long list scrolls inside the card).
     await expectInside(
@@ -1721,8 +1745,8 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       stage,
       `possessions card, ${where}`,
     );
-    if (SHOTS.has(`${vp.width}x${vp.height}`))
-      await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
+    // The row actions at rest, at the three sizes of the design review.
+    await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }
 });
 

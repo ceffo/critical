@@ -67,3 +67,50 @@ describe("Contact target: required fields", () => {
     );
   });
 });
+
+/** The attack's band: the mind is optional, "closed" is shown chosen because it is what is sent. */
+function AttackTarget() {
+  const [target, setTarget] = useState<TargetDraft>(NO_TARGET);
+  const needs = targetNeeds("attack", target);
+  return (
+    <>
+      <TargetBand
+        target={target}
+        needs={needs}
+        mindDefaults
+        onChange={setTarget}
+      />
+      <Needs needs={needs} testId="attack-need" />
+    </>
+  );
+}
+
+describe("Attack target: the mind defaults to closed", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("asks for the opponent's name only, shows Closed chosen, and clears once named", async () => {
+    const { user } = await renderApp(<AttackTarget />);
+    expect(screen.getByTestId("attack-need")).toHaveTextContent(
+      "Still needed: the opponent’s name.",
+    );
+    const name = screen.getByRole("textbox", { name: "Opponent" });
+    expect(name).toBeRequired();
+    const closed = within(band()).getByRole("radio", { name: "Closed" });
+    expect(closed).toHaveAttribute("aria-checked", "true");
+    expect(within(band()).getByRole("radio", { name: "Open" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+
+    await user.type(name, "Orc");
+    expect(screen.queryByTestId("attack-need")).toBeNull();
+    expect(name).not.toBeRequired();
+  });
+
+  it("shows Fermé chosen in French", async () => {
+    await renderApp(<AttackTarget />, { lng: "fr" });
+    expect(
+      within(band()).getByRole("radio", { name: "Fermé" }),
+    ).toHaveAttribute("aria-checked", "true");
+  });
+});

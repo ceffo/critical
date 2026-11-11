@@ -38,6 +38,14 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   and 2560x1440 as well as the spec's sizes, with real scrollbars shown (headless Chromium with
   `ignoreDefaultArgs: ['--hide-scrollbars']`; never a visible window, see "Hard rules"), and keep an
   automated check (`layout.spec`) that would fail on the defect.
+  `layout.spec` runs as walks: one browser session per screen size runs independent steps
+  (`runWalk`, helpers in `web/e2e/layoutWalk.ts`): dashboard walks (1280, 1440, 1920, 2560), pages walks
+  (1280, 1920, 2560), class, psionicist and long-list walks, and one behaviours walk. A layout check is
+  a step function added to the walk's step list (`DASHBOARD_STEPS`, `PAGES_STEPS`, `CLASS_STEPS`,
+  `PSIONICIST_STEPS`, `BEHAVIOUR_STEPS`), not a new test, and runs at each size through `sizesAt`. A
+  failure names the walk and the step. Run one walk with
+  `just e2e layout.spec.ts --grep "dashboard walk at 1920"` (also `pages walk`, `class screens walk`,
+  `psionicist walk`, `behaviours walk`); `layout-narrow.spec.ts` keeps the 1024x768 floor.
 - **e2e budget (hard rule):** the whole suite stays at about 3 minutes and about 100 tests on CI
   ([ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)); the run step times out at 6, which is the
   regression tripwire, not the budget. e2e is for what only a browser proves: wiring, navigation,

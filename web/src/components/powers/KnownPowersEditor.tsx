@@ -271,6 +271,48 @@ export function DisciplineChips({
 }
 
 /**
+ * Adds a discipline not yet known, from a list of the ones left. Beside the Pouvoirs filter, whose
+ * chips already name every discipline, this keeps the names from showing twice.
+ */
+export function DisciplineSelect({
+  options,
+  known,
+  busy,
+  onChange,
+}: {
+  options: PowerFilterOptions | null;
+  known: KnownPowers;
+  busy: boolean;
+  onChange: (next: PowerPick[]) => void | Promise<void>;
+}) {
+  const { t, i18n } = useTranslation();
+  const lang = i18n.language;
+  const { add, isPicked } = usePickEdits(known.picks, busy, onChange);
+  const left = (options?.disciplines ?? []).filter(
+    (d) => !isPicked("discipline", d.id),
+  );
+  return (
+    <select
+      aria-label={t("powers.addDiscipline")}
+      lang={lang}
+      className={fieldClass}
+      disabled={busy || left.length === 0}
+      value=""
+      onChange={(e) => {
+        if (e.target.value) add({ kind: "discipline", id: e.target.value });
+      }}
+    >
+      <option value="">{t("powers.addDiscipline")}</option>
+      {left.map((d) => (
+        <option key={d.id} value={d.id}>
+          {localized(lang, d.name)}
+        </option>
+      ))}
+    </select>
+  );
+}
+
+/**
  * The creation's known-powers editor (ADR 0043 step 9): the known list beside a picker over the
  * powers catalogue. One list, changed whole by every add, remove or relearn (`onChange`): the
  * server checks the rules, and `refusal` names the power, the discipline and the slot it refused.

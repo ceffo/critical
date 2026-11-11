@@ -5779,7 +5779,7 @@ test.describe("Powers tab, long list", () => {
 });
 
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
-// the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
+// the refusal, the picker with its search, discipline chips once and the add-a-discipline select), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
 test.describe("Known powers", () => {
@@ -5788,8 +5788,15 @@ test.describe("Known powers", () => {
     test.setTimeout(90_000);
     await openDashboard(page);
     const panel = await openSortsPowers(page);
+    // The discipline names show once, as the filter chips; a discipline is added from the select.
+    const addDiscipline = panel.getByRole("combobox", {
+      name: "Add a discipline",
+    });
+    await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(
+      1,
+    );
     for (const name of ["Telepathy", "Clairsentience"])
-      await panel.getByRole("button", { name: `Add ${name}` }).click();
+      await addDiscipline.selectOption({ label: name });
     await panel
       .getByRole("combobox", { name: "Search powers..." })
       .fill("mind");
@@ -5803,7 +5810,7 @@ test.describe("Known powers", () => {
       .filter({ hasText: "Mind Thrust" })
       .getByRole("button", { name: "Add Mind Thrust" })
       .click();
-    await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
+    await addDiscipline.selectOption({ label: "Psychokinesis" });
     await expect(panel.getByTestId("powers-refusal")).toBeVisible();
     // The known list beside the browser, then a power's detail open in its place.
     for (const view of ["list", "detail"] as const) {

@@ -102,7 +102,9 @@ test.describe("a psionicist's known powers", () => {
     const count = (k: string) => panel.getByTestId(`powers-count-${k}`);
     await expect(count("disciplines")).toContainText("0 / 2");
 
-    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await panel
+      .getByRole("combobox", { name: "Add a discipline" })
+      .selectOption({ label: "Telepathy" });
     await expect(count("disciplines")).toContainText("1 / 2");
     await panel
       .getByRole("combobox", { name: "Search powers..." })
@@ -115,9 +117,13 @@ test.describe("a psionicist's known powers", () => {
       panel.getByTestId("known-power").filter({ hasText: "Contact" }),
     ).toBeVisible();
 
-    await panel.getByRole("button", { name: "Add Clairsentience" }).click();
+    await panel
+      .getByRole("combobox", { name: "Add a discipline" })
+      .selectOption({ label: "Clairsentience" });
     await expect(count("disciplines")).toContainText("2 / 2");
-    await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
+    await panel
+      .getByRole("combobox", { name: "Add a discipline" })
+      .selectOption({ label: "Psychokinesis" });
     const refusal = panel.getByTestId("powers-refusal");
     await expect(refusal).toContainText("Over the allowance for this level");
     await expect(count("disciplines")).toContainText("2 / 2");
@@ -139,7 +145,9 @@ test.describe("a psionicist's known powers", () => {
   }) => {
     await openDashboard(page);
     const panel = await openSortsPowers(page);
-    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await panel
+      .getByRole("combobox", { name: "Add a discipline" })
+      .selectOption({ label: "Telepathy" });
     await panel
       .getByRole("combobox", { name: "Search powers..." })
       .fill("contact");
@@ -177,7 +185,9 @@ test.describe("a psionicist's known powers", () => {
   test("a power added from Sorts shows in Act > Powers", async ({ page }) => {
     await openDashboard(page);
     const panel = await openSortsPowers(page);
-    await panel.getByRole("button", { name: "Add Telepathy" }).click();
+    await panel
+      .getByRole("combobox", { name: "Add a discipline" })
+      .selectOption({ label: "Telepathy" });
     await panel
       .getByRole("combobox", { name: "Search powers..." })
       .fill("contact");

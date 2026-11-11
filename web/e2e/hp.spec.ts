@@ -1,6 +1,7 @@
 import { test, expect, snap } from "./fixtures";
 import {
   addBuff,
+  chooseLanguage,
   currentHp,
   expectNoReload,
   logEntry,
@@ -9,7 +10,9 @@ import {
   readsAfter,
   recordHp,
   roundGroup,
+  undoEntry,
 } from "./helpers";
+import { expectNoClippedText } from "./noClip";
 
 test("damage then heal change current HP by the amounts entered, without reload", async ({
   page,
@@ -172,6 +175,27 @@ test("below 0 HP: the condition and the dying zone show, and HP stops at the flo
     await expect(character.getByTestId("hp-dying-zone")).toBeVisible();
     await snap(page, `hp-floor-${vp.width}x${vp.height}`);
   }
+
+  // In French at the big sizes: the line is worded and nothing is cut.
+  await chooseLanguage(page, "fr");
+  const carte = page.getByRole("complementary", { name: "Personnage" });
+  for (const vp of [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(carte.getByTestId("hp-condition")).toHaveText("Mort");
+    await expectNoClippedText(carte, `character card dead, ${vp.width}`);
+    await snap(page, `hp-dead-fr-${vp.width}x${vp.height}`);
+  }
+  await chooseLanguage(page, "en");
+
+  // Undo of the last hit puts the character back at -4 (unconscious); healing above 0 clears the line.
+  await undoEntry(page, "e2e ogre club");
+  await expect(character.getByTestId("hp-condition")).toHaveText("Unconscious");
+  await recordHp(page, "heal", max, "e2e cleric");
+  await expect.poll(() => currentHp(page)).toBe(max - 4);
+  await expect(character.getByTestId("hp-condition")).toHaveCount(0);
 });
 
 test("Quick HP: text typed while a change's refetch is pending is kept", async ({

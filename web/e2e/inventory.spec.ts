@@ -1,11 +1,6 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import {
-  logEntry,
-  openDashboard,
-  openWorkspace,
-  undoEntry,
-} from "./helpers";
+import { logEntry, openDashboard, openWorkspace, undoEntry } from "./helpers";
 
 // Inventory tab: one happy path (use, restock, undo). The behaviour rules (charges, stock, daily,
 // long-rest refill, empty refusal) are Go tests in itemsvc and restsvc.

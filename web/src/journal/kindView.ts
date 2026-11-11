@@ -68,6 +68,11 @@ export interface KindView<P, L = never> {
   text(p: P, w: Words, e: LogEntry): string;
   /** The journal row's value; none when absent. */
   value?(p: P, e: LogEntry): RowValue | null;
+  /**
+   * Setup and bookkeeping (a spell written in the book, an item added or equipped, a round set by
+   * hand): hidden by the journal's default view, shown by "All". Absent: shown by default.
+   */
+  bookkeeping?: boolean;
   /** The journal's Rolls filter: the entry carries dice the server rolled. Absent: never. */
   rolled?(p: P | null): boolean;
   /** The result card's subtitle (weapon, save, spell, item…); empty when absent. */

@@ -2055,8 +2055,13 @@
     "castBuff": "{{buff}}: {{counters}}",
     "castBuffOther": "{{buff}}: {{counters}}, not on you",
     "noRollsThisRound": "No rolls this round.",
+    "setupHidden_one": "{{count}} setup entry hidden",
+    "setupHidden_other": "{{count}} setup entries hidden",
+    "onlySetupHidden": "Only setup entries so far: choose All to see them.",
     "filter": {
       "label": "Journal filter",
+      "hideSetup": "Hide setup",
+      "hideSetupTitle": "Hide setup entries (spellbook, items, equipment, proficiencies, hand-set rounds); rolls, casts, damage and progress stay",
       "all": "All",
       "rolls": "Rolls"
     },

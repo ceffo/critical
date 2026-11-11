@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { test, expect, snap } from "./fixtures";
 import {
   combatLog,
@@ -7,8 +9,10 @@ import {
   expectNoReload,
   logEntry,
   markNoReload,
+  apiCall,
   openDashboard,
   recordHp,
+  reloadSettled,
 } from "./helpers";
 
 // The log is a stack: entries are popped, never edited, and the journal offers no note
@@ -162,4 +166,95 @@ test("Annuler and Ctrl/Cmd+Z pop the newest action", async ({
   await expect(logEntry(page, "e2e undo goblin")).toContainText("Undone");
   await expect.poll(() => currentHp(page)).toBe(max);
   await snap(page, "undo-popped");
+});
+
+test.describe("the default journal view", () => {
+  test.use({ journalAll: false });
+
+  // Setup rows are hidden by default (the kind views flag them); the filter brings them back and the
+  // choice survives a reload. A mage whose spellbook is filled by hand, one add (one transaction) per
+  // spell, opens on a journal without those rows; Undo still names the entry it pops. What the filter
+  // keeps and hides per kind is a unit test (bookkeeping.test.ts); this is the wiring and the persistence.
+  test("a mage with 17 hand-added spells opens on a journal without them; All brings them back and survives a reload", async ({
+    page,
+  }) => {
+    test.setTimeout(90_000);
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await openDashboard(page);
+    const catalogue = JSON.parse(
+      readFileSync(
+        fileURLToPath(
+          new URL("../../api/testdata/catalogue.json", import.meta.url),
+        ),
+        "utf8",
+      ),
+    ) as { spells: { id: string; class: string }[] };
+    const wizard = catalogue.spells
+      .filter((s) => s.class === "Wizard" && s.id !== "detect_magic")
+      .map((s) => s.id)
+      .slice(0, 17);
+    expect(wizard).toHaveLength(17);
+    expect(
+      await apiCall(page, "POST", "/api/characters", {
+        name: "Zéphyrin le Collectionneur",
+        class: "mage",
+        raceCode: "human",
+        details: { alignment: "neutral_good", sex: "male" },
+        str: 9,
+        dex: 12,
+        con: 11,
+        int: 19,
+        wis: 12,
+        cha: 10,
+        hpMax: 4,
+        xp: 0,
+      }),
+    ).toBe(true);
+    expect(
+      await apiCall(page, "POST", "/api/xp", { base: 40000, bonus: false }),
+    ).toBe(true);
+    for (const id of wizard) {
+      expect(
+        await apiCall(page, "POST", "/api/character/spellbook/add", {
+          spellId: id,
+        }),
+      ).toBe(true);
+    }
+    await reloadSettled(page);
+    await recordHp(page, "damage", 1, "e2e rat bite");
+
+    const log = combatLog(page);
+    await expect(logEntry(page, "e2e rat bite")).toBeVisible();
+    await expect(log.locator('[data-kind="spell_add"]')).toHaveCount(0);
+    await expect(log.getByTestId("journal-hidden")).toHaveText(
+      "17 setup entries hidden",
+    );
+    // The newest entry is the damage; the XP award stays (character progress).
+    await expect(log.locator('[data-kind="xp_add"]')).toHaveCount(1);
+    await snap(page, "setup-hidden-1920x1080");
+
+    await log.getByRole("radio", { name: "All" }).click();
+    await expect(log.locator('[data-kind="spell_add"]')).toHaveCount(17);
+    await expect(log.getByTestId("journal-hidden")).toHaveCount(0);
+    await snap(page, "setup-shown-1920x1080");
+
+    await reloadSettled(page);
+    await expect(log.getByRole("radio", { name: "All" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(log.locator('[data-kind="spell_add"]')).toHaveCount(17);
+
+    // Back to the default; Undo pops the newest entry, which is visible here, so pop it and then the
+    // hidden spell: its tooltip names the spell although the row is not listed.
+    await log.getByRole("radio", { name: "Hide setup" }).click();
+    await undoEntry(page, "e2e rat bite");
+    await expect(log.locator('[data-kind="xp_add"]')).toHaveCount(1);
+    await page.getByTestId("undo").click();
+    await expect(page.getByTestId("undo")).toHaveAttribute(
+      "aria-label",
+      /Added to the spellbook/,
+    );
+    await snap(page, "undo-names-hidden-spell-1920x1080");
+  });
 });

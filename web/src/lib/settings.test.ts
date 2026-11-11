@@ -35,6 +35,7 @@ describe("settings", () => {
       lightTheme: "arcane",
       journalHeight: null,
       journalCollapsed: false,
+      journalFilter: "hideSetup",
     });
     expect(loadSettings(null)).toEqual(DEFAULT_SETTINGS);
   });
@@ -48,10 +49,19 @@ describe("settings", () => {
       lightTheme: "parchment",
       journalHeight: 320,
       journalCollapsed: true,
+      journalFilter: "rolls",
     } as const;
     saveSettings(s, store);
     expect(saved(store)).toEqual(s);
     expect(loadSettings(store)).toEqual(s);
+  });
+
+  it("saves the journal filter and falls back to hiding setup on an unknown one", () => {
+    const store = memory();
+    saveSettings({ ...DEFAULT_SETTINGS, journalFilter: "all" }, store);
+    expect(loadSettings(store).journalFilter).toBe("all");
+    store.data.set(SETTINGS_KEY, JSON.stringify({ journalFilter: "nope" }));
+    expect(loadSettings(store).journalFilter).toBe("hideSetup");
   });
 
   it("keeps both theme choices when the mode switches", () => {
@@ -97,6 +107,7 @@ describe("settings", () => {
         lightTheme,
         journalHeight: null,
         journalCollapsed: false,
+        journalFilter: "hideSetup",
       });
       // Saved back without `amb`: a later choice is not re-mapped.
       saveSettings({ ...loadSettings(store), darkTheme: "plain" }, store);
@@ -158,6 +169,7 @@ describe("settings", () => {
       lightTheme: "arcane",
       journalHeight: null,
       journalCollapsed: false,
+      journalFilter: "hideSetup",
     };
     expect(loadSettings(store)).toEqual(migrated);
     expect(store.data.has(LEGACY_THEME_KEY)).toBe(false);
@@ -183,6 +195,7 @@ describe("settings", () => {
       lightTheme: "plain",
       journalHeight: null,
       journalCollapsed: false,
+      journalFilter: "hideSetup",
     });
   });
 
@@ -206,6 +219,7 @@ describe("settings", () => {
       lightTheme: "arcane",
       journalHeight: null,
       journalCollapsed: false,
+      journalFilter: "hideSetup",
     });
     expect(loadSettings(memory({ [SETTINGS_KEY]: "{not json" }))).toEqual(
       DEFAULT_SETTINGS,

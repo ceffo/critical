@@ -4,6 +4,7 @@
  * height and whether it is collapsed), kept in localStorage under one versioned key. Presentation
  * only; never sent to the API.
  */
+import { LOG_FILTERS, type LogFilter } from "@/journal/filter";
 import {
   DEFAULT_DARK_THEME,
   DEFAULT_LIGHT_THEME,
@@ -29,6 +30,8 @@ export interface Settings {
   /** The journal's height in CSS px once dragged; null = the default split. */
   journalHeight: number | null;
   journalCollapsed: boolean;
+  /** The journal's filter: without setup rows, everything, or rolls only. */
+  journalFilter: LogFilter;
 }
 
 export const SETTINGS_KEY = "critical.settings.v1";
@@ -65,6 +68,7 @@ export const DEFAULT_SETTINGS: Settings = {
   lightTheme: DEFAULT_LIGHT_THEME,
   journalHeight: null,
   journalCollapsed: false,
+  journalFilter: "hideSetup",
 };
 
 /**
@@ -142,6 +146,9 @@ export function loadSettings(store: Store | null = storage()): Settings {
         ? Math.round(saved.journalHeight)
         : DEFAULT_SETTINGS.journalHeight,
       journalCollapsed: saved.journalCollapsed === true,
+      journalFilter: LOG_FILTERS.includes(saved.journalFilter as LogFilter)
+        ? (saved.journalFilter as LogFilter)
+        : DEFAULT_SETTINGS.journalFilter,
     };
     if (legacy) saveSettings(settings, store);
     return settings;
@@ -173,6 +180,7 @@ export function saveSettings(s: Settings, store: Store | null = storage()) {
         lightTheme: s.lightTheme,
         journalHeight: s.journalHeight,
         journalCollapsed: s.journalCollapsed,
+        journalFilter: s.journalFilter,
       }),
     );
   } catch {

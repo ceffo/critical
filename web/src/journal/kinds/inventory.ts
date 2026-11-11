@@ -27,6 +27,7 @@ function decodeRestock(e: LogEntry): RestockResult | null {
 }
 
 export const itemRestockKind: KindView<RestockResult> = {
+  bookkeeping: true,
   decode: decodeRestock,
   icon: Package,
   text: (p, { t, names }) =>
@@ -75,6 +76,7 @@ function itemEditText(
 }
 
 export const itemAddKind: KindView<ItemChangeRecord> = {
+  bookkeeping: true,
   decode: decodeItemChange,
   icon: Package,
   text: (p, { t, names }) =>
@@ -82,12 +84,14 @@ export const itemAddKind: KindView<ItemChangeRecord> = {
 };
 
 export const itemEditKind: KindView<ItemChangeRecord> = {
+  bookkeeping: true,
   decode: decodeItemChange,
   icon: Package,
   text: (p, { t, names, spellName }) => itemEditText(p, t, names, spellName),
 };
 
 export const itemRemoveKind: KindView<ItemChangeRecord> = {
+  bookkeeping: true,
   decode: decodeItemChange,
   icon: Package,
   text: (p, { t, names }) =>
@@ -124,6 +128,7 @@ function weaponEditText(
 }
 
 export const weaponAddKind: KindView<WeaponChangeRecord> = {
+  bookkeeping: true,
   decode: decodeWeaponChange,
   icon: Sword,
   text: (p, { t, names }) =>
@@ -131,12 +136,14 @@ export const weaponAddKind: KindView<WeaponChangeRecord> = {
 };
 
 export const weaponEditKind: KindView<WeaponChangeRecord> = {
+  bookkeeping: true,
   decode: decodeWeaponChange,
   icon: Sword,
   text: (p, { t, names }) => weaponEditText(p, t, names),
 };
 
 export const weaponRemoveKind: KindView<WeaponChangeRecord> = {
+  bookkeeping: true,
   decode: decodeWeaponChange,
   icon: Sword,
   text: (p, { t, names }) =>
@@ -153,6 +160,7 @@ function decodeEquipmentState(e: LogEntry): EquipmentStateRecord | null {
 }
 
 export const equipmentStateKind: KindView<EquipmentStateRecord> = {
+  bookkeeping: true,
   decode: decodeEquipmentState,
   icon: TShirt,
   text(p, { t, names }) {

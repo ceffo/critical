@@ -368,8 +368,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
     *Checked by* the lookup spec and `layout.spec`'s French audit of the lookup; a unit test of the
     levels derived from the catalogue.
 14. **Inventory and Experience** (amends ADR 0022 step 2.5 "Experience" and "Inventory").
-    1. **Item rows**: the name, its dice right after it, the quantity stepper, then edit / delete on
-       hover and focus. The meta line shows the behaviour in the UI language ("Stock", "Charges",
+    1. **Item rows**: the name, its dice right after it, the quantity stepper, then edit / delete.
+       *Amended 2026-11-11 (user, accepting the critique's default): the buttons are **always
+       visible**, low-emphasis icon buttons (ghost, muted), at least 24 px, each named for its item
+       ("Edit Long sword", "Remove Long sword"); they were shown on hover and focus only (step 1.4),
+       which nobody found. Step 1.4's hover rule stays for the other rows (effects, journal).* The meta line shows the behaviour in the UI language ("Stock", "Charges",
        "Quotidien"); the free-text type stays in the edit form.
     2. **Add buttons are quiet and one word** ("Ajouter").
     3. **Items and weapons side by side** when the stage is at least 1200 px wide (1707x1300 and up),

@@ -14,6 +14,7 @@ import {
   openSettings,
   openWeapons,
   openWorkspace,
+  showWizardSpells,
   recordHp,
   apiCall,
   keepATangent,
@@ -491,6 +492,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 
   // The lookup with the long spell selected in a full list.
   await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
   const lookupList = page.getByRole("listbox", { name: "Spells" });
   const spellDetail = page.getByTestId("spell-detail");
   await lookupList.getByRole("option", { name: LONG_SPELL }).click();
@@ -1170,6 +1172,7 @@ test("theme: the main screens in dark and light, every theme in each of its mode
     await openWorkspace(page, "Act");
     await snap(page, `${m}-act-weapons`);
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page.getByRole("combobox", { name: "Search spells..." }).fill("fire");
     await expect(
       page.getByTestId("spell-detail").getByRole("heading"),
@@ -1657,6 +1660,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);
     await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
+    await showWizardSpells(page);
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);
     await expectWholeWords(stage, `lookup, ${where}`);
@@ -1771,6 +1775,7 @@ test.describe("workspaces to the dice composer", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page
       .getByRole("combobox", { name: "Search spells..." })
       .fill("quixotic still");

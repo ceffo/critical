@@ -643,3 +643,15 @@ export async function openActPowers(page: Page) {
   await page.getByRole("tab", { name: /^(Powers|Pouvoirs)$/ }).click();
   return page.getByTestId("powers-tab");
 }
+
+/**
+ * The lookup opens on "Mine" for a caster with spells; a spec that browses the catalogue switches
+ * to the Wizard list (in English or French).
+ */
+export async function showWizardSpells(page: Page) {
+  const wizard = page
+    .getByRole("group", { name: /^(Spell list|Liste de sorts)$/ })
+    .getByRole("button", { name: /^(Wizard|Magicien)$/, exact: false });
+  await wizard.click();
+  await expect(wizard).toHaveAttribute("aria-pressed", "true");
+}

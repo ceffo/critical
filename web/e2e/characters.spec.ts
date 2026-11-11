@@ -13,6 +13,7 @@ import {
   openRoster,
   openWeapons,
   openWorkspace,
+  showWizardSpells,
   undoEntry,
   openTypedAdd,
 } from "./helpers";
@@ -726,6 +727,7 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
   const searchBox = page.getByRole("combobox", { name: "Search spells..." });
   const detail = page.getByTestId("spell-detail");
   let learned = "";

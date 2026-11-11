@@ -589,7 +589,7 @@
     "otherWeapons": "Other weapons",
     "otherWeapon": "Other weapon",
     "otherWeaponPlaceholder": "Other weapon…",
-    "notEquipped": "not equipped",
+    "notEquipped": "stowed",
     "modifiers": "Situational modifier",
     "tags": {
       "situational": "Situational {{value}}"

@@ -118,7 +118,7 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
     .getByRole("group", { name: "Other weapons" })
     .locator('[data-equipped="false"]');
   await expect(unequipped).toHaveAttribute("data-weapon", "Long Bow");
-  await expect(unequipped).toContainText("not equipped");
+  await expect(unequipped).toContainText("stowed");
   await snap(page, "chip-not-equipped");
   await chooseWeapon(page, "Long Bow");
   await expect(logEntry(page, "Equipped: Long Bow")).toBeVisible();

@@ -589,7 +589,7 @@
     "otherWeapons": "Autres armes",
     "otherWeapon": "Autre arme",
     "otherWeaponPlaceholder": "Autre arme…",
-    "notEquipped": "non équipée",
+    "notEquipped": "rangée",
     "modifiers": "Modificateur situationnel",
     "tags": {
       "situational": "Situationnel {{value}}"

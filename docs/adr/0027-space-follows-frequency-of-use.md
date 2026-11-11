@@ -345,6 +345,8 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        blocks are side by side. A thief's or a bard's block also writes the skill point budget
        (available with its formula, spent, left) and each skill's terms as text (user, 2026-10-19:
        transparency over a short tab), so that tab scrolls inside the act panel; the page does not.
+       _(Amended 2026-11-11: the budget, its warnings and the editors moved to the spend dialog of
+       ADR 0037 step 15; the tab shows the rows and each skill's terms only.)_
     4. Rows look clickable (the shared row affordance).
 
     *Implementation note (2026-10-17):* the rows are the saves' clickable row (a raised stripe, hover

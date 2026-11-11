@@ -2602,9 +2602,7 @@ test("dashboard walk at 1707x1300", async ({ page, stack }) => {
 // (mouse) and arrows (keyboard); a click (or Enter) on it folds the journal into a one-line bar and
 // back, a drag of 4 px or more only resizes; both are kept per device
 // across a reload. What only a browser proves: pointer drag, layout heights and localStorage.
-test("journal split: drag resizes, click toggles, kept across reload", async ({
-  page,
-}) => {
+async function journalSplitStep(page: Page) {
   await openDashboard(page);
   await recordHp(page, "damage", 3, "Split goblin");
   const slot = page.getByTestId("journal-slot");
@@ -2676,7 +2674,7 @@ test("journal split: drag resizes, click toggles, kept across reload", async ({
   await page.getByTestId("journal-handle").click();
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
   await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
-});
+}
 
 // The audit itself: it reports a cut line and a box hiding tall text, and passes text that wraps or
 // scrolls. A plain page, no stack.
@@ -2713,7 +2711,7 @@ base("expectWholeWords reports a word broken mid-word", async ({ page }) => {
 
 // ADR 0022 step 2.4: a click focuses an activity; each mounts on its first visit and keeps its state
 // while hidden.
-test("rail: focuses activities and each keeps its state", async ({ page }) => {
+async function railStep(page: Page) {
   await openDashboard(page);
   const rail = page.getByRole("navigation", { name: "Activities" });
   await expect(rail.getByRole("button", { name: "Act" })).toHaveAttribute(
@@ -2760,7 +2758,7 @@ test("rail: focuses activities and each keeps its state", async ({ page }) => {
     page.getByRole("region", { name: "Journal", exact: true }),
   ).toBeHidden();
   await expect(page.getByTestId("hp-value")).toBeVisible();
-});
+}
 
 const isDark = (page: Page) =>
   page.evaluate(() => document.documentElement.classList.contains("dark"));
@@ -2789,9 +2787,7 @@ async function expectNoLoneRow(list: Locator, what: string) {
 // ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
 // switches live with the OS; both choices survive a reload and the inline script paints the
 // effective one before the app runs.
-test("settings: language, appearance and both themes apply live and persist across reload", async ({
-  page,
-}) => {
+async function settingsStep(page: Page) {
   const DEEP = / 232\)$/; // Deep's tint hue
   const PARCHMENT = / 262\)$/; // Parchment's lapis
   await page.emulateMedia({ colorScheme: "light" });
@@ -2892,7 +2888,7 @@ test("settings: language, appearance and both themes apply live and persist acro
       .getByRole("radio", { name: "Abysses", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
-});
+}
 
 /** A long weapon and a long item name: the act panel wraps them, never cuts (ADR 0022 step 1). */
 const LONG_WEAPON = "Two-Handed Flamberge of the Seventh Drowned Kingdom +3";
@@ -2916,111 +2912,103 @@ const PREPARED = [
 // (a client store shared across workspaces), and Roll on a spell's dice reaches the dice endpoint
 // and lands in the card and the journal. The formula wording is a unit test (spellValues), the
 // values at level are Go tests (spellstats). Screens of both workspaces at the four viewports.
-test.describe("workspaces to the dice composer", () => {
-  test.use({
-    extraSpells: {
-      rows: [
-        catalogueSpell({
-          id: "quixotic_stillness",
-          name: "Quixotic Stillness",
-          class: "Wizard",
-          level: 3,
-          school: "Alteration",
-          casting_time: "3",
-          range: "Touch",
-          duration: "8 rds. + 1d8 rds.",
-          area_of_effect: "The caster",
-        }),
-      ],
-    },
-  });
+const COMPOSER_EXTRA_SPELLS = {
+  rows: [
+    catalogueSpell({
+      id: "quixotic_stillness",
+      name: "Quixotic Stillness",
+      class: "Wizard",
+      level: 3,
+      school: "Alteration",
+      casting_time: "3",
+      range: "Touch",
+      duration: "8 rds. + 1d8 rds.",
+      area_of_effect: "The caster",
+    }),
+  ],
+};
 
-  test("Inventaire dice chip and Sorts 'To the dice' fill the composer; Roll rolls on the server", async ({
-    page,
-  }) => {
-    await openDashboard(page);
-    const formula = page
-      .getByRole("form", { name: "Dice" })
-      .getByLabel("Formula");
+async function composerStep(page: Page) {
+  await openDashboard(page);
+  const formula = page
+    .getByRole("form", { name: "Dice" })
+    .getByLabel("Formula");
 
-    await openWorkspace(page, "Inventory");
-    await page
-      .getByTestId("item-fire_flask")
-      .getByRole("button", { name: "Send 5d6 to the dice" })
-      .click();
-    await expect(formula).toHaveValue("5d6");
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      await expectNoPageScroll(page);
-      await snap(page, `inventory-${vp.width}x${vp.height}`);
-    }
-    await page.setViewportSize({ width: 1440, height: 900 });
+  await openWorkspace(page, "Inventory");
+  await page
+    .getByTestId("item-fire_flask")
+    .getByRole("button", { name: "Send 5d6 to the dice" })
+    .click();
+  await expect(formula).toHaveValue("5d6");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await snap(page, `inventory-${vp.width}x${vp.height}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
 
-    await openWorkspace(page, "Spells");
-    await showWizardSpells(page);
-    await page
-      .getByRole("combobox", { name: "Search spells..." })
-      .fill("quixotic still");
-    const detail = page.getByTestId("spell-detail");
-    await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
-    await snap(page, "spells-short");
-    const dice = detail.getByTestId("spell-dice-duration");
-    await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
-    await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();
-    await expect(formula).toHaveValue("1d8+8");
+  await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
+  await page
+    .getByRole("combobox", { name: "Search spells..." })
+    .fill("quixotic still");
+  const detail = page.getByTestId("spell-detail");
+  await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
+  await snap(page, "spells-short");
+  const dice = detail.getByTestId("spell-dice-duration");
+  await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
+  await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();
+  await expect(formula).toHaveValue("1d8+8");
 
-    await formula.fill("");
-    await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
-    // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
-    const last = page.getByTestId("last-result");
-    await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
-    const total = Number(
-      await last.getByTestId("last-result-chip").textContent(),
-    );
-    expect(total).toBeGreaterThanOrEqual(9);
-    expect(total).toBeLessThanOrEqual(16);
-    await expect(formula).toHaveValue("d8+8");
-    // In the Act activity the journal has the entry and the result panel shows it.
-    await openWorkspace(page, "Act");
-    await combatLog(page)
-      .getByRole("listitem")
-      .filter({ hasText: `Dice d8+8 = ${total}` })
-      .getByTestId("log-select")
-      .click();
-    const result = page
-      .getByRole("region", { name: "Detail", exact: true })
-      .getByTestId("dice-result");
-    // The server answers with its normal form (a single die has no count).
-    await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
-    await expect(result.getByTestId("dice-total")).toHaveText(String(total));
-    await openWorkspace(page, "Spells");
+  await formula.fill("");
+  await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
+  // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
+  const last = page.getByTestId("last-result");
+  await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
+  const total = Number(
+    await last.getByTestId("last-result-chip").textContent(),
+  );
+  expect(total).toBeGreaterThanOrEqual(9);
+  expect(total).toBeLessThanOrEqual(16);
+  await expect(formula).toHaveValue("d8+8");
+  // In the Act activity the journal has the entry and the result panel shows it.
+  await openWorkspace(page, "Act");
+  await combatLog(page)
+    .getByRole("listitem")
+    .filter({ hasText: `Dice d8+8 = ${total}` })
+    .getByTestId("log-select")
+    .click();
+  const result = page
+    .getByRole("region", { name: "Detail", exact: true })
+    .getByTestId("dice-result");
+  // The server answers with its normal form (a single die has no count).
+  await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
+  await expect(result.getByTestId("dice-total")).toHaveText(String(total));
+  await openWorkspace(page, "Spells");
 
-    // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
-    await page
-      .getByRole("combobox", { name: "Search spells..." })
-      .fill("fireball");
-    await expect(detail.getByRole("heading")).toContainText("Fireball");
-    const damage = detail.getByTestId("spell-dice-damage");
-    await expect(damage.getByTestId("spell-dice-formula")).toHaveText(
-      "10d6 fire",
-    );
-    await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
-    await expect(formula).toHaveValue("10d6");
-    await damage.getByRole("button", { name: "Roll 10d6" }).click();
-    await expect(last.getByTestId("last-result-text")).toContainText("10d6");
-    const fire = Number(
-      await last.getByTestId("last-result-chip").textContent(),
-    );
-    expect(fire).toBeGreaterThanOrEqual(10);
-    expect(fire).toBeLessThanOrEqual(60);
+  // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
+  await page
+    .getByRole("combobox", { name: "Search spells..." })
+    .fill("fireball");
+  await expect(detail.getByRole("heading")).toContainText("Fireball");
+  const damage = detail.getByTestId("spell-dice-damage");
+  await expect(damage.getByTestId("spell-dice-formula")).toHaveText(
+    "10d6 fire",
+  );
+  await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
+  await expect(formula).toHaveValue("10d6");
+  await damage.getByRole("button", { name: "Roll 10d6" }).click();
+  await expect(last.getByTestId("last-result-text")).toContainText("10d6");
+  const fire = Number(await last.getByTestId("last-result-chip").textContent());
+  expect(fire).toBeGreaterThanOrEqual(10);
+  expect(fire).toBeLessThanOrEqual(60);
 
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      await expectNoPageScroll(page);
-      await snap(page, `spells-lookup-${vp.width}x${vp.height}`);
-    }
-  });
-});
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await snap(page, `spells-lookup-${vp.width}x${vp.height}`);
+  }
+}
 
 // The login page (ADR 0022 step 1, ADR 0027 step 2): with both login buttons and the longest
 // refusal message, no text is cut in French and English at every layout viewport; screenshots in
@@ -5055,10 +5043,7 @@ async function versionBadgeStep(
 // answers with a newer version (the rule's cases are unit-tested; here the wiring), takes no band
 // or height, stays inside the same box as the badge, and a click reloads the page. A tab that is
 // hidden sends no heartbeat. Screenshots in French at 1920x1080 and 2560x1440.
-test("new version toast: beside the badge after two newer answers, no extra height, click reloads", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function newVersionStep(page: Page) {
   const sizes = [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
@@ -5156,7 +5141,7 @@ test("new version toast: beside the badge after two newer answers, no extra heig
   expect(loads).toBeGreaterThan(0);
   await expect(page.getByTestId("version-text")).toHaveText("1.4.3");
   await expect(toast).toHaveCount(0);
-});
+}
 
 // ADR 0043 step 5 and ADR 0047 items 4, 5 and 11: the PSP block in the character card's 280-384px
 // column (below the HP and the HP change) and the rest popover over it, with a paying power kept up
@@ -5827,4 +5812,24 @@ test.describe("psionicist long list walks", () => {
       await runWalk(page, size, [["long list", longListStep]], stack);
     });
   }
+});
+
+/**
+ * The browser behaviours walk: what only a browser proves (drag, focus, persistence in local storage, a
+ * client store, a heartbeat), at 1440x900. The toast and the composer step set their own viewports.
+ */
+const BEHAVIOUR_STEPS: [string, Step][] = [
+  ["journal split", journalSplitStep],
+  ["rail", railStep],
+  ["settings", settingsStep],
+  ["workspaces to the dice composer", composerStep],
+  ["new version toast", newVersionStep],
+];
+
+test.describe("behaviours walk", () => {
+  test.use({ extraSpells: COMPOSER_EXTRA_SPELLS });
+  test("behaviours walk at 1440x900", async ({ page, stack }) => {
+    test.setTimeout(90_000);
+    await runWalk(page, VIEWPORTS[1], BEHAVIOUR_STEPS, stack);
+  });
 });

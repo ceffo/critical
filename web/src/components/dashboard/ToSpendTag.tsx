@@ -10,7 +10,9 @@ import { hasGrants } from "@/lib/grants";
 import { cn } from "@/lib/utils";
 import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
-import { GrantRows } from "./LevelUpGrants";
+import { GrantRows, type SpendPools } from "./LevelUpGrants";
+
+export type { SpendPools };
 
 /**
  * The "to spend" reminder of the character card (ADR 0037 step 15, user ruling: it stays visible
@@ -21,17 +23,21 @@ import { GrantRows } from "./LevelUpGrants";
  */
 export function ToSpendTag({
   toSpend,
+  pools,
   onOpenEditor,
   onOpenFreeSpell,
 }: {
   toSpend: LevelGrants;
+  /** The pools the character has: the entry stays while there is one (ADR 0037 step 15). */
+  pools?: SpendPools;
   onOpenEditor: (editor: SkillsEditor) => void;
   /** Opens the spell lookup on a free spell owed (ADR 0030 step 20.8). */
   onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  if (!hasGrants(toSpend)) return null;
+  if (!hasGrants(toSpend) && !Object.values(pools ?? {}).some(Boolean))
+    return null;
   const title = t("app.levelUp.toSpendTitle");
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -54,6 +60,7 @@ export function ToSpendTag({
         <PopoverTitle className="section-label">{title}</PopoverTitle>
         <GrantRows
           grants={toSpend}
+          pools={pools}
           gained={false}
           onOpenEditor={(editor) => {
             setOpen(false);

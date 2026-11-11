@@ -4,6 +4,15 @@ import { Button } from "@/components/ui/button";
 import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 
+/** What the card knows of each pool: absent when the character has none. A skill set's points
+ * carry no figures here (the points editor shows its budget). */
+export type SpendPools = Partial<
+  Record<
+    "weaponSlots" | "nonWeaponSlots" | "skillPoints",
+    { spent?: number; available?: number; left?: number }
+  >
+>;
+
 /** The editor each grant is spent in (the Skills tab's, ADR 0037 steps 7 and 12; ADR 0030 steps
  * 17 and 18), in the order the card lists them. */
 const ROWS: {
@@ -29,21 +38,34 @@ const ROW_BUTTON = "h-[1.125rem]";
 export function GrantRows({
   grants,
   gained,
+  pools,
   onOpenEditor,
   onOpenFreeSpell,
 }: {
   grants: LevelGrants;
   gained: boolean;
+  /** The pools the character has: their rows are listed at 0 left, and when over budget they say
+   * how many slots to remove (ADR 0037 step 15, amended). */
+  pools?: SpendPools;
   onOpenEditor: (editor: SkillsEditor) => void;
   onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   return (
     <ul className="flex flex-col gap-0.5">
-      {ROWS.filter((r) => grants[r.key] > 0).map((r) => {
-        const what = t(`app.levelUp.grant.${r.key}`, {
-          count: grants[r.key],
-        });
+      {ROWS.filter((r) => grants[r.key] > 0 || pools?.[r.key]).map((r) => {
+        const pool = pools?.[r.key];
+        const over = pool?.left !== undefined && pool.left < 0;
+        const what =
+          grants[r.key] > 0
+            ? t(`app.levelUp.grant.${r.key}`, { count: grants[r.key] })
+            : over
+              ? t("proficiencies.overBudget", {
+                  count: -(pool?.left ?? 0),
+                  spent: pool?.spent,
+                  available: pool?.available,
+                })
+              : t(`app.levelUp.settled.${r.key}`);
         const actionTitle = t(`app.levelUp.open.${r.editor}`);
         return (
           <li

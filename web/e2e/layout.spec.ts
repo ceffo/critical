@@ -24,6 +24,7 @@ import {
   expectUndoOn,
   logEntry,
   openSortsPowers,
+  openSpend,
 } from "./helpers";
 import { test as base, type Locator, type Page } from "@playwright/test";
 import { asMultiClass, openClassDetail } from "./multiclass";
@@ -1604,25 +1605,22 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await expectNoClippedText(actions, `skills tab, ${where}`);
     await expectWholeWords(actions, `skills tab, ${where}`);
     // A level 15 bard's budget (20 + 15 × 14 = 230) and its editor wrap uncut in French.
-    await expect(skills.getByTestId("skill-points-available")).toContainText(
-      "Disponibles : 20 + 15 × 14 = 230 (niveau 15)",
-    );
-    await expectNoClippedText(
-      skills.getByTestId("skill-points-budget"),
-      `bard budget, ${where}`,
-    );
-    await skills.getByTestId("thief-points-edit").click();
-    const pointsEditor = skills.getByTestId("thief-points-editor");
+    await openSpend(page, "skillPoints");
+    const pointsEditor = page.getByTestId("thief-points-editor");
     await expect(
       pointsEditor.getByTestId("skill-points-available"),
-    ).toBeVisible();
+    ).toContainText("Disponibles : 20 + 15 × 14 = 230 (niveau 15)");
+    await expectNoClippedText(
+      pointsEditor.getByTestId("skill-points-budget"),
+      `bard budget, ${where}`,
+    );
     await expectNoClippedText(pointsEditor, `bard points editor, ${where}`);
     await expectWholeWords(pointsEditor, `bard points editor, ${where}`);
     await pointsEditor.getByTestId("thief-points-cancel").click();
     // ADR 0037 step 12: the proficiency editor in place of the lists, Kelsen's eight picks with an
     // extra slot on Tumbling (the server's figures), the catalogue split by the bard's groups.
-    await skills.getByTestId("proficiency-edit").click();
-    const picksEditor = skills.getByTestId("proficiency-editor");
+    await openSpend(page, "nonWeapon");
+    const picksEditor = page.getByTestId("proficiency-editor");
     await picksEditor
       .getByTestId("proficiency-pick-tumbling")
       .getByTestId("proficiency-more")
@@ -3123,8 +3121,7 @@ test("skills editor: the languages pool, its refusal and the card's view uncut i
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Compétences" });
-  await panel.getByTestId("proficiency-edit").click();
+  const panel = await openSpend(page, "nonWeapon");
   const pool = panel.getByTestId("proficiency-languages");
   // Test Bard spends 8 of 10 slots: three languages are one too many.
   for (const name of ["Elfe", "Gnome", "Orque"])
@@ -3146,7 +3143,7 @@ test("skills editor: the languages pool, its refusal and the card's view uncut i
     "2 emplacements de compétence",
   );
   await panel.getByTestId("proficiency-save").click();
-  await expect(panel.getByTestId("proficiency-editor")).toHaveCount(0);
+  await expect(page.getByTestId("proficiency-editor")).toHaveCount(0);
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
   await expect(pop.getByTestId("details-language-slots")).toHaveText(
@@ -4061,7 +4058,6 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
   const skills = page.getByTestId("skills-blocks");
-  await expect(page.getByTestId("skill-budget")).toContainText("70 au total");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
@@ -4080,16 +4076,16 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
 
   // The budget, each skill's terms and the Spend editor with its live preview, uncut in French
   // (ADR 0027 step 2): the server's figures, nothing computed here.
-  await expect(page.getByTestId("skill-points-available")).toContainText(
+  await openSpend(page, "skillPoints");
+  const editor = page.getByTestId("thief-points-editor");
+  await expect(editor.getByTestId("skill-points-available")).toContainText(
     "Disponibles : 60 + 30 × 0 = 60",
   );
-  // Over budget on the tab (70 of 60): left is negative, in the warning colour, no refusal.
-  await expect(page.getByTestId("skill-points-left")).toHaveAttribute(
+  // Over budget (70 of 60): left is negative, in the warning colour, no refusal.
+  await expect(editor.getByTestId("skill-points-left")).toHaveAttribute(
     "data-over",
     "true",
   );
-  await page.getByTestId("thief-points-edit").click();
-  const editor = page.getByTestId("thief-points-editor");
   // Above the range the server refuses the preview: its field error shows under the field, the
   // figures are marked out of date, and Save reports the same field.
   await editor.getByTestId("thief-points-open_locks").fill("96");
@@ -5274,9 +5270,8 @@ test("weapon proficiency editor: a fighter's rows uncut, fr and en, 1280 to 2560
     await actions
       .getByRole("tab", { name: tr("Compétences", "Skills") })
       .click();
-    const skills = actions.getByRole("tabpanel");
-    await skills.getByTestId("weapon-edit").click();
-    const editor = skills.getByTestId("weapon-editor");
+    await openSpend(page, "weapon");
+    const editor = page.getByTestId("weapon-editor");
     if (lang === "fr") {
       // The specialization in a long bow (3 slots) and a plain short sword: 4 of 4 spent.
       const bow = editor.getByTestId("weapon-row-long_bow");
@@ -5302,17 +5297,6 @@ test("weapon proficiency editor: a fighter's rows uncut, fr and en, 1280 to 2560
     if (lang === "fr") await editor.getByTestId("weapon-save").click();
     else await editor.getByTestId("weapon-cancel").click();
     await expect(editor).toBeHidden();
-    // The Skills tab's block: the picks, the specialization's tag, the pool's line.
-    const block = skills.getByTestId("weapon-proficiencies");
-    await expect(block.getByTestId("weapon-pick-specialized")).toBeVisible();
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoClippedText(block, `weapon block, ${where}`);
-      await expectWholeWords(block, `weapon block, ${where}`);
-      if (vp.width >= 1920)
-        await snap(page, `skills-weapons-${lang}-${vp.width}x${vp.height}`);
-    }
   }
 });
 
@@ -5349,8 +5333,8 @@ test("proficiency pop-up: the Skills rows, the pop-up and the picker uncut in Fr
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
   }
-  await panel.getByTestId("proficiency-edit").click();
-  const editor = panel.getByTestId("proficiency-editor");
+  await openSpend(page, "nonWeapon");
+  const editor = page.getByTestId("proficiency-editor");
   for (const vp of [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },

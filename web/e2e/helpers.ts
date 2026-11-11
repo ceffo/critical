@@ -652,6 +652,21 @@ export async function openActPowers(page: Page) {
 }
 
 /**
+ * Opens an editor from the character card's "To spend" entry (the dialog that hosts the weapon
+ * proficiencies, the non-weapon ones and a bard's or thief's skill points) and returns the dialog.
+ */
+export async function openSpend(
+  page: Page,
+  editor: "weapon" | "nonWeapon" | "skillPoints",
+): Promise<Locator> {
+  await page.getByTestId("to-spend-tag").click();
+  await page.getByTestId(`grant-open-${editor}`).click();
+  const dialog = page.getByTestId("spend-dialog");
+  await expect(dialog).toBeVisible();
+  return dialog;
+}
+
+/**
  * The lookup opens on "Mine" for a caster with spells; a spec that browses the catalogue switches
  * to the Wizard list (in English or French).
  */

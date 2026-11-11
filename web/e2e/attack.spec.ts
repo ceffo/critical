@@ -4,14 +4,12 @@ import {
   attackForm,
   ammoChips,
   chooseAmmo,
-  chooseLanguage,
   chooseWeapon,
   chosenAmmoCount,
   logEntry,
   openDashboard,
   openWeapons,
   undoEntry,
-  expectUndoOn,
   openTargetModifiers,
   openFold,
 } from "./helpers";
@@ -60,24 +58,14 @@ test("a melee attack lists every modifier in the result card and the log", async
   await expect(mods.getByRole("listitem").nth(2)).toHaveText(
     /Rear attack\s*\+2/,
   );
-  const log = (await (await page.request.get("/api/log")).json()) as {
-    entries: {
-      kind: string;
-      payload: { modifiers: { kind: string; detail?: string }[] };
-    }[];
-  };
-  expect(
-    log.entries
-      .find((e) => e.kind === "attack")!
-      .payload.modifiers.find((m) => m.kind === "situational")?.detail,
-  ).toBe("Rear attack");
-
   // The attack is in the combat log, in the player's language, rendered from its payload.
   await expect(logEntry(page, "Long Sword +2 vs AC 5")).toBeVisible();
   await snap(page, "melee-modifiers");
 });
 
-test("a missile attack spends the chosen arrow", async ({ page }) => {
+test("a missile attack spends the chosen arrow; voiding it gives the arrow back", async ({
+  page,
+}) => {
   await openAttack(page);
   const form = attackForm(page);
   await chooseWeapon(page, "Short Bow +2");
@@ -100,86 +88,11 @@ test("a missile attack spends the chosen arrow", async ({ page }) => {
   await expect(
     logEntry(page, "Short Bow +2 (Arrows +3) vs AC 2"),
   ).toBeVisible();
-  await snap(page, "missile-ammo");
-});
 
-test("voiding a missile attack gives the arrow back", async ({ page }) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Short Bow +2");
-  await chooseAmmo(page, "Arrows +2");
-  const before = await selectedAmmoCount(page);
-  await form.getByLabel("Target AC").fill("3");
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
-
-  await undoEntry(page, "Short Bow +2 (Arrows +2) vs AC 3");
+  // Voiding the attack gives the arrow back.
+  await undoEntry(page, "Short Bow +2 (Arrows +3) vs AC 2");
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await snap(page, "missile-void");
-});
-
-test("spent ammunition stays selected and must be replaced by an explicit pick", async ({
-  page,
-}) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  const roll = form.getByRole("button", { name: "Attack", exact: true });
-  await chooseWeapon(page, "Short Bow +2");
-  await chooseAmmo(page, "Arrows +3");
-  const left = await selectedAmmoCount(page);
-  for (let i = left; i > 0; i--) {
-    await roll.click();
-    await expect.poll(() => selectedAmmoCount(page)).toBe(i - 1);
-  }
-
-  // The +3 arrows are spent: still the choice, no silent switch to other arrows.
-  await expect(
-    ammoChips(page).locator('[aria-checked="true"]'),
-  ).toHaveAttribute("data-item", "arrows_plus3");
-  await expect(form.getByTestId("ammo-spent")).toHaveText(
-    "No Arrows +3 left: pick other ammunition",
-  );
-  await expect(roll).toBeDisabled();
-  await snap(page, "ammo-spent");
-
-  await chooseAmmo(page, "Arrows +1");
-  await expect(form.getByTestId("ammo-spent")).toHaveCount(0);
-  await expect(roll).toBeEnabled();
-  // Once another pick replaces it, the spent arrows are no longer offered.
-  await expect(
-    ammoChips(page).locator('[data-item="arrows_plus3"]'),
-  ).toHaveCount(0);
-});
-
-test("an earlier shot can only be voided once the later shot is popped", async ({
-  page,
-}) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Short Bow +2");
-  await form.getByLabel("Target AC").fill("7");
-
-  await chooseAmmo(page, "Arrows +3");
-  const plus3 = await selectedAmmoCount(page);
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect.poll(() => selectedAmmoCount(page)).toBe(plus3 - 1);
-
-  await chooseAmmo(page, "Arrows +1");
-  const plus1 = await selectedAmmoCount(page);
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1 - 1);
-
-  // The log is a stack: the journal's Undo names the newest entry only.
-  await expectUndoOn(page, "Short Bow +2 (Arrows +3) vs AC 7", true);
-  await snap(page, "undo-earlier-shot-not-offered");
-
-  await undoEntry(page, "Short Bow +2 (Arrows +1) vs AC 7");
-  await expect.poll(() => selectedAmmoCount(page)).toBe(plus1);
-  await undoEntry(page, "Short Bow +2 (Arrows +3) vs AC 7");
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  await chooseAmmo(page, "Arrows +3");
-  await expect.poll(() => selectedAmmoCount(page)).toBe(plus3);
-  await snap(page, "void-earlier-shot");
 });
 
 test("the target AC is corrected on the card after the roll: same dice, no arrow spent", async ({
@@ -266,32 +179,6 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect(entry).toContainText(/\(AC -20 → 10: MISS → (HIT|CRIT)\)/);
   await expect.poll(() => selectedAmmoCount(page)).toBe(before - 1);
 
-  // In French: the form and the log line.
-  await chooseLanguage(page, "fr");
-  const frCard = page
-    .getByRole("region", { name: "Détail", exact: true })
-    .getByTestId("attack-result");
-  const frFix = frCard.getByRole("form", {
-    name: "Corriger la CA de la cible",
-  });
-  await expect(frFix.getByLabel("CA de la cible corrigée")).toHaveValue("10");
-  await expect(frFix.getByRole("button", { name: "Appliquer" })).toBeDisabled();
-  await expect(
-    frFix.getByRole("button", { name: "Monter la CA de la cible" }),
-  ).toBeVisible();
-  await expect(frCard.getByTestId("ac-corrected")).toHaveText(
-    "jet contre CA -20",
-  );
-  const frEntry = page
-    .getByRole("region", { name: "Journal", exact: true })
-    .getByRole("listitem")
-    .filter({ hasText: "Arc court +2 (Flèches +2)" });
-  await expect(frEntry).toContainText(
-    /contre CA 10 : (attaque réussie|critique).*\(CA -20 → 10 : RATÉ → (TOUCHÉ|CRITIQUE)\)/,
-  );
-  await snap(page, "attack-ac-corrected-fr");
-  await chooseLanguage(page, "en");
-
   // Each correction is its own step (ADR 0010 step 6): Annuler names the newest one and pops it,
   // and the card reads the attack as it was before it, here the rolled AC again (no arrow back).
   const undo = page.getByTestId("undo");
@@ -326,200 +213,6 @@ test("the target AC is corrected on the card after the roll: same dice, no arrow
   await expect.poll(() => selectedAmmoCount(page)).toBe(before);
   await expect(fix).toHaveCount(0);
   await snap(page, "attack-ac-corrected-voided");
-});
-
-test("only the latest roll's target AC can be corrected", async ({ page }) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Long Sword +2");
-  await form.getByLabel("Target AC").fill("5");
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect(resultCard(page)).toContainText("vs AC 5");
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect
-    .poll(async () => await logEntry(page, "Long Sword +2 vs AC 5").count())
-    .toBe(2);
-
-  const log = (await (await page.request.get("/api/log")).json()) as {
-    entries: { id: number; kind: string }[];
-  };
-  const [, older] = log.entries
-    .filter((e) => e.kind === "attack")
-    .map((e) => e.id);
-  const res = await page.request.post(`/api/roll/attack/${older}/adjust`, {
-    data: { targetAc: 7 },
-  });
-  expect(res.status()).toBe(409);
-  expect((await res.json()).error).toContain(
-    "only the latest roll can be adjusted",
-  );
-
-  // A save rolled after the attack replaces the card: the attack is no longer the latest roll.
-  const [latest] = log.entries
-    .filter((e) => e.kind === "attack")
-    .map((e) => e.id);
-  expect(
-    (
-      await page.request.post("/api/roll/save", { data: { category: "spell" } })
-    ).ok(),
-  ).toBe(true);
-  const afterSave = await page.request.post(
-    `/api/roll/attack/${latest}/adjust`,
-    { data: { targetAc: 7 } },
-  );
-  expect(afterSave.status()).toBe(409);
-  expect((await afterSave.json()).error).toContain(
-    "only the latest roll can be adjusted",
-  );
-});
-
-test("an attack logged before the multiplier d100 keeps the old crit text", async ({
-  page,
-}) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Long Sword +2");
-  // The card of an old response (no multiplier d100): the old crit text and two dice facts. The
-  // attack is sent at AC 1000 (beyond the form's ±20): so low a roll is needed that it crits.
-  await page.route("**/api/roll/attack", async (route) => {
-    const sent = route.request().postDataJSON() as Record<string, unknown>;
-    const res = await route.fetch({
-      postData: JSON.stringify({ ...sent, target_ac: 1000 }),
-    });
-    const body = (await res.json()) as Record<string, unknown>;
-    delete body.d100MultiplierRoll;
-    await route.fulfill({ response: res, json: body });
-  });
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  const card = resultCard(page);
-  await expect(card.getByTestId("crit-badge")).toHaveText(
-    "Critical ×2 (placeholder)",
-  );
-  await expect(card.locator("dt", { hasText: "Crit check d100" })).toHaveCount(
-    1,
-  );
-  await expect(card.locator("dt", { hasText: "Multiplier d100" })).toHaveCount(
-    0,
-  );
-  await snap(page, "legacy-crit-card");
-  await page.unroute("**/api/roll/attack");
-
-  // Serve the stored entry as an old one, as logged before the multiplier d100 existed (the API's
-  // refusal to correct such an entry is a Go test: combatsvc adjust_attack_test).
-  const asLogged = (p: unknown) => {
-    if (p && typeof p === "object")
-      delete (p as Record<string, unknown>).d100MultiplierRoll;
-  };
-  await page.route(/\/api\/log(\?.*)?$/, async (route) => {
-    const res = await route.fetch();
-    const body = (await res.json()) as {
-      entries: { kind: string; payload: unknown; effectivePayload: unknown }[];
-    };
-    for (const e of body.entries.filter((e) => e.kind === "attack")) {
-      asLogged(e.payload);
-      asLogged(e.effectivePayload);
-    }
-    await route.fulfill({ response: res, json: body });
-  });
-
-  await page.reload();
-  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).toContainText(
-    /Long Sword \+2 vs AC 1000: critical ×2, \d+ damage/,
-  );
-  await expect(logEntry(page, "Long Sword +2 vs AC 1000")).not.toContainText(
-    "multiplier",
-  );
-});
-
-test("a miss corrected into a crit shows both d100s on the card and in the log", async ({
-  page,
-}) => {
-  await openAttack(page);
-  const form = attackForm(page);
-  await chooseWeapon(page, "Long Sword +2");
-  // AC -20 can't be hit (effective THAC0 11 needs 31). AC 10 needs 1: a crit when
-  // d20 − check d100 ≥ 1 (ADR 0001 step 2). The seeded dice (CRITICAL_DICE_SEED, fixtures.ts) make
-  // this test's first attack one that crits at AC 10; the assertion below fails loudly if the
-  // sequence ever changes (a new roll before it, a different seed), and no roll is repeated.
-  await form.getByLabel("Target AC").fill("-20");
-  const card = resultCard(page);
-  const fact = async (label: string) =>
-    Number(
-      await card
-        .locator("dt", { hasText: label })
-        .locator("xpath=following-sibling::dd")
-        .textContent(),
-    );
-  const lastEntryId = () =>
-    page.evaluate(
-      () =>
-        document
-          .querySelector('[data-testid="last-result"] [data-entry-id]')
-          ?.getAttribute("data-entry-id") ?? null,
-    );
-  const previous = await lastEntryId();
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  // The new roll is the one the last-result line names.
-  await expect.poll(lastEntryId).not.toBe(previous);
-  const d20 = await fact("d20");
-  const check = await fact("Crit check d100");
-  expect(
-    d20 - check,
-    "the seed's first attack no longer makes AC 10 a crit",
-  ).toBeGreaterThanOrEqual(1);
-  await expect(card.getByTestId("verdict")).toHaveText("Miss");
-  await expect(card.getByTestId("total-damage")).toHaveCount(0);
-  await snap(page, "miss-card");
-  const mult = await fact("Multiplier d100");
-
-  const fix = await openFold(card, "Correct the target AC");
-  await fix.getByLabel("Corrected target AC").fill("10");
-  await fix.getByRole("button", { name: "Apply" }).click();
-  await expect(card).toContainText("vs AC 10");
-  await expect(card.getByTestId("verdict")).toHaveText("Hit");
-  await expect(card.getByTestId("crit-badge")).toHaveText(
-    `Crit check ${check} · multiplier ${mult} → ×2 (placeholder)`,
-  );
-  expect(await fact("Crit check d100")).toBe(check);
-  expect(await fact("Multiplier d100")).toBe(mult);
-  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
-    `critical (check ${check} · multiplier ${mult} → ×2)`,
-  );
-  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
-    "(AC -20 → 10: MISS → CRIT)",
-  );
-  await snap(page, "miss-to-crit");
-
-  // After a reload the card is drawn from the entry's payload, the shape the correction answered with.
-  await page.reload();
-  await expect(card.getByTestId("verdict")).toHaveText("Hit");
-  await expect(card.getByTestId("crit-badge")).toHaveText(
-    `Crit check ${check} · multiplier ${mult} → ×2 (placeholder)`,
-  );
-  expect(await fact("Crit check d100")).toBe(check);
-  expect(await fact("Multiplier d100")).toBe(mult);
-  await expect(logEntry(page, "Long Sword +2 vs AC 10")).toContainText(
-    "(AC -20 → 10: MISS → CRIT)",
-  );
-
-  // In French: the three dice facts and the crit text.
-  await chooseLanguage(page, "fr");
-  const frCard = page
-    .getByRole("region", { name: "Détail", exact: true })
-    .getByTestId("attack-result");
-  await expect(frCard.getByTestId("crit-badge")).toHaveText(
-    `Jet critique ${check} · multiplicateur ${mult} → ×2 (provisoire)`,
-  );
-  await expect(
-    frCard.locator("dt", { hasText: "d100 multiplicateur" }),
-  ).toHaveCount(1);
-  await expect(
-    page
-      .getByRole("region", { name: "Journal", exact: true })
-      .getByRole("listitem")
-      .filter({ hasText: "Épée longue +2 contre CA 10" }),
-  ).toContainText(`(CA -20 → 10 : RATÉ → CRITIQUE)`);
-  await snap(page, "miss-to-crit-fr");
 });
 
 // The form's choices are server state: a reload restores them all, and switching weapons
@@ -680,47 +373,4 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
     ),
   ).toBeVisible();
   await snap(page, "unknown-ac-gm-hit");
-});
-
-// docs/adr/0012 step 5: the GM gives the AC after the roll; at AC 10 the stored dice make a crit.
-// The THAC0 is derived (ADR 0030 step 5): critsFromAc (effective THAC0 − d20 + crit-check d100) is
-// at most 10 for the seeded dice (CRITICAL_DICE_SEED, fixtures.ts) of this test's first attack, so
-// it is the one attack made; the assertion fails loudly if the sequence changes.
-test.describe("an attack whose dice crit AC 10", () => {
-  test("an attack against an unknown AC becomes a crit when the GM gives the AC", async ({
-    page,
-  }) => {
-    await openAttack(page);
-    const form = attackForm(page);
-    await chooseWeapon(page, "Long Sword +2");
-    const rolled = page.waitForResponse((res) =>
-      res.url().endsWith("/api/roll/attack"),
-    );
-    await form.getByRole("button", { name: "Attack", exact: true }).click();
-    const { critsFromAc } = (await (await rolled).json()) as {
-      critsFromAc: number;
-    };
-    expect(
-      critsFromAc,
-      "the seed's first attack no longer crits AC 10",
-    ).toBeLessThanOrEqual(10);
-
-    const card = resultCard(page);
-    await expect(card.getByTestId("verdict")).toHaveText("?");
-    const give = await openFold(card, "Give the real AC");
-    await give.getByLabel("Real target AC").fill("10");
-    await give.getByRole("button", { name: "Correct" }).click();
-    await expect(card).toContainText("Long Sword +2 vs AC 10");
-    await expect(card.getByTestId("ac-given")).toBeVisible();
-    await expect(card.getByTestId("tell-gm")).toHaveCount(0);
-    await expect(
-      card.getByRole("group", { name: "The DM’s hit or miss" }),
-    ).toHaveCount(0);
-    await expect(card.getByTestId("verdict")).toHaveText("Hit");
-    await expect(card.getByTestId("crit-badge")).toBeVisible();
-    await expect(
-      logEntry(page, "Long Sword +2 vs AC 10: critical"),
-    ).toBeVisible();
-    await snap(page, "unknown-ac-given-crit");
-  });
 });

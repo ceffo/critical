@@ -18,8 +18,8 @@ vi.mock("@/api/spells", async (orig) => ({
 const spell = (id: string, name: string, level: number) =>
   ({ id, name: { en: name }, class: "Priest", level }) as unknown as Spell;
 
-async function openPicker() {
-  const view = await renderApp(<AddEffect />);
+async function openPicker(lng: "en" | "fr" = "en") {
+  const view = await renderApp(<AddEffect />, { lng });
   await view.user.click(screen.getByTestId("add-effect"));
   return view;
 }
@@ -66,4 +66,24 @@ describe("Received spell picker", () => {
     );
     expect(screen.getAllByRole("listitem")).toHaveLength(50);
   });
+
+  it.each([
+    ["en", "Priest"],
+    ["fr", "Prêtre"],
+  ] as const)(
+    "words the spell's class by its name in %s, never the catalogue code",
+    async (lng, label) => {
+      search.mockResolvedValue({
+        items: [
+          { id: "command", name: { en: "Command" }, class: "priest", level: 1 },
+        ],
+        total: 1,
+      });
+      const { user } = await openPicker(lng);
+      await user.type(screen.getByRole("searchbox"), "comma");
+      const row = await screen.findByRole("listitem");
+      expect(row).toHaveTextContent(label);
+      expect(row).not.toHaveTextContent("priest");
+    },
+  );
 });

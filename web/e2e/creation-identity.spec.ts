@@ -1,6 +1,6 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage, combatLog } from "./helpers";
+import { openDashboard, chooseLanguage, combatLog, openSpend } from "./helpers";
 
 // The identity step and the review of the creation route (ADR 0034 steps 3.5 and 3.6): what only a
 // browser proves is the timing and the navigation around the server's replies (a late roll, a stale
@@ -392,11 +392,13 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   const panel = page.getByRole("tabpanel", { name: "Compétences" });
   await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
   await expect(panel.getByTestId("skill-singing")).toBeVisible();
-  await expect(panel.getByTestId("proficiency-slots-line")).toHaveText(
-    "Emplacements : 2 sur 7 · 5 emplacements à dépenser",
+  await page.getByTestId("to-spend-tag").click();
+  await expect(page.getByTestId("grant-nonWeaponSlots")).toContainText(
+    "5 emplacements de compétence",
   );
-  await panel.getByTestId("proficiency-edit").click();
-  const editor = panel.getByTestId("proficiency-editor");
+  await page.keyboard.press("Escape");
+  await openSpend(page, "nonWeapon");
+  const editor = page.getByTestId("proficiency-editor");
   await editor.getByTestId("proficiency-search").fill("jongl");
   await editor.getByRole("button", { name: /^Ajouter Jonglerie/ }).click();
   const spent = editor.getByTestId("proficiency-pool-spent");
@@ -468,7 +470,9 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await page.getByTestId("undo").click();
   await expect(panel.getByTestId("skill-juggling")).toHaveCount(0);
   await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
-  await expect(panel.getByTestId("proficiency-slots-line")).toHaveText(
-    "Emplacements : 2 sur 7 · 5 emplacements à dépenser",
+  await page.getByTestId("to-spend-tag").click();
+  await expect(page.getByTestId("grant-nonWeaponSlots")).toContainText(
+    "5 emplacements de compétence",
   );
+  await page.keyboard.press("Escape");
 });

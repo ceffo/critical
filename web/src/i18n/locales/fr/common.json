@@ -38,6 +38,11 @@
         "skillPoints_other": "{{count}} points de talent",
         "freeSpell": "1 sort gratuit, niv. {{spellLevel}}"
       },
+      "settled": {
+        "weaponSlots": "Maîtrises d’armes",
+        "nonWeaponSlots": "Compétences diverses",
+        "skillPoints": "Points de talent"
+      },
       "choose": "Choisir",
       "spend": "Dépenser",
       "open": {
@@ -2340,6 +2345,7 @@
     "headingMulti": "Expérience"
   },
   "skills": {
+    "empty": "Rien à lancer ici pour l’instant. Choisissez des compétences ou dépensez des points de talent depuis « À dépenser » sur la feuille de personnage.",
     "proficiencies": "Compétences diverses",
     "percent": "{{value}} %",
     "rollLabel": "Lancer {{name}}",
@@ -3414,6 +3420,8 @@
     "toSpend_one": "{{count}} emplacement à dépenser",
     "toSpend_other": "{{count}} emplacements à dépenser",
     "over": "Budget dépassé : {{spent}} emplacements pour {{available}} disponibles. Vous pouvez en retirer, pas en ajouter.",
+    "overBudget_one": "Retirez {{count}} emplacement pour continuer : vous en avez {{spent}} sur {{available}}",
+    "overBudget_other": "Retirez {{count}} emplacements pour continuer : vous en avez {{spent}} sur {{available}}",
     "overShort": "budget dépassé",
     "previewStale": "Ces chiffres sont ceux des derniers choix que le serveur a pu lire.",
     "picked_one": "Vos compétences ({{count}})",

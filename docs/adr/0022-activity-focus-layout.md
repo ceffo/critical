@@ -137,6 +137,9 @@ B's choice and is marked "(design)".
         at least 14rem tall, with the rest of the height.
       - **Skills tab**: the proficiencies and the bard skills are two raised blocks (`bg-neu-900`,
         rounded), 24 px apart; a row's hover is the next tone step (`bg-neu-800`).
+        _(Amended 2026-11-11, user: the tab only rolls. Its editors, Choose / Spend buttons, slot
+        lines and budget summary go to the dialog opened from the card's "To spend" entry, ADR 0037
+        step 15. With no proficiency and no skill it says so in a worded empty state.)_
       - **Weapons tab**: the weapon in hand is one row: its name, its stats as one line of text
         (`Melee · 1d8 S/M · 1d12 L · +2 / +2 to hit / dmg · THAC0 11`, the size not in use dimmed)
         and the **Attack** button, the only control in the row (step 3.3). The other weapons are

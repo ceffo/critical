@@ -2729,12 +2729,25 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
         await snap(page, `creation-${name}-${lang}-${vp.width}x${vp.height}`);
       }
       await page.setViewportSize(sizes[0]!);
+      // One name per step: the stepper's current entry and the step card's title read the same.
+      if (name !== "refusal")
+        await expect(
+          page.getByTestId("creation-steps").locator("[aria-current=step]"),
+        ).toContainText(
+          (await step.getByRole("heading", { level: 1 }).textContent()) ?? "",
+        );
     };
     const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
 
     await step
       .getByRole("radio", { name: tr("Barde", "Bard"), exact: true })
       .click();
+    // ADR 0034 step 4: the starting level is Level by default, XP the alternative.
+    await expect(
+      step
+        .getByTestId("starting-level")
+        .getByRole("radio", { name: tr("Niveau", "Level"), exact: true }),
+    ).toBeChecked();
     await step
       .getByRole("radio", { name: tr("Niveau 5", "Level 5"), exact: true })
       .click();
@@ -2928,6 +2941,19 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
     await next.click();
     await next.click();
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
+    // The review lists the proficiencies the step picked and the summary beside it is gone: no
+    // fact shows twice.
+    await expect(step.getByTestId("review-weapon-picks")).toContainText(
+      tr("Épée longue", "Long sword"),
+    );
+    await expect(step.getByTestId("review-proficiency-picks")).toContainText(
+      tr("Soins", "Healing"),
+    );
+    await expect(page.getByTestId("creation-building")).toHaveCount(0);
+    // The stepper does not repeat the choices either.
+    await expect(
+      page.getByTestId("creation-steps").getByText(/Aldéric/),
+    ).toHaveCount(0);
     await audit("6-review");
 
     if (lang === "fr") {

@@ -3062,7 +3062,7 @@
     },
     "class": {
       "name": "Class",
-      "title": "Choose a class",
+      "title": "Class",
       "lead": "The class sets the hit die, the skills and the alignments allowed.",
       "hitDie": "Hit die",
       "alignment": "Alignment",
@@ -3127,7 +3127,7 @@
     },
     "race": {
       "name": "Race",
-      "title": "Choose a race",
+      "title": "Race",
       "leadSeveral": "Every race can be picked: the combination of the classes and the race is checked by the server.",
       "lead": "Only the races a {{className}} allows can be picked; the others stay visible.",
       "refused": "No {{className}}",
@@ -3254,7 +3254,7 @@
     "warningsOn_other": "{{count}} warnings: {{fields}}",
     "proficiencies": {
       "name": "Proficiencies",
-      "title": "Proficiencies and weapons",
+      "title": "Proficiencies",
       "lead": "The character’s weapon and non-weapon proficiencies, within the slots of its class, level and Intelligence. Slots left can be spent later.",
       "pickedN_one": "{{count}} chosen",
       "pickedN_other": "{{count}} chosen",
@@ -3266,7 +3266,7 @@
     },
     "spellbook": {
       "name": "Spellbook",
-      "title": "Starting spellbook",
+      "title": "Spellbook",
       "lead": "The spells the DM gave the character, written without a learning roll, within the limits of its starting level and Intelligence. The spellbook may stay empty.",
       "spellsN_one": "{{count}} spell",
       "spellsN_other": "{{count}} spells",

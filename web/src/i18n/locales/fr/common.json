@@ -3062,7 +3062,7 @@
     },
     "class": {
       "name": "Classe",
-      "title": "Choisissez une classe",
+      "title": "Classe",
       "lead": "La classe fixe le dé de vie, les talents et les alignements permis.",
       "hitDie": "Dé de vie",
       "alignment": "Alignement",
@@ -3127,7 +3127,7 @@
     },
     "race": {
       "name": "Race",
-      "title": "Choisissez une race",
+      "title": "Race",
       "leadSeveral": "Toutes les races sont proposées : le serveur vérifie l'accord des classes et de la race.",
       "lead": "Seules les races permises au {{className}} sont proposées ; les autres restent visibles.",
       "refused": "Pas {{className}}",
@@ -3254,7 +3254,7 @@
     "warningsOn_other": "{{count}} avertissements : {{fields}}",
     "proficiencies": {
       "name": "Compétences",
-      "title": "Compétences et armes",
+      "title": "Compétences",
       "lead": "Les maîtrises d’armes et les compétences diverses du personnage, dans les emplacements de sa classe, de son niveau et de son Intelligence. Les emplacements restants pourront être dépensés plus tard.",
       "pickedN_one": "{{count}} choisie",
       "pickedN_other": "{{count}} choisies",
@@ -3266,7 +3266,7 @@
     },
     "spellbook": {
       "name": "Grimoire",
-      "title": "Grimoire de départ",
+      "title": "Grimoire",
       "lead": "Les sorts que le MJ a donnés au personnage, inscrits sans jet d’apprentissage, dans les limites de son niveau de départ et de son Intelligence. Le grimoire peut rester vide.",
       "spellsN_one": "{{count}} sort",
       "spellsN_other": "{{count}} sorts",

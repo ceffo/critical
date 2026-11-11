@@ -236,3 +236,97 @@ test.describe("a psionicist attacking the same mind again", () => {
     await expect(rows("Orc")).toContainText("contact");
   });
 });
+
+// The result card and the header's last result follow the newest psionic roll: an attack takes them
+// from the check before it, and a check takes them back, each as its own structured card (die,
+// target, verdict as separate parts). Only a browser proves that the card swaps and fits at the
+// layout sizes, in French too; the card's parts are Vitest, which roll is newest is Go.
+test.describe("the result card after a psionic attack and a power check", () => {
+  test.use({ character: psionicist });
+
+  test("attack, then a check: the newest takes the card", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "mindlink" },
+          { kind: "power", id: "contact" },
+          { kind: "power", id: "mind_thrust" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await openActPowers(page);
+    const card = page.locator("section[data-readonly]");
+    const last = page.getByTestId("last-result");
+    const sizes = [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ];
+    async function fits(name: string) {
+      for (const vp of sizes) {
+        await page.setViewportSize(vp);
+        await expectNoClippedText(card, `${name} ${vp.width}`);
+        if (vp.width > 1280)
+          await snap(page, `${name}-${vp.width}x${vp.height}`);
+      }
+    }
+
+    // Contact, a power paid by the table, on an open mind of level 3.
+    async function useContact() {
+      await aim(page, "Orc", "3");
+      await page
+        .getByTestId("target-band")
+        .getByRole("radio", { name: "Open" })
+        .click();
+      await rowOf(page, "Contact").getByRole("button").last().click();
+      await bar(page)
+        .getByTestId("table-form")
+        .getByRole("button", { name: "Use Contact" })
+        .click();
+    }
+
+    // A power check first: its card.
+    await useContact();
+    await expect(card.getByTestId("power-check-result")).toBeVisible();
+    await expect(card.getByTestId("power-check-tiles")).toContainText("PSPs");
+    await expect(last).toContainText("Power check");
+    await fits("result-power-check");
+
+    // The attack after it replaces both the card and the last result.
+    await page
+      .getByTestId("target-band")
+      .getByRole("radio", { name: "Closed" })
+      .click();
+    await adjustToMax(page);
+    const attackBar = await openAttack(page);
+    await attackBar.getByRole("button", { name: "Attack with" }).click();
+    await expect(card.getByTestId("psionic-attack-result")).toBeVisible();
+    await expect(card.getByTestId("power-check-result")).toHaveCount(0);
+    await expect(card.getByTestId("psionic-attack-check").first())
+      .toContainText("Defence roll")
+      .catch(() => undefined);
+    await expect(last).toContainText("Psionic attack");
+    await fits("result-psionic-attack");
+
+    // And a check after the attack takes them back.
+    await useContact();
+    await expect(card.getByTestId("power-check-result")).toBeVisible();
+    await expect(card.getByTestId("psionic-attack-result")).toHaveCount(0);
+    await expect(last).toContainText("Power check");
+
+    // The same in French.
+    await chooseLanguage(page, "fr");
+    await expect(last).toContainText("Jet de pouvoir");
+    await expect(card.getByTestId("power-check-tiles")).toContainText("PFP");
+    await fits("result-power-check-fr");
+    const frBar = await openAttack(page, "Pression mentale", "Attaquer avec");
+    await frBar.getByRole("button", { name: /^Attaquer avec/ }).click();
+    await expect(card.getByTestId("psionic-attack-result")).toBeVisible();
+    await fits("result-psionic-attack-fr");
+  });
+});

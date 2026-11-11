@@ -85,9 +85,9 @@ const (
 
 // RollKinds are the entries whose result replaces the dashboard's result
 // card (attack, save, cast or received spell, item use, skill check, ability
-// check, spell exposure, turning undead, power check). Only
+// check, spell exposure, turning undead, power check, psionic attack). Only
 // the newest of them, the one on the card, can be adjusted after the fact.
-var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead, KindPowerCheck}
+var RollKinds = []Kind{KindAttack, KindSave, KindCast, KindItemUse, KindSkillCheck, KindAbilityCheck, KindExposure, KindTurnUndead, KindPowerCheck, KindPsionicAttack}
 
 // IsRoll reports whether k is one of RollKinds.
 func IsRoll(k Kind) bool {

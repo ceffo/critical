@@ -49,7 +49,7 @@
       "tangentsBefore": 1,
       "tangentsAfter": 2
     },
-    "roll": false
+    "roll": true
   },
   "contact": {
     "payload": {
@@ -87,7 +87,7 @@
       "contact": true,
       "warnings": ["second_power_this_round"]
     },
-    "roll": false
+    "roll": true
   },
   "openMindBothFail": {
     "payload": {
@@ -126,7 +126,7 @@
       "tangentsAfter": 0,
       "broken": "Orc"
     },
-    "roll": false
+    "roll": true
   },
   "openMindEffect": {
     "payload": {
@@ -165,6 +165,6 @@
       "tangentsBefore": 0,
       "tangentsAfter": 0
     },
-    "roll": false
+    "roll": true
   }
 }

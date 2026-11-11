@@ -1543,6 +1543,23 @@
       "failed": "Failed",
       "destroyedCount": "Destroyed: {{count}} ({{dice}})",
       "turnedCount": "Turned: {{count}} ({{dice}})"
+    },
+    "psi": {
+      "target": "Target {{target}}",
+      "cost": "PSPs",
+      "paidOf": "{{spent}} of {{cost}}",
+      "score": "Score {{score}}",
+      "heading": "{{power}} on {{target}}",
+      "against": "vs {{defence}}",
+      "attackRoll": "Attack roll {{n}}",
+      "defenceRoll": "Defence roll",
+      "winner": "Result",
+      "attackerWon": "Attacker won",
+      "attackerWonEffect": "Attacker won, effect to apply",
+      "defended": "Defended",
+      "tangents": "Tangents",
+      "tangentsChange": "{{from}} → {{to}}",
+      "rolledVs": "d20 {{d20}} vs {{target}}"
     }
   },
   "log": {

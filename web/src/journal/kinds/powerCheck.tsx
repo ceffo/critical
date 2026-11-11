@@ -3,10 +3,13 @@
 // recorded, in the player's language (its id for an entry with none).
 import { Brain } from "@phosphor-icons/react";
 import type { TFunction } from "i18next";
+import { useTranslation } from "react-i18next";
+import { useInventoryName } from "@/i18n/inventoryName";
 import { formatSigned } from "@/lib/format";
 import type { LocalizedText } from "@/types/localized";
 import type { LogEntry } from "@/types/log";
 import type { KindView, ShortVerdict } from "../kindView";
+import { Fact, HexDie, ResultLine, Verdict } from "../parts";
 
 /** The check's breakdown and outcome, as logged (psionicsvc CheckRecord). */
 export interface PowerCheckPayload {
@@ -163,9 +166,79 @@ export const powerCheckKind: KindView<PowerCheckPayload> = {
   ],
   value: (p) => ({ text: String(p.d20), tone: p.success ? "pass" : "fail" }),
   rolled: () => true,
+  subtitle: (p, { names }) => names.text(p.name, p.power),
   short: (p, { t }, _e, value) => ({
     value,
     what: t("log.kinds.power_check"),
     verdict: verdict(p, t),
   }),
+  card: ({ payload, entry }) => (
+    <PowerCheckCard p={payload} spent={entry ? spent(entry) : undefined} />
+  ),
 };
+
+/**
+ * A power check as a card (ADR 0043 steps 10 and 11): the d20 in its hexagon, the target it was
+ * rolled against and the verdict beside it, the PSPs spent as a tile, then how the target came
+ * about. Every figure is the check's record; the PSPs spent are the entry's PSP delta, or the
+ * payload's `spent` while the entry is not in the log yet.
+ */
+function PowerCheckCard({
+  p,
+  spent: delta,
+}: {
+  p: PowerCheckPayload;
+  spent?: number;
+}) {
+  const { t } = useTranslation();
+  const names = useInventoryName();
+  const paid = delta !== undefined ? Math.abs(delta) : p.spent;
+  const word = t(`powers.use.outcome.${p.outcome}`);
+  const lines = breakdown(p, t);
+  return (
+    <div className="flex flex-col gap-3" data-testid="power-check-result">
+      <div className="flex items-center gap-3">
+        <HexDie value={p.d20} label={t("journal.d20", { value: p.d20 })} />
+        <div className="min-w-0 flex-1">
+          <ResultLine verdict={<Verdict ok={p.success} yes={word} no={word} />}>
+            <span
+              className="text-key tabular-nums"
+              data-testid="power-check-target"
+            >
+              {t("result.psi.target", { target: p.target })}
+            </span>
+          </ResultLine>
+          <div className="text-body text-muted-foreground">
+            {names.text(p.name, p.power)}
+          </div>
+        </div>
+      </div>
+      <dl
+        className="grid grid-cols-[repeat(auto-fit,minmax(5rem,1fr))] gap-2"
+        data-testid="power-check-tiles"
+      >
+        <Fact label={t("result.d20")}>{p.d20}</Fact>
+        <Fact label={t("result.target")}>{p.target}</Fact>
+        <Fact label={t("result.psi.cost")}>
+          <span data-testid="power-check-cost">
+            {paid === p.cost
+              ? paid
+              : t("result.psi.paidOf", { spent: paid, cost: p.cost })}
+          </span>
+        </Fact>
+      </dl>
+      {lines.length > 0 && (
+        <ul
+          className="flex flex-col gap-0.5 text-label text-muted-foreground"
+          data-testid="power-check-parts"
+        >
+          {lines.map((l) => (
+            <li key={l} className="break-words">
+              {l}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

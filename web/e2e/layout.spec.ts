@@ -1,4 +1,4 @@
-import { test, expect, snap, catalogueSpell } from "./fixtures";
+import { test, expect, snap, catalogueSpell, type Stack } from "./fixtures";
 import {
   addBuff,
   ammoChips,
@@ -26,7 +26,12 @@ import {
   openSortsPowers,
   openSpend,
 } from "./helpers";
-import { test as base, type Locator, type Page } from "@playwright/test";
+import {
+  test as base,
+  type BrowserContext,
+  type Locator,
+  type Page,
+} from "@playwright/test";
 import { asMultiClass, openClassDetail } from "./multiclass";
 import { psionicist } from "./psionicist";
 import { keepPowerUp } from "./keepPowerUp";
@@ -37,389 +42,29 @@ import {
   expectWholeWords,
 } from "./noClip";
 
-/** The page itself never scrolls: each column scrolls on its own. */
-async function expectNoPageScroll(page: Page) {
-  const m = await page.evaluate(() => {
-    const el = document.scrollingElement ?? document.documentElement;
-    return {
-      sw: el.scrollWidth,
-      cw: el.clientWidth,
-      sh: el.scrollHeight,
-      ch: el.clientHeight,
-    };
-  });
-  expect(m.sw, "horizontal page scroll").toBeLessThanOrEqual(m.cw);
-  expect(m.sh, "vertical page scroll").toBeLessThanOrEqual(m.ch);
-  expect(
-    await escapedAbsolutes(page),
-    "absolute boxes past their scroller",
-  ).toEqual([]);
-}
+import {
+  VIEWPORTS,
+  ACTIVITIES,
+  SHOTS,
+  LONG_EFFECT,
+  LONG_SOURCE,
+  LONG_REASON,
+  LONG_SPELL,
+  sizesAt,
+  expectNoPageScroll,
+  escapedAbsolutes,
+  expectZones,
+  expectInside,
+  expectOnScreen,
+  expectNoScroll,
+  expectCompactJournal,
+  expectCharacterCardLines,
+  expectHeaderLayout,
+  expectInitiativeBreakdown,
+  lineCount,
+  type Viewport,
+} from "./layoutWalk";
 
-/**
- * Absolutely positioned boxes that a scroller or clipping box around them can't hold: their
- * containing block (nearest positioned or transformed ancestor) lies outside that box, so they
- * are neither clipped nor scrolled by it and they stretch the document. A `sr-only` label in a
- * journal turn below the fold did that: with enough turns the whole page got a scrollbar. The
- * rule holds whatever the content, so a short fixture journal still proves it.
- */
-async function escapedAbsolutes(page: Page): Promise<string[]> {
-  return page.evaluate(() => {
-    const createsBlock = (cs: CSSStyleDeclaration) =>
-      cs.position !== "static" ||
-      cs.transform !== "none" ||
-      cs.filter !== "none" ||
-      cs.perspective !== "none" ||
-      /paint|layout|strict|content/.test(cs.contain);
-    const out: string[] = [];
-    for (const el of document.querySelectorAll("body *")) {
-      if (getComputedStyle(el).position !== "absolute") continue;
-      for (let p = el.parentElement; p; p = p.parentElement) {
-        const cs = getComputedStyle(p);
-        if (createsBlock(cs)) break;
-        if (cs.overflowX !== "visible" || cs.overflowY !== "visible") {
-          const what = (e: Element) =>
-            `${e.tagName.toLowerCase()}.${(e.getAttribute("class") ?? "").split(" ").slice(0, 4).join(".")}`;
-          out.push(
-            `${what(el)} "${el.textContent?.slice(0, 30)}" escapes ${what(p)}`,
-          );
-          break;
-        }
-      }
-    }
-    return [...new Set(out)];
-  });
-}
-
-/** The always-visible zones (ADR 0022 step 2.1) and the focused activity's stage. */
-async function expectZones(page: Page) {
-  await expect(page.locator("[data-screen=round-header]")).toBeVisible();
-  await expect(
-    page.getByRole("complementary", { name: "Character" }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("navigation", { name: "Activities" }),
-  ).toBeVisible();
-  await expect(page.getByTestId("stage")).toBeVisible();
-  await expect(page.getByTestId("dice-footer")).toBeVisible();
-}
-
-/** `inner` lies entirely within `outer` (bounding boxes, 1px tolerance for subpixel rounding). */
-async function expectInside(inner: Locator, outer: Locator, what: string) {
-  const i = (await inner.boundingBox())!;
-  const o = (await outer.boundingBox())!;
-  expect(i.y, `${what}: top`).toBeGreaterThanOrEqual(o.y - 1);
-  expect(i.y + i.height, `${what}: bottom`).toBeLessThanOrEqual(
-    o.y + o.height + 1,
-  );
-  expect(i.x, `${what}: left`).toBeGreaterThanOrEqual(o.x - 1);
-  expect(i.x + i.width, `${what}: right`).toBeLessThanOrEqual(
-    o.x + o.width + 1,
-  );
-}
-
-/** `el` is shown in full inside the viewport. */
-async function expectOnScreen(page: Page, el: Locator, what: string) {
-  await expect(el, what).toBeVisible();
-  const b = (await el.boundingBox())!;
-  const vp = page.viewportSize()!;
-  expect(b.y, `${what}: top`).toBeGreaterThanOrEqual(0);
-  expect(b.x, `${what}: left`).toBeGreaterThanOrEqual(0);
-  expect(b.y + b.height, `${what}: bottom`).toBeLessThanOrEqual(vp.height);
-  expect(b.x + b.width, `${what}: right`).toBeLessThanOrEqual(vp.width);
-}
-
-/** The column scrolls no content out of view. */
-async function expectNoScroll(column: Locator, what: string) {
-  const m = await column.evaluate((el) => ({
-    sh: el.scrollHeight,
-    ch: el.clientHeight,
-  }));
-  expect(m.sh, `${what} scrolls`).toBeLessThanOrEqual(m.ch);
-}
-
-/**
- * ADR 0027 step 9 on the journal: a one-line entry is a 24 px row, turn blocks touch
- * (no vertical gap), the turn marker is at most 3rem wide, the entry text starts close to the left,
- * every time ends at the same right edge (9.4) and a turn's opening rows are not framed (9.6).
- * `long` holds the texts whose entries may wrap.
- */
-async function expectCompactJournal(
-  page: Page,
-  long: readonly string[],
-  where: string,
-) {
-  const log = combatLog(page);
-  for (const row of await log.getByRole("listitem").all()) {
-    const text = (await row.textContent()) ?? "";
-    if (long.some((l) => text.includes(l))) continue;
-    expect(
-      (await row.boundingBox())!.height,
-      `one-line row, ${where}: ${text}`,
-    ).toBeLessThanOrEqual(24);
-  }
-  const turns = await log.getByTestId("journal-round").all();
-  expect(turns.length, `turn blocks, ${where}`).toBeGreaterThanOrEqual(2);
-  for (let i = 1; i < turns.length; i++) {
-    const [a, b] = [
-      (await turns[i - 1].boundingBox())!,
-      (await turns[i].boundingBox())!,
-    ];
-    expect(
-      Math.abs(b.y - (a.y + a.height)),
-      `no gap between turn blocks, ${where}`,
-    ).toBeLessThanOrEqual(1);
-  }
-  const marker = (await log
-    .getByTestId("journal-round-marker")
-    .first()
-    .boundingBox())!;
-  expect(
-    marker.width,
-    `turn marker at most 3rem, ${where}`,
-  ).toBeLessThanOrEqual(48);
-  const logBox = (await log.boundingBox())!;
-  const entryText = (await log
-    .getByTestId("log-select")
-    .first()
-    .locator("span.break-words")
-    .boundingBox())!;
-  expect(
-    entryText.x - logBox.x,
-    `entry text near the left, ${where}`,
-  ).toBeLessThan(150);
-  const rightEdges = await log
-    .getByTestId("log-time")
-    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().right));
-  expect(rightEdges.length, `times, ${where}`).toBeGreaterThanOrEqual(2);
-  for (const r of rightEdges)
-    expect(
-      Math.abs(r - rightEdges[0]),
-      `time right-aligned, ${where}`,
-    ).toBeLessThanOrEqual(1);
-  await expect(
-    log.locator('[data-kind="round_advance"]'),
-    `a turn's opening rows, ${where}`,
-  ).not.toHaveCount(0);
-  await expect(
-    log.getByTestId("log-transaction").locator('[data-kind="round_advance"]'),
-    `a turn's opening rows unframed, ${where}`,
-  ).toHaveCount(0);
-}
-
-/**
- * ADR 0027 step 5 on the character card, in French at 1440x900 and 1707x1300: the card is
- * `clamp(280px, 21vw, 384px)` wide, the saves heading and every save row are one line, the HP
- * change's amount and buttons share one line and the source's placeholder fits its field.
- */
-async function expectCharacterCardLines(page: Page, where: string) {
-  const character = page.getByTestId("character");
-  const vw = page.viewportSize()!.width;
-  expect(
-    Math.round((await character.boundingBox())!.width),
-    `card width, ${where}`,
-  ).toBe(Math.round(Math.min(384, Math.max(280, vw * 0.21))));
-  const heading = character.getByRole("heading", {
-    name: "Jets de sauvegarde",
-  });
-  // One 16 px line plus the sub-band's 4 px padding above and below (ADR 0026 step 6.3).
-  expect(
-    (await heading.boundingBox())!.height,
-    `saves heading on one line, ${where}`,
-  ).toBeLessThanOrEqual(25);
-  // The label line with its rare controls (mind box, spell button) is one line too (ADR 0027 step 1).
-  expect(
-    (await character.getByTestId("saves-head").boundingBox())!.height,
-    `saves label line on one line, ${where}`,
-  ).toBeLessThanOrEqual(25);
-  for (const row of await character.getByTestId("save-row").all())
-    expect(
-      (await row.boundingBox())!.height,
-      `${await row.getAttribute("data-save")} on one line, ${where}`,
-    ).toBeLessThanOrEqual(29);
-  // The identity: the class under the name, the level right-aligned on the name's line.
-  const name = (await character.getByTestId("details-trigger").boundingBox())!;
-  const klass = (await character.getByTestId("class").boundingBox())!;
-  const level = (await character
-    .getByRole("button", { name: /^Niveau/ })
-    .boundingBox())!;
-  expect(klass.y, `class under the name, ${where}`).toBeGreaterThanOrEqual(
-    name.y + name.height - 1,
-  );
-  expect(
-    Math.abs(level.y + level.height / 2 - (name.y + 14)),
-    `level on the name's line, ${where}`,
-  ).toBeLessThanOrEqual(14);
-  const hp = character.getByRole("group", { name: "Modifier les PV" });
-  await expect(
-    hp.getByText("Montant"),
-    `no visible amount label, ${where}`,
-  ).toHaveCount(0);
-  const amount = (await hp.getByLabel("Montant").boundingBox())!;
-  for (const name of ["Dégâts", "Soins"]) {
-    const b = (await hp.getByRole("button", { name }).boundingBox())!;
-    expect(
-      Math.abs(b.y - amount.y),
-      `${name} beside the amount, ${where}`,
-    ).toBeLessThanOrEqual(1);
-  }
-  const placeholder = await hp.getByLabel("Source").evaluate((el) => {
-    const input = el as HTMLInputElement;
-    const style = getComputedStyle(input);
-    const ctx = document.createElement("canvas").getContext("2d")!;
-    ctx.font = style.font;
-    const room =
-      input.clientWidth -
-      parseFloat(style.paddingLeft) -
-      parseFloat(style.paddingRight);
-    return { text: ctx.measureText(input.placeholder).width, room };
-  });
-  expect(
-    placeholder.text,
-    `source placeholder fits, ${where}`,
-  ).toBeLessThanOrEqual(placeholder.room);
-}
-
-/**
- * ADR 0027 step 4 on the header, in French: the turn label over its number, the initiative under
- * "Tour suivant" and larger than the turn, five turn columns, the brand (mark and wordmark) over the
- * last result in one right-aligned column 6 px apart whose right edge lines up with the result card,
- * at most 120 px at rest. At the design's two viewports every effect name and the last result are
- * one line.
- */
-async function expectHeaderLayout(page: Page, where: string) {
-  const header = page.locator("[data-screen=round-header]");
-  const box = async (l: Locator) => (await l.boundingBox())!;
-  const h = await box(header);
-  expect(h.height, `header at rest, ${where}`).toBeLessThanOrEqual(120);
-  const label = await box(
-    header.getByTestId("round").getByText("Tour", { exact: true }),
-  );
-  const turn = await box(page.getByTestId("round-value"));
-  expect(
-    label.y + label.height,
-    `turn label over its number, ${where}`,
-  ).toBeLessThanOrEqual(turn.y + 1);
-  const next = await box(page.getByRole("button", { name: "Tour suivant" }));
-  // Next turn is an `lg` primary action, 32 px (ADR 0017 step 5, ADR 0027 step 1.2).
-  expect(Math.round(next.height), `Tour suivant height, ${where}`).toBe(32);
-  const init = page.getByTestId("initiative-value");
-  expect(
-    (await box(init)).y,
-    `initiative under Tour suivant, ${where}`,
-  ).toBeGreaterThan(next.y + next.height - 1);
-  const fontSize = (l: Locator) =>
-    l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-  expect(
-    await fontSize(init),
-    `initiative larger than the turn, ${where}`,
-  ).toBeGreaterThan(await fontSize(page.getByTestId("round-value")));
-  await expect(page.getByTestId("effects-track")).toHaveAttribute(
-    "data-columns",
-    "5",
-  );
-  await expect(page.getByTestId("wordmark")).toBeVisible();
-  const brand = await box(page.getByTestId("brand"));
-  const last = await box(page.getByTestId("last-result"));
-  const right = (b: { x: number; width: number }) => b.x + b.width;
-  expect(
-    Math.abs(right(brand) - right(last)),
-    `brand and last result right-aligned, ${where}`,
-  ).toBeLessThanOrEqual(1);
-  expect(
-    Math.abs(last.y - (brand.y + brand.height) - 6),
-    `6 px under the brand, ${where}`,
-  ).toBeLessThanOrEqual(1);
-  // The column sits at the header's right edge (its padding and outline in), as the result card.
-  const card = await box(page.getByTestId("now-band"));
-  expect(
-    Math.abs(right(h) - right(card)),
-    `header and result card share their right edge, ${where}`,
-  ).toBeLessThanOrEqual(1);
-  expect(
-    right(h) - right(last),
-    `right column docked, ${where}`,
-  ).toBeLessThanOrEqual(18);
-  if (SHOTS.has(where.replace(/^.*?(\d+x\d+)$/, "$1"))) {
-    for (const name of await page.getByTestId("effect-name").all())
-      expect(
-        await name.evaluate(lineCount),
-        `effect name on one line, ${where}: ${await name.textContent()}`,
-      ).toBe(1);
-    expect(
-      await page.getByTestId("last-result").locator("p").evaluate(lineCount),
-      `last result on one line, ${where}`,
-    ).toBe(1);
-  }
-}
-
-/**
- * ADR 0035 item 6.3: the initiative's breakdown is its number's tooltip, shown on hover, whole
- * and inside the screen; the "fin du tour" tag sits in the header (which stays at rest,
- * expectHeaderLayout) when the round's spell takes a round or more.
- */
-async function expectInitiativeBreakdown(page: Page, where: string) {
-  await expect(page.getByTestId("initiative-end-of-round")).toHaveText(
-    "fin du tour",
-  );
-  const value = page.getByTestId("initiative-value");
-  await value.hover();
-  const breakdown = page.getByTestId("initiative-breakdown");
-  await expect(breakdown).toBeVisible();
-  await expect(breakdown).toContainText(/^d10 \d+/);
-  await expect(breakdown).toContainText("fin du tour");
-  await expect(breakdown).toContainText("le plus bas agit en premier");
-  await expectNoClippedText(breakdown, `initiative breakdown, ${where}`);
-  await expectInside(breakdown, page.locator("body"), `breakdown, ${where}`);
-  if (
-    SHOTS.has(where.replace(/^.*?(\d+x\d+)$/, "$1")) ||
-    /1920|2560/.test(where)
-  )
-    await snap(page, `initiative-breakdown-${where.replace(/[ ,]+/g, "-")}`);
-  await page.mouse.move(0, 0);
-  await expect(breakdown).toBeHidden();
-}
-
-/** The lines `el`'s text lays out on: its text boxes grouped by vertical overlap. */
-function lineCount(el: Element): number {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const rects = [...range.getClientRects()]
-    .filter((r) => r.width > 0)
-    .sort((a, b) => a.top - b.top);
-  let lines = 0;
-  let bottom = -Infinity;
-  for (const r of rects) {
-    if (r.top >= bottom - 1) lines++;
-    bottom = r.top >= bottom - 1 ? r.bottom : Math.max(bottom, r.bottom);
-  }
-  return lines;
-}
-
-// ADR 0022 step 1 (layout viewports). 1707x1300 is a third of the user's 5120x1440 table screen.
-const VIEWPORTS = [
-  { width: 1280, height: 800 },
-  { width: 1440, height: 900 },
-  { width: 1707, height: 1300 },
-  { width: 1920, height: 1080 },
-  { width: 2560, height: 1440 },
-];
-const ACTIVITIES = ["Act", "Spells", "Inventory", "Experience"] as const;
-/** Activities whose screenshots are kept, at the two viewports of the design (ADR 0022). */
-const SHOTS = new Set(["1440x900", "1707x1300"]);
-/** A long effect name: it wraps in the expanded header, never cut. */
-const LONG_EFFECT = "Protection From Evil, 10' Radius (from the temple priest)";
-/** A long journal entry: it wraps inside its row, never cut (ADR 0022 step 5.1). */
-const LONG_SOURCE =
-  "Fire breath of the young red dragon perched on the ruined bell tower, half damage behind the shield wall";
-
-/** A long XP ledger reason: it wraps between words in its row, never cut (ADR 0022 step 1). */
-const LONG_REASON =
-  "Drove the hobgoblin warband out of the flooded silver mine below Thornwood and freed the captured dwarven miners";
-
-/** A long spell name and stat text: the lookup's list and detail wrap them, never cut (step 1). */
-const LONG_SPELL =
-  "Comprehensively Unreasonably Long Spell Name Of The Ancient Archmages";
 test.use({
   extraSpells: {
     rows: [
@@ -439,16 +84,8 @@ test.use({
     ],
   },
 });
-
-// ADR 0022 steps 2.1, 2.2, 2.8 and 3.1: in every activity at every layout viewport, the header card
-// (at most 120 px at rest with 3 effect rows), the character card and the dice footer stay put and
-// show the last result, HP and the turn with its effects; the page never scrolls and no text in the
-// shell's zones is cut (step 1). Screenshots of every activity at 1440x900 and 1707x1300.
-test("shell: always-visible zones in every activity, header budget, no cut text", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 1024, height: 768 });
+async function shellStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await expectZones(page);
   await expectNoPageScroll(page);
@@ -488,7 +125,10 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
   await nextRound(page);
   await recordHp(page, "damage", 3, LONG_SOURCE);
   await expect(
-    combatLog(page).getByRole("listitem").filter({ hasText: LONG_SOURCE }),
+    combatLog(page)
+      .getByRole("listitem")
+      .filter({ hasText: LONG_SOURCE })
+      .first(),
   ).toBeVisible();
 
   // The lookup with the long spell selected in a full list.
@@ -513,7 +153,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 
   const rail = page.getByRole("navigation", { name: "Activities" });
   const character = page.getByRole("complementary", { name: "Character" });
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const size = `${vp.width}x${vp.height}`;
     expect(await heightOf(), `header at rest, ${size}`).toBeLessThanOrEqual(
@@ -630,60 +270,64 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
       await expect(page.getByTestId("buff")).toHaveCount(3);
     }
   }
-});
+}
 
-// ADR 0016 step 13 and ADR 0022 step 1: an item power that is on (the Power Gem's hammer at STR 18)
-// is a row of the effects header; its name, its effects and its bar caption are shown whole, never
-// cut, at the smallest and the largest layout viewport.
-test.describe("with the sheet's STR 12", () => {
-  test.use({ character: { str: 12 } });
-
-  test("item power row: name, effects and bar caption uncut, 1280 to 2560", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await openDashboard(page);
-    await addBuff(page, {
-      name: "e2e Strength",
-      rounds: 6,
-      effects: [
-        ["str_bonus", 6],
-        ["str_max", 18],
-      ],
-    });
-    const header = page.locator("[data-screen=round-header]");
-    const hammer = page.locator(
-      '[data-testid="item-power"][data-item="power_gem_dispel"]',
-    );
-    for (const vp of [
-      { width: 1280, height: 800 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      const size = `${vp.width}x${vp.height}`;
-      await expect(hammer).toContainText("Power Gem");
-      await expectOnScreen(
-        page,
-        hammer.getByTestId("power-effects"),
-        `power effects, ${size}`,
-      );
-      const caption = hammer
-        .getByTestId("effect-bar")
-        .getByText("while STR ≥ 18");
-      await expectOnScreen(page, caption, `power bar caption, ${size}`);
-      await expectNoClippedText(header, `header with the power, ${size}`);
-      await expectWholeWords(header, `header with the power, ${size}`);
-      await snap(page, `power-row-${size}`);
-    }
+async function itemPowerRowStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  await addBuff(page, {
+    name: "e2e Strength",
+    rounds: 6,
+    effects: [
+      ["str_bonus", 6],
+      ["str_max", 18],
+    ],
   });
-});
+  const header = page.locator("[data-screen=round-header]");
+  const hammer = page.locator(
+    '[data-testid="item-power"][data-item="power_gem_dispel"]',
+  );
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const size = `${vp.width}x${vp.height}`;
+    await expect(hammer).toContainText("Power Gem");
+    await expectOnScreen(
+      page,
+      hammer.getByTestId("power-effects"),
+      `power effects, ${size}`,
+    );
+    const caption = hammer
+      .getByTestId("effect-bar")
+      .getByText("while STR ≥ 18");
+    await expectOnScreen(page, caption, `power bar caption, ${size}`);
+    await expectNoClippedText(header, `header with the power, ${size}`);
+    await expectWholeWords(header, `header with the power, ${size}`);
+    await snap(page, `power-row-${size}`);
+  }
+}
 
-// ADR 0006 step 10.2 / ADR 0027 step 1: the saves' Spell line (shown once "Against the mind" is
-// ticked) and the tag of a spell set, in French first: the label line stays one line, the tag and the
-// rows are uncut, 1440 to 2560.
-test("saves label line with a spell set: heading one line, tag uncut, 1440 to 2560", async ({
-  page,
-}) => {
+/** Dismiss every active effect: a step that measures the save rows starts without their bonus tags. */
+async function dismissEffects(stack: Stack) {
+  const list = (await (await fetch(`${stack.apiUrl}/api/buffs`)).json()) as
+    { id: string }[] | { buffs: { id: string }[] };
+  for (const b of Array.isArray(list) ? list : list.buffs)
+    await fetch(`${stack.apiUrl}/api/buffs/${b.id}`, { method: "DELETE" });
+}
+
+/** Delete every XP ledger entry: a step that counts the ledger's rows starts from an empty one. */
+async function clearXp(stack: Stack) {
+  const ledger = (await (await fetch(`${stack.apiUrl}/api/xp`)).json()) as {
+    entries: { id: number }[];
+  };
+  for (const e of ledger.entries)
+    await fetch(`${stack.apiUrl}/api/xp/${e.id}`, { method: "DELETE" });
+}
+
+async function savesLabelStep(page: Page, size: Viewport, stack: Stack) {
+  await dismissEffects(stack);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const character = page.getByTestId("character");
@@ -693,11 +337,13 @@ test("saves label line with a spell set: heading one line, tag uncut, 1440 to 25
   await page.getByTestId("save-spell").click();
   await page.getByTestId("save-spell-search").fill("comma");
   await page.getByTestId("save-spell-option").first().click();
-  for (const vp of [
+  // The card's saves heading is checked from 1440 up (the 280 px card at 1280 wraps the French label).
+  const wide = [
     { width: 1440, height: 900 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ];
+  for (const vp of size.width < 1440 ? [] : sizesAt(size, wide)) {
     await page.setViewportSize(vp);
     const size = `${vp.width}x${vp.height}`;
     await expect(page.getByTestId("save-spell-tag")).toBeVisible();
@@ -712,118 +358,107 @@ test("saves label line with a spell set: heading one line, tag uncut, 1440 to 25
     );
     await snap(page, `saves-spell-tag-fr-${size}`);
   }
-});
-
-// ADR 0016 step 13: magic armour worn has no row on the effects timeline (it is always on); French
-// first (ADR 0027 step 2). Screens at 1920x1080 and 2560x1440.
-// ADR 0042 steps 5 and 7 on the dashboard: the character card's class lines (a long class name, the
-// level-limit warning, a pending level per class, a frozen old class) and the Experience activity's
-// class standings and split preview, in French first then English (ADR 0027 step 2), 1280 to 2560.
-// Screenshots at 1920x1080 and 2560x1440 (visual QA).
-for (const mode of ["multi", "three", "dual"] as const) {
-  test(`class lines (${mode}-class): uncut in French and English, 1280 to 2560`, async ({
-    page,
-  }) => {
-    test.setTimeout(90_000);
-    await asMultiClass(
-      page,
-      mode === "multi"
-        ? {
-            pending: true,
-            longClass: "Warden of the Northern Marches and Sunken Citadels",
-          }
-        : mode === "three"
-          ? { three: true, pending: true }
-          : { dual: true },
-    );
-    await openDashboard(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      const character = page.getByRole("complementary", {
-        name: lang === "fr" ? "Personnage" : "Character",
-      });
-      const summary = character.getByTestId("class-summary");
-      await expect(summary).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
-        // The classes are one line from 1440 wide; a long class name, or three French names in the
-        // 1280 card, wrap between classes instead of being cut. The detail is behind the line.
-        if (mode !== "multi")
-          expect(
-            (await summary.boundingBox())!.height,
-            `class summary lines, ${where}`,
-          ).toBeLessThanOrEqual(vp.width >= 1440 ? 34 : 50);
-        await expect(character.getByTestId("class-entries")).toHaveCount(0);
-        await expectNoClippedText(character, `class lines, ${where}`);
-        await expectWholeWords(character, `class lines, ${where}`);
-        await expectNoPageScroll(page);
-        if (mode !== "dual")
-          await expectNoClippedText(
-            page.getByTestId("level-up").first(),
-            `level-up prompt, ${where}`,
-          );
-        if (vp.width >= 1920 && lang === "fr")
-          await snap(page, `${mode}-card-${vp.width}x${vp.height}`);
-        // The detail, opened by keyboard: every class, uncut, inside the viewport.
-        const detail = await openClassDetail(page);
-        await expectNoClippedText(detail, `class detail, ${where}`);
-        await expectWholeWords(detail, `class detail, ${where}`);
-        const box = (await detail.boundingBox())!;
-        expect(box.x, `class detail inside, ${where}`).toBeGreaterThanOrEqual(
-          0,
-        );
-        expect(
-          box.x + box.width,
-          `class detail inside, ${where}`,
-        ).toBeLessThanOrEqual(vp.width);
-        if (lang === "fr" || vp.width === 1280)
-          await snap(page, `${mode}-detail-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(detail).toHaveCount(0);
-      }
-      // The Experience activity: the standings (and, for a multi-class, the split preview).
-      await page
-        .getByRole("navigation", {
-          name: lang === "fr" ? "Activités" : "Activities",
-        })
-        .getByRole("button", {
-          name: lang === "fr" ? "Expérience" : "Experience",
-          exact: true,
-        })
-        .click();
-      const xp = page.getByTestId("xp-top");
-      if (mode === "multi") await xp.getByRole("textbox").first().fill("1001");
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
-        if (mode === "multi")
-          await expect(xp.getByTestId("xp-split")).toBeVisible();
-        await expectNoClippedText(xp, `experience classes, ${where}`);
-        await expectNoClippedText(
-          page.getByTestId("xp-ledger"),
-          `ledger, ${where}`,
-        );
-        if (vp.width >= 1920 && lang === "fr")
-          await snap(page, `${mode}-xp-${vp.width}x${vp.height}`);
-      }
-      await page
-        .getByRole("navigation", {
-          name: lang === "fr" ? "Activités" : "Activities",
-        })
-        .getByRole("button", {
-          name: lang === "fr" ? "Agir" : "Act",
-          exact: true,
-        })
-        .click();
-    }
-  });
 }
 
-test("effects timeline with magic armour worn: no row for it, 1920 to 2560", async ({
-  page,
-}) => {
+async function classLinesStep(
+  page: Page,
+  size: Viewport,
+  mode: "multi" | "three" | "dual",
+) {
+  await asMultiClass(
+    page,
+    mode === "multi"
+      ? {
+          pending: true,
+          longClass: "Warden of the Northern Marches and Sunken Citadels",
+        }
+      : mode === "three"
+        ? { three: true, pending: true }
+        : { dual: true },
+  );
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    const character = page.getByRole("complementary", {
+      name: lang === "fr" ? "Personnage" : "Character",
+    });
+    const summary = character.getByTestId("class-summary");
+    await expect(summary).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
+      // The classes are one line from 1440 wide; a long class name, or three French names in the
+      // 1280 card, wrap between classes instead of being cut. The detail is behind the line.
+      if (mode !== "multi")
+        expect(
+          (await summary.boundingBox())!.height,
+          `class summary lines, ${where}`,
+        ).toBeLessThanOrEqual(vp.width >= 1440 ? 34 : 50);
+      await expect(character.getByTestId("class-entries")).toHaveCount(0);
+      await expectNoClippedText(character, `class lines, ${where}`);
+      await expectWholeWords(character, `class lines, ${where}`);
+      await expectNoPageScroll(page);
+      if (mode !== "dual")
+        await expectNoClippedText(
+          page.getByTestId("level-up").first(),
+          `level-up prompt, ${where}`,
+        );
+      if (vp.width >= 1920 && lang === "fr")
+        await snap(page, `${mode}-card-${vp.width}x${vp.height}`);
+      // The detail, opened by keyboard: every class, uncut, inside the viewport.
+      const detail = await openClassDetail(page);
+      await expectNoClippedText(detail, `class detail, ${where}`);
+      await expectWholeWords(detail, `class detail, ${where}`);
+      const box = (await detail.boundingBox())!;
+      expect(box.x, `class detail inside, ${where}`).toBeGreaterThanOrEqual(0);
+      expect(
+        box.x + box.width,
+        `class detail inside, ${where}`,
+      ).toBeLessThanOrEqual(vp.width);
+      if (lang === "fr" || vp.width === 1280)
+        await snap(page, `${mode}-detail-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(detail).toHaveCount(0);
+    }
+    // The Experience activity: the standings (and, for a multi-class, the split preview).
+    await page
+      .getByRole("navigation", {
+        name: lang === "fr" ? "Activités" : "Activities",
+      })
+      .getByRole("button", {
+        name: lang === "fr" ? "Expérience" : "Experience",
+        exact: true,
+      })
+      .click();
+    const xp = page.getByTestId("xp-top");
+    if (mode === "multi") await xp.getByRole("textbox").first().fill("1001");
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${mode}, ${lang}, ${vp.width}x${vp.height}`;
+      if (mode === "multi")
+        await expect(xp.getByTestId("xp-split")).toBeVisible();
+      await expectNoClippedText(xp, `experience classes, ${where}`);
+      await expectNoClippedText(
+        page.getByTestId("xp-ledger"),
+        `ledger, ${where}`,
+      );
+      if (vp.width >= 1920 && lang === "fr")
+        await snap(page, `${mode}-xp-${vp.width}x${vp.height}`);
+    }
+    await page
+      .getByRole("navigation", {
+        name: lang === "fr" ? "Activités" : "Activities",
+      })
+      .getByRole("button", {
+        name: lang === "fr" ? "Agir" : "Act",
+        exact: true,
+      })
+      .click();
+  }
+}
+
+async function effectsTimelineStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await openWorkspace(page, "Inventory");
   await page
@@ -836,195 +471,18 @@ test("effects timeline with magic armour worn: no row for it, 1920 to 2560", asy
   await expect(af).toHaveCount(0);
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await expect(page.getByTestId("effects-track")).toBeVisible();
     await expect(page.getByTestId("item-power")).toHaveCount(0);
     await snap(page, `timeline-magic-armour-fr-${vp.width}x${vp.height}`);
   }
-});
+}
 
-// ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
-// (mouse) and arrows (keyboard); a click (or Enter) on it folds the journal into a one-line bar and
-// back, a drag of 4 px or more only resizes; both are kept per device
-// across a reload. What only a browser proves: pointer drag, layout heights and localStorage.
-test("journal split: drag resizes, click toggles, kept across reload", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await recordHp(page, "damage", 3, "Split goblin");
-  const slot = page.getByTestId("journal-slot");
-  const band = page.getByTestId("now-band");
-  const handle = page.getByTestId("journal-handle");
-  const heightOf = async (l: Locator) => (await l.boundingBox())!.height;
-  // Default: the band takes at most 60 % of the stage, the journal at least 14rem.
-  const stage = await heightOf(page.getByTestId("act-stage"));
-  expect(await heightOf(band)).toBeLessThanOrEqual(stage * 0.6 + 1);
-  // The band is as tall as its content, so the journal's height follows the content: measure it
-  // once the logged entry has rendered and the layout has stopped moving.
-  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
-  const settled = async () => {
-    let last = -1;
-    await expect
-      .poll(async () => {
-        const now = await heightOf(slot);
-        const same = now === last;
-        last = now;
-        return same;
-      })
-      .toBe(true);
-    return last;
-  };
-  const before = await settled();
-  expect(before).toBeGreaterThanOrEqual(224);
-
-  // Drag the handle down by 120 px: the journal shrinks by as much, the band grows. Down, not up:
-  // the default band is only as tall as its content, so the journal starts large and an upward
-  // drag has little room before the band's minimum (NOW_MIN_PX).
-  const h = (await handle.boundingBox())!;
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 60, {
-    steps: 4,
-  });
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 120, {
-    steps: 4,
-  });
-  await page.mouse.up();
-  const dragged = await heightOf(slot);
-  expect(Math.abs(dragged - (before - 120))).toBeLessThanOrEqual(2);
-  expect(dragged).toBeGreaterThanOrEqual(224);
-  // Keyboard: ArrowDown shrinks it by one step.
-  await handle.focus();
-  await page.keyboard.press("ArrowDown");
-  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
-  await snap(page, "act-journal-dragged");
-
-  // A drag never toggles: still expanded, handle states it.
-  await expect(handle).toHaveAttribute("aria-valuetext", "Expanded");
-  await expect(
-    page.getByRole("button", { name: /Collapse|Expand/ }),
-  ).toHaveCount(0);
-
-  // A click on the handle collapses: one line with the newest entry, the count, Undo / Redo.
-  await handle.click();
-  await expect(handle).toHaveAttribute("aria-valuetext", "Collapsed");
-  const bar = page.getByTestId("journal-bar");
-  await expect(bar).toContainText("Split goblin");
-  await expect(bar.getByTestId("undo")).toBeVisible();
-  await expectNoClippedText(bar, "collapsed journal");
-  expect(await heightOf(slot)).toBeLessThan(80);
-  await snap(page, "act-journal-collapsed");
-
-  // Kept across a reload; A click brings back the dragged height.
-  await reloadSettled(page);
-  await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
-  await page.getByTestId("journal-handle").click();
-  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
-  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
-});
-
-// The audit itself: it reports a cut line and a box hiding tall text, and passes text that wraps or
-// scrolls. A plain page, no stack.
-base(
-  "expectNoClippedText reports cut text and passes wrapped or scrolling text",
-  async ({ page }) => {
-    await page.setContent(
-      `<div id="cut" style="width:50px;overflow:hidden;white-space:nowrap">a very long line of text</div>
-<div id="tall" style="height:20px;overflow:hidden"><p style="margin:0">one</p><p style="margin:0">two</p></div>
-<div id="ok" style="width:50px">a very long line of text that wraps</div>
-<div id="scrolls" style="height:20px;overflow-y:auto"><p>one</p><p>two</p></div>
-<span id="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;white-space:nowrap">screen reader text</span>`,
-    );
-    const cut = await page.locator("body").evaluate(clippedText);
-    expect(cut).toHaveLength(2);
-    expect(cut[0]).toContain("wide");
-    expect(cut[1]).toContain("tall");
-    for (const id of ["ok", "scrolls", "sr"])
-      await expectNoClippedText(page.locator(`#${id}`), id);
-  },
-);
-
-// A word split across two lines counts as cut too; words wrapped whole pass.
-base("expectWholeWords reports a word broken mid-word", async ({ page }) => {
-  await page.setContent(
-    `<div id="split" style="width:40px;overflow-wrap:anywhere">Thornwoodsilvermine</div>
-<div id="whole" style="width:60px">a few short words wrap</div>`,
-  );
-  expect(await page.locator("#split").evaluate(brokenWords)).toEqual([
-    "Thornwoodsilvermine",
-  ]);
-  await expectWholeWords(page.locator("#whole"), "whole");
-});
-
-// ADR 0022 step 2.4: a click focuses an activity; each mounts on its first visit and keeps its state
-// while hidden.
-test("rail: focuses activities and each keeps its state", async ({ page }) => {
-  await openDashboard(page);
-  const rail = page.getByRole("navigation", { name: "Activities" });
-  await expect(rail.getByRole("button", { name: "Act" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-
-  // Act: pick the Spells tab.
-  await page.getByRole("tab", { name: "Spells" }).click();
-  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-
-  // Inventory: items and weapons; open the add-item form.
-  await openWorkspace(page, "Inventory");
-  await expect(rail.getByRole("button", { name: "Inventory" })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
-  await expect(page.getByRole("region", { name: "Actions" })).toBeHidden();
-  const inventory = page.getByRole("region", { name: "Inventory" });
-  await expect(inventory.getByTestId("category-chips")).toBeVisible();
-  await openTypedAdd(inventory);
-  await expect(inventory.getByTestId("item-form")).toBeVisible();
-
-  // Spells: the spell lookup; type a search.
-  await openWorkspace(page, "Spells");
-  const search = page.getByRole("combobox", { name: "Search spells..." });
-  await search.fill("fire");
-  await expect(page.getByTestId("spell-row").first()).toBeVisible();
-
-  // Back: every activity is as it was left; the journal is the Act activity's.
-  await openWorkspace(page, "Act");
-  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await openWorkspace(page, "Inventory");
-  await expect(inventory.getByTestId("item-form")).toBeVisible();
-  await openWorkspace(page, "Spells");
-  await expect(search).toHaveValue("fire");
-  await expect(
-    page.getByRole("region", { name: "Journal", exact: true }),
-  ).toBeHidden();
-  await expect(page.getByTestId("hp-value")).toBeVisible();
-});
-
-const isDark = (page: Page) =>
-  page.evaluate(() => document.documentElement.classList.contains("dark"));
-const rootVar = (page: Page, name: string) =>
-  page.evaluate(
-    (n) =>
-      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
-    name,
-  );
-
-// ADR 0029 step 3.8: the settings popover names the user by the Google name, a long one wraps and
-// is never cut. The dev login has no name: /api/auth/me is answered with one here.
-test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
-  page,
-}) => {
+async function settingsPopoverStep(page: Page, size: Viewport) {
   await page.route("**/api/auth/me", async (route) => {
     const res = await route.fetch();
     const body = (await res.json()) as Record<string, unknown>;
@@ -1033,7 +491,7 @@ test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
     await route.fulfill({ response: res, json: body });
   });
   await openDashboard(page);
-  for (const vp of VIEWPORTS.slice(3)) {
+  for (const vp of sizesAt(size, VIEWPORTS.slice(3))) {
     await page.setViewportSize(vp);
     const popover = await openSettings(page);
     await expect(popover).toContainText("Aurélie de La Tour");
@@ -1042,139 +500,9 @@ test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
     await snap(page, `settings-popover-name-${vp.width}x${vp.height}`);
     await page.keyboard.press("Escape");
   }
-});
-
-// ADR 0026 step 3.1: the theme grid never leaves one theme alone on a row.
-async function expectNoLoneRow(list: Locator, what: string) {
-  const tops = await list
-    .getByRole("radio")
-    .evaluateAll((els) =>
-      els.map((e) => Math.round(e.getBoundingClientRect().top)),
-    );
-  const perRow = new Map<number, number>();
-  for (const t of tops) perRow.set(t, (perRow.get(t) ?? 0) + 1);
-  expect(
-    [...perRow.values()].every((n) => n >= 2),
-    `${what}: themes per row ${[...perRow.values()].join(",")}`,
-  ).toBe(true);
 }
 
-// ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
-// switches live with the OS; both choices survive a reload and the inline script paints the
-// effective one before the app runs.
-test("settings: language, appearance and both themes apply live and persist across reload", async ({
-  page,
-}) => {
-  const DEEP = / 232\)$/; // Deep's tint hue
-  const PARCHMENT = / 262\)$/; // Parchment's lapis
-  await page.emulateMedia({ colorScheme: "light" });
-  await openDashboard(page);
-  expect(await isDark(page)).toBe(false); // System by default, the OS is light
-
-  await chooseTheme(page, "Parchment");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
-  // The list follows the appearance: light themes in Light, dark themes in Dark.
-  let popover = await openSettings(page);
-  const list = popover.getByTestId("settings-theme");
-  await expect(list).toHaveAttribute("data-mode", "light");
-  await expect(list.getByRole("radio")).toHaveText([
-    /Arcane/,
-    /Parchment/,
-    /Plain/,
-    /Forest/,
-  ]);
-  await page.keyboard.press("Escape");
-  await chooseSetting(page, "Dark");
-  expect(await isDark(page)).toBe(true);
-  await openSettings(page);
-  await expect(list).toHaveAttribute("data-mode", "dark");
-  await expect(list.getByRole("radio")).toHaveText([
-    /Arcane/,
-    /Deep/,
-    /Plain/,
-    /Forest/,
-    /Ember/,
-    /Amber/,
-  ]);
-  await page.keyboard.press("Escape");
-  await chooseTheme(page, "Deep");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
-  await chooseLanguage(page, "fr");
-  await expect(
-    page.getByRole("button", { name: "Tour suivant" }),
-  ).toBeVisible();
-
-  // First paint, the app's script blocked: index.html alone paints Deep in dark.
-  const appScript = /\/assets\/.*\.js$/;
-  await page.route(appScript, (route) => route.abort());
-  await reloadSettled(page);
-  expect(await isDark(page)).toBe(true);
-  expect(await rootVar(page, "--tint")).toMatch(DEEP);
-  await page.unroute(appScript);
-
-  await reloadSettled(page);
-  await expect(
-    page.getByRole("button", { name: "Tour suivant" }),
-  ).toBeVisible();
-  expect(await rootVar(page, "--tint")).toMatch(DEEP);
-  popover = await openSettings(page);
-  for (const name of ["Français", "Sombre"])
-    await expect(
-      popover.getByRole("radio", { name, exact: true }),
-    ).toHaveAttribute("aria-checked", "true");
-  await expect(
-    popover.getByTestId("settings-theme").getByRole("radio", {
-      name: "Abysses",
-      exact: true,
-    }),
-  ).toHaveAttribute("aria-checked", "true");
-  await expectNoClippedText(popover, "settings popover, fr");
-  await expectWholeWords(popover, "settings popover, fr");
-  await expectNoLoneRow(popover.getByTestId("settings-theme"), "dark list, fr");
-  await snap(page, "settings-popover-fr");
-
-  // Système follows the OS live, between the two chosen themes.
-  await popover.getByRole("radio", { name: "Système", exact: true }).click();
-  expect(await isDark(page)).toBe(false);
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
-  await page.emulateMedia({ colorScheme: "dark" });
-  await expect.poll(() => isDark(page)).toBe(true);
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
-
-  // Dark -> Light -> Dark: each appearance keeps its own pick, and the list switches with it.
-  await popover.getByRole("radio", { name: "Clair", exact: true }).click();
-  await expect(popover.getByTestId("settings-theme")).toHaveAttribute(
-    "data-mode",
-    "light",
-  );
-  await expect(
-    popover
-      .getByTestId("settings-theme")
-      .getByRole("radio", { name: "Parchemin", exact: true }),
-  ).toHaveAttribute("aria-checked", "true");
-  await expectNoLoneRow(
-    popover.getByTestId("settings-theme"),
-    "light list, fr",
-  );
-  await snap(page, "settings-popover-fr-light");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
-  await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
-  await expect(
-    popover
-      .getByTestId("settings-theme")
-      .getByRole("radio", { name: "Abysses", exact: true }),
-  ).toHaveAttribute("aria-checked", "true");
-  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
-});
-
-// The visual identity (ADR 0020, ADR 0026): the main screens in dark and light with content in the
-// result card and the journal (Act/Weapons after an attack, Spells, Inventory, Experience), then
-// every theme in each mode it exists in, in French (the layout reference), with the no-cut audit.
-// Screenshots: the colours themselves are unit-tested (theme.test).
-test("theme: the main screens in dark and light, every theme in each of its modes", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function themesStep(page: Page) {
   await openDashboard(page);
   await expect(page.getByTestId("brand")).toHaveText("Critical!");
   await expect(page).toHaveTitle("Critical!");
@@ -1277,36 +605,9 @@ test("theme: the main screens in dark and light, every theme in each of its mode
       await snap(page, `fr-${which}-${name.toLowerCase()}`);
     }
   }
-});
+}
 
-/** A long weapon and a long item name: the act panel wraps them, never cuts (ADR 0022 step 1). */
-const LONG_WEAPON = "Two-Handed Flamberge of the Seventh Drowned Kingdom +3";
-const LONG_ITEM = "Potion of Extra-Healing brewed by the Hermit of Grey Hollow";
-const ACT_TABS = ["Weapons", "Spells", "Items", "Skills"] as const;
-/** The Spells tab's preparation in the layout audits; Rary's is cast in French (blank extra slots). */
-const PREPARED = [
-  "rarys_mnemonic_enhancer",
-  "magic_missile",
-  "burning_hands",
-  "chromatic_orb",
-  "tashas_uncontrollable_hideous_laughter",
-  "mirror_image",
-  "fireball",
-  "haste",
-  "stoneskin",
-  "cloudkill",
-];
-
-// ADR 0022 steps 1, 2.5, 3.3 and 4: each tab of the act panel at every layout viewport, with long
-// weapon, item and spell names and a bow's ammunition, shows no cut text and no page scroll; the
-// weapon in hand is one row whose Attack is the 44 px control with its icon centred in a 44 x 44
-// cell, and the act panel is as tall as its content (no empty band under the weapon). Screenshots
-// of every tab at 1440x900 and 1707x1300.
-test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(60_000);
+async function actPanelStep(page: Page, size: Viewport, stack: Stack) {
   const api = (method: string, url: string, data: unknown) =>
     fetch(`${stack.apiUrl}${url}`, {
       method,
@@ -1319,6 +620,8 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
   await api("PATCH", "/api/items/power_gem_dispel", {
     name: { en: LONG_ITEM, fr: LONG_ITEM },
   });
+  // Emptying the list first gives fresh slots: an earlier step may have spent Rary's.
+  await api("PUT", "/api/spells/prepared", { spells: [] });
   await api("PUT", "/api/spells/prepared", { spells: PREPARED });
   await openDashboard(page);
   await openWeapons(page);
@@ -1327,7 +630,7 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
   await expect(ammoChips(page)).toBeVisible();
   const actions = page.getByRole("region", { name: "Actions" });
   const panel = actions.getByRole("tabpanel");
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const size = `${vp.width}x${vp.height}`;
     for (const tab of ACT_TABS) {
@@ -1379,7 +682,7 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       ).toBeLessThanOrEqual(24);
   }
   // The long weapon in hand wraps inside its row at the narrowest viewport.
-  await page.setViewportSize(VIEWPORTS[0]);
+  await page.setViewportSize(size);
   await chooseWeapon(page, LONG_WEAPON);
   await expectNoClippedText(actions, "long weapon in hand, 1280x800");
   await expectInside(
@@ -1396,30 +699,19 @@ test("act panel: every tab from 1280 to 2560, long names, no cut text", async ({
       .getByRole("navigation", { name: "Activities" })
       .getByRole("button", { name: "Inventory" }),
   ).toHaveAttribute("aria-current", "page");
-});
+}
 
-// ADR 0022 step 1 in French (the longest texts: "Bâton/Sceptre/Baguette", "Métamorphose") and with
-// long inventory names: at every layout viewport the character card, the act panel, the lookup (the
-// long spell selected, no automatic hyphenation) and the Inventory stage show no cut text and no
-// word broken mid-word. Only a browser lays text out, so no Go or unit test can hold this.
-test("no cut text in French and with long inventory names, 1280 to 2560", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(90_000);
+async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
   const api = (method: string, url: string, data: unknown) =>
     fetch(`${stack.apiUrl}${url}`, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/items/darts", {
-    name: { en: LONG_WEAPON, fr: LONG_WEAPON },
-  });
-  await api("PATCH", "/api/items/power_gem_dispel", {
-    name: { en: LONG_ITEM, fr: LONG_ITEM },
-  });
+  // The long weapon and item names were set by the act panel step, which runs before this one.
   // The Spells tab with the long Tasha's name, a used slot and blank extra slots (ADR 0027 step 10).
+  // Emptying the list first gives fresh slots: an earlier step may have spent Rary's.
+  await api("PUT", "/api/spells/prepared", { spells: [] });
   await api("PUT", "/api/spells/prepared", { spells: PREPARED });
   const slots = (await (
     await fetch(`${stack.apiUrl}/api/spells/slots`)
@@ -1455,7 +747,9 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     topId: number;
   };
   await api("POST", "/api/log/undo", { expectedTopId: log.topId });
-  // Two XP entries, one with a long reason and a session (ADR 0027 step 14.4).
+  // Two XP entries, one with a long reason and a session (ADR 0027 step 14.4): the ledger starts empty
+  // here, whatever the earlier steps of the walk added.
+  await clearXp(stack);
   await api("POST", "/api/xp", {
     base: 2500,
     bonus: true,
@@ -1486,7 +780,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
   await buffActions.getByRole("button").first().focus();
   await expect(buffActions).toHaveCSS("opacity", "1");
   await buffActions.getByRole("button").first().blur();
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     // The whole screen (header, rail, journal, dice footer and the shared pieces in every zone).
@@ -1771,124 +1065,10 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     // The row actions at rest, at the three sizes of the design review.
     await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }
-});
+}
 
-// What only a browser proves: the Inventaire dice chip and the Sorts "To the dice" fill the composer
-// (a client store shared across workspaces), and Roll on a spell's dice reaches the dice endpoint
-// and lands in the card and the journal. The formula wording is a unit test (spellValues), the
-// values at level are Go tests (spellstats). Screens of both workspaces at the four viewports.
-test.describe("workspaces to the dice composer", () => {
-  test.use({
-    extraSpells: {
-      rows: [
-        catalogueSpell({
-          id: "quixotic_stillness",
-          name: "Quixotic Stillness",
-          class: "Wizard",
-          level: 3,
-          school: "Alteration",
-          casting_time: "3",
-          range: "Touch",
-          duration: "8 rds. + 1d8 rds.",
-          area_of_effect: "The caster",
-        }),
-      ],
-    },
-  });
-
-  test("Inventaire dice chip and Sorts 'To the dice' fill the composer; Roll rolls on the server", async ({
-    page,
-  }) => {
-    await openDashboard(page);
-    const formula = page
-      .getByRole("form", { name: "Dice" })
-      .getByLabel("Formula");
-
-    await openWorkspace(page, "Inventory");
-    await page
-      .getByTestId("item-fire_flask")
-      .getByRole("button", { name: "Send 5d6 to the dice" })
-      .click();
-    await expect(formula).toHaveValue("5d6");
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      await expectNoPageScroll(page);
-      await snap(page, `inventory-${vp.width}x${vp.height}`);
-    }
-    await page.setViewportSize({ width: 1440, height: 900 });
-
-    await openWorkspace(page, "Spells");
-    await showWizardSpells(page);
-    await page
-      .getByRole("combobox", { name: "Search spells..." })
-      .fill("quixotic still");
-    const detail = page.getByTestId("spell-detail");
-    await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
-    await snap(page, "spells-short");
-    const dice = detail.getByTestId("spell-dice-duration");
-    await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
-    await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();
-    await expect(formula).toHaveValue("1d8+8");
-
-    await formula.fill("");
-    await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
-    // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
-    const last = page.getByTestId("last-result");
-    await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
-    const total = Number(
-      await last.getByTestId("last-result-chip").textContent(),
-    );
-    expect(total).toBeGreaterThanOrEqual(9);
-    expect(total).toBeLessThanOrEqual(16);
-    await expect(formula).toHaveValue("d8+8");
-    // In the Act activity the journal has the entry and the result panel shows it.
-    await openWorkspace(page, "Act");
-    await combatLog(page)
-      .getByRole("listitem")
-      .filter({ hasText: `Dice d8+8 = ${total}` })
-      .getByTestId("log-select")
-      .click();
-    const result = page
-      .getByRole("region", { name: "Detail", exact: true })
-      .getByTestId("dice-result");
-    // The server answers with its normal form (a single die has no count).
-    await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
-    await expect(result.getByTestId("dice-total")).toHaveText(String(total));
-    await openWorkspace(page, "Spells");
-
-    // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
-    await page
-      .getByRole("combobox", { name: "Search spells..." })
-      .fill("fireball");
-    await expect(detail.getByRole("heading")).toContainText("Fireball");
-    const damage = detail.getByTestId("spell-dice-damage");
-    await expect(damage.getByTestId("spell-dice-formula")).toHaveText(
-      "10d6 fire",
-    );
-    await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
-    await expect(formula).toHaveValue("10d6");
-    await damage.getByRole("button", { name: "Roll 10d6" }).click();
-    await expect(last.getByTestId("last-result-text")).toContainText("10d6");
-    const fire = Number(
-      await last.getByTestId("last-result-chip").textContent(),
-    );
-    expect(fire).toBeGreaterThanOrEqual(10);
-    expect(fire).toBeLessThanOrEqual(60);
-
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      await expectNoPageScroll(page);
-      await snap(page, `spells-lookup-${vp.width}x${vp.height}`);
-    }
-  });
-});
-
-// ADR 0006 step 5 on the save card: with an adjustment it shows four facts (d20, target, adjusted
-// target, margin) and the adjustment line; nothing is cut from 1280x800 to 2560x1440, en and fr.
-test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to 2560", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function saveCardStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await page.getByRole("button", { name: "Roll save vs Spells" }).click();
   const card = page.getByTestId("save-result");
@@ -1912,10 +1092,10 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
     await expect(card).toContainText(
       lang === "fr" ? "Seuil ajusté" : "Adjusted target",
     );
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(card, `adjusted save card, ${where}`);
@@ -1928,15 +1108,10 @@ test("adjusted save card: four facts and a long reason uncut, en and fr, 1280 to
       .getByRole("listitem")
       .filter({ hasText: "Sauvegarde contre Sorts" }),
   ).toContainText("(seuil ");
-});
+}
 
-// ADR 0028 on the result card, French first: an ability check rolled from the character card's
-// DEX tile, adjusted after the roll with a long reason; the card and the stat tiles are never cut,
-// fr and en, 1280x800 to 2560x1440.
-test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function abilityCardStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.getByRole("button", { name: "Jet de Dextérité (17)" }).click();
@@ -1957,10 +1132,10 @@ test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to
     await expect(card).toContainText(
       lang === "fr" ? "Seuil ajusté" : "Adjusted target",
     );
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(card, `ability check card, ${where}`);
@@ -1974,15 +1149,9 @@ test("ability check card: adjusted with a long reason, uncut, fr and en, 1280 to
       await snap(page, `ability-check-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
-// ADR 0027 step 8 on the attack card, French first: the verdict pill right after the result it
-// judges, the stat tiles (d20, target AC, margin) and the AC correction opened from its one line;
-// nothing is cut at any layout viewport, in French and English.
-test("attack card: verdict beside the result, tiles and the open AC correction uncut, fr and en, 1280 to 2560", async ({
-  page,
-  stack,
-}) => {
+async function attackCardStep(page: Page, size: Viewport, stack: Stack) {
   const res = await fetch(`${stack.apiUrl}/api/attack/form`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
@@ -2002,7 +1171,7 @@ test("attack card: verdict beside the result, tiles and the open AC correction u
     await expect(card.getByTestId("attack-tiles")).toContainText(
       lang === "fr" ? "CA cible" : "Target AC",
     );
-    for (const vp of VIEWPORTS) {
+    for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       // Step 8.1: the pill follows the result on its line, not at the card's far edge.
@@ -2022,18 +1191,17 @@ test("attack card: verdict beside the result, tiles and the open AC correction u
         await snap(page, `attack-card-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
-test("the last result is one short line, at most a sixth of the viewport, the full wording in its tooltip (French)", async ({
-  page,
-  stack,
-}) => {
+async function lastResultStep(page: Page, size: Viewport, stack: Stack) {
   const api = (method: string, url: string, data: unknown) =>
     fetch(`${stack.apiUrl}${url}`, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  // Emptying the list first gives fresh slots: an earlier step may have spent Rary's.
+  await api("PUT", "/api/spells/prepared", { spells: [] });
   await api("PUT", "/api/spells/prepared", { spells: PREPARED });
   const slots = (await (
     await fetch(`${stack.apiUrl}/api/spells/slots`)
@@ -2051,10 +1219,10 @@ test("the last result is one short line, at most a sixth of the viewport, the fu
   await chooseLanguage(page, "fr");
   const last = page.getByTestId("last-result");
   await expect(last.getByTestId("last-result-text")).toContainText("Rary");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     expect(
       await last.locator("p").evaluate(lineCount),
@@ -2068,17 +1236,9 @@ test("the last result is one short line, at most a sixth of the viewport, the fu
     await expect(last.locator("p")).toHaveAttribute("title", /Rary/);
     await snap(page, `last-result-long-spell-fr-${vp.width}x${vp.height}`);
   }
-});
+}
 
-// ADR 0026 step 6.7: every in-card group heading (the spell list's and the preparation's levels,
-// the skills' groups, the inventory's column heads, the character card's groups) is the one shared
-// heading band, in French, in a dark and a light theme. Only a browser paints the tones, so the
-// screenshots (and the no-cut audit on them) are the check.
-test("group headings: one shared band, French, dark and light", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(60_000);
+async function groupHeadingsStep(page: Page, _size: Viewport, stack: Stack) {
   const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -2122,16 +1282,9 @@ test("group headings: one shared band, French, dark and light", async ({
     await expectNoClippedText(page.locator("main"), `inventory, ${tag}`);
     await snap(page, `fr-${tag}-inventory`);
   }
-});
+}
 
-// The spells tab in French at 1280x800 and 1920x1080: the Cast buttons of the spell list, then the
-// preparation editor, whose two columns take the act panel's whole height side by side and each
-// scroll inside themselves. Only a browser lays out the heights, so this is the check.
-test("spells tab: Cast buttons and full-height preparation columns, French, 1280 and 1920", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(60_000);
+async function spellsTabStep(page: Page, size: Viewport, stack: Stack) {
   const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
@@ -2142,10 +1295,10 @@ test("spells tab: Cast buttons and full-height preparation columns, French, 1280
   await chooseLanguage(page, "fr");
   const actions = page.getByRole("region", { name: "Actions" });
   const panel = actions.getByRole("tabpanel");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const size = `${vp.width}x${vp.height}`;
     await actions.getByRole("tab", { name: "Sorts" }).click();
@@ -2192,15 +1345,1689 @@ test("spells tab: Cast buttons and full-height preparation columns, French, 1280
     ).toBeLessThanOrEqual(1);
     await actions.getByRole("button", { name: "Annuler" }).click();
   }
+}
+
+async function skillsEditorStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = await openSpend(page, "nonWeapon");
+  const pool = panel.getByTestId("proficiency-languages");
+  // Test Bard spends 8 of 10 slots: three languages are one too many.
+  for (const name of ["Elfe", "Gnome", "Orque"])
+    await pool.getByRole("checkbox", { name, exact: true }).check();
+  await expect(pool.getByRole("alert")).toContainText("Budget dépassé");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(pool, `skills editor languages, ${where}`);
+    await expectWholeWords(pool, `skills editor languages, ${where}`);
+    await snap(page, `skills-languages-edit-fr-${where}`);
+  }
+  await pool.getByRole("checkbox", { name: "Orque", exact: true }).uncheck();
+  await expect(pool.getByTestId("proficiency-languages-slots")).toHaveText(
+    "2 emplacements de compétence",
+  );
+  await panel.getByTestId("proficiency-save").click();
+  await expect(page.getByTestId("proficiency-editor")).toHaveCount(0);
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  await expect(pop.getByTestId("details-language-slots")).toHaveText(
+    "2 emplacements de compétence",
+  );
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(pop, `details card languages view, ${where}`);
+    await snap(page, `details-languages-view-fr-${where}`);
+  }
+}
+
+async function pieceSpellStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  await chooseLanguage(page, "fr");
+  await openTypedAdd(page, "fr");
+  const wf = page.getByTestId("item-form");
+  await wf.getByLabel("Composante de sort").selectOption("gem");
+  for (const vp of sizesAt(size, VIEWPORTS)) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await expectNoClippedText(wf, `piece editor, fr, ${vp.width}x${vp.height}`);
+    if (vp.width >= 1920)
+      await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
+  }
+}
+
+async function piecePowersStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await openTypedAdd(page, lang);
+    const wf = page.getByTestId("item-form");
+    await wf
+      .getByLabel(lang === "fr" ? "Catégorie" : "Category")
+      .selectOption("magic");
+    await wf.getByTestId("power-templates").click();
+    await page.getByTestId("power-template-ring_of_protection").click();
+    await wf.getByTestId("power-add").click();
+    const second = wf.getByTestId("power-row").nth(1);
+    await second.getByTestId("power-min-str").fill("18");
+    await second.getByRole("combobox").last().selectOption("melee");
+    await second.getByTestId("power-without-magic-armour").check();
+    await second
+      .getByRole("button", {
+        name: lang === "fr" ? "Effet" : "Effect",
+        exact: true,
+      })
+      .click();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoPageScroll(page);
+      await expectNoClippedText(wf, `powers editor, ${where}`);
+      if (lang === "fr" && vp.width >= 1920)
+        await snap(page, `powers-editor-fr-${vp.width}x${vp.height}`);
+    }
+    await wf
+      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
+      .click();
+    await page
+      .getByTestId("item-leather")
+      .getByRole("button", { name: lang === "fr" ? /^Modifier / : /^Edit / })
+      .click();
+    const af = page.getByTestId("item-form");
+    await af
+      .getByRole("button", {
+        name: lang === "fr" ? "Plus de magie" : "More magic",
+      })
+      .click();
+    await af.getByTestId("power-add").click();
+    for (const vp of sizesAt(size, [
+      VIEWPORTS[0],
+      VIEWPORTS[3],
+      VIEWPORTS[4],
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoPageScroll(page);
+      await expectNoClippedText(af, `armour editor +N, ${where}`);
+      await af.getByTestId("item-powers").scrollIntoViewIfNeeded();
+      if (lang === "fr" && vp.width >= 1920)
+        await snap(page, `armour-plus-editor-fr-${vp.width}x${vp.height}`);
+    }
+    await af
+      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
+      .click();
+  }
+}
+
+async function ajouterStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  const names = {
+    fr: ["Armes", "Munitions", "Armures", "Boucliers"],
+    en: ["Weapons", "Ammunition", "Armour", "Shields"],
+  } as const;
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page
+      .getByRole("button", {
+        name: lang === "fr" ? "Ajouter un objet" : "Add item",
+      })
+      .click();
+    const add = page.getByTestId("add-piece");
+    for (const category of names[lang]) {
+      await add.getByRole("button", { name: category, exact: true }).click();
+      await add.getByTestId("add-rows").getByRole("button").first().click();
+      await expect(add.getByTestId("add-submit")).toBeVisible();
+      for (const vp of sizesAt(size, VIEWPORTS)) {
+        await page.setViewportSize(vp);
+        const where = `${category}, ${lang}, ${vp.width}x${vp.height}`;
+        await expectNoPageScroll(page);
+        await expectNoClippedText(add, `add from the catalogue, ${where}`);
+        if (
+          vp.width >= 1920 &&
+          (category === "Armures" ||
+            category === "Armes" ||
+            category === "Weapons" ||
+            category === "Armour")
+        )
+          await snap(
+            page,
+            `add-catalogue-${category.toLowerCase()}-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+    }
+    await add
+      .getByRole("tab", { name: lang === "fr" ? "Saisir" : "Type in" })
+      .click();
+    for (const vp of sizesAt(size, [VIEWPORTS[0], VIEWPORTS[3]])) {
+      await page.setViewportSize(vp);
+      await expectNoPageScroll(page);
+      await expectNoClippedText(
+        add,
+        `add typed, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      if (lang === "fr" && vp.width === 1920)
+        await snap(page, `add-typed-fr-${vp.width}x${vp.height}`);
+    }
+    await add
+      .getByRole("button", { name: lang === "fr" ? "Fermer" : "Close" })
+      .click();
+    await expect(add).toHaveCount(0);
+  }
+}
+
+async function acShieldStep(page: Page, size: Viewport) {
+  // Like the other viewport sweeps: five viewports in two languages and four states take about
+  // 20 s unloaded, and a starved runner needs more than the 30 s default.
+  await openDashboard(page);
+  await addBuff(page, {
+    name: "Protection from Evil",
+    effects: [["ac", -2]],
+  });
+  await openWorkspace(page, "Inventory");
+  await openTypedAdd(page);
+  const f = page.getByTestId("item-form");
+  await f.getByLabel("Name").fill("Chain mail of the long winter watch");
+  await f.getByLabel("Category").selectOption("armour");
+  await f.getByLabel("Base AC").fill("5");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Equip Chain mail of the long winter watch" })
+    .click();
+  // A body shield: +1 against melee, +2 against missiles (ADR 0033 step 10.3).
+  await openTypedAdd(page);
+  await f.getByLabel("Name").fill("Body shield");
+  await f.getByLabel("Category").selectOption("shield");
+  await f.getByLabel("Shield kind").selectOption("body");
+  await f.getByLabel("AC bonus (melee)").fill("1");
+  await f.getByLabel("AC bonus (missiles)").fill("2");
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await page.getByRole("button", { name: "Equip Body shield" }).click();
+  const card = page.getByTestId("ac-card");
+  // 5, shield -1, Dexterity -3, Protection from Evil -2; against missiles -2.
+  await expect(card.getByTestId("ac-card-value")).toHaveText("−1");
+  await expect(
+    page.getByTestId("ac-shield").getByTestId("ac-value"),
+  ).toHaveText("−1");
+  await expect(card.getByTestId("ac-breakdown")).toContainText(
+    "−2 vs missiles",
+  );
+
+  const character = page.getByTestId("character");
+  const shield = page.getByTestId("ac-shield");
+  const pop = page.getByTestId("ac-popover");
+  const check = async (
+    state: string,
+    langs: readonly ("fr" | "en")[] = ["fr", "en"],
+  ) => {
+    for (const lang of langs) {
+      await chooseLanguage(page, lang);
+      for (const vp of sizesAt(size, VIEWPORTS)) {
+        const where = `${state}, ${lang}, ${vp.width}x${vp.height}`;
+        await page.setViewportSize(vp);
+        await expectNoPageScroll(page);
+        await expectInside(shield, character, `AC shield, ${where}`);
+        const size = async (l: Locator) =>
+          l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
+        expect(
+          await size(shield.getByTestId("ac-value")),
+          `the AC is smaller than the HP, ${where}`,
+        ).toBeLessThan(
+          await size(page.getByTestId("hp-value").locator("span").first()),
+        );
+        await expectNoClippedText(card, `AC card, ${where}`);
+        await shield.click();
+        await expect(pop).toBeVisible();
+        await expectOnScreen(page, pop, `AC popover, ${where}`);
+        await expectNoClippedText(pop, `AC popover, ${where}`);
+        if (vp.width >= 1920)
+          await snap(page, `ac-${state}-${lang}-${vp.width}x${vp.height}`);
+        await page.keyboard.press("Escape");
+        await expect(pop).toHaveCount(0);
+      }
+    }
+  };
+  await check("derived");
+
+  await card.getByTestId("ac-card-override").click();
+  await card.getByTestId("ac-override-value").fill("4");
+  await card
+    .getByTestId("ac-override-label")
+    .fill("Shield spell against hurled missiles");
+  await card.getByTestId("ac-override-save").click();
+  await expect(card.getByTestId("ac-override")).toBeVisible();
+  await expect(shield).toHaveAttribute("data-overridden", "true");
+  await check("override");
+
+  // The dark theme, French first.
+  await chooseSetting(page, "Dark");
+  await check("override-dark", ["fr"]);
+  await card.getByTestId("ac-override-clear").click();
+  await expect(card.getByTestId("ac-override")).toHaveCount(0);
+  await check("derived-dark", ["fr"]);
+
+  // The widest numbers the shield holds: -10 and 10.
+  for (const value of ["-10", "10"]) {
+    await card.getByTestId("ac-card-override").click();
+    await card.getByTestId("ac-override-value").fill(value);
+    await card.getByTestId("ac-override-save").click();
+    await expect(shield.getByTestId("ac-value")).toHaveText(
+      value.replace("-", "−"),
+    );
+    for (const vp of sizesAt(size, [
+      VIEWPORTS[0],
+      VIEWPORTS[VIEWPORTS.length - 1],
+    ])) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        shield,
+        `AC shield ${value}, ${vp.width}x${vp.height}`,
+      );
+      const box = (await shield.getByTestId("ac-value").boundingBox())!;
+      const outer = (await shield.boundingBox())!;
+      expect(box.width, `the number fits the shield, ${value}`).toBeLessThan(
+        outer.width - 16,
+      );
+      if (value === "-10")
+        await snap(page, `ac-minus10-fr-dark-${vp.width}x${vp.height}`);
+    }
+    await card.getByTestId("ac-override-clear").click();
+    await expect(card.getByTestId("ac-override")).toHaveCount(0);
+  }
+}
+
+async function scrollSpellStep(page: Page, size: Viewport) {
+  const FR_SPELL =
+    "Nom de sortilège invraisemblablement long des anciens archimages";
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/items", {
+      name: {
+        en: "Scroll of the ancient archmages",
+        fr: "Parchemin des anciens archimages",
+      },
+      category: "magic",
+      magicKind: "scroll",
+      spellId: "long_spell",
+      behaviour: "stock",
+      count: 2,
+    }),
+  ).toBe(true);
+  expect(await call("POST", "/api/round/advance", {})).toBe(true);
+  expect(
+    await call("POST", "/api/items/scroll_of_the_ancient_archmages/use", {}),
+  ).toBe(true);
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  // The rail's buttons in order (French names): Act, Spells, XP, Inventory.
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `fr, ${vp.width}x${vp.height}`;
+    // The initiative breakdown's term names the scroll and its spell.
+    await page.getByTestId("initiative-value").hover();
+    const breakdown = page.getByTestId("initiative-breakdown");
+    await expect(breakdown).toContainText(
+      `Parchemin des anciens archimages (${FR_SPELL}) : +1`,
+    );
+    await expectNoClippedText(breakdown, `scroll initiative term, ${where}`);
+    await expectWholeWords(breakdown, `scroll initiative term, ${where}`);
+    await expectInside(breakdown, page.locator("body"), `breakdown, ${where}`);
+    await snap(page, `scroll-initiative-term-${vp.width}x${vp.height}`);
+    await page.mouse.move(0, 0);
+    await expect(breakdown).toBeHidden();
+    // The editor's Spell picker shows the long name whole.
+    await rail.nth(2).click();
+    // The scroll's row in the possessions list names the spell, whole.
+    const scrollRow = page.getByTestId("item-scroll_of_the_ancient_archmages");
+    await expect(scrollRow.getByTestId("item-stats")).toContainText(FR_SPELL);
+    await expectNoClippedText(scrollRow, `scroll row, ${where}`);
+    await expectWholeWords(scrollRow, `scroll row, ${where}`);
+    await snap(page, `scroll-row-spell-${vp.width}x${vp.height}`);
+    await page
+      .getByRole("button", {
+        name: "Modifier Parchemin des anciens archimages",
+      })
+      .click();
+    const form = page.getByTestId("item-form");
+    const picker = form.getByLabel("Sort", { exact: true });
+    await expect(picker).toHaveValue("long_spell");
+    await expect(picker.locator("option:checked")).toHaveText(FR_SPELL);
+    await expectNoClippedText(form, `item form, ${where}`);
+    await expectWholeWords(form, `item form, ${where}`);
+    await expectInside(picker, form, `spell picker, ${where}`);
+    // A native select cuts its selected text without any scroll width: measure it in the select's font.
+    const room = await picker.evaluate((el) => {
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement("canvas").getContext("2d")!;
+      ctx.font = cs.font;
+      const text = (el as HTMLSelectElement).selectedOptions[0].text;
+      const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+      return el.clientWidth - pad - ctx.measureText(text).width;
+    });
+    expect(room, `long spell name fits its picker, ${where}`).toBeGreaterThan(
+      24,
+    );
+    await snap(page, `scroll-spell-form-${vp.width}x${vp.height}`);
+    await form.getByRole("button", { name: "Annuler" }).click();
+    await expect(form).toHaveCount(0);
+    await rail.nth(0).click();
+  }
+}
+
+async function nonProficiencyStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const thac0 = attackForm(page).getByTestId("tile-thac0");
+  const proficient = Number(await thac0.textContent());
+
+  expect(
+    await call("PUT", "/api/proficiencies", {
+      weapon: ["short_bow", "dagger", "dart", "sling", "other_melee"].map(
+        (type) => ({ type, slots: 1 }),
+      ),
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/items", {
+      name: { en: "Homebrew cudgel", fr: "Gourdin maison" },
+      category: "weapon",
+      damageSm: "1d6",
+      damageL: "1d3",
+      damageTypes: ["b"],
+      weaponKind: "melee",
+      behaviour: "stock",
+      count: 1,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await openWeapons(page);
+  await expect(thac0).toHaveText(String(proficient + 3));
+  await attackForm(page).getByLabel("Target AC").fill("5");
+  await attackForm(page)
+    .getByRole("button", { name: "Attack", exact: true })
+    .click();
+  const card = page.getByTestId("attack-result");
+  await expect(card).toContainText("Long Sword +2 vs AC 5");
+  await card.getByText("Calculation details").click();
+  const penalty = card
+    .getByTestId("to-hit-modifiers")
+    .getByRole("listitem")
+    .filter({ hasText: "Non-proficiency (Long sword)" });
+  await expect(penalty).toHaveText(/Non-proficiency \(Long sword\)\s*−3/);
+  // The journal's entry opens in the same Detail view: its row is the selected one.
+  await expect(
+    combatLog(page)
+      .getByRole("button", { name: /Attack Long Sword \+2 vs AC 5/ })
+      .first(),
+  ).toHaveAttribute("aria-pressed", "true");
+
+  // The typeless homebrew weapon: wielded, tagged, no penalty in its preview.
+  await chooseWeapon(page, "Homebrew cudgel");
+  const missing =
+    '[data-testid="class-warning"][data-code="weapon_type_missing"]';
+  await expect(attackForm(page).locator(missing)).toHaveText(
+    "No weapon type: weapon proficiency not checked",
+  );
+  const form = (await (await page.request.get("/api/attack/form")).json()) as {
+    preview: { modifiers: { kind: string }[] };
+  };
+  expect(form.preview.modifiers.map((m) => m.kind)).not.toContain(
+    "nonproficient",
+  );
+
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    const attack = page.getByRole("form", {
+      name: lang === "fr" ? "Attaque" : "Attack",
+    });
+    const words =
+      lang === "fr"
+        ? [
+            "Non-maîtrise (Épée longue)",
+            "Sans type d'arme : compétence martiale non vérifiée",
+          ]
+        : [
+            "Non-proficiency (Long sword)",
+            "No weapon type: weapon proficiency not checked",
+          ];
+    for (const vp of sizesAt(size, [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await rail.nth(0).click();
+      await expect(card.getByTestId("to-hit-modifiers")).toContainText(
+        words[0],
+      );
+      await expect(attack.locator(missing)).toHaveText(words[1]);
+      await expectNoClippedText(card, `result card, ${where}`);
+      await expectNoClippedText(attack, `attack card, ${where}`);
+      await expectNoClippedText(combatLog(page), `journal, ${where}`);
+      await snap(page, `nonproficient-attack-${lang}-${vp.width}x${vp.height}`);
+      await rail.nth(2).click();
+      const row = page.getByTestId("item-homebrew_cudgel");
+      await expect(row.locator(missing)).toHaveText(words[1]);
+      await expect(page.getByTestId("ac-card").locator(missing)).toHaveCount(0);
+      // Below 1920 the walk's items carry damage dice chips that 9 px overflow their cell at 1280
+      // and 1440 (the spec never checked this list there): left to the dedicated inventory step.
+      if (vp.width >= 1920)
+        await expectNoClippedText(
+          page.getByTestId("stage"),
+          `inventory, ${where}`,
+        );
+      await snap(
+        page,
+        `nonproficient-inventory-${lang}-${vp.width}x${vp.height}`,
+      );
+    }
+  }
+}
+
+async function classWarningsStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/characters", {
+      name: "Ilyana Mainfroide d'Ombrebrume",
+      class: "mage",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "female" },
+      str: 9,
+      dex: 14,
+      con: 10,
+      int: 17,
+      wis: 10,
+      cha: 12,
+      hpMax: 4,
+      xp: 0,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  const pieces = [
+    {
+      id: "full_plate_armour_of_the_northern_wardens",
+      state: "worn",
+      body: {
+        name: {
+          en: "Full plate armour of the northern wardens",
+          fr: "Armure de plates complète des gardiens du nord",
+        },
+        category: "armour",
+        baseAc: 1,
+        skillColumn: "none_allowed",
+        armorRow: "full_plate",
+      },
+    },
+    {
+      id: "tower_shield",
+      state: "worn",
+      body: {
+        name: { en: "Tower shield", fr: "Bouclier-tour" },
+        category: "shield",
+        shieldKind: "body",
+        acMelee: 1,
+        acMissile: 2,
+      },
+    },
+    {
+      id: "great_claymore",
+      state: "wielded",
+      body: {
+        name: { en: "Great claymore", fr: "Grande claymore à deux mains" },
+        category: "weapon",
+        damageSm: "1d10",
+        damageL: "3d6",
+        damageTypes: ["s"],
+        weaponKind: "melee",
+        weaponType: "long_sword",
+        twoHanded: true,
+      },
+    },
+  ];
+  for (const p of pieces) {
+    expect(
+      await call("POST", "/api/items", {
+        ...p.body,
+        behaviour: "stock",
+        count: 1,
+      }),
+      `create ${p.id}`,
+    ).toBe(true);
+    // Warned, never refused: wearing and wielding succeed.
+    expect(
+      await call("POST", `/api/items/${p.id}/state`, { state: p.state }),
+      `equip ${p.id}`,
+    ).toBe(true);
+  }
+  await reloadSettled(page);
+
+  const codes = async (id: string) =>
+    page
+      .getByTestId(`item-${id}`)
+      .getByTestId("class-warning")
+      .evaluateAll((els) => els.map((e) => e.getAttribute("data-code")));
+  const check = async (
+    lang: "en" | "fr",
+    vp: { width: number; height: number },
+  ) => {
+    await page.setViewportSize(vp);
+    const where = `${lang}, ${vp.width}x${vp.height}`;
+    const shot = vp.width === 1920 || vp.width === 2560;
+    // The Inventaire: the warnings on the rows and on the AC card.
+    await rail.nth(2).click();
+    await expect(
+      page.getByTestId("item-full_plate_armour_of_the_northern_wardens"),
+    ).toBeVisible();
+    expect(await codes("full_plate_armour_of_the_northern_wardens")).toEqual([
+      "armour_not_allowed",
+    ]);
+    expect(await codes("tower_shield")).toEqual([
+      "armour_not_allowed",
+      "hands",
+    ]);
+    expect(await codes("great_claymore")).toEqual([
+      "weapon_not_allowed",
+      "hands",
+    ]);
+    const card = page.getByTestId("ac-card");
+    await expect(card.getByTestId("ac-warnings")).toBeVisible();
+    await expect(card.getByTestId("class-warning")).toHaveCount(3);
+    // The shield's two warnings sit under its name, shown once.
+    await expect(card.getByTestId("ac-warning-piece")).toHaveCount(2);
+    await expect(card.getByTestId("ac-warnings")).toContainText(
+      lang === "fr" ? "Pas pour un magicien" : "Not for a mage",
+    );
+    await expectNoClippedText(page.getByTestId("stage"), `inventory, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-inventory-${lang}-${vp.width}x${vp.height}`,
+      );
+    // The shield beside the HP: a badge, and the popover lists the warnings.
+    const shield = page.getByTestId("ac-shield");
+    await expect(shield.getByTestId("ac-shield-warning")).toBeVisible();
+    await shield.click();
+    const popover = page.getByTestId("ac-popover");
+    await expect(popover.getByTestId("class-warning")).toHaveCount(3);
+    await expectNoClippedText(popover, `AC popover, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-shield-${lang}-${vp.width}x${vp.height}`,
+      );
+    await page.keyboard.press("Escape");
+    await expect(popover).toHaveCount(0);
+    // The attack card: the weapon in hand carries its warnings.
+    // The Weapons tab stays open between visits (its name is English-only in the helper).
+    await rail.nth(0).click();
+    const attack = page.getByRole("form", {
+      name: lang === "fr" ? "Attaque" : "Attack",
+    });
+    await expect(attack.getByTestId("class-warning")).toHaveCount(2);
+    await expectNoClippedText(attack, `attack card, ${where}`);
+    if (shot)
+      await snap(
+        page,
+        `class-warnings-attack-${lang}-${vp.width}x${vp.height}`,
+      );
+  };
+  // The weapon in hand is picked once (in English); the choice is kept on the server.
+  await openWorkspace(page, "Act");
+  await openWeapons(page);
+  await chooseWeapon(page, "Great claymore");
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizesAt(size, VIEWPORTS)) await check(lang, vp);
+  }
+}
+
+async function spellDescriptionStep(page: Page, size: Viewport, stack: Stack) {
+  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ spells: ["chromatic_orb", "magic_missile"] }),
+  });
+  expect(put.ok).toBe(true);
+  await openDashboard(page);
+
+  /** The description box's shape: one column, the measure, the rhythm and the tables. */
+  const expectOneColumn = async (box: Locator, where: string) => {
+    const m = await box.evaluate((el) => {
+      const probe = document.createElement("span");
+      probe.style.cssText = "position:absolute;visibility:hidden;width:1ch";
+      el.appendChild(probe);
+      const ch = probe.getBoundingClientRect().width;
+      probe.remove();
+      const blocks = [...el.children] as HTMLElement[];
+      const rect = (e: Element) => e.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      return {
+        columns: cs.columnCount + "/" + cs.columnWidth,
+        widthCh: rect(el).width / ch,
+        lefts: blocks.map((b) => Math.round(rect(b).left)),
+        gaps: blocks
+          .slice(1)
+          .map((b, i) => Math.round(rect(b).top - rect(blocks[i]).bottom)),
+        lineHeight: parseFloat(cs.lineHeight),
+        blocks: blocks.length,
+        tables: [...el.querySelectorAll("[data-testid=spell-table]")].map(
+          (t) => {
+            const cell = t.querySelector("td")!;
+            const ccs = getComputedStyle(cell);
+            return {
+              pad: [ccs.paddingLeft, ccs.paddingTop],
+              inside: rect(t).right <= rect(el).right + 1,
+            };
+          },
+        ),
+        page: document.documentElement.scrollWidth - innerWidth,
+      };
+    });
+    expect(m.columns, `no CSS columns, ${where}`).toMatch(/^auto\/auto$/);
+    expect(m.widthCh, `measure, ${where}`).toBeLessThanOrEqual(75.5);
+    expect(new Set(m.lefts).size, `one left edge, ${where}`).toBe(1);
+    expect(m.blocks).toBeGreaterThan(1);
+    for (const g of m.gaps)
+      expect(g, `blocks apart, ${where}`).toBeGreaterThanOrEqual(16);
+    for (const t of m.tables) {
+      expect(t.pad, `cell padding, ${where}`).toEqual(["12px", "8px"]);
+      expect(t.inside, `table in its box, ${where}`).toBe(true);
+    }
+    expect(m.page, `page does not widen, ${where}`).toBeLessThanOrEqual(0);
+  };
+
+  // The cast result's folded text (a long spell; the table spell cannot be cast in the fixture).
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await page.getByRole("button", { name: "Cast Magic Missile" }).click();
+  const card = page.getByTestId("cast-result");
+  await expect(card).toBeVisible();
+  await card.getByText("Spell text").click();
+
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang} ${vp.width}x${vp.height}`;
+      const shot = lang === "fr" || vp.width >= 1920;
+      // The cast result.
+      await rail.nth(0).click();
+      if (!(await card.getByTestId("cast-text").isVisible()))
+        await card.getByText(/Spell text|Texte du sort/).click();
+      await expect(card.getByTestId("cast-text")).toBeVisible();
+      await expectOneColumn(card.getByTestId("cast-text"), `cast, ${where}`);
+      await expectNoClippedText(card, `cast result, ${where}`);
+      if (shot)
+        await snap(page, `description-cast-${lang}-${vp.width}x${vp.height}`);
+      // The lookup, a table spell then a long one.
+      await rail.nth(1).click();
+      for (const [query, name, title] of [
+        ["chromatic", "chromatic", /Chromatic Orb|Orbe chromatique/],
+        ["magic missile", "missile", /Magic Missile|Projectile magique/],
+      ] as const) {
+        await page
+          .getByRole("combobox", {
+            name:
+              lang === "fr" ? "Rechercher des sorts..." : "Search spells...",
+          })
+          .fill(query);
+        const detail = page.getByTestId("spell-detail");
+        await expect(detail.getByRole("heading").first()).toHaveText(title);
+        const text = detail.getByTestId("spell-description-text");
+        await expectOneColumn(
+          text.locator("> div"),
+          `lookup ${name}, ${where}`,
+        );
+        await expectNoClippedText(detail, `spell detail ${name}, ${where}`);
+        await expectNoPageScroll(page);
+        if (shot)
+          await snap(
+            page,
+            `description-lookup-${name}-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+    }
+  }
+}
+
+async function endEffectsStep(page: Page, size: Viewport, stack: Stack) {
+  await dismissEffects(stack);
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizesAt(size, [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      expect(
+        await apiCall(page, "POST", "/api/hp/event", {
+          delta: -8,
+          source: "e2e goblin",
+        }),
+      ).toBe(true);
+      expect(
+        await apiCall(page, "POST", "/api/spells/receive", {
+          spellId: "polymorph_self",
+          casterLevel: 15,
+        }),
+      ).toBe(true);
+      await reloadSettled(page);
+      await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+      await page.getByTestId("buff-stop").click();
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible();
+      await expectNoClippedText(menu, `stop menu, ${where}`);
+      await expectWholeWords(menu, `stop menu, ${where}`);
+      await page.getByTestId("buff-end-voluntary").click();
+      const ended = page.getByTestId("notice-ended");
+      await expect(ended).toBeVisible();
+      await expectNoClippedText(ended, `end notice, ${where}`);
+      await expectWholeWords(ended, `end notice, ${where}`);
+      await expectNoClippedText(page.getByRole("status"), `notice, ${where}`);
+      await expectNoClippedText(combatLog(page), `journal, ${where}`);
+      await snap(page, `end-effects-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+}
+
+async function weaponProfEditorStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await createInFlow(page, {
+    name: "Borin",
+    className: "Guerrier",
+    race: "Humain",
+    scores: { FOR: "16", DEX: "14", CON: "15", INT: "10", SAG: "10", CHA: "9" },
+    hpMax: "10",
+  });
+  await expect(page.getByTestId("character")).toContainText("Borin");
+  for (const lang of ["fr", "en"] as const) {
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+    await chooseLanguage(page, lang);
+    await page.setViewportSize(size);
+    // A new character opens on Act (Agir), where the Skills tab is.
+    const actions = page.getByRole("region", { name: "Actions" });
+    await actions
+      .getByRole("tab", { name: tr("Compétences", "Skills") })
+      .click();
+    await openSpend(page, "weapon");
+    const editor = page.getByTestId("weapon-editor");
+    if (lang === "fr") {
+      // The specialization in a long bow (3 slots) and a plain short sword: 4 of 4 spent.
+      const bow = editor.getByTestId("weapon-row-long_bow");
+      await bow.getByTestId("weapon-add").click();
+      await bow.getByTestId("weapon-specialize").click();
+      await editor
+        .getByTestId("weapon-row-short_sword")
+        .getByTestId("weapon-add")
+        .click();
+      await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
+        "Dépensés 4, restants 0",
+      );
+    }
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(editor, `weapon editor, ${where}`);
+      await expectWholeWords(editor, `weapon editor, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `weapon-editor-${lang}-${vp.width}x${vp.height}`);
+    }
+    if (lang === "fr") await editor.getByTestId("weapon-save").click();
+    else await editor.getByTestId("weapon-cancel").click();
+    await expect(editor).toBeHidden();
+  }
+}
+
+async function profPopupStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Compétences" });
+  const dialog = page.getByTestId("proficiency-details");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expect(
+      panel.getByTestId("proficiency-name-musical_instrument"),
+    ).toBeVisible();
+    await expectNoClippedText(panel, `skills rows, ${where}`);
+    await expectWholeWords(panel, `skills rows, ${where}`);
+    await snap(page, `proficiency-rows-fr-${where}`);
+    await panel.getByTestId("proficiency-name-musical_instrument").click();
+    await expect(dialog.getByTestId("proficiency-description")).toBeVisible();
+    await expectNoClippedText(dialog, `proficiency pop-up, ${where}`);
+    await expectWholeWords(dialog, `proficiency pop-up, ${where}`);
+    await snap(page, `proficiency-popup-fr-${where}`);
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  }
+  await openSpend(page, "nonWeapon");
+  const editor = page.getByTestId("proficiency-editor");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(editor, `picker rows, ${where}`);
+    await expectWholeWords(editor, `picker rows, ${where}`);
+    await snap(page, `proficiency-picker-fr-${where}`);
+  }
+}
+
+async function longRestStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await nextRound(page);
+  await page.getByRole("tab", { name: "Spells" }).click();
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("button", {
+        name: lang === "fr" ? "Repos long" : "Long rest",
+      })
+      .click();
+    const dialog = page.getByTestId("long-rest-confirm");
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText(
+      lang === "fr" ? /tour \d+/ : /round \d+/,
+    );
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(dialog, `long rest confirmation, ${where}`);
+      await expectWholeWords(dialog, `long rest confirmation, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920 && lang === "fr")
+        await snap(page, `long-rest-confirm-fr-${vp.width}x${vp.height}`);
+      if (vp.width >= 1920 && lang === "en")
+        await snap(page, `long-rest-confirm-en-${vp.width}x${vp.height}`);
+    }
+    await page.keyboard.press("Escape");
+    await expect(dialog).toHaveCount(0);
+  }
+}
+
+async function weaponInHandStep(page: Page, size: Viewport, stack: Stack) {
+  const api = (method: string, url: string, data: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  await openDashboard(page);
+  await openWeapons(page);
+  // Trim or grow the character's weapons so exactly `wanted` are besides the one in hand.
+  let added = 0;
+  const growTo = async (wanted: number) => {
+    const weapons = (await (
+      await fetch(`${stack.apiUrl}/api/weapons`)
+    ).json()) as { id: string }[];
+    const held = (
+      (await (await fetch(`${stack.apiUrl}/api/attack/form`)).json()) as {
+        form: { weaponId: string };
+      }
+    ).form.weaponId;
+    const spare = weapons.filter((w) => w.id !== held);
+    for (const w of spare.slice(wanted))
+      await fetch(`${stack.apiUrl}/api/items/${w.id}`, { method: "DELETE" });
+    for (let n = spare.length; n < wanted; n++) {
+      added += 1;
+      await api("POST", "/api/items", {
+        name: {
+          en: `Spare ${LONG_WEAPON} number ${added}`,
+          fr: `Arme de rechange ${LONG_WEAPON} numéro ${added}`,
+        },
+        category: "weapon",
+        damageSm: "1d6",
+        damageL: "1d6",
+        damageTypes: ["s"],
+        weaponKind: "melee",
+        behaviour: "stock",
+        count: 1,
+      });
+    }
+    await reloadSettled(page);
+    await openWeapons(page);
+  };
+  for (const wanted of [2, 6]) {
+    await chooseLanguage(page, "en");
+    await growTo(wanted);
+    for (const lang of ["en", "fr"] as const) {
+      await chooseLanguage(page, lang);
+      const label = lang === "en" ? "Other weapons" : "Autres armes";
+      for (const vp of sizesAt(size, [
+        VIEWPORTS[0],
+        VIEWPORTS[3],
+        VIEWPORTS[4],
+      ])) {
+        await page.setViewportSize(vp);
+        const where = `${wanted} others, ${lang}, ${vp.width}x${vp.height}`;
+        const f =
+          lang === "en"
+            ? attackForm(page)
+            : page.getByRole("form", { name: "Attaque" });
+        // No native select in the panel; damage, speed and to-hit are separate labelled chips.
+        await expect(
+          f.locator("select"),
+          `native select, ${where}`,
+        ).toHaveCount(0);
+        const stats = f.getByTestId("weapon-stats").locator("dt");
+        await expect(stats.first()).toBeVisible();
+        expect(await stats.count()).toBeGreaterThanOrEqual(4);
+        const group = f.getByRole("group", { name: label });
+        if (wanted <= 4)
+          await expect(group.getByRole("button")).toHaveCount(wanted);
+        else await expect(group.getByTestId("other-weapon-menu")).toBeVisible();
+        await expectNoClippedText(f, `weapons tab, ${where}`);
+        await snap(
+          page,
+          `weapon-chips-${wanted}-${lang}-${vp.width}x${vp.height}`,
+        );
+      }
+    }
+  }
+  // With more than four the menu holds the rest, reachable by keyboard; choosing one puts it in hand.
+  await chooseLanguage(page, "en");
+  await page.setViewportSize(size);
+  const menu = attackForm(page).getByTestId("other-weapon-menu");
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem").first()).toBeVisible();
+  await snap(page, "weapon-menu-open-en-1920x1080");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
+}
+
+async function journalRowsStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await recordHp(page, "damage", 7, "Orc axe");
+  await recordHp(page, "heal", 3, "Potion sip");
+  // An attack is the latest result.
+  await openWeapons(page);
+  await chooseWeapon(page, "Long Sword +2");
+  const form = attackForm(page);
+  await form.getByLabel("Target AC").fill("5");
+  await form.getByRole("button", { name: "Attack", exact: true }).click();
+  // Adding a catalogue item and equipping it at once is one transaction: the undo group.
+  await openWorkspace(page, "Inventory");
+  await page.getByRole("button", { name: "Add item" }).click();
+  await page.getByTestId("add-row-long_sword").click();
+  await page.getByTestId("add-submit").click();
+  await expect(page.getByTestId("add-piece")).toHaveCount(0);
+  await openWorkspace(page, "Act");
+  const log = combatLog(page);
+  const group = log.getByTestId("log-transaction").first();
+  await expect(group).toBeVisible();
+
+  const look = (el: Locator) =>
+    el.evaluate((node) => {
+      const s = getComputedStyle(node);
+      const clear = (c: string) =>
+        c === "rgba(0, 0, 0, 0)" || c === "transparent";
+      return {
+        bracket: s.borderLeftWidth,
+        fill: !clear(s.backgroundColor),
+        bar: s.boxShadow !== "none",
+        outline: s.outlineStyle === "none" ? "0px" : s.outlineWidth,
+      };
+    });
+  // The undo group: a 2 px bracket, no fill.
+  expect(await look(group)).toMatchObject({ bracket: "2px", fill: false });
+
+  const damage = logEntry(page, "Orc axe");
+  const heal = logEntry(page, "Potion sip");
+  const icon = (row: Locator) => row.locator("svg").first().innerHTML();
+  expect(await icon(damage), "damage and healing icons differ").not.toBe(
+    await icon(heal),
+  );
+
+  // The newest result is the latest: the outline, no fill, no bar.
+  const latestRow = log.locator('[data-latest="true"]');
+  await expect(latestRow).toHaveCount(1);
+  expect(await look(latestRow)).toMatchObject({
+    fill: false,
+    bar: false,
+    outline: "2px",
+  });
+  await snap(page, "journal-rows-latest-en");
+  // A row the player picks: the fill, no bar, no outline; a row of the group does not copy it.
+  await damage.click();
+  await expect(damage).toHaveAttribute("data-selected", "true");
+  expect(await look(damage)).toMatchObject({
+    fill: true,
+    bar: false,
+    outline: "0px",
+  });
+  for (const row of await group.getByRole("listitem").all())
+    expect(await look(row)).toMatchObject({ fill: false });
+  await snap(page, "journal-rows-en");
+
+  // Every row is at least a 24 px target; keyboard focus shows a ring.
+  for (const row of await log.getByRole("listitem").all())
+    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(24);
+  await heal.getByTestId("log-select").focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  expect(
+    await heal
+      .getByTestId("log-select")
+      .evaluate((el) => getComputedStyle(el).boxShadow),
+    "focus ring",
+  ).not.toBe("none");
+
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizesAt(size, [
+      { width: 1280, height: 800 },
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang} ${vp.width}x${vp.height}`;
+      await expectNoClippedText(log, `journal rows, ${where}`);
+      await snap(page, `journal-rows-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+  for (const [mode, theme] of [
+    ["Sombre", "Arcane"],
+    ["Clair", "Parchemin"],
+  ] as const) {
+    await chooseSetting(page, mode);
+    await chooseTheme(page, theme);
+    await page.waitForTimeout(150);
+    await expectNoClippedText(log, `journal rows, ${theme}`);
+    await snap(page, `journal-rows-fr-${theme.toLowerCase()}`);
+  }
+}
+
+type Step = (
+  page: Page,
+  size: Viewport,
+  stack: Stack,
+  context: BrowserContext,
+) => Promise<void>;
+
+/**
+ * The dashboard walk: every screen and state of the dashboard in turn, in one test on one stack, at one
+ * size. Each step runs the no-cut, whole-word and page-scroll checks of its region. The server state
+ * carries over from step to step (what a step adds stays), so the steps that change the character
+ * more (a multi-class sheet) come last; the browser's local storage is cleared between steps, so each
+ * starts in the default language and theme.
+ */
+const DASHBOARD_STEPS: [string, Step][] = [
+  ["end effects", endEffectsStep],
+  ["shell", shellStep],
+  ["item power row", itemPowerRowStep],
+  ["act panel", actPanelStep],
+  ["French and long names", frenchLongNamesStep],
+  ["saves label line", savesLabelStep],
+  ["save card", saveCardStep],
+  ["ability check card", abilityCardStep],
+  ["attack card", attackCardStep],
+  ["last result", lastResultStep],
+  ["journal rows", journalRowsStep],
+  ["spells tab", spellsTabStep],
+  ["spell description", spellDescriptionStep],
+  ["inventory, AC shield", acShieldStep],
+  ["scroll spell", scrollSpellStep],
+  ["piece editor spell component", pieceSpellStep],
+  ["piece editor powers", piecePowersStep],
+  ["Ajouter", ajouterStep],
+  ["skills editor", skillsEditorStep],
+  ["proficiency pop-up", profPopupStep],
+  ["effects timeline", effectsTimelineStep],
+  ["long rest", longRestStep],
+  ["settings popover", settingsPopoverStep],
+  ["non-proficiency", nonProficiencyStep],
+  ["weapon in hand", weaponInHandStep],
+  ["class warnings", classWarningsStep],
+  ["class lines, multi-class", (p, s) => classLinesStep(p, s, "multi")],
+  ["class lines, three classes", (p, s) => classLinesStep(p, s, "three")],
+  ["class lines, dual-class", (p, s) => classLinesStep(p, s, "dual")],
+  ["weapon proficiency editor", weaponProfEditorStep],
+];
+
+async function runWalk(
+  page: Page,
+  size: Viewport,
+  steps: [string, Step][],
+  stack: Stack,
+) {
+  const context = page.context();
+  for (const [name, step] of steps) {
+    // Each step starts from the walk's size, signed in, with no route of an earlier step left.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    await context.addCookies([
+      {
+        name: stack.session.name,
+        value: stack.session.value,
+        domain: new URL(stack.webUrl).hostname,
+        path: "/",
+        httpOnly: true,
+        sameSite: "Lax",
+      },
+    ]);
+    await page.setViewportSize(size);
+    await test.step(name, async () => {
+      await step(page, size, stack, context);
+    });
+    // Local storage holds the language and the theme: the next step starts from the defaults.
+    await page.evaluate(() => localStorage.clear()).catch(() => undefined);
+  }
+}
+
+// Two halves per size, each on a stack of its own: one session would run past the 90 s test timeout on
+// the CI runner.
+// The first ten steps take about as long as the rest.
+const HALF = 10;
+for (const size of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3], VIEWPORTS[4]]) {
+  for (const [part, steps] of [
+    ["first half", DASHBOARD_STEPS.slice(0, HALF)],
+    ["second half", DASHBOARD_STEPS.slice(HALF)],
+  ] as const) {
+    test(`dashboard walk at ${size.width}x${size.height}, ${part}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, [...steps], stack);
+    });
+  }
+}
+
+// Shots of the themes and the group headings, on a stack of their own.
+test("dashboard walk at 1440x900, themes and group headings", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(90_000);
+  await runWalk(
+    page,
+    VIEWPORTS[1],
+    [
+      ["themes", themesStep],
+      ["group headings", groupHeadingsStep],
+    ],
+    stack,
+  );
 });
+
+// The design's second viewport (ADR 0022): the shell and the act panel, on a stack of their own.
+test("dashboard walk at 1707x1300", async ({ page, stack }) => {
+  test.setTimeout(90_000);
+  await runWalk(
+    page,
+    VIEWPORTS[2],
+    [
+      ["shell", shellStep],
+      ["act panel", actPanelStep],
+    ],
+    stack,
+  );
+});
+
+// ADR 0022 step 5.4: the handle between the now band and the journal resizes the journal by drag
+// (mouse) and arrows (keyboard); a click (or Enter) on it folds the journal into a one-line bar and
+// back, a drag of 4 px or more only resizes; both are kept per device
+// across a reload. What only a browser proves: pointer drag, layout heights and localStorage.
+async function journalSplitStep(page: Page) {
+  await openDashboard(page);
+  await recordHp(page, "damage", 3, "Split goblin");
+  const slot = page.getByTestId("journal-slot");
+  const band = page.getByTestId("now-band");
+  const handle = page.getByTestId("journal-handle");
+  const heightOf = async (l: Locator) => (await l.boundingBox())!.height;
+  // Default: the band takes at most 60 % of the stage, the journal at least 14rem.
+  const stage = await heightOf(page.getByTestId("act-stage"));
+  expect(await heightOf(band)).toBeLessThanOrEqual(stage * 0.6 + 1);
+  // The band is as tall as its content, so the journal's height follows the content: measure it
+  // once the logged entry has rendered and the layout has stopped moving.
+  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
+  const settled = async () => {
+    let last = -1;
+    await expect
+      .poll(async () => {
+        const now = await heightOf(slot);
+        const same = now === last;
+        last = now;
+        return same;
+      })
+      .toBe(true);
+    return last;
+  };
+  const before = await settled();
+  expect(before).toBeGreaterThanOrEqual(224);
+
+  // Drag the handle down by 120 px: the journal shrinks by as much, the band grows. Down, not up:
+  // the default band is only as tall as its content, so the journal starts large and an upward
+  // drag has little room before the band's minimum (NOW_MIN_PX).
+  const h = (await handle.boundingBox())!;
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 60, {
+    steps: 4,
+  });
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 120, {
+    steps: 4,
+  });
+  await page.mouse.up();
+  const dragged = await heightOf(slot);
+  expect(Math.abs(dragged - (before - 120))).toBeLessThanOrEqual(2);
+  expect(dragged).toBeGreaterThanOrEqual(224);
+  // Keyboard: ArrowDown shrinks it by one step.
+  await handle.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+  await snap(page, "act-journal-dragged");
+
+  // A drag never toggles: still expanded, handle states it.
+  await expect(handle).toHaveAttribute("aria-valuetext", "Expanded");
+  await expect(
+    page.getByRole("button", { name: /Collapse|Expand/ }),
+  ).toHaveCount(0);
+
+  // A click on the handle collapses: one line with the newest entry, the count, Undo / Redo.
+  await handle.click();
+  await expect(handle).toHaveAttribute("aria-valuetext", "Collapsed");
+  const bar = page.getByTestId("journal-bar");
+  await expect(bar).toContainText("Split goblin");
+  await expect(bar.getByTestId("undo")).toBeVisible();
+  await expectNoClippedText(bar, "collapsed journal");
+  expect(await heightOf(slot)).toBeLessThan(80);
+  await snap(page, "act-journal-collapsed");
+
+  // Kept across a reload; A click brings back the dragged height.
+  await reloadSettled(page);
+  await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
+  await page.getByTestId("journal-handle").click();
+  await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+}
+
+// The audit itself: it reports a cut line and a box hiding tall text, and passes text that wraps or
+// scrolls. A plain page, no stack.
+base(
+  "expectNoClippedText reports cut text and passes wrapped or scrolling text",
+  async ({ page }) => {
+    await page.setContent(
+      `<div id="cut" style="width:50px;overflow:hidden;white-space:nowrap">a very long line of text</div>
+<div id="tall" style="height:20px;overflow:hidden"><p style="margin:0">one</p><p style="margin:0">two</p></div>
+<div id="ok" style="width:50px">a very long line of text that wraps</div>
+<div id="scrolls" style="height:20px;overflow-y:auto"><p>one</p><p>two</p></div>
+<span id="sr" style="position:absolute;width:1px;height:1px;overflow:hidden;white-space:nowrap">screen reader text</span>`,
+    );
+    const cut = await page.locator("body").evaluate(clippedText);
+    expect(cut).toHaveLength(2);
+    expect(cut[0]).toContain("wide");
+    expect(cut[1]).toContain("tall");
+    for (const id of ["ok", "scrolls", "sr"])
+      await expectNoClippedText(page.locator(`#${id}`), id);
+  },
+);
+
+// A word split across two lines counts as cut too; words wrapped whole pass.
+base("expectWholeWords reports a word broken mid-word", async ({ page }) => {
+  await page.setContent(
+    `<div id="split" style="width:40px;overflow-wrap:anywhere">Thornwoodsilvermine</div>
+<div id="whole" style="width:60px">a few short words wrap</div>`,
+  );
+  expect(await page.locator("#split").evaluate(brokenWords)).toEqual([
+    "Thornwoodsilvermine",
+  ]);
+  await expectWholeWords(page.locator("#whole"), "whole");
+});
+
+// ADR 0022 step 2.4: a click focuses an activity; each mounts on its first visit and keeps its state
+// while hidden.
+async function railStep(page: Page) {
+  await openDashboard(page);
+  const rail = page.getByRole("navigation", { name: "Activities" });
+  await expect(rail.getByRole("button", { name: "Act" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+
+  // Act: pick the Spells tab.
+  await page.getByRole("tab", { name: "Spells" }).click();
+  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+
+  // Inventory: items and weapons; open the add-item form.
+  await openWorkspace(page, "Inventory");
+  await expect(rail.getByRole("button", { name: "Inventory" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  await expect(page.getByRole("region", { name: "Actions" })).toBeHidden();
+  const inventory = page.getByRole("region", { name: "Inventory" });
+  await expect(inventory.getByTestId("category-chips")).toBeVisible();
+  await openTypedAdd(inventory);
+  await expect(inventory.getByTestId("item-form")).toBeVisible();
+
+  // Spells: the spell lookup; type a search.
+  await openWorkspace(page, "Spells");
+  const search = page.getByRole("combobox", { name: "Search spells..." });
+  await search.fill("fire");
+  await expect(page.getByTestId("spell-row").first()).toBeVisible();
+
+  // Back: every activity is as it was left; the journal is the Act activity's.
+  await openWorkspace(page, "Act");
+  await expect(page.getByRole("tab", { name: "Spells" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+  await openWorkspace(page, "Inventory");
+  await expect(inventory.getByTestId("item-form")).toBeVisible();
+  await openWorkspace(page, "Spells");
+  await expect(search).toHaveValue("fire");
+  await expect(
+    page.getByRole("region", { name: "Journal", exact: true }),
+  ).toBeHidden();
+  await expect(page.getByTestId("hp-value")).toBeVisible();
+}
+
+const isDark = (page: Page) =>
+  page.evaluate(() => document.documentElement.classList.contains("dark"));
+const rootVar = (page: Page, name: string) =>
+  page.evaluate(
+    (n) =>
+      getComputedStyle(document.documentElement).getPropertyValue(n).trim(),
+    name,
+  );
+
+// ADR 0026 step 3.1: the theme grid never leaves one theme alone on a row.
+async function expectNoLoneRow(list: Locator, what: string) {
+  const tops = await list
+    .getByRole("radio")
+    .evaluateAll((els) =>
+      els.map((e) => Math.round(e.getBoundingClientRect().top)),
+    );
+  const perRow = new Map<number, number>();
+  for (const t of tops) perRow.set(t, (perRow.get(t) ?? 0) + 1);
+  expect(
+    [...perRow.values()].every((n) => n >= 2),
+    `${what}: themes per row ${[...perRow.values()].join(",")}`,
+  ).toBe(true);
+}
+
+// ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
+// switches live with the OS; both choices survive a reload and the inline script paints the
+// effective one before the app runs.
+async function settingsStep(page: Page) {
+  const DEEP = / 232\)$/; // Deep's tint hue
+  const PARCHMENT = / 262\)$/; // Parchment's lapis
+  await page.emulateMedia({ colorScheme: "light" });
+  await openDashboard(page);
+  expect(await isDark(page)).toBe(false); // System by default, the OS is light
+
+  await chooseTheme(page, "Parchment");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  // The list follows the appearance: light themes in Light, dark themes in Dark.
+  let popover = await openSettings(page);
+  const list = popover.getByTestId("settings-theme");
+  await expect(list).toHaveAttribute("data-mode", "light");
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Parchment/,
+    /Plain/,
+    /Forest/,
+  ]);
+  await page.keyboard.press("Escape");
+  await chooseSetting(page, "Dark");
+  expect(await isDark(page)).toBe(true);
+  await openSettings(page);
+  await expect(list).toHaveAttribute("data-mode", "dark");
+  await expect(list.getByRole("radio")).toHaveText([
+    /Arcane/,
+    /Deep/,
+    /Plain/,
+    /Forest/,
+    /Ember/,
+    /Amber/,
+  ]);
+  await page.keyboard.press("Escape");
+  await chooseTheme(page, "Deep");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
+  await chooseLanguage(page, "fr");
+  await expect(
+    page.getByRole("button", { name: "Tour suivant" }),
+  ).toBeVisible();
+
+  // First paint, the app's script blocked: index.html alone paints Deep in dark.
+  const appScript = /\/assets\/.*\.js$/;
+  await page.route(appScript, (route) => route.abort());
+  await reloadSettled(page);
+  expect(await isDark(page)).toBe(true);
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
+  await page.unroute(appScript);
+
+  await reloadSettled(page);
+  await expect(
+    page.getByRole("button", { name: "Tour suivant" }),
+  ).toBeVisible();
+  expect(await rootVar(page, "--tint")).toMatch(DEEP);
+  popover = await openSettings(page);
+  for (const name of ["Français", "Sombre"])
+    await expect(
+      popover.getByRole("radio", { name, exact: true }),
+    ).toHaveAttribute("aria-checked", "true");
+  await expect(
+    popover.getByTestId("settings-theme").getByRole("radio", {
+      name: "Abysses",
+      exact: true,
+    }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expectNoClippedText(popover, "settings popover, fr");
+  await expectWholeWords(popover, "settings popover, fr");
+  await expectNoLoneRow(popover.getByTestId("settings-theme"), "dark list, fr");
+  await snap(page, "settings-popover-fr");
+
+  // Système follows the OS live, between the two chosen themes.
+  await popover.getByRole("radio", { name: "Système", exact: true }).click();
+  expect(await isDark(page)).toBe(false);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  await page.emulateMedia({ colorScheme: "dark" });
+  await expect.poll(() => isDark(page)).toBe(true);
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
+
+  // Dark -> Light -> Dark: each appearance keeps its own pick, and the list switches with it.
+  await popover.getByRole("radio", { name: "Clair", exact: true }).click();
+  await expect(popover.getByTestId("settings-theme")).toHaveAttribute(
+    "data-mode",
+    "light",
+  );
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Parchemin", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expectNoLoneRow(
+    popover.getByTestId("settings-theme"),
+    "light list, fr",
+  );
+  await snap(page, "settings-popover-fr-light");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
+  await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
+  await expect(
+    popover
+      .getByTestId("settings-theme")
+      .getByRole("radio", { name: "Abysses", exact: true }),
+  ).toHaveAttribute("aria-checked", "true");
+  await expect.poll(() => rootVar(page, "--tint")).toMatch(DEEP);
+}
+
+/** A long weapon and a long item name: the act panel wraps them, never cuts (ADR 0022 step 1). */
+const LONG_WEAPON = "Two-Handed Flamberge of the Seventh Drowned Kingdom +3";
+const LONG_ITEM = "Potion of Extra-Healing brewed by the Hermit of Grey Hollow";
+const ACT_TABS = ["Weapons", "Spells", "Items", "Skills"] as const;
+/** The Spells tab's preparation in the layout audits; Rary's is cast in French (blank extra slots). */
+const PREPARED = [
+  "rarys_mnemonic_enhancer",
+  "magic_missile",
+  "burning_hands",
+  "chromatic_orb",
+  "tashas_uncontrollable_hideous_laughter",
+  "mirror_image",
+  "fireball",
+  "haste",
+  "stoneskin",
+  "cloudkill",
+];
+
+// What only a browser proves: the Inventaire dice chip and the Sorts "To the dice" fill the composer
+// (a client store shared across workspaces), and Roll on a spell's dice reaches the dice endpoint
+// and lands in the card and the journal. The formula wording is a unit test (spellValues), the
+// values at level are Go tests (spellstats). Screens of both workspaces at the four viewports.
+const COMPOSER_EXTRA_SPELLS = {
+  rows: [
+    catalogueSpell({
+      id: "quixotic_stillness",
+      name: "Quixotic Stillness",
+      class: "Wizard",
+      level: 3,
+      school: "Alteration",
+      casting_time: "3",
+      range: "Touch",
+      duration: "8 rds. + 1d8 rds.",
+      area_of_effect: "The caster",
+    }),
+  ],
+};
+
+async function composerStep(page: Page) {
+  await openDashboard(page);
+  const formula = page
+    .getByRole("form", { name: "Dice" })
+    .getByLabel("Formula");
+
+  await openWorkspace(page, "Inventory");
+  await page
+    .getByTestId("item-fire_flask")
+    .getByRole("button", { name: "Send 5d6 to the dice" })
+    .click();
+  await expect(formula).toHaveValue("5d6");
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await snap(page, `inventory-${vp.width}x${vp.height}`);
+  }
+  await page.setViewportSize({ width: 1440, height: 900 });
+
+  await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
+  await page
+    .getByRole("combobox", { name: "Search spells..." })
+    .fill("quixotic still");
+  const detail = page.getByTestId("spell-detail");
+  await expect(detail.getByRole("heading")).toHaveText("Quixotic Stillness");
+  await snap(page, "spells-short");
+  const dice = detail.getByTestId("spell-dice-duration");
+  await expect(dice.getByTestId("spell-dice-formula")).toHaveText("1d8+8");
+  await dice.getByRole("button", { name: "Send 1d8+8 to the dice" }).click();
+  await expect(formula).toHaveValue("1d8+8");
+
+  await formula.fill("");
+  await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
+  // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
+  const last = page.getByTestId("last-result");
+  await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
+  const total = Number(
+    await last.getByTestId("last-result-chip").textContent(),
+  );
+  expect(total).toBeGreaterThanOrEqual(9);
+  expect(total).toBeLessThanOrEqual(16);
+  await expect(formula).toHaveValue("d8+8");
+  // In the Act activity the journal has the entry and the result panel shows it.
+  await openWorkspace(page, "Act");
+  await combatLog(page)
+    .getByRole("listitem")
+    .filter({ hasText: `Dice d8+8 = ${total}` })
+    .getByTestId("log-select")
+    .click();
+  const result = page
+    .getByRole("region", { name: "Detail", exact: true })
+    .getByTestId("dice-result");
+  // The server answers with its normal form (a single die has no count).
+  await expect(result.getByTestId("dice-formula")).toHaveText("d8+8");
+  await expect(result.getByTestId("dice-total")).toHaveText(String(total));
+  await openWorkspace(page, "Spells");
+
+  // The damage row: Fireball at the Bard's level, to the composer and rolled on the server.
+  await page
+    .getByRole("combobox", { name: "Search spells..." })
+    .fill("fireball");
+  await expect(detail.getByRole("heading")).toContainText("Fireball");
+  const damage = detail.getByTestId("spell-dice-damage");
+  await expect(damage.getByTestId("spell-dice-formula")).toHaveText(
+    "10d6 fire",
+  );
+  await damage.getByRole("button", { name: "Send 10d6 to the dice" }).click();
+  await expect(formula).toHaveValue("10d6");
+  await damage.getByRole("button", { name: "Roll 10d6" }).click();
+  await expect(last.getByTestId("last-result-text")).toContainText("10d6");
+  const fire = Number(await last.getByTestId("last-result-chip").textContent());
+  expect(fire).toBeGreaterThanOrEqual(10);
+  expect(fire).toBeLessThanOrEqual(60);
+
+  for (const vp of VIEWPORTS) {
+    await page.setViewportSize(vp);
+    await expectNoPageScroll(page);
+    await snap(page, `spells-lookup-${vp.width}x${vp.height}`);
+  }
+}
 
 // The login page (ADR 0022 step 1, ADR 0027 step 2): with both login buttons and the longest
 // refusal message, no text is cut in French and English at every layout viewport; screenshots in
 // French. The e2e API has no OAuth settings, so its login options are answered here with both.
-test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", async ({
-  page,
-  context,
-}) => {
+async function loginStep(
+  page: Page,
+  size: Viewport,
+  _stack: Stack,
+  context: BrowserContext,
+) {
   await context.clearCookies();
   await page.route("**/api/auth/options", (r) =>
     r.fulfill({ json: { google: true, devLogin: true } }),
@@ -2213,7 +3040,7 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
       .click();
     await expect(card.getByTestId("login-error")).toBeVisible();
     await expect(card.getByRole("link")).toBeVisible();
-    for (const vp of VIEWPORTS) {
+    for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
       await expectNoClippedText(card, `login page ${lang} ${vp.width}`);
       await expectWholeWords(card, `login page ${lang} ${vp.width}`);
@@ -2242,15 +3069,13 @@ test("login page: both buttons and a refusal, uncut, fr and en, 1280 to 2560", a
     await expectNoClippedText(card, `login page dark ${dark}`);
     await snap(page, `login-fr-dark-${dark}`);
   }
-});
+}
 
 // ADR 0022 step 1 for the database banner (ADR 0025 step 10.4), French first: with both of its
 // lines (a write whose outcome is unknown), it wraps and is never cut, fr and en, 1280x800 to
 // 2560x1440.
-test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function dbBannerStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const unavailable = {
     status: 503,
@@ -2269,10 +3094,10 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
   );
   for (const lang of ["fr", "en"] as const) {
     await chooseLanguage(page, lang);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(banner, `database banner, ${where}`);
@@ -2280,17 +3105,17 @@ test("database banner: both lines uncut, fr and en, 1280 to 2560", async ({
         await snap(page, `database-banner-${where.replace(", ", "-")}`);
     }
   }
-});
+}
 
 // The admin section (ADR 0029 step 1.3), French first: a player with a long email and two
 // characters' worth of names, a disabled user and a long pending invite; the invites and users cards
 // are never cut, fr and en, 1280x800 to 2560x1440.
-test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
-  page,
-  context,
-  stack,
-}) => {
-  test.setTimeout(60_000);
+async function adminStep(
+  page: Page,
+  size: Viewport,
+  stack: Stack,
+  context: BrowserContext,
+) {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   const api = (method: string, url: string, body: unknown) =>
     fetch(`${stack.apiUrl}${url}`, {
@@ -2333,7 +3158,7 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
     }
     await route.fulfill({ response: res, json: body });
   });
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/admin");
@@ -2369,11 +3194,11 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       })
       .click();
     await expect(invites.getByTestId("admin-mail-hint")).toBeVisible();
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(invites, `admin invites, ${where}`);
@@ -2383,17 +3208,14 @@ test("admin section: users and invites uncut, fr and en, 1280 to 2560", async ({
       await snap(page, `admin-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The Ruleset screen (ADR 0041 step 8), French first: the crit table with a long error from the
 // server, the house-rule switches with the level limits mode and the success effects are never
 // cut, fr and en, 1280x800 to 2560x1440. The page may scroll as a page, but nothing escapes its
 // scrollers.
-test("ruleset screen: crit table, house rules and success effects uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function rulesetAdminStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/ruleset");
@@ -2432,11 +3254,11 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       .first()
       .boundingBox();
     expect(toBox!.width, "crit field width").toBeLessThan(80);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
@@ -2450,15 +3272,12 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       await snap(page, `ruleset-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The Ruleset screen as a player sees it (ADR 0041 step 8): every card shown read-only, the weapon
 // switch included, no edit control, uncut in fr and en at 1280 to 2560. /api/auth/me answers role
 // "player" for the root admin's sheet, as admin.spec does.
-test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
+async function rulesetPlayerStep(page: Page, size: Viewport) {
   await page.route("**/api/auth/me", async (route) => {
     const res = await route.fetch();
     await route.fulfill({
@@ -2466,7 +3285,7 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       json: { ...(await res.json()), role: "player" },
     });
   });
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   await page.goto("/ruleset");
@@ -2488,11 +3307,11 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       await page.goto("/ruleset");
       await expect(effects).toContainText("Tumbling");
     }
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `player, ${lang}, ${vp.width}x${vp.height}`;
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
@@ -2502,221 +3321,211 @@ test("ruleset screen: a player reads it, nothing editable, uncut, fr and en, 128
       await snap(page, `ruleset-player-${lang}-${vp.width}x${vp.height}`);
     }
   }
-});
+}
 
 // The imported character lacks its alignment and sex (the roster cards' tag), the one created below has them.
-test.describe("roster cards", () => {
-  test.use({ character: { alignment: "", sex: "" } });
 
-  // The roster, "Vos personnages" (ADR 0034 step 7), and the intro of a user with no character (step
-  // 1), French first: the roster with a long name, its rename and retire dialogs, the character card's
-  // header with the roster's way in, the details with Nom first (step 7.2) and the cog menu left with
-  // no character action (step 8) are never cut, fr and en, 1280x800, 1920x1080 and 2560x1440, and the
-  // page never scrolls. The current character retired elsewhere (another tab) leaves a usable screen:
-  // back in the game the page loads on the next one.
-  test("roster, character card and intro uncut, fr and en, 1280 to 2560", async ({
-    page,
-  }) => {
-    test.setTimeout(90_000);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await openDashboard(page);
-    await chooseLanguage(page, "fr");
-    const call = (method: string, url: string, body: unknown) =>
-      page.evaluate(
-        async ([m, u, b]) => {
-          const r = await fetch(u as string, {
-            method: m as string,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(b),
-          });
-          return {
-            ok: r.ok,
-            body: (await r.json()) as {
-              characters: { id: number }[];
-              currentId: number | null;
-            },
-          };
-        },
-        [method, url, body] as const,
-      );
-    const created = await call("POST", "/api/characters", {
-      name: "Aldéric de la Tour-d'Auvergne-Lesparre",
-      class: "bard",
-      raceCode: "half_elf",
-      details: { alignment: "chaotic_neutral", sex: "male" },
-      str: 10,
-      dex: 15,
-      con: 12,
-      int: 14,
-      wis: 9,
-      cha: 16,
-      hpMax: 6,
-      xp: 0,
-    });
-    expect(created.ok).toBe(true);
-    await reloadSettled(page);
-    const sizes = [
-      { width: 1280, height: 800 },
-      { width: 1920, height: 1080 },
-      { width: 2560, height: 1440 },
-    ];
-    const dialog = page.getByTestId("character-dialog");
-    const roster = page.getByTestId("roster");
-    const character = page.getByTestId("character");
-
-    for (const lang of ["fr", "en"] as const) {
-      await page.setViewportSize(sizes[0]!);
-      if (lang === "en") await chooseLanguage(page, "en");
-      const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
-      for (const vp of sizes) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        // The cog menu: settings and account, no character action.
-        const settings = await openSettings(page);
-        await expect(
-          settings.getByRole("button", {
-            name: tr("Créer un nouveau personnage", "Create a new character"),
-          }),
-        ).toHaveCount(0);
-        await expectNoClippedText(settings, `cog menu, ${where}`);
-        await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        // The card's header: the long name wraps beside the level and the roster's button.
-        await expectNoClippedText(
-          character.locator(".group-band"),
-          `character card header, ${where}`,
-        );
-        await page.getByTestId("details-trigger").click();
-        const pop = page.getByTestId("details-popover");
-        await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
-        await expect(
-          pop.getByLabel(tr("Nom", "Name"), { exact: true }),
-        ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
-        await expectNoClippedText(pop, `details with Nom, ${where}`);
-        await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(pop).toBeHidden();
-
-        await page.getByTestId("roster-open").click();
-        await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-        // Each card shows its HP; race · alignment and no tag on the one with a complete identity,
-        // the tag on the one still to choose (the imported sheet).
-        await expect(roster.getByTestId("roster-hp")).toHaveCount(2);
-        const complete = roster
-          .getByTestId("roster-card")
-          .filter({ hasText: "Aldéric" });
-        await expect(complete.getByTestId("roster-identity")).toHaveText(
-          tr("Demi-elfe · Chaotique neutre", "Half-elf · Chaotic neutral"),
-        );
-        await expect(complete.getByTestId("roster-missing")).toHaveCount(0);
-        await expect(complete.getByTestId("roster-hp")).toHaveText(
-          tr("PV 6/6", "HP 6/6"),
-        );
-        await expect(roster.getByTestId("roster-missing")).toHaveCount(1);
-        await expect(roster.getByTestId("roster-missing")).toHaveText(
-          tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
-        );
-        await expectNoClippedText(page.locator("body"), `roster, ${where}`);
-        await expectNoPageScroll(page);
-        await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
-
-        await roster
-          .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
-          .click();
-        await expect(dialog.getByTestId("rename-form")).toBeVisible();
-        await expectNoClippedText(dialog, `rename dialog, ${where}`);
-        await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(dialog).toBeHidden();
-        await roster
-          .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
-          .click();
-        await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
-        await expectNoClippedText(dialog, `retire dialog, ${where}`);
-        await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(dialog).toBeHidden();
-        await page
-          .getByRole("button", {
-            name: tr("Revenir à la partie", "Back to the game"),
-          })
-          .click();
-        await expect(character).toBeVisible();
-      }
-    }
-
-    // The current character retired elsewhere while the roster shows: back in the game, the server
-    // says the character changed and the page loads on the one it made current.
-    await page.setViewportSize(sizes[0]!);
-    await page.getByTestId("roster-open").click();
-    await expect(roster.getByTestId("roster-card")).toHaveCount(2);
-    const retired = await call(
-      "PATCH",
-      `/api/characters/${created.body.currentId}`,
-      { retired: true },
+// The roster, "Vos personnages" (ADR 0034 step 7), and the intro of a user with no character (step
+// 1), French first: the roster with a long name, its rename and retire dialogs, the character card's
+// header with the roster's way in, the details with Nom first (step 7.2) and the cog menu left with
+// no character action (step 8) are never cut, fr and en, 1280x800, 1920x1080 and 2560x1440, and the
+// page never scrolls. The current character retired elsewhere (another tab) leaves a usable screen:
+// back in the game the page loads on the next one.
+async function rosterStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const call = (method: string, url: string, body: unknown) =>
+    page.evaluate(
+      async ([m, u, b]) => {
+        const r = await fetch(u as string, {
+          method: m as string,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(b),
+        });
+        return {
+          ok: r.ok,
+          body: (await r.json()) as {
+            characters: { id: number }[];
+            currentId: number | null;
+          },
+        };
+      },
+      [method, url, body] as const,
     );
-    expect(retired.ok).toBe(true);
-    await page.getByRole("button", { name: "Back to the game" }).click();
-    await expect(character).toContainText("Test Bard");
+  const created = await call("POST", "/api/characters", {
+    name: "Aldéric de la Tour-d'Auvergne-Lesparre",
+    class: "bard",
+    raceCode: "half_elf",
+    details: { alignment: "chaotic_neutral", sex: "male" },
+    str: 10,
+    dex: 15,
+    con: 12,
+    int: 14,
+    wis: 9,
+    cha: 16,
+    hpMax: 6,
+    xp: 0,
+  });
+  expect(created.ok).toBe(true);
+  await reloadSettled(page);
+  const sizes = sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]);
+  const dialog = page.getByTestId("character-dialog");
+  const roster = page.getByTestId("roster");
+  const character = page.getByTestId("character");
 
-    // The last character retired: the intro (no character left), then Commencer opens the flow.
-    const list = await call("GET", "/api/characters", undefined);
-    for (const c of list.body.characters)
-      expect(
-        (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
-      ).toBe(true);
-    await page.setViewportSize({ width: 1280, height: 800 });
-    // Not a goto: a request the page had in flight answers "character changed" now and reloads the
-    // page itself, which interrupts a navigation.
-    await reloadSettled(page);
-    const intro = page.getByTestId("intro");
-    await expect(intro).toBeVisible();
-    for (const lang of ["fr", "en"] as const) {
+  for (const lang of ["fr", "en"] as const) {
+    await page.setViewportSize(sizes[0]!);
+    if (lang === "en") await chooseLanguage(page, "en");
+    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      // The cog menu: settings and account, no character action.
+      const settings = await openSettings(page);
+      await expect(
+        settings.getByRole("button", {
+          name: tr("Créer un nouveau personnage", "Create a new character"),
+        }),
+      ).toHaveCount(0);
+      await expectNoClippedText(settings, `cog menu, ${where}`);
+      await snap(page, `cog-menu-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      // The card's header: the long name wraps beside the level and the roster's button.
+      await expectNoClippedText(
+        character.locator(".group-band"),
+        `character card header, ${where}`,
+      );
+      await page.getByTestId("details-trigger").click();
+      const pop = page.getByTestId("details-popover");
+      await pop.getByRole("button", { name: tr("Modifier", "Edit") }).click();
+      await expect(
+        pop.getByLabel(tr("Nom", "Name"), { exact: true }),
+      ).toHaveValue("Aldéric de la Tour-d'Auvergne-Lesparre");
+      await expectNoClippedText(pop, `details with Nom, ${where}`);
+      await snap(page, `character-card-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(pop).toBeHidden();
+
+      await page.getByTestId("roster-open").click();
+      await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+      // Each card shows its HP; race · alignment and no tag on the one with a complete identity,
+      // the tag on the one still to choose (the imported sheet).
+      await expect(roster.getByTestId("roster-hp")).toHaveCount(2);
+      const complete = roster
+        .getByTestId("roster-card")
+        .filter({ hasText: "Aldéric" });
+      await expect(complete.getByTestId("roster-identity")).toHaveText(
+        tr("Demi-elfe · Chaotique neutre", "Half-elf · Chaotic neutral"),
+      );
+      await expect(complete.getByTestId("roster-missing")).toHaveCount(0);
+      await expect(complete.getByTestId("roster-hp")).toHaveText(
+        tr("PV 6/6", "HP 6/6"),
+      );
+      await expect(roster.getByTestId("roster-missing")).toHaveCount(1);
+      await expect(roster.getByTestId("roster-missing")).toHaveText(
+        tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
+      );
+      await expectNoClippedText(page.locator("body"), `roster, ${where}`);
+      await expectNoPageScroll(page);
+      await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
+
+      await roster
+        .getByRole("button", { name: /^(Renommer|Rename) Aldéric/ })
+        .click();
+      await expect(dialog.getByTestId("rename-form")).toBeVisible();
+      await expectNoClippedText(dialog, `rename dialog, ${where}`);
+      await snap(page, `roster-rename-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
+      await roster
+        .getByRole("button", { name: /^(Retirer|Retire) Aldéric/ })
+        .click();
+      await expect(dialog.getByTestId("retire-confirm")).toBeVisible();
+      await expectNoClippedText(dialog, `retire dialog, ${where}`);
+      await snap(page, `roster-retire-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeHidden();
       await page
-        .getByRole("radio", {
-          name: lang === "fr" ? "Français" : "English",
-          exact: true,
+        .getByRole("button", {
+          name: tr("Revenir à la partie", "Back to the game"),
         })
         .click();
-      for (const vp of [
-        { width: 1280, height: 800 },
-        { width: 2560, height: 1440 },
-      ]) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(page.locator("body"), `intro, ${where}`);
-        await expectWholeWords(intro, `intro, ${where}`);
-        await expectNoPageScroll(page);
-        await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
-      }
+      await expect(character).toBeVisible();
     }
+  }
+
+  // The current character retired elsewhere while the roster shows: back in the game, the server
+  // says the character changed and the page loads on the one it made current.
+  await page.setViewportSize(sizes[0]!);
+  await page.getByTestId("roster-open").click();
+  await expect(roster.getByTestId("roster-card")).toHaveCount(2);
+  const retired = await call(
+    "PATCH",
+    `/api/characters/${created.body.currentId}`,
+    { retired: true },
+  );
+  expect(retired.ok).toBe(true);
+  await page.getByRole("button", { name: "Back to the game" }).click();
+  await expect(character).toContainText("Test Bard");
+
+  // The last character retired: the intro (no character left), then Commencer opens the flow.
+  const list = await call("GET", "/api/characters", undefined);
+  for (const c of list.body.characters)
+    expect(
+      (await call("PATCH", `/api/characters/${c.id}`, { retired: true })).ok,
+    ).toBe(true);
+  await page.setViewportSize(size);
+  // Not a goto: a request the page had in flight answers "character changed" now and reloads the
+  // page itself, which interrupts a navigation.
+  await reloadSettled(page);
+  const intro = page.getByTestId("intro");
+  await expect(intro).toBeVisible();
+  for (const lang of ["fr", "en"] as const) {
     await page
-      .getByRole("button", { name: "Start creating your character" })
+      .getByRole("radio", {
+        name: lang === "fr" ? "Français" : "English",
+        exact: true,
+      })
       .click();
-    await expect(page.getByTestId("creation-step")).toBeVisible();
-    // Quitter with nothing entered goes straight back to the intro.
-    await page.getByRole("button", { name: "Leave the creation" }).click();
-    await expect(intro).toBeVisible();
-  });
-});
+    for (const vp of sizesAt(size, [
+      { width: 1280, height: 800 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(page.locator("body"), `intro, ${where}`);
+      await expectWholeWords(intro, `intro, ${where}`);
+      await expectNoPageScroll(page);
+      await snap(page, `intro-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+  await page
+    .getByRole("button", { name: "Start creating your character" })
+    .click();
+  await expect(page.getByTestId("creation-step")).toBeVisible();
+  // Quitter with nothing entered goes straight back to the intro.
+  await page.getByRole("button", { name: "Leave the creation" }).click();
+  await expect(intro).toBeVisible();
+}
 
 // The creation route (ADR 0034 steps 2 to 4), judged in French first (ADR 0027 step 2) and audited
 // in English: each step, filled as a level 5 half-elf bard with the server's rolls (the longest
 // content: method V's six totals, five HP rows, the bard's skills), is never cut at 1280x800,
 // 1920x1080 and 2560x1440, the page never scrolls (the step card does) and the frame is capped at
 // 1680 px on wide screens (step 2.2). A refusal opens its step with the field's error.
-test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function creationStep(page: Page, size: Viewport) {
   // Leaving a filled-in flow asks the browser's beforeunload question: accept it.
-  page.on("dialog", (d) => void d.accept());
   await openDashboard(page);
-  const sizes = [
+  const sizes = sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   for (const lang of ["fr", "en"] as const) {
     await page.setViewportSize(sizes[0]!);
     await page.goto("/");
@@ -2902,7 +3711,7 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       `creation languages refusal, ${lang}`,
     );
     if (lang === "fr")
-      for (const vp of [sizes[1]!, sizes[2]!]) {
+      for (const vp of sizes.filter((v) => v.width >= 1920)) {
         await page.setViewportSize(vp);
         await snap(
           page,
@@ -2980,22 +3789,18 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
       await audit("refusal");
     }
   }
-});
+}
 
 // The class step's multi-class and dual-class rows (ADR 0042 steps 1 and 4): three classes with a
 // long XP, and a dual-class character refused at Créer (Intelligence 14 is under the 17 the new
 // class needs), whose refusal opens the class step; never cut, French first, 1280 to 2560.
-test("creation route: multi-class rows and a class refusal uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  page.on("dialog", (d) => void d.accept());
+async function creationMultiStep(page: Page, size: Viewport) {
   await openDashboard(page);
-  const sizes = [
+  const sizes = sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   for (const lang of ["fr", "en"] as const) {
     await page.setViewportSize(sizes[0]!);
     await page.goto("/");
@@ -3108,65 +3913,12 @@ test("creation route: multi-class rows and a class refusal uncut, fr and en, 128
     await expect(step.getByTestId("field-error").first()).toBeVisible();
     await audit("classes-dual-refused");
   }
-});
-
-// ADR 0032 step 4, ADR 0037 step 18 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the
-// languages pool of the Skills tab's editor (the catalogue's checkboxes, the race's list first, the
-// refusal over the non-weapon slots of ADR 0037 step 6, the slots they spend) and the details
-// card's read-only view (the names and the slots) are never cut from 1280 to 2560.
-test("skills editor: the languages pool, its refusal and the card's view uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await openDashboard(page);
-  await chooseLanguage(page, "fr");
-  await page.getByRole("tab", { name: "Compétences" }).click();
-  const panel = await openSpend(page, "nonWeapon");
-  const pool = panel.getByTestId("proficiency-languages");
-  // Test Bard spends 8 of 10 slots: three languages are one too many.
-  for (const name of ["Elfe", "Gnome", "Orque"])
-    await pool.getByRole("checkbox", { name, exact: true }).check();
-  await expect(pool.getByRole("alert")).toContainText("Budget dépassé");
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    const where = `${vp.width}x${vp.height}`;
-    await expectNoClippedText(pool, `skills editor languages, ${where}`);
-    await expectWholeWords(pool, `skills editor languages, ${where}`);
-    await snap(page, `skills-languages-edit-fr-${where}`);
-  }
-  await pool.getByRole("checkbox", { name: "Orque", exact: true }).uncheck();
-  await expect(pool.getByTestId("proficiency-languages-slots")).toHaveText(
-    "2 emplacements de compétence",
-  );
-  await panel.getByTestId("proficiency-save").click();
-  await expect(page.getByTestId("proficiency-editor")).toHaveCount(0);
-  await page.getByTestId("details-trigger").click();
-  const pop = page.getByTestId("details-popover");
-  await expect(pop.getByTestId("details-language-slots")).toHaveText(
-    "2 emplacements de compétence",
-  );
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    const where = `${vp.width}x${vp.height}`;
-    await expectNoClippedText(pop, `details card languages view, ${where}`);
-    await snap(page, `details-languages-view-fr-${where}`);
-  }
-});
+}
 
 // ADR 0030 step 7 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the level-up prompt on
 // the character card, at its widest (a hit die to roll, a second level owed, the manual entry
 // open), is never cut from 1280 to 2560, and each button says one word (ADR 0027 step 3).
-test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpPromptStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -3197,7 +3949,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
     "Niveau 2 atteint",
   );
   await expect(prompt.getByTestId("level-up-more")).toBeVisible();
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(prompt, `level-up prompt, ${where}`);
@@ -3212,15 +3964,13 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
       await snap(page, `level-up-fr-${vp.width}x${vp.height}`);
     await prompt.getByRole("button", { name: "Fermer", exact: true }).click();
   }
-});
+}
 
 // ADR 0037 step 15 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once level 2 is taken,
 // what it grants (a bard's 15 points) under the prompt, and what is left to spend (a level 1 bard's
 // slots and points), the class line's tag and its popover, each row with its one-word link, never
 // cut from 1280 to 2560. Screenshots of both at every viewport.
-test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpGrantsStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -3254,7 +4004,7 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
   await expect(grants).toContainText("+15 points de talent");
   const tag = page.getByTestId("to-spend-tag");
   const popover = page.getByTestId("level-up-to-spend");
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(grants, `level-up grants, ${where}`);
@@ -3269,16 +4019,14 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
     await page.keyboard.press("Escape");
     await expect(popover).toHaveCount(0);
   }
-});
+}
 
 // ADR 0030 step 20.8 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once a mage takes
 // level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link) and the
 // to-spend popover listing the free spell, never cut from 1280 to 2560; the character
 // card does not scroll for them from 1440x900 up (ADR 0022 step 2.8), with a three-line name.
 // Screenshots of both at every viewport.
-test("level-up free spell: the grants and the to-spend popover uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpFreeSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -3316,7 +4064,7 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
   const tag = page.getByTestId("to-spend-tag");
   const popover = page.getByTestId("level-up-to-spend");
   const character = page.getByTestId("character");
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(grants, `free spell grants, ${where}`);
@@ -3338,16 +4086,13 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
     await page.keyboard.press("Escape");
     await expect(popover).toHaveCount(0);
   }
-});
+}
 
 // ADR 0030 step 9 through the class's features (ADR 0040 step 3), on the creation route's "Points
 // de vie et talents" step at 1920x1080 and 2560x1440: a human fighter of Strength 18 is offered the
 // 18/xx field, a human mage of Strength 18 is not. The form has no rule of its own: the field
 // follows the draft's exceptionalStrength (the cases are Go's, composition draft_exceptional_test).
-test("creation extras: the 18/xx field follows the server, fighter and mage, 1920 and 2560", async ({
-  page,
-}) => {
-  page.on("dialog", (d) => void d.accept());
+async function creationExtrasStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   const step = page.getByTestId("creation-step");
@@ -3385,10 +4130,10 @@ test("creation extras: the 18/xx field follows the server, fighter and mage, 192
     expect(draft.exceptionalStrength, name).toBe(offered);
     const field = step.getByLabel("Pourcentage (18/xx)");
     await expect(field).toHaveCount(offered ? 1 : 0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${name} extras, ${vp.width}x${vp.height}`;
       await expectNoClippedText(step, where);
@@ -3398,17 +4143,14 @@ test("creation extras: the 18/xx field follows the server, fighter and mage, 192
       );
     }
   }
-});
+}
 
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type
 // d’arme control, none of them cut. Screenshot of the weapon editor at both sizes.
-test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function fighterStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -3493,10 +4235,10 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
       await expect(f.getByTestId("point-blank")).toBeVisible();
     } else await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${weapon}, fr, ${vp.width}x${vp.height}`;
       await expectNoClippedText(
@@ -3511,16 +4253,16 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       if (weapon === "Heavy Crossbow")
         await snap(page, `fighter-crossbow-fr-${vp.width}x${vp.height}`);
     }
-    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.setViewportSize(size);
   }
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
   await chooseLanguage(page, "fr");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await page
       .getByTestId("item-long_sword")
@@ -3535,15 +4277,12 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
     await wf.getByRole("button", { name: "Annuler" }).click();
     await expect(wf).toBeHidden();
   }
-});
+}
 
 // The mage's Learn control (ADR 0030 step 20) in the lookup's detail: the button, then the
 // roll's answer (and "in the spellbook" once learned), uncut in French at 1280x800 and 2560x1440.
-test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in French, 1280 to 2560; Add writes the spell", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function mageLearnStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const created = await apiCall(page, "POST", "/api/characters", {
     name: "Mordenkainen l'Archimage de Greyhawk",
@@ -3573,10 +4312,10 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   await expect(detail.getByRole("heading")).toHaveText("Sommeil");
   await expect(learn.getByRole("button", { name: /^Apprendre/ })).toBeVisible();
   await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await expectNoClippedText(
       learn,
@@ -3584,7 +4323,7 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
     );
     await snap(page, `mage-learn-add-buttons-fr-${vp.width}x${vp.height}`);
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   // The failure's answer, the longest one (with the server's retry level): the dice are real, so
   // the response is fixed here; the server's own failure is a Go test (learnsvc).
   await page.route("**/api/character/spellbook/learn", (route) =>
@@ -3602,27 +4341,27 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   );
   await learn.getByRole("button", { name: /^Apprendre/ }).click();
   await expect(learn.getByTestId("learn-result")).toContainText("niveau 2");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(learn, `Learn failure, fr, ${where}`);
     await snap(page, `mage-learn-failed-fr-${where}`);
   }
   await page.unroute("**/api/character/spellbook/learn");
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   const answered = page.waitForResponse("**/api/character/spellbook/learn");
   await learn.getByRole("button", { name: /^Apprendre/ }).click();
   const real = (await (await answered).json()) as { roll: number };
   await expect(learn.getByTestId("learn-result")).toContainText(
     String(real.roll),
   );
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(learn, `Learn answer, fr, ${where}`);
@@ -3635,7 +4374,7 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
 
   // Ajouter (ADR 0030 step 20.6): the add's state key reads the spellbook again, so the detail
   // shows the spell in the book (the refusals and the no-die rule are Go tests, learnsvc).
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page
     .getByRole("combobox", { name: "Rechercher des sorts..." })
     .fill("Alarm");
@@ -3662,17 +4401,14 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
     logEntry(page, "Ajouté au grimoire : Alarme (sans jet)"),
   ).toHaveAttribute("data-status", "voided");
   await snap(page, "mage-add-undone-journal-fr-1280x800");
-});
+}
 
 // The lookup says why a spell cannot be written in the spellbook (ADR 0030 step 20.1), in the
 // server's own words: a level-5 mage with Intelligence 9 (highest spell level 4) sees the reason
 // instead of Learn and Add on a level-5 spell, and the buttons on a level-4 one. The reason
 // matches the server's refusal (a unit test compares the codes; the refusal is a Go test).
-test("mage: a spell above the Intelligence's limit shows its reason, no Learn or Add, in English and French at 1920x1080 and 2560x1440", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1920, height: 1080 });
+async function mageLimitStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const created = await apiCall(page, "POST", "/api/characters", {
     name: "Elminster",
@@ -3718,10 +4454,10 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
     );
     await expect(learn.getByRole("button")).toHaveCount(0);
     await expect(learn.getByTestId("add-spell")).toHaveCount(0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       await expectNoClippedText(
         learn,
@@ -3729,7 +4465,7 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
       );
       await snap(page, `mage-lookup-reason-${lang}-${vp.width}x${vp.height}`);
     }
-    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.setViewportSize(size);
     // A spell the Intelligence allows keeps its buttons.
     await box.fill("alarm");
     await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
@@ -3739,18 +4475,15 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
     await expect(learn.getByTestId("add-spell")).toBeVisible();
     await expect(learn.getByTestId("learn-refused")).toHaveCount(0);
   }
-});
+}
 
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the
 // Turning tab (Table 61 at the realized level, the longest outcome labels), the turning result card
 // and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
 // failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
 // Go test, castsvc).
-test("cleric: turning panel, turning result and spell failure uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function clericStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   let created = await apiCall(page, "POST", "/api/characters", {
     name: "Frère Anselme de la Haute-Marche",
@@ -3778,24 +4511,24 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   await page.getByRole("tab", { name: "Renvoi" }).click();
   const turning = page.getByTestId("turn-undead");
   await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await expectNoClippedText(
       turning,
       `turning panel, fr, ${vp.width}x${vp.height}`,
     );
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
   const turned = page.getByTestId("turn-result");
   await expect(turned).toContainText("Clerc de niveau 1");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(turned, `turning result, fr, ${where}`);
@@ -3807,7 +4540,7 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
     await snap(page, `cleric-turn-fr-${where}`);
   }
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page.route("**/api/spells/*/cast", (route) =>
     route.fulfill({
       json: {
@@ -3827,27 +4560,24 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   await page.getByRole("button", { name: "Lancer Bless" }).click();
   const failure = page.getByTestId("cast-failure");
   await expect(failure).toHaveAttribute("data-failed", "true");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(failure, `spell failure, fr, ${where}`);
     await snap(page, `cleric-spell-failure-fr-${where}`);
   }
   await page.unroute("**/api/spells/*/cast");
-});
+}
 
 // The thief's screens (ADR 0030 steps 1, 17 and 19) uncut in French at 1280x800 and 2560x1440: the
 // creation form's skill points and armour fields, the Skills tab's thieving skills with the
 // budget warnings (70 points at 1st, 40 in one skill: both breached), the Spend editor's
 // over-budget refusal (ADR 0037 step 10) and the attack card's backstab option.
-test("thief: creation fields, thieving skills with the budget warnings and backstab uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function thiefStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   // The creation route's "Points de vie et talents" step of a thief; leaving it accepts the
@@ -3876,16 +4606,16 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(
     step.getByTestId("minimums-bard").locator("[data-unmet]"),
   ).toHaveCount(3); // Dex 8, Int 12 and Cha 12 against 12, 13 and 15
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(step, `thief class minimums, fr, ${where}`);
     await snap(page, `thief-class-minimums-fr-${where}`);
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await next.click();
   await next.click();
   await step.getByLabel("DEX", { exact: true }).fill("12");
@@ -3961,11 +4691,11 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await step.getByRole("radio", { name: "Voleur", exact: true }).click();
   await goOn();
   await expect(step.getByTestId("skill-budget")).toContainText("Restants : 60");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(entry, `thief creation fields, fr, ${where}`);
@@ -3974,7 +4704,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await page.goto("/");
   await expect(page.getByTestId("character")).toBeVisible();
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
   expect(
@@ -4058,10 +4788,10 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
   const skills = page.getByTestId("skills-blocks");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
@@ -4129,11 +4859,11 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(editor.getByRole("alert")).toHaveText(
     "Budget dépassé : 66 pour 60 disponibles.",
   );
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(editor, `skill points editor, fr, ${where}`);
@@ -4144,856 +4874,38 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await editor.getByTestId("thief-points-cancel").click();
   await page.unroute("**/api/skills/points/preview");
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page.getByRole("tab", { name: "Armes" }).click();
   const f = page.getByRole("form", { name: "Attaque" });
   await f.getByTestId("backstab").check();
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(f, `backstab attack card, fr, ${where}`);
     await snap(page, `thief-backstab-card-fr-${where}`);
   }
-});
-
-// ADR 0033 step 1.1 and ADR 0022 step 1: the piece editor with its spell component select, in French
-// (ADR 0027 step 2), uncut at every layout viewport; screens at 1920x1080 and 2560x1440.
-test("the piece editor's spell component uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await openWorkspace(page, "Inventory");
-  await chooseLanguage(page, "fr");
-  await openTypedAdd(page, "fr");
-  const wf = page.getByTestId("item-form");
-  await wf.getByLabel("Composante de sort").selectOption("gem");
-  for (const vp of VIEWPORTS) {
-    await page.setViewportSize(vp);
-    await expectNoPageScroll(page);
-    await expectNoClippedText(wf, `piece editor, fr, ${vp.width}x${vp.height}`);
-    if (vp.width >= 1920)
-      await snap(page, `component-editor-fr-${vp.width}x${vp.height}`);
-  }
-});
-
-// ADR 0033 step 17, ADR 0035 item 11 and ADR 0022 step 1: the editor's powers. A ring with the ring
-// of protection template and a power with every control set (trigger, weapon kind, without magic
-// armour, two effects), then the worn armour's "+N" and its other powers: no cut text and no page
-// scroll in French (ADR 0027 step 2) and English, 1280 to 2560. Screens at 1920x1080 and 2560x1440.
-test("the piece editor's powers and +N uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await openWorkspace(page, "Inventory");
-  for (const lang of ["fr", "en"] as const) {
-    await chooseLanguage(page, lang);
-    await openTypedAdd(page, lang);
-    const wf = page.getByTestId("item-form");
-    await wf
-      .getByLabel(lang === "fr" ? "Catégorie" : "Category")
-      .selectOption("magic");
-    await wf.getByTestId("power-templates").click();
-    await page.getByTestId("power-template-ring_of_protection").click();
-    await wf.getByTestId("power-add").click();
-    const second = wf.getByTestId("power-row").nth(1);
-    await second.getByTestId("power-min-str").fill("18");
-    await second.getByRole("combobox").last().selectOption("melee");
-    await second.getByTestId("power-without-magic-armour").check();
-    await second
-      .getByRole("button", {
-        name: lang === "fr" ? "Effet" : "Effect",
-        exact: true,
-      })
-      .click();
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoPageScroll(page);
-      await expectNoClippedText(wf, `powers editor, ${where}`);
-      if (lang === "fr" && vp.width >= 1920)
-        await snap(page, `powers-editor-fr-${vp.width}x${vp.height}`);
-    }
-    await wf
-      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
-      .click();
-    await page
-      .getByTestId("item-leather")
-      .getByRole("button", { name: lang === "fr" ? /^Modifier / : /^Edit / })
-      .click();
-    const af = page.getByTestId("item-form");
-    await af
-      .getByRole("button", {
-        name: lang === "fr" ? "Plus de magie" : "More magic",
-      })
-      .click();
-    await af.getByTestId("power-add").click();
-    for (const vp of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoPageScroll(page);
-      await expectNoClippedText(af, `armour editor +N, ${where}`);
-      await af.getByTestId("item-powers").scrollIntoViewIfNeeded();
-      if (lang === "fr" && vp.width >= 1920)
-        await snap(page, `armour-plus-editor-fr-${vp.width}x${vp.height}`);
-    }
-    await af
-      .getByRole("button", { name: lang === "fr" ? "Annuler" : "Cancel" })
-      .click();
-  }
-});
-
-// ADR 0035 item 10 and ADR 0022 step 1: Ajouter in the stage, French first (ADR 0027 step 2), then
-// English. Each catalogue category with its first row chosen (the copy panel filled): no cut text
-// and no page scroll from 1280 to 2560 (the rows scroll inside the card); the Saisir tab too.
-// Screens at 1920x1080 and 2560x1440.
-test("Ajouter: the catalogue rows and the copy panel uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await openWorkspace(page, "Inventory");
-  const names = {
-    fr: ["Armes", "Munitions", "Armures", "Boucliers"],
-    en: ["Weapons", "Ammunition", "Armour", "Shields"],
-  } as const;
-  for (const lang of ["fr", "en"] as const) {
-    await chooseLanguage(page, lang);
-    await page
-      .getByRole("button", {
-        name: lang === "fr" ? "Ajouter un objet" : "Add item",
-      })
-      .click();
-    const add = page.getByTestId("add-piece");
-    for (const category of names[lang]) {
-      await add.getByRole("button", { name: category, exact: true }).click();
-      await add.getByTestId("add-rows").getByRole("button").first().click();
-      await expect(add.getByTestId("add-submit")).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${category}, ${lang}, ${vp.width}x${vp.height}`;
-        await expectNoPageScroll(page);
-        await expectNoClippedText(add, `add from the catalogue, ${where}`);
-        if (
-          vp.width >= 1920 &&
-          (category === "Armures" ||
-            category === "Armes" ||
-            category === "Weapons" ||
-            category === "Armour")
-        )
-          await snap(
-            page,
-            `add-catalogue-${category.toLowerCase()}-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-    }
-    await add
-      .getByRole("tab", { name: lang === "fr" ? "Saisir" : "Type in" })
-      .click();
-    for (const vp of [VIEWPORTS[0], VIEWPORTS[3]]) {
-      await page.setViewportSize(vp);
-      await expectNoPageScroll(page);
-      await expectNoClippedText(
-        add,
-        `add typed, ${lang}, ${vp.width}x${vp.height}`,
-      );
-      if (lang === "fr" && vp.width === 1920)
-        await snap(page, `add-typed-fr-${vp.width}x${vp.height}`);
-    }
-    await add
-      .getByRole("button", { name: lang === "fr" ? "Fermer" : "Close" })
-      .click();
-    await expect(add).toHaveCount(0);
-  }
-});
-
-// The character's AC (ADR 0035 items 4, 7 and 8): the number in a filled shield beside the HP,
-// inside the character card and smaller than the HP; its breakdown popover on screen; the
-// Inventaire's AC card beside the possessions; the override with its derived AC. No cut text and no
-// page scroll in French and English, 1280 to 2560.
-test("AC: the shield beside the HP, its breakdown popover and the Inventaire's AC card uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  // Like the other viewport sweeps: five viewports in two languages and four states take about
-  // 20 s unloaded, and a starved runner needs more than the 30 s default.
-  test.setTimeout(90_000);
-  await openDashboard(page);
-  await addBuff(page, {
-    name: "Protection from Evil",
-    effects: [["ac", -2]],
-  });
-  await openWorkspace(page, "Inventory");
-  await openTypedAdd(page);
-  const f = page.getByTestId("item-form");
-  await f.getByLabel("Name").fill("Chain mail of the long winter watch");
-  await f.getByLabel("Category").selectOption("armour");
-  await f.getByLabel("Base AC").fill("5");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await page
-    .getByRole("button", { name: "Equip Chain mail of the long winter watch" })
-    .click();
-  // A body shield: +1 against melee, +2 against missiles (ADR 0033 step 10.3).
-  await openTypedAdd(page);
-  await f.getByLabel("Name").fill("Body shield");
-  await f.getByLabel("Category").selectOption("shield");
-  await f.getByLabel("Shield kind").selectOption("body");
-  await f.getByLabel("AC bonus (melee)").fill("1");
-  await f.getByLabel("AC bonus (missiles)").fill("2");
-  await f.getByRole("button", { name: "Add", exact: true }).click();
-  await page.getByRole("button", { name: "Equip Body shield" }).click();
-  const card = page.getByTestId("ac-card");
-  // 5, shield -1, Dexterity -3, Protection from Evil -2; against missiles -2.
-  await expect(card.getByTestId("ac-card-value")).toHaveText("−1");
-  await expect(
-    page.getByTestId("ac-shield").getByTestId("ac-value"),
-  ).toHaveText("−1");
-  await expect(card.getByTestId("ac-breakdown")).toContainText(
-    "−2 vs missiles",
-  );
-
-  const character = page.getByTestId("character");
-  const shield = page.getByTestId("ac-shield");
-  const pop = page.getByTestId("ac-popover");
-  const check = async (
-    state: string,
-    langs: readonly ("fr" | "en")[] = ["fr", "en"],
-  ) => {
-    for (const lang of langs) {
-      await chooseLanguage(page, lang);
-      for (const vp of VIEWPORTS) {
-        const where = `${state}, ${lang}, ${vp.width}x${vp.height}`;
-        await page.setViewportSize(vp);
-        await expectNoPageScroll(page);
-        await expectInside(shield, character, `AC shield, ${where}`);
-        const size = async (l: Locator) =>
-          l.evaluate((el) => parseFloat(getComputedStyle(el).fontSize));
-        expect(
-          await size(shield.getByTestId("ac-value")),
-          `the AC is smaller than the HP, ${where}`,
-        ).toBeLessThan(
-          await size(page.getByTestId("hp-value").locator("span").first()),
-        );
-        await expectNoClippedText(card, `AC card, ${where}`);
-        await shield.click();
-        await expect(pop).toBeVisible();
-        await expectOnScreen(page, pop, `AC popover, ${where}`);
-        await expectNoClippedText(pop, `AC popover, ${where}`);
-        if (vp.width >= 1920)
-          await snap(page, `ac-${state}-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(pop).toHaveCount(0);
-      }
-    }
-  };
-  await check("derived");
-
-  await card.getByTestId("ac-card-override").click();
-  await card.getByTestId("ac-override-value").fill("4");
-  await card
-    .getByTestId("ac-override-label")
-    .fill("Shield spell against hurled missiles");
-  await card.getByTestId("ac-override-save").click();
-  await expect(card.getByTestId("ac-override")).toBeVisible();
-  await expect(shield).toHaveAttribute("data-overridden", "true");
-  await check("override");
-
-  // The dark theme, French first.
-  await chooseSetting(page, "Dark");
-  await check("override-dark", ["fr"]);
-  await card.getByTestId("ac-override-clear").click();
-  await expect(card.getByTestId("ac-override")).toHaveCount(0);
-  await check("derived-dark", ["fr"]);
-
-  // The widest numbers the shield holds: -10 and 10.
-  for (const value of ["-10", "10"]) {
-    await card.getByTestId("ac-card-override").click();
-    await card.getByTestId("ac-override-value").fill(value);
-    await card.getByTestId("ac-override-save").click();
-    await expect(shield.getByTestId("ac-value")).toHaveText(
-      value.replace("-", "−"),
-    );
-    for (const vp of [VIEWPORTS[0], VIEWPORTS[VIEWPORTS.length - 1]]) {
-      await page.setViewportSize(vp);
-      await expectNoClippedText(
-        shield,
-        `AC shield ${value}, ${vp.width}x${vp.height}`,
-      );
-      const box = (await shield.getByTestId("ac-value").boundingBox())!;
-      const outer = (await shield.boundingBox())!;
-      expect(box.width, `the number fits the shield, ${value}`).toBeLessThan(
-        outer.width - 16,
-      );
-      if (value === "-10")
-        await snap(page, `ac-minus10-fr-dark-${vp.width}x${vp.height}`);
-    }
-    await card.getByTestId("ac-override-clear").click();
-    await expect(card.getByTestId("ac-override")).toHaveCount(0);
-  }
-});
-
-// ADR 0033 step 2, ADR 0035 item 6.2: a scroll that names the catalogue's longest spell name, in
-// French at 1280, 1920 and 2560 (real scrollbars): the editor's Spell picker (the form) and the
-// initiative breakdown's "Parchemin (Sort) : +1" term and the scroll's inventory row are not cut.
-// Screenshots of each.
-test("scroll spell: picker and initiative term uncut, fr, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  const FR_SPELL =
-    "Nom de sortilège invraisemblablement long des anciens archimages";
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await openDashboard(page);
-  const call = (method: string, url: string, body: unknown) =>
-    apiCall(page, method, url, body);
-  expect(
-    await call("POST", "/api/items", {
-      name: {
-        en: "Scroll of the ancient archmages",
-        fr: "Parchemin des anciens archimages",
-      },
-      category: "magic",
-      magicKind: "scroll",
-      spellId: "long_spell",
-      behaviour: "stock",
-      count: 2,
-    }),
-  ).toBe(true);
-  expect(await call("POST", "/api/round/advance", {})).toBe(true);
-  expect(
-    await call("POST", "/api/items/scroll_of_the_ancient_archmages/use", {}),
-  ).toBe(true);
-  await reloadSettled(page);
-  await chooseLanguage(page, "fr");
-  // The rail's buttons in order (French names): Act, Spells, XP, Inventory.
-  const rail = page.getByTestId("rail").getByRole("button");
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    const where = `fr, ${vp.width}x${vp.height}`;
-    // The initiative breakdown's term names the scroll and its spell.
-    await page.getByTestId("initiative-value").hover();
-    const breakdown = page.getByTestId("initiative-breakdown");
-    await expect(breakdown).toContainText(
-      `Parchemin des anciens archimages (${FR_SPELL}) : +1`,
-    );
-    await expectNoClippedText(breakdown, `scroll initiative term, ${where}`);
-    await expectWholeWords(breakdown, `scroll initiative term, ${where}`);
-    await expectInside(breakdown, page.locator("body"), `breakdown, ${where}`);
-    await snap(page, `scroll-initiative-term-${vp.width}x${vp.height}`);
-    await page.mouse.move(0, 0);
-    await expect(breakdown).toBeHidden();
-    // The editor's Spell picker shows the long name whole.
-    await rail.nth(2).click();
-    // The scroll's row in the possessions list names the spell, whole.
-    const scrollRow = page.getByTestId("item-scroll_of_the_ancient_archmages");
-    await expect(scrollRow.getByTestId("item-stats")).toContainText(FR_SPELL);
-    await expectNoClippedText(scrollRow, `scroll row, ${where}`);
-    await expectWholeWords(scrollRow, `scroll row, ${where}`);
-    await snap(page, `scroll-row-spell-${vp.width}x${vp.height}`);
-    await page
-      .getByRole("button", {
-        name: "Modifier Parchemin des anciens archimages",
-      })
-      .click();
-    const form = page.getByTestId("item-form");
-    const picker = form.getByLabel("Sort", { exact: true });
-    await expect(picker).toHaveValue("long_spell");
-    await expect(picker.locator("option:checked")).toHaveText(FR_SPELL);
-    await expectNoClippedText(form, `item form, ${where}`);
-    await expectWholeWords(form, `item form, ${where}`);
-    await expectInside(picker, form, `spell picker, ${where}`);
-    // A native select cuts its selected text without any scroll width: measure it in the select's font.
-    const room = await picker.evaluate((el) => {
-      const cs = getComputedStyle(el);
-      const ctx = document.createElement("canvas").getContext("2d")!;
-      ctx.font = cs.font;
-      const text = (el as HTMLSelectElement).selectedOptions[0].text;
-      const pad = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
-      return el.clientWidth - pad - ctx.measureText(text).width;
-    });
-    expect(room, `long spell name fits its picker, ${where}`).toBeGreaterThan(
-      24,
-    );
-    await snap(page, `scroll-spell-form-${vp.width}x${vp.height}`);
-    await form.getByRole("button", { name: "Annuler" }).click();
-    await expect(form).toHaveCount(0);
-    await rail.nth(0).click();
-  }
-});
-
-// ADR 0037 step 8: Kelsen without his long sword pick sees the rogue's -3 in the attack card's
-// THAC0, and the roll names it ("Non-proficiency (Long sword)", "Non-maîtrise (Épée longue)") on
-// the result card and in the journal entry; a homebrew weapon with no type, wielded, is tagged
-// weapon_type_missing on its row and on the attack card, never on the AC card, and takes no
-// penalty. What only a browser shows: the wording reaches both views and the tag sits where the
-// class warnings do. En and fr at 1920x1080 and 2560x1440, real scrollbars: nothing is cut.
-test("non-proficiency penalty and missing weapon type: card, journal, rows uncut, en and fr", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await openDashboard(page);
-  const call = (method: string, url: string, body: unknown) =>
-    apiCall(page, method, url, body);
-  await openWeapons(page);
-  await chooseWeapon(page, "Long Sword +2");
-  const thac0 = attackForm(page).getByTestId("tile-thac0");
-  const proficient = Number(await thac0.textContent());
-
-  expect(
-    await call("PUT", "/api/proficiencies", {
-      weapon: ["short_bow", "dagger", "dart", "sling", "other_melee"].map(
-        (type) => ({ type, slots: 1 }),
-      ),
-    }),
-  ).toBe(true);
-  expect(
-    await call("POST", "/api/items", {
-      name: { en: "Homebrew cudgel", fr: "Gourdin maison" },
-      category: "weapon",
-      damageSm: "1d6",
-      damageL: "1d3",
-      damageTypes: ["b"],
-      weaponKind: "melee",
-      behaviour: "stock",
-      count: 1,
-    }),
-  ).toBe(true);
-  await reloadSettled(page);
-  await openWeapons(page);
-  await expect(thac0).toHaveText(String(proficient + 3));
-  await attackForm(page).getByLabel("Target AC").fill("5");
-  await attackForm(page)
-    .getByRole("button", { name: "Attack", exact: true })
-    .click();
-  const card = page.getByTestId("attack-result");
-  await expect(card).toContainText("Long Sword +2 vs AC 5");
-  await card.getByText("Calculation details").click();
-  const penalty = card
-    .getByTestId("to-hit-modifiers")
-    .getByRole("listitem")
-    .filter({ hasText: "Non-proficiency (Long sword)" });
-  await expect(penalty).toHaveText(/Non-proficiency \(Long sword\)\s*−3/);
-  // The journal's entry opens in the same Detail view: its row is the selected one.
-  await expect(
-    combatLog(page).getByRole("button", {
-      name: /Attack Long Sword \+2 vs AC 5/,
-    }),
-  ).toHaveAttribute("aria-pressed", "true");
-
-  // The typeless homebrew weapon: wielded, tagged, no penalty in its preview.
-  await chooseWeapon(page, "Homebrew cudgel");
-  const missing =
-    '[data-testid="class-warning"][data-code="weapon_type_missing"]';
-  await expect(attackForm(page).locator(missing)).toHaveText(
-    "No weapon type: weapon proficiency not checked",
-  );
-  const form = (await (await page.request.get("/api/attack/form")).json()) as {
-    preview: { modifiers: { kind: string }[] };
-  };
-  expect(form.preview.modifiers.map((m) => m.kind)).not.toContain(
-    "nonproficient",
-  );
-
-  const rail = page.getByTestId("rail").getByRole("button");
-  for (const lang of ["en", "fr"] as const) {
-    await chooseLanguage(page, lang);
-    const attack = page.getByRole("form", {
-      name: lang === "fr" ? "Attaque" : "Attack",
-    });
-    const words =
-      lang === "fr"
-        ? [
-            "Non-maîtrise (Épée longue)",
-            "Sans type d'arme : compétence martiale non vérifiée",
-          ]
-        : [
-            "Non-proficiency (Long sword)",
-            "No weapon type: weapon proficiency not checked",
-          ];
-    for (const vp of [
-      { width: 1920, height: 1080 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await rail.nth(0).click();
-      await expect(card.getByTestId("to-hit-modifiers")).toContainText(
-        words[0],
-      );
-      await expect(attack.locator(missing)).toHaveText(words[1]);
-      await expectNoClippedText(card, `result card, ${where}`);
-      await expectNoClippedText(attack, `attack card, ${where}`);
-      await expectNoClippedText(combatLog(page), `journal, ${where}`);
-      await snap(page, `nonproficient-attack-${lang}-${vp.width}x${vp.height}`);
-      await rail.nth(2).click();
-      const row = page.getByTestId("item-homebrew_cudgel");
-      await expect(row.locator(missing)).toHaveText(words[1]);
-      await expect(page.getByTestId("ac-card").locator(missing)).toHaveCount(0);
-      await expectNoClippedText(
-        page.getByTestId("stage"),
-        `inventory, ${where}`,
-      );
-      await snap(
-        page,
-        `nonproficient-inventory-${lang}-${vp.width}x${vp.height}`,
-      );
-    }
-  }
-});
-
-// ADR 0033 step 20, ADR 0035 item 9: a mage in plate, with a shield and a two-handed sword, is
-// warned on the rows, the AC card, the shield (badge and popover) and the attack card; nothing is
-// refused. In French and English at every layout viewport (1920x1080 and 2560x1440 included, real
-// scrollbars): no warning, piece name or sentence is cut. Screenshots at 1920x1080 and 2560x1440.
-test("class warnings: rows, AC card, shield and attack card uncut, en and fr, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await openDashboard(page);
-  const call = (method: string, url: string, body: unknown) =>
-    apiCall(page, method, url, body);
-  expect(
-    await call("POST", "/api/characters", {
-      name: "Ilyana Mainfroide d'Ombrebrume",
-      class: "mage",
-      raceCode: "human",
-      details: { alignment: "neutral_good", sex: "female" },
-      str: 9,
-      dex: 14,
-      con: 10,
-      int: 17,
-      wis: 10,
-      cha: 12,
-      hpMax: 4,
-      xp: 0,
-    }),
-  ).toBe(true);
-  await reloadSettled(page);
-  const pieces = [
-    {
-      id: "full_plate_armour_of_the_northern_wardens",
-      state: "worn",
-      body: {
-        name: {
-          en: "Full plate armour of the northern wardens",
-          fr: "Armure de plates complète des gardiens du nord",
-        },
-        category: "armour",
-        baseAc: 1,
-        skillColumn: "none_allowed",
-        armorRow: "full_plate",
-      },
-    },
-    {
-      id: "tower_shield",
-      state: "worn",
-      body: {
-        name: { en: "Tower shield", fr: "Bouclier-tour" },
-        category: "shield",
-        shieldKind: "body",
-        acMelee: 1,
-        acMissile: 2,
-      },
-    },
-    {
-      id: "great_claymore",
-      state: "wielded",
-      body: {
-        name: { en: "Great claymore", fr: "Grande claymore à deux mains" },
-        category: "weapon",
-        damageSm: "1d10",
-        damageL: "3d6",
-        damageTypes: ["s"],
-        weaponKind: "melee",
-        weaponType: "long_sword",
-        twoHanded: true,
-      },
-    },
-  ];
-  for (const p of pieces) {
-    expect(
-      await call("POST", "/api/items", {
-        ...p.body,
-        behaviour: "stock",
-        count: 1,
-      }),
-      `create ${p.id}`,
-    ).toBe(true);
-    // Warned, never refused: wearing and wielding succeed.
-    expect(
-      await call("POST", `/api/items/${p.id}/state`, { state: p.state }),
-      `equip ${p.id}`,
-    ).toBe(true);
-  }
-  await reloadSettled(page);
-
-  const codes = async (id: string) =>
-    page
-      .getByTestId(`item-${id}`)
-      .getByTestId("class-warning")
-      .evaluateAll((els) => els.map((e) => e.getAttribute("data-code")));
-  const check = async (
-    lang: "en" | "fr",
-    vp: { width: number; height: number },
-  ) => {
-    await page.setViewportSize(vp);
-    const where = `${lang}, ${vp.width}x${vp.height}`;
-    const shot = vp.width === 1920 || vp.width === 2560;
-    // The Inventaire: the warnings on the rows and on the AC card.
-    await rail.nth(2).click();
-    await expect(
-      page.getByTestId("item-full_plate_armour_of_the_northern_wardens"),
-    ).toBeVisible();
-    expect(await codes("full_plate_armour_of_the_northern_wardens")).toEqual([
-      "armour_not_allowed",
-    ]);
-    expect(await codes("tower_shield")).toEqual([
-      "armour_not_allowed",
-      "hands",
-    ]);
-    expect(await codes("great_claymore")).toEqual([
-      "weapon_not_allowed",
-      "hands",
-    ]);
-    const card = page.getByTestId("ac-card");
-    await expect(card.getByTestId("ac-warnings")).toBeVisible();
-    await expect(card.getByTestId("class-warning")).toHaveCount(3);
-    // The shield's two warnings sit under its name, shown once.
-    await expect(card.getByTestId("ac-warning-piece")).toHaveCount(2);
-    await expect(card.getByTestId("ac-warnings")).toContainText(
-      lang === "fr" ? "Pas pour un magicien" : "Not for a mage",
-    );
-    await expectNoClippedText(page.getByTestId("stage"), `inventory, ${where}`);
-    if (shot)
-      await snap(
-        page,
-        `class-warnings-inventory-${lang}-${vp.width}x${vp.height}`,
-      );
-    // The shield beside the HP: a badge, and the popover lists the warnings.
-    const shield = page.getByTestId("ac-shield");
-    await expect(shield.getByTestId("ac-shield-warning")).toBeVisible();
-    await shield.click();
-    const popover = page.getByTestId("ac-popover");
-    await expect(popover.getByTestId("class-warning")).toHaveCount(3);
-    await expectNoClippedText(popover, `AC popover, ${where}`);
-    if (shot)
-      await snap(
-        page,
-        `class-warnings-shield-${lang}-${vp.width}x${vp.height}`,
-      );
-    await page.keyboard.press("Escape");
-    await expect(popover).toHaveCount(0);
-    // The attack card: the weapon in hand carries its warnings.
-    // The Weapons tab stays open between visits (its name is English-only in the helper).
-    await rail.nth(0).click();
-    const attack = page.getByRole("form", {
-      name: lang === "fr" ? "Attaque" : "Attack",
-    });
-    await expect(attack.getByTestId("class-warning")).toHaveCount(2);
-    await expectNoClippedText(attack, `attack card, ${where}`);
-    if (shot)
-      await snap(
-        page,
-        `class-warnings-attack-${lang}-${vp.width}x${vp.height}`,
-      );
-  };
-  // The weapon in hand is picked once (in English); the choice is kept on the server.
-  await openWorkspace(page, "Act");
-  await openWeapons(page);
-  await chooseWeapon(page, "Great claymore");
-  const rail = page.getByTestId("rail").getByRole("button");
-  for (const lang of ["en", "fr"] as const) {
-    await chooseLanguage(page, lang);
-    for (const vp of VIEWPORTS) await check(lang, vp);
-  }
-});
-
-// ADR 0022 steps 2.5 and 3.5: a spell description is one column capped at 75 characters, in the
-// lookup and in the cast result alike, at every layout viewport, in English and French; blocks are
-// clearly further apart than the lines of a paragraph, a table has room and scrolls inside its own
-// box without widening the page, and nothing is cut. One spec for the whole matrix: only a browser
-// measures the column, the measure and the rhythm.
-test("spell description: one capped column in the lookup and the cast result, 1280 to 2560", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(120_000);
-  const put = await fetch(`${stack.apiUrl}/api/spells/prepared`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ spells: ["chromatic_orb", "magic_missile"] }),
-  });
-  expect(put.ok).toBe(true);
-  await openDashboard(page);
-
-  /** The description box's shape: one column, the measure, the rhythm and the tables. */
-  const expectOneColumn = async (box: Locator, where: string) => {
-    const m = await box.evaluate((el) => {
-      const probe = document.createElement("span");
-      probe.style.cssText = "position:absolute;visibility:hidden;width:1ch";
-      el.appendChild(probe);
-      const ch = probe.getBoundingClientRect().width;
-      probe.remove();
-      const blocks = [...el.children] as HTMLElement[];
-      const rect = (e: Element) => e.getBoundingClientRect();
-      const cs = getComputedStyle(el);
-      return {
-        columns: cs.columnCount + "/" + cs.columnWidth,
-        widthCh: rect(el).width / ch,
-        lefts: blocks.map((b) => Math.round(rect(b).left)),
-        gaps: blocks
-          .slice(1)
-          .map((b, i) => Math.round(rect(b).top - rect(blocks[i]).bottom)),
-        lineHeight: parseFloat(cs.lineHeight),
-        blocks: blocks.length,
-        tables: [...el.querySelectorAll("[data-testid=spell-table]")].map(
-          (t) => {
-            const cell = t.querySelector("td")!;
-            const ccs = getComputedStyle(cell);
-            return {
-              pad: [ccs.paddingLeft, ccs.paddingTop],
-              inside: rect(t).right <= rect(el).right + 1,
-            };
-          },
-        ),
-        page: document.documentElement.scrollWidth - innerWidth,
-      };
-    });
-    expect(m.columns, `no CSS columns, ${where}`).toMatch(/^auto\/auto$/);
-    expect(m.widthCh, `measure, ${where}`).toBeLessThanOrEqual(75.5);
-    expect(new Set(m.lefts).size, `one left edge, ${where}`).toBe(1);
-    expect(m.blocks).toBeGreaterThan(1);
-    for (const g of m.gaps)
-      expect(g, `blocks apart, ${where}`).toBeGreaterThanOrEqual(16);
-    for (const t of m.tables) {
-      expect(t.pad, `cell padding, ${where}`).toEqual(["12px", "8px"]);
-      expect(t.inside, `table in its box, ${where}`).toBe(true);
-    }
-    expect(m.page, `page does not widen, ${where}`).toBeLessThanOrEqual(0);
-  };
-
-  // The cast result's folded text (a long spell; the table spell cannot be cast in the fixture).
-  await page.getByRole("tab", { name: "Spells" }).click();
-  await page.getByRole("button", { name: "Cast Magic Missile" }).click();
-  const card = page.getByTestId("cast-result");
-  await expect(card).toBeVisible();
-  await card.getByText("Spell text").click();
-
-  const rail = page.getByTestId("rail").getByRole("button");
-  for (const lang of ["en", "fr"] as const) {
-    await chooseLanguage(page, lang);
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      const where = `${lang} ${vp.width}x${vp.height}`;
-      const shot = lang === "fr" || vp.width >= 1920;
-      // The cast result.
-      await rail.nth(0).click();
-      if (!(await card.getByTestId("cast-text").isVisible()))
-        await card.getByText(/Spell text|Texte du sort/).click();
-      await expect(card.getByTestId("cast-text")).toBeVisible();
-      await expectOneColumn(card.getByTestId("cast-text"), `cast, ${where}`);
-      await expectNoClippedText(card, `cast result, ${where}`);
-      if (shot)
-        await snap(page, `description-cast-${lang}-${vp.width}x${vp.height}`);
-      // The lookup, a table spell then a long one.
-      await rail.nth(1).click();
-      for (const [query, name, title] of [
-        ["chromatic", "chromatic", /Chromatic Orb|Orbe chromatique/],
-        ["magic missile", "missile", /Magic Missile|Projectile magique/],
-      ] as const) {
-        await page
-          .getByRole("combobox", {
-            name:
-              lang === "fr" ? "Rechercher des sorts..." : "Search spells...",
-          })
-          .fill(query);
-        const detail = page.getByTestId("spell-detail");
-        await expect(detail.getByRole("heading").first()).toHaveText(title);
-        const text = detail.getByTestId("spell-description-text");
-        await expectOneColumn(
-          text.locator("> div"),
-          `lookup ${name}, ${where}`,
-        );
-        await expectNoClippedText(detail, `spell detail ${name}, ${where}`);
-        await expectNoPageScroll(page);
-        if (shot)
-          await snap(
-            page,
-            `description-lookup-${name}-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-    }
-  }
-});
-
-// ADR 0004 step 21: the stop menu of a row with end effects, the notice that says what the end
-// effects did and the journal's end-effect line are uncut, in French and English, 1280 to 2560.
-test("end effects: stop menu, notice and journal line uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
-  await openDashboard(page);
-  for (const lang of ["fr", "en"] as const) {
-    await chooseLanguage(page, lang);
-    for (const vp of [
-      { width: 1280, height: 800 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      expect(
-        await apiCall(page, "POST", "/api/hp/event", {
-          delta: -8,
-          source: "e2e goblin",
-        }),
-      ).toBe(true);
-      expect(
-        await apiCall(page, "POST", "/api/spells/receive", {
-          spellId: "polymorph_self",
-          casterLevel: 15,
-        }),
-      ).toBe(true);
-      await reloadSettled(page);
-      await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
-      await page.getByTestId("buff-stop").click();
-      const menu = page.getByRole("menu");
-      await expect(menu).toBeVisible();
-      await expectNoClippedText(menu, `stop menu, ${where}`);
-      await expectWholeWords(menu, `stop menu, ${where}`);
-      await page.getByTestId("buff-end-voluntary").click();
-      const ended = page.getByTestId("notice-ended");
-      await expect(ended).toBeVisible();
-      await expectNoClippedText(ended, `end notice, ${where}`);
-      await expectWholeWords(ended, `end notice, ${where}`);
-      await expectNoClippedText(page.getByRole("status"), `notice, ${where}`);
-      await expectNoClippedText(combatLog(page), `journal, ${where}`);
-      await snap(page, `end-effects-${lang}-${vp.width}x${vp.height}`);
-    }
-  }
-});
+}
 
 // The version badge (ADR 0024 step 1.4): it sits inside a box the screen already has, never in a band
 // of its own: the dashboard's dice footer (right end), a header card (roster, creation), the login
 // card. No page scroll or cut text at 1920x1080 and 2560x1440. The e2e API is a local build, so the
 // real answer shows the dev pill and a version with its commit; staging and production are the
 // health answers given here. Screenshots in French.
-test("version badge: inside the footer or the screen's card, three environments, 1920 and 2560", async ({
-  page,
-  context,
-}) => {
-  test.setTimeout(90_000);
-  page.on("dialog", (d) => void d.accept());
-  const sizes = [
+async function versionBadgeStep(
+  page: Page,
+  size: Viewport,
+  _stack: Stack,
+  context: BrowserContext,
+) {
+  // Judged at 1920x1080 and 2560x1440 only (the creation page at 1280x800 reaches past the window).
+  if (size.width < 1920) return;
+  const sizes = sizesAt(size, [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ];
+  ]);
   const badge = page.getByTestId("version-badge");
   const expectBadgeIn = async (
     host: Locator,
@@ -5134,16 +5046,13 @@ test("version badge: inside the footer or the screen's card, three environments,
         );
     }
   }
-});
+}
 
 // The "update available" button beside the version badge: it shows after two consecutive health
 // answers with a newer version (the rule's cases are unit-tested; here the wiring), takes no band
 // or height, stays inside the same box as the badge, and a click reloads the page. A tab that is
 // hidden sends no heartbeat. Screenshots in French at 1920x1080 and 2560x1440.
-test("new version toast: beside the badge after two newer answers, no extra height, click reloads", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function newVersionStep(page: Page) {
   const sizes = [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
@@ -5241,633 +5150,454 @@ test("new version toast: beside the badge after two newer answers, no extra heig
   expect(loads).toBeGreaterThan(0);
   await expect(page.getByTestId("version-text")).toHaveText("1.4.3");
   await expect(toast).toHaveCount(0);
-});
-
-// ADR 0037 steps 7 to 9 and 12, ADR 0022 step 1, ADR 0027 steps 2 and 3: a fighter's weapon
-// proficiency editor (every weapon type, a specialization toggle with its cost, a plain pick, the
-// pool) and the Skills tab's block uncut, in French first and in English, 1280 to 2560; screenshots
-// at 1920x1080 and 2560x1440 with real scrollbars. Only the layout is judged here (the flow is in
-// characters.spec.ts, the rules in Go).
-test("weapon proficiency editor: a fighter's rows uncut, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await chooseLanguage(page, "fr");
-  await createInFlow(page, {
-    name: "Borin",
-    className: "Guerrier",
-    race: "Humain",
-    scores: { FOR: "16", DEX: "14", CON: "15", INT: "10", SAG: "10", CHA: "9" },
-    hpMax: "10",
-  });
-  await expect(page.getByTestId("character")).toContainText("Borin");
-  for (const lang of ["fr", "en"] as const) {
-    const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
-    await chooseLanguage(page, lang);
-    await page.setViewportSize(VIEWPORTS[0]);
-    // A new character opens on Act (Agir), where the Skills tab is.
-    const actions = page.getByRole("region", { name: "Actions" });
-    await actions
-      .getByRole("tab", { name: tr("Compétences", "Skills") })
-      .click();
-    await openSpend(page, "weapon");
-    const editor = page.getByTestId("weapon-editor");
-    if (lang === "fr") {
-      // The specialization in a long bow (3 slots) and a plain short sword: 4 of 4 spent.
-      const bow = editor.getByTestId("weapon-row-long_bow");
-      await bow.getByTestId("weapon-add").click();
-      await bow.getByTestId("weapon-specialize").click();
-      await editor
-        .getByTestId("weapon-row-short_sword")
-        .getByTestId("weapon-add")
-        .click();
-      await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
-        "Dépensés 4, restants 0",
-      );
-    }
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoClippedText(editor, `weapon editor, ${where}`);
-      await expectWholeWords(editor, `weapon editor, ${where}`);
-      await expectNoPageScroll(page);
-      if (vp.width >= 1920)
-        await snap(page, `weapon-editor-${lang}-${vp.width}x${vp.height}`);
-    }
-    if (lang === "fr") await editor.getByTestId("weapon-save").click();
-    else await editor.getByTestId("weapon-cancel").click();
-    await expect(editor).toBeHidden();
-  }
-});
-
-// ADR 0037 step 19.4 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the Skills tab's rows
-// (name and ability parts), the proficiency pop-up with its table and figures, and the picker's
-// catalogue rows (name, ability, cost, add) are never cut from 1280 to 2560.
-test("proficiency pop-up: the Skills rows, the pop-up and the picker uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await openDashboard(page);
-  await chooseLanguage(page, "fr");
-  await page.getByRole("tab", { name: "Compétences" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Compétences" });
-  const dialog = page.getByTestId("proficiency-details");
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    const where = `${vp.width}x${vp.height}`;
-    await expect(
-      panel.getByTestId("proficiency-name-musical_instrument"),
-    ).toBeVisible();
-    await expectNoClippedText(panel, `skills rows, ${where}`);
-    await expectWholeWords(panel, `skills rows, ${where}`);
-    await snap(page, `proficiency-rows-fr-${where}`);
-    await panel.getByTestId("proficiency-name-musical_instrument").click();
-    await expect(dialog.getByTestId("proficiency-description")).toBeVisible();
-    await expectNoClippedText(dialog, `proficiency pop-up, ${where}`);
-    await expectWholeWords(dialog, `proficiency pop-up, ${where}`);
-    await snap(page, `proficiency-popup-fr-${where}`);
-    await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
-  }
-  await openSpend(page, "nonWeapon");
-  const editor = page.getByTestId("proficiency-editor");
-  for (const vp of [
-    { width: 1280, height: 800 },
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ]) {
-    await page.setViewportSize(vp);
-    const where = `${vp.width}x${vp.height}`;
-    await expectNoClippedText(editor, `picker rows, ${where}`);
-    await expectWholeWords(editor, `picker rows, ${where}`);
-    await snap(page, `proficiency-picker-fr-${where}`);
-  }
-});
+}
 
 // ADR 0043 step 5 and ADR 0047 items 4, 5 and 11: the PSP block in the character card's 280-384px
 // column (below the HP and the HP change) and the rest popover over it, with a paying power kept up
 // so the warning and the stop-and-recover caption are on screen, uncut in French and English, 1280 to
 // 2560. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("PSP block and rest popover", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(120_000);
-    await openDashboard(page);
-    await keepPowerUp(page);
-    const card = page.getByTestId("character");
-    const panel = page.getByTestId("psp-panel");
-    await expect(panel.getByTestId("psp-value")).toHaveText("37 / 40");
+async function pspStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await keepPowerUp(page);
+  const card = page.getByTestId("character");
+  const panel = page.getByTestId("psp-panel");
+  await expect(panel.getByTestId("psp-value")).toHaveText("37 / 40");
 
-    // The card reads HP, HP change, then the PSPs.
-    const top = async (l: Locator) => (await l.boundingBox())?.y ?? -1;
-    const hp = await top(card.getByTestId("hp-value"));
-    const change = await top(card.getByRole("group", { name: "HP change" }));
-    const psp = await top(panel);
-    expect(hp).toBeGreaterThan(0);
-    expect(change, "HP change under the HP").toBeGreaterThan(hp);
-    expect(psp, "PSP block under the HP change").toBeGreaterThan(change);
+  // The card reads HP, HP change, then the PSPs.
+  const top = async (l: Locator) => (await l.boundingBox())?.y ?? -1;
+  const hp = await top(card.getByTestId("hp-value"));
+  const change = await top(card.getByRole("group", { name: "HP change" }));
+  const psp = await top(panel);
+  expect(hp).toBeGreaterThan(0);
+  expect(change, "HP change under the HP").toBeGreaterThan(hp);
+  expect(psp, "PSP block under the HP change").toBeGreaterThan(change);
 
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expect(panel).toBeVisible();
+      const box = await panel.boundingBox();
+      expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
+      expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
+      await expectNoClippedText(panel, `PSP block, ${where}`);
+      await expectWholeWords(panel, `PSP block, ${where}`);
+      await expectNoPageScroll(page);
+
+      await panel.getByTestId("psp-adjust").click();
+      const adjust = page.getByTestId("psp-adjust-popover");
+      await expect(adjust).toBeVisible();
+      await expectNoClippedText(adjust, `adjust popover, ${where}`);
+      await expectWholeWords(adjust, `adjust popover, ${where}`);
       await page.keyboard.press("Escape");
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expect(panel).toBeVisible();
-        const box = await panel.boundingBox();
-        expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
-        expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
-        await expectNoClippedText(panel, `PSP block, ${where}`);
-        await expectWholeWords(panel, `PSP block, ${where}`);
-        await expectNoPageScroll(page);
+      await expect(adjust).toHaveCount(0);
 
-        await panel.getByTestId("psp-adjust").click();
-        const adjust = page.getByTestId("psp-adjust-popover");
-        await expect(adjust).toBeVisible();
-        await expectNoClippedText(adjust, `adjust popover, ${where}`);
-        await expectWholeWords(adjust, `adjust popover, ${where}`);
-        await page.keyboard.press("Escape");
-        await expect(adjust).toHaveCount(0);
-
-        await panel.getByTestId("psp-rest").click();
-        const rest = page.getByTestId("psp-rest-popover");
-        await expect(rest.getByTestId("psp-rest-stops")).toBeVisible();
-        await expectNoClippedText(rest, `rest popover, ${where}`);
-        await expectWholeWords(rest, `rest popover, ${where}`);
-        const inside = await rest.boundingBox();
-        expect(inside?.x, `rest popover left, ${where}`).toBeGreaterThanOrEqual(
-          0,
-        );
-        expect(
-          (inside?.x ?? 0) + (inside?.width ?? 0),
-          `rest popover right, ${where}`,
-        ).toBeLessThanOrEqual(vp.width);
-        if (vp.width >= 1920)
-          await snap(page, `psp-rest-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(rest).toHaveCount(0);
-        if (vp.width >= 1920)
-          await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
-      }
+      await panel.getByTestId("psp-rest").click();
+      const rest = page.getByTestId("psp-rest-popover");
+      await expect(rest.getByTestId("psp-rest-stops")).toBeVisible();
+      await expectNoClippedText(rest, `rest popover, ${where}`);
+      await expectWholeWords(rest, `rest popover, ${where}`);
+      const inside = await rest.boundingBox();
+      expect(inside?.x, `rest popover left, ${where}`).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(
+        (inside?.x ?? 0) + (inside?.width ?? 0),
+        `rest popover right, ${where}`,
+      ).toBeLessThanOrEqual(vp.width);
+      if (vp.width >= 1920)
+        await snap(page, `psp-rest-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(rest).toHaveCount(0);
+      if (vp.width >= 1920)
+        await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
     }
-  });
-});
+  }
+}
 
 // ADR 0047: Act > Pouvoirs (the round's power and the adjustment, the defence chips, the target band,
 // the groups of rows), uncut in French and English, 1280 to 2560, in combat so the chips are live.
 // Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("Powers tab", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "mind_blank" },
-          { kind: "power", id: "thought_shield" },
-          { kind: "power", id: "mind_thrust" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "discipline", id: "metapsionics" },
-          { kind: "power", id: "intensify" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+async function powersStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "mind_blank" },
+        { kind: "power", id: "thought_shield" },
+        { kind: "power", id: "mind_thrust" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "discipline", id: "metapsionics" },
+        { kind: "power", id: "intensify" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
+    await tab.getByTestId("target-name").fill("Orc");
+    // The standing mind blank raised, so the band shows its Stop beside the chip.
+    const standing = tab.locator(
+      "[data-testid=defence-chip][data-defence=standing]",
+    );
+    if ((await standing.count()) === 0)
+      await tab
+        .getByTestId("defence-chip")
+        .filter({ hasText: /Mind Blank|Néant spirituel/ })
         .click();
-      const tab = page.getByTestId("powers-tab");
-      await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
-      await tab.getByTestId("target-name").fill("Orc");
-      // The standing mind blank raised, so the band shows its Stop beside the chip.
-      const standing = tab.locator(
-        "[data-testid=defence-chip][data-defence=standing]",
+    await expect(standing).toHaveCount(1);
+    await expect(
+      tab.getByRole("button", { name: /^(Stop maintaining|Arrêter)/ }),
+    ).toHaveCount(1);
+    // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
+    const rowBoxes = async () => {
+      const origin = (await tab.boundingBox())!;
+      return Promise.all(
+        (await tab.getByTestId("power-row").all()).map(async (r) => {
+          const b = (await r.boundingBox())!;
+          return { ...b, x: b.x - origin.x, y: b.y - origin.y };
+        }),
       );
-      if ((await standing.count()) === 0)
-        await tab
-          .getByTestId("defence-chip")
-          .filter({ hasText: /Mind Blank|Néant spirituel/ })
-          .click();
-      await expect(standing).toHaveCount(1);
+    };
+    const select = (id: string) =>
+      tab
+        .locator(`[data-testid=power-row][data-id=${id}]`)
+        .getByRole("button")
+        .last()
+        .click();
+    const bar = page.getByTestId("action-bar");
+    const close = () => bar.getByRole("button").first().click();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await tab.getByTestId("target-band").locator("select").selectOption({
+        index: 1,
+      });
+      await expect(bar).toHaveCount(0);
       await expect(
-        tab.getByRole("button", { name: /^(Stop maintaining|Arrêter)/ }),
-      ).toHaveCount(1);
-      // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
-      const rowBoxes = async () => {
-        const origin = (await tab.boundingBox())!;
-        return Promise.all(
-          (await tab.getByTestId("power-row").all()).map(async (r) => {
-            const b = (await r.boundingBox())!;
-            return { ...b, x: b.x - origin.x, y: b.y - origin.y };
-          }),
-        );
-      };
-      const select = (id: string) =>
-        tab
-          .locator(`[data-testid=power-row][data-id=${id}]`)
-          .getByRole("button")
-          .last()
-          .click();
-      const bar = page.getByTestId("action-bar");
-      const close = () => bar.getByRole("button").first().click();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await tab.getByTestId("target-band").locator("select").selectOption({
-          index: 1,
-        });
-        await expect(bar).toHaveCount(0);
-        await expect(
-          tab.getByTestId("attack-score-target").first(),
-        ).toBeVisible();
-        await expectNoClippedText(tab, `powers tab, ${where}`);
-        await expectWholeWords(tab, `powers tab, ${where}`);
-        await expectNoPageScroll(page);
-        const closed = await rowBoxes();
-        expect(closed.length).toBeGreaterThan(3);
-        const forms: [string, string][] = [
-          ["mind_thrust", "attack-form"],
-          ["intensify", "use-power"],
-        ];
-        for (const [id, form] of forms) {
-          await select(id);
-          await expect(bar.getByTestId(form)).toBeVisible();
-          expect(await rowBoxes(), `rows with ${form} open, ${where}`).toEqual(
-            closed,
-          );
-          await expectNoClippedText(tab, `${form}, ${where}`);
-          await expectWholeWords(tab, `${form}, ${where}`);
-          await expectNoPageScroll(page);
-          if (vp.width >= 1920)
-            await snap(page, `powers-${form}-${lang}-${vp.width}x${vp.height}`);
-          await close();
-          await expect(bar).toHaveCount(0);
-        }
-        await tab.getByTestId("incoming-attack").click();
-        await expect(bar.getByTestId("defend-form")).toBeVisible();
-        expect(await rowBoxes(), `rows with incoming open, ${where}`).toEqual(
+        tab.getByTestId("attack-score-target").first(),
+      ).toBeVisible();
+      await expectNoClippedText(tab, `powers tab, ${where}`);
+      await expectWholeWords(tab, `powers tab, ${where}`);
+      await expectNoPageScroll(page);
+      const closed = await rowBoxes();
+      expect(closed.length).toBeGreaterThan(3);
+      const forms: [string, string][] = [
+        ["mind_thrust", "attack-form"],
+        ["intensify", "use-power"],
+      ];
+      for (const [id, form] of forms) {
+        await select(id);
+        await expect(bar.getByTestId(form)).toBeVisible();
+        expect(await rowBoxes(), `rows with ${form} open, ${where}`).toEqual(
           closed,
         );
-        await expectNoClippedText(tab, `incoming, ${where}`);
-        await expectWholeWords(tab, `incoming, ${where}`);
+        await expectNoClippedText(tab, `${form}, ${where}`);
+        await expectWholeWords(tab, `${form}, ${where}`);
         await expectNoPageScroll(page);
         if (vp.width >= 1920)
-          await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
+          await snap(page, `powers-${form}-${lang}-${vp.width}x${vp.height}`);
         await close();
+        await expect(bar).toHaveCount(0);
       }
+      await tab.getByTestId("incoming-attack").click();
+      await expect(bar.getByTestId("defend-form")).toBeVisible();
+      expect(await rowBoxes(), `rows with incoming open, ${where}`).toEqual(
+        closed,
+      );
+      await expectNoClippedText(tab, `incoming, ${where}`);
+      await expectWholeWords(tab, `incoming, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
+      await close();
     }
-  });
-});
+  }
+}
 
 // The Maintained card of Act > Pouvoirs (ADR 0047 item 10): a tangent row with a long mind name, its
 // cost, Stop and the balance, uncut in French and English, 1280 to 2560. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
-test.describe("Maintained card", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "power", id: "mind_thrust" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    await chooseLanguage(page, "fr");
-    await page.keyboard.press("Escape");
-    await page.getByRole("tab", { name: "Pouvoirs" }).click();
-    const tab = page.getByTestId("powers-tab");
-    await keepATangent(
-      page,
-      tab,
-      "Gardien des Mille Portes de la Citadelle Oubliée",
-    );
-    const card = page.getByTestId("maintained-card");
-    await expect(card).toBeVisible();
-    await expect(card.getByTestId("maintained-balance")).toBeVisible();
-    for (const lang of ["fr", "en"] as const) {
-      if (lang === "en") {
-        await chooseLanguage(page, "en");
-        await page.keyboard.press("Escape");
-      }
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expect(card.getByTestId("maintained-balance")).toBeVisible();
-        await expectNoClippedText(card, `maintained card, ${where}`);
-        await expectWholeWords(card, `maintained card, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(page, `maintained-${lang}-${vp.width}x${vp.height}`);
-      }
+async function maintainedStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "power", id: "mind_thrust" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  await chooseLanguage(page, "fr");
+  await page.keyboard.press("Escape");
+  await page.getByRole("tab", { name: "Pouvoirs" }).click();
+  const tab = page.getByTestId("powers-tab");
+  await keepATangent(
+    page,
+    tab,
+    "Gardien des Mille Portes de la Citadelle Oubliée",
+  );
+  const card = page.getByTestId("maintained-card");
+  await expect(card).toBeVisible();
+  await expect(card.getByTestId("maintained-balance")).toBeVisible();
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") {
+      await chooseLanguage(page, "en");
+      await page.keyboard.press("Escape");
     }
-  });
-});
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expect(card.getByTestId("maintained-balance")).toBeVisible();
+      await expectNoClippedText(card, `maintained card, ${where}`);
+      await expectWholeWords(card, `maintained card, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `maintained-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+}
 
 // The bar's two forms of a power paid on contact, uncut in French and English, 1280 to 2560: the
 // table-cost form (its controls from the table's rows, the server's cost) and the state with no contact
 // held. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("Powers tab, contact forms", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "power", id: "mind_thrust" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+async function contactFormsStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "power", id: "mind_thrust" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    const band = tab.getByTestId("target-band");
+    const bar = page.getByTestId("action-bar");
+    const select = (id: string) =>
+      tab
+        .locator(`[data-testid=power-row][data-id=${id}]`)
+        .getByRole("button")
+        .last()
         .click();
-      const tab = page.getByTestId("powers-tab");
-      const band = tab.getByTestId("target-band");
-      const bar = page.getByTestId("action-bar");
-      const select = (id: string) =>
-        tab
-          .locator(`[data-testid=power-row][data-id=${id}]`)
-          .getByRole("button")
-          .last()
-          .click();
-      await band.getByTestId("target-name").fill("");
-      await select("mindlink");
-      await expect(bar.getByTestId("no-contact")).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(tab, `no contact, ${where}`);
-        await expectWholeWords(tab, `no contact, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(
-            page,
-            `powers-no-contact-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-      await bar.getByRole("button").first().click();
-      await band.getByTestId("target-name").fill("Orc");
-      await band
-        .getByRole("radio", { name: lang === "fr" ? "Ouvert" : "Open" })
-        .click();
-      await band.getByRole("textbox").nth(1).fill("3");
-      await select("contact");
-      const form = bar.getByTestId("table-form");
-      await expect(form.getByTestId("table-preview")).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(tab, `table form, ${where}`);
-        await expectWholeWords(tab, `table form, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(
-            page,
-            `powers-table-form-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-      await bar.getByRole("button").first().click();
+    await band.getByTestId("target-name").fill("");
+    await select("mindlink");
+    await expect(bar.getByTestId("no-contact")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(tab, `no contact, ${where}`);
+      await expectWholeWords(tab, `no contact, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-no-contact-${lang}-${vp.width}x${vp.height}`);
     }
-  });
-});
+    await bar.getByRole("button").first().click();
+    await band.getByTestId("target-name").fill("Orc");
+    await band
+      .getByRole("radio", { name: lang === "fr" ? "Ouvert" : "Open" })
+      .click();
+    await band.getByRole("textbox").nth(1).fill("3");
+    await select("contact");
+    const form = bar.getByTestId("table-form");
+    await expect(form.getByTestId("table-preview")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(tab, `table form, ${where}`);
+      await expectWholeWords(tab, `table form, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-table-form-${lang}-${vp.width}x${vp.height}`);
+    }
+    await bar.getByRole("button").first().click();
+  }
+}
 
 // ADR 0047: the action bar is pinned to the panel's bottom edge, outside the scrolling lists. With 16
 // known powers (11 rows and 5 defence chips: the most the test catalogue allows) at 1280x800, 1920x1080 and 2560x1440, in French and English: the armed bar sits whole
 // inside the Act panel wherever the list is scrolled, the last row stays reachable above it, and the
 // bar follows the last row in the tab order. Screenshots at 1280x800 and 1920x1080, French first.
-test.describe("Powers tab, long list", () => {
-  test.use({
-    character: { ...psionicist, level: 20, xp_total: 5_000_000, wis: 20 },
-  });
-  test("the armed bar stays inside the panel, 16 powers", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    const picks = [
-      "mindlink",
-      "psionic_blast",
-      "contact",
-      "mind_blank",
-      "mind_thrust",
-      "ego_whip",
-      "id_insinuation",
-      "psychic_crush",
-      "thought_shield",
-      "mental_barrier",
-      "intellect_fortress",
-      "tower_of_iron_will",
-      "switch_personality",
-      "intensify",
-      "displacement",
-      "graft_weapon",
-    ];
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "discipline", id: "metapsionics" },
-          { kind: "discipline", id: "psychometabolism" },
-          ...picks.map((id) => ({ kind: "power", id })),
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
-        .click();
-      const tab = page.getByTestId("powers-tab");
-      const panel = page.getByRole("tabpanel");
-      const rows = tab.getByTestId("power-row");
-      // The five defence modes are chips, not rows.
-      await expect(rows).toHaveCount(picks.length - 5);
-      const bar = page.getByTestId("action-bar");
-      for (const vp of VIEWPORTS.filter((v) =>
-        [1280, 1920, 2560].includes(v.width),
-      )) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        const inside = async (what: string) => {
-          const b = (await bar.boundingBox())!;
-          const p = (await panel.boundingBox())!;
-          expect(b.y, `bar top, ${what}, ${where}`).toBeGreaterThanOrEqual(
-            p.y - 0.5,
-          );
-          expect(
-            b.y + b.height,
-            `bar bottom, ${what}, ${where}`,
-          ).toBeLessThanOrEqual(p.y + p.height + 0.5);
-          return b;
-        };
-        // Armed from the first row, the list scrolled to its top.
-        await panel.evaluate((el) => (el.scrollTop = 0));
-        await rows.first().getByRole("button").last().click();
-        await expect(bar).toBeVisible();
-        await inside("first row armed");
-        await expectNoClippedText(tab, `bar over the top, ${where}`);
-        await expectWholeWords(tab, `bar over the top, ${where}`);
-        await expectNoPageScroll(page);
-        // Scrolled to the end: the last row sits above the bar, whole and clickable.
-        await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
-        const b = await inside("list scrolled to the end");
-        const last = (await rows.last().boundingBox())!;
+async function longListStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  const picks = [
+    "mindlink",
+    "psionic_blast",
+    "contact",
+    "mind_blank",
+    "mind_thrust",
+    "ego_whip",
+    "id_insinuation",
+    "psychic_crush",
+    "thought_shield",
+    "mental_barrier",
+    "intellect_fortress",
+    "tower_of_iron_will",
+    "switch_personality",
+    "intensify",
+    "displacement",
+    "graft_weapon",
+  ];
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "discipline", id: "metapsionics" },
+        { kind: "discipline", id: "psychometabolism" },
+        ...picks.map((id) => ({ kind: "power", id })),
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    const panel = page.getByRole("tabpanel");
+    const rows = tab.getByTestId("power-row");
+    // The five defence modes are chips, not rows.
+    await expect(rows).toHaveCount(picks.length - 5);
+    const bar = page.getByTestId("action-bar");
+    for (const vp of sizesAt(
+      size,
+      VIEWPORTS.filter((v) => [1280, 1920, 2560].includes(v.width)),
+    )) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      const inside = async (what: string) => {
+        const b = (await bar.boundingBox())!;
+        const p = (await panel.boundingBox())!;
+        expect(b.y, `bar top, ${what}, ${where}`).toBeGreaterThanOrEqual(
+          p.y - 0.5,
+        );
         expect(
-          last.y + last.height,
-          `last row above the bar, ${where}`,
-        ).toBeLessThanOrEqual(b.y + 0.5);
-        if (vp.width <= 1920)
-          await snap(page, `powers-bar-end-${lang}-${vp.width}x${vp.height}`);
-        // The bar is the next stop after the last row's control, in tab order.
-        await rows.last().getByRole("button").last().focus();
-        await page.keyboard.press("Tab");
-        expect(
-          await bar.evaluate((el) => el.contains(document.activeElement)),
-          `tab order, ${where}`,
-        ).toBe(true);
-        // Arming the last row keeps the bar whole too.
-        await rows.last().getByRole("button").last().click();
-        await expect(bar).toBeVisible();
-        await inside("last row armed");
-        await bar.getByRole("button").first().click();
-        await expect(bar).toHaveCount(0);
-      }
+          b.y + b.height,
+          `bar bottom, ${what}, ${where}`,
+        ).toBeLessThanOrEqual(p.y + p.height + 0.5);
+        return b;
+      };
+      // Armed from the first row, the list scrolled to its top.
+      await panel.evaluate((el) => (el.scrollTop = 0));
+      await rows.first().getByRole("button").last().click();
+      await expect(bar).toBeVisible();
+      await inside("first row armed");
+      await expectNoClippedText(tab, `bar over the top, ${where}`);
+      await expectWholeWords(tab, `bar over the top, ${where}`);
+      await expectNoPageScroll(page);
+      // Scrolled to the end: the last row sits above the bar, whole and clickable.
+      await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      const b = await inside("list scrolled to the end");
+      const last = (await rows.last().boundingBox())!;
+      expect(
+        last.y + last.height,
+        `last row above the bar, ${where}`,
+      ).toBeLessThanOrEqual(b.y + 0.5);
+      if (vp.width <= 1920)
+        await snap(page, `powers-bar-end-${lang}-${vp.width}x${vp.height}`);
+      // The bar is the next stop after the last row's control, in tab order.
+      await rows.last().getByRole("button").last().focus();
+      await page.keyboard.press("Tab");
+      expect(
+        await bar.evaluate((el) => el.contains(document.activeElement)),
+        `tab order, ${where}`,
+      ).toBe(true);
+      // Arming the last row keeps the bar whole too.
+      await rows.last().getByRole("button").last().click();
+      await expect(bar).toBeVisible();
+      await inside("last row armed");
+      await bar.getByRole("button").first().click();
+      await expect(bar).toHaveCount(0);
     }
-  });
-});
+  }
+}
 
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
 // the refusal, the picker with its search, discipline chips once and the add-a-discipline select), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
-test.describe("Known powers", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    const panel = await openSortsPowers(page);
-    // The discipline names show once, as the filter chips; a discipline is added from the select.
-    const addDiscipline = panel.getByRole("combobox", {
-      name: "Add a discipline",
-    });
-    await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(
-      1,
-    );
-    for (const name of ["Telepathy", "Clairsentience"])
-      await addDiscipline.selectOption({ label: name });
-    await panel
-      .getByRole("combobox", { name: "Search powers..." })
-      .fill("mind");
-    await panel
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Blank" })
-      .getByRole("button", { name: "Add Mind Blank" })
-      .click();
-    await panel
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Thrust" })
-      .getByRole("button", { name: "Add Mind Thrust" })
-      .click();
-    await addDiscipline.selectOption({ label: "Psychokinesis" });
-    await expect(panel.getByTestId("powers-refusal")).toBeVisible();
-    // The known list beside the browser, then a power's detail open in its place.
-    for (const view of ["list", "detail"] as const) {
-      if (view === "detail") {
-        await panel.getByTestId("power-row").first().click();
-        await expect(panel.getByTestId("power-detail")).toBeVisible();
-      }
-      for (const lang of ["fr", "en"] as const) {
-        await chooseLanguage(page, lang);
-        await page.keyboard.press("Escape");
-        for (const vp of VIEWPORTS) {
-          await page.setViewportSize(vp);
-          const where = `${view}, ${lang}, ${vp.width}x${vp.height}`;
-          await expect(panel).toBeVisible();
-          await expectNoClippedText(panel, `known powers, ${where}`);
-          await expectWholeWords(panel, `known powers, ${where}`);
-          await expectNoPageScroll(page);
-          if (vp.width >= 1920)
-            await snap(
-              page,
-              `known-powers-${view}-${lang}-${vp.width}x${vp.height}`,
-            );
-        }
-      }
-    }
-  });
-});
-
-// The Long rest confirmation (a fight running): the dialog's text is whole and uncut, French first
-// then English (ADR 0027 step 2), 1280 to 2560. Screenshots at 1920x1080 and 2560x1440.
-test("long rest confirmation: uncut in French and English, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
+async function knownPowersStep(page: Page, size: Viewport) {
   await openDashboard(page);
-  await nextRound(page);
-  await page.getByRole("tab", { name: "Spells" }).click();
-  for (const lang of ["fr", "en"] as const) {
-    await chooseLanguage(page, lang);
-    await page.keyboard.press("Escape");
-    await page
-      .getByRole("button", {
-        name: lang === "fr" ? "Repos long" : "Long rest",
-      })
-      .click();
-    const dialog = page.getByTestId("long-rest-confirm");
-    await expect(dialog).toBeVisible();
-    await expect(dialog).toContainText(lang === "fr" ? "tour 1" : "round 1");
-    for (const vp of VIEWPORTS) {
-      await page.setViewportSize(vp);
-      const where = `${lang}, ${vp.width}x${vp.height}`;
-      await expectNoClippedText(dialog, `long rest confirmation, ${where}`);
-      await expectWholeWords(dialog, `long rest confirmation, ${where}`);
-      await expectNoPageScroll(page);
-      if (vp.width >= 1920 && lang === "fr")
-        await snap(page, `long-rest-confirm-fr-${vp.width}x${vp.height}`);
-      if (vp.width >= 1920 && lang === "en")
-        await snap(page, `long-rest-confirm-en-${vp.width}x${vp.height}`);
+  const panel = await openSortsPowers(page);
+  // The discipline names show once, as the filter chips; a discipline is added from the select.
+  const addDiscipline = panel.getByRole("combobox", {
+    name: "Add a discipline",
+  });
+  await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(1);
+  for (const name of ["Telepathy", "Clairsentience"])
+    await addDiscipline.selectOption({ label: name });
+  await panel.getByRole("combobox", { name: "Search powers..." }).fill("mind");
+  await panel
+    .getByTestId("power-row")
+    .filter({ hasText: "Mind Blank" })
+    .getByRole("button", { name: "Add Mind Blank" })
+    .click();
+  await panel
+    .getByTestId("power-row")
+    .filter({ hasText: "Mind Thrust" })
+    .getByRole("button", { name: "Add Mind Thrust" })
+    .click();
+  await addDiscipline.selectOption({ label: "Psychokinesis" });
+  await expect(panel.getByTestId("powers-refusal")).toBeVisible();
+  // The known list beside the browser, then a power's detail open in its place.
+  for (const view of ["list", "detail"] as const) {
+    if (view === "detail") {
+      await panel.getByTestId("power-row").first().click();
+      await expect(panel.getByTestId("power-detail")).toBeVisible();
     }
-    await page.keyboard.press("Escape");
-    await expect(dialog).toHaveCount(0);
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      for (const vp of sizesAt(size, VIEWPORTS)) {
+        await page.setViewportSize(vp);
+        const where = `${view}, ${lang}, ${vp.width}x${vp.height}`;
+        await expect(panel).toBeVisible();
+        await expectNoClippedText(panel, `known powers, ${where}`);
+        await expectWholeWords(panel, `known powers, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(
+            page,
+            `known-powers-${view}-${lang}-${vp.width}x${vp.height}`,
+          );
+      }
+    }
   }
-});
+}
 
 // One page header on every full-screen page: Roster, character creation, Admin and Ruleset share the
 // brand (mark and wordmark in full, with its accessible name), the title, the version and the way
 // out, at the same height and the same place, uncut, fr and en, 1280x800 to 2560x1440 (ADR 0027
 // step 4.6). Only a browser lays the header out, so no Go or unit test can hold this.
-test("page header: the same brand header on every full-screen page, fr and en, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  const sizes = [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]];
+async function pageHeaderStep(page: Page, size: Viewport) {
+  const sizes = sizesAt(size, [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]);
   const pages = [
     {
       name: "roster",
@@ -5937,14 +5667,11 @@ test("page header: the same brand header on every full-screen page, fr and en, 1
     await page.setViewportSize(sizes[0]);
     await page.goto("/");
   }
-});
+}
 
 // The same header in every theme and mode (French, 1920x1080), on the Ruleset page.
-test("page header: every theme and mode shows the brand uncut", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await page.setViewportSize(VIEWPORTS[3]);
+async function pageHeaderThemesStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   for (const [mode, which, themes] of [
@@ -5969,212 +5696,149 @@ test("page header: every theme and mode shows the brand uncut", async ({
       await expect(page.getByTestId("brand")).toBeVisible();
     }
   }
-});
+}
 
-// The weapon in hand: damage, speed and to-hit as labelled chips (the result card's tile), the other
-// weapons as chips up to four and a menu beyond, no native select left, en and fr, long names, no cut
-// text from 1280x800 to 2560x1440. Only a browser shows the wrapping of the chips and the menu.
-test("weapon in hand: labelled stat chips and other weapons as chips, then a menu", async ({
-  page,
-  stack,
-}) => {
-  test.setTimeout(120_000);
-  const api = (method: string, url: string, data: unknown) =>
-    fetch(`${stack.apiUrl}${url}`, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
-  await api("PATCH", "/api/items/darts", {
-    name: { en: LONG_WEAPON, fr: LONG_WEAPON },
-  });
-  await openDashboard(page);
-  await openWeapons(page);
-  // Trim or grow the character's weapons so exactly `wanted` are besides the one in hand.
-  let added = 0;
-  const growTo = async (wanted: number) => {
-    const weapons = (await (
-      await fetch(`${stack.apiUrl}/api/weapons`)
-    ).json()) as { id: string }[];
-    const held = (
-      (await (await fetch(`${stack.apiUrl}/api/attack/form`)).json()) as {
-        form: { weaponId: string };
-      }
-    ).form.weaponId;
-    const spare = weapons.filter((w) => w.id !== held);
-    for (const w of spare.slice(wanted))
-      await fetch(`${stack.apiUrl}/api/items/${w.id}`, { method: "DELETE" });
-    for (let n = spare.length; n < wanted; n++) {
-      added += 1;
-      await api("POST", "/api/items", {
-        name: {
-          en: `Spare ${LONG_WEAPON} number ${added}`,
-          fr: `Arme de rechange ${LONG_WEAPON} numéro ${added}`,
-        },
-        category: "weapon",
-        damageSm: "1d6",
-        damageL: "1d6",
-        damageTypes: ["s"],
-        weaponKind: "melee",
-        behaviour: "stock",
-        count: 1,
-      });
-    }
-    await reloadSettled(page);
-    await openWeapons(page);
-  };
-  for (const wanted of [2, 6]) {
-    await chooseLanguage(page, "en");
-    await growTo(wanted);
-    for (const lang of ["en", "fr"] as const) {
-      await chooseLanguage(page, lang);
-      const label = lang === "en" ? "Other weapons" : "Autres armes";
-      for (const vp of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
-        await page.setViewportSize(vp);
-        const where = `${wanted} others, ${lang}, ${vp.width}x${vp.height}`;
-        const f =
-          lang === "en"
-            ? attackForm(page)
-            : page.getByRole("form", { name: "Attaque" });
-        // No native select in the panel; damage, speed and to-hit are separate labelled chips.
-        await expect(
-          f.locator("select"),
-          `native select, ${where}`,
-        ).toHaveCount(0);
-        const stats = f.getByTestId("weapon-stats").locator("dt");
-        await expect(stats.first()).toBeVisible();
-        expect(await stats.count()).toBeGreaterThanOrEqual(4);
-        const group = f.getByRole("group", { name: label });
-        if (wanted <= 4)
-          await expect(group.getByRole("button")).toHaveCount(wanted);
-        else await expect(group.getByTestId("other-weapon-menu")).toBeVisible();
-        await expectNoClippedText(f, `weapons tab, ${where}`);
-        await snap(
-          page,
-          `weapon-chips-${wanted}-${lang}-${vp.width}x${vp.height}`,
-        );
-      }
-    }
-  }
-  // With more than four the menu holds the rest, reachable by keyboard; choosing one puts it in hand.
-  await chooseLanguage(page, "en");
-  await page.setViewportSize(VIEWPORTS[3]);
-  const menu = attackForm(page).getByTestId("other-weapon-menu");
-  await menu.focus();
-  await page.keyboard.press("Enter");
-  await expect(page.getByRole("menuitem").first()).toBeVisible();
-  await snap(page, "weapon-menu-open-en-1920x1080");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("Enter");
-  await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
-});
+/**
+ * The full-screen pages walk: the pages that are not the dashboard, one size per walk. The roster step
+ * retires every character, so it comes last; the steps that clear the session (login, the version badge's
+ * login card) get it back from `runWalk`.
+ */
+const PAGES_STEPS: [string, Step][] = [
+  ["page header", pageHeaderStep],
+  ["page header themes", pageHeaderThemesStep],
+  ["ruleset, admin", rulesetAdminStep],
+  ["ruleset, player", rulesetPlayerStep],
+  ["admin section", adminStep],
+  ["database banner", dbBannerStep],
+  ["version badge", versionBadgeStep],
+  ["creation route", creationStep],
+  ["creation, multi-class", creationMultiStep],
+  ["creation extras", creationExtrasStep],
+  ["login page", loginStep],
+  ["roster", rosterStep],
+];
 
-// ADR 0022 step 2.4 (amended by ADR 0026 step 5.1 and this change): in the journal an undo group
-// is a left bracket and nothing else, a selected row is a fill and nothing else, the latest row
-// keeps its outline, damage is a drop and healing a heart, every row is a 24 px target with a
-// visible focus ring, and nothing is cut in en and fr at the three large viewports. Only a browser
-// paints these; the ratios of the colours themselves are the theme unit tests' (theme.test).
-test("journal rows: undo group, selected, latest and the damage drop, 24 px, en and fr", async ({
-  page,
-}) => {
-  test.setTimeout(90_000);
-  await openDashboard(page);
-  await recordHp(page, "damage", 7, "Orc axe");
-  await recordHp(page, "heal", 3, "Potion sip");
-  // An attack is the latest result.
-  await openWeapons(page);
-  await chooseWeapon(page, "Long Sword +2");
-  const form = attackForm(page);
-  await form.getByLabel("Target AC").fill("5");
-  await form.getByRole("button", { name: "Attack", exact: true }).click();
-  // Adding a catalogue item and equipping it at once is one transaction: the undo group.
-  await openWorkspace(page, "Inventory");
-  await page.getByRole("button", { name: "Add item" }).click();
-  await page.getByTestId("add-row-long_sword").click();
-  await page.getByTestId("add-submit").click();
-  await expect(page.getByTestId("add-piece")).toHaveCount(0);
-  await openWorkspace(page, "Act");
-  const log = combatLog(page);
-  const group = log.getByTestId("log-transaction").first();
-  await expect(group).toBeVisible();
-
-  const look = (el: Locator) =>
-    el.evaluate((node) => {
-      const s = getComputedStyle(node);
-      const clear = (c: string) =>
-        c === "rgba(0, 0, 0, 0)" || c === "transparent";
-      return {
-        bracket: s.borderLeftWidth,
-        fill: !clear(s.backgroundColor),
-        bar: s.boxShadow !== "none",
-        outline: s.outlineStyle === "none" ? "0px" : s.outlineWidth,
-      };
+test.describe("pages walks", () => {
+  test.use({ character: { alignment: "", sex: "" } });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+    test(`pages walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      // Leaving a filled-in flow asks the browser's beforeunload question: accept it.
+      page.on("dialog", (d) => void d.accept());
+      await runWalk(page, size, PAGES_STEPS, stack);
     });
-  // The undo group: a 2 px bracket, no fill.
-  expect(await look(group)).toMatchObject({ bracket: "2px", fill: false });
-
-  const damage = logEntry(page, "Orc axe");
-  const heal = logEntry(page, "Potion sip");
-  const icon = (row: Locator) => row.locator("svg").first().innerHTML();
-  expect(await icon(damage), "damage and healing icons differ").not.toBe(
-    await icon(heal),
-  );
-
-  // The newest result is the latest: the outline, no fill, no bar.
-  const latestRow = log.locator('[data-latest="true"]');
-  await expect(latestRow).toHaveCount(1);
-  expect(await look(latestRow)).toMatchObject({
-    fill: false,
-    bar: false,
-    outline: "2px",
-  });
-  await snap(page, "journal-rows-latest-en");
-  // A row the player picks: the fill, no bar, no outline; a row of the group does not copy it.
-  await damage.click();
-  await expect(damage).toHaveAttribute("data-selected", "true");
-  expect(await look(damage)).toMatchObject({
-    fill: true,
-    bar: false,
-    outline: "0px",
-  });
-  for (const row of await group.getByRole("listitem").all())
-    expect(await look(row)).toMatchObject({ fill: false });
-  await snap(page, "journal-rows-en");
-
-  // Every row is at least a 24 px target; keyboard focus shows a ring.
-  for (const row of await log.getByRole("listitem").all())
-    expect((await row.boundingBox())!.height).toBeGreaterThanOrEqual(24);
-  await heal.getByTestId("log-select").focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
-  expect(
-    await heal
-      .getByTestId("log-select")
-      .evaluate((el) => getComputedStyle(el).boxShadow),
-    "focus ring",
-  ).not.toBe("none");
-
-  for (const lang of ["en", "fr"] as const) {
-    await chooseLanguage(page, lang);
-    for (const vp of [
-      { width: 1280, height: 800 },
-      { width: 1920, height: 1080 },
-      { width: 2560, height: 1440 },
-    ]) {
-      await page.setViewportSize(vp);
-      const where = `${lang} ${vp.width}x${vp.height}`;
-      await expectNoClippedText(log, `journal rows, ${where}`);
-      await snap(page, `journal-rows-${lang}-${vp.width}x${vp.height}`);
-    }
   }
-  for (const [mode, theme] of [
-    ["Sombre", "Arcane"],
-    ["Clair", "Parchemin"],
-  ] as const) {
-    await chooseSetting(page, mode);
-    await chooseTheme(page, theme);
-    await page.waitForTimeout(150);
-    await expectNoClippedText(log, `journal rows, ${theme}`);
-    await snap(page, `journal-rows-fr-${theme.toLowerCase()}`);
+});
+
+/**
+ * The class screens walk: the level-up prompt and its grants, then the fighter, mage, cleric and thief
+ * screens, each step making its own character through the API, one size per walk.
+ */
+const CLASS_STEPS: [string, Step][] = [
+  ["level-up prompt", levelUpPromptStep],
+  ["level-up grants", levelUpGrantsStep],
+  ["level-up free spell", levelUpFreeSpellStep],
+  ["fighter", fighterStep],
+  ["mage, Learn and Add", mageLearnStep],
+  ["mage, above the Intelligence limit", mageLimitStep],
+  ["cleric", clericStep],
+  ["thief", thiefStep],
+];
+
+for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+  test(`class screens walk at ${size.width}x${size.height}`, async ({
+    page,
+    stack,
+  }) => {
+    test.setTimeout(90_000);
+    await runWalk(page, size, CLASS_STEPS, stack);
+  });
+}
+
+/**
+ * The psionicist walk: the PSP block, the Powers tab, the Maintained card, the contact forms and the known
+ * powers, one size per walk. The long list needs a level 20 character, so it has a walk of its own.
+ */
+// Each step starts with no picks and nothing maintained: an earlier step's would change what the
+// disciplines select and the Powers tab offer.
+const freshPicks =
+  (step: Step): Step =>
+  async (page, size, stack, context) => {
+    const res = await page.request.fetch(`${stack.webUrl}/api/psionics/picks`, {
+      method: "PUT",
+      data: { picks: [] },
+      headers: { Origin: stack.webUrl },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    // The PSP step keeps Intensify up: stopping it (a no-op when it is not kept) leaves nothing maintained.
+    await page.request.fetch(
+      `${stack.webUrl}/api/psionics/powers/intensify/stop`,
+      {
+        method: "POST",
+        data: {},
+        headers: { Origin: stack.webUrl },
+      },
+    );
+    await step(page, size, stack, context);
+  };
+
+const PSIONICIST_STEPS: [string, Step][] = (
+  [
+    ["PSP block and rest popover", pspStep],
+    ["powers tab", powersStep],
+    ["maintained card", maintainedStep],
+    ["contact forms", contactFormsStep],
+    ["known powers", knownPowersStep],
+  ] as [string, Step][]
+).map(([name, step]) => [name, freshPicks(step)]);
+
+test.describe("psionicist walks", () => {
+  test.use({ character: psionicist });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+    test(`psionicist walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, PSIONICIST_STEPS, stack);
+    });
   }
+});
+
+test.describe("psionicist long list walks", () => {
+  test.use({
+    character: { ...psionicist, level: 20, xp_total: 5_000_000, wis: 20 },
+  });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+    test(`powers long list walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, [["long list", longListStep]], stack);
+    });
+  }
+});
+
+/**
+ * The browser behaviours walk: what only a browser proves (drag, focus, persistence in local storage, a
+ * client store, a heartbeat), at 1440x900. The toast and the composer step set their own viewports.
+ */
+const BEHAVIOUR_STEPS: [string, Step][] = [
+  ["journal split", journalSplitStep],
+  ["rail", railStep],
+  ["settings", settingsStep],
+  ["workspaces to the dice composer", composerStep],
+  ["new version toast", newVersionStep],
+];
+
+test.describe("behaviours walk", () => {
+  test.use({ extraSpells: COMPOSER_EXTRA_SPELLS });
+  test("behaviours walk at 1440x900", async ({ page, stack }) => {
+    test.setTimeout(90_000);
+    await runWalk(page, VIEWPORTS[1], BEHAVIOUR_STEPS, stack);
+  });
 });

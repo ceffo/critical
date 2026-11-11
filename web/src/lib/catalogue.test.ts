@@ -190,6 +190,7 @@ describe("pickBody", () => {
       code: "chain_mail",
       name: catalogue.armour[0].name,
       cells: [],
+      group: { key: "metal", label: "Metal (bard)" },
     };
     expect(
       pickBody(mail, "armour", copy({ name: "Chain mail", magic: 3 }), "en"),

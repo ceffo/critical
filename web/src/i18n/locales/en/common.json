@@ -2002,10 +2002,7 @@
     "row": "Range {{n}}",
     "remove": "Remove range {{n}}",
     "add": "Add range",
-    "addShort": "Add",
-    "save": "Save table",
-    "saveShort": "Save",
-    "saved": "Saved. The next crit uses it."
+    "addShort": "Add"
   },
   "ruleset": {
     "open": "Ruleset",
@@ -2013,6 +2010,13 @@
     "title": "Ruleset",
     "back": "Back",
     "backHint": "Back to the character sheet",
+    "save": "Save",
+    "saveHint": "Save every change on this page",
+    "discard": "Discard",
+    "discardHint": "Discard the changes not saved yet",
+    "saved": "Saved. The next crit and the next success use it.",
+    "unsaved": "Not saved",
+    "unsavedChanges": "Changes not saved yet",
     "loadFailed": "The ruleset could not be loaded: {{message}}",
     "houseRules": {
       "title": "House rules",
@@ -2021,7 +2025,6 @@
       "dualclassAnyRace": "Dual-class: any race",
       "weaponHelp": "Let a character with several classes use any weapon its other classes allow, even if one of them is limited to blunt weapons (the cleric). Off by default. Weapon specialization is not changed.",
       "multiclassAnyWeapon": "Multi-class: any weapon",
-      "saved": "Saved.",
       "levelLimits": "Level limits",
       "levelLimitsMode": {
         "warn": "Warn: a level past the race's limit is shown as a warning, never refused."
@@ -2033,10 +2036,7 @@
       "none": "No success effect.",
       "proficiency": "Proficiency",
       "ac": "AC",
-      "rounds": "Rounds",
-      "save": "Save",
-      "saveHint": "Save the success effects",
-      "saved": "Saved. The next success uses them."
+      "rounds": "Rounds"
     }
   },
   "weapons": {

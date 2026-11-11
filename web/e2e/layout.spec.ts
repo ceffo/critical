@@ -2417,15 +2417,23 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       .getByLabel(lang === "fr" ? "À" : "To")
       .first()
       .fill("40");
-    await crit
+    // A house-rule tick is a second unsaved edit, so two cards carry the "not saved" tag.
+    await rules.getByRole("checkbox").first().click();
+    await expect(page.getByTestId("unsaved-mark")).toHaveCount(2);
+    await page
       .getByRole("button", {
-        name: lang === "fr" ? "Enregistrer la table" : "Save table",
+        name: lang === "fr" ? /^Enregistrer tous/ : /^Save every change/,
       })
       .click();
     await expect(crit.getByRole("alert")).toBeVisible();
-    await rules.getByRole("checkbox").first().click();
-    await expect(rules.getByRole("status")).toBeVisible();
-    await rules.getByRole("checkbox").first().click();
+    // The refused table keeps its edit and its tag; the accepted house rule is saved and untagged.
+    await expect(page.getByTestId("unsaved-mark")).toHaveCount(1);
+    // A two-digit number's field is sized to it (about 4 rem), not stretched to its column.
+    const toBox = await crit
+      .getByLabel(lang === "fr" ? "À" : "To")
+      .first()
+      .boundingBox();
+    expect(toBox!.width, "crit field width").toBeLessThan(80);
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
@@ -2436,6 +2444,10 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
       await expectNoClippedText(rules, `ruleset house rules, ${where}`);
       await expectNoClippedText(effects, `ruleset success effects, ${where}`);
+      await expectNoClippedText(
+        page.getByTestId("ruleset-save-bar"),
+        `ruleset save bar, ${where}`,
+      );
       expect(await escapedAbsolutes(page), `ruleset, ${where}`).toEqual([]);
       await snap(page, `ruleset-${lang}-${vp.width}x${vp.height}`);
     }

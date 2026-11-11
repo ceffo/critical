@@ -73,8 +73,8 @@ test("the table saved in the editor is used by the next crit", async ({
   await editor.getByRole("button", { name: "Add range" }).click();
   await range(editor, 3).to.fill("100");
   await range(editor, 3).mult.fill("4");
-  await editor.getByRole("button", { name: "Save table" }).click();
-  await expect(editor).toContainText("Saved");
+  await page.getByRole("button", { name: /^Save every change/ }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
   await expect(editor).not.toContainText("Placeholder");
   await snap(page, "table-saved");
 
@@ -127,17 +127,17 @@ test("a decimal multiplier typed with a comma is saved and the crit shows the fl
 
   // 1-100 at x1.5, typed the French way; below 1 and text are refused with the row named.
   await range(editor, 1).mult.fill("0,99");
-  await editor.getByRole("button", { name: "Save table" }).click();
+  await page.getByRole("button", { name: /^Save every change/ }).click();
   await expect(editor.getByRole("alert")).toContainText(
     "row 1 (1-100) has multiplier 0.99",
   );
   await range(editor, 1).mult.fill("abc");
-  await editor.getByRole("button", { name: "Save table" }).click();
+  await page.getByRole("button", { name: /^Save every change/ }).click();
   await expect(editor.getByRole("alert")).toContainText("row 1 (1-100)");
 
   await range(editor, 1).mult.fill("1,5");
-  await editor.getByRole("button", { name: "Save table" }).click();
-  await expect(editor).toContainText("Saved");
+  await page.getByRole("button", { name: /^Save every change/ }).click();
+  await expect(page.getByRole("status")).toContainText("Saved");
   await expect(range(editor, 1).mult).toHaveValue("1.5");
 
   await page.reload();

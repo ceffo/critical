@@ -54,8 +54,10 @@ endpoint (CRI-128) and the panel (CRI-129) follow it.
    2. A build lists the versions up to its own, never newer ones.
    3. The server reads the baked file and does no git work at run time.
 7. **The panel (CRI-129) follows these rules.**
-   1. It opens from the version badge, covers about two thirds of the canvas and lists the newest version
-      first.
+   1. It opens from the version badge and lists the newest version first. It is sized to its content, at
+      most 40 rem wide and two thirds of the viewport high, and scrolls inside past that height.
+      Amended 2026-11-11 (was: covers about two thirds of the canvas): the panel was 1280x720 for one
+      line in a dev build; the user accepted the item's default on 2026-11-10.
    2. It loads by infinite scroll: the endpoint is paginated by version; the page size is the implementing
       item's choice.
    3. Layout details (the rows, the headings) follow [ADR 0022](0022-activity-focus-layout.md) and

@@ -4,10 +4,27 @@ import { chooseLanguage, openDashboard } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 // The changelog panel (ADR 0039 step 7), opened from the version badge. Only a browser proves the
-// overlay geometry (two thirds of the viewport, no screen height change), the keyboard and
+// overlay geometry (sized to its content, at most 40 rem wide and two thirds of the viewport high, scrolling inside; no screen height change), the keyboard and
 // click-outside closing, and the scroll that loads the next page; the pagination rules are unit tests
 // (src/lib/changelogPages.test.ts). The API is mocked: 25 versions, 10 per page.
 const TOTAL = 25;
+
+// ADR 0039 step 7.1 (amended): the panel is as wide as its content needs up to 40 rem, and as high
+// up to two thirds of the viewport. Ten versions are taller than that, so the height is the cap
+// and the list scrolls inside.
+function panelFit(
+  b: { width: number; height: number },
+  vp: { width: number; height: number },
+) {
+  const maxW = Math.min(640, vp.width - 32);
+  return [
+    b.width <= maxW + 1 ? "ok" : `width ${b.width}`,
+    b.width >= 320 ? "ok" : `too narrow ${b.width}`,
+    Math.abs(b.height - vp.height * (2 / 3)) < 1.5
+      ? "ok"
+      : `height ${b.height}`,
+  ];
+}
 const versionName = (i: number) => `1.${TOTAL - i}.0`;
 
 async function mockChangelog(page: Page, opts: { failOnce?: boolean } = {}) {
@@ -72,11 +89,9 @@ test("badge opens the panel, infinite scroll loads each page once, retry, Esc / 
   await expect
     .poll(async () => {
       const b = (await panel.boundingBox())!;
-      return [b.width / vp.width, b.height / vp.height].map((r) =>
-        Math.abs(r - 2 / 3) < 0.01 ? "ok" : String(r),
-      );
+      return panelFit(b, vp);
     })
-    .toEqual(["ok", "ok"]);
+    .toEqual(["ok", "ok", "ok"]);
   expect(
     (await footer.boundingBox())!.height,
     "the overlay changes no screen height",
@@ -139,11 +154,9 @@ test("the panel on every screen at 1920x1080 and 2560x1440; the login badge is n
       await expect
         .poll(async () => {
           const b = (await panel.boundingBox())!;
-          return [b.width / vp.width, b.height / vp.height].map((r) =>
-            Math.abs(r - 2 / 3) < 0.01 ? "ok" : String(r),
-          );
+          return panelFit(b, vp);
         })
-        .toEqual(["ok", "ok"]);
+        .toEqual(["ok", "ok", "ok"]);
       await expectNoClippedText(panel, `${name} ${vp.width}`);
       await snap(page, `${name}-${vp.width}x${vp.height}`);
       await page.keyboard.press("Escape");

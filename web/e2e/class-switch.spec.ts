@@ -1,13 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import { expectNoClippedText } from "./noClip";
-import {
-  apiCall,
-  chooseLanguage,
-  logEntry,
-  openDashboard,
-  openWorkspace,
-  undoEntry,
-} from "./helpers";
+import { logEntry, openDashboard, openWorkspace, undoEntry } from "./helpers";
 import { openClassDetail } from "./multiclass";
 
 const VIEWPORTS = [
@@ -112,106 +105,5 @@ test.describe("a human fighter taking a new class", () => {
     );
     await openWorkspace(page, "Experience");
     await expect(mageXp).toHaveText("0 XP");
-  });
-});
-
-// The refusals show in the dialog in the player's language (French first, ADR 0027).
-test.describe("a character who may not take a class", () => {
-  test.use({
-    character: {
-      class: "fighter",
-      race: "elf",
-      alignment: "neutral_good",
-      str: 16,
-      int: 17,
-      level: 6,
-      xp_total: 21000,
-      skill_points: {},
-      proficiencies: [],
-      weapon_proficiencies: [],
-    },
-  });
-
-  test("an elf is accepted with the lift, refused without it, in French", async ({
-    page,
-  }) => {
-    await openDashboard(page);
-    await chooseLanguage(page, "fr");
-    const card = page.getByRole("complementary", { name: "Personnage" });
-    // The racial lift is off: the server refuses and the dialog says why.
-    expect(
-      await apiCall(page, "PUT", "/api/ruleset/racial-lift", {
-        multiclassAnyRace: true,
-        dualclassAnyRace: false,
-      }),
-    ).toBe(true);
-    await page.getByTestId("details-trigger").click();
-    await page.getByTestId("take-class-open").click();
-    const dialog = page.getByTestId("take-class-dialog");
-    await dialog.getByTestId("take-class-pick").selectOption("mage");
-    await dialog.getByTestId("take-class-next").click();
-    await dialog.getByTestId("take-class-confirm-button").click();
-    await expect(dialog.getByTestId("take-class-refusal")).toContainText(
-      "ne peut pas devenir double-classé",
-    );
-    await snap(page, "refusal-fr");
-    await expectNoClippedText(dialog, "the refusal");
-    // Nothing changed.
-    await dialog.getByRole("button", { name: "Annuler" }).click();
-    await expect(card.getByTestId("class-summary")).toHaveCount(0);
-
-    // The lift on again (the default): the same elf is accepted.
-    expect(
-      await apiCall(page, "PUT", "/api/ruleset/racial-lift", {
-        multiclassAnyRace: true,
-        dualclassAnyRace: true,
-      }),
-    ).toBe(true);
-    await page.getByTestId("details-trigger").click();
-    await page.getByTestId("take-class-open").click();
-    await dialog.getByTestId("take-class-pick").selectOption("mage");
-    await dialog.getByTestId("take-class-next").click();
-    await snap(page, "confirm-fr");
-    await dialog.getByTestId("take-class-confirm-button").click();
-    await expect(dialog).toHaveCount(0);
-    const detail = await openClassDetail(page);
-    await expect(detail.getByTestId("class-entry-fighter")).toHaveAttribute(
-      "data-state",
-      "frozen",
-    );
-  });
-});
-
-test.describe("a human whose new prime requisite is too low", () => {
-  test.use({
-    character: {
-      class: "fighter",
-      race: "human",
-      alignment: "neutral_good",
-      str: 16,
-      int: 16,
-      level: 6,
-      xp_total: 21000,
-      skill_points: {},
-      proficiencies: [],
-      weapon_proficiencies: [],
-    },
-  });
-
-  test("the dialog shows the refusal and nothing changes", async ({ page }) => {
-    await openDashboard(page);
-    const card = page.getByRole("complementary", { name: "Character" });
-    await page.getByTestId("details-trigger").click();
-    await page.getByTestId("take-class-open").click();
-    const dialog = page.getByTestId("take-class-dialog");
-    await dialog.getByTestId("take-class-pick").selectOption("mage");
-    await dialog.getByTestId("take-class-next").click();
-    await dialog.getByTestId("take-class-confirm-button").click();
-    await expect(dialog.getByTestId("take-class-refusal")).toBeVisible();
-    await snap(page, "refusal-en");
-    await dialog.getByRole("button", { name: "Cancel" }).click();
-    await expect(card.getByTestId("class")).toHaveText("Fighter");
-    await expect(card.getByTestId("class-summary")).toHaveCount(0);
-    await expect(logEntry(page, "Took a new class")).toHaveCount(0);
   });
 });

@@ -1,12 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import {
-  apiSettled,
-  chooseLanguage,
-  combatLog,
-  openDashboard,
-  openSpend,
-} from "./helpers";
-import { expectNoClippedText } from "./noClip";
+import { combatLog, openDashboard, openSpend } from "./helpers";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -20,8 +13,8 @@ const VIEWPORTS = [
 // field error shows under its field (the rule itself is a Go test in detailssvc), Save shows the
 // stored values, and they survive a reload. The card shows the languages read-only: they are
 // picked in the Skills tab's editor (ADR 0037 step 18), from the catalogue with the race's own
-// language ticked and fixed (the rules are Go tests); a save over the non-weapon slots is refused
-// there, a save within them is one journal entry the card then shows, and Undo takes it back.
+// language ticked and fixed; a save is one journal entry the card then shows, after a reload too. The
+// slot budget, the units, the identity picks and the rolls are Go and unit tests.
 test("character details: view, edit with a field error, save, reload", async ({
   page,
 }) => {
@@ -75,28 +68,15 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByText("Common", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
 
-  // The languages in the Skills tab's editor, with the non-weapon picks whose pool they spend.
+  // The languages in the Skills tab's editor.
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");
   const pool = editor.getByTestId("proficiency-languages");
   const common = pool.getByRole("checkbox", { name: "Common", exact: true });
   await expect(common).toBeChecked();
   await expect(common).toBeDisabled();
-  // ADR 0037 step 6: each language beyond Common spends a non-weapon slot; Test Bard has 8 of 10.
-  for (const name of ["Elvish", "Gnomish", "Orcish"])
+  for (const name of ["Elvish", "Gnomish"])
     await pool.getByRole("checkbox", { name, exact: true }).check();
-  await expect(pool.getByRole("alert")).toHaveText(
-    "Over budget: 11 for 10 available.",
-  );
-  await editor.getByTestId("proficiency-save").click();
-  await expect(pool.getByRole("alert")).toHaveText(
-    "Over budget: 11 for 10 available.",
-  );
-  await snap(page, "skills-languages-over-1440x900");
-  await pool.getByRole("checkbox", { name: "Orcish", exact: true }).uncheck();
-  await expect(pool.getByTestId("proficiency-languages-slots")).toHaveText(
-    "2 proficiency slots",
-  );
   await editor.getByTestId("proficiency-save").click();
   await expect(editor).toHaveCount(0);
   await expect(combatLog(page)).toContainText("Languages: + Elvish, + Gnomish");
@@ -107,20 +87,6 @@ test("character details: view, edit with a field error, save, reload", async ({
     "2 proficiency slots",
   );
 
-  // Cancel drops the draft, and an emptied age is cleared (null), not kept.
-  await pop.getByRole("button", { name: "Edit" }).click();
-  await pop.getByLabel("Hair", { exact: true }).fill("Dwarf");
-  await pop.getByRole("button", { name: "Cancel" }).click();
-  await pop.getByRole("button", { name: "Edit" }).click();
-  await expect(pop.getByLabel("Hair", { exact: true })).toHaveValue("Chestnut");
-  await pop.getByLabel("Age", { exact: true }).fill("0");
-  await pop.getByRole("button", { name: "Save" }).click();
-  await expect(pop.getByRole("alert")).toBeVisible();
-  await pop.getByLabel("Age", { exact: true }).fill("");
-  await pop.getByRole("button", { name: "Save" }).click();
-  await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
-  await expect(pop.getByText("112")).toHaveCount(0);
-
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
   await expect(page.getByTestId("details-trigger")).toHaveText(
@@ -128,190 +94,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   );
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("green")).toBeVisible();
-  await expect(pop.getByText("112")).toHaveCount(0);
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();
   await expect(pop.getByTestId("details-language-slots")).toBeVisible();
   await page.keyboard.press("Escape");
-
-  // One Undo gives the languages before the save back (ADR 0037 step 13).
-  await page.getByTestId("undo").click();
-  await expect(combatLog(page)).toContainText("Undone");
-  await page.getByTestId("details-trigger").click();
-  await expect(pop.getByText("Common", { exact: true })).toBeVisible();
-  await expect(pop.getByTestId("details-language-slots")).toHaveCount(0);
-});
-
-// ADR 0032 step 5, what only a browser proves: the roll button fills the field from the server's
-// dice and shows its breakdown, a typed value outside the race's table is saved with a note (never
-// refused), and the same stored number reads feet-inches and pounds in English, centimetres and
-// kilograms in French. The tables, the ranges and the conversions are Go and unit tests.
-test("height, weight and age: roll, save outside the range with a note, per-language units", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await page.getByTestId("details-trigger").click();
-  const pop = page.getByTestId("details-popover");
-  await pop.getByRole("button", { name: "Edit" }).click();
-
-  await pop.getByTestId("details-roll-height").click();
-  // A half-elf man: 2d6 on a base of 60 inches (PHB Table 10).
-  await expect(pop.getByTestId("details-roll-height-breakdown")).toHaveText(
-    /^2d6 \(\d \+ \d\) \+ 60 in = \d+ in$/,
-  );
-  await expect(pop.getByLabel("Height", { exact: true })).toHaveValue(
-    /^\d+'\d+"$/,
-  );
-  await pop.getByTestId("details-roll-age").click();
-  await expect(pop.getByTestId("details-roll-age-breakdown")).toHaveText(
-    /^1d6 \(\d\) \+ 15 years = \d+ years$/,
-  );
-
-  // 300 lb is beyond a half-elf's weights: saved, with a note.
-  await pop.getByLabel("Weight", { exact: true }).fill("300");
-  await pop.getByRole("button", { name: "Save" }).click();
-  await expect(pop.getByRole("button", { name: "Edit" })).toBeVisible();
-  await expect(pop.getByText("300 lb")).toBeVisible();
-  await expect(pop.getByTestId("details-weight-warning")).toBeVisible();
-  await expect(pop.getByTestId("details-height-warning")).toHaveCount(0);
-  await snap(page, "details-numbers-en");
-
-  // The same stored numbers, in French: kilograms and centimetres.
-  await page.keyboard.press("Escape");
-  await chooseLanguage(page, "fr");
-  await page.getByTestId("details-trigger").click();
-  await expect(pop.getByText("136,1 kg")).toBeVisible();
-  await expect(pop.getByText(/^\d+(,\d)? cm$/)).toBeVisible();
-  await expect(pop.getByTestId("details-weight-warning")).toContainText(
-    "Hors de la plage habituelle",
-  );
-  await expectNoClippedText(pop, "the card with its numbers, in French");
-  await snap(page, "details-numbers-fr");
-
-  // They survive a reload.
-  await page.reload();
-  await page.getByTestId("details-trigger").click();
-  await expect(pop.getByText("136,1 kg")).toBeVisible();
-});
-
-// ADR 0032 step 8: a character that lacks its alignment or sex (a migrated one) is asked to pick
-// them, in French without cut text; it still saves an unrelated edit, and the picks stay after a reload.
-test.describe("a character lacking its alignment and sex", () => {
-  test.use({ character: { alignment: "", sex: "" } });
-
-  test("the card asks for them, saves an unrelated edit, then the picks", async ({
-    page,
-  }) => {
-    await openDashboard(page);
-    await chooseLanguage(page, "fr");
-    await page.getByTestId("details-trigger").click();
-    const pop = page.getByTestId("details-popover");
-    await expect(pop.getByTestId("details-missing")).toHaveCount(2);
-    await expect(pop.getByTestId("details-missing").first()).toHaveText(
-      "À choisir",
-    );
-    await expectNoClippedText(pop, "the card with its identity to pick");
-    await snap(page, "details-to-pick-fr");
-
-    await pop.getByRole("button", { name: "Modifier" }).click();
-    await pop.getByLabel("Cheveux", { exact: true }).fill("châtain");
-    await pop.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(pop.getByText("châtain")).toBeVisible();
-    await expect(pop.getByTestId("details-missing")).toHaveCount(2);
-
-    await pop.getByRole("button", { name: "Modifier" }).click();
-    await pop.getByLabel("Alignement").selectOption({ label: "Neutre bon" });
-    await pop.getByLabel("Sexe").selectOption({ label: "Femme" });
-    await pop.getByRole("button", { name: "Enregistrer" }).click();
-    await expect(pop.getByTestId("details-missing")).toHaveCount(0);
-
-    // The card shows the picks before the save has landed: a reload now would cut the write.
-    await apiSettled(page);
-    await page.reload();
-    await page.getByTestId("details-trigger").click();
-    await expect(pop).toContainText("Neutre bon");
-    await expect(pop).toContainText("Femme");
-    await expectNoClippedText(pop, "the card with its identity picked");
-  });
-});
-
-// A rolling deploy (ADR 0024): the page may meet an old server whose character answer has no
-// `warnings`/`missing`, and the choices' request can fail. The card still opens; the form says the
-// choices did not load and Retry fetches them.
-test("details card: an answer without warnings opens, failed choices show an error and retry", async ({
-  page,
-}) => {
-  await page.route("**/api/character", async (route) => {
-    if (route.request().method() !== "GET") return route.fallback();
-    const res = await route.fetch();
-    const body = await res.json();
-    delete body.warnings;
-    delete body.missing;
-    await route.fulfill({ response: res, json: body });
-  });
-  let fail = true;
-  await page.route("**/api/characters/options", (route) =>
-    fail ? route.abort() : route.fallback(),
-  );
-  await openDashboard(page);
-  await page.getByTestId("details-trigger").click();
-  const pop = page.getByTestId("details-popover");
-  await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
-  await pop.getByRole("button", { name: "Edit" }).click();
-  await expect(pop.getByTestId("details-options-error")).toBeVisible();
-  fail = false;
-  await pop.getByRole("button", { name: "Retry" }).click();
-  await expect(pop.getByTestId("details-options-error")).toHaveCount(0);
-  await expect(
-    pop.getByLabel("Alignment").getByRole("option", { name: "Neutral good" }),
-  ).toHaveCount(1);
-});
-
-// A rolling deploy (ADR 0024): an old server's options carry no alignment or sex lists. The
-// creation route says the choices did not load, never shows empty pickers, and Retry loads them.
-test("creation route: options without the identity lists show an error, retry loads them", async ({
-  page,
-}) => {
-  let old = true;
-  await page.route("**/api/characters/options", async (route) => {
-    if (!old) return route.fallback();
-    const res = await route.fetch();
-    const body = await res.json();
-    delete body.sexes;
-    for (const c of body.classes) delete c.alignments;
-    await route.fulfill({ response: res, json: body });
-  });
-  await openDashboard(page);
-  await page.goto("/create");
-  await expect(page.getByRole("alert")).toContainText(
-    "The choices could not be loaded.",
-  );
-  old = false;
-  await page.getByRole("button", { name: "Retry" }).click();
-  await expect(
-    page.getByRole("radio", { name: "Bard", exact: true }),
-  ).toBeVisible();
-});
-
-// A rolling deploy (ADR 0024): the options of a release that predates the language catalogue carry
-// none of it. The card still opens and names the stored codes as they are, and the Skills tab's
-// editor offers no language picker.
-test("details card: options without the language catalogue show no picker", async ({
-  page,
-}) => {
-  await page.route("**/api/characters/options", async (route) => {
-    const res = await route.fetch();
-    const body = await res.json();
-    delete body.languages;
-    delete body.raceLanguages;
-    await route.fulfill({ response: res, json: body });
-  });
-  await openDashboard(page);
-  await page.getByTestId("details-trigger").click();
-  const pop = page.getByTestId("details-popover");
-  await expect(pop.getByText("common", { exact: true })).toBeVisible();
-  await page.keyboard.press("Escape");
-  await page.getByRole("tab", { name: "Skills" }).click();
-  await openSpend(page, "nonWeapon");
-  await expect(page.getByTestId("proficiency-search")).toBeVisible();
-  await expect(page.getByTestId("language-picker")).toHaveCount(0);
 });

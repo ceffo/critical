@@ -1357,6 +1357,8 @@
     "immunity": "Sagesse {{score}} : immunité contre {{spell}}, aucun jet",
     "hit": "Touché",
     "miss": "Raté",
+    "natural20": "20 naturel",
+    "natural1": "1 naturel",
     "crit": "Jet critique {{check}} · multiplicateur {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
     "passed": "Réussie",
     "failed": "Échouée",

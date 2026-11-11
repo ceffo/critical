@@ -3,13 +3,23 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
 
+/**
+ * Button looks (ADR 0027 step 3.4, amended 2026-11-11).
+ *
+ * - One filled (`main`) button per panel or zone: its every-turn commit action (Attack, Next turn).
+ *   Everything else is `quiet` (the default), including a row action repeated down a list (Cast in
+ *   the Spells tab) and the Add / Save buttons; a panel never shows a column of filled buttons.
+ * - Disabled looks disabled in every variant without a dashed edge: no edge, the raised tone as a
+ *   flat fill (ΔL >= .07 off the card, ADR 0026 step 2.1) and muted ink (AA, ADR 0026 step 2.3),
+ *   no hover. An enabled quiet button has the 3:1 field edge and full ink, a main one the tint, so
+ *   the three never read alike. A disabled `ghost` has no fill (it stays transparent).
+ * - The dashed frame belongs to the roster's Create card alone.
+ */
 const buttonVariants = cva(
-  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-body font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:border-dashed disabled:border-input disabled:bg-transparent disabled:text-ink-muted disabled:shadow-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-body font-medium whitespace-nowrap transition-all outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:border-transparent disabled:bg-raised disabled:text-ink-muted disabled:shadow-none aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        // A button with nothing to submit is disabled and looks it, the same in every variant: no
-        // fill, muted text, a dashed edge; never a faded main button.
         // The zone's one every-turn action (ADR 0027 step 3.4): filled with the tint.
         main: "bg-primary text-primary-foreground hover:bg-primary/85",
         // Every other button: no fill, the field edge (3:1 on the card, so it reads on the card, the
@@ -19,7 +29,7 @@ const buttonVariants = cva(
           "border-input text-foreground hover:bg-raised-hover aria-expanded:bg-raised-hover aria-pressed:border-transparent aria-pressed:bg-selected aria-pressed:shadow-[inset_0_0_0_1.5px_var(--tint)]",
         // Icon-only buttons in a toolbar or a row: no fill until hovered (disabled: muted, no edge).
         ghost:
-          "hover:bg-raised-hover hover:text-foreground aria-expanded:bg-raised-hover aria-expanded:text-foreground disabled:border-transparent",
+          "hover:bg-raised-hover hover:text-foreground aria-expanded:bg-raised-hover aria-expanded:text-foreground disabled:border-transparent disabled:bg-transparent",
         // A quiet button whose action removes something.
         destructive:
           "border-input text-danger hover:bg-raised-hover focus-visible:border-danger/40 focus-visible:ring-danger/30",

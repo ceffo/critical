@@ -5,12 +5,11 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * A row's edit / delete buttons (ADR 0027 step 14.1): shown on the row's hover and keyboard focus
- * (step 1.4), always on a device without hover. `opacity`, not `visibility`, so Tab still reaches
- * them and the focus shows them.
+ * A row's edit / delete buttons (ADR 0027 step 14.1): always visible, low-emphasis icon buttons
+ * (ghost, muted), never hidden behind the row's hover, so a pointer, a touch and the keyboard all
+ * find them. The buttons are 28 px (`icon-sm`), above the 24 px minimum target.
  */
-export const ROW_ACTIONS =
-  "flex justify-end opacity-0 transition-opacity group-hover/row:opacity-100 group-focus-within/row:opacity-100 [@media(hover:none)]:opacity-100";
+export const ROW_ACTIONS = "flex justify-end";
 
 /**
  * A card of the Inventaire stage: its section-label title, the quiet one-word Add (ADR 0027 steps

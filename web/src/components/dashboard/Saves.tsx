@@ -9,15 +9,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useLogStore } from "@/stores/log";
 import { useRollStore } from "@/stores/roll";
 import { SAVE_CATEGORIES, type SaveCategory } from "@/types/combat";
-import type { SaveNumbers } from "@/types/character";
-
-const TARGET_FIELD: Record<SaveCategory, keyof SaveNumbers> = {
-  para_poison: "paraPoison",
-  rod_staff_wand: "rodStaffWand",
-  petri_poly: "petriPoly",
-  breath: "breath",
-  spell: "spell",
-};
+import { SAVE_FIELD as TARGET_FIELD } from "@/lib/saveFields";
 
 /**
  * The five saving throws under their section label (ADR 0022 steps 2.3 and 4.2, ADR 0027 step 5.2:

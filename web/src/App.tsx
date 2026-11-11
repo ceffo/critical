@@ -11,6 +11,7 @@ import { Saves } from "@/components/dashboard/Saves";
 import { AcShield } from "@/components/ac/AcShield";
 import { HpBar } from "@/components/dashboard/HpBar";
 import { PspPanel } from "@/components/dashboard/PspPanel";
+import { CardDetails } from "@/components/dashboard/CardDetails";
 import { Identity } from "@/components/dashboard/Identity";
 import { Notices } from "@/components/dashboard/Notices";
 import { DiceComposer } from "@/components/dashboard/DiceComposer";
@@ -154,6 +155,7 @@ function App() {
             <ChargeCards />
           </div>
           <Saves />
+          <CardDetails />
         </aside>
 
         <Rail active={activity} onSelect={focus} />

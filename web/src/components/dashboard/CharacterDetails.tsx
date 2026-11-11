@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,26 +9,15 @@ import {
 } from "@/components/ui/popover";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import {
-  TEXT_FIELDS,
-  ALIGNMENT_CODES,
-  SEX_CODES,
-  codeOrEmpty,
-  hasAlignmentWarning,
-  rangeWarnings,
   toDraft,
+  unsetDetails,
   toPatch,
   type Draft,
 } from "@/lib/characterDetails";
 import { useCreationOptions } from "@/lib/useCreationOptions";
 import { IdentityRoll } from "@/components/dashboard/IdentityRoll";
-import { useLanguageNames } from "@/lib/useLanguageNames";
-import {
-  formatHeight,
-  formatWeight,
-  heightField,
-  unitsFor,
-  weightField,
-} from "@/lib/measures";
+import { heightField, unitsFor, weightField } from "@/lib/measures";
+import { DetailRows } from "@/components/dashboard/DetailRows";
 import { useCharacterStore } from "@/stores/character";
 import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
@@ -109,15 +98,6 @@ export function CharacterDetails({
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-2 text-body">
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words tabular-nums">{children}</dd>
-    </div>
-  );
-}
-
 function DetailsView({
   character: c,
   onEdit,
@@ -127,124 +107,12 @@ function DetailsView({
   onEdit: () => void;
   onTakeClass: () => void;
 }) {
-  const { t, i18n } = useTranslation();
-  // The language catalogue, for the names (ADR 0032 step 4): tolerant of a release that predates
-  // it (its codes then show as they are).
-  const catalogue = useCreationOptions();
-  const languageName = useLanguageNames(catalogue.options);
-  // ADR 0037 step 6: the slots the languages beyond the native one and Common spend (the server's).
-  const languageSlots = c.derived.proficiencySlots?.nonWeapon.languages ?? 0;
-  const none = (
-    <span className="text-muted-foreground">{t("details.none")}</span>
-  );
-  const primary = primaryEntry(c.classes)?.class ?? "";
-  const classKey = `details.classes.${primary}`;
-  const text = (v: string) => (v === "" ? none : v);
-  // ADR 0032 step 8.2: a required value the character lacks is asked for, not shown as "not set".
-  const toPick = (
-    <span className="text-danger" data-testid="details-missing">
-      {t("details.missing")}
-    </span>
-  );
-  // A value that is not a code (an old release's free text) reads as missing, never as a raw key.
-  const alignment = codeOrEmpty(c.alignment, ALIGNMENT_CODES);
-  const sex = codeOrEmpty(c.sex, SEX_CODES);
-  const alignmentWarning = hasAlignmentWarning(c);
-  const units = unitsFor(i18n.language);
-  const outside = rangeWarnings(c);
-  // ADR 0032 step 5.2: a number outside the race's table range is noted, never refused; the
-  // range is the server's, converted for display here.
-  const rangeNote = (field: "height" | "weight" | "age") => {
-    const w = outside[field];
-    if (!w) return null;
-    const show = (v: number) =>
-      field === "height"
-        ? formatHeight(v, units, i18n.language)
-        : field === "weight"
-          ? formatWeight(v, units, i18n.language)
-          : String(v);
-    return (
-      <span
-        className="block text-label text-muted-foreground"
-        data-testid={`details-${field}-warning`}
-      >
-        {t(`details.warnings.${field}_outside_range`, {
-          min: show(w.min),
-          max: show(w.max),
-        })}
-      </span>
-    );
-  };
+  const { t } = useTranslation();
+  // Only what is set shows; one link to the form stands for every field left out.
+  const hasUnset = unsetDetails(c).length > 0;
   return (
     <>
-      <dl className="flex flex-col gap-2">
-        <Row label={t("characters.name")}>{c.name}</Row>
-        <Row label={t("details.class")}>
-          {i18n.exists(classKey) ? t(classKey) : primary}
-        </Row>
-        <Row label={t("details.level")}>{c.derived.realizedLevel}</Row>
-        <Row label={t("details.raceCode")}>
-          {c.raceCode === "" ? none : t(`details.races.${c.raceCode}`)}
-        </Row>
-        <Row label={t("details.fields.alignment")}>
-          {alignment === "" ? (
-            toPick
-          ) : (
-            <>
-              {t(`details.alignments.${alignment}`)}
-              {alignmentWarning && (
-                <span
-                  className="block text-label text-muted-foreground"
-                  data-testid="details-alignment-warning"
-                >
-                  {t("details.warnings.alignment_not_allowed", {
-                    className: i18n.exists(classKey) ? t(classKey) : primary,
-                  })}
-                </span>
-              )}
-            </>
-          )}
-        </Row>
-        <Row label={t("details.fields.age")}>
-          {c.age === null ? none : c.age}
-          {rangeNote("age")}
-        </Row>
-        <Row label={t("details.fields.sex")}>
-          {sex === "" ? toPick : t(`details.sexes.${sex}`)}
-        </Row>
-        <Row label={t("details.fields.height")}>
-          {c.height_cm === null
-            ? none
-            : formatHeight(c.height_cm, units, i18n.language)}
-          {rangeNote("height")}
-        </Row>
-        <Row label={t("details.fields.weight")}>
-          {c.weight_kg === null
-            ? none
-            : formatWeight(c.weight_kg, units, i18n.language)}
-          {rangeNote("weight")}
-        </Row>
-        {TEXT_FIELDS.map((f) => (
-          <Row key={f} label={t(`details.fields.${f}`)}>
-            {text(c[f])}
-          </Row>
-        ))}
-        <Row label={t("details.fields.languages")}>
-          {c.languages.length === 0
-            ? none
-            : !catalogue.options && !catalogue.failed
-              ? "…"
-              : c.languages.map(languageName).join(", ")}
-          {languageSlots > 0 && (
-            <span
-              className="block text-label text-muted-foreground"
-              data-testid="details-language-slots"
-            >
-              {t("details.languageSlots", { count: languageSlots })}
-            </span>
-          )}
-        </Row>
-      </dl>
+      <DetailRows character={c} withIdentity />
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
@@ -254,6 +122,16 @@ function DetailsView({
         >
           {t("takeClass.open")}
         </Button>
+        {hasUnset && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onEdit}
+            data-testid="details-set"
+          >
+            {t("details.set")}
+          </Button>
+        )}
         <Button type="button" onClick={onEdit}>
           {t("details.edit")}
         </Button>

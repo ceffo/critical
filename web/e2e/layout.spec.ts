@@ -236,8 +236,17 @@ async function shellStep(page: Page, size: Viewport) {
     );
     if (vp.width === 1440) {
       // ADR 0022 step 2.8: the character card shows everything from the name to the fifth saving
-      // throw without scrolling, and the weapon in hand is fully inside the act panel.
-      await expectNoScroll(character, "character card");
+      // throw without scrolling, and the weapon in hand is fully inside the act panel. What
+      // follows the saves (the details, below) may scroll inside the card (ADR 0017 step 7).
+      await expectInside(
+        character.getByTestId("save-row").last(),
+        character,
+        "fifth save inside the character card",
+      );
+      expect(
+        await character.evaluate((el) => el.scrollTop),
+        "character card at rest",
+      ).toBe(0);
       await expect(character.getByTestId("save-row")).toHaveCount(5);
       for (const [what, el] of [
         ["name", character.getByRole("heading", { level: 1 })],
@@ -1392,6 +1401,45 @@ async function skillsEditorStep(page: Page, size: Viewport) {
   }
 }
 
+// The card's lower half shows the details and languages the popover also shows, inline, set ones
+// only (ADR 0017 step 7 for the fit: it fits at 1920x1080 and up, and scrolls inside the card below).
+// The popover hides the fields not set. French first, the no-cut audit on the card, at every size.
+async function cardDetailsStep(page: Page, size: Viewport, stack: Stack) {
+  await dismissEffects(stack);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const card = page.getByTestId("character");
+  await page.getByTestId("details-trigger").click();
+  const pop = page.getByTestId("details-popover");
+  // The popover lists what is set only, with the one link to the rest.
+  await expect(pop.getByText("Non renseigné")).toHaveCount(0);
+  await expect(pop.getByTestId("details-set")).toHaveCount(1);
+  await pop.getByTestId("details-set").click();
+  await pop.getByLabel("Cheveux", { exact: true }).fill("Châtain");
+  await pop.getByLabel("Âge", { exact: true }).fill("112");
+  await pop.getByRole("button", { name: "Enregistrer" }).click();
+  await expect(pop.getByRole("button", { name: "Modifier" })).toBeVisible();
+  await page.keyboard.press("Escape");
+  const lower = page.getByTestId("card-details");
+  await expect(lower.getByText("Châtain")).toBeVisible();
+  await expect(lower.getByText("112")).toBeVisible();
+  // The languages the skills editor step left.
+  await expect(lower.getByText(/Commun, Elfe, Gnome/)).toBeVisible();
+  await expect(lower.getByText("Non renseigné")).toHaveCount(0);
+  for (const vp of sizesAt(size, VIEWPORTS)) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expect(lower).toBeVisible();
+    await expectNoClippedText(card, `character card lower half, ${where}`);
+    await expectWholeWords(card, `character card lower half, ${where}`);
+    if (vp.height >= 1080) {
+      await expectNoScroll(card, `character card, ${where}`);
+      await expectNoScroll(lower, `card details, ${where}`);
+    }
+    await snap(page, `card-details-fr-${where}`);
+  }
+}
+
 async function pieceSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await openWorkspace(page, "Inventory");
@@ -2516,6 +2564,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["piece editor powers", piecePowersStep],
   ["Ajouter", ajouterStep],
   ["skills editor", skillsEditorStep],
+  ["card details", cardDetailsStep],
   ["proficiency pop-up", profPopupStep],
   ["effects timeline", effectsTimelineStep],
   ["long rest", longRestStep],

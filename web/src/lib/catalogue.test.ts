@@ -4,6 +4,7 @@ import { resources } from "@/i18n";
 import {
   catalogueRows,
   fold,
+  groupRows,
   minMagic,
   pickBody,
   type CopyDraft,
@@ -95,6 +96,49 @@ describe("catalogueRows", () => {
     ]);
   });
 
+  it("sorts by the name in the active language: Épée between Dague and Hache, case and accents ignored", async () => {
+    const w = (
+      code: string,
+      fr: string,
+      en: string,
+      kind: "melee" | "missile",
+    ) => ({
+      ...catalogue.weapons[0],
+      code,
+      name: { en, fr },
+      weaponKind: kind,
+    });
+    const c: EquipmentCatalogue = {
+      ...catalogue,
+      weapons: [
+        w("axe", "Hache", "Axe", "melee"),
+        w("bow", "arc court", "Short bow", "missile"),
+        w("sword", "Épée", "Sword", "melee"),
+        w("dagger", "Dague", "Dagger", "melee"),
+        w("zeal", "Zèle", "Zeal", "melee"),
+        w("ewer", "Étau", "Ewer", "melee"),
+      ],
+    };
+    const fr = await makeT("fr");
+    expect(catalogueRows(c, "weapon", "", "fr", fr).map((r) => r.code)).toEqual(
+      ["bow", "dagger", "sword", "ewer", "axe", "zeal"],
+    );
+    const en = await makeT("en");
+    expect(catalogueRows(c, "weapon", "", "en", en).map((r) => r.code)).toEqual(
+      ["axe", "dagger", "ewer", "bow", "sword", "zeal"],
+    );
+  });
+
+  it("groups under headings sorted in the language, each group's rows keeping the name order", async () => {
+    const fr = await makeT("fr");
+    const rows = catalogueRows(catalogue, "weapon", "", "fr", fr);
+    const groups = groupRows(rows, "fr");
+    expect(groups.map((g) => [g.label, g.rows.map((r) => r.code)])).toEqual([
+      ["Mêlée", ["long_sword"]],
+      ["Tir", ["long_bow"]],
+    ]);
+  });
+
   it("folds", () => expect(fold(" Épée ")).toBe("epee"));
 });
 
@@ -103,6 +147,7 @@ describe("pickBody", () => {
     code: "long_sword",
     name: catalogue.weapons[0].name,
     cells: [],
+    group: { key: "melee", label: "Mêlée" },
   };
   it("sends the code, the +N as to hit and damage, equip; the row's name is not sent", () => {
     expect(pickBody(sword, "weapon", copy({ magic: 2 }), "fr")).toEqual({
@@ -127,6 +172,7 @@ describe("pickBody", () => {
       code: "sheaf_arrow",
       name: { en: "Sheaf arrow" },
       cells: [],
+      group: { key: "arrow", label: "Arrow" },
     };
     expect(
       pickBody(
@@ -144,6 +190,7 @@ describe("pickBody", () => {
       code: "chain_mail",
       name: catalogue.armour[0].name,
       cells: [],
+      group: { key: "metal", label: "Metal (bard)" },
     };
     expect(
       pickBody(mail, "armour", copy({ name: "Chain mail", magic: 3 }), "en"),

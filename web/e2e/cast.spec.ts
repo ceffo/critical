@@ -166,9 +166,9 @@ test.describe("a priest healing", () => {
 
     // A heal that lands on the bearer by default: the arrow offers the other target.
     await level1
-      .getByRole("button", { name: "Choose the target of Cure Light Wounds" })
+      .getByRole("button", { name: "Choose who Cure Light Wounds lands on" })
       .click();
-    await expect(page.getByRole("menuitem")).toHaveCount(1);
+    await expect(page.getByRole("menuitemradio")).toHaveCount(2);
     await page.keyboard.press("Escape");
 
     await level1

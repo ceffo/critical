@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ArrowLeft } from "@phosphor-icons/react";
 import { fetchRuleset } from "@/api/ruleset";
 import { buttonVariants } from "@/components/ui/button";
-import { VersionBadge } from "@/components/shell/VersionBadge";
+import { PageHeader } from "@/components/shell/PageHeader";
 import { APP_NAME } from "@/lib/brand";
 import { useSessionStore } from "@/stores/session";
 import type { Ruleset } from "@/types/ruleset";
@@ -39,19 +39,20 @@ export function RulesetPage() {
       className="mx-auto flex min-h-dvh w-full max-w-[120rem] flex-col gap-3 p-3"
       data-screen="ruleset"
     >
-      <header className="zone-card flex items-center gap-3 px-4 py-2">
-        <h1 className="section-label min-w-0 flex-1">{t("ruleset.title")}</h1>
-        <VersionBadge />
-        <a
-          href="/"
-          className={buttonVariants({ variant: "quiet" })}
-          aria-label={t("ruleset.backHint")}
-          title={t("ruleset.backHint")}
-        >
-          <ArrowLeft aria-hidden />
-          {t("ruleset.back")}
-        </a>
-      </header>
+      <PageHeader
+        title={t("ruleset.title")}
+        action={
+          <a
+            href="/"
+            className={buttonVariants({ variant: "quiet" })}
+            aria-label={t("ruleset.backHint")}
+            title={t("ruleset.backHint")}
+          >
+            <ArrowLeft aria-hidden />
+            {t("ruleset.back")}
+          </a>
+        }
+      />
       {error && (
         <p role="alert" className="zone-card px-4 py-3 text-body text-danger">
           {t("ruleset.loadFailed", { message: error })}

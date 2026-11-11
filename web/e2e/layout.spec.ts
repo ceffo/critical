@@ -5674,3 +5674,115 @@ test("long rest confirmation: uncut in French and English, 1280 to 2560", async 
     await expect(dialog).toHaveCount(0);
   }
 });
+
+// One page header on every full-screen page: Roster, character creation, Admin and Ruleset share the
+// brand (mark and wordmark in full, with its accessible name), the title, the version and the way
+// out, at the same height and the same place, uncut, fr and en, 1280x800 to 2560x1440 (ADR 0027
+// step 4.6). Only a browser lays the header out, so no Go or unit test can hold this.
+test("page header: the same brand header on every full-screen page, fr and en, 1280 to 2560", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const sizes = [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]];
+  const pages = [
+    {
+      name: "roster",
+      open: async () => {
+        await page.goto("/");
+        await page.getByTestId("roster-open").click();
+        await expect(page.getByTestId("roster")).toBeVisible();
+      },
+    },
+    { name: "create", open: () => page.goto("/create") },
+    { name: "admin", open: () => page.goto("/admin") },
+    { name: "ruleset", open: () => page.goto("/ruleset") },
+  ];
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    const seen = new Map<string, { height: number; left: number }>();
+    for (const p of pages) {
+      await page.setViewportSize(sizes[0]);
+      await p.open();
+      const header = page.getByTestId("page-header");
+      await expect(header).toBeVisible();
+      for (const vp of sizes) {
+        await page.setViewportSize(vp);
+        const where = `${p.name}, ${lang}, ${vp.width}x${vp.height}`;
+        // The mark has its accessible name and the wordmark shows in full at every width.
+        await expect(
+          header.getByRole("img", { name: "Critical!" }),
+        ).toBeVisible();
+        await expect(header.getByTestId("brand-icon")).toBeVisible();
+        await expect(header.getByTestId("wordmark")).toHaveText("Critical!");
+        await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
+        await expectNoClippedText(header, `page header, ${where}`);
+        const m = await header.evaluate((el) => {
+          const r = el.getBoundingClientRect();
+          const brand = el
+            .querySelector("[data-testid=brand]")!
+            .getBoundingClientRect();
+          const doc = document.documentElement;
+          return {
+            height: Math.round(r.height),
+            left: Math.round(brand.left - r.left),
+            right: r.right,
+            vw: doc.clientWidth,
+            wide: doc.scrollWidth > doc.clientWidth,
+          };
+        });
+        expect(
+          m.right,
+          `header inside the screen, ${where}`,
+        ).toBeLessThanOrEqual(m.vw);
+        expect(m.wide, `page scrolls sideways, ${where}`).toBe(false);
+        // Every page's header is the same box with the brand in the same place.
+        const key = `${lang}-${vp.width}`;
+        const first = seen.get(key);
+        if (!first) seen.set(key, { height: m.height, left: m.left });
+        else {
+          expect(m.height, `header height, ${where}`).toBe(first.height);
+          expect(m.left, `brand position, ${where}`).toBe(first.left);
+        }
+        await header.screenshot({
+          path: `e2e-results/screens/layout/page-header-${p.name}-${lang}-${vp.width}.png`,
+        });
+      }
+      await snap(page, `page-header-${p.name}-${lang}-full`);
+    }
+    await page.setViewportSize(sizes[0]);
+    await page.goto("/");
+  }
+});
+
+// The same header in every theme and mode (French, 1920x1080), on the Ruleset page.
+test("page header: every theme and mode shows the brand uncut", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await page.setViewportSize(VIEWPORTS[3]);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  for (const [mode, which, themes] of [
+    [
+      "Sombre",
+      "dark",
+      ["Arcane", "Abysses", "Sobre", "Forêt", "Braise", "Ambre"],
+    ],
+    ["Clair", "light", ["Arcane", "Parchemin", "Sobre", "Forêt"]],
+  ] as const) {
+    await chooseSetting(page, mode);
+    for (const name of themes) {
+      await chooseTheme(page, name);
+      await page.goto("/ruleset");
+      const header = page.getByTestId("page-header");
+      await expect(header.getByTestId("wordmark")).toBeVisible();
+      await expectNoClippedText(header, `page header, ${which} ${name}`);
+      await header.screenshot({
+        path: `e2e-results/screens/layout/page-header-theme-${which}-${name.toLowerCase()}.png`,
+      });
+      await page.goto("/");
+      await expect(page.getByTestId("brand")).toBeVisible();
+    }
+  }
+});

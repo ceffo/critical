@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { VersionBadge } from "@/components/shell/VersionBadge";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, ArrowRight, UserPlus, X } from "@phosphor-icons/react";
 import { createCharacter, draftCharacter } from "@/api/characters";
@@ -20,7 +19,8 @@ import {
   type CreationDraft,
   type CreationOptions,
 } from "@/types/character";
-import { CardHead, Note, StepDot, Wordmark } from "./kit";
+import { PageHeader } from "@/components/shell/PageHeader";
+import { CardHead, Note, StepDot } from "./kit";
 import {
   EMPTY_DRAFT,
   STEPS,
@@ -445,21 +445,20 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       className="mx-auto flex h-dvh max-w-[1680px] flex-col gap-3 overflow-hidden p-3"
       data-screen="create-character"
     >
-      <header className="zone-card flex shrink-0 items-center gap-4 px-4 py-2">
-        <Wordmark />
-        <span className="text-title">{t("characters.newTitle")}</span>
-        <span className="flex-1" />
-        <VersionBadge />
-        <Button
-          variant="quiet"
-          onClick={leave}
-          aria-label={t("creation.leaveHint")}
-          title={t("creation.leaveHint")}
-        >
-          <X aria-hidden />
-          {t("creation.leave")}
-        </Button>
-      </header>
+      <PageHeader
+        title={t("characters.newTitle")}
+        action={
+          <Button
+            variant="quiet"
+            onClick={leave}
+            aria-label={t("creation.leaveHint")}
+            title={t("creation.leaveHint")}
+          >
+            <X aria-hidden />
+            {t("creation.leave")}
+          </Button>
+        }
+      />
       <div className="flex min-h-0 flex-1 gap-3">
         <StepList
           options={options}

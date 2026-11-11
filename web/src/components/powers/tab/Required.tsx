@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next";
 export function Required() {
   const { t } = useTranslation();
   return (
-    <span className="text-danger" title={t("powers.tab.bar.required")}>
+    <span className="relative text-danger" title={t("powers.tab.bar.required")}>
       <span aria-hidden>*</span>
       <span className="sr-only">{t("powers.tab.bar.required")}</span>
     </span>

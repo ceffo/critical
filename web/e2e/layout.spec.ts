@@ -14,6 +14,7 @@ import {
   openSettings,
   openWeapons,
   openWorkspace,
+  showWizardSpells,
   recordHp,
   apiCall,
   keepATangent,
@@ -491,6 +492,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 
   // The lookup with the long spell selected in a full list.
   await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
   const lookupList = page.getByRole("listbox", { name: "Spells" });
   const spellDetail = page.getByTestId("spell-detail");
   await lookupList.getByRole("option", { name: LONG_SPELL }).click();
@@ -1191,6 +1193,7 @@ test("theme: the main screens in dark and light, every theme in each of its mode
     await openWorkspace(page, "Act");
     await snap(page, `${m}-act-weapons`);
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page.getByRole("combobox", { name: "Search spells..." }).fill("fire");
     await expect(
       page.getByTestId("spell-detail").getByRole("heading"),
@@ -1678,6 +1681,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);
     await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
+    await showWizardSpells(page);
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);
     await expectWholeWords(stage, `lookup, ${where}`);
@@ -1816,6 +1820,7 @@ test.describe("workspaces to the dice composer", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page
       .getByRole("combobox", { name: "Search spells..." })
       .fill("quixotic still");
@@ -3622,6 +3627,83 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
     logEntry(page, "Ajouté au grimoire : Alarme (sans jet)"),
   ).toHaveAttribute("data-status", "voided");
   await snap(page, "mage-add-undone-journal-fr-1280x800");
+});
+
+// The lookup says why a spell cannot be written in the spellbook (ADR 0030 step 20.1), in the
+// server's own words: a level-5 mage with Intelligence 9 (highest spell level 4) sees the reason
+// instead of Learn and Add on a level-5 spell, and the buttons on a level-4 one. The reason
+// matches the server's refusal (a unit test compares the codes; the refusal is a Go test).
+test("mage: a spell above the Intelligence's limit shows its reason, no Learn or Add, in English and French at 1920x1080 and 2560x1440", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  const created = await apiCall(page, "POST", "/api/characters", {
+    name: "Elminster",
+    class: "mage",
+    raceCode: "human",
+    details: { alignment: "neutral_good", sex: "male" },
+    str: 9,
+    dex: 12,
+    con: 11,
+    int: 9,
+    wis: 12,
+    cha: 10,
+    hpMax: 4,
+    xp: 20000,
+  });
+  expect(created).toBe(true);
+  await reloadSettled(page);
+  await openWorkspace(page, "Spells");
+  const classes = page.getByRole("group", {
+    name: /^(Spell list|Liste de sorts)$/,
+  });
+  const detail = page.getByTestId("spell-detail");
+  const learn = detail.getByTestId("learn-spell");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    await classes.getByRole("button", { name: /^(Wizard|Magicien)$/ }).click();
+    const box = page.getByRole("combobox", {
+      name: /^(Search spells\.\.\.|Rechercher des sorts\.\.\.)$/,
+    });
+    await box.fill("magic jar");
+    await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
+      "data-id",
+      "magic_jar",
+    );
+    await expect(learn.getByTestId("learn-refused")).toHaveAttribute(
+      "data-code",
+      "spell_level_above_intelligence",
+    );
+    await expect(learn.getByTestId("learn-refused")).toHaveText(
+      lang === "en"
+        ? "This Intelligence limits spells to level 4."
+        : "Cette Intelligence limite les sorts au niveau 4.",
+    );
+    await expect(learn.getByRole("button")).toHaveCount(0);
+    await expect(learn.getByTestId("add-spell")).toHaveCount(0);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        learn,
+        `spellbook refusal, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      await snap(page, `mage-lookup-reason-${lang}-${vp.width}x${vp.height}`);
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    // A spell the Intelligence allows keeps its buttons.
+    await box.fill("alarm");
+    await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
+      "data-id",
+      "alarm",
+    );
+    await expect(learn.getByTestId("add-spell")).toBeVisible();
+    await expect(learn.getByTestId("learn-refused")).toHaveCount(0);
+  }
 });
 
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the

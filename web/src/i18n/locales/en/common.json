@@ -1293,7 +1293,12 @@
       "add": "Add",
       "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)",
       "free": "Level {{level}}'s free spell",
-      "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll"
+      "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll",
+      "refused": {
+        "spell_level_above_class": "The class cannot learn spells above level {{classMax}}.",
+        "spell_level_above_intelligence": "This Intelligence limits spells to level {{intMax}}.",
+        "spellbook_level_full": "The spellbook already holds {{max}} spells of level {{level}}, the most this Intelligence allows."
+      }
     },
     "powers": {
       "search": "Search powers...",

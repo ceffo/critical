@@ -1293,7 +1293,12 @@
       "add": "Ajouter",
       "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)",
       "free": "Sort gratuit du niveau {{level}}",
-      "addFreeTitle": "Écrire ce sort dans le grimoire comme sort gratuit du niveau {{level}}, sans jet"
+      "addFreeTitle": "Écrire ce sort dans le grimoire comme sort gratuit du niveau {{level}}, sans jet",
+      "refused": {
+        "spell_level_above_class": "La classe ne peut pas apprendre de sort au-delà du niveau {{classMax}}.",
+        "spell_level_above_intelligence": "Cette Intelligence limite les sorts au niveau {{intMax}}.",
+        "spellbook_level_full": "Le grimoire contient déjà {{max}} sorts de niveau {{level}}, le maximum que permet cette Intelligence."
+      }
     },
     "powers": {
       "search": "Rechercher des pouvoirs...",

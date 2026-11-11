@@ -468,6 +468,8 @@ test("a miss corrected into a crit shows both d100s on the card and in the log",
     "the seed's first attack no longer makes AC 10 a crit",
   ).toBeGreaterThanOrEqual(1);
   await expect(card.getByTestId("verdict")).toHaveText("Miss");
+  await expect(card.getByTestId("total-damage")).toHaveCount(0);
+  await snap(page, "miss-card");
   const mult = await fact("Multiplier d100");
 
   const fix = await openFold(card, "Correct the target AC");

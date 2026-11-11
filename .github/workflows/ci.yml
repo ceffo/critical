@@ -27,6 +27,10 @@ jobs:
   changes:
     name: changes
     runs-on: ubuntu-latest
+    # checks: read lets the script see whether e2e passed on the previous head before a pure branch update keeps it.
+    permissions:
+      contents: read
+      checks: read
     outputs:
       skip_slow: ${{ steps.decide.outputs.skip_slow }}
       skip_e2e: ${{ steps.decide.outputs.skip_e2e }}
@@ -40,6 +44,7 @@ jobs:
           EVENT: ${{ github.event_name }}
           ACTION: ${{ github.event.action }}
           BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}

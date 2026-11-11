@@ -100,13 +100,31 @@ check "an unknown base" false push "" 1111111111111111111111111111111111111111
 out="$(cd "$repo" && git checkout -q readme && EVENT=pull_request BASE="$base" "$script" | head -1)"
 [ "$out" = "skip_slow=true (only documentation changed)" ] || fail "stdout without GITHUB_OUTPUT: $out"
 
-# --- skip_e2e ---------------------------------------------------------------------------------------------
+# --- skip_e2e ---
+# A fake gh: prints $FAKE_GH, the conclusion (or status) of the latest e2e check run on BEFORE that the real
+# call's jq filter would give; FAKE_GH=fail makes the call fail (a token without checks: read, an API error).
+mkdir -p "$tmp/bin"
+cat > "$tmp/bin/gh" <<'GH'
+#!/usr/bin/env bash
+[ "${FAKE_GH:-}" != fail ] || exit 1
+echo "${FAKE_GH:-none}"
+GH
+chmod +x "$tmp/bin/gh"
+# The jq filter against sample payloads: the latest run by start time, its conclusion, or its status.
+jqf='.check_runs | sort_by(.started_at) | last | if . == null then "none" elif .status != "completed" then .status else .conclusion end'
+jqcase() { [ "$(echo "$2" | jq -r "$jqf")" = "$1" ] || fail "jq filter: want $1 for $2"; }
+jqcase none '{"check_runs":[]}'
+jqcase success '{"check_runs":[{"started_at":"2026-01-01T00:00:01Z","status":"completed","conclusion":"success"}]}'
+jqcase success '{"check_runs":[{"started_at":"2026-01-01T00:00:01Z","status":"completed","conclusion":"failure"},{"started_at":"2026-01-01T00:00:09Z","status":"completed","conclusion":"success"}]}'
+jqcase failure '{"check_runs":[{"started_at":"2026-01-01T00:00:09Z","status":"completed","conclusion":"failure"},{"started_at":"2026-01-01T00:00:01Z","status":"completed","conclusion":"success"}]}'
+jqcase in_progress '{"check_runs":[{"started_at":"2026-01-01T00:00:01Z","status":"in_progress","conclusion":null}]}'
+jqcase cancelled '{"check_runs":[{"started_at":"2026-01-01T00:00:01Z","status":"completed","conclusion":"cancelled"}]}'
 # e2e <name> <want> <event> <labels> <base> [action] [before] [head]: skip_e2e on the checked-out branch.
 e2e() {
     local name="$1" want="$2" event="$3" labels="$4" from="$5" action="${6:-}" was="${7:-}" tip="${8:-HEAD}" out status=0
     : > "$tmp/out"
-    out="$(cd "$repo" && EVENT="$event" ACTION="$action" BASE="$from" BEFORE="$was" HEAD="$tip" LABELS="$labels" \
-        GITHUB_OUTPUT="$tmp/out" "$script" 2>&1)" || status=$?
+    out="$(cd "$repo" && PATH="$tmp/bin:$PATH" GITHUB_REPOSITORY=o/r EVENT="$event" ACTION="$action" BASE="$from" \
+        BEFORE="$was" HEAD="$tip" LABELS="$labels" GITHUB_OUTPUT="$tmp/out" "$script" 2>&1)" || status=$?
     [ "$status" = 0 ] || { fail "$name: exit $status: $out"; return; }
     grep -qx "skip_e2e=$want" "$tmp/out" || fail "$name: want skip_e2e=$want, got: $(cat "$tmp/out") ($out)"
 }
@@ -159,12 +177,27 @@ git -C "$repo" checkout -q -B pr-ui "$base"
 mkdir -p "$repo/web/src"; echo ui > "$repo/web/src/App.tsx"; git -C "$repo" add -A; git -C "$repo" commit -q -m ui
 was="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" merge -q --no-edit main-2
+export FAKE_GH=success
 e2e "a pure branch update skips e2e" true pull_request "" "$main2" synchronize "$was" "$(git -C "$repo" rev-parse HEAD)"
 e2e "the same event on a labeled action runs e2e" false pull_request "" "$main2" labeled "$was" "$(git -C "$repo" rev-parse HEAD)"
 e2e "the same event on opened runs e2e" false pull_request "" "$main2" opened "$was" "$(git -C "$repo" rev-parse HEAD)"
 e2e "a branch update with no before runs e2e" false pull_request "" "$main2" synchronize "" "$(git -C "$repo" rev-parse HEAD)"
 e2e "a branch update with a zero before runs e2e" false pull_request "" "$main2" synchronize 0000000000000000000000000000000000000000 "$(git -C "$repo" rev-parse HEAD)"
 e2e "a branch update with an unknown before runs e2e" false pull_request "" "$main2" synchronize 1111111111111111111111111111111111111111 "$(git -C "$repo" rev-parse HEAD)"
+# The previous head's e2e decides: only success or skipped keeps the result.
+tipnow="$(git -C "$repo" rev-parse HEAD)"
+for r in success skipped; do
+    FAKE_GH=$r e2e "a pure update after e2e $r skips e2e" true pull_request "" "$main2" synchronize "$was" "$tipnow"
+done
+for r in failure cancelled in_progress queued none fail timed_out; do
+    FAKE_GH=$r e2e "a pure update after e2e $r runs e2e" false pull_request "" "$main2" synchronize "$was" "$tipnow"
+done
+# A Go-only PR skips whatever the previous e2e was (no e2e path), and a labeled action on it skips too.
+git -C "$repo" checkout -q -B go-only "$base"
+echo g > "$repo/api-only.go"; git -C "$repo" add -A; git -C "$repo" commit -q -m go-only
+FAKE_GH=failure e2e "a Go-only PR skips e2e after a red previous run" true pull_request "" "$base" synchronize "$base" "$(git -C "$repo" rev-parse HEAD)"
+FAKE_GH=failure e2e "a labeled event on a Go-only PR skips e2e" true pull_request "" "$base" labeled "" "$(git -C "$repo" rev-parse HEAD)"
+git -C "$repo" checkout -q pr-ui
 # An update that is not a merge but a real new commit on the PR.
 echo ui2 >> "$repo/web/src/App.tsx"; git -C "$repo" add -A; git -C "$repo" commit -q -m ui2
 e2e "a branch update plus a real PR change runs e2e" false pull_request "" "$main2" synchronize "$was" "$(git -C "$repo" rev-parse HEAD)"

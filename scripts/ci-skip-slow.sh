@@ -10,6 +10,7 @@
 #   BASE    the PR's base commit (read on pull_request events only).
 #   HEAD    the PR's own head commit (default HEAD). Not the merge commit CI checks out: that one carries every
 #           commit main gained since the PR branched, and none of those is the PR's change.
+#   GH_TOKEN, GITHUB_REPOSITORY  to read the check runs of BEFORE (gh api; needs `checks: read`).
 #   BEFORE  the PR's head before this push (github.event.before, on a synchronize action only).
 #   LABELS  comma-separated label names of the PR (read on pull_request events only).
 #
@@ -18,8 +19,10 @@
 #   - every file the PR changes is documentation: *.md anywhere, docs/**. The PR's changes are the diff from
 #     the merge base of BASE and HEAD (BASE...HEAD), so a base that moved on does not count.
 # skip_e2e is true when skip_slow is, and also when:
-#   - the push only updated the branch: the PR's own diff before the push (BASE...BEFORE) and now (BASE...HEAD)
-#     have the same patch id, so the PR keeps its last e2e result; or
+#   - the push only updated the branch (the PR's own diff before the push, BASE...BEFORE, and now, BASE...HEAD,
+#     have the same patch id) and the e2e check run on BEFORE concluded success or skipped (read with `gh api`,
+#     GH_TOKEN and GITHUB_REPOSITORY): the PR keeps its last good e2e result. A failed, cancelled, running or
+#     unreadable one runs e2e again; or
 #   - none of the changed files is on an e2e path (e2e_path below): the web app, the route and handler layer of
 #     the API, the API fixture, the e2e stack and the CI workflow. Unit-test-only files do not count.
 # Only a pull request skips. A push to main (and a dispatched run) always runs everything: Release deploys
@@ -87,18 +90,31 @@ if [ "$docs_only" = true ]; then
     emit true "only documentation changed" true "only documentation changed"
 fi
 
-# A branch update (main merged into the PR) changes the checked-out commit but not the PR's own diff.
+# No changed file on an e2e path: nothing to run, whatever the push was.
+runs=""
+while IFS= read -r f; do
+    if e2e_path "$f"; then runs="$f"; break; fi
+done <<< "$files"
+if [ -z "$runs" ]; then
+    emit false "$slow_reason" true "no changed file is on an e2e path"
+fi
+
+# A branch update (main merged into the PR) changes the checked-out commit but not the PR's own diff. It keeps
+# the last e2e result only if that result is good: e2e on BEFORE succeeded or was itself skipped. A red,
+# cancelled, still running or unreadable one runs e2e again, so an update never turns a red PR green.
 if [ "$action" = synchronize ] && [ -n "$before" ] && ! [[ "$before" =~ ^0+$ ]]; then
     now_id="$(git diff "$base...$head" -- 2>/dev/null | git patch-id --stable 2>/dev/null | cut -d' ' -f1 || true)"
     was_id="$(git diff "$base...$before" -- 2>/dev/null | git patch-id --stable 2>/dev/null | cut -d' ' -f1 || true)"
     if [ -n "$now_id" ] && [ "$now_id" = "$was_id" ]; then
-        emit false "$slow_reason" true "the push only updated the branch: the pull request's own diff is unchanged"
+        # The latest e2e check run on BEFORE: its conclusion, or its status while it has none.
+        result="$(gh api "repos/${GITHUB_REPOSITORY:-}/commits/$before/check-runs?check_name=e2e&per_page=100" --jq \
+            '.check_runs | sort_by(.started_at) | last | if . == null then "none" elif .status != "completed" then .status else .conclusion end' \
+            2>/dev/null || echo unreadable)"
+        case "$result" in
+            success | skipped)
+                emit false "$slow_reason" true "the push only updated the branch and e2e on its previous head was $result" ;;
+            *) emit false "$slow_reason" false "the push only updated the branch, but e2e on its previous head was ${result:-unreadable}" ;;
+        esac
     fi
 fi
-
-while IFS= read -r f; do
-    if e2e_path "$f"; then
-        emit false "$slow_reason" false "$f is on an e2e path"
-    fi
-done <<< "$files"
-emit false "$slow_reason" true "no changed file is on an e2e path"
+emit false "$slow_reason" false "$runs is on an e2e path"

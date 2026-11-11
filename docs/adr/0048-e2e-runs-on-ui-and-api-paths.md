@@ -29,12 +29,15 @@ the PR's own change had not moved. The 5-minute budget was already exceeded.
    Everything else skips e2e: Go internals below the handlers (domain, adapters, storage), Go tests,
    scripts, seeds, other workflows, documentation, `api/go.mod` and `api/go.sum`. Their correctness is
    `just validate`'s (Go tests, lint, build), which is a required check on every PR.
-3. **A pure branch update does not re-run e2e.** On a `synchronize` action CI compares the patch id of
-   the PR's own diff at `github.event.before` (`BASE...BEFORE`) with its diff now (`BASE...HEAD`).
-   Equal and non-empty means main was merged into the PR (or the PR was rebased) and nothing else
-   moved: e2e is skipped and the PR keeps its last e2e result. A `labeled` or `unlabeled` action, an
-   unreadable or zero `before`, a force-pushed `before` that is not fetched, or any difference runs the
-   path rule of step 2.
+3. **A pure branch update keeps a good e2e result, never a bad one.** On a `synchronize` action CI
+   compares the patch id of the PR's own diff at `github.event.before` (`BASE...BEFORE`) with its diff
+   now (`BASE...HEAD`). Equal and non-empty means main was merged into the PR (or the PR was rebased)
+   and nothing else moved. e2e is then skipped **only if** the `e2e` check run on `before` concluded
+   `success` or was itself `skipped`; a failed, cancelled, still running, missing or unreadable one
+   (the `changes` job has `checks: read` for this) runs e2e again, so an update never turns a red or
+   unfinished PR green. A `labeled` or `unlabeled` action, an unreadable or zero `before`, a
+   force-pushed `before` that is not fetched, or any difference in the diff goes to the path rule of
+   step 2 alone.
 4. **`ci-skip` and documentation-only** skip e2e as before. `dev-smoke` and `image` are decided apart
    (`skip_slow`) and are unchanged: documentation-only or `ci-skip`.
 5. **Main always runs everything.** A push to `main` and a dispatched run never skip: Release deploys
@@ -48,14 +51,15 @@ the PR's own change had not moved. The 5-minute budget was already exceeded.
 
 ## Consequences
 
-- A Go change below the handlers that alters what the UI shows reaches `main` without a browser
-  check on its PR. The push to `main` runs the whole suite, so the first red is on `main`, before
-  Release. This is the user's decision (triage, 2026-11-11); the Go tests are where such a change is
-  proven.
-- A pure update after a red e2e shows a green (skipped) e2e on the new head, although the PR's change
-  is the one that failed. The failing run stays on the previous head. Reviewers and the supervisor
-  read the last real e2e result, not only the latest check.
-- An update that cancels an e2e still in progress (the concurrency group cancels it) leaves the PR
-  with no completed e2e either. The push to `main` covers it.
+- **The trade-off, stated plainly (the user's triage call, 2026-11-11):** the e2e API runs on in-memory
+  storage built from the domain, adapters and storage code, so a change below the handlers, or a Go
+  dependency bump (`api/go.mod`, `api/go.sum`, for example a Dependabot PR), can change what the browser
+  sees with no e2e on its PR. Its Go tests and `just validate` are what prove it there. The push to
+  `main` runs the whole suite, so the first red browser result for such a change can be on `main`,
+  before Release, not on the PR.
+- A semantic conflict introduced by the main that a branch update merged is likewise first seen by the
+  push to `main`.
+- The skipped `e2e` of a PR that touches no e2e path is green by design; for a pure update it is green
+  only because the previous head's e2e was.
 - A `labeled` action (for example `no-release`) on a PR that touches an e2e path runs e2e again;
   step 3 reads `before` on `synchronize` only.

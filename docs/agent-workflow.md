@@ -311,9 +311,11 @@ gained meanwhile), or when the PR carries the label `ci-skip`. `skip_e2e` skips 
 when no file the PR changes is on a UI or API path (globs in
 [ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md) step 2: `web/**` but unit tests, the route and handler layer
 of the API, `api/testdata/**`, the e2e stack and `ci.yml`), and when a push only updated the branch (`synchronize`
-whose own diff, by patch id, equals the one at `github.event.before`): the PR keeps its last e2e result, so a
-`gh pr update-branch` costs no e2e run. After a red e2e, a pure update shows a green (skipped) e2e: read the last
-real result. Anything unreadable runs. A push to main and a dispatched run never skip: Release deploys the
+whose own diff, by patch id, equals the one at `github.event.before`) **and** e2e on that previous head
+succeeded or was skipped: the PR keeps its last good e2e result, so a `gh pr update-branch` costs no e2e run.
+After a red, cancelled or unfinished e2e a pure update runs e2e again (`changes` reads the check runs, so it has
+`checks: read`). Anything unreadable runs. Go below the handlers and `go.mod`/`go.sum` skip e2e: `main`'s push run
+catches them. A push to main and a dispatched run never skip: Release deploys the
 commit that run gates. `validate` and `generated` always run (required checks). A skipped job
 counts as a success, so the PR is mergeable and green; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
 `ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still

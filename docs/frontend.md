@@ -620,12 +620,13 @@ export const useHpStore = create<HpStore>((set) => ({
 - Use `Card`, `CardContent`, `CardHeader` for panel sections
 - Use `Badge` for buff tags and spell slot indicators (it is the chip family below)
 - `Button` has two looks (ADR 0027 step 3.4): `variant="main"`, filled with the tint, for the one
-  every-turn action of a zone (Attack, Next turn), and **quiet** (the default): no fill, the field
+  every-turn action of a zone (Attack, Next turn; at most one filled button per panel, so Cast is quiet), and **quiet** (the default): no fill, the field
   edge (`--input`, 3:1 on the card, so it reads on the card, the raised step and the selected tone
   alike), the hover tone on hover; a pressed toggle (`aria-pressed`) is the chosen chip. `ghost` is
   for icon-only buttons in a row or toolbar, `destructive` a quiet button in danger ink. A button
-  with nothing to submit is disabled and looks it, the same in every look: no fill, muted ink, a
-  dashed edge (none on `ghost`); never a faded main button.
+  with nothing to submit is disabled and looks it, the same in every look: the raised tone as a flat
+  fill, muted ink, no edge (no fill on `ghost`); never a dashed edge (the roster's Create card
+  alone) and never a faded main button.
 - **One action word per caption** (ADR 0027 step 3): the detail goes in `title` and `aria-label`
   (`spellSlots.prepare` "Prepare spells" there, `spellSlots.prepareShort` "Prepare" on the button).
   "Next turn" and "Long rest" are the fixed terms of step 3.2. Enforced by

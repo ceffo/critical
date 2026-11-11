@@ -132,6 +132,13 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    4. Main versus quiet: each zone has at most one main (filled) button, the every-turn action of
       that zone (Attaquer on Act's Weapons tab, Tour suivant in the header, Lancer for a spell);
       the others are quiet (the shared pieces of the colour epic). Add buttons are quiet.
+      *Amended 2026-11-11 (user accepted the defaults):* "Lancer for a spell" is **not** main: a
+      row action repeated down a list is quiet, so the Spells tab shows no column of filled
+      buttons; at most one filled button per panel, never two side by side. A **disabled** button
+      is drawn the same in every look without a dashed edge: the raised tone as a flat fill (ΔL
+      >= .07 off the card, [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 2.1),
+      muted ink (AA, step 2.3), no edge, no hover; `ghost` stays transparent. The dashed frame is
+      the roster's Créer card alone. Written in `button.tsx`'s doc comment.
 4. **Header** (amends ADR 0022 steps 2.2, 3.4 and 7, ADR 0017 step 6, ADR 0026 step 5.9).
    1. **The turn is stacked**: its label ("TOUR") over its number. The number is `text-headline`
       (24 px), no longer `text-hero`.
@@ -282,7 +289,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    around the turn's opening rows (9.6), and the no-cut audit in French and English; the opening
    transaction by `groupByRound.test.ts` (`opensTurn`).
 10. **Spells tab** (new; the act panel's Sorts tab, no ADR 0022 step drew it).
-    1. **"Lancer" is a split button**: the main part casts with the server's default target (today's
+    1. **"Lancer" is a split button** (quiet since 2026-11-11, step 3.4): the main part casts with the server's default target (today's
        call, no `onSelf`); the arrow opens the other target (`onSelf: false`, or what the server
        offers). The global "on an ally" checkbox goes.
        1. **The arrow is for a defensive spell only** (ruling from the user's words: _"cast on self

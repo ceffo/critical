@@ -1,5 +1,5 @@
-import { test, expect } from "./fixtures";
-import { openDashboard } from "./helpers";
+import { test, expect, snap } from "./fixtures";
+import { chooseLanguage, openDashboard } from "./helpers";
 
 // Keyboard order and arrow keys: a tablist and the rail are one Tab stop each, a skip link comes
 // first (the WAI-ARIA tabs pattern). Only a browser proves focus order; the walk is headless.
@@ -83,3 +83,41 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
   await page.keyboard.press("Enter");
   await expect(weapons).toBeFocused();
 });
+
+// The skip link is seen when focused: inside the viewport, with room, in both languages.
+for (const lang of ["en", "fr"] as const) {
+  for (const [width, height] of [
+    [1920, 1080],
+    [2560, 1440],
+  ]) {
+    test(`skip link visible on focus, ${lang} ${width}x${height}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await openDashboard(page);
+      if (lang === "fr") await chooseLanguage(page, "fr");
+      const skip = page.getByTestId("skip-link");
+      // The language popover leaves focus on its trigger: start from the link itself.
+      await skip.focus();
+      await expect(skip).toBeFocused();
+      await expect(skip).toHaveText(
+        lang === "fr"
+          ? "Aller au panneau d'actions"
+          : "Skip to the action panel",
+      );
+      const box = await skip.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThan(100);
+      expect(box!.height).toBeGreaterThan(20);
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.y).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(height);
+      // Not cut: its text fits its box.
+      expect(await skip.evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(
+        true,
+      );
+      await snap(page, `skip-link-${lang}-${width}`);
+    });
+  }
+}

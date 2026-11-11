@@ -116,7 +116,7 @@ function App() {
     <div className="relative flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
       <a
         href="#stage"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-body focus:text-foreground"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:z-50 focus:-translate-x-1/2 focus:whitespace-nowrap focus:rounded-lg focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-body focus:text-foreground"
         data-testid="skip-link"
         onClick={(ev) => {
           // To the stage's selected tab when the focused activity has tabs, else to the stage itself.

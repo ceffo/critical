@@ -6,8 +6,15 @@
 # /var/lib/apt/lists/lock, and every later attempt then fails at once on the lock. So after a failed
 # attempt this script reaps the leftover apt processes and waits for the lock to be free before retrying.
 #
+# Cache hit, no network: when OFFLINE_CMD is set it runs first, once. It installs the cached debs without
+# contacting any mirror (apt-get --no-download), so an Ubuntu archive or DNS outage cannot fail the job that
+# has its packages already. If it fails (no cache, a stale one missing a package) the bounded online
+# attempts below run as before: a cold cache still uses the archive.
+#
 # Environment (defaults are the CI values; scripts/test-ci-install-chromium-deps.sh overrides them):
 #   INSTALL_CMD      the install command                       (npx playwright install-deps chromium)
+#   OFFLINE_CMD     cache-only install, tried once first      (empty: skip)
+#   OFFLINE_TIMEOUT seconds the offline install may run       (120)
 #   ATTEMPTS         number of attempts                        (3)
 #   ATTEMPT_TIMEOUT  seconds one attempt may run               (135)
 #   SETTLE_SECONDS   seconds to wait for apt/dpkg to be gone   (15)
@@ -17,6 +24,8 @@
 set -uo pipefail
 
 INSTALL_CMD="${INSTALL_CMD:-npx playwright install-deps chromium}"
+OFFLINE_CMD="${OFFLINE_CMD:-}"
+OFFLINE_TIMEOUT="${OFFLINE_TIMEOUT:-120}"
 ATTEMPTS="${ATTEMPTS:-3}"
 ATTEMPT_TIMEOUT="${ATTEMPT_TIMEOUT:-135}"
 SETTLE_SECONDS="${SETTLE_SECONDS:-15}"
@@ -49,6 +58,16 @@ free_locks() {
     # shellcheck disable=SC2086
     $SUDO dpkg --configure -a || true
 }
+
+if [ -n "$OFFLINE_CMD" ]; then
+    # shellcheck disable=SC2086
+    if timeout "$OFFLINE_TIMEOUT" $OFFLINE_CMD; then
+        echo "installed from the cached debs, no network needed"
+        exit 0
+    fi
+    echo "offline install from the cached debs failed; falling back to the archive"
+    free_locks
+fi
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
     # shellcheck disable=SC2086

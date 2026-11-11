@@ -5,7 +5,8 @@
 # real apt-get on the machine nor a parallel run of this test (another worktree's gate) can be seen or
 # killed. No wall-clock race: which attempt hangs is decided by a counter, not by a background sleep.
 # Attempt 1 times out, the script must stop the leftover apt-get so attempt 2 gets the lock; a mirror
-# that is really down must still end in a failure after the bounded attempts.
+# that is really down must still end in a failure after the bounded attempts. With cached debs the offline
+# install runs first and, when it works, the mirrors are never contacted.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -43,7 +44,7 @@ printf '#!/usr/bin/env bash\ntouch "%s/state/configured"\n' "$tmp" > "$tmp/bin/d
 chmod +x "$tmp/bin/dpkg"
 
 run() {
-    PATH="$tmp/bin:$PATH" SUDO="" INSTALL_CMD="$tmp/bin/install" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
+    PATH="$tmp/bin:$PATH" SUDO="" INSTALL_CMD="${INSTALL_CMD:-$tmp/bin/install}" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
         APT_PROCS="$fake" APT_KILL="$fake" \
         "$script" "$@"
 }
@@ -64,6 +65,31 @@ rm -f "$tmp/state/dies"
 # The mirror is really down: every attempt hangs, the script fails after the bounded attempts.
 touch "$tmp/state/always"
 if ATTEMPTS=2 run >/dev/null 2>&1; then fail "a permanently stalled install reported success"; fi
+
+# Cache hit, archive unreachable: the online install (INSTALL_CMD, whose `apt-get update` needs the mirrors)
+# always fails and records that it ran; the offline install works. The script must succeed without ever
+# running the online one.
+rm -f "$tmp/state/always" "$tmp/state/n" "$tmp/state/online-ran" "$tmp/state/offline-ran"
+printf '#!/usr/bin/env bash\ntouch "%s/state/online-ran"; echo "Err: azure.archive.ubuntu.com unreachable" >&2; exit 100\n' "$tmp" > "$tmp/bin/online-down"
+printf '#!/usr/bin/env bash\ntouch "%s/state/offline-ran"\n' "$tmp" > "$tmp/bin/offline-ok"
+printf '#!/usr/bin/env bash\ntouch "%s/state/offline-ran"; exit 100\n' "$tmp" > "$tmp/bin/offline-bad"
+chmod +x "$tmp/bin/online-down" "$tmp/bin/offline-ok" "$tmp/bin/offline-bad"
+if ! out="$(INSTALL_CMD="$tmp/bin/online-down" OFFLINE_CMD="$tmp/bin/offline-ok" run 2>&1)"; then
+    fail "a cache hit with the archive unreachable failed: $out"
+fi
+[ -e "$tmp/state/offline-ran" ] || fail "the offline install did not run on a cache hit"
+[ -e "$tmp/state/online-ran" ] && fail "the online install ran although the offline one succeeded"
+
+# Cold cache (the offline install fails) with the archive reachable: falls back to the online install.
+rm -f "$tmp/state/online-ran" "$tmp/state/offline-ran" "$tmp/state/n"
+if ! out="$(OFFLINE_CMD="$tmp/bin/offline-bad" run 2>&1)"; then fail "a cold cache did not fall back to the online install: $out"; fi
+[ -e "$tmp/state/offline-ran" ] || fail "the offline install was not tried first"
+grep -q "falling back to the archive" <<<"$out" || fail "the fallback was not announced: $out"
+
+# Neither works: the script fails.
+if INSTALL_CMD="$tmp/bin/online-down" OFFLINE_CMD="$tmp/bin/offline-bad" ATTEMPTS=1 run >/dev/null 2>&1; then
+    fail "an install that failed offline and online reported success"
+fi
 
 [ "$fails" -eq 0 ] && echo "test-ci-install-chromium-deps: ok"
 exit "$fails"

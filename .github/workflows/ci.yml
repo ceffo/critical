@@ -148,7 +148,14 @@ jobs:
           # does not hold the apt lock (scripts/ci-install-chromium-deps.sh).
           ok=0
           scripts_dir="$(git rev-parse --show-toplevel)/scripts"
-          "$scripts_dir/ci-install-chromium-deps.sh" && ok=1
+          # With cached debs, install them first without contacting any mirror (apt-get --no-download: no
+          # `apt-get update`), so an Ubuntu archive or DNS outage does not fail a job that has its packages.
+          # Without them, or if that fails, the bounded online attempts run.
+          offline=""
+          if ls "$HOME"/apt-debs/*.deb >/dev/null 2>&1; then
+            offline="sudo apt-get install -y --no-install-recommends --no-download $(printf '%s ' "$HOME"/apt-debs/*.deb)"
+          fi
+          OFFLINE_CMD="$offline" "$scripts_dir/ci-install-chromium-deps.sh" && ok=1
           sudo cp -n /var/cache/apt/archives/*.deb "$HOME/apt-debs/" 2>/dev/null || true
           sudo chown -R "$USER" "$HOME/apt-debs"
           [ "$ok" = 1 ]

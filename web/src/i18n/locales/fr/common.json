@@ -281,13 +281,19 @@
         "contactMind": "Esprit en contact",
         "noContact": "Aucun contact",
         "noRolls": "Aucune défense choisie : pas de jet à saisir.",
-        "needTarget": "Nommez l’adversaire dans la bande Cible.",
+        "needs": "Il manque : {{fields}}.",
+        "need": {
+          "target": "le nom de l’adversaire",
+          "mind": "son esprit, ouvert ou fermé",
+          "level": "son niveau",
+          "rolls": "les deux jets"
+        },
+        "required": "obligatoire",
         "initialCost": "Coût initial",
         "maintenanceCost": "Maintien par tour",
         "confirm": "Coût fixé par le pouvoir.",
         "tableCost": "Coût {{cost}} PFP · score {{target}}",
         "notEnough": "Pas assez de PFP ({{current}} restants).",
-        "needOpponent": "Nommez l’adversaire, son esprit et son niveau dans la bande Cible.",
         "dmCost": "Coût (MJ)",
         "previewFailed": "Le coût n’a pas pu être lu.",
         "resolve": "Résoudre"
@@ -591,14 +597,17 @@
     "otherWeapons": "Autres armes",
     "otherWeapon": "Autre arme",
     "otherWeaponPlaceholder": "Autre arme…",
+    "notEquipped": "rangée",
     "modifiers": "Modificateur situationnel",
     "tags": {
       "situational": "Situationnel {{value}}"
     },
     "line": {
-      "sm": "P/M",
-      "l": "G",
-      "bonus": "toucher / dégâts",
+      "damageSm": "Dégâts P/M",
+      "damageL": "Dégâts G",
+      "speed": "Vitesse",
+      "toHit": "Toucher",
+      "dmgBonus": "Bonus dég.",
       "thac0": "TAC0"
     },
     "backstab": "Dans le dos ×{{n}}",

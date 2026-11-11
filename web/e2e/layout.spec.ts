@@ -5814,3 +5814,101 @@ test("page header: every theme and mode shows the brand uncut", async ({
     }
   }
 });
+
+// The weapon in hand: damage, speed and to-hit as labelled chips (the result card's tile), the other
+// weapons as chips up to four and a menu beyond, no native select left, en and fr, long names, no cut
+// text from 1280x800 to 2560x1440. Only a browser shows the wrapping of the chips and the menu.
+test("weapon in hand: labelled stat chips and other weapons as chips, then a menu", async ({
+  page,
+  stack,
+}) => {
+  test.setTimeout(120_000);
+  const api = (method: string, url: string, data: unknown) =>
+    fetch(`${stack.apiUrl}${url}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }).then((r) => expect(r.ok, `${method} ${url}`).toBe(true));
+  await api("PATCH", "/api/items/darts", {
+    name: { en: LONG_WEAPON, fr: LONG_WEAPON },
+  });
+  await openDashboard(page);
+  await openWeapons(page);
+  // Trim or grow the character's weapons so exactly `wanted` are besides the one in hand.
+  let added = 0;
+  const growTo = async (wanted: number) => {
+    const weapons = (await (
+      await fetch(`${stack.apiUrl}/api/weapons`)
+    ).json()) as { id: string }[];
+    const held = (
+      (await (await fetch(`${stack.apiUrl}/api/attack/form`)).json()) as {
+        form: { weaponId: string };
+      }
+    ).form.weaponId;
+    const spare = weapons.filter((w) => w.id !== held);
+    for (const w of spare.slice(wanted))
+      await fetch(`${stack.apiUrl}/api/items/${w.id}`, { method: "DELETE" });
+    for (let n = spare.length; n < wanted; n++) {
+      added += 1;
+      await api("POST", "/api/items", {
+        name: {
+          en: `Spare ${LONG_WEAPON} number ${added}`,
+          fr: `Arme de rechange ${LONG_WEAPON} numéro ${added}`,
+        },
+        category: "weapon",
+        damageSm: "1d6",
+        damageL: "1d6",
+        damageTypes: ["s"],
+        weaponKind: "melee",
+        behaviour: "stock",
+        count: 1,
+      });
+    }
+    await reloadSettled(page);
+    await openWeapons(page);
+  };
+  for (const wanted of [2, 6]) {
+    await chooseLanguage(page, "en");
+    await growTo(wanted);
+    for (const lang of ["en", "fr"] as const) {
+      await chooseLanguage(page, lang);
+      const label = lang === "en" ? "Other weapons" : "Autres armes";
+      for (const vp of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+        await page.setViewportSize(vp);
+        const where = `${wanted} others, ${lang}, ${vp.width}x${vp.height}`;
+        const f =
+          lang === "en"
+            ? attackForm(page)
+            : page.getByRole("form", { name: "Attaque" });
+        // No native select in the panel; damage, speed and to-hit are separate labelled chips.
+        await expect(
+          f.locator("select"),
+          `native select, ${where}`,
+        ).toHaveCount(0);
+        const stats = f.getByTestId("weapon-stats").locator("dt");
+        await expect(stats.first()).toBeVisible();
+        expect(await stats.count()).toBeGreaterThanOrEqual(4);
+        const group = f.getByRole("group", { name: label });
+        if (wanted <= 4)
+          await expect(group.getByRole("button")).toHaveCount(wanted);
+        else await expect(group.getByTestId("other-weapon-menu")).toBeVisible();
+        await expectNoClippedText(f, `weapons tab, ${where}`);
+        await snap(
+          page,
+          `weapon-chips-${wanted}-${lang}-${vp.width}x${vp.height}`,
+        );
+      }
+    }
+  }
+  // With more than four the menu holds the rest, reachable by keyboard; choosing one puts it in hand.
+  await chooseLanguage(page, "en");
+  await page.setViewportSize(VIEWPORTS[3]);
+  const menu = attackForm(page).getByTestId("other-weapon-menu");
+  await menu.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("menuitem").first()).toBeVisible();
+  await snap(page, "weapon-menu-open-en-1920x1080");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("Enter");
+  await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
+});

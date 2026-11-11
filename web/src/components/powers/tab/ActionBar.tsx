@@ -20,7 +20,12 @@ import {
 import { localized } from "@/i18n/localized";
 import { useTableStore } from "@/stores/table";
 import type { Power } from "@/types/powers";
-import { EMPTY_ATTACK, attackRequest, type AttackDraft } from "../attack";
+import {
+  EMPTY_ATTACK,
+  attackNeeds,
+  attackRequest,
+  type AttackDraft,
+} from "../attack";
 import { CHECK_DIE, EMPTY_DEFEND, defendRequest } from "../defend";
 import {
   EMPTY_DRAFT,
@@ -32,9 +37,11 @@ import {
 import { useBuffsStore } from "@/stores/buffs";
 import { contactMinds, labelledOf } from "./model";
 import { fixedCost, formOf, type TargetDraft } from "./bar";
+import { Needs, Required } from "./Required";
 import {
   controlsOf,
   initialPicks,
+  tableNeeds,
   tableRequest,
   type Control,
   type Picks,
@@ -212,9 +219,12 @@ type Roll = { roll: string; success: boolean };
 function Rolls({
   rolls,
   onChange,
+  required = false,
 }: {
   rolls: Roll[];
   onChange: (next: Roll[]) => void;
+  /** The rolls are still to be entered (marked). */
+  required?: boolean;
 }) {
   const { t } = useTranslation();
   return (
@@ -224,6 +234,12 @@ function Rolls({
     >
       <span className={`${labelClass} self-center`}>
         {t("powers.defence.rolls")}
+        {required && (
+          <>
+            {" "}
+            <Required />
+          </>
+        )}
       </span>
       {rolls.map((r, i) => (
         <span key={i} className="flex items-center gap-1.5">
@@ -277,7 +293,9 @@ function AttackBarForm({
   const [rolls, setRolls] = useState<Roll[]>(EMPTY_ATTACK.rolls);
   const [result, setResult] = useState<AttackResult | null>(null);
   const [refused, setRefused] = useState<string | null>(null);
-  const req = attackRequest({ ...EMPTY_ATTACK, ...target, rolls, modifiers });
+  const draft = { ...EMPTY_ATTACK, ...target, rolls, modifiers };
+  const req = attackRequest(draft);
+  const needs = attackNeeds(draft);
   const name = localized(i18n.language, power.name);
   const fresh =
     <A,>(f: (a: A) => void) =>
@@ -308,7 +326,11 @@ function AttackBarForm({
     >
       <div className={row}>
         {target.defence ? (
-          <Rolls rolls={rolls} onChange={fresh(setRolls)} />
+          <Rolls
+            rolls={rolls}
+            onChange={fresh(setRolls)}
+            required={needs.includes("rolls")}
+          />
         ) : (
           <span className="text-body text-ink-muted">
             {t("powers.tab.bar.noRolls")}
@@ -324,11 +346,7 @@ function AttackBarForm({
           {t("powers.attack.attack")}
         </Button>
       </div>
-      {!target.target.trim() && (
-        <span className="text-label text-ink-muted">
-          {t("powers.tab.bar.needTarget")}
-        </span>
-      )}
+      <Needs needs={needs} testId="attack-need" />
       <Refusal text={refused} testId="attack-refused" />
       {result && <AttackOutcome result={result} />}
     </form>
@@ -646,11 +664,7 @@ function TableBarForm({
           {t("powers.use.use")}
         </Button>
       </div>
-      {!req && table && (
-        <span className="text-label text-ink-muted" data-testid="table-need">
-          {t("powers.tab.bar.needOpponent")}
-        </span>
-      )}
+      <Needs needs={tableNeeds(target)} testId="table-need" />
       {unavailable && (
         <Refusal text={t("powers.tab.bar.previewFailed")} testId="table-down" />
       )}

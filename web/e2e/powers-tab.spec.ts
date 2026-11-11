@@ -2,6 +2,7 @@ import { test, expect, snap } from "./fixtures";
 import { psionicist } from "./psionicist";
 import {
   apiCall,
+  chooseLanguage,
   keepATangent,
   nextRound,
   openDashboard,
@@ -54,16 +55,44 @@ test.describe("the Powers tab of a psionicist", () => {
     await nextRound(page);
     await page.getByRole("tab", { name: "Powers" }).click();
     const tab = page.getByTestId("powers-tab");
-    await tab.getByTestId("target-name").fill("Orc");
     await tab
       .getByRole("button", { name: "Attack with Mind Thrust" })
       .first()
       .click();
     const bar = page.getByTestId("action-bar");
-    await bar.getByRole("button", { name: "Attack with Mind Thrust" }).click();
+    const attack = bar.getByRole("button", { name: "Attack with Mind Thrust" });
+    // Armed with no opponent: the field is marked and the disabled Attack says what is missing.
+    const name = tab.getByTestId("target-name");
+    await expect(attack).toBeDisabled();
+    await expect(bar.getByTestId("attack-need")).toHaveText(
+      "Still needed: the opponent’s name.",
+    );
+    await expect(name).toHaveAttribute("aria-required", "true");
+    // The mind is optional here: Closed shows chosen, as it is sent.
+    const mind = tab.getByTestId("target-band").getByRole("radio");
+    await expect(mind.filter({ hasText: "Closed" })).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
+    await expect(mind.filter({ hasText: "Open" })).toHaveAttribute(
+      "aria-checked",
+      "false",
+    );
+    await snap(page, "attack-mind-default-en");
+    await expect(tab.getByTestId("target-band")).toContainText("required");
+    await name.fill("Orc");
+    await expect(attack).toBeEnabled();
+    await expect(bar.getByTestId("attack-need")).toHaveCount(0);
+    await expect(name).not.toHaveAttribute("aria-required", "true");
+    await attack.click();
     await expect(bar.getByTestId("attack-result")).toBeVisible();
     await expect(bar.getByTestId("attack-tangents")).toContainText("Orc");
     await snap(page, "powers-bar-attack-result");
+    await chooseLanguage(page, "fr");
+    await expect(
+      tab.getByTestId("target-band").getByRole("radio", { name: "Fermé" }),
+    ).toHaveAttribute("aria-checked", "true");
+    await snap(page, "attack-mind-default-fr");
   });
 
   test("keep a tangent up, see the balance, Next turn charges it", async ({
@@ -209,5 +238,58 @@ test.describe("the Powers tab of a psionicist", () => {
       `${40 - spent} / 40`,
     );
     await snap(page, "contact-table-used");
+  });
+
+  // Only a browser shows the marks beside the fields, the reason beside the disabled Use and the
+  // enabling, in both languages. What is required is Vitest (`tableNeeds`, `attackNeeds`).
+  test("contact: required fields marked, the disabled Use names what is missing", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    await openDashboard(page);
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "power", id: "contact" },
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    await nextRound(page);
+    await page.getByRole("tab", { name: "Powers" }).click();
+    const tab = page.getByTestId("powers-tab");
+    const band = tab.getByTestId("target-band");
+    await tab
+      .locator("[data-testid=power-row][data-id=contact]")
+      .getByRole("button")
+      .last()
+      .click();
+    const bar = page.getByTestId("action-bar");
+    const use = bar.getByRole("button", { name: /^(Use|Utiliser) Contact/ });
+    const need = bar.getByTestId("table-need");
+    await expect(use).toBeDisabled();
+    await expect(need).toHaveText(
+      "Still needed: the opponent’s name, its mind, open or closed, its level.",
+    );
+    await expect(band.getByText("required")).toHaveCount(3);
+    await snap(page, "required-empty-en");
+    await tab.getByTestId("target-name").fill("Orc");
+    await band.getByRole("radio", { name: "Open" }).click();
+    await expect(need).toHaveText("Still needed: its level.");
+    await expect(band.getByText("required")).toHaveCount(1);
+    await snap(page, "required-partial-en");
+    await chooseLanguage(page, "fr");
+    await expect(need).toHaveText("Il manque : son niveau.");
+    await expect(band.getByText("obligatoire")).toHaveCount(1);
+    await snap(page, "required-partial-fr");
+    await tab.getByTestId("target-name").fill("");
+    await expect(need).toContainText("Il manque : le nom de l’adversaire");
+    await snap(page, "required-empty-fr");
+    await tab.getByTestId("target-name").fill("Orc");
+    await band.getByLabel("Niveau", { exact: true }).fill("3");
+    await expect(use).toBeEnabled();
+    await expect(need).toHaveCount(0);
+    await expect(band.getByText("obligatoire")).toHaveCount(0);
   });
 });

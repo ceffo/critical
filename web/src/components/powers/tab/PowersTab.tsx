@@ -13,7 +13,7 @@ import { useTableStore } from "@/stores/table";
 import type { Power, PowerFilterOptions } from "@/types/powers";
 import { MAX_MODIFIER } from "../powerUse";
 import { ActionBar, type Selection } from "./ActionBar";
-import { NO_TARGET, formOf, type TargetDraft } from "./bar";
+import { NO_TARGET, formOf, targetNeeds, type TargetDraft } from "./bar";
 import {
   adjustmentModifiers,
   groupsOf,
@@ -93,7 +93,20 @@ export function PowersView({
           )
         }
       />
-      {aimed && <TargetBand target={target} onChange={setTarget} />}
+      {aimed && (
+        <TargetBand
+          target={target}
+          needs={
+            selection?.kind === "power"
+              ? targetNeeds(formOf(selection.power), target)
+              : []
+          }
+          mindDefaults={
+            selection?.kind === "power" && formOf(selection.power) === "attack"
+          }
+          onChange={setTarget}
+        />
+      )}
       {powers.length === 0 && (
         <p className="text-body text-muted-foreground">{t("powers.none")}</p>
       )}

@@ -36,16 +36,26 @@ function form(page: Page) {
   return page.getByTestId("item-form");
 }
 
-/** Every weapon not in hand: the previous weapon's button and the drop-down's options. */
+/** Every weapon not in hand: the chips, and the menu's entries when there are more than four. */
 async function otherWeapons(page: Page) {
   const group = attackForm(page).getByRole("group", { name: "Other weapons" });
-  const previous = await group
-    .getByRole("button")
+  const names = await group
+    .locator("button[data-weapon]")
     .evaluateAll((els) => els.map((e) => e.getAttribute("data-weapon") ?? ""));
-  const listed = await group
-    .locator("option:not([disabled])")
-    .evaluateAll((els) => els.map((e) => e.textContent ?? ""));
-  return [...previous, ...listed];
+  const menu = group.getByTestId("other-weapon-menu");
+  if (await menu.count()) {
+    await menu.click();
+    await expect(page.getByRole("menuitem").first()).toBeVisible();
+    names.push(
+      ...(await page
+        .getByRole("menuitem")
+        .evaluateAll((els) =>
+          els.map((e) => e.getAttribute("data-weapon") ?? ""),
+        )),
+    );
+    await page.keyboard.press("Escape");
+  }
+  return names;
 }
 
 async function rollAttack(page: Page, weapon: string) {
@@ -118,11 +128,14 @@ test("a new bow is carried: the attack's drop-down lists it under Not equipped, 
 
   await openWorkspace(page, "Act");
   await openWeapons(page);
-  const group = attackForm(page)
-    .getByRole("combobox", { name: "Other weapon" })
-    .locator('optgroup[label="Not equipped"] option');
-  await expect(group).toHaveText(["Long Bow"]);
-  await snap(page, "drop-down-not-equipped");
+  // Beyond four other weapons they are in the menu: open it to see the bow marked as stowed.
+  const others = attackForm(page).getByRole("group", { name: "Other weapons" });
+  await others.getByRole("button", { name: "Other weapon" }).click();
+  await expect(
+    page.getByRole("menuitem", { name: /^Long Bow\s*stowed$/ }),
+  ).toBeVisible();
+  await snap(page, "menu-stowed-weapon");
+  await page.keyboard.press("Escape");
   await chooseWeapon(page, "Long Bow");
   await expect(logEntry(page, "Equipped: Long Bow")).toBeVisible();
   await expect(

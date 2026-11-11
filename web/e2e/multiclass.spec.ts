@@ -6,7 +6,7 @@ import {
   openWorkspace,
 } from "./helpers";
 import { expectNoClippedText } from "./noClip";
-import { asMultiClass } from "./multiclass";
+import { asMultiClass, openClassDetail } from "./multiclass";
 
 // What only a browser proves for a multi-class character: the card's class lines, the Experience
 // activity's standings, an award's preview, ledger row and journal row each showing the split the
@@ -19,19 +19,26 @@ test("multi-class: the class lines, an XP award split between the classes, a lev
   await asMultiClass(page, { pending: true });
   await openDashboard(page);
 
-  // The card: one line per class with its level and XP, no single class line.
+  // The card: one summary line, no single class line; the detail per class behind it.
   const character = page.getByRole("complementary", { name: "Character" });
   await expect(character.getByTestId("class")).toHaveCount(0);
-  await expect(character.getByTestId("class-level-fighter")).toHaveText(
-    "Level 7",
+  await expect(character.getByTestId("class-summary")).toHaveText(
+    "Fighter 7 / Thief 9",
   );
-  await expect(character.getByTestId("class-level-thief")).toHaveText(
-    "Level 9",
-  );
-  await expect(character.getByTestId("class-xp-fighter")).toHaveText(
+  const detail = await openClassDetail(page);
+  await expect(detail.getByTestId("class-level-fighter")).toHaveText("Level 7");
+  await expect(detail.getByTestId("class-level-thief")).toHaveText("Level 9");
+  await expect(detail.getByTestId("class-xp-fighter")).toHaveText(
     "64,000 / 125,000 XP",
   );
-  await expect(character.getByTestId("class-limit-thief")).toBeVisible();
+  await expect(detail.getByTestId("class-limit-thief")).toBeVisible();
+  // A row opens the Experience activity and closes the detail.
+  await detail.getByTestId("class-entry-fighter").click();
+  await expect(detail).toHaveCount(0);
+  await expect(
+    page.getByRole("region", { name: "Experience", exact: true }),
+  ).toBeVisible();
+  await openWorkspace(page, "Act");
 
   // A level-up prompt per class, each naming its class and sending it.
   const prompts = character.getByTestId("level-up");
@@ -81,19 +88,17 @@ test("dual-class: the old class is shown frozen beside the active one", async ({
 }) => {
   await asMultiClass(page, { dual: true });
   await openDashboard(page);
-  const character = page.getByRole("complementary", { name: "Character" });
-  await expect(character.getByTestId("class-entry-fighter")).toHaveAttribute(
+  const detail = await openClassDetail(page);
+  await expect(detail.getByTestId("class-entry-fighter")).toHaveAttribute(
     "data-state",
     "frozen",
   );
-  await expect(character.getByTestId("class-frozen-fighter")).toHaveText(
-    "Frozen",
-  );
-  await expect(character.getByTestId("class-entry-mage")).toHaveAttribute(
+  await expect(detail.getByTestId("class-frozen-fighter")).toHaveText("Frozen");
+  await expect(detail.getByTestId("class-entry-mage")).toHaveAttribute(
     "data-state",
     "active",
   );
-  await expect(character.getByTestId("class-xp-fighter")).toHaveCount(0);
+  await expect(detail.getByTestId("class-xp-fighter")).toHaveCount(0);
 });
 
 test("multi-class: the XP bonus rule names every active class's prime requisites, in French then English", async ({

@@ -60,6 +60,8 @@
     },
     "classEntry": {
       "list": "Classes",
+      "summaryItem": "{{class}}\u00a0{{level}}",
+      "summaryOpen": "Classes: {{summary}}. Show the detail of each class",
       "xp": "{{xp}} / {{next}} XP",
       "xpMax": "{{xp}} XP (highest level)",
       "frozen": "Frozen",

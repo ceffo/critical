@@ -1,4 +1,4 @@
-import type { Page, Route } from "@playwright/test";
+import type { Locator, Page, Route } from "@playwright/test";
 
 /**
  * A multi-class (or dual-class) character for the specs. The API cannot create one yet, so the real
@@ -10,6 +10,8 @@ import type { Page, Route } from "@playwright/test";
 export interface MultiClassOptions {
   /** A frozen old class and one active (a dual-class), else two active classes. */
   dual?: boolean;
+  /** Three active classes, at levels 5, 5 and 6, in place of two. */
+  three?: boolean;
   /** One pending level per class. */
   pending?: boolean;
   /** A long first class name, to prove wrapping: the code, as the web has no wording for it. */
@@ -40,7 +42,9 @@ const PRIMES: Record<string, string[]> = {
 
 /** The class codes sharing an award: the active entries. */
 export function sharing(opts: MultiClassOptions): string[] {
-  return opts.dual ? ["mage"] : [opts.longClass ?? "fighter", "thief"];
+  if (opts.dual) return ["mage"];
+  const first = opts.longClass ?? "fighter";
+  return opts.three ? [first, "mage", "thief"] : [first, "thief"];
 }
 
 export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
@@ -62,22 +66,30 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
           leftAtLevel: 0,
         },
       ]
-    : [
-        {
-          class: first,
-          level: 7,
+    : opts.three
+      ? [first, "mage", "thief"].map((c, i) => ({
+          class: c,
+          level: i === 2 ? 6 : 5,
           startingXp: 64000,
           state: "active",
           leftAtLevel: 0,
-        },
-        {
-          class: "thief",
-          level: 9,
-          startingXp: 160000,
-          state: "active",
-          leftAtLevel: 0,
-        },
-      ];
+        }))
+      : [
+          {
+            class: first,
+            level: 7,
+            startingXp: 64000,
+            state: "active",
+            leftAtLevel: 0,
+          },
+          {
+            class: "thief",
+            level: 9,
+            startingXp: 160000,
+            state: "active",
+            leftAtLevel: 0,
+          },
+        ];
   const classes = sharing(opts);
   await page.route(
     (url) => url.pathname === "/api/character",
@@ -157,4 +169,17 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
             }),
           ),
   );
+}
+
+/**
+ * Opens the class summary line's popover of the character card (by keyboard, as the line is a
+ * button) and returns the popover, which holds one row per class entry. Escape closes it.
+ */
+export async function openClassDetail(page: Page): Promise<Locator> {
+  const summary = page.getByTestId("class-summary");
+  await summary.focus();
+  await page.keyboard.press("Enter");
+  const detail = page.getByTestId("class-entries");
+  await detail.waitFor();
+  return detail;
 }

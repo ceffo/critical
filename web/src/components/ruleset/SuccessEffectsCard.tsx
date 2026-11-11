@@ -133,6 +133,7 @@ export function SuccessEffectsCard({
           <div className="flex gap-2">
             <Button
               type="button"
+              variant="main"
               disabled={saving}
               title={t("ruleset.effects.saveHint")}
               aria-label={t("ruleset.effects.saveHint")}

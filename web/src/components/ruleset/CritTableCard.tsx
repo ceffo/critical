@@ -167,6 +167,7 @@ export function CritTableCard({
             </Button>
             <Button
               type="button"
+              variant="main"
               disabled={saving}
               title={t("critTable.save")}
               aria-label={t("critTable.save")}

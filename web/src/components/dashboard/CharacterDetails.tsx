@@ -480,7 +480,7 @@ function DetailsForm({
         <Button type="button" variant="ghost" onClick={onDone}>
           {t("details.cancel")}
         </Button>
-        <Button type="submit" disabled={busy}>
+        <Button type="submit" variant="main" disabled={busy}>
           {busy ? t("details.saving") : t("details.save")}
         </Button>
       </div>

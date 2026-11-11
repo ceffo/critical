@@ -88,7 +88,12 @@ export function EditBuffForm({
         value={note}
         onChange={(e) => setNote(e.target.value)}
       />
-      <Button size="sm" type="submit" disabled={!valid || busy}>
+      <Button
+        size="sm"
+        type="submit"
+        variant="main"
+        disabled={!valid || busy}
+      >
         {t("buffs.save")}
       </Button>
       <Button size="sm" type="button" variant="ghost" onClick={onDone}>
@@ -245,7 +250,12 @@ export function AddBuffForm({ onDone }: { onDone: () => void }) {
         />
         {t("buffs.saveForReuse")}
       </label>
-      <Button size="sm" type="submit" disabled={!valid || busy}>
+      <Button
+        size="sm"
+        type="submit"
+        variant="main"
+        disabled={!valid || busy}
+      >
         {t("buffs.activate")}
       </Button>
       <Button size="sm" type="button" variant="ghost" onClick={onDone}>

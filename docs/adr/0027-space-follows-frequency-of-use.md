@@ -131,7 +131,9 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       a switch button's weapon name) goes on its second line or as its object, not as more verbs.
    4. Main versus quiet: each zone has at most one main (filled) button, the every-turn action of
       that zone (Attaquer on Act's Weapons tab, Tour suivant in the header, Lancer for a spell);
-      the others are quiet (the shared pieces of the colour epic). Add buttons are quiet.
+      the others are quiet (the shared pieces of the colour epic). A form's commit action
+      (Enregistrer, Ajouter, Créer) is main in every form (amended 2026-11-11, user critique C4);
+      a button that opens a form or adds one row to a list is quiet.
 4. **Header** (amends ADR 0022 steps 2.2, 3.4 and 7, ADR 0017 step 6, ADR 0026 step 5.9).
    1. **The turn is stacked**: its label ("TOUR") over its number. The number is `text-headline`
       (24 px), no longer `text-hero`.

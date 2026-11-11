@@ -86,6 +86,7 @@ export function AcOverrideForm({
         </Button>
         <Button
           type="submit"
+          variant="main"
           size="sm"
           disabled={busy}
           title={t("ac.override.saveHint")}

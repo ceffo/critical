@@ -579,7 +579,7 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
         />
       </div>
       <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="submit" variant="main" size="sm" disabled={busy}>
           {editing ? t("items.form.save") : t("items.form.add")}
         </Button>
         <Button type="button" size="sm" onClick={onCancel}>

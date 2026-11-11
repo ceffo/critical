@@ -10,7 +10,11 @@ const buttonVariants = cva(
       variant: {
         // A button with nothing to submit is disabled and looks it, the same in every variant: no
         // fill, muted text, a dashed edge; never a faded main button.
-        // The zone's one every-turn action (ADR 0027 step 3.4): filled with the tint.
+        // Which variant a button takes: a form's commit action (Save, Add, Create, Invite: the
+        // button that submits its fields) and a zone's one every-turn action (ADR 0027 step 3.4)
+        // are `main`, filled with the tint, in every form. Cancel and every other action are
+        // `quiet`; icon-only toolbar and row buttons are `ghost`; removals are `destructive`. A
+        // button that adds one row to a list inside a form, or opens a form, is not a commit: quiet.
         main: "bg-primary text-primary-foreground hover:bg-primary/85",
         // Every other button: no fill, the field edge (3:1 on the card, so it reads on the card, the
         // raised step and the selected tone alike), the raised tone on hover; a pressed toggle is

@@ -1868,6 +1868,21 @@
     "pspRecovery": "{{hours}} h {{activity}} : PFP récupérés {{amount}}",
     "defenceRaised": "Défense dressée ({{power}}) : PFP {{spent}}",
     "defenceRaisedStanding": "Défense dressée ({{power}}, permanente) : PFP {{spent}}",
+    "summary": {
+      "effect": "effet à appliquer",
+      "attack": "{{attack}} sur {{target}} : {{outcome}}",
+      "tangents_one": "{{count}} tangente",
+      "tangents_other": "{{count}} tangentes",
+      "powerCheck": "{{power}} : {{verdict}}, PFP {{spent}}",
+      "powerRoll": "d20 {{d20}} contre {{target}}, {{verdict}}, PFP {{spent}}",
+      "defence": "{{attack}} contre {{defence}} : {{outcome}}",
+      "defenceNone": "{{attack}}, sans défense : {{outcome}}",
+      "maintenance": "Maintien, PFP {{cost}}",
+      "maintenanceEnded_one": "{{text}}, {{count}} terminé",
+      "maintenanceEnded_other": "{{text}}, {{count}} terminés",
+      "expand": "Afficher le détail",
+      "collapse": "Masquer le détail"
+    },
     "psionicAttack": "Attaque psionique ({{attack}} sur {{target}}) : {{results}}",
     "psionicAttackWith": "{{text}} ({{parts}})",
     "attackParts": {

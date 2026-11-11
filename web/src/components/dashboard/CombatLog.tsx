@@ -1,6 +1,6 @@
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { Campfire } from "@phosphor-icons/react";
+import { Campfire, CaretDown, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useBuffsStore } from "@/stores/buffs";
 import { useJournalStore } from "@/stores/journal";
@@ -14,6 +14,7 @@ import { useInventoryName } from "@/i18n/inventoryName";
 import { cardEntryId, cardSource } from "@/journal/card";
 import {
   entryCapped,
+  entrySummary,
   entryText,
   filterEntries,
   rerollFormula,
@@ -239,7 +240,10 @@ function LogRow({
   const voided = e.status === "voided";
   const amended = e.status === "amended";
   const isHp = e.kind === "hp_change";
-  const text = entryText(e, t, spellName, names);
+  // A kind with a short form shows its summary; the detail opens under it (a button, so by keyboard).
+  const short = entrySummary(e, t, spellName, names);
+  const [open, setOpen] = useState(false);
+  const text = short ? short.summary : entryText(e, t, spellName, names);
   const capped = entryCapped(e);
   const value = rowValue(e);
   const kindLabel = t(`log.kinds.${e.kind}`, { defaultValue: e.kind });
@@ -294,6 +298,18 @@ function LogRow({
           <span className={cn(voided && "text-muted-foreground line-through")}>
             {text}
           </span>
+          {short && open && (
+            <span
+              className="mt-0.5 block text-muted-foreground"
+              data-testid="log-detail"
+            >
+              {short.detail.map((line, i) => (
+                <span key={i} className="block">
+                  {line}
+                </span>
+              ))}
+            </span>
+          )}
           {amended && (
             <span className="chip ml-2 px-1.5 text-label text-muted-foreground">
               {t("log.status.amended")}
@@ -315,6 +331,23 @@ function LogRow({
           )}
         </span>
       </button>
+      {short && (
+        <button
+          type="button"
+          className="flex h-[1.125rem] shrink-0 items-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          aria-expanded={open}
+          aria-label={t(open ? "log.summary.collapse" : "log.summary.expand")}
+          title={t(open ? "log.summary.collapse" : "log.summary.expand")}
+          data-testid="log-expand"
+          onClick={() => setOpen((v) => !v)}
+        >
+          {open ? (
+            <CaretDown aria-hidden className="size-[1.125rem]" />
+          ) : (
+            <CaretRight aria-hidden className="size-[1.125rem]" />
+          )}
+        </button>
+      )}
       {diceFormula !== null && (
         // On hover, on keyboard focus in the row, and on the selected row (ADR 0022 step 5.3).
         <Button

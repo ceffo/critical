@@ -10,7 +10,7 @@ import { englishSpellName } from "@/i18n/spellName";
 import { inventoryNamer } from "@/i18n/inventoryName";
 import type { LogEntry, LogKind } from "@/types/log";
 import { cardContent } from "./card";
-import { isRolledEntry, rowValue, shortResult } from "./entry";
+import { entrySummary, isRolledEntry, rowValue, shortResult } from "./entry";
 import type { RowValue } from "./kindView";
 import { KIND_VIEWS } from "./registry";
 import type { Lang } from "./testing";
@@ -22,6 +22,12 @@ export type Fixture = Partial<LogEntry> & { payload: unknown };
 export interface Words {
   /** The journal's text. */
   text: string;
+  /**
+   * The journal row's one-line summary (about 60 characters, 64 at most) and the lines of its expanded
+   * detail; absent: the kind's row shows the full text and none is checked.
+   */
+  summary?: string;
+  detail?: string[];
   /** The header's last result, "what · verdict" (absent: the kind's label alone). */
   short?: string;
   /** The result card's subtitle (absent: none). */
@@ -112,6 +118,15 @@ export function describeKind(
           );
           expect(c.text, lang).toBe(w.text);
           expect(c.subtitle, lang).toBe(w.subtitle ?? "");
+          const short = entrySummary(e, inst.t, englishSpellName, names);
+          expect(short?.summary ?? undefined, lang).toBe(w.summary);
+          if (w.summary !== undefined) {
+            expect(
+              w.summary.length,
+              `${lang} summary length`,
+            ).toBeLessThanOrEqual(64);
+            expect(short?.detail, lang).toEqual(w.detail);
+          }
           const s = shortResult(e, inst.t, englishSpellName, names);
           const line = s.verdict ? `${s.what} · ${s.verdict.text}` : s.what;
           expect(line, lang).toBe(w.short ?? c.tag);

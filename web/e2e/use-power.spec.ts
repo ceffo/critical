@@ -4,6 +4,8 @@ import {
   chooseLanguage,
   openActPowers,
   undoEntry,
+  expandRow,
+  rowDetail,
 } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
@@ -135,7 +137,8 @@ test("use a known power, keep it up across Next Round, stop it", async ({
     .getByRole("listitem")
     .filter({ hasText: "Intensification" })
     .first();
-  await expect(check).toContainText("Ajustement");
+  await expandRow(check);
+  await expect(rowDetail(check)).toContainText("Ajustement");
   await snap(page, "after-use-1920");
 
   // Next Round charges the upkeep, named in French.
@@ -143,9 +146,12 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   await page.getByRole("button", { name: "Tour suivant" }).click();
   await expect(journal.getByRole("region", { name: "Tour 1" })).toBeVisible();
   await page.getByRole("button", { name: "Tour suivant" }).click();
-  await expect(
-    journal.getByRole("listitem").filter({ hasText: "maintien" }).first(),
-  ).toContainText("Intensification 1");
+  const upkeep = journal
+    .getByRole("listitem")
+    .filter({ hasText: "maintien" })
+    .first();
+  await expandRow(upkeep);
+  await expect(rowDetail(upkeep)).toContainText("Intensification 1");
   await expect(row.getByTestId("power-maintained")).toBeAttached();
   const afterRound = Number((await pool.innerText()).split("/")[0]);
   expect(afterRound).toBe(afterUse - 1);

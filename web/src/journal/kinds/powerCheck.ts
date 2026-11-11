@@ -133,6 +133,7 @@ export const powerCheckKind: KindView<PowerCheckPayload> = {
   icon: Brain,
   // "Power check (Mind Thrust): d20 9 vs 13, success, PSPs −7 (INT 18 −4, +1 relearned, −2 the DM)".
   text: (p, { t, names }, e) => {
+    const parts = breakdown(p, t);
     const line = t("log.powerCheck", {
       power: names.text(p.name, p.power),
       d20: p.d20,
@@ -140,11 +141,26 @@ export const powerCheckKind: KindView<PowerCheckPayload> = {
       verdict: verdict(p, t).text,
       spent: formatSigned(spent(e)),
     });
-    const parts = breakdown(p, t);
     return parts.length > 0
       ? t("log.powerCheckWith", { text: line, parts: parts.join(", ") })
       : line;
   },
+  // "Mind Thrust: success, PSPs −7".
+  summary: (p, { t, names }, e) =>
+    t("log.summary.powerCheck", {
+      power: names.text(p.name, p.power),
+      verdict: verdict(p, t).text,
+      spent: formatSigned(spent(e)),
+    }),
+  detail: (p, { t }, e) => [
+    t("log.summary.powerRoll", {
+      d20: p.d20,
+      target: p.target,
+      verdict: verdict(p, t).text,
+      spent: formatSigned(spent(e)),
+    }),
+    ...breakdown(p, t),
+  ],
   value: (p) => ({ text: String(p.d20), tone: p.success ? "pass" : "fail" }),
   rolled: () => true,
   short: (p, { t }, _e, value) => ({

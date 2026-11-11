@@ -5480,6 +5480,111 @@ test.describe("Powers tab, contact forms", () => {
   });
 });
 
+// ADR 0047: the action bar is pinned to the panel's bottom edge, outside the scrolling lists. With 16
+// known powers (11 rows and 5 defence chips: the most the test catalogue allows) at 1280x800, 1920x1080 and 2560x1440, in French and English: the armed bar sits whole
+// inside the Act panel wherever the list is scrolled, the last row stays reachable above it, and the
+// bar follows the last row in the tab order. Screenshots at 1280x800 and 1920x1080, French first.
+test.describe("Powers tab, long list", () => {
+  test.use({
+    character: { ...psionicist, level: 20, xp_total: 5_000_000, wis: 20 },
+  });
+  test("the armed bar stays inside the panel, 16 powers", async ({ page }) => {
+    test.setTimeout(90_000);
+    await openDashboard(page);
+    const picks = [
+      "mindlink",
+      "psionic_blast",
+      "contact",
+      "mind_blank",
+      "mind_thrust",
+      "ego_whip",
+      "id_insinuation",
+      "psychic_crush",
+      "thought_shield",
+      "mental_barrier",
+      "intellect_fortress",
+      "tower_of_iron_will",
+      "switch_personality",
+      "intensify",
+      "displacement",
+      "graft_weapon",
+    ];
+    expect(
+      await apiCall(page, "PUT", "/api/psionics/picks", {
+        picks: [
+          { kind: "discipline", id: "telepathy" },
+          { kind: "discipline", id: "metapsionics" },
+          { kind: "discipline", id: "psychometabolism" },
+          ...picks.map((id) => ({ kind: "power", id })),
+        ],
+      }),
+    ).toBe(true);
+    await reloadSettled(page);
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      await page
+        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+        .click();
+      const tab = page.getByTestId("powers-tab");
+      const panel = page.getByRole("tabpanel");
+      const rows = tab.getByTestId("power-row");
+      // The five defence modes are chips, not rows.
+      await expect(rows).toHaveCount(picks.length - 5);
+      const bar = page.getByTestId("action-bar");
+      for (const vp of VIEWPORTS.filter((v) =>
+        [1280, 1920, 2560].includes(v.width),
+      )) {
+        await page.setViewportSize(vp);
+        const where = `${lang}, ${vp.width}x${vp.height}`;
+        const inside = async (what: string) => {
+          const b = (await bar.boundingBox())!;
+          const p = (await panel.boundingBox())!;
+          expect(b.y, `bar top, ${what}, ${where}`).toBeGreaterThanOrEqual(
+            p.y - 0.5,
+          );
+          expect(
+            b.y + b.height,
+            `bar bottom, ${what}, ${where}`,
+          ).toBeLessThanOrEqual(p.y + p.height + 0.5);
+          return b;
+        };
+        // Armed from the first row, the list scrolled to its top.
+        await panel.evaluate((el) => (el.scrollTop = 0));
+        await rows.first().getByRole("button").last().click();
+        await expect(bar).toBeVisible();
+        await inside("first row armed");
+        await expectNoClippedText(tab, `bar over the top, ${where}`);
+        await expectWholeWords(tab, `bar over the top, ${where}`);
+        await expectNoPageScroll(page);
+        // Scrolled to the end: the last row sits above the bar, whole and clickable.
+        await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
+        const b = await inside("list scrolled to the end");
+        const last = (await rows.last().boundingBox())!;
+        expect(
+          last.y + last.height,
+          `last row above the bar, ${where}`,
+        ).toBeLessThanOrEqual(b.y + 0.5);
+        if (vp.width <= 1920)
+          await snap(page, `powers-bar-end-${lang}-${vp.width}x${vp.height}`);
+        // The bar is the next stop after the last row's control, in tab order.
+        await rows.last().getByRole("button").last().focus();
+        await page.keyboard.press("Tab");
+        expect(
+          await bar.evaluate((el) => el.contains(document.activeElement)),
+          `tab order, ${where}`,
+        ).toBe(true);
+        // Arming the last row keeps the bar whole too.
+        await rows.last().getByRole("button").last().click();
+        await expect(bar).toBeVisible();
+        await inside("last row armed");
+        await bar.getByRole("button").first().click();
+        await expect(bar).toHaveCount(0);
+      }
+    }
+  });
+});
+
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
 // the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and

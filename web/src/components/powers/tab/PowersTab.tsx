@@ -133,13 +133,21 @@ export function PowersView({
         ))}
       </div>
       {selection && (
-        <ActionBar
-          key={selection.kind === "power" ? selection.power.id : "incoming"}
-          selection={selection}
-          target={target}
-          modifiers={modifiers}
-          onClose={() => setSelection(null)}
-        />
+        // Pinned to the panel's bottom edge while the lists scroll behind it; after the last row once
+        // scrolled to the end, so that row is never hidden under it. The negative margin and the padding
+        // cover the panel's own bottom padding so rows do not show through under the bar.
+        <div
+          className="sticky bottom-0 z-10 -mb-3.5 bg-card pt-1 pb-3.5"
+          data-testid="action-bar-dock"
+        >
+          <ActionBar
+            key={selection.kind === "power" ? selection.power.id : "incoming"}
+            selection={selection}
+            target={target}
+            modifiers={modifiers}
+            onClose={() => setSelection(null)}
+          />
+        </div>
       )}
     </div>
   );

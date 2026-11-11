@@ -99,7 +99,7 @@ export function RoundBlock() {
           </Popover>
         </div>
         <div
-          className="flex min-h-9 max-w-48 items-center text-body text-muted-foreground"
+          className="flex min-h-9 max-w-64 items-center text-body text-muted-foreground"
           data-testid="initiative-row"
         >
           {round === 0 ? (

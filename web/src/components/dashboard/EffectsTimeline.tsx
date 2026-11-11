@@ -56,7 +56,8 @@ type TrackRow =
  * server's `duration`), in the warning colour on its last round; a charge buff shows its charges as
  * pips; a buff that does not apply is dashed with a lock and the reason. Absorb, edit and remove
  * show on the row's hover and keyboard focus (ADR 0027 step 4.4); Add stays next to the label. Five
- * round columns at every width (step 4.3), sharing the width the header leaves. At rest the track shows its round row and up to 3 effect rows, no scrollbar; with more effects an
+ * round columns at every width (step 4.3), sharing the width the header leaves; with no effect, no
+ * columns: the label, Add and a "none" line. At rest the track shows its round row and up to 3 effect rows, no scrollbar; with more effects an
  * expander (aria-expanded) grows the track in place to show them all, capped at 40% of the viewport
  * height where it scrolls (ADR 0017 step 6).
  */
@@ -85,12 +86,19 @@ export function EffectsTimeline() {
   // Out of combat (round 0) no round is counted: the numbers row and the current-round highlight go,
   // the row itself stays so the effect rows do not move (ADR 0027 step 4.3).
   const inCombat = round > 0;
-  const columns = Array.from({ length: size }, (_, i) => start + i);
-  const grid: CSSProperties = {
-    gridTemplateColumns: `${NAME_COLUMN} repeat(${size}, minmax(3rem, 1fr))`,
-    // An effect row grows when its name wraps (names are never truncated).
-    gridTemplateRows: `1.5rem repeat(${Math.max(shown.length, 1)}, minmax(1.5rem, auto))`,
-  };
+  // With no effect there is nothing to place on a round: no columns, only the label, Add and the
+  // "none" line (ADR 0027 step 4.3); the first effect brings the five columns back.
+  const empty = rows.length === 0;
+  const columns = empty
+    ? []
+    : Array.from({ length: size }, (_, i) => start + i);
+  const grid: CSSProperties = empty
+    ? { gridTemplateColumns: "auto 1fr", gridTemplateRows: "1.5rem" }
+    : {
+        gridTemplateColumns: `${NAME_COLUMN} repeat(${size}, minmax(3rem, 1fr))`,
+        // An effect row grows when its name wraps (names are never truncated).
+        gridTemplateRows: `1.5rem repeat(${shown.length}, minmax(1.5rem, auto))`,
+      };
 
   return (
     <div
@@ -103,10 +111,10 @@ export function EffectsTimeline() {
           className="relative grid items-center"
           style={grid}
           data-testid="effects-track"
-          data-columns={size}
+          data-columns={empty ? 0 : size}
         >
           {/* The current round, highlighted across every row (in combat only). */}
-          {inCombat && (
+          {inCombat && !empty && (
             <div
               aria-hidden
               data-testid="effects-current-column"
@@ -205,10 +213,10 @@ export function EffectsTimeline() {
               )}
             </span>
           ))}
-          {rows.length === 0 && (
+          {empty && (
             <span
               className="text-body text-muted-foreground italic"
-              style={{ gridColumn: "1 / -1", gridRow: 2 }}
+              style={{ gridColumn: 2, gridRow: 1 }}
             >
               {t("effects.none")}
             </span>

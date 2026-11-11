@@ -1,4 +1,4 @@
-import { test, expect, snap, catalogueSpell } from "./fixtures";
+import { test, expect, snap, snapOf, catalogueSpell } from "./fixtures";
 import {
   addBuff,
   ammoChips,
@@ -436,6 +436,78 @@ test.use({
       }),
     ],
   },
+});
+
+// ADR 0027 step 4.3: with no effect the header draws no round columns (the label, Add and "no
+// active effects" only), and "Out of combat" takes two lines at most, in English and French at
+// three viewports; the first effect brings the track back and nothing outside it moves. Only a
+// browser lays the header out, so no Go or unit test can hold this. Crops of the header in each
+// state are kept in the screens folder.
+test("header: no empty effects track, out of combat on two lines, en and fr", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  const sizes = [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ];
+  const header = page.locator("[data-screen=round-header]");
+  const crop = (name: string) => snapOf(header, `header-${name}`);
+  const rect = async (l: Locator) => {
+    const b = (await l.boundingBox())!;
+    return [b.x, b.y, b.width, b.height].map(Math.round);
+  };
+  const outside = async () => ({
+    header: (await rect(header)).slice(2),
+    round: await rect(page.getByTestId("round")),
+    next: await rect(page.getByRole("button", { name: "Next round" })),
+    initiative: await rect(page.getByTestId("initiative-row")),
+    dock: await rect(page.getByTestId("header-dock")),
+  });
+  await openDashboard(page);
+  await expect(page.getByTestId("round-value")).toHaveText("0");
+  const rest: Record<string, Awaited<ReturnType<typeof outside>>> = {};
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizes) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expect(page.getByTestId("effects-round-number")).toHaveCount(0);
+      await expect(page.getByTestId("effects-track")).toHaveAttribute(
+        "data-columns",
+        "0",
+      );
+      await expect(page.getByTestId("effects-current-column")).toHaveCount(0);
+      expect(
+        await page.getByTestId("initiative-row").evaluate(lineCount),
+        `out of combat, two lines at most, ${where}`,
+      ).toBeLessThanOrEqual(2);
+      expect(
+        (await header.boundingBox())!.height,
+        `header, ${where}`,
+      ).toBeLessThanOrEqual(112);
+      await expectNoClippedText(header, `empty header, ${where}`);
+      await crop(`empty-${lang}-${vp.width}`);
+      if (lang === "en") rest[vp.width] = await outside();
+    }
+  }
+  // The first effect: the track is back, five columns, and nothing outside it moves.
+  await chooseLanguage(page, "en");
+  await page.setViewportSize(sizes[0]);
+  await addBuff(page, { name: "Bless", rounds: 6 });
+  for (const vp of sizes) {
+    await page.setViewportSize(vp);
+    await expect(page.getByTestId("effects-track")).toHaveAttribute(
+      "data-columns",
+      "5",
+    );
+    expect(
+      await outside(),
+      `nothing outside the track moved, ${vp.width}`,
+    ).toEqual(rest[vp.width]);
+    await crop(`effect-en-${vp.width}`);
+  }
 });
 
 // ADR 0022 steps 2.1, 2.2, 2.8 and 3.1: in every activity at every layout viewport, the header card

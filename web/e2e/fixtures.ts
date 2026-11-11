@@ -455,3 +455,13 @@ export async function snap(page: Page, name: string): Promise<string> {
   await page.screenshot({ path: file, animations: "disabled" });
   return file;
 }
+
+/** Like `snap`, cropped to one element. */
+export async function snapOf(el: Locator, name: string): Promise<string> {
+  const spec = path.basename(test.info().file).replace(/\.spec\.ts$/, "");
+  const dir = path.join(screensDir, spec);
+  await mkdir(dir, { recursive: true });
+  const file = path.join(dir, `${name}.png`);
+  await el.screenshot({ path: file, animations: "disabled" });
+  return file;
+}

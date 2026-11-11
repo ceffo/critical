@@ -45,10 +45,35 @@ async function render(
   );
 }
 
+const bless = {
+  id: "b",
+  name: "Bless",
+  charges: 0,
+  duration: 6,
+  effects: {},
+  note: "",
+  startRound: 0,
+  chargesTotal: 0,
+  onOther: false,
+  applies: true,
+};
+
 describe("EffectsTimeline round numbers (ADR 0027 step 4.3)", () => {
+  it("with no effect draws no round columns, only the label, Add and the none line", async () => {
+    for (const round of [0, 6]) {
+      const html = await render(round, "en");
+      expect(html).toContain('data-columns="0"');
+      expect(html).toContain("No active effects");
+      expect(html).toContain('data-testid="add-effect"');
+      expect(html).not.toContain("effects-round-number");
+      expect(html).not.toContain("effects-current-column");
+    }
+    expect(await render(0, "en", [bless])).toContain('data-columns="5"');
+  });
+
   it("out of combat (round 0) draws no round numbers and no current column", async () => {
     for (const lng of ["fr", "en"]) {
-      const html = await render(0, lng);
+      const html = await render(0, lng, [bless]);
       expect(html).toContain('data-testid="effects-track"');
       expect(html).not.toMatch(/>[RT]\d+</);
       expect(html).not.toContain("effects-current-column");
@@ -57,12 +82,12 @@ describe("EffectsTimeline round numbers (ADR 0027 step 4.3)", () => {
   });
 
   it("in combat shows the numbers and the current column", async () => {
-    const fr = await render(6, "fr");
+    const fr = await render(6, "fr", [bless]);
     expect(fr).toContain(">T6<");
     expect(fr).toContain(">T4<");
     expect(fr).toContain("effects-current-column");
     expect(fr).toContain('aria-current="step"');
-    expect(await render(6, "en")).toContain(">R6<");
+    expect(await render(6, "en", [bless])).toContain(">R6<");
   });
 });
 

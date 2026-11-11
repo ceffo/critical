@@ -152,6 +152,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       2026-10-17, user: "When we're out of combat, we should not see the rounds", bars, no
       numbers*); the row itself stays, empty, so the "Effets" label cell and the effect rows keep
       their place, and the bars, pills, charges and item powers draw as in combat.
+      **With no effect there are no round columns** (*amended 2026-11-11, CRI-301*): the cell
+      shows the "Effets" label, Add and "Aucun effet actif" only; the first effect brings the five
+      columns back. The initiative line under "Tour suivant" ("Hors combat · l'initiative sera
+      lancée") has a 16 rem cap, so it takes one line in English and French at every layout width
+      and never more than two; the round cells keep that width with or without effects.
    4. **Effect rows show their edit and remove buttons on hover and keyboard focus** only (step 1.4),
       not at rest. Add stays visible in the "Effets" label cell.
    5. **The last result is one line**, larger than today (its value in `text-key`, the words in

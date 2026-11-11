@@ -324,6 +324,9 @@ type EntryDerivedDTO struct {
 	TargetLevel int    `json:"targetLevel"`
 	Level       int    `json:"level"`
 	NextLevelXP *int   `json:"nextLevelXp"`
+	// CurrentFloor is the XP that reaches `targetLevel` (the ledger's
+	// `currentFloor`, per entry); null for a frozen entry.
+	CurrentFloor *int `json:"currentFloor"`
 }
 
 // SkillSetDTO is one skill set of the sheet (ADR 0040 steps 3.5 and 15): set the rogue_skills set code, name its heading (a language map),
@@ -490,7 +493,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		}
 		out.Classes = append(out.Classes, EntryDerivedDTO{
 			Class: e.Class, State: string(e.State), XP: e.XP, TargetLevel: e.TargetLevel,
-			Level: e.RealizedLevel, NextLevelXP: e.NextLevelXP,
+			Level: e.RealizedLevel, NextLevelXP: e.NextLevelXP, CurrentFloor: e.CurrentFloor,
 		})
 	}
 	if d.Turning != nil {

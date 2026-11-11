@@ -170,6 +170,29 @@ test("pick a long sword from the catalogue in French: renamed, +1, equipped at o
   await expect(
     add.getByRole("button", { name: "Armes", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
+  // Family headings (the served weapon kind) are not buttons; the rows under each read in name order.
+  const rows = add.getByTestId("add-rows");
+  await expect(rows.getByRole("heading")).toHaveText(["Mêlée", "Tir"]);
+  const groups = await rows.evaluate((el) => {
+    const out: string[][] = [];
+    for (const c of Array.from(el.children)) {
+      if (c.tagName === "H3") out.push([]);
+      else if (c.tagName === "BUTTON" && out.length)
+        out[out.length - 1].push(c.firstElementChild?.textContent ?? "");
+    }
+    return out;
+  });
+  const collator = new Intl.Collator("fr", { sensitivity: "base" });
+  for (const names of groups) {
+    expect(names.length).toBeGreaterThan(0);
+    expect(names).toEqual([...names].sort(collator.compare));
+  }
+  // Keyboard: Tab to a row and Enter chooses it.
+  await add.getByTestId("add-row-long_sword").focus();
+  await page.keyboard.press("Enter");
+  await expect(add.getByTestId("add-name")).toHaveValue(
+    "Banc d'essai long sword",
+  );
   await add.getByTestId("add-search").fill("essai long SWORD");
   await expect(add.getByTestId("add-rows").getByRole("button")).toHaveCount(1);
   await add.getByTestId("add-row-long_sword").click();

@@ -13,6 +13,7 @@ import {
   openRoster,
   openWeapons,
   openWorkspace,
+  showWizardSpells,
   undoEntry,
   openTypedAdd,
   openSpend,
@@ -310,7 +311,23 @@ test("create a bard through the creation route, switch to the first and back, re
 
   // Retire the one in play from the roster: the server makes the first one left current.
   roster = await openRoster(page);
-  await roster.getByRole("button", { name: /^Retirer Lyra la Brave/ }).click();
+  const retireButton = roster.getByRole("button", {
+    name: /^Retirer Lyra la Brave/,
+  });
+  // Cancel and Escape change nothing and give the focus back to the button that opened the dialog.
+  await retireButton.click();
+  await expect(dialog.getByTestId("retire-confirm")).toContainText(
+    "Lyra la Brave",
+  );
+  await dialog.getByRole("button", { name: "Annuler" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(retireButton).toBeFocused();
+  await retireButton.click();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(retireButton).toBeFocused();
+  await expect(cards).toHaveCount(2);
+  await retireButton.click();
   await snap(page, "retire-character-fr");
   await dialog
     .getByTestId("retire-confirm")
@@ -723,6 +740,7 @@ test("create a mage, learn a spell, prepare and cast it", async ({ page }) => {
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
   const searchBox = page.getByRole("combobox", { name: "Search spells..." });
   const detail = page.getByTestId("spell-detail");
   let learned = "";

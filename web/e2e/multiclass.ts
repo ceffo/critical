@@ -98,13 +98,15 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
         ? route.fallback()
         : patched(route, (c) => {
             c.classes = entries;
-            c.derived.classes = entries.map((e) => ({
+            c.derived.classes = entries.map((e, i) => ({
               class: e.class,
               state: e.state,
-              xp: e.state === "frozen" ? e.startingXp : 64000,
+              // The first class sits on its floor; the others are part-way to the next level.
+              xp: e.state === "frozen" ? e.startingXp : 64000 + i * 30000,
               targetLevel: e.state === "frozen" ? 0 : e.level,
               level: e.level,
               nextLevelXp: e.state === "frozen" ? null : 125000,
+              currentFloor: e.state === "frozen" ? null : 64000,
             }));
             c.warnings = [
               ...(c.warnings ?? []),

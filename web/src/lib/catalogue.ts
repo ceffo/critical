@@ -16,6 +16,15 @@ export interface CatalogueRow {
   code: string;
   name: LocalizedText;
   cells: string[];
+  /** The family the row is listed under: a field the served row carries (weapon kind, ammo kind, skill column, shield kind). */
+  group: { key: string; label: string };
+}
+
+/** A heading and the rows under it. */
+export interface CatalogueGroup {
+  key: string;
+  label: string;
+  rows: CatalogueRow[];
 }
 
 /** Lower case, accents dropped: "Épée" finds "epee" and "épée". */
@@ -39,7 +48,7 @@ function damage(t: TFunction, sm: string, l: string): string {
     : sm;
 }
 
-/** The rows of `category` whose name in `lang` holds `query` (accents and case ignored), in the catalogue's order. */
+/** The rows of `category` whose name in `lang` holds `query` (accents and case ignored), sorted by that name in `lang`. */
 export function catalogueRows(
   c: EquipmentCatalogue,
   category: PickedCategory,
@@ -53,6 +62,10 @@ export function catalogueRows(
         return c.weapons.map((w) => ({
           code: w.code,
           name: w.name,
+          group: {
+            key: w.weaponKind,
+            label: t(`weapons.kind.${w.weaponKind}`),
+          },
           cells: [
             damage(t, w.damageSm, w.damageL),
             String(w.speed),
@@ -63,6 +76,12 @@ export function catalogueRows(
         return c.ammunition.map((a) => ({
           code: a.code,
           name: a.name,
+          group: {
+            key: a.ammoKind,
+            label: t(`equipment.ammoKinds.${a.ammoKind}`, {
+              defaultValue: a.ammoKind,
+            }),
+          },
           cells: [
             t(`equipment.ammoKinds.${a.ammoKind}`, {
               defaultValue: a.ammoKind,
@@ -74,6 +93,10 @@ export function catalogueRows(
         return c.armour.map((a) => ({
           code: a.code,
           name: a.name,
+          group: {
+            key: a.skillColumn,
+            label: t(`equipment.skillColumns.${a.skillColumn}`),
+          },
           cells: [
             String(a.baseAc),
             t(`equipment.skillColumns.${a.skillColumn}`),
@@ -84,6 +107,10 @@ export function catalogueRows(
         return c.shields.map((s) => ({
           code: s.code,
           name: s.name,
+          group: {
+            key: s.shieldKind,
+            label: t(`equipment.shieldKinds.${s.shieldKind}`),
+          },
           cells: [
             t(`equipment.shieldKinds.${s.shieldKind}`),
             String(s.acMelee),
@@ -93,9 +120,34 @@ export function catalogueRows(
     }
   })();
   const q = fold(query);
-  return q
+  const kept = q
     ? rows.filter((r) => fold(localized(lang, r.name)).includes(q))
     : rows;
+  return kept.sort(byName(lang));
+}
+
+/** Locale-aware order of two rows by their name in `lang`: accents and case do not decide the order. */
+function byName(lang: string) {
+  const collator = new Intl.Collator(lang, { sensitivity: "base" });
+  return (a: CatalogueRow, b: CatalogueRow) =>
+    collator.compare(localized(lang, a.name), localized(lang, b.name));
+}
+
+/** `rows` (already sorted by name) under their family headings, the headings sorted by label in `lang`. */
+export function groupRows(
+  rows: CatalogueRow[],
+  lang: string,
+): CatalogueGroup[] {
+  const groups = new Map<string, CatalogueGroup>();
+  for (const r of rows) {
+    const g = groups.get(r.group.key);
+    if (g) g.rows.push(r);
+    else groups.set(r.group.key, { ...r.group, rows: [r] });
+  }
+  const collator = new Intl.Collator(lang, { sensitivity: "base" });
+  return [...groups.values()].sort((a, b) =>
+    collator.compare(a.label, b.label),
+  );
 }
 
 /** What the player sets on the copy (ADR 0035 item 10, "Votre exemplaire"). */

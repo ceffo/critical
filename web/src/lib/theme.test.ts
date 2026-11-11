@@ -13,6 +13,7 @@ import {
   isLight,
   oklchToLinearRgb,
   palette,
+  themeColumns,
   themeVars,
 } from "./theme";
 import { linear, luminance, over, parseOklch, ratio, type Rgb } from "./wcag";
@@ -419,5 +420,48 @@ describe("index.css defaults (ADR 0026 step 1.6)", () => {
   it("paint the default light and dark themes exactly as themeVars computes them", () => {
     expect(block(css, ":root")).toEqual(themeVars(DEFAULT_LIGHT_THEME, true));
     expect(block(css, ".dark")).toEqual(themeVars(DEFAULT_DARK_THEME, false));
+  });
+});
+
+describe("ADR 0026 theme list", () => {
+  it("the table of step 3.1 lists exactly the themes and modes THEMES offers", () => {
+    const adr = readFileSync(
+      join(
+        __dirname,
+        "..",
+        "..",
+        "..",
+        "docs",
+        "adr",
+        "0026-contrast-ladder-raised-stage-four-themes.md",
+      ),
+      "utf8",
+    );
+    const documented = [
+      ...adr.matchAll(/^\s*\| `([a-z]+)`\s*\| ([a-z, ]+?)\s*\|$/gm),
+    ].map((m) => `${m[1]}: ${m[2]}`);
+    const offered = THEMES.map((t) => {
+      const modes = [
+        ...("dark" in t ? ["dark"] : []),
+        ...("light" in t ? ["light"] : []),
+      ];
+      return `${t.id}: ${modes.join(", ")}`;
+    });
+    expect(documented).toEqual(offered);
+  });
+});
+
+describe("theme grid (ADR 0026 step 3.1)", () => {
+  it("never leaves one theme alone on the last row", () => {
+    for (let n = 2; n <= 12; n++) {
+      const c = themeColumns(n);
+      expect(n % c, `${n} themes in ${c} columns`).not.toBe(1);
+    }
+  });
+
+  it("fits the lists the themes offer in whole rows", () => {
+    expect(themeColumns(DARK_THEMES.length)).toBe(3);
+    expect(DARK_THEMES.length % themeColumns(DARK_THEMES.length)).toBe(0);
+    expect(LIGHT_THEMES.length % themeColumns(LIGHT_THEMES.length)).toBe(0);
   });
 });

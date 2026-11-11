@@ -358,6 +358,15 @@
 }
 
 /*
+ * A journal row the player picked: the selected tone and ink text, no bar. The 3 px bar is
+ * the undo group's bracket there (step 5.1 amended), and the latest row has its outline.
+ */
+@utility selected-fill {
+  background-color: var(--amb-800);
+  color: var(--ink);
+}
+
+/*
  * The "latest" mark (step 5.2): the result card showing the latest result, a 2 px tint outline drawn
  * over the card's own edge (an outline, so it never fights the card's border).
  */

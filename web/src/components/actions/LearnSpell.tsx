@@ -23,9 +23,11 @@ import { spellbookOffer } from "./spellbookOffer";
  */
 export function LearnSpell({
   spellId,
+  spellLevel,
   wizard,
 }: {
   spellId: string;
+  spellLevel: number;
   wizard: boolean;
 }) {
   const { t } = useTranslation();
@@ -60,9 +62,11 @@ export function LearnSpell({
     if (rules) void fetchInfo();
   }, [rules, fetchInfo]);
 
-  const known = book.some((e) => e.id === spellId);
-  const offer = spellbookOffer(rules, wizard, known);
-  if (offer === "none" || !rules) return null;
+  const offer = spellbookOffer(rules, wizard, book, {
+    id: spellId,
+    level: spellLevel,
+  });
+  if (offer.kind === "none" || !rules) return null;
   const shown =
     result?.res.spellId === spellId && result.entry === topId
       ? result.res
@@ -96,7 +100,20 @@ export function LearnSpell({
       className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-3"
       data-testid="learn-spell"
     >
-      {offer === "known" ? (
+      {offer.kind === "refused" ? (
+        <span
+          className="text-body text-muted-foreground"
+          data-testid="learn-refused"
+          data-code={offer.code}
+        >
+          {t(`lookup.learn.refused.${offer.code}`, {
+            classMax: rules.classMaxSpellLevel,
+            intMax: rules.intMaxSpellLevel,
+            max: rules.maxSpellsPerLevel,
+            level: spellLevel,
+          })}
+        </span>
+      ) : offer.kind === "known" ? (
         <span className="inline-flex items-center gap-1 text-label text-magic">
           <BookOpen aria-hidden />
           {t("lookup.learn.known")}

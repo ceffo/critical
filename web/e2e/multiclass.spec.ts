@@ -135,3 +135,61 @@ test("multi-class: the XP bonus rule names every active class's prime requisites
     await snap(page, `multi-xp-en-${vp.width}`);
   }
 });
+
+// One bar per active class, each from the floor the server serves for that class's target level to
+// its next threshold (the web only sets the width); a dual-class's frozen class has none. The
+// figures are the server's (charactersvc, Go); here the wiring, French first, and no cut text.
+test("multi-class: the Experience header draws one bar per active class", async ({
+  page,
+}) => {
+  await asMultiClass(page, { three: true });
+  await openDashboard(page);
+  await openWorkspace(page, "Experience");
+  const top = page.getByTestId("xp-top");
+  await chooseLanguage(page, "fr");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expect(top.getByRole("progressbar")).toHaveCount(3);
+    await expectNoClippedText(top, `class bars, fr ${vp.width}`);
+    await snap(page, `class-bars-fr-${vp.width}`);
+  }
+  // First class on its floor, the next two part-way: (94,000 - 64,000) / (125,000 - 64,000).
+  const bar = (c: string) => top.getByTestId(`xp-class-bar-${c}`);
+  await expect(bar("fighter")).toHaveAttribute("aria-valuenow", "0");
+  await expect(bar("mage")).toHaveAttribute("aria-valuenow", "49");
+  await expect(bar("thief")).toHaveAttribute("aria-valuenow", "98");
+  await expect(top.getByTestId("xp-class-next-mage")).toHaveText(
+    "31 000 XP avant le niveau 6",
+  );
+  await chooseLanguage(page, "en");
+  for (const vp of [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]) {
+    await page.setViewportSize(vp);
+    await expectNoClippedText(top, `class bars, en ${vp.width}`);
+    await snap(page, `class-bars-en-${vp.width}`);
+  }
+  await expect(top.getByTestId("xp-class-next-mage")).toHaveText(
+    "31,000 XP before level 6",
+  );
+});
+
+test("dual-class: the Experience header has one bar, for the active class", async ({
+  page,
+}) => {
+  await asMultiClass(page, { dual: true });
+  await openDashboard(page);
+  await openWorkspace(page, "Experience");
+  const top = page.getByTestId("xp-top");
+  await expect(top.getByRole("progressbar")).toHaveCount(1);
+  await expect(top.getByTestId("xp-class-bar-mage")).toBeVisible();
+  await expect(top.getByTestId("xp-class-fighter")).toContainText(
+    "Left at level 7",
+  );
+});

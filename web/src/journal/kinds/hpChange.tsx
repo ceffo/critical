@@ -1,6 +1,6 @@
 // The HP change entry (ADR 0007): the ledger's delta and the player's source; a heal cut by max HP
 // or damage cut by the floor carries what was asked and applied (ADR 0011).
-import { Heart } from "@phosphor-icons/react";
+import { Drop, Heart } from "@phosphor-icons/react";
 import { formatSigned } from "@/lib/format";
 import type { HpBreakdown, LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
@@ -25,7 +25,9 @@ function amount(e: LogEntry): number {
 export const hpChangeKind: KindView<HpChangePayload> = {
   // The payload in effect; an HP change logged without one still reads (its delta is the entry's).
   decode: (e) => (e.effectivePayload ?? {}) as HpChangePayload,
+  // Damage is a drop, healing the heart (the HP buttons' icons); `iconOf` picks per entry.
   icon: Heart,
+  iconOf: (e) => (e.hpDelta < 0 ? Drop : Heart),
   // The player's source is the text; an HP change logged without one is worded from its delta.
   text: (_p, { t }, e) =>
     e.effectiveSummary ||

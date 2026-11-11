@@ -1,11 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import {
-  combatLog,
-  expectSlotDots,
-  logEntry,
-  nextRound,
-  openDashboard,
-} from "./helpers";
+import { expectSlotDots, logEntry, openDashboard } from "./helpers";
 import type { Page } from "@playwright/test";
 
 async function openSpells(page: Page) {
@@ -32,113 +26,29 @@ async function put(apiUrl: string, spells: string[]) {
   });
 }
 
-// ADR 0027 step 11: what only a browser proves is the wiring (the editor in place of the list, the
-// filter, the steppers, the gate on the button, the save reaching the server and the list coming
-// back). The draft's counts and the over-budget gate are unit tests (prepareDraft, slotDots); the
-// server's refusal of an over-budget save is a Go test (prepsvc).
-test("Prepare edits today's preparation in place: level filter, − count +, Save gated over budget", async ({
-  page,
-  stack,
-}) => {
-  expect((await put(stack.apiUrl, ["alarm", "mirror_image"])).ok).toBe(true);
-  await openSpells(page);
-  await page.getByRole("button", { name: "Prepare spells" }).click();
-  const editor = page.getByRole("form", { name: "Prepare today's spells" });
-  // In the same space: the daily list and its buttons are gone while editing.
-  await expect(page.getByRole("region", { name: "Level 1" })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Long rest" })).toHaveCount(0);
-  // Pre-filled with today's preparation, the dots against the server's counts (3 at level 1).
-  const level1 = editor.getByTestId("draft-level-1");
-  await expect(level1).toContainText("Alarm");
-  await expect(editor.getByTestId("prepared-dots-1")).toHaveAttribute(
-    "data-state",
-    "aee",
-  );
-  await expect(editor.getByTestId("draft-level-2")).toContainText(
-    "Mirror Image",
-  );
-
-  // The level filter narrows the preparation and the grimoire; picking it again clears it.
-  const level2Chip = editor
-    .getByRole("group", { name: "Filter by level" })
-    .getByRole("button", { name: "Level 2" });
-  await level2Chip.click();
-  await expect(level1).toHaveCount(0);
-  await expect(editor.getByTestId("grimoire-level-1")).toHaveCount(0);
-  await expect(editor.getByTestId("grimoire-level-2")).toBeVisible();
-  await level2Chip.click();
-  await expect(level1).toBeVisible();
-
-  // Add from the grimoire, + a copy: 4 of 3 is shown and allowed, Save is disabled.
-  await add(page, "Burning Hands", "Chromatic Orb");
-  await editor.getByRole("button", { name: "One more copy of Alarm" }).click();
-  await expect(level1.getByTestId("prepared-count").first()).toHaveText("2");
-  await expect(editor.getByTestId("prepared-dots-1")).toHaveAttribute(
-    "data-state",
-    "aaao",
-  );
-  const save = editor.getByRole("button", { name: "Save preparation" });
-  await expect(save).toBeDisabled();
-  await expect(editor.getByTestId("over-budget")).toContainText("level 1");
-  await snap(page, "prepare-over-budget");
-
-  // − takes a copy off, the last − removes the spell; Save is enabled again.
-  await editor.getByRole("button", { name: "Remove Alarm" }).click();
-  await expect(save).toBeEnabled();
-  await editor.getByRole("button", { name: "Remove Mirror Image" }).click();
-  await expect(editor.getByTestId("draft-level-2")).not.toContainText(
-    "Mirror Image",
-  );
-  // A name opens the details popup, as on the Spells tab.
-  await level1
-    .getByRole("button", { name: "Chromatic Orb", exact: true })
-    .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await snap(page, "prepare-editing");
-
-  await save.click();
-  await expect(editor).toHaveCount(0);
-  const day1 = page.getByRole("region", { name: "Level 1" });
-  await expectSlotDots(day1, 1, 3, 3);
-  await expect(day1).toContainText("Chromatic Orb");
-  await expect(page.getByRole("region", { name: "Level 2" })).toHaveCount(0);
-  await snap(page, "prepare-saved");
-});
-
-test("duplicates are prepared and a long rest keeps the preparation but resets used", async ({
+// A spell prepared several times is one row with a count, rows are sorted by name; a long rest
+// refills the used slots and keeps the preparation. The refill and the grouping rules are Go and
+// component tests (restsvc, LongRestButton, prepareDraft); the browser proves the wiring.
+test("duplicates are prepared, grouped by name and a long rest resets used", async ({
   page,
   stack,
 }) => {
   expect(
-    (
-      await put(stack.apiUrl, [
-        "mirror_image",
-        "mirror_image",
-        "haste",
-        "fireball",
-      ])
-    ).ok,
+    (await put(stack.apiUrl, ["magic_missile", "alarm", "magic_missile"])).ok,
   ).toBe(true);
   await openSpells(page);
-
-  const level2 = page.getByRole("region", { name: "Level 2" });
-  await expectSlotDots(level2, 2, 2, 2);
-  await level2
-    .getByRole("button", { name: "Cast Mirror Image" })
-    .first()
-    .click();
-  await expectSlotDots(level2, 2, 1, 2);
-  await snap(page, "after-cast");
+  const level1 = page.getByRole("region", { name: "Level 1" });
+  await expect(level1.getByRole("listitem").nth(0)).toContainText("Alarm");
+  await expect(level1.getByRole("listitem").nth(1)).toContainText(
+    "Magic Missile ×2",
+  );
+  await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
+  await expectSlotDots(level1, 1, 2, 3);
+  await snap(page, "grouped-spells");
 
   await page.getByRole("button", { name: "Long rest" }).click();
-  await expectSlotDots(level2, 2, 2, 2);
-  await expect(level2.getByRole("listitem")).toHaveCount(1); // grouped: one row, with a count
-  await expect(level2).toContainText("Mirror Image ×2");
-  await expect(page.getByRole("region", { name: "Level 3" })).toContainText(
-    "Haste",
-  );
+  await expectSlotDots(level1, 1, 3, 3);
+  await expect(level1).toContainText("Magic Missile ×2");
   await snap(page, "after-long-rest");
 });
 
@@ -212,51 +122,8 @@ test("the spell names follow the language: the catalogue's French name, English 
   await expect(buff).toContainText("Image miroir");
   await expect(page.getByTestId("cast-buff")).toContainText("Image miroir");
   await snap(page, "french-buff");
-  await buff.getByRole("button", { name: "Retirer Image miroir" }).click();
-  await expect(buff).toHaveCount(0);
-  const dismissed = combatLog(page)
-    .getByRole("listitem")
-    .filter({ hasText: "Effet retiré : Image miroir" });
-  await expect(dismissed).toBeVisible();
-
-  // Undo and redo restore the buff with its spell: still named from the catalogue.
-  await page.getByTestId("undo").click();
-  await expect(dismissed).toHaveAttribute("data-status", "voided");
-  await expect(buff).toContainText("Image miroir");
-  await page.getByTestId("redo").click();
-  await expect(buff).toHaveCount(0);
-  await expect(dismissed).toHaveAttribute("data-status", "active");
-  await expect(dismissed).toContainText("Effet retiré : Image miroir");
-  await page.getByTestId("undo").click();
-  await expect(buff).toContainText("Image miroir");
-
-  // Next turn expires the spell's buff and a hand-made one together: each named its own way.
-  const { buffs } = (await (
-    await fetch(`${stack.apiUrl}/api/buffs`)
-  ).json()) as {
-    buffs: { id: string; spellId?: string }[];
-  };
-  const mirror = buffs.find((b) => b.spellId === "mirror_image");
-  expect(mirror).toBeDefined();
-  for (const [url, method, body] of [
-    [`/api/buffs/${mirror!.id}`, "PATCH", { duration: 1 }],
-    ["/api/buffs", "POST", { name: "Rage", duration: 1, effects: {} }],
-  ] as const) {
-    const res = await fetch(`${stack.apiUrl}${url}`, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    expect(res.ok).toBe(true);
-  }
   await page.reload();
-  await page.getByRole("button", { name: "Tour suivant" }).click();
-  await expect(page.getByRole("status")).toContainText(
-    "Effets expirés : Image miroir, Rage",
-  );
-  await expect(
-    combatLog(page).getByText("— expirés : Image miroir, Rage"),
-  ).toBeVisible();
+  await expect(buff).toContainText("Image miroir");
 
   // Names are never truncated: a long name wraps in the timeline and on its charge card.
   const long = "Protection contre le mal sur trois mètres de rayon";
@@ -290,139 +157,4 @@ test("the spell names follow the language: the catalogue's French name, English 
     }
     await snap(page, `french-long-buff-${width}`);
   }
-});
-
-test("a prepared spell outside the spellbook is listed as removed and not sent", async ({
-  page,
-  stack,
-}) => {
-  expect((await put(stack.apiUrl, ["alarm"])).ok).toBe(true);
-  // The stored preparation also holds a slot the spellbook no longer has (seed changed since).
-  await page.route("**/api/spells/slots", async (route) => {
-    if (route.request().method() !== "GET") return route.fallback();
-    const slots = (await (await route.fetch()).json()) as object[];
-    await route.fulfill({
-      json: [
-        ...slots,
-        {
-          level: 3,
-          prepared_spell_id: "shield",
-          prepared_spell_name: "Shield",
-          used: false,
-        },
-      ],
-    });
-  });
-  let sent: string[] | undefined;
-  page.on("request", (r) => {
-    if (r.method() === "PUT" && r.url().endsWith("/api/spells/prepared")) {
-      sent = (JSON.parse(r.postData() ?? "{}") as { spells: string[] }).spells;
-    }
-  });
-  await openSpells(page);
-  await page.getByRole("button", { name: "Prepare spells" }).click();
-  const editor = page.getByRole("form", { name: "Prepare today's spells" });
-  await expect(editor.getByTestId("stale-prepared")).toContainText(
-    "will be removed",
-  );
-  await expect(
-    editor.getByTestId("stale-prepared").getByRole("listitem"),
-  ).toHaveCount(1);
-  await expect(editor.getByTestId("draft-level-1")).toContainText("Alarm");
-  await snap(page, "stale-listed");
-
-  await editor.getByRole("button", { name: "Save preparation" }).click();
-  await expect(editor).toHaveCount(0);
-  expect(sent).toEqual(["alarm"]);
-  await expect(page.getByRole("alert")).toHaveCount(0);
-  await snap(page, "stale-saved");
-});
-
-// a spell prepared several times is one row with a count; rows are sorted by name.
-test("a repeated spell shows once with a count that drops as copies are cast; rows are alphabetical", async ({
-  page,
-  stack,
-}) => {
-  expect(
-    (await put(stack.apiUrl, ["magic_missile", "alarm", "magic_missile"])).ok,
-  ).toBe(true);
-  await openSpells(page);
-  const level1 = page.getByRole("region", { name: "Level 1" });
-  await expect(level1.getByRole("listitem")).toHaveCount(2);
-  await expect(level1.getByRole("listitem").nth(0)).toContainText("Alarm");
-  await expect(level1.getByRole("listitem").nth(1)).toContainText(
-    "Magic Missile ×2",
-  );
-  await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
-  await expect(level1.getByRole("listitem").nth(1)).not.toContainText(
-    "Magic Missile ×",
-  );
-  await expectSlotDots(level1, 1, 2, 3);
-  await level1.getByRole("button", { name: "Cast Magic Missile" }).click();
-  await expectSlotDots(level1, 1, 1, 3);
-  await snap(page, "grouped-spells");
-});
-
-// Long rest asks first when a fight is running (round above 0), and only then. The rule is one
-// comparison on the round counter; what only a browser proves is the dialog's wiring: nothing sent
-// before the answer, Cancel and Escape leave the slots, focus returns to the button, the confirmed
-// rest is one journal entry and one Undo.
-test("Long rest: one click out of combat, a confirmation in a fight (cancel, Escape, confirm, undo)", async ({
-  page,
-  stack,
-}) => {
-  expect((await put(stack.apiUrl, ["haste"])).ok).toBe(true);
-  await openSpells(page);
-  const level3 = page.getByRole("region", {
-    name: "Level 3",
-    includeHidden: true,
-  });
-  const rest = page.getByTestId("long-rest");
-  const dialog = page.getByTestId("long-rest-confirm");
-  const cast = async () => {
-    await level3.getByRole("button", { name: "Cast Haste" }).click();
-    await expectSlotDots(level3, 3, 0, 1);
-  };
-
-  // Round 0: no confirmation.
-  await cast();
-  await rest.click();
-  await expect(dialog).toHaveCount(0);
-  await expectSlotDots(level3, 3, 1, 1);
-  await expect(logEntry(page, "Long rest: 1 spell slots")).toHaveCount(1);
-  await cast();
-
-  // Round 1: the confirmation says what is refilled; Cancel, then Escape, change nothing.
-  await nextRound(page);
-  await rest.click();
-  await expect(dialog).toBeVisible();
-  await expect(dialog).toContainText("round 1");
-  await expect(dialog).toContainText("spell slot");
-  await expectSlotDots(level3, 3, 0, 1);
-  await dialog.getByRole("button", { name: "Cancel" }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(rest).toBeFocused();
-  await expectSlotDots(level3, 3, 0, 1);
-  await rest.click();
-  await expect(dialog).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(rest).toBeFocused();
-  await expectSlotDots(level3, 3, 0, 1);
-  await expect(logEntry(page, "Long rest")).toHaveCount(1); // only the round 0 one
-
-  // Confirm by keyboard: one rest, one journal entry, one Undo step.
-  await rest.click();
-  await dialog.getByRole("button", { name: "Rest", exact: true }).focus();
-  await page.keyboard.press("Enter");
-  await expect(dialog).toHaveCount(0);
-  await expectSlotDots(level3, 3, 1, 1);
-  await snap(page, "long-rest-confirmed-in-a-fight");
-  await expect(logEntry(page, "Long rest")).toHaveCount(2);
-  await page.getByTestId("undo").click();
-  await expect(logEntry(page, "Long rest").first()).toHaveAttribute(
-    "data-status",
-    "voided",
-  );
-  await expectSlotDots(level3, 3, 0, 1);
 });

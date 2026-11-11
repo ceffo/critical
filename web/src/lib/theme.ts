@@ -426,6 +426,20 @@ export function themesFor(light: boolean): readonly ThemeId[] {
   return light ? LIGHT_THEMES : DARK_THEMES;
 }
 
+/**
+ * Columns of the settings popover's theme grid for a list of `count` themes (ADR 0026 step 3.1):
+ * the widest of 3, 2, 4 that divides the list evenly; else the first that leaves at least two
+ * themes on the last row, so a theme is never alone on a row.
+ */
+export function themeColumns(count: number): number {
+  const options = [3, 2, 4];
+  return (
+    options.find((c) => count % c === 0) ??
+    options.find((c) => count % c !== 1) ??
+    2
+  );
+}
+
 export function isMode(v: unknown): v is Mode {
   return MODES.includes(v as Mode);
 }

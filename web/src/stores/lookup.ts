@@ -36,9 +36,18 @@ interface LookupStore {
   /** The free spell the lookup was opened for (ADR 0030 step 20.8): Ajouter claims it while set.
    * Changing the class or the levels, or Reset, drops it. */
   grant: FreeSpell | null;
+  /** The character the lookup has decided its opening view for ("Mine" when it has spells). */
+  openedFor: number | null;
+  /** The opening view, what Reset goes back to: Wizard, or "Mine" for a caster with spells. */
+  home: SpellQuery;
 
   setQuery: (patch: Partial<SpellQuery>) => void;
   reset: () => void;
+  /**
+   * Decides the opening view once per character: a caster with spells opens on "Mine", any other
+   * keeps the catalogue. A query the user already changed, or a free spell's link, is left alone.
+   */
+  openFor: (characterId: number, hasSpells: boolean) => void;
   /** Opens the lookup on a free spell's spell level, its Ajouter claiming that free spell. */
   openFreeSpell: (fs: FreeSpell) => void;
   /** Drops the free spell being claimed (claimed, or no longer owed). */
@@ -58,8 +67,11 @@ export function queryKey(q: SpellQuery): string {
 }
 
 /** Whether anything differs from the default (the Reset link shows). */
-export function isQuerySet(q: SpellQuery): boolean {
-  return queryKey(q) !== queryKey(LOOKUP_DEFAULT);
+export function isQuerySet(
+  q: SpellQuery,
+  home: SpellQuery = LOOKUP_DEFAULT,
+): boolean {
+  return queryKey(q) !== queryKey(home);
 }
 
 // Only the latest request may write: a slow older response must not overwrite it.
@@ -80,6 +92,8 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
   selectedId: null,
   options: null,
   grant: null,
+  openedFor: null,
+  home: LOOKUP_DEFAULT,
 
   setQuery: (patch) =>
     set(({ query, grant }) => {
@@ -100,8 +114,18 @@ export const useLookupStore = create<LookupStore>((set, get) => ({
 
   reset: () => {
     pendingMove = 0;
-    set({ query: LOOKUP_DEFAULT, selectedId: null, grant: null });
+    set({ query: get().home, selectedId: null, grant: null });
   },
+
+  openFor: (characterId, hasSpells) =>
+    set(({ openedFor, query, grant }) => {
+      if (openedFor === characterId) return {};
+      const home: SpellQuery = hasSpells
+        ? { ...LOOKUP_DEFAULT, cls: "mine" }
+        : LOOKUP_DEFAULT;
+      const open = hasSpells && grant === null && !isQuerySet(query);
+      return { openedFor: characterId, home, ...(open ? { query: home } : {}) };
+    }),
 
   openFreeSpell: (fs) => {
     pendingMove = 0;

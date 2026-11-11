@@ -107,9 +107,10 @@ test("French: the switch on the Ruleset screen lets a cleric/fighter pick a long
   const lift = page.getByTestId("ruleset-weapon-lift");
   await expect(lift).not.toBeChecked();
   await lift.click();
-  await expect(page.getByTestId("ruleset-house-rules")).toContainText(
-    "Enregistré.",
-  );
+  await expect(page.getByTestId("unsaved-mark")).toBeVisible();
+  await page.getByRole("button", { name: /^Enregistrer tous/ }).click();
+  await expect(page.getByRole("status")).toContainText("Enregistré.");
+  await expect(page.getByTestId("unsaved-mark")).toHaveCount(0);
   await expect(lift).toBeChecked();
   await page.reload();
   await expect(page.getByTestId("ruleset-weapon-lift")).toBeChecked();

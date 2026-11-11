@@ -1,68 +1,34 @@
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Button } from "@/components/ui/button";
-import { saveSuccessEffects } from "@/api/ruleset";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
-import type { SuccessEffect } from "@/types/ruleset";
+import type { EffectDraft } from "./rulesetDraft";
+import { UnsavedMark } from "./UnsavedMark";
 
-interface Draft {
-  proficiencyId: string;
-  ac: string;
-  rounds: string;
-}
-
-const toDrafts = (effects: SuccessEffect[]): Draft[] =>
-  effects.map((e) => ({
-    proficiencyId: e.proficiencyId,
-    ac: String(e.ac),
-    rounds: String(e.rounds),
-  }));
-
-/** Empty or non-numeric text becomes NaN, which the server refuses. */
-const num = (s: string): number => (s.trim() === "" ? Number.NaN : Number(s));
+/** Wide enough for the largest value: a two-digit round count or a signed AC. */
+const cellClass = `${fieldClass} !w-16`;
 
 /**
  * The buff a successful check of a proficiency puts on the character (ADR 0041 step 2.4): the AC
  * change (descending AC, negative betters it) and the rounds it lasts. The proficiency is worded
- * from its id; its values are edited here and the server validates them on save.
- * A player reads them (`editable` false): read-only fields, no save.
+ * from its id; its values are edited here, sent with the page's Save, and the server validates them.
+ * A player reads them (`editable` false): read-only fields.
  */
 export function SuccessEffectsCard({
-  initial,
+  rows,
+  onChange,
+  error,
+  dirty,
   editable = true,
 }: {
-  initial: SuccessEffect[];
+  rows: EffectDraft[];
+  onChange: (rows: EffectDraft[]) => void;
+  error: string;
+  dirty: boolean;
   editable?: boolean;
 }) {
   const { t } = useTranslation();
-  const [rows, setRows] = useState<Draft[]>(() => toDrafts(initial));
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
 
   function edit(i: number, field: "ac" | "rounds", value: string) {
-    setSaved(false);
-    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, [field]: value } : r)));
-  }
-
-  async function save() {
-    setSaving(true);
-    setError("");
-    try {
-      const next = await saveSuccessEffects(
-        rows.map((r) => ({
-          proficiencyId: r.proficiencyId,
-          ac: num(r.ac),
-          rounds: num(r.rounds),
-        })),
-      );
-      setRows(toDrafts(next));
-      setSaved(true);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSaving(false);
-    }
+    onChange(rows.map((r, j) => (j === i ? { ...r, [field]: value } : r)));
   }
 
   const nameOf = (id: string) => t(`skills.names.${id}`, { defaultValue: id });
@@ -73,10 +39,11 @@ export function SuccessEffectsCard({
       className="zone-card flex min-w-0 flex-col"
       data-testid="ruleset-success-effects"
     >
-      <div className="card-band flex items-center px-4 py-2">
+      <div className="card-band flex items-center gap-2 px-4 py-2">
         <h2 id="ruleset-effects" className="section-label">
           {t("ruleset.effects.title")}
         </h2>
+        <UnsavedMark show={dirty} />
       </div>
       <div className="flex flex-col gap-2 px-4 pt-3 pb-3">
         <p className="text-body text-muted-foreground">
@@ -87,7 +54,7 @@ export function SuccessEffectsCard({
             {t("ruleset.effects.none")}
           </p>
         ) : (
-          <div className="grid grid-cols-[minmax(0,2fr)_1fr_1fr] items-end gap-2">
+          <div className="grid grid-cols-[minmax(0,1fr)_4rem_4rem] items-end gap-2">
             <span className={labelClass}>
               {t("ruleset.effects.proficiency")}
             </span>
@@ -106,7 +73,7 @@ export function SuccessEffectsCard({
                 {(["ac", "rounds"] as const).map((f) => (
                   <input
                     key={f}
-                    className={fieldClass}
+                    className={cellClass}
                     type="number"
                     inputMode="numeric"
                     aria-label={t(`ruleset.effects.${f}`)}
@@ -123,24 +90,6 @@ export function SuccessEffectsCard({
           <p role="alert" className="text-body text-danger">
             {error}
           </p>
-        )}
-        {saved && (
-          <p role="status" className="text-body text-muted-foreground">
-            {t("ruleset.effects.saved")}
-          </p>
-        )}
-        {editable && rows.length > 0 && (
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              disabled={saving}
-              title={t("ruleset.effects.saveHint")}
-              aria-label={t("ruleset.effects.saveHint")}
-              onClick={() => void save()}
-            >
-              {t("ruleset.effects.save")}
-            </Button>
-          </div>
         )}
       </div>
     </section>

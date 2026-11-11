@@ -129,6 +129,9 @@
     "activity": {
       "act": "Agir",
       "spells": "Sorts",
+      "powers": "Pouvoirs",
+      "spellsAndPowers": "Sorts et pouvoirs",
+      "reference": "Référence",
       "xp": "Expérience",
       "inventory": "Inventaire"
     },

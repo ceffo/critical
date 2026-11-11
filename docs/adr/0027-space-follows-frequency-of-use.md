@@ -282,6 +282,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
    around the turn's opening rows (9.6), and the no-cut audit in French and English; the opening
    transaction by `groupByRound.test.ts` (`opensTurn`).
 10. **Spells tab** (new; the act panel's Sorts tab, no ADR 0022 step drew it).
+    *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* the tab shows only for a character with spell slots or a per-day item (the Long rest exception: its button refills those items and stays in this tab); see ADR 0022 step 2.5.
     1. **"Lancer" is a split button**: the main part casts with the server's default target (today's
        call, no `onSelf`); the arrow opens the other target (`onSelf: false`, or what the server
        offers). The global "on an ally" checkbox goes.

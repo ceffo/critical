@@ -71,7 +71,8 @@ export function rowValue(e: LogEntry): RowValue | null {
 
 /** The kind's icon; a kind this web does not know gets the generic one. */
 export function entryIcon(e: LogEntry): Icon {
-  return viewOf(e.kind)?.icon ?? Sparkle;
+  const view = viewOf(e.kind);
+  return view?.iconOf?.(e) ?? view?.icon ?? Sparkle;
 }
 
 /** What an HP change asked for when the server cut it; null otherwise. */

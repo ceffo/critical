@@ -111,7 +111,7 @@ B's choice and is marked "(design)".
    4. **Rail**, 68 px (design), between the character card and the stage, on the ground (not a card):
       bare Phosphor icons with their caption under them, the active one on a tint pill
       (`bg-amb-900 text-tint`; *amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 5.1, 2026-10-17:* the
-      selected tone with a 3 px tint bar, the one selection mark). Activities: **Act**, **Spells** (lookup), **Experience**,
+      selected tone with a 3 px tint bar, the one selection mark; *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* in the journal the selected row is the tone without the bar, see ADR 0026 step 5.1 and ADR 0027 step 9.7). Activities: **Act**, **Spells** (lookup), **Experience**,
       **Inventory**. A click focuses that activity; the stage reshapes, the always-visible zones do
       not move. Each activity mounts on its first visit and stays mounted while hidden (ADR 0009
       step 2, kept). No settings item in the rail.

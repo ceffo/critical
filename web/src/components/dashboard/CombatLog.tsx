@@ -33,7 +33,7 @@ import { useDiceStore } from "@/stores/dice";
 /**
  * The journal (GET /api/log, ADR 0022 step 5): a head with the Hide setup / All / Rolls filter (saved with the display settings; the default hides the
  * kinds whose view says `bookkeeping`), the entry count,
- * Undo and Redo, then the entries grouped by round, newest first, one 22 px line each: value · icon
+ * Undo and Redo, then the entries grouped by round, newest first, one 24 px line each: value · icon
  * · entry, the time right-aligned last (ADR 0027 step 9). A narrow marker ("T3", an icon out of
  * combat) sits beside a round's first entry, the current round's in the tint; round blocks touch and
  * alternate between the card's tone and the sub-band. A round's opening rows (the advance and the
@@ -48,7 +48,11 @@ export function CombatLog() {
   const { selectedId, select } = useJournalStore();
   const filter = useSettingsStore((s) => s.journalFilter);
   const update = useSettingsStore((s) => s.update);
-  const shownId = cardEntryId(cardSource(last, entries, selectedId));
+  const source = cardSource(last, entries, selectedId);
+  const shownId = cardEntryId(source);
+  // The shown row is the latest result's (outline) or one the player picked (fill): never both.
+  const shownIsLatest =
+    source.kind === "live" || (source.kind === "entry" && source.latest);
   const shown = filterEntries(entries, filter);
   const hidden = filter === "hideSetup" ? entries.length - shown.length : 0;
   const groups = groupByRound(shown, round);
@@ -79,7 +83,7 @@ export function CombatLog() {
               }
               onClick={() => update({ journalFilter: f })}
               className={cn(
-                "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "h-6 rounded-md px-3 text-body transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 filter === f
                   ? "chip-chosen font-medium"
                   : "text-muted-foreground hover:text-foreground",
@@ -128,7 +132,7 @@ export function CombatLog() {
             >
               <h3
                 className={cn(
-                  "flex h-[1.375rem] items-center justify-center text-label font-semibold tabular-nums",
+                  "flex h-6 items-center justify-center text-label font-semibold tabular-nums",
                   // The current round's one mark: its marker in the tint (ADR 0027 step 9.1).
                   g.current ? "text-tint" : "text-muted-foreground",
                 )}
@@ -143,7 +147,7 @@ export function CombatLog() {
                 <span className="sr-only">{marker.full}</span>
               </h3>
               {g.entries.length === 0 ? (
-                <p className="flex min-h-[1.375rem] items-center px-2 text-body text-muted-foreground">
+                <p className="flex min-h-6 items-center px-2 text-body text-muted-foreground">
                   {entries.length === 0
                     ? t("log.empty")
                     : filter === "rolls"
@@ -164,7 +168,8 @@ export function CombatLog() {
                           <LogRow
                             key={e.id}
                             entry={e}
-                            selected={e.id === shownId}
+                            selected={e.id === shownId && !shownIsLatest}
+                            latest={e.id === shownId && shownIsLatest}
                             onSelect={() => select(e.id)}
                             grouped={framed}
                             undoneGroup={isUndone(tx)}
@@ -180,7 +185,7 @@ export function CombatLog() {
                       <div
                         key={tx[0].id}
                         className={cn(
-                          "rounded-md border-l-2 bg-raised",
+                          "border-l-2",
                           undone ? "border-input" : "border-tint",
                         )}
                         data-testid="log-transaction"
@@ -220,12 +225,16 @@ function VoidedTag({ className }: { className?: string }) {
 function LogRow({
   entry: e,
   selected,
+  latest,
   onSelect,
   grouped,
   undoneGroup,
 }: {
   entry: LogEntry;
+  /** A row the player picked: the selected tone, no bar (the bar is the undo group's). */
   selected: boolean;
+  /** The latest result's row: the 2 px tint outline. */
+  latest: boolean;
   onSelect: () => void;
   /** In a multi-entry transaction: an undone one says so once on its frame, not on each row. */
   grouped: boolean;
@@ -256,22 +265,24 @@ function LogRow({
   return (
     <li
       className={cn(
-        // One 22 px line (ADR 0027 step 9.2): value · icon · entry (the select button), the row
+        // One 24 px line (ADR 0027 step 9.2): value · icon · entry (the select button), the row
         // action, then the time right-aligned in the last column (step 9.4). A long entry wraps
         // inside its row; nothing is drawn under it.
-        "group/row relative flex cursor-pointer items-start gap-x-2 rounded-md px-2 py-0.5",
-        selected ? "selected" : "hover:bg-raised-hover",
+        "group/row relative flex min-h-6 cursor-pointer items-start gap-x-2 rounded-md px-2",
+        selected ? "selected-fill" : "hover:bg-raised-hover",
+        latest && "latest",
       )}
       data-status={e.status}
       data-kind={e.kind}
       data-entry-id={e.id}
-      data-selected={selected}
+      data-selected={selected || latest}
+      data-latest={latest}
       onClick={onRowClick}
     >
       <button
         type="button"
-        className="flex min-w-0 flex-1 items-start gap-x-2 rounded-sm text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-        aria-pressed={selected}
+        className="flex min-h-6 min-w-0 flex-1 items-start gap-x-2 rounded-sm py-[3px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        aria-pressed={selected || latest}
         data-testid="log-select"
         onClick={onSelect}
       >
@@ -334,7 +345,7 @@ function LogRow({
       {short && (
         <button
           type="button"
-          className="flex h-[1.125rem] shrink-0 items-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="flex h-6 shrink-0 items-center rounded-sm text-muted-foreground outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
           aria-expanded={open}
           aria-label={t(open ? "log.summary.collapse" : "log.summary.expand")}
           title={t(open ? "log.summary.collapse" : "log.summary.expand")}
@@ -354,7 +365,7 @@ function LogRow({
           size="xs"
           variant="ghost"
           className={cn(
-            "h-[1.125rem] shrink-0",
+            "h-6 shrink-0",
             "invisible group-hover/row:visible group-focus-within/row:visible",
             selected && "visible",
           )}
@@ -368,7 +379,7 @@ function LogRow({
       )}
       {/* The time in its own right-aligned column, last (ADR 0027 step 9.4). */}
       <span
-        className="shrink-0 text-right text-label leading-[1.125rem] text-muted-foreground tabular-nums"
+        className="shrink-0 text-right text-label leading-6 text-muted-foreground tabular-nums"
         data-testid="log-time"
       >
         {formatTime(e.createdAt, i18n.language)}

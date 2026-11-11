@@ -5,7 +5,8 @@
 # real apt-get on the machine nor a parallel run of this test (another worktree's gate) can be seen or
 # killed. No wall-clock race: which attempt hangs is decided by a counter, not by a background sleep.
 # Attempt 1 times out, the script must stop the leftover apt-get so attempt 2 gets the lock; a mirror
-# that is really down must still end in a failure after the bounded attempts.
+# that is really down must still end in a failure after the bounded attempts. With cached debs the offline
+# install runs first and, when it works, the mirrors are never contacted.
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -43,7 +44,7 @@ printf '#!/usr/bin/env bash\ntouch "%s/state/configured"\n' "$tmp" > "$tmp/bin/d
 chmod +x "$tmp/bin/dpkg"
 
 run() {
-    PATH="$tmp/bin:$PATH" SUDO="" INSTALL_CMD="$tmp/bin/install" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
+    PATH="$tmp/bin:$PATH" MIRRORS_FILE="${MIRRORS_FILE:-$tmp/no-mirrors}" SUDO="" INSTALL_CMD="${INSTALL_CMD:-$tmp/bin/install}" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
         APT_PROCS="$fake" APT_KILL="$fake" \
         "$script" "$@"
 }
@@ -64,6 +65,68 @@ rm -f "$tmp/state/dies"
 # The mirror is really down: every attempt hangs, the script fails after the bounded attempts.
 touch "$tmp/state/always"
 if ATTEMPTS=2 run >/dev/null 2>&1; then fail "a permanently stalled install reported success"; fi
+
+# Cache hit, archive unreachable: the online install (INSTALL_CMD, whose `apt-get update` needs the mirrors)
+# always fails and records that it ran. The offline install is `apt-get install --no-download <names>` with
+# the names Playwright would install (PACKAGES_CMD prints them through the recording apt-get); the fake apt-get
+# records what it was asked. The script must succeed without running the online install, and must name
+# exactly Playwright's packages, never anything else that is in the cache.
+rm -f "$tmp/state/always" "$tmp/state/n" "$tmp/state/online-ran" "$tmp/state/offline-args"
+printf '#!/usr/bin/env bash\ntouch "%s/state/online-ran"; echo "Err: azure.archive.ubuntu.com unreachable" >&2; exit 100\n' "$tmp" > "$tmp/bin/online-down"
+printf '#!/usr/bin/env bash\napt-get update\nsudo apt-get install -y --no-install-recommends libnss3 xvfb fonts-liberation\n' > "$tmp/bin/playwright-like"
+printf '#!/usr/bin/env bash\necho "$*" > "%s/state/offline-args"\n' "$tmp" > "$tmp/bin/apt-ok"
+printf '#!/usr/bin/env bash\necho "$*" > "%s/state/offline-args"; exit 100\n' "$tmp" > "$tmp/bin/apt-bad"
+chmod +x "$tmp/bin/online-down" "$tmp/bin/playwright-like" "$tmp/bin/apt-ok" "$tmp/bin/apt-bad"
+if ! out="$(INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-ok" OFFLINE=1 run 2>&1)"; then
+    fail "a cache hit with the archive unreachable failed: $out"
+fi
+[ "$(cat "$tmp/state/offline-args" 2>/dev/null)" = "install -y --no-install-recommends --no-download libnss3 xvfb fonts-liberation" ] \
+    || fail "the offline install was not Playwright's package names without download: $(cat "$tmp/state/offline-args" 2>/dev/null)"
+[ -e "$tmp/state/online-ran" ] && fail "the online install ran although the offline one succeeded"
+
+# Not on a cache hit (OFFLINE unset): no offline attempt at all.
+rm -f "$tmp/state/online-ran" "$tmp/state/offline-args" "$tmp/state/n"
+if ! out="$(PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-ok" run 2>&1)"; then fail "a cold run failed: $out"; fi
+[ -e "$tmp/state/offline-args" ] && fail "the offline install was tried without a cache hit"
+
+# Cache hit that does not cover the packages (the offline install fails), archive reachable: falls back.
+rm -f "$tmp/state/offline-args" "$tmp/state/n"
+if ! out="$(PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-bad" OFFLINE=1 run 2>&1)"; then fail "a stale cache did not fall back to the online install: $out"; fi
+[ -e "$tmp/state/offline-args" ] || fail "the offline install was not tried first"
+grep -q "falling back to the archive" <<<"$out" || fail "the fallback was not announced: $out"
+
+# Neither works: the script fails.
+if INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-bad" OFFLINE=1 ATTEMPTS=1 run >/dev/null 2>&1; then
+    fail "an install that failed offline and online reported success"
+fi
+
+# Dead default mirror: the first entry of the mirror list does not answer, so the sources files (not the list:
+# apt's mirror method ignores its order) get the first fallback that answers in place of `mirror+file:`; with a
+# healthy default mirror, or with every fallback dead, they are left untouched. The probe is a fake that answers
+# by host name; the sources are the runner's deb822 file and a legacy one-line file.
+printf '#!/usr/bin/env bash\ncase "$1" in *dead*) exit 1;; *) exit 0;; esac\n' > "$tmp/bin/probe"
+chmod +x "$tmp/bin/probe"
+sources() {
+    printf 'Types: deb\nURIs: mirror+file:/etc/apt/apt-mirrors.txt\nSuites: resolute\n' > "$tmp/ubuntu.sources"
+    printf 'deb mirror+file:/etc/apt/apt-mirrors.txt resolute main\n' > "$tmp/sources.list"
+    printf '%s\n' "$@" > "$tmp/mirrors.txt"
+    rm -f "$tmp/state/n"
+}
+runm() { MIRRORS_FILE="$tmp/mirrors.txt" SOURCES_FILES="$tmp/ubuntu.sources $tmp/sources.list" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="$1" run 2>&1; }
+sources http://dead-azure.example/ubuntu/ http://dead-canonical.example/ubuntu/
+if ! out="$(runm "http://dead-a.example/u/ http://good.example/u/ http://good2.example/u/")"; then
+    fail "the script failed with a dead default mirror: $out"
+fi
+grep -qx 'URIs: http://good.example/u/' "$tmp/ubuntu.sources" || fail "the deb822 sources do not use the first answering fallback: $(cat "$tmp/ubuntu.sources")"
+grep -qx 'deb http://good.example/u/ resolute main' "$tmp/sources.list" || fail "the legacy sources do not use the fallback: $(cat "$tmp/sources.list")"
+grep -q 'mirror+file' "$tmp/ubuntu.sources" "$tmp/sources.list" && fail "a mirror+file reference is left"
+grep -q 'URIs: http://good.example/u/' <<<"$out" || fail "the log does not name the mirror apt will use: $out"
+sources http://good-azure.example/ubuntu/ http://other.example/ubuntu/
+runm "http://good.example/u/" >/dev/null || true
+grep -qx 'URIs: mirror+file:/etc/apt/apt-mirrors.txt' "$tmp/ubuntu.sources" || fail "a healthy default mirror changed the sources: $(cat "$tmp/ubuntu.sources")"
+sources http://dead-azure.example/ubuntu/
+runm "http://dead-x.example/u/" >/dev/null || true
+grep -qx 'URIs: mirror+file:/etc/apt/apt-mirrors.txt' "$tmp/ubuntu.sources" || fail "the sources changed although no fallback answers: $(cat "$tmp/ubuntu.sources")"
 
 [ "$fails" -eq 0 ] && echo "test-ci-install-chromium-deps: ok"
 exit "$fails"

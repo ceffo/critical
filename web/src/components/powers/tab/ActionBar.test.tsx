@@ -141,7 +141,7 @@ describe("the form the bar opens", () => {
     expect(none).toContain('data-form="attack"');
     expect(none).toContain('data-testid="attack-form"');
     expect(none).not.toContain("Roll 1");
-    expect(none).toContain("Name the opponent in the Target band.");
+    expect(none).toContain("Still needed: the opponent’s name.");
     const defended = await html(
       "fr",
       { kind: "power", power: attackMode },
@@ -149,7 +149,7 @@ describe("the form the bar opens", () => {
     );
     expect(defended).toContain("Jet 1");
     expect(defended).toContain("Jet 2");
-    expect(defended).not.toContain("Nommez l’adversaire");
+    expect(defended).toContain("Il manque : les deux jets.");
   });
 
   it("shows the cost and maintenance fields only for a variable one", async () => {

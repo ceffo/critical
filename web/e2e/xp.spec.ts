@@ -3,6 +3,7 @@ import {
   chooseLanguage,
   logEntry,
   openDashboard,
+  openWorkspace,
   expectUndoOn,
 } from "./helpers";
 import type { Page } from "@playwright/test";

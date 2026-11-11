@@ -4,13 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { SHORTCUTS_OFF, useKeyClicks } from "./shortcuts";
 
-function Probe({
-  onClick,
-  disabled = false,
-}: {
-  onClick: () => void;
-  disabled?: boolean;
-}) {
+function Probe({ onClick }: { onClick: () => void }) {
   const ref = useRef<HTMLButtonElement>(null);
   useKeyClicks("n", ref);
   return (

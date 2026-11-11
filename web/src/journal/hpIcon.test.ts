@@ -1,7 +1,7 @@
 import { Drop, Heart } from "@phosphor-icons/react";
 import { describe, expect, it } from "vitest";
 import type { LogEntry } from "@/types/log";
-import { entryIcon } from "../entry";
+import { entryIcon } from "./entry";
 
 // ADR 0027 step 9.7: damage is a drop, healing the heart.
 describe("an HP change's journal icon", () => {

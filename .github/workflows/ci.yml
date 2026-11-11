@@ -19,14 +19,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  # Decides whether the slow jobs (dev-smoke, e2e, image) run: skipped for a documentation-only change or a
-  # pull request labelled ci-skip (scripts/ci-skip-slow.sh). validate and generated never wait for it, and a
-  # skipped job counts as a success, so the CI run stays green and the Release workflow still starts.
+  # Decides whether the slow jobs run (scripts/ci-skip-slow.sh, ADR 0048). dev-smoke and image are skipped for a
+  # documentation-only change or a pull request labelled ci-skip; e2e also when the pull request touches no UI or
+  # API path, and when a push only updated the branch (the PR's own diff is unchanged). validate and generated
+  # never wait for it, and a skipped job counts as a success, so the CI run stays green and the Release workflow
+  # still starts.
   changes:
     name: changes
     runs-on: ubuntu-latest
+    # checks: read lets the script see whether e2e passed on the previous head before a pure branch update keeps it.
+    permissions:
+      contents: read
+      checks: read
     outputs:
       skip_slow: ${{ steps.decide.outputs.skip_slow }}
+      skip_e2e: ${{ steps.decide.outputs.skip_e2e }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,6 +42,9 @@ jobs:
         id: decide
         env:
           EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
           BASE: ${{ github.event.pull_request.base.sha }}
           HEAD: ${{ github.event.pull_request.head.sha }}
           LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
@@ -84,7 +94,7 @@ jobs:
   e2e:
     name: e2e
     needs: changes
-    if: needs.changes.outputs.skip_slow != 'true'
+    if: needs.changes.outputs.skip_e2e != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -175,8 +185,8 @@ jobs:
           path: ~/apt-debs
           key: apt-chromium-v2-${{ runner.os }}-${{ steps.pw.outputs.version }}-${{ steps.apt-week.outputs.week }}
       - name: Run the e2e suite
-        # The suite's budget is 5 minutes (docs/agent-workflow.md); 6 here makes a regression fail on this
-        # step instead of the job timeout hiding which step was slow.
+        # The suite's budget is 3 minutes (ADR 0048, docs/agent-workflow.md); 6 here makes a regression fail on this
+        # step instead of the job timeout hiding which step was slow: the tripwire for a regression.
         timeout-minutes: 6
         run: just e2e
       - name: Upload e2e results

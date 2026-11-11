@@ -14,6 +14,7 @@ import {
   openSettings,
   openWeapons,
   openWorkspace,
+  showWizardSpells,
   recordHp,
   apiCall,
   keepATangent,
@@ -491,6 +492,7 @@ test("shell: always-visible zones in every activity, header budget, no cut text"
 
   // The lookup with the long spell selected in a full list.
   await openWorkspace(page, "Spells");
+  await showWizardSpells(page);
   const lookupList = page.getByRole("listbox", { name: "Spells" });
   const spellDetail = page.getByTestId("spell-detail");
   await lookupList.getByRole("option", { name: LONG_SPELL }).click();
@@ -1191,6 +1193,7 @@ test("theme: the main screens in dark and light, every theme in each of its mode
     await openWorkspace(page, "Act");
     await snap(page, `${m}-act-weapons`);
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page.getByRole("combobox", { name: "Search spells..." }).fill("fire");
     await expect(
       page.getByTestId("spell-detail").getByRole("heading"),
@@ -1678,6 +1681,7 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);
     await actions.getByRole("tab", { name: "Armes" }).click();
     await rail.nth(1).click();
+    await showWizardSpells(page);
     await page.getByRole("option", { name: FR_SPELL }).click();
     await expectNoClippedText(stage, `lookup, ${where}`);
     await expectWholeWords(stage, `lookup, ${where}`);
@@ -1816,6 +1820,7 @@ test.describe("workspaces to the dice composer", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
 
     await openWorkspace(page, "Spells");
+    await showWizardSpells(page);
     await page
       .getByRole("combobox", { name: "Search spells..." })
       .fill("quixotic still");
@@ -2412,15 +2417,23 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       .getByLabel(lang === "fr" ? "À" : "To")
       .first()
       .fill("40");
-    await crit
+    // A house-rule tick is a second unsaved edit, so two cards carry the "not saved" tag.
+    await rules.getByRole("checkbox").first().click();
+    await expect(page.getByTestId("unsaved-mark")).toHaveCount(2);
+    await page
       .getByRole("button", {
-        name: lang === "fr" ? "Enregistrer la table" : "Save table",
+        name: lang === "fr" ? /^Enregistrer tous/ : /^Save every change/,
       })
       .click();
     await expect(crit.getByRole("alert")).toBeVisible();
-    await rules.getByRole("checkbox").first().click();
-    await expect(rules.getByRole("status")).toBeVisible();
-    await rules.getByRole("checkbox").first().click();
+    // The refused table keeps its edit and its tag; the accepted house rule is saved and untagged.
+    await expect(page.getByTestId("unsaved-mark")).toHaveCount(1);
+    // A two-digit number's field is sized to it (about 4 rem), not stretched to its column.
+    const toBox = await crit
+      .getByLabel(lang === "fr" ? "À" : "To")
+      .first()
+      .boundingBox();
+    expect(toBox!.width, "crit field width").toBeLessThan(80);
     for (const vp of [
       { width: 1280, height: 800 },
       { width: 1920, height: 1080 },
@@ -2431,6 +2444,10 @@ test("ruleset screen: crit table, house rules and success effects uncut, fr and 
       await expectNoClippedText(crit, `ruleset crit table, ${where}`);
       await expectNoClippedText(rules, `ruleset house rules, ${where}`);
       await expectNoClippedText(effects, `ruleset success effects, ${where}`);
+      await expectNoClippedText(
+        page.getByTestId("ruleset-save-bar"),
+        `ruleset save bar, ${where}`,
+      );
       expect(await escapedAbsolutes(page), `ruleset, ${where}`).toEqual([]);
       await snap(page, `ruleset-${lang}-${vp.width}x${vp.height}`);
     }
@@ -2724,12 +2741,25 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
         await snap(page, `creation-${name}-${lang}-${vp.width}x${vp.height}`);
       }
       await page.setViewportSize(sizes[0]!);
+      // One name per step: the stepper's current entry and the step card's title read the same.
+      if (name !== "refusal")
+        await expect(
+          page.getByTestId("creation-steps").locator("[aria-current=step]"),
+        ).toContainText(
+          (await step.getByRole("heading", { level: 1 }).textContent()) ?? "",
+        );
     };
     const tr = (fr: string, en: string) => (lang === "fr" ? fr : en);
 
     await step
       .getByRole("radio", { name: tr("Barde", "Bard"), exact: true })
       .click();
+    // ADR 0034 step 4: the starting level is Level by default, XP the alternative.
+    await expect(
+      step
+        .getByTestId("starting-level")
+        .getByRole("radio", { name: tr("Niveau", "Level"), exact: true }),
+    ).toBeChecked();
     await step
       .getByRole("radio", { name: tr("Niveau 5", "Level 5"), exact: true })
       .click();
@@ -2923,6 +2953,19 @@ test("creation route: every step uncut, fr and en, 1280 to 2560", async ({
     await next.click();
     await next.click();
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
+    // The review lists the proficiencies the step picked and the summary beside it is gone: no
+    // fact shows twice.
+    await expect(step.getByTestId("review-weapon-picks")).toContainText(
+      tr("Épée longue", "Long sword"),
+    );
+    await expect(step.getByTestId("review-proficiency-picks")).toContainText(
+      tr("Soins", "Healing"),
+    );
+    await expect(page.getByTestId("creation-building")).toHaveCount(0);
+    // The stepper does not repeat the choices either.
+    await expect(
+      page.getByTestId("creation-steps").getByText(/Aldéric/),
+    ).toHaveCount(0);
     await audit("6-review");
 
     if (lang === "fr") {
@@ -3624,6 +3667,83 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   await snap(page, "mage-add-undone-journal-fr-1280x800");
 });
 
+// The lookup says why a spell cannot be written in the spellbook (ADR 0030 step 20.1), in the
+// server's own words: a level-5 mage with Intelligence 9 (highest spell level 4) sees the reason
+// instead of Learn and Add on a level-5 spell, and the buttons on a level-4 one. The reason
+// matches the server's refusal (a unit test compares the codes; the refusal is a Go test).
+test("mage: a spell above the Intelligence's limit shows its reason, no Learn or Add, in English and French at 1920x1080 and 2560x1440", async ({
+  page,
+}) => {
+  test.setTimeout(60_000);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  const created = await apiCall(page, "POST", "/api/characters", {
+    name: "Elminster",
+    class: "mage",
+    raceCode: "human",
+    details: { alignment: "neutral_good", sex: "male" },
+    str: 9,
+    dex: 12,
+    con: 11,
+    int: 9,
+    wis: 12,
+    cha: 10,
+    hpMax: 4,
+    xp: 20000,
+  });
+  expect(created).toBe(true);
+  await reloadSettled(page);
+  await openWorkspace(page, "Spells");
+  const classes = page.getByRole("group", {
+    name: /^(Spell list|Liste de sorts)$/,
+  });
+  const detail = page.getByTestId("spell-detail");
+  const learn = detail.getByTestId("learn-spell");
+  for (const lang of ["en", "fr"] as const) {
+    await chooseLanguage(page, lang);
+    await classes.getByRole("button", { name: /^(Wizard|Magicien)$/ }).click();
+    const box = page.getByRole("combobox", {
+      name: /^(Search spells\.\.\.|Rechercher des sorts\.\.\.)$/,
+    });
+    await box.fill("magic jar");
+    await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
+      "data-id",
+      "magic_jar",
+    );
+    await expect(learn.getByTestId("learn-refused")).toHaveAttribute(
+      "data-code",
+      "spell_level_above_intelligence",
+    );
+    await expect(learn.getByTestId("learn-refused")).toHaveText(
+      lang === "en"
+        ? "This Intelligence limits spells to level 4."
+        : "Cette Intelligence limite les sorts au niveau 4.",
+    );
+    await expect(learn.getByRole("button")).toHaveCount(0);
+    await expect(learn.getByTestId("add-spell")).toHaveCount(0);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        learn,
+        `spellbook refusal, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      await snap(page, `mage-lookup-reason-${lang}-${vp.width}x${vp.height}`);
+    }
+    await page.setViewportSize({ width: 1920, height: 1080 });
+    // A spell the Intelligence allows keeps its buttons.
+    await box.fill("alarm");
+    await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
+      "data-id",
+      "alarm",
+    );
+    await expect(learn.getByTestId("add-spell")).toBeVisible();
+    await expect(learn.getByTestId("learn-refused")).toHaveCount(0);
+  }
+});
+
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the
 // Turning tab (Table 61 at the realized level, the longest outcome labels), the turning result card
 // and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
@@ -4163,6 +4283,7 @@ test("Ajouter: the catalogue rows and the copy panel uncut, fr and en, 1280 to 2
           vp.width >= 1920 &&
           (category === "Armures" ||
             category === "Armes" ||
+            category === "Weapons" ||
             category === "Armour")
         )
           await snap(
@@ -5658,7 +5779,7 @@ test.describe("Powers tab, long list", () => {
 });
 
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
-// the refusal, the picker with its search and discipline chips), uncut in French and English, 1280 to
+// the refusal, the picker with its search, discipline chips once and the add-a-discipline select), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
 test.describe("Known powers", () => {
@@ -5667,8 +5788,15 @@ test.describe("Known powers", () => {
     test.setTimeout(90_000);
     await openDashboard(page);
     const panel = await openSortsPowers(page);
+    // The discipline names show once, as the filter chips; a discipline is added from the select.
+    const addDiscipline = panel.getByRole("combobox", {
+      name: "Add a discipline",
+    });
+    await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(
+      1,
+    );
     for (const name of ["Telepathy", "Clairsentience"])
-      await panel.getByRole("button", { name: `Add ${name}` }).click();
+      await addDiscipline.selectOption({ label: name });
     await panel
       .getByRole("combobox", { name: "Search powers..." })
       .fill("mind");
@@ -5682,7 +5810,7 @@ test.describe("Known powers", () => {
       .filter({ hasText: "Mind Thrust" })
       .getByRole("button", { name: "Add Mind Thrust" })
       .click();
-    await panel.getByRole("button", { name: "Add Psychokinesis" }).click();
+    await addDiscipline.selectOption({ label: "Psychokinesis" });
     await expect(panel.getByTestId("powers-refusal")).toBeVisible();
     // The known list beside the browser, then a power's detail open in its place.
     for (const view of ["list", "detail"] as const) {

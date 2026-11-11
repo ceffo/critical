@@ -270,7 +270,8 @@
       "inCombat": "in combat",
       "target": "Target",
       "noMind": "No mind held yet; an attack names its target.",
-      "tangents": "{{count}} of 2 tangents",
+      "tangents_one": "{{count}} of 2 tangents",
+      "tangents_other": "{{count}} of 2 tangents",
       "contact": "contact",
       "heldMinds": "Opponents held",
       "newTarget": "New opponent",
@@ -553,7 +554,8 @@
   },
   "attack": {
     "ammo": "Ammunition",
-    "ammoOption": "{{name}}, {{count}} left",
+    "ammoOption_one": "{{name}}, {{count}} left",
+    "ammoOption_other": "{{name}}, {{count}} left",
     "noAmmo": "No ammunition for this weapon",
     "ammoSpent": "No {{name}} left: pick other ammunition",
     "targetAc": "Target AC",
@@ -1293,7 +1295,12 @@
       "add": "Add",
       "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)",
       "free": "Level {{level}}'s free spell",
-      "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll"
+      "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll",
+      "refused": {
+        "spell_level_above_class": "The class cannot learn spells above level {{classMax}}.",
+        "spell_level_above_intelligence": "This Intelligence limits spells to level {{intMax}}.",
+        "spellbook_level_full": "The spellbook already holds {{max}} spells of level {{level}}, the most this Intelligence allows."
+      }
     },
     "powers": {
       "search": "Search powers...",
@@ -1380,7 +1387,8 @@
       "l": "large target"
     },
     "critPlaceholder": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} (placeholder)",
-    "ammoLeft": "{{name}}: {{count}} left",
+    "ammoLeft_one": "{{name}}: {{count}} left",
+    "ammoLeft_other": "{{name}}: {{count}} left",
     "damageTerms": "Damage modifiers",
     "mods": {
       "strength": "Strength {{detail}}",
@@ -1500,7 +1508,8 @@
     "rolls": "Rolls",
     "total": "Total",
     "save": "Save: {{name}}",
-    "left": "{{name}}: {{count}} left",
+    "left_one": "{{name}}: {{count}} left",
+    "left_other": "{{name}}: {{count}} left",
     "leftRemoved": "{{name}}: last charge used, removed from the inventory",
     "noRoll": "Nothing to roll — the effect is resolved at the table.",
     "adjust": {
@@ -1865,8 +1874,10 @@
     },
     "turn": {
       "text": "Turning undead ({{undead}}): {{result}}, {{roll}}",
-      "turned": "{{count}} turned",
-      "destroyed": "{{count}} destroyed",
+      "turned_one": "{{count}} turned",
+      "turned_other": "{{count}} turned",
+      "destroyed_one": "{{count}} destroyed",
+      "destroyed_other": "{{count}} destroyed",
       "destroyedTurned": "{{destroyed}} destroyed, {{turned}} turned",
       "failed": "failed",
       "roll": "d20 {{d20}} vs {{target}}",
@@ -1997,10 +2008,7 @@
     "row": "Range {{n}}",
     "remove": "Remove range {{n}}",
     "add": "Add range",
-    "addShort": "Add",
-    "save": "Save table",
-    "saveShort": "Save",
-    "saved": "Saved. The next crit uses it."
+    "addShort": "Add"
   },
   "ruleset": {
     "open": "Ruleset",
@@ -2008,6 +2016,13 @@
     "title": "Ruleset",
     "back": "Back",
     "backHint": "Back to the character sheet",
+    "save": "Save",
+    "saveHint": "Save every change on this page",
+    "discard": "Discard",
+    "discardHint": "Discard the changes not saved yet",
+    "saved": "Saved. The next crit and the next success use it.",
+    "unsaved": "Not saved",
+    "unsavedChanges": "Changes not saved yet",
     "loadFailed": "The ruleset could not be loaded: {{message}}",
     "houseRules": {
       "title": "House rules",
@@ -2016,7 +2031,6 @@
       "dualclassAnyRace": "Dual-class: any race",
       "weaponHelp": "Let a character with several classes use any weapon its other classes allow, even if one of them is limited to blunt weapons (the cleric). Off by default. Weapon specialization is not changed.",
       "multiclassAnyWeapon": "Multi-class: any weapon",
-      "saved": "Saved.",
       "levelLimits": "Level limits",
       "levelLimitsMode": {
         "warn": "Warn: a level past the race's limit is shown as a warning, never refused."
@@ -2028,10 +2042,7 @@
       "none": "No success effect.",
       "proficiency": "Proficiency",
       "ac": "AC",
-      "rounds": "Rounds",
-      "save": "Save",
-      "saveHint": "Save the success effects",
-      "saved": "Saved. The next success uses them."
+      "rounds": "Rounds"
     }
   },
   "weapons": {
@@ -2319,13 +2330,14 @@
       "toNext": "{{xp}} XP before level {{level}}",
       "maxLevel": "Highest level of the table",
       "frozen": "Left at level {{level}}: earns no XP while frozen",
+      "progressLabel": "{{class}}: progress to level {{level}}",
       "level": "{{class}} · level {{level}}"
     },
     "split": {
       "preview": "Split: {{parts}}",
       "part": "{{class}} {{amount, number}}"
     },
-    "headingClass": "Experience · {{class}} · level {{level}}"
+    "headingMulti": "Experience"
   },
   "skills": {
     "proficiencies": "Proficiencies",
@@ -2544,8 +2556,10 @@
     "defence_mode_is_raised": "A defence mode is raised, not used.",
     "psp_recovery_while_maintaining": "No PSP recovery while a power is maintained: stop it first.",
     "not_a_psionicist": "This character is not a psionicist.",
-    "psionic_allowance_exceeded": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
-    "primary_discipline_exceeded": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",
+    "psionic_allowance_exceeded_one": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
+    "psionic_allowance_exceeded_other": "Over the allowance for this level: {{count}} picked, {{limit}} allowed.",
+    "primary_discipline_exceeded_one": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",
+    "primary_discipline_exceeded_other": "A discipline other than the primary one must have fewer powers than the primary: {{count}} picked, {{limit}} at most.",
     "devotions_below_twice_sciences": "A discipline needs at least twice as many devotions as sciences: {{count}} devotions, {{limit}} needed.",
     "discipline_not_known": "That power's discipline has not been picked.",
     "prerequisite_not_known": "That power's prerequisites are not all known.",
@@ -3056,7 +3070,7 @@
     },
     "class": {
       "name": "Class",
-      "title": "Choose a class",
+      "title": "Class",
       "lead": "The class sets the hit die, the skills and the alignments allowed.",
       "hitDie": "Hit die",
       "alignment": "Alignment",
@@ -3121,7 +3135,7 @@
     },
     "race": {
       "name": "Race",
-      "title": "Choose a race",
+      "title": "Race",
       "leadSeveral": "Every race can be picked: the combination of the classes and the race is checked by the server.",
       "lead": "Only the races a {{className}} allows can be picked; the others stay visible.",
       "refused": "No {{className}}",
@@ -3248,7 +3262,7 @@
     "warningsOn_other": "{{count}} warnings: {{fields}}",
     "proficiencies": {
       "name": "Proficiencies",
-      "title": "Proficiencies and weapons",
+      "title": "Proficiencies",
       "lead": "The character’s weapon and non-weapon proficiencies, within the slots of its class, level and Intelligence. Slots left can be spent later.",
       "pickedN_one": "{{count}} chosen",
       "pickedN_other": "{{count}} chosen",
@@ -3260,7 +3274,7 @@
     },
     "spellbook": {
       "name": "Spellbook",
-      "title": "Starting spellbook",
+      "title": "Spellbook",
       "lead": "The spells the DM gave the character, written without a learning roll, within the limits of its starting level and Intelligence. The spellbook may stay empty.",
       "spellsN_one": "{{count}} spell",
       "spellsN_other": "{{count}} spells",

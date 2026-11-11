@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ApiError } from "@/api/http";
 import {
-  DisciplineChips,
+  DisciplineSelect,
   KnownPowersList,
 } from "@/components/powers/KnownPowersEditor";
 import { usePickEdits } from "@/components/powers/usePickEdits";
@@ -54,7 +54,7 @@ export function PowersBrowser({ tabs }: { tabs: React.ReactNode }) {
             options={options}
             seen={items}
             disciplineChips={
-              <DisciplineChips
+              <DisciplineSelect
                 options={options}
                 known={known}
                 busy={busy}

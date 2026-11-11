@@ -42,7 +42,7 @@ export function codeMessage(
   params?: Record<string, number>,
 ): string | null {
   const key = `apiError.${code}`;
-  return code && i18n.exists(key) ? i18n.t(key, params) : null;
+  return code && i18n.exists(key, params) ? i18n.t(key, params) : null;
 }
 
 /** The numbers of an error body (an over_budget's `spent` and `limit`, ADR 0037 step 10): the

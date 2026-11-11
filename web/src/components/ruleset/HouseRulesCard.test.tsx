@@ -21,9 +21,13 @@ async function render(
   return renderToStaticMarkup(
     <I18nextProvider i18n={inst}>
       <HouseRulesCard
-        initial={{ multiclassAnyRace: true, dualclassAnyRace: true }}
-        weaponLift={{ multiclassAnyWeapon: weaponOn }}
+        lift={{ multiclassAnyRace: true, dualclassAnyRace: true }}
+        weapon={{ multiclassAnyWeapon: weaponOn }}
         levelLimits="warn"
+        onLift={() => {}}
+        onWeapon={() => {}}
+        error=""
+        dirty={false}
         editable={editable}
       />
     </I18nextProvider>,

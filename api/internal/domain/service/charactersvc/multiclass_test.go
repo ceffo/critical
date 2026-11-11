@@ -114,6 +114,26 @@ func TestDerive_Step7_PendingLevelUpsPerEntry(t *testing.T) {
 	})
 }
 
+// ADR 0042 step 7 with ADR 0046 step 5.1: each active entry serves the floor
+// of its own target level (the class definition's threshold, as the ledger's
+// currentFloor does for the first class), so a bar per class fills from it;
+// a frozen entry serves none.
+func TestDerive_Step7_EachEntryServesTheFloorOfItsTargetLevel(t *testing.T) {
+	c := multi("half_elf", entry("cleric", 5, 13_000), entry("fighter", 4, 8_000))
+	d := derived(t, c, 16_000)
+	cleric, fighter := entryOf(t, d, "cleric"), entryOf(t, d, "fighter")
+	require.NotNil(t, cleric.CurrentFloor)
+	require.NotNil(t, fighter.CurrentFloor)
+	assert.Equal(t, 13_000, *cleric.CurrentFloor, "Table 23: cleric level 5")
+	assert.Equal(t, 16_000, *fighter.CurrentFloor, "Table 14: fighter level 5, not the cleric's")
+	assert.Equal(t, 27_500, *cleric.NextLevelXP)
+
+	old := classes.Entry{Class: "fighter", RealizedLevel: 9, StartingXP: 250_000, State: classes.EntryFrozen, LeftAtLevel: 9}
+	dual := derived(t, multi("human", old, entry("mage", 1, 0)), 1_000)
+	assert.Nil(t, entryOf(t, dual, "fighter").CurrentFloor, "a frozen entry has no progress")
+	assert.NotNil(t, entryOf(t, dual, "mage").CurrentFloor)
+}
+
 // ADR 0042 step 8: "A multi-class character uses the best (lowest) Table 53
 // value among its active entries, each at its realized level." A cleric
 // 7/fighter 6 uses the fighter's 15, not the cleric's 16.

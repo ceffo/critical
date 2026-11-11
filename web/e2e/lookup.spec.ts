@@ -105,11 +105,20 @@ const named = [
 
 test.use({ extraSpells: { rows: named } });
 
-async function openLookup(page: Page) {
+// The fixture character is a bard with a spellbook, so the lookup opens on "Mine"; the specs that
+// browse the catalogue switch to Wizard here (`opening` keeps the opening view).
+async function openLookup(page: Page, opening = false) {
   await openDashboard(page);
   await openWorkspace(page, "Spells");
   await expect(search(page)).toBeVisible();
   await expect(rows(page).first()).toBeVisible();
+  if (opening) return;
+  await classButton(page, "Wizard").click();
+  await expect(classButton(page, "Wizard")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(count(page)).toBeVisible();
 }
 
 const search = (page: Page) =>
@@ -187,6 +196,8 @@ test("lookup in French: a French name finds the spell, its French text shows wit
 }) => {
   await openLookup(page);
   await chooseLanguage(page, "fr");
+  // A language change reloads the page, which opens on Mine again.
+  await classButton(page, "Magicien").click();
   const searchFrench = page.getByRole("combobox", {
     name: "Rechercher des sorts...",
   });
@@ -316,10 +327,17 @@ for (const size of [
   });
 }
 
-test("lookup: the toggle defaults to Wizard; Mine is the spellbook; Priest and All work; class chip only on All", async ({
+test("lookup: a caster with spells opens on Mine, the spellbook; Wizard, Priest and All work; class chip only on All", async ({
   page,
 }) => {
-  await openLookup(page);
+  await openLookup(page, true);
+  await expect(classButton(page, "Mine")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await expect(count(page)).toHaveText(`${fixtureBook.length} spells`);
+  await snap(page, "opens-on-mine");
+  await classButton(page, "Wizard").click();
   await expect(classButton(page, "Wizard")).toHaveAttribute(
     "aria-pressed",
     "true",
@@ -433,7 +451,7 @@ test("lookup: up/down in the search box moves the selection, a click selects; va
 test("lookup: tab switch keeps search, filters and selection; Reset only when set; reload clears", async ({
   page,
 }) => {
-  await openLookup(page);
+  await openLookup(page, true);
   const reset = page.getByRole("button", { name: "Reset", exact: true });
   await expect(reset).toHaveCount(0);
 
@@ -460,7 +478,8 @@ test("lookup: tab switch keeps search, filters and selection; Reset only when se
 
   await reset.click();
   await expect(search(page)).toHaveValue("");
-  await expect(classButton(page, "Wizard")).toHaveAttribute(
+  // Reset goes back to the opening view: the bard's spellbook.
+  await expect(classButton(page, "Mine")).toHaveAttribute(
     "aria-pressed",
     "true",
   );

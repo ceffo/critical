@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { Fragment, useEffect, useId, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
 import { MagnifyingGlass, Minus, Plus, X } from "@phosphor-icons/react";
@@ -11,6 +11,7 @@ import {
   COLUMNS,
   canEquip,
   catalogueRows,
+  groupRows,
   minMagic,
   pickBody,
   type CatalogueRow,
@@ -163,6 +164,7 @@ function CataloguePick({
   const rows = catalogue
     ? catalogueRows(catalogue, category, query, i18n.language, t)
     : [];
+  const groups = groupRows(rows, i18n.language);
   const columns = COLUMNS[category];
   const empty =
     catalogue !== null &&
@@ -240,29 +242,39 @@ function CataloguePick({
                   <span key={c}>{t(`equipment.add.columns.${c}`)}</span>
                 ))}
               </div>
-              {rows.map((r) => (
-                <button
-                  key={r.code}
-                  type="button"
-                  aria-pressed={chosen?.code === r.code}
-                  className={cn(
-                    "col-span-full grid grid-cols-subgrid items-center rounded-md px-3 py-1 text-left text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                    chosen?.code === r.code
-                      ? "chip-chosen"
-                      : "bg-raised hover:text-tint",
-                  )}
-                  data-testid={`add-row-${r.code}`}
-                  onClick={() => setChosen(r)}
-                >
-                  <span className="min-w-0 break-words font-medium">
-                    {localized(i18n.language, r.name)}
-                  </span>
-                  {r.cells.map((cell, n) => (
-                    <span key={n} className="tabular-nums">
-                      {cell}
-                    </span>
+              {groups.map((g) => (
+                <Fragment key={g.key}>
+                  <h3
+                    className="col-span-full px-3 pt-2 text-label font-semibold text-tint"
+                    data-testid={`add-group-${g.key}`}
+                  >
+                    {g.label}
+                  </h3>
+                  {g.rows.map((r) => (
+                    <button
+                      key={r.code}
+                      type="button"
+                      aria-pressed={chosen?.code === r.code}
+                      className={cn(
+                        "col-span-full grid grid-cols-subgrid items-center rounded-md px-3 py-1 text-left text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        chosen?.code === r.code
+                          ? "chip-chosen"
+                          : "bg-raised hover:text-tint",
+                      )}
+                      data-testid={`add-row-${r.code}`}
+                      onClick={() => setChosen(r)}
+                    >
+                      <span className="min-w-0 break-words font-medium">
+                        {localized(i18n.language, r.name)}
+                      </span>
+                      {r.cells.map((cell, n) => (
+                        <span key={n} className="tabular-nums">
+                          {cell}
+                        </span>
+                      ))}
+                    </button>
                   ))}
-                </button>
+                </Fragment>
               ))}
             </div>
           )}

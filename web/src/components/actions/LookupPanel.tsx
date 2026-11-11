@@ -18,6 +18,7 @@ import { PowersBrowser } from "@/components/actions/PowersBrowser";
 import { usePowerStore } from "@/stores/powers";
 import { isQuerySet, useLookupStore } from "@/stores/lookup";
 import { useCharacterStore } from "@/stores/character";
+import { useSpellStore } from "@/stores/spells";
 import { effectiveClass, lookupClasses } from "./lookupClasses";
 import { localized } from "@/i18n/localized";
 import { classLabel, sphereLabel, schoolLabel } from "@/lib/lookupLabels";
@@ -43,7 +44,11 @@ export function LookupPanel() {
     select,
     move,
     loadOptions,
+    openFor,
+    openedFor,
+    home,
   } = useLookupStore();
+  const fetchInfo = useSpellStore((s) => s.fetchInfo);
   // The Pouvoirs tab is a psionicist's: the sheet carries a known-powers block (ADR 0047 step 12).
   const psionic = useCharacterStore((s) => !!s.character?.derived?.knownPowers);
   const powersActive = usePowerStore((s) => s.active) && psionic;
@@ -53,6 +58,26 @@ export function LookupPanel() {
   const character = useCharacterStore((s) => s.character);
   const rules = character?.derived.spellbook ?? null;
   const classes = lookupClasses(rules);
+  const characterId = character?.id ?? null;
+  // The opening view needs the spellbook: a caster reads it first (the list waits for that).
+  const hasBook = rules !== null;
+  const deciding = hasBook && characterId !== null && openedFor !== characterId;
+  useEffect(() => {
+    if (!hasBook || characterId === null) return;
+    let live = true;
+    void fetchInfo()
+      .catch(() => undefined)
+      .then(() => {
+        if (live)
+          openFor(
+            characterId,
+            useSpellStore.getState().info.spellbook.length > 0,
+          );
+      });
+    return () => {
+      live = false;
+    };
+  }, [hasBook, characterId, fetchInfo, openFor]);
   const priest = query.cls === "priest";
   const selected = items.find((s) => s.id === selectedId) ?? null;
 
@@ -69,10 +94,10 @@ export function LookupPanel() {
   // Search as the query changes (debounced while typing); the store skips a query
   // whose rows are already shown, so coming back to the tab keeps the selection.
   useEffect(() => {
-    if (powersActive) return;
+    if (powersActive || deciding) return;
     const timer = setTimeout(() => void search(), 150);
     return () => clearTimeout(timer);
-  }, [query, search, powersActive]);
+  }, [query, search, powersActive, deciding]);
 
   // Keep the selected row visible (keyboard moves, coming back to the tab).
   useEffect(() => {
@@ -312,7 +337,7 @@ export function LookupPanel() {
                 {t("lookup.count", { count: total })}
               </span>
             )}
-            {isQuerySet(query) && (
+            {isQuerySet(query, home) && (
               <button
                 type="button"
                 className="text-tint hover:underline"
@@ -386,6 +411,7 @@ export function LookupPanel() {
           <>
             <LearnSpell
               spellId={selected.id}
+              spellLevel={selected.level}
               wizard={selected.class.toLowerCase() === "wizard"}
             />
             <SpellDetail key={selected.id} spell={selected} banded />

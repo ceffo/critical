@@ -17,6 +17,8 @@ import {
   type ScoresRoll,
 } from "@/types/character";
 
+import { isSpecialization } from "@/components/proficiencies/weapons";
+
 /*
  * The creation flow (ADR 0034 steps 3 to 6): its steps and what blocks Suivant, the draft the
  * player fills in, the one request it sends (`buildBody`, the draft's and Créer's) and the one
@@ -747,4 +749,19 @@ export interface StepProps {
   wording: (e: FieldError) => string;
   /** The UI language (number formatting). */
   language: string;
+}
+
+/** The weapon picks as one line ("Épée longue, Dague (spécialisé)"), empty when none. */
+export function weaponPickNames(
+  t: (key: string, o?: { defaultValue?: string }) => string,
+  picks: FlowDraft["weaponPicks"],
+): string {
+  return picks
+    .map((p) => {
+      const type = t(`weapons.types.${p.type}`, { defaultValue: p.type });
+      return isSpecialization(p)
+        ? `${type} (${t("weaponProficiencies.specialized")})`
+        : type;
+    })
+    .join(", ");
 }

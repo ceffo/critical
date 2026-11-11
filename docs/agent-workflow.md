@@ -38,12 +38,16 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   and 2560x1440 as well as the spec's sizes, with real scrollbars shown (headless Chromium with
   `ignoreDefaultArgs: ['--hide-scrollbars']`; never a visible window, see "Hard rules"), and keep an
   automated check (`layout.spec`) that would fail on the defect.
-- **e2e budget (hard rule):** the whole suite stays under 5 minutes on CI, absolute (the job times out
-  at 6). e2e is for what only a browser proves: wiring, navigation, persistence across reload, one
-  happy path per user flow, plus the screenshots. Rules, edge cases and error branches belong in Go
-  or unit tests, and UI edge cases (marks, hidden blocks, disabled states, both languages) in component tests (`*.dom.test.tsx`, `docs/frontend.md` "Testing"); add the lower-level test first, then drop the e2e one it makes redundant. Tests
-  that only call the API belong in Go. A new spec justifies itself in the report: what only a
-  browser proves there, and why no Go or unit test can. Layout screenshots stay in `layout.spec`.
+- **e2e budget (hard rule):** the whole suite stays at about 3 minutes and about 100 tests on CI
+  ([ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)); the run step times out at 6, which is the
+  regression tripwire, not the budget. e2e is for what only a browser proves: wiring, navigation,
+  persistence across reload, one happy path per user flow, plus the screenshots. Rules, edge cases and
+  error branches belong in Go or unit tests, and UI edge cases (marks, hidden blocks, disabled states,
+  both languages) in component tests (`*.dom.test.tsx`, `docs/frontend.md` "Testing"); add the lower-level test first, then drop the e2e one it
+  makes redundant. Tests that only call the API belong in Go. A new spec justifies itself in the report:
+  what only a browser proves there, and why no Go or unit test can. Layout screenshots stay in
+  `layout.spec`. A PR that changes route refusals (`api/internal/render/**`, the handlers) or any UI path
+  runs the whole suite on CI.
 - **Local dev gate (hard rule):** a change to the justfile, `docker-compose.yml`, `api/.air.toml`,
   `scripts/dev*`, the storage engine, the migrations or the server's start-up/config runs
   `just dev-smoke` green (start, answer, graceful restart, Ctrl-C and `just stop` leave nothing
@@ -298,13 +302,21 @@ contract or domain struct.
 
 ## CI and PRs
 
-CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; hard limit: the suite must stay under 5 minutes, the run step times out at 6; Playwright Chromium and the apt .debs it needs cached (apt key: Playwright version + ISO week, with restore-keys; on a cache hit the packages install offline by name with `apt-get --no-download` (the cache holds only the debs the install used, saved only after a success), so an Ubuntu archive outage cannot fail the job; a cold cache installs from the archive (when the runner's default Ubuntu mirror does not answer, the apt sources are pointed at another official mirror), retried and bounded, a timed-out attempt's apt-get stopped before the next one), 3 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
+CI: GitHub Actions run on every PR (`gh pr checks <n>`); `just validate` stays the local gate. Jobs: `validate` (`just validate`), `e2e` (`just e2e`; budget about 3 minutes, the run step times out at 6 as the regression tripwire; Playwright Chromium and the apt .debs it needs cached (apt key: Playwright version + ISO week, with restore-keys; on a cache hit the packages install offline by name with `apt-get --no-download` (the cache holds only the debs the install used, saved only after a success), so an Ubuntu archive outage cannot fail the job; a cold cache installs from the archive (when the runner's default Ubuntu mirror does not answer, the apt sources are pointed at another official mirror), retried and bounded, a timed-out attempt's apt-get stopped before the next one), 3 workers, 1 retry, `web/e2e-results/` uploaded as an artifact), `generated` (sqlc/mockery output is up to date), plus `dev-smoke` and `image`.
 **Main runs:** a push to `main` runs CI, and Release follows. A Dependabot PR merged by auto-merge starts no push run (GitHub: events caused by `GITHUB_TOKEN` start no workflow, `workflow_dispatch` excepted), and a CI run dispatched with that token does not start Release (`workflow_run`) either. So `main-catchup.yml` runs `scripts/main-catchup.sh` every 10 minutes (schedule, late under load; also by hand): if main's head has no finished CI run it dispatches `ci.yml` (no base commit, so `changes` runs every slow job); if CI is green on it for 5 minutes and no Release run exists for the commit it dispatches `release.yml -f commit=<sha>` (release rules apply, nothing forced; Release re-checks the green CI). It waits for no merge, so a merge hours after the PR opened is covered. Tested by `scripts/test-main-catchup.sh`.
 **Slow-job skip:** a first job, `changes` (`scripts/ci-skip-slow.sh`, tested by
-`scripts/test-ci-skip-slow.sh` in `just validate`), skips `e2e`, `dev-smoke` and `image` on a pull request
-when every file the PR itself changes is documentation (`*.md`, `docs/**`; the diff from the merge base of
-the PR's base and head, not the merge commit CI checks out, which also holds what main gained meanwhile), or
-when the PR carries the label `ci-skip`. A push to main and a dispatched run never skip: Release deploys the
+`scripts/test-ci-skip-slow.sh` in `just validate`), decides two outputs. `skip_slow` skips `dev-smoke` and
+`image` on a pull request when every file the PR itself changes is documentation (`*.md`, `docs/**`; the diff
+from the merge base of the PR's base and head, not the merge commit CI checks out, which also holds what main
+gained meanwhile), or when the PR carries the label `ci-skip`. `skip_e2e` skips `e2e` in those cases, and also
+when no file the PR changes is on a UI or API path (globs in
+[ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md) step 2: `web/**` but unit tests, the route and handler layer
+of the API, `api/testdata/**`, the e2e stack and `ci.yml`), and when a push only updated the branch (`synchronize`
+whose own diff, by patch id, equals the one at `github.event.before`) **and** e2e on that previous head
+succeeded or was skipped: the PR keeps its last good e2e result, so a `gh pr update-branch` costs no e2e run.
+After a red, cancelled or unfinished e2e a pure update runs e2e again (`changes` reads the check runs, so it has
+`checks: read`). Anything unreadable runs. Go below the handlers and `go.mod`/`go.sum` skip e2e: `main`'s push run
+catches them. A push to main and a dispatched run never skip: Release deploys the
 commit that run gates. `validate` and `generated` always run (required checks). A skipped job
 counts as a success, so the PR is mergeable and green; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
 `ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still

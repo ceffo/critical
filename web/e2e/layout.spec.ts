@@ -1041,6 +1041,21 @@ test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
   }
 });
 
+// ADR 0026 step 3.1: the theme grid never leaves one theme alone on a row.
+async function expectNoLoneRow(list: Locator, what: string) {
+  const tops = await list
+    .getByRole("radio")
+    .evaluateAll((els) =>
+      els.map((e) => Math.round(e.getBoundingClientRect().top)),
+    );
+  const perRow = new Map<number, number>();
+  for (const t of tops) perRow.set(t, (perRow.get(t) ?? 0) + 1);
+  expect(
+    [...perRow.values()].every((n) => n >= 2),
+    `${what}: themes per row ${[...perRow.values()].join(",")}`,
+  ).toBe(true);
+}
+
 // ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
 // switches live with the OS; both choices survive a reload and the inline script paints the
 // effective one before the app runs.
@@ -1112,6 +1127,7 @@ test("settings: language, appearance and both themes apply live and persist acro
   ).toHaveAttribute("aria-checked", "true");
   await expectNoClippedText(popover, "settings popover, fr");
   await expectWholeWords(popover, "settings popover, fr");
+  await expectNoLoneRow(popover.getByTestId("settings-theme"), "dark list, fr");
   await snap(page, "settings-popover-fr");
 
   // Système follows the OS live, between the two chosen themes.
@@ -1133,6 +1149,11 @@ test("settings: language, appearance and both themes apply live and persist acro
       .getByTestId("settings-theme")
       .getByRole("radio", { name: "Parchemin", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await expectNoLoneRow(
+    popover.getByTestId("settings-theme"),
+    "light list, fr",
+  );
+  await snap(page, "settings-popover-fr-light");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
   await expect(
@@ -1714,6 +1735,30 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
     await rail.nth(2).click();
     await expectNoClippedText(stage, `inventory, ${where}`);
     await expectWholeWords(stage, `inventory, ${where}`);
+    // ADR 0027 step 14.1: every row's edit and delete are visible at rest (no hover), at least
+    // 24 px, named for their item, and inside the stage's width (the list scrolls vertically).
+    await page.mouse.move(0, 0);
+    const rowButtons = stage.getByRole("button", {
+      name: /^(Modifier|Retirer) /,
+    });
+    expect(await rowButtons.count(), `row actions, ${where}`).toBeGreaterThan(
+      1,
+    );
+    for (const b of await rowButtons.all()) {
+      await expect(b).toBeVisible();
+      await expect(b.locator("xpath=..")).toHaveCSS("opacity", "1");
+      const box = (await b.boundingBox())!;
+      expect(
+        Math.min(box.width, box.height),
+        `${where}`,
+      ).toBeGreaterThanOrEqual(24);
+      const st = (await stage.boundingBox())!;
+      expect(box.x, `row action left, ${where}`).toBeGreaterThanOrEqual(st.x);
+      expect(
+        box.x + box.width,
+        `row action right, ${where}`,
+      ).toBeLessThanOrEqual(st.x + st.width);
+    }
     // ADR 0027 step 14.3 and ADR 0035 item 2: one possessions card, inside the stage (the page never
     // scrolls; a long list scrolls inside the card).
     await expectInside(
@@ -1721,8 +1766,8 @@ test("no cut text in French and with long inventory names, 1280 to 2560", async 
       stage,
       `possessions card, ${where}`,
     );
-    if (SHOTS.has(`${vp.width}x${vp.height}`))
-      await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
+    // The row actions at rest, at the three sizes of the design review.
+    await snap(page, `inventory-long-fr-${vp.width}x${vp.height}`);
   }
 });
 

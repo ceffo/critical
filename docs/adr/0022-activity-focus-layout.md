@@ -115,7 +115,19 @@ B's choice and is marked "(design)".
       **Inventory**. A click focuses that activity; the stage reshapes, the always-visible zones do
       not move. Each activity mounts on its first visit and stays mounted while hidden (ADR 0009
       step 2, kept). No settings item in the rail.
+      *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* the lookup activity is
+      named by its content, read from what the sheet serves (spell slots over every class entry,
+      the known-powers block): **Spells** (fr: Sorts), **Powers** (Pouvoirs), **Spells and powers**
+      (Sorts et pouvoirs) for both, **Reference** (Référence) for neither. Its icon and place are
+      unchanged.
    5. **Stage per activity:**
+      - *Amended 2026-11-11 (same acceptance):* **an Act tab shows only when the character has a use
+        for it.** Spells shows when any class entry has spell slots (a multi-class character
+        follows the union), **or** when the character holds a per-day item: the Long rest button
+        lives in that tab and also refills those items, so the tab stays reachable (Long rest does
+        not move). Powers shows with the known-powers block, Turning with the turning table. The
+        test is the served data, never a class id (ADR 0040). A psionicist has no Spells tab unless
+        it holds a per-day item; its rest popover keeps its own long-rest line.
       - **Act**: the "now" band over the journal. The now band is the act panel (tabs **with icons,
         no panel title**: Weapons `Sword`, Spells `Sparkle`, Items `Backpack`, Skills `ListChecks`)
         beside the **result panel** (the latest result or a selected journal entry, with its

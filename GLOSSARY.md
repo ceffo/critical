@@ -612,7 +612,7 @@ The play screen. [ADR 0022](docs/adr/0022-activity-focus-layout.md) step 2. _Avo
 The regions of the dashboard. [ADR 0022](docs/adr/0022-activity-focus-layout.md) steps 2.2 to 2.6.
 
 **Activity** (fr: activité):
-What the stage shows: **Act** (fr: Agir), **Spells**, **Experience**, **Inventory**.
+What the stage shows: **Act** (fr: Agir), **Spells** (the lookup, named **Powers**, **Spells and powers** or **Reference** by what the character has: fr Sorts, Pouvoirs, Sorts et pouvoirs, Référence), **Experience**, **Inventory**.
 [ADR 0022](docs/adr/0022-activity-focus-layout.md) steps 2.4 and 2.5.
 
 **Now band** and **Result card** (fr: dernier résultat):

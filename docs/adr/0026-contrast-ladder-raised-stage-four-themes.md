@@ -134,6 +134,27 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
       The dark list is Arcane, Deep, Plain, Forest, Ember, Amber; the light list Arcane, Parchment,
       Plain, Forest. No touches of step 7 for them.
 
+      _Amended 2026-11-11 (the user kept every theme the code has rather than cutting back to four;
+      "four themes" in this ADR's title and in steps 3 to 4.1 is the first round's set). **The list of
+      themes the app offers** is exactly the table below, one row per entry of `THEMES`; a theme with
+      a dark palette is in the dark list, one with a light palette in the light list. The settings
+      popover lays the list out in a grid whose column count (`themeColumns`) never leaves a single
+      theme alone on the last row._
+
+      | Id          | Modes       |
+      | ----------- | ----------- |
+      | `arcane`    | dark, light |
+      | `deep`      | dark        |
+      | `parchment` | light       |
+      | `plain`     | dark, light |
+      | `forest`    | dark, light |
+      | `ember`     | dark        |
+      | `amber`     | dark        |
+
+      _Enforced by_ the "ADR 0026 theme list" test of `theme.test.ts`, which parses this table and
+      fails when its ids or modes differ from `THEMES`, and by the "theme grid" test (no lone theme
+      on a row for any list length the themes can reach).
+
    2. **Ids and names** (_proposed, user OK on the PR_): ids `arcane`, `deep`, `parchment`, `plain`
       (stable, language-free); display names are i18n keys (en / fr): **Arcane / Arcane**,
       **Deep / Abysses**, **Parchment / Parchemin**, **Plain / Sobre**.

@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { VerticalButton, VerticalButtons } from "@/components/ui/tabs";
 import { ACTIVITIES, type Activity } from "@/lib/activities";
+import { lookupLabelKey, useActFeatures } from "@/lib/actFeatures";
 
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
   act: HandFist,
@@ -31,6 +32,10 @@ export function Rail({
   onSelect: (a: Activity) => void;
 }) {
   const { t } = useTranslation();
+  const features = useActFeatures();
+  // The lookup activity is named by its content (ADR 0022 steps 2.4 and 2.5).
+  const label = (a: Activity) =>
+    t(`shell.activity.${a === "spells" ? lookupLabelKey(features) : a}`);
   return (
     <nav
       aria-label={t("shell.activities")}
@@ -57,7 +62,7 @@ export function Rail({
               onClick={() => onSelect(a)}
             >
               <Icon weight={on ? "fill" : "regular"} aria-hidden />
-              <span className="max-w-full">{t(`shell.activity.${a}`)}</span>
+              <span className="max-w-full">{label(a)}</span>
             </VerticalButton>
           );
         })}

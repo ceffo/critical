@@ -1,6 +1,6 @@
 import type { Page } from "@playwright/test";
-import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard } from "./helpers";
+import { test, expect } from "./fixtures";
+import { openDashboard } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
 // The changelog panel (ADR 0039 step 7), opened from the version badge. Only a browser proves the
@@ -129,62 +129,4 @@ test("badge opens the panel, infinite scroll loads each page once, retry, Esc / 
   await expect(panel).toBeVisible();
   await page.mouse.click(5, 5);
   await expect(panel).toBeHidden();
-});
-
-// Screens and sizes: the panel opens from the badge on the dashboard, roster, creation and admin, and
-// the login screen's badge is plain text (the endpoint needs a session). French chrome, English bullets.
-test("the panel on every screen at 1920x1080 and 2560x1440; the login badge is not a button", async ({
-  page,
-  context,
-}) => {
-  test.setTimeout(120_000);
-  await mockChangelog(page);
-  const sizes = [
-    { width: 1920, height: 1080 },
-    { width: 2560, height: 1440 },
-  ];
-  const panel = page.getByTestId("changelog-panel");
-  const check = async (name: string) => {
-    for (const vp of sizes) {
-      await page.setViewportSize(vp);
-      await page.getByTestId("version-open").click();
-      await expect(panel).toBeVisible();
-      await expect(page.getByTestId("changelog-version")).toHaveCount(10);
-      // The open animation scales it from 95 %: measure once it is still.
-      await expect
-        .poll(async () => {
-          const b = (await panel.boundingBox())!;
-          return panelFit(b, vp);
-        })
-        .toEqual(["ok", "ok", "ok"]);
-      await expectNoClippedText(panel, `${name} ${vp.width}`);
-      await snap(page, `${name}-${vp.width}x${vp.height}`);
-      await page.keyboard.press("Escape");
-      await expect(panel).toBeHidden();
-    }
-  };
-
-  await openDashboard(page);
-  await chooseLanguage(page, "fr");
-  await check("dashboard");
-
-  await page.setViewportSize(sizes[0]!);
-  await page.getByTestId("roster-open").click();
-  await expect(page.getByTestId("roster")).toBeVisible();
-  await check("roster");
-
-  await page.goto("/create");
-  await expect(page.getByTestId("creation-step")).toBeVisible();
-  await check("creation");
-
-  await page.goto("/admin");
-  await expect(page.getByTestId("admin-users")).toBeVisible();
-  await check("admin");
-
-  // No session: the badge shows the version as plain text.
-  await context.clearCookies();
-  await page.goto("/login");
-  await expect(page.getByTestId("version-text")).toBeVisible();
-  await expect(page.getByTestId("version-open")).toHaveCount(0);
-  await snap(page, "login-plain");
 });

@@ -1,5 +1,11 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard } from "./helpers";
+import {
+  apiSettled,
+  chooseLanguage,
+  currentRound,
+  openDashboard,
+  openWeapons,
+} from "./helpers";
 
 // Keyboard order and arrow keys: a tablist and the rail are one Tab stop each, a skip link comes
 // first (the WAI-ARIA tabs pattern). Only a browser proves focus order; the walk is headless.
@@ -120,4 +126,70 @@ for (const lang of ["en", "fr"] as const) {
       await snap(page, `skip-link-${lang}-${width}`);
     });
   }
+}
+
+// N is Next round and A is Attack: plain keys, when nothing takes typing or a popup is open. Each is
+// the button's own click, so one Undo undoes it. Wording differs per language; the keys do not.
+for (const lang of ["en", "fr"] as const) {
+  test(`N and A: Next round and Attack, one Undo each, ${lang}`, async ({
+    page,
+  }) => {
+    await openDashboard(page);
+    if (lang === "fr") await chooseLanguage(page, "fr");
+    else await openWeapons(page);
+    if (lang === "fr") await page.getByRole("tab", { name: "Armes" }).click();
+    const next = page.getByRole("button", {
+      name: lang === "fr" ? "Tour suivant" : "Next round",
+    });
+    const attack = page.getByRole("button", {
+      name: lang === "fr" ? "Attaquer" : "Attack",
+      exact: true,
+    });
+    await expect(attack).toBeEnabled();
+    // The key shows on both tooltips.
+    await expect(next).toHaveAttribute("title", /\(N\)/);
+    await expect(attack).toHaveAttribute("title", /\(A\)/);
+    const round0 = await currentRound(page);
+    const results = page.getByTestId("attack-result");
+    const voided = page.locator('li[data-status="voided"]');
+
+    // Where a key must do nothing: in a text field, in the dice composer, with a popover open.
+    await page.getByLabel(/Target AC|CA de la cible/).focus();
+    await page.keyboard.press("n");
+    await page.keyboard.press("a");
+    const dice = page.getByRole("form", {
+      name: lang === "fr" ? "Dés" : "Dice",
+    });
+    await dice.getByRole("textbox").focus();
+    await page.keyboard.press("n");
+    await page.keyboard.press("a");
+    await page.getByTestId("settings-trigger").click();
+    await expect(page.getByTestId("settings-popover")).toBeVisible();
+    await page.keyboard.press("n");
+    await page.keyboard.press("a");
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("settings-popover")).toBeHidden();
+    // A modified N is the browser's, not ours.
+    await page.locator("body").click({ position: { x: 1, y: 1 } });
+    await page.keyboard.press("Control+n");
+    await page.keyboard.press("Alt+a");
+    await apiSettled(page);
+    expect(await currentRound(page)).toBe(round0);
+    await expect(results).toHaveCount(0);
+
+    // A: one attack, one Undo.
+    await page.keyboard.press("a");
+    await expect(results).toHaveCount(1);
+    await apiSettled(page);
+    await page.getByTestId("undo").click();
+    await expect(voided.first()).toBeVisible();
+    await apiSettled(page);
+
+    // N: one round, one Undo.
+    await page.keyboard.press("n");
+    await expect.poll(() => currentRound(page)).toBe(round0 + 1);
+    await apiSettled(page);
+    await page.getByTestId("undo").click();
+    await expect.poll(() => currentRound(page)).toBe(round0);
+  });
 }

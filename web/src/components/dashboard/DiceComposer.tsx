@@ -32,6 +32,7 @@ export function DiceComposer() {
   const empty = s.formula.trim() === "";
   return (
     <form
+      data-shortcuts-off=""
       className="flex min-w-0 flex-1 items-center gap-2"
       aria-label={t("dice.title")}
       onSubmit={(ev) => {

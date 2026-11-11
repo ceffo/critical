@@ -72,7 +72,12 @@
     "en": "English",
     "fr": "Français"
   },
+  "shortcut": {
+    "hint": "{{label}} ({{key}})"
+  },
   "settings": {
+    "keyboard": "Keyboard",
+    "keyboardKeys": "N: next round. A: attack.",
     "open": "Settings",
     "title": "Settings",
     "language": "Language",

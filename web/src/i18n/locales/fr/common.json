@@ -72,7 +72,12 @@
     "en": "English",
     "fr": "Français"
   },
+  "shortcut": {
+    "hint": "{{label}} ({{key}})"
+  },
   "settings": {
+    "keyboard": "Clavier",
+    "keyboardKeys": "N : tour suivant. A : attaquer.",
     "open": "Réglages",
     "title": "Réglages",
     "language": "Langue",

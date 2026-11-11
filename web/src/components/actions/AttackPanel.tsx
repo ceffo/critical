@@ -1,4 +1,12 @@
-import { Fragment, useEffect, useId, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import { useKeyClicks } from "@/lib/shortcuts";
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
 import {
@@ -61,6 +69,9 @@ export function AttackPanel() {
   const buffs = useBuffsStore((s) => s.buffs);
   const strength = useBuffsStore((s) => s.strength);
   const needsId = useId();
+  // A is Attack from anywhere on the page that is not typing or an open popup.
+  const attackRef = useRef<HTMLButtonElement>(null);
+  useKeyClicks("a", attackRef);
 
   // The preview depends on buffs, effective STR, item counts and the weapons: reload with them.
   useEffect(() => {
@@ -169,8 +180,11 @@ export function AttackPanel() {
               )}
             </div>
             <Button
+              ref={attackRef}
               type="submit"
               variant="main"
+              title={t("shortcut.hint", { label: t("attack.roll"), key: "A" })}
+              aria-keyshortcuts="A"
               className="h-11 shrink-0 gap-0 py-0 pr-4 pl-0 whitespace-normal"
               disabled={rolling || !ready}
               aria-label={t("attack.roll")}

@@ -46,8 +46,12 @@ function useFormats() {
   }, [i18n.language]);
 }
 
-/** The top card's two columns: progress, then the 24rem Add XP form. */
-const XP_COLS = "grid grid-cols-[minmax(0,1fr)_24rem] gap-x-6";
+/**
+ * The top card's two columns: progress, then the 24rem Add XP form (18rem below 1280 px, where the
+ * stage is too narrow for 24rem beside the progress).
+ */
+const XP_COLS =
+  "grid grid-cols-[minmax(0,1fr)_24rem] gap-x-6 max-[1279px]:grid-cols-[minmax(0,1fr)_18rem] max-[1279px]:gap-x-4";
 
 /**
  * Experience activity (ADR 0015; layout ADR 0022 step 2.5): one card with the progress (the total,

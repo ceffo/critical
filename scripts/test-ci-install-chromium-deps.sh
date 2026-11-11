@@ -44,7 +44,7 @@ printf '#!/usr/bin/env bash\ntouch "%s/state/configured"\n' "$tmp" > "$tmp/bin/d
 chmod +x "$tmp/bin/dpkg"
 
 run() {
-    PATH="$tmp/bin:$PATH" SUDO="" INSTALL_CMD="${INSTALL_CMD:-$tmp/bin/install}" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
+    PATH="$tmp/bin:$PATH" MIRRORS_FILE="${MIRRORS_FILE:-$tmp/no-mirrors}" SUDO="" INSTALL_CMD="${INSTALL_CMD:-$tmp/bin/install}" ATTEMPT_TIMEOUT=2 SETTLE_SECONDS=8 \
         APT_PROCS="$fake" APT_KILL="$fake" \
         "$script" "$@"
 }
@@ -99,6 +99,28 @@ grep -q "falling back to the archive" <<<"$out" || fail "the fallback was not an
 if INSTALL_CMD="$tmp/bin/online-down" PACKAGES_CMD="$tmp/bin/playwright-like" APT_GET="$tmp/bin/apt-bad" OFFLINE=1 ATTEMPTS=1 run >/dev/null 2>&1; then
     fail "an install that failed offline and online reported success"
 fi
+
+# Dead default mirror: the first entry of the mirror list does not answer, the first fallback that does goes to
+# the top and the original entries stay; with a healthy default mirror, or with every fallback dead, the list is
+# left untouched. The probe is a fake that answers by host name.
+printf '#!/usr/bin/env bash\ncase "$1" in *dead*) exit 1;; *) exit 0;; esac\n' > "$tmp/bin/probe"
+chmod +x "$tmp/bin/probe"
+mirrors() { printf '%s\n' "$@" > "$tmp/mirrors.txt"; }
+mirrors http://dead-azure.example/ubuntu/ http://dead-canonical.example/ubuntu/
+rm -f "$tmp/state/n"
+if ! out="$(MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://dead-a.example/u/ http://good.example/u/ http://good2.example/u/" run 2>&1)"; then
+    fail "the script failed with a dead default mirror: $out"
+fi
+[ "$(head -1 "$tmp/mirrors.txt")" = "http://good.example/u/" ] || fail "the first answering fallback is not at the top: $(cat "$tmp/mirrors.txt")"
+[ "$(wc -l < "$tmp/mirrors.txt")" -eq 3 ] || fail "the original mirrors were not kept below it: $(cat "$tmp/mirrors.txt")"
+mirrors http://good-azure.example/ubuntu/ http://other.example/ubuntu/
+rm -f "$tmp/state/n"
+MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://good.example/u/" run >/dev/null 2>&1 || true
+[ "$(wc -l < "$tmp/mirrors.txt")" -eq 2 ] && [ "$(head -1 "$tmp/mirrors.txt")" = "http://good-azure.example/ubuntu/" ] || fail "a healthy default mirror was changed: $(cat "$tmp/mirrors.txt")"
+mirrors http://dead-azure.example/ubuntu/
+rm -f "$tmp/state/n"
+MIRRORS_FILE="$tmp/mirrors.txt" PROBE_CMD="$tmp/bin/probe" FALLBACK_MIRRORS="http://dead-x.example/u/" run >/dev/null 2>&1 || true
+[ "$(cat "$tmp/mirrors.txt")" = "http://dead-azure.example/ubuntu/" ] || fail "the list changed although no fallback answers: $(cat "$tmp/mirrors.txt")"
 
 [ "$fails" -eq 0 ] && echo "test-ci-install-chromium-deps: ok"
 exit "$fails"

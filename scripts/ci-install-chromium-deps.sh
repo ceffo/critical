@@ -14,12 +14,21 @@
 # and the install would then try to download them. If the offline install fails (no cache, a cache older than
 # the package lists) the bounded online attempts below run as before: a cold cache still uses the archive.
 #
+# Dead default mirror: the runner's apt reads /etc/apt/apt-mirrors.txt (the Azure Ubuntu mirror, then the
+# canonical archives) and, when those are unreachable, every attempt spends minutes timing out on them. Before
+# each online attempt the first mirror of that list is probed; if it does not answer, the first fallback
+# mirror (other official Ubuntu mirrors, FALLBACK_MIRRORS) that answers is put at the top of the list, the
+# original entries stay below it. A healthy default mirror leaves the file untouched.
+#
 # Environment (defaults are the CI values; scripts/test-ci-install-chromium-deps.sh overrides them):
 #   INSTALL_CMD      the install command                       (npx playwright install-deps chromium)
 #   OFFLINE         1: try the cache-only install first       (unset: skip)
 #   PACKAGES_CMD    command whose apt-get install line names  ($INSTALL_CMD)
 #                   the packages
 #   APT_GET         the apt-get used for the offline install   (apt-get)
+#   MIRRORS_FILE    apt's mirror list                          (/etc/apt/apt-mirrors.txt)
+#   FALLBACK_MIRRORS  mirror URLs tried when the first one is down (a built-in list of official mirrors)
+#   PROBE_CMD       command run with a mirror's InRelease URL, success = the mirror answers (curl, 5 s)
 #   OFFLINE_TIMEOUT seconds the offline install may run       (120)
 #   ATTEMPTS         number of attempts                        (3)
 #   ATTEMPT_TIMEOUT  seconds one attempt may run               (135)
@@ -41,6 +50,9 @@ APT_PROCS="${APT_PROCS:-apt-get apt dpkg}"
 APT_KILL="${APT_KILL:-apt-get apt}"
 
 PACKAGES_CMD="${PACKAGES_CMD:-$INSTALL_CMD}"
+MIRRORS_FILE="${MIRRORS_FILE:-/etc/apt/apt-mirrors.txt}"
+FALLBACK_MIRRORS="${FALLBACK_MIRRORS:-https://mirrors.edge.kernel.org/ubuntu/ https://mirror.math.princeton.edu/pub/ubuntu/ https://mirrors.xtom.com/ubuntu/ https://ubuntu.mirror.constant.com/ https://mirrors.mit.edu/ubuntu/ http://mirror.us.leaseweb.net/ubuntu/ https://ftp.fau.de/ubuntu/}"
+PROBE_CMD="${PROBE_CMD:-curl -fsS -o /dev/null --connect-timeout 3 -m 5}"
 
 # package_names: the package names of the `apt-get install` that PACKAGES_CMD would run. apt-get and sudo are
 # replaced by recorders for that one run, so nothing is installed and no network is used.
@@ -55,6 +67,34 @@ package_names() {
     PATH="$shim:$PATH" $PACKAGES_CMD >/dev/null 2>&1 || true
     [ -s "$rec" ] && grep -v -e '^install$' -e '^-' "$rec"
     rm -rf "$shim"
+}
+
+# mirror_answers URL: does the mirror serve the release's metadata?
+mirror_answers() {
+    local codename
+    codename="$(. /etc/os-release 2>/dev/null && echo "${VERSION_CODENAME:-}")"
+    # shellcheck disable=SC2086
+    $PROBE_CMD "${1%/}/dists/${codename:-stable}-updates/InRelease" >/dev/null 2>&1
+}
+
+# ensure_mirror: see "Dead default mirror" above.
+ensure_mirror() {
+    local first m
+    [ -r "$MIRRORS_FILE" ] || return 0
+    first="$(awk 'NF {print $1; exit}' "$MIRRORS_FILE")"
+    [ -n "$first" ] || return 0
+    mirror_answers "$first" && return 0
+    echo "mirror $first does not answer; looking for another Ubuntu mirror"
+    for m in $FALLBACK_MIRRORS; do
+        if mirror_answers "$m"; then
+            echo "using $m ahead of the runner's mirrors"
+            { echo "$m"; cat "$MIRRORS_FILE"; } | $SUDO tee "$MIRRORS_FILE.new" >/dev/null &&
+                $SUDO mv "$MIRRORS_FILE.new" "$MIRRORS_FILE"
+            return 0
+        fi
+        echo "mirror $m does not answer either"
+    done
+    echo "no fallback mirror answers; keeping the runner's list"
 }
 
 # shellcheck disable=SC2086 # APT_PROCS and SUDO are word lists on purpose.
@@ -95,6 +135,7 @@ if [ "$OFFLINE" = 1 ]; then
 fi
 
 for attempt in $(seq 1 "$ATTEMPTS"); do
+    ensure_mirror
     # shellcheck disable=SC2086
     if timeout "$ATTEMPT_TIMEOUT" $INSTALL_CMD; then
         exit 0

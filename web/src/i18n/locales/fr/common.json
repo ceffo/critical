@@ -1543,6 +1543,23 @@
       "failed": "Échec",
       "destroyedCount": "Détruits : {{count}} ({{dice}})",
       "turnedCount": "Repoussés : {{count}} ({{dice}})"
+    },
+    "psi": {
+      "target": "Cible {{target}}",
+      "cost": "PFP",
+      "paidOf": "{{spent}} sur {{cost}}",
+      "score": "Score {{score}}",
+      "heading": "{{power}} sur {{target}}",
+      "against": "contre {{defence}}",
+      "attackRoll": "Jet d’attaque {{n}}",
+      "defenceRoll": "Jet de défense",
+      "winner": "Résultat",
+      "attackerWon": "L’attaquant l’emporte",
+      "attackerWonEffect": "L’attaquant l’emporte, effet à appliquer",
+      "defended": "Défendu",
+      "tangents": "Tangentes",
+      "tangentsChange": "{{from}} → {{to}}",
+      "rolledVs": "d20 {{d20}} contre {{target}}"
     }
   },
   "log": {

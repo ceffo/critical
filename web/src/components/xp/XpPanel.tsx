@@ -65,12 +65,10 @@ export function XpPanel() {
   const { t } = useTranslation();
   const ledger = useXpStore((s) => s.ledger);
   const refresh = useTableStore((s) => s.refresh);
-  const className = useClassName();
-  // ADR 0042: a multi-class or dual-class character has one standing per class entry; the ledger's
-  // total, level and progress are the first active entry's.
+  // ADR 0042: a multi-class or dual-class character has one standing, and one bar, per class entry
+  // (the ledger's own progress is the first active entry's, so it is not drawn then).
   const entries = useCharacterStore((s) => s.character?.derived.classes);
   const multi = (entries?.length ?? 0) > 1;
-  const first = entries?.find((e) => e.state === "active");
   useEffect(() => {
     void refresh(["xp"]);
   }, [refresh]);
@@ -92,11 +90,8 @@ export function XpPanel() {
       >
         <div className={cn(XP_COLS, "card-band bleed-x-4 col-span-2 py-2")}>
           <h2 className="section-label">
-            {multi && first
-              ? t("xp.headingClass", {
-                  class: className(first.class),
-                  level: ledger.level,
-                })
+            {multi
+              ? t("xp.headingMulti")
               : t("xp.heading", { level: ledger.level })}
           </h2>
           <h2 className="section-label">{t("xp.add.title")}</h2>
@@ -110,8 +105,10 @@ export function XpPanel() {
 }
 
 /**
- * The class entries' standings (ADR 0042 steps 5 and 7), one line each: the class and its level, its
- * XP and the XP before its next level, all the server's. A frozen entry says it earns nothing.
+ * The class entries' standings (ADR 0042 steps 5 and 7): one block per class, its level and XP, a
+ * bar from the floor of its target level to its next threshold (the server's `currentFloor` and
+ * `nextLevelXp`; the web only sets the width) and the XP left. A frozen entry has no bar: it says
+ * it earns nothing.
  */
 function ClassStandings({ entries }: { entries: DerivedClass[] }) {
   const { t } = useTranslation();
@@ -120,44 +117,87 @@ function ClassStandings({ entries }: { entries: DerivedClass[] }) {
   return (
     <section
       aria-label={t("xp.classes.title")}
-      className="flex min-w-0 flex-col gap-1"
+      className="flex min-w-0 flex-col gap-2"
       data-testid="xp-classes"
     >
-      <h3 className="section-label">{t("xp.classes.title")}</h3>
-      <ul className="flex flex-col gap-1">
-        {entries.map((e) => (
-          <li
-            key={e.class}
-            data-testid={`xp-class-${e.class}`}
-            className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 rounded-md bg-raised px-2.5 py-1 text-body tabular-nums"
-          >
-            <span className="min-w-0 font-medium break-words">
-              {t("xp.classes.level", {
-                class: className(e.class),
-                level: e.level,
-              })}
-            </span>
-            {e.state === "frozen" ? (
-              <span className="text-label text-muted-foreground">
-                {t("xp.classes.frozen", { level: e.level })}
-              </span>
-            ) : (
-              <span className="text-right">
-                <span data-testid={`xp-class-xp-${e.class}`}>
-                  {f.n(e.xp)} {t("xp.unit")}
+      <ul className="flex flex-col gap-2">
+        {entries.map((e) => {
+          const name = className(e.class);
+          const floor = e.currentFloor ?? 0;
+          const fraction =
+            e.nextLevelXp === null
+              ? 1
+              : Math.min(
+                  1,
+                  Math.max(
+                    0,
+                    (e.xp - floor) / Math.max(1, e.nextLevelXp - floor),
+                  ),
+                );
+          return (
+            <li
+              key={e.class}
+              data-testid={`xp-class-${e.class}`}
+              className="flex min-w-0 flex-col gap-1 rounded-md bg-raised px-2.5 py-1.5 text-body tabular-nums"
+            >
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3">
+                <span className="min-w-0 font-medium break-words">
+                  {t("xp.classes.level", { class: name, level: e.level })}
                 </span>
-                <span className="block text-label text-muted-foreground">
-                  {e.nextLevelXp === null
-                    ? t("xp.classes.maxLevel")
-                    : t("xp.classes.toNext", {
-                        xp: f.n(Math.max(0, e.nextLevelXp - e.xp)),
-                        level: e.targetLevel + 1,
-                      })}
-                </span>
-              </span>
-            )}
-          </li>
-        ))}
+                {e.state === "frozen" ? (
+                  <span className="text-right text-label text-muted-foreground">
+                    {t("xp.classes.frozen", { level: e.level })}
+                  </span>
+                ) : (
+                  <span
+                    className="text-right"
+                    data-testid={`xp-class-xp-${e.class}`}
+                  >
+                    {f.n(e.xp)} {t("xp.unit")}
+                  </span>
+                )}
+              </div>
+              {e.state === "active" && (
+                <>
+                  <div
+                    role="progressbar"
+                    aria-label={t("xp.classes.progressLabel", {
+                      class: name,
+                      level: e.targetLevel + 1,
+                    })}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                    aria-valuenow={Math.round(fraction * 100)}
+                    data-testid={`xp-class-bar-${e.class}`}
+                    className="relative h-2.5 overflow-hidden rounded-md bg-surface"
+                  >
+                    <div
+                      className="absolute inset-y-0 left-0 rounded-md bg-tint transition-[width] duration-300"
+                      style={{ width: `${fraction * 100}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-x-3 text-label text-muted-foreground">
+                    <span>{f.n(floor)}</span>
+                    <span
+                      className="text-foreground"
+                      data-testid={`xp-class-next-${e.class}`}
+                    >
+                      {e.nextLevelXp === null
+                        ? t("xp.classes.maxLevel")
+                        : t("xp.classes.toNext", {
+                            xp: f.n(Math.max(0, e.nextLevelXp - e.xp)),
+                            level: e.targetLevel + 1,
+                          })}
+                    </span>
+                    <span>
+                      {e.nextLevelXp === null ? "" : f.n(e.nextLevelXp)}
+                    </span>
+                  </div>
+                </>
+              )}
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -172,6 +212,15 @@ function Progress({
 }) {
   const { t } = useTranslation();
   const f = useFormats();
+  if (entries)
+    return (
+      <section
+        aria-label={t("xp.progressTitle")}
+        className="flex min-w-0 flex-col gap-3"
+      >
+        <ClassStandings entries={entries} />
+      </section>
+    );
   const headline =
     l.nextLevel === null
       ? t("xp.maxLevel")
@@ -242,7 +291,6 @@ function Progress({
           <LevelCell key={c.level} cell={c} />
         ))}
       </ol>
-      {entries && <ClassStandings entries={entries} />}
     </section>
   );
 }

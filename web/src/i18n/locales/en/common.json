@@ -2314,13 +2314,14 @@
       "toNext": "{{xp}} XP before level {{level}}",
       "maxLevel": "Highest level of the table",
       "frozen": "Left at level {{level}}: earns no XP while frozen",
+      "progressLabel": "{{class}}: progress to level {{level}}",
       "level": "{{class}} · level {{level}}"
     },
     "split": {
       "preview": "Split: {{parts}}",
       "part": "{{class}} {{amount, number}}"
     },
-    "headingClass": "Experience · {{class}} · level {{level}}"
+    "headingMulti": "Experience"
   },
   "skills": {
     "proficiencies": "Proficiencies",

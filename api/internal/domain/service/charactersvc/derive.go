@@ -318,6 +318,12 @@ func (ed *EntryDerived) setLevels(e classes.Entry, def classes.Class, shares, le
 		realized = target
 	}
 	ed.TargetLevel, ed.RealizedLevel = target, realized
+	// ADR 0046 step 5.1: the floor of the target level is the class definition's.
+	floor, err := def.XPThreshold(target)
+	if err != nil {
+		return fmt.Errorf("derive %s: %w", e.Class, err)
+	}
+	ed.CurrentFloor = &floor
 	if target < classes.MaxLevel {
 		// ADR 0046 step 5.1: the next threshold is the class definition's.
 		next, err := def.XPThreshold(target + 1)
@@ -326,7 +332,6 @@ func (ed *EntryDerived) setLevels(e classes.Entry, def classes.Class, shares, le
 		}
 		ed.NextLevelXP = &next
 	}
-	var err error
 	ed.LevelUp, err = levelUp(e.Class, ed.Group, realized, target, shares, leftAt, rules)
 	return err
 }

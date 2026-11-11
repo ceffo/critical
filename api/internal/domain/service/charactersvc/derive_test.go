@@ -46,13 +46,13 @@ func expectKelsenRules(r *mocks.MockRules, xp, level int) {
 }
 
 func kelsenDerived() charactersvc.Derived {
-	next := 1_320_000
+	next, floor := 1_320_000, 1_100_000
 	return charactersvc.Derived{
 		// His one class entry (ADR 0042 step 1) and the features it grants
 		// at 15 (ADR 0042 step 12).
 		Classes: []charactersvc.EntryDerived{{
 			Class: "bard", Group: "rogue", State: classes.EntryActive, XP: 1_293_418, TargetLevel: 15, RealizedLevel: 15,
-			NextLevelXP: &next, SpellSlots: level15Slots, Casts: true, LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
+			NextLevelXP: &next, CurrentFloor: &floor, SpellSlots: level15Slots, Casts: true, LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		}},
 		Features: []charactersvc.FeatureGrant{
 			{Kind: classes.KindRogueSkills, Class: "bard", Level: 15}, {Kind: classes.KindSpellbook, Class: "bard", Level: 15},

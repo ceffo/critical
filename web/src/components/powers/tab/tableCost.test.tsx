@@ -12,6 +12,7 @@ import {
   controlsOf,
   initialPicks,
   pickedRows,
+  tableNeeds,
   tableRequest,
 } from "./tableCost";
 
@@ -95,6 +96,11 @@ describe("the table-cost form", () => {
       tableRequest({ ...target, mindSaid: false }, controls, picks, []),
     ).toBeNull();
     expect(tableRequest(target, controls, picks, [], "13")?.cost).toBe(13);
+    // The marks and the reason beside Use read the same condition as the request.
+    expect(tableNeeds(NO_TARGET)).toEqual(["target", "mind", "level"]);
+    expect(tableNeeds({ ...target, level: "" })).toEqual(["level"]);
+    expect(tableNeeds({ ...target, mindSaid: false })).toEqual(["mind"]);
+    expect(tableNeeds(target)).toEqual([]);
   });
 
   it("shows the server's cost, as it came", async () => {

@@ -3,6 +3,8 @@
 import type { AttackDraft } from "../attack";
 import type { Power } from "@/types/powers";
 import { asks } from "../powerUse";
+import { attackNeeds, EMPTY_ATTACK } from "../attack";
+import { tableNeeds } from "./tableCost";
 
 /**
  * The form a power opens in the bar (ADR 0047 item 2), from the shape of its data:
@@ -56,3 +58,20 @@ export const stepLevel = (level: string, by: number): string => {
   );
   return String(next);
 };
+
+/** A target field a form needs before its action is enabled. */
+export type TargetNeed = "target" | "mind" | "level";
+
+/**
+ * The Target band's fields the form still lacks, read from the same conditions as the requests
+ * (`attackNeeds`, `tableNeeds`), so the marks, the reason beside the disabled button and the
+ * enabling never disagree. Other forms take nothing from the band.
+ */
+export function targetNeeds(form: BarForm, target: TargetDraft): TargetNeed[] {
+  if (form === "attack")
+    return attackNeeds({ ...EMPTY_ATTACK, ...target }).flatMap((n) =>
+      n === "rolls" ? [] : [n],
+    );
+  if (form === "table") return tableNeeds(target);
+  return [];
+}

@@ -2557,14 +2557,23 @@ async function runWalk(
   }
 }
 
+// Two halves per size, each on a stack of its own: one session would run past the 90 s test timeout on
+// the CI runner.
+// The first ten steps take about as long as the rest.
+const HALF = 10;
 for (const size of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3], VIEWPORTS[4]]) {
-  test(`dashboard walk at ${size.width}x${size.height}`, async ({
-    page,
-    stack,
-  }) => {
-    test.setTimeout(90_000);
-    await runWalk(page, size, DASHBOARD_STEPS, stack);
-  });
+  for (const [part, steps] of [
+    ["first half", DASHBOARD_STEPS.slice(0, HALF)],
+    ["second half", DASHBOARD_STEPS.slice(HALF)],
+  ] as const) {
+    test(`dashboard walk at ${size.width}x${size.height}, ${part}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, [...steps], stack);
+    });
+  }
 }
 
 // Shots of the themes and the group headings, on a stack of their own.

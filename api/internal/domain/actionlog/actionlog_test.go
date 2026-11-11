@@ -21,6 +21,9 @@ func TestIsRoll(t *testing.T) {
 		{"skill check", actionlog.KindSkillCheck, true},
 		// ADR 0028 step 5.
 		{"ability check", actionlog.KindAbilityCheck, true},
+		// ADR 0044 step 7: an attack mode's use is a roll, so it takes the result card.
+		{"psionic attack", actionlog.KindPsionicAttack, true},
+		{"power check", actionlog.KindPowerCheck, true},
 		{"hp change", actionlog.KindHPChange, false},
 		{"buff change", actionlog.KindBuffChange, false},
 	}

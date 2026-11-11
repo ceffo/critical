@@ -42,9 +42,17 @@ describeKind("buff_change", fixtures, {
   nextRoundHolds: {
     en: {
       text: "Round 3 → 4 — expired: Goblin shaman — maintenance (PSPs): Orc 1 — holds ended, not enough PSPs: Goblin shaman",
+      summary: "Maintenance, PSPs 1, 1 ended",
+      detail: [
+        "Round 3 → 4 — expired: Goblin shaman — maintenance (PSPs): Orc 1 — holds ended, not enough PSPs: Goblin shaman",
+      ],
     },
     fr: {
       text: "Tour 3 → 4 — expirés : Goblin shaman — maintien (PFP) : Orc 1 — emprises terminées, PFP insuffisants : Goblin shaman",
+      summary: "Maintien, PFP 1, 1 terminé",
+      detail: [
+        "Tour 3 → 4 — expirés : Goblin shaman — maintien (PFP) : Orc 1 — emprises terminées, PFP insuffisants : Goblin shaman",
+      ],
     },
   },
   // ADR 0044 step 10: letting go of a contact ends the powers kept up through it, in the same entry.
@@ -56,7 +64,15 @@ describeKind("buff_change", fixtures, {
   },
   // Contact is free while a power uses it: only the power's charge is listed.
   nextRoundContactFree: {
-    en: { text: "Round 3 → 4 — maintenance (PSPs): Inflict Pain 2" },
-    fr: { text: "Tour 3 → 4 — maintien (PFP) : Infliger la douleur 2" },
+    en: {
+      text: "Round 3 → 4 — maintenance (PSPs): Inflict Pain 2",
+      summary: "Maintenance, PSPs 2",
+      detail: ["Round 3 → 4 — maintenance (PSPs): Inflict Pain 2"],
+    },
+    fr: {
+      text: "Tour 3 → 4 — maintien (PFP) : Infliger la douleur 2",
+      summary: "Maintien, PFP 2",
+      detail: ["Tour 3 → 4 — maintien (PFP) : Infliger la douleur 2"],
+    },
   },
 });

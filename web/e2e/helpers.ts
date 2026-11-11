@@ -217,6 +217,20 @@ export function logEntry(page: Page, source: string): Locator {
   return combatLog(page).getByRole("listitem").filter({ hasText: source });
 }
 
+/**
+ * A journal row's expanded detail: opens it when closed (a kind with a short form has a button for
+ * it) and returns it. The row is read again on each try, as the journal may still be catching up.
+ */
+export function rowDetail(row: Locator): Locator {
+  return row.getByTestId("log-detail");
+}
+
+export async function expandRow(row: Locator) {
+  const toggle = row.getByTestId("log-expand");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
+}
+
 /** The row of the active buff called `name` in the header's effects timeline. */
 export function buffBadge(page: Page, name: string): Locator {
   return page.locator(`[data-testid="buff"][data-buff="${name}"]`);

@@ -5,7 +5,9 @@ import {
   apiCall,
   openActPowers,
   chooseLanguage,
+  expandRow,
   logEntry,
+  rowDetail,
   nextRound,
   openDashboard,
   reloadSettled,
@@ -104,9 +106,11 @@ test.describe("a psionicist in psionic combat", () => {
     await snap(page, "defend-result");
 
     // The journal has the contest, and Undo takes it back.
-    await expect(logEntry(page, "Psychic contest")).toContainText("Mind Blank");
+    await expect(logEntry(page, "against Mind Blank")).toContainText(
+      "Mind Blank",
+    );
     await snap(page, "defend-journal");
-    await undoEntry(page, "Psychic contest");
+    await undoEntry(page, "against Mind Blank");
 
     // Stop ends the standing mode: no defence is raised, and a defend then names none.
     await expect(blank).toHaveAttribute("data-defence", "standing");
@@ -160,9 +164,14 @@ test.describe("a psionicist in psionic combat", () => {
     await expect(second).toContainText("kept for the round, no die");
     await expect(second.locator("[data-winner]")).toHaveCount(1);
     await snap(page, "defend-result-from-kept");
-    await expect(logEntry(page, "Psychic contest").first()).toContainText(
-      "kept for the round, no die",
-    );
+    // The newest row's detail, once the journal has read the entry.
+    await expect(async () => {
+      const row = logEntry(page, "against Thought Shield").first();
+      await expandRow(row);
+      await expect(rowDetail(row)).toContainText("kept for the round, no die", {
+        timeout: 500,
+      });
+    }).toPass();
     await snap(page, "defend-journal-from-kept");
 
     // Next Round lowers the raised row; Undo brings it back, Redo lowers it again.

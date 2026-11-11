@@ -295,6 +295,19 @@ function buffKind(icon: Icon, bookkeeping = false): KindView<BuffLogPayload> {
     icon,
     bookkeeping,
     text: (p, w, e) => buffText(p, w.t, w.spellName, e, w.names),
+    // A round or a stretch of time that charged psionic upkeep leads with it; the rounds, what
+    // expired and the powers that ended are in the detail.
+    summary: (p, { t }) => {
+      const cost = (p.maintenance ?? []).reduce((n, m) => n + m.cost, 0);
+      const ended =
+        (p.maintenanceUnpaid?.length ?? 0) + (p.unpaidTargets?.length ?? 0);
+      if (!p.maintenance?.length && ended === 0) return null;
+      const line = t("log.summary.maintenance", { cost });
+      return ended > 0
+        ? t("log.summary.maintenanceEnded", { text: line, count: ended })
+        : line;
+    },
+    detail: (p, w, e) => [buffText(p, w.t, w.spellName, e, w.names)],
   };
 }
 

@@ -43,6 +43,25 @@ export function entryText(
   return view.text(payload, words(t, spellName, names), e);
 }
 
+/**
+ * The row's short form: its one-line summary and the lines of its detail, for a kind and an entry
+ * that have one; null when the row shows the full text.
+ */
+export function entrySummary(
+  e: LogEntry,
+  t: TFunction,
+  spellName: SpellNamer = englishSpellName,
+  names: InventoryNamer = recordedNames,
+): { summary: string; detail: string[] } | null {
+  const { view, payload } = readEntry(e);
+  if (!view?.summary || !view.detail || payload === null) return null;
+  const w = words(t, spellName, names);
+  const summary = view.summary(payload, w, e);
+  return summary === null
+    ? null
+    : { summary, detail: view.detail(payload, w, e) };
+}
+
 /** The journal row's value: the number that sums the entry up; null when none. */
 export function rowValue(e: LogEntry): RowValue | null {
   const { view, payload } = readEntry(e);

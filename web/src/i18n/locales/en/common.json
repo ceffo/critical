@@ -1868,6 +1868,21 @@
     "pspRecovery": "{{hours}} h {{activity}}: PSPs recovered {{amount}}",
     "defenceRaised": "Defence raised ({{power}}): PSPs {{spent}}",
     "defenceRaisedStanding": "Defence raised ({{power}}, standing): PSPs {{spent}}",
+    "summary": {
+      "effect": "effect to apply",
+      "attack": "{{attack}} on {{target}}: {{outcome}}",
+      "tangents_one": "{{count}} tangent",
+      "tangents_other": "{{count}} tangents",
+      "powerCheck": "{{power}}: {{verdict}}, PSPs {{spent}}",
+      "powerRoll": "d20 {{d20}} vs {{target}}, {{verdict}}, PSPs {{spent}}",
+      "defence": "{{attack}} against {{defence}}: {{outcome}}",
+      "defenceNone": "{{attack}}, no defence: {{outcome}}",
+      "maintenance": "Maintenance, PSPs {{cost}}",
+      "maintenanceEnded_one": "{{text}}, {{count}} ended",
+      "maintenanceEnded_other": "{{text}}, {{count}} ended",
+      "expand": "Show the detail",
+      "collapse": "Hide the detail"
+    },
     "psionicAttack": "Psionic attack ({{attack}} on {{target}}): {{results}}",
     "psionicAttackWith": "{{text}} ({{parts}})",
     "attackParts": {

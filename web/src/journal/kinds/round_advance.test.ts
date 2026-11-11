@@ -28,18 +28,34 @@ describeKind("round_advance", fixtures, {
   maintained: {
     en: {
       text: "Round 4 → 5 — maintenance (PSPs): Mind thrust 3, Body equilibrium 2",
+      summary: "Maintenance, PSPs 5",
+      detail: [
+        "Round 4 → 5 — maintenance (PSPs): Mind thrust 3, Body equilibrium 2",
+      ],
     },
     fr: {
       text: "Tour 4 → 5 — maintien (PFP) : Mind thrust 3, Body equilibrium 2",
+      summary: "Maintien, PFP 5",
+      detail: [
+        "Tour 4 → 5 — maintien (PFP) : Mind thrust 3, Body equilibrium 2",
+      ],
     },
   },
   // The power the PSPs left could not pay ends.
   maintenanceUnpaid: {
     en: {
       text: "Round 5 → 6 — maintenance (PSPs): Mind Thrust 2 — powers ended, not enough PSPs: Body Equilibrium",
+      summary: "Maintenance, PSPs 2, 1 ended",
+      detail: [
+        "Round 5 → 6 — maintenance (PSPs): Mind Thrust 2 — powers ended, not enough PSPs: Body Equilibrium",
+      ],
     },
     fr: {
       text: "Tour 5 → 6 — maintien (PFP) : Poussée mentale 2 — pouvoirs terminés, PFP insuffisants : Équilibre corporel",
+      summary: "Maintien, PFP 2, 1 terminé",
+      detail: [
+        "Tour 5 → 6 — maintien (PFP) : Poussée mentale 2 — pouvoirs terminés, PFP insuffisants : Équilibre corporel",
+      ],
     },
   },
 });

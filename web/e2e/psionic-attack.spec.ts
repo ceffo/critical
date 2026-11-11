@@ -5,6 +5,9 @@ import {
   openActPowers,
   expectUndoOn,
   chooseLanguage,
+  combatLog,
+  expandRow,
+  rowDetail,
   logEntry,
   nextRound,
   openDashboard,
@@ -112,12 +115,22 @@ test.describe("a psionicist attacking a closed mind", () => {
       .filter({ hasText: "Orc" })
       .first();
     await expect(effect).toContainText(/tangents?|contact/);
-    await expect(logEntry(page, "Psionic attack")).toContainText("Orc");
+    // The journal row is the outcome first; the dice are on its detail, opened by keyboard.
+    const attackRow = logEntry(page, "on Orc");
+    await expect(attackRow).toHaveAttribute("data-kind", "psionic_attack");
+    await expect(attackRow.getByTestId("log-detail")).toHaveCount(0);
+    const expand = attackRow.getByTestId("log-expand");
+    await expect(expand).toHaveAttribute("aria-expanded", "false");
+    await expand.focus();
+    await page.keyboard.press("Enter");
+    await expect(expand).toHaveAttribute("aria-expanded", "true");
+    await expect(attackRow.getByTestId("log-detail")).toContainText("d20");
     for (const vp of [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
     ]) {
       await page.setViewportSize(vp);
+      await expectNoClippedText(combatLog(page), `attack journal ${vp.width}`);
       await snap(page, `attack-effects-journal-${vp.width}x${vp.height}`);
     }
 
@@ -141,7 +154,14 @@ test.describe("a psionicist attacking a closed mind", () => {
       .getByTestId("rail")
       .getByRole("button", { name: "Agir" })
       .click();
-    await snap(page, "attack-effects-journal-fr");
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(combatLog(page), `journal fr ${vp.width}`);
+      await snap(page, `attack-effects-journal-fr-${vp.width}x${vp.height}`);
+    }
   });
 });
 
@@ -197,9 +217,9 @@ test.describe("a psionicist attacking the same mind again", () => {
     const rows = (name: string) =>
       page.getByTestId("effect-name").filter({ hasText: name });
     await expect(rows("Orc")).toHaveCount(0);
-    await expect(logEntry(page, "on Goblin")).toContainText(
-      "tangents on Orc ended",
-    );
+    const goblinRow = logEntry(page, "on Goblin");
+    await expandRow(goblinRow);
+    await expect(rowDetail(goblinRow)).toContainText("tangents on Orc ended");
     await expectUndoOn(page, "on Goblin");
     await undoEntry(page, "on Goblin");
     await expect(rows("Orc")).toHaveCount(1);

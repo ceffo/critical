@@ -16,9 +16,17 @@ describeKind("time_passed", fixtures, {
   passTimeMaintained: {
     en: {
       text: "Time passed: 1 h (60 rd), round 0 → 0 — maintenance (PSPs): Mind thrust 60",
+      summary: "Maintenance, PSPs 60",
+      detail: [
+        "Time passed: 1 h (60 rd), round 0 → 0 — maintenance (PSPs): Mind thrust 60",
+      ],
     },
     fr: {
       text: "Temps écoulé : 1 h (60 tr.), tour 0 → 0 — maintien (PFP) : Mind thrust 60",
+      summary: "Maintien, PFP 60",
+      detail: [
+        "Temps écoulé : 1 h (60 tr.), tour 0 → 0 — maintien (PFP) : Mind thrust 60",
+      ],
     },
   },
 });

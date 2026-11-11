@@ -66,6 +66,13 @@ export interface KindView<P, L = never> {
   icon: Icon;
   /** The journal's text in the player's language. */
   text(p: P, w: Words, e: LogEntry): string;
+  /**
+   * The journal row's one-line summary, outcome first (about 60 characters); null or absent: the row
+   * shows `text`. A kind that has one also gives `detail`, what the row shows when expanded.
+   */
+  summary?(p: P, w: Words, e: LogEntry): string | null;
+  /** The expanded row's lines: every figure the full `text` carries (each die, scores, costs, notes). */
+  detail?(p: P, w: Words, e: LogEntry): string[];
   /** The journal row's value; none when absent. */
   value?(p: P, e: LogEntry): RowValue | null;
   /**

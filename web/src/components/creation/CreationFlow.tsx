@@ -36,6 +36,7 @@ import {
   settle,
   stepOfField,
   stepsFor,
+  weaponPickNames,
   type DraftAnswer,
   type FieldError,
   type DraftPatch,
@@ -51,7 +52,6 @@ import { SpellbookStep } from "./spellbook";
 import { PsionicsStep } from "./psionics";
 import { useSpellName } from "@/i18n/spellName";
 import { useSpellNamesStore } from "@/stores/spellNames";
-import { isSpecialization } from "@/components/proficiencies/weapons";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
 /** A server refusal as the flow's field error; anything else (a network error) as a message. An
@@ -546,10 +546,12 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
         </main>
         {/* The panel reads the server's languages and warnings once the draft was seen where the
             former preview was asked, as it did. */}
-        <Building
-          {...props}
-          answer={{ ...answer, current: seen ? answer.current : null }}
-        />
+        {step !== "review" && (
+          <Building
+            {...props}
+            answer={{ ...answer, current: seen ? answer.current : null }}
+          />
+        )}
       </div>
       <Dialog open={confirmLeave} onOpenChange={setConfirmLeave}>
         <DialogContent
@@ -704,7 +706,8 @@ function StepList({
           const done = at < Math.max(reached, STEPS.indexOf(current));
           const on = s === current;
           const open = at <= reached && !on;
-          const shown = done && !on ? choice(s) : null;
+          // The review already lists every choice: the list does not repeat them there.
+          const shown = done && !on && current !== "review" ? choice(s) : null;
           return (
             <li key={s}>
               <button
@@ -854,15 +857,7 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
             {t("creation.proficiencies.weaponsName")}
           </dt>
           <dd className="break-words" data-testid="building-weapons">
-            {draft.weaponPicks.length > 0
-              ? draft.weaponPicks
-                  .map((p) =>
-                    isSpecialization(p)
-                      ? `${t(`weapons.types.${p.type}`, { defaultValue: p.type })} (${t("weaponProficiencies.specialized")})`
-                      : t(`weapons.types.${p.type}`, { defaultValue: p.type }),
-                  )
-                  .join(", ")
-              : dash}
+            {weaponPickNames(t, draft.weaponPicks) || dash}
           </dd>
           <dt className="text-ink-muted">{t("creation.proficiencies.name")}</dt>
           <dd className="break-words" data-testid="building-proficiencies">

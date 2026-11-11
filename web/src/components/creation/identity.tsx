@@ -11,7 +11,12 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
-import { hasSpellbook, type StepId, type StepProps } from "./flow";
+import {
+  hasSpellbook,
+  weaponPickNames,
+  type StepId,
+  type StepProps,
+} from "./flow";
 import { useSpellName } from "@/i18n/spellName";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
@@ -662,6 +667,28 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
                     `review-skill-${s.skill}`,
                   ] as [string, ReactNode, string],
               ),
+            ]}
+          />
+        </ReviewBlock>
+        <ReviewBlock
+          title={t("creation.proficiencies.name")}
+          step="proficiencies"
+          go={go}
+        >
+          <Dl
+            rows={[
+              [
+                t("creation.proficiencies.weaponsName"),
+                weaponPickNames(t, draft.weaponPicks) || dash,
+                "review-weapon-picks",
+              ],
+              [
+                t("creation.proficiencies.name"),
+                draft.picks.length > 0
+                  ? draft.picks.map((p) => skillName(t, p.id)).join(", ")
+                  : dash,
+                "review-proficiency-picks",
+              ],
             ]}
           />
         </ReviewBlock>

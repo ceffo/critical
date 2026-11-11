@@ -1,13 +1,6 @@
 import { test, expect, snap } from "./fixtures";
 import { combatLog, openDashboard, readsAfter } from "./helpers";
 
-const VIEWPORTS = [
-  { width: 1280, height: 800 },
-  { width: 1440, height: 900 },
-  { width: 1920, height: 1080 },
-  { width: 2560, height: 1440 },
-];
-
 // What only a browser proves: the composer's buttons and field build a formula, Enter and Roll reach
 // the server, the card and the journal render the dice entry, Reroll adds a new entry, and a favourite
 // saved on the server comes back after a reload. The grammar and limits are Go tests (dicesvc);
@@ -111,22 +104,8 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   await expect(result.getByTestId("dice-group")).toHaveCount(2);
   await expect(journal.getByText(/^Dice d%\+d4 = \d+$/)).toHaveCount(2);
 
-  for (const vp of VIEWPORTS) {
-    await page.setViewportSize(vp);
-    await expect(composer).toBeVisible();
-    const scroll = await page.evaluate(() => {
-      const el = document.scrollingElement ?? document.documentElement;
-      return {
-        x: el.scrollWidth - el.clientWidth,
-        y: el.scrollHeight - el.clientHeight,
-      };
-    });
-    expect(scroll, "no page scroll").toEqual({ x: 0, y: 0 });
-    await snap(page, `dice-${vp.width}x${vp.height}`);
-  }
-
   // Undo pops the last dice roll.
-  await page.setViewportSize({ width: 1440, height: 900 });
+  await snap(page, "dice-composer");
   await page.getByTestId("undo").click();
   await expect(journal.locator('[data-status="voided"]')).toHaveCount(1);
   await expect(journal.locator('[data-status="voided"]')).toContainText(

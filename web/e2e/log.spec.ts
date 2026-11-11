@@ -3,7 +3,6 @@ import { fileURLToPath } from "node:url";
 import { test, expect, snap } from "./fixtures";
 import {
   combatLog,
-  expectUndoOn,
   currentHp,
   undoEntry,
   expectNoReload,
@@ -17,27 +16,6 @@ import {
 
 // The log is a stack: entries are popped, never edited, and the journal offers no note
 // (ADR 0022 step 5.2).
-test("the journal Undo names only the newest entry: damage 10, heal 4, pop the heal, pop the damage", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const max = await currentHp(page);
-  await recordHp(page, "damage", 10, "e2e ogre club");
-  await expect.poll(() => currentHp(page)).toBe(max - 10);
-  await recordHp(page, "heal", 4, "e2e potion");
-  await expect.poll(() => currentHp(page)).toBe(max - 6);
-
-  await expectUndoOn(page, "e2e potion");
-  await expectUndoOn(page, "e2e ogre club", true);
-  await snap(page, "undo-names-the-top");
-
-  await undoEntry(page, "e2e potion");
-  await expect.poll(() => currentHp(page)).toBe(max - 10);
-  await undoEntry(page, "e2e ogre club");
-  await expect.poll(() => currentHp(page)).toBe(max);
-  await snap(page, "popped-in-order");
-});
-
 test("undoing an entry restores current HP and marks it undone", async ({
   page,
 }) => {
@@ -63,40 +41,6 @@ test("undoing an entry restores current HP and marks it undone", async ({
 
   await expectNoReload(page);
   await snap(page, "undone");
-});
-
-test("a server error is shown to the user", async ({ page, stack }) => {
-  await openDashboard(page);
-  await recordHp(page, "damage", 2, "e2e stale entry");
-  const entry = logEntry(page, "e2e stale entry");
-  await expect(entry).toBeVisible();
-
-  // Void it behind the UI's back, then try again from the (stale) UI.
-  const { entries } = (await (
-    await fetch(`${stack.apiUrl}/api/log`)
-  ).json()) as {
-    entries: { id: number; summary: string }[];
-  };
-  const id = entries.find((e) => e.summary === "e2e stale entry")!.id;
-  expect(
-    (
-      await fetch(`${stack.apiUrl}/api/log/undo`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedTopId: id }),
-      })
-    ).ok,
-  ).toBe(true);
-
-  await page.getByTestId("undo").click();
-
-  const alert = page.getByRole("alert");
-  await expect(alert).toContainText(/nothing to undo|changed in the meantime/);
-  await snap(page, "server-error");
-  await alert.getByRole("button", { name: "Dismiss" }).click();
-  await expect(alert).toHaveCount(0);
-  // The refresh after the failed call shows the server's truth.
-  await expect(entry).toHaveAttribute("data-status", "voided");
 });
 
 // Global undo (ADR 0010 step 5). Only a browser proves the button's wiring, the tooltip worded

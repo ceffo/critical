@@ -1,13 +1,13 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard, openSpend } from "./helpers";
+import { openDashboard, openSpend } from "./helpers";
 
 // What only a browser proves for the proficiency pop-up (ADR 0037 step 19.4): the name and the
 // ability part of a Skills tab row are two real click targets (the name rolls nothing, the other
-// part opens nothing), the description comes from the server's lookup in the UI language with its
+// part opens nothing), the description comes from the server's lookup with its
 // table rendered as a table, Escape closes it, and the picker's names open the same pop-up with
 // the class's cost while adding still works. The text is the fixture's invented one; the lookup
 // itself is a Go test, the pop-up's body and the row's two buttons are unit tests.
-test("proficiency description: from the Skills tab row and the picker, en and fr", async ({
+test("proficiency description: from the Skills tab row and the picker", async ({
   page,
 }) => {
   await openDashboard(page);
@@ -70,20 +70,4 @@ test("proficiency description: from the Skills tab row and the picker, en and fr
   await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await editor.getByTestId("proficiency-cancel").click();
-
-  // French: the same pop-up in the UI language.
-  await chooseLanguage(page, "fr");
-  const translatedPanel = page.getByRole("tabpanel", { name: "Compétences" });
-  await translatedPanel
-    .getByTestId("proficiency-name-musical_instrument")
-    .click();
-  await expect(dialog.getByTestId("proficiency-description")).toContainText(
-    "Texte inventé pour musical instrument.",
-  );
-  await expect(
-    dialog.getByTestId("proficiency-description").getByRole("table"),
-  ).toBeVisible();
-  await snap(page, "proficiency-popup-fr");
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
 });

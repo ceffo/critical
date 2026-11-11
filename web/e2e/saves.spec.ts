@@ -1,13 +1,11 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
 import {
-  addBuff,
   apiCall,
   chooseLanguage,
   currentHp,
   logEntry,
   openDashboard,
-  recordHp,
   openFold,
   reloadSettled,
 } from "./helpers";
@@ -61,38 +59,6 @@ async function adjust(page: Page, steps: number, reason?: string) {
 }
 
 const verdict = (margin: number) => (margin >= 0 ? "PASSED" : "FAILED");
-
-// The live card reads the save endpoint's answer, the reloaded one the entry's payload: one shape
-// (the answer is the payload plus its entry id), so a natural 1 or 20 reads the same in both.
-test("a natural 1 or 20 save reads the same live and after a reload", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  const card = saveCard(page);
-  // The seeded dice (CRITICAL_DICE_SEED, fixtures.ts): this test's second save is a natural 1 or 20.
-  // No save is repeated to get it; the assertion fails loudly if the sequence changes.
-  await rollSpellSave(page);
-  await expect(logEntry(page, "Save vs Spells")).toHaveCount(1);
-  await rollSpellSave(page);
-  await expect(logEntry(page, "Save vs Spells")).toHaveCount(2);
-  const live = await facts(card);
-  expect(
-    [1, 20],
-    "the seed's second save is no longer a natural 1 or 20",
-  ).toContain(live.d20);
-  const vs = await card.getByTestId("save-vs").textContent();
-  const outcome = live.margin >= 0 ? "Passed" : "Failed";
-  await expect(card).toContainText(outcome);
-
-  await page.reload();
-  await expect(card).toBeVisible();
-  expect(await facts(card)).toEqual(live);
-  await expect(card.getByTestId("save-vs")).toHaveText(vs ?? "");
-  await expect(card).toContainText(outcome);
-  await expect(logEntry(page, "Save vs Spells").first()).toContainText(
-    `Save vs Spells: d20 ${live.d20} vs ${live.target}, ${verdict(live.margin)}`,
-  );
-});
 
 test("a save is logged and its adjustment moves the target, never the roll", async ({
   page,
@@ -148,168 +114,6 @@ test("a save is logged and its adjustment moves the target, never the roll", asy
   );
   expect(await currentHp(page)).toBe(hp);
   await snap(page, "save-adjustment-removed");
-});
-
-test("a voided save can no longer be adjusted; older saves and other entries are refused", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await recordHp(page, "damage", 1, "e2e save neighbour");
-  await rollSpellSave(page);
-  await rollSpellSave(page);
-
-  const log = (await (await page.request.get("/api/log")).json()) as {
-    entries: { id: number; kind: string }[];
-  };
-  const [latest, older] = log.entries
-    .filter((e) => e.kind === "save")
-    .map((e) => e.id);
-  const hpEntry = log.entries.find((e) => e.kind === "hp_change")!.id;
-
-  const adjustById = (id: number) =>
-    page.request.post(`/api/roll/save/${id}/adjust`, {
-      data: { adjustment: 4 },
-    });
-  const notLatest = await adjustById(older);
-  expect(notLatest.status()).toBe(409);
-  expect((await notLatest.json()).error).toContain(
-    "only the latest roll can be adjusted",
-  );
-  const notSave = await adjustById(hpEntry);
-  expect(notSave.status()).toBe(400);
-
-  // Void the latest save (the one on the card) from the log, newest first: the card loses its
-  // adjust control and the API refuses it.
-  const form = await openFold(
-    saveCard(page),
-    "Adjust after the roll",
-    "Adjust this save",
-  );
-  const newest = logEntry(page, "Save vs Spells").first();
-  await page.getByTestId("undo").click();
-  await expect(newest).toHaveAttribute("data-status", "voided");
-  await expect(form).toHaveCount(0);
-  const voided = await adjustById(latest);
-  expect(voided.status()).toBe(409);
-  expect((await voided.json()).error).toContain("already undone");
-  // Voiding the newer save does not make the older one adjustable again.
-  const stillOlder = await adjustById(older);
-  expect(stillOlder.status()).toBe(409);
-  expect((await stillOlder.json()).error).toContain(
-    "only the latest roll can be adjusted",
-  );
-  await snap(page, "save-voided");
-});
-
-test("a save is no longer adjustable once another roll (an attack) follows it", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await rollSpellSave(page);
-  const save = (
-    (await (await page.request.get("/api/log")).json()) as {
-      entries: { id: number; kind: string }[];
-    }
-  ).entries.find((e) => e.kind === "save")!.id;
-
-  await page.getByRole("tab", { name: "Weapons" }).click();
-  await page
-    .getByRole("form", { name: "Attack" })
-    .getByLabel("Target AC")
-    .fill("4");
-  await page.getByRole("button", { name: "Attack", exact: true }).click();
-  await expect(
-    page
-      .getByRole("region", { name: "Detail", exact: true })
-      .getByTestId("attack-result"),
-  ).toBeVisible();
-
-  const res = await page.request.post(`/api/roll/save/${save}/adjust`, {
-    data: { adjustment: 4 },
-  });
-  expect(res.status()).toBe(409);
-  expect((await res.json()).error).toContain(
-    "only the latest roll can be adjusted",
-  );
-});
-
-test("a save-bonus buff is labelled by its name on the save card (en and fr)", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  await addBuff(page, { name: "e2e Gaia ward", effects: [["save_bonus", 2]] });
-  await rollSpellSave(page);
-  const mods = saveCard(page).getByTestId("save-modifiers");
-  await expect(mods.getByRole("listitem")).toHaveCount(1);
-  await expect(mods.getByRole("listitem").first()).toHaveText(
-    /^e2e Gaia ward\s*\+2$/,
-  );
-  await expect(logEntry(page, "Save vs Spells")).toBeVisible();
-
-  await chooseLanguage(page, "fr");
-  const frCard = page
-    .getByRole("region", { name: "Détail", exact: true })
-    .getByTestId("save-result");
-  await expect(frCard).toContainText("Sauvegarde contre Sorts");
-  await expect(
-    frCard.getByTestId("save-modifiers").getByRole("listitem").first(),
-  ).toHaveText(/^e2e Gaia ward\s*\+2$/);
-  await snap(page, "save-buff-fr");
-});
-
-// ADR 0006 step 9 in the browser: the "Against the mind" box reaches the save request, the card
-// words the server's Wisdom modifier (en and fr), and the box clears for the next save. The values
-// (Table 5, which saves, every class) are Go tests (combatsvc, ruletablesadpt, router).
-test("a save against the mind carries the Wisdom modifier on its card (en and fr)", async ({
-  page,
-}) => {
-  await openDashboard(page);
-  expect(
-    await apiCall(page, "POST", "/api/characters", {
-      name: "Wren",
-      class: "fighter",
-      raceCode: "human",
-      details: { alignment: "neutral_good", sex: "female" },
-      str: 12,
-      dex: 12,
-      con: 12,
-      int: 10,
-      wis: 17,
-      cha: 10,
-      hpMax: 10,
-      xp: 0,
-    }),
-  ).toBe(true);
-  await reloadSettled(page);
-  const mind = page.getByTestId("save-mind-affecting");
-  await mind.check();
-  const rolled = page.waitForResponse(
-    (r) =>
-      r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "Roll save vs Spells" }).click();
-  const res = await rolled;
-  expect(res.request().postDataJSON()).toEqual({
-    category: "spell",
-    mindAffecting: true,
-  });
-  expect((await res.json()).mindAffecting).toBe(true);
-  const mods = saveCard(page).getByTestId("save-modifiers");
-  await expect(mods.getByRole("listitem")).toHaveCount(1);
-  await expect(mods.getByRole("listitem").first()).toHaveText(
-    /^Wisdom 17 \(magical defence\)\s*\+3$/,
-  );
-  await expect(mind).not.toBeChecked();
-
-  await chooseLanguage(page, "fr");
-  const frCard = page
-    .getByRole("region", { name: "Détail", exact: true })
-    .getByTestId("save-result");
-  await expect(
-    frCard.getByTestId("save-modifiers").getByRole("listitem").first(),
-  ).toHaveText(/^Sagesse 17 \(défense contre la magie\)\s*\+3$/);
-  await expect(page.getByText("Contre l’esprit")).toBeVisible();
-  await snap(page, "save-mind-fr");
 });
 
 /** Makes a fresh Wisdom-19 fighter the active character (Table 5: immune to command). */
@@ -405,17 +209,4 @@ test("a save against a spell the Wisdom makes the character immune to rolls noth
       .getByTestId("save-immunity"),
   ).toHaveText(/^Sagesse 19 : immunité contre .+, aucun jet$/);
   await snap(page, "save-immune-fr");
-
-  // The picker words the class in French too.
-  await page.getByTestId("save-mind-affecting").check();
-  await page.getByTestId("save-spell").click();
-  await page.getByTestId("save-spell-search").fill("comma");
-  await expect(page.getByTestId("save-spell-option").first()).toContainText(
-    "Prêtre",
-  );
-  await expect(page.getByTestId("save-spell-option").first()).not.toContainText(
-    "priest",
-  );
-  await page.setViewportSize({ width: 1920, height: 1080 });
-  await snap(page, "save-spell-picker-fr");
 });

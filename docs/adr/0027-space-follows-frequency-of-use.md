@@ -212,20 +212,22 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 
    *Checked by* `layout.spec`: the "no cut text in French" test with a one-line check on each save
    row and the heading at 1440x900 and 1707x1300, and the content target of step 2.8.
-6. **Act stage: the now band fits its tab** (replaces ADR 0022 step 2.5's 60 % cap).
-   1. Until the player drags the split, the now band (act panel | result panel) is **as tall as the
-      active tab's content**, and the journal takes the rest of the stage, at least 14rem (step 2.5).
-      Changing tab resizes the band. When the tab's content is taller than the stage minus the
-      journal's minimum and the handle, the act panel scrolls inside.
-      *Implementation note (2026-10-17):* a result taller than the tab (an attack against an unknown
-      AC with the GM's Hit / Miss) also sets the band's height, so that every-turn control does not
-      hide under a scroll (step 1.7); the band is the taller of the two, with no cap.
+6. **Act stage: the now band keeps one height** (replaces ADR 0022 step 2.5's 60 % cap;
+   *amended 2026-11-11, user: the journal jumped as tabs changed*).
+   1. Until the player drags the split, the now band (act panel | result panel) has **one fixed
+      height for every tab**, that of the tallest tab's content (640 px, Turning's), and the journal
+      takes the rest of the stage, at least 14rem (step 2.5). Changing tab never moves the
+      journal's top edge. When the stage is too short for the band plus the journal's minimum, the
+      band gives way and keeps what is left; a tab (or a result) taller than the band scrolls
+      inside its panel. A short tab leaves empty room under its content: that is the price of the
+      steady journal.
    2. **Weapons does not scroll** at 1440x900 in French with the header at rest.
    3. The split handle is unchanged (ADR 0022 step 5.4): a drag sets the journal's height (and the
       band takes the rest), a click collapses it; both stay per-device preferences.
 
-   *Checked by* `layout.spec`'s "act panel" test: at 1440x900 in French, the Weapons tab's
-   `scrollHeight` equals its `clientHeight` and the journal is at least 14rem tall.
+   *Checked by* `layout.spec`'s "act panel" step of the dashboard walks (the journal's top edge is the
+   same on every Act tab at each walk size) and its French step (at 1440x900 the Weapons tab's
+   `scrollHeight` equals its `clientHeight` and the journal is at least 14rem tall).
 7. **Weapons tab** (amends ADR 0022 step 2.5 "Weapons tab").
    1. **Switching weapon**: one button to switch to the **previous weapon** (the one the server
       stores in the attack form), its caption the swap icon and the weapon's name, its tooltip
@@ -434,8 +436,8 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 - ADR 0022's tiers were implicit (the 44 px Attack, the always-visible zones); step 1 makes them the
   rule every later layout change is judged by, and the review checklist
   (`docs/agent-workflow.md`, "Review") carries steps 2 and 3.
-- **The 60 % cap goes** (step 6): with a short tab the journal gets more room, with a tall one
-  (Spells, Skills before step 12) less; the 14rem minimum and the drag stay the player's way out.
+- **The 60 % cap goes** (step 6): the band keeps one height (step 6.1, amended): the journal no longer follows the tab;
+  the 14rem minimum and the drag stay the player's way out.
 - The weapon chips of ADR 0022 step 2.5 were themselves the regression the user named; the previous
   weapon is already stored by the server, so step 7.1 needs no API change.
 - Every check adjusted on the result card (step 8.3) leaves ADR 0014 step 5's pre-roll adjustment

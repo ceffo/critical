@@ -3921,9 +3921,7 @@ async function creationMultiStep(page: Page, size: Viewport) {
 // ADR 0030 step 7 and ADR 0022 step 1, judged in French (ADR 0027 step 2): the level-up prompt on
 // the character card, at its widest (a hit die to roll, a second level owed, the manual entry
 // open), is never cut from 1280 to 2560, and each button says one word (ADR 0027 step 3).
-test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpPromptStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -3954,7 +3952,7 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
     "Niveau 2 atteint",
   );
   await expect(prompt.getByTestId("level-up-more")).toBeVisible();
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(prompt, `level-up prompt, ${where}`);
@@ -3969,15 +3967,13 @@ test("level-up prompt: the hit die and its manual entry uncut in French, 1280 to
       await snap(page, `level-up-fr-${vp.width}x${vp.height}`);
     await prompt.getByRole("button", { name: "Fermer", exact: true }).click();
   }
-});
+}
 
 // ADR 0037 step 15 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once level 2 is taken,
 // what it grants (a bard's 15 points) under the prompt, and what is left to spend (a level 1 bard's
 // slots and points), the class line's tag and its popover, each row with its one-word link, never
 // cut from 1280 to 2560. Screenshots of both at every viewport.
-test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpGrantsStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -4011,7 +4007,7 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
   await expect(grants).toContainText("+15 points de talent");
   const tag = page.getByTestId("to-spend-tag");
   const popover = page.getByTestId("level-up-to-spend");
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(grants, `level-up grants, ${where}`);
@@ -4026,16 +4022,14 @@ test("level-up grants and the to-spend tag uncut in French, 1280 to 2560", async
     await page.keyboard.press("Escape");
     await expect(popover).toHaveCount(0);
   }
-});
+}
 
 // ADR 0030 step 20.8 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once a mage takes
 // level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link) and the
 // to-spend popover listing the free spell, never cut from 1280 to 2560; the character
 // card does not scroll for them from 1440x900 up (ADR 0022 step 2.8), with a three-line name.
 // Screenshots of both at every viewport.
-test("level-up free spell: the grants and the to-spend popover uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
+async function levelUpFreeSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -4073,7 +4067,7 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
   const tag = page.getByTestId("to-spend-tag");
   const popover = page.getByTestId("level-up-to-spend");
   const character = page.getByTestId("character");
-  for (const vp of VIEWPORTS) {
+  for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(grants, `free spell grants, ${where}`);
@@ -4095,7 +4089,7 @@ test("level-up free spell: the grants and the to-spend popover uncut in French, 
     await page.keyboard.press("Escape");
     await expect(popover).toHaveCount(0);
   }
-});
+}
 
 // ADR 0030 step 9 through the class's features (ADR 0040 step 3), on the creation route's "Points
 // de vie et talents" step at 1920x1080 and 2560x1440: a human fighter of Strength 18 is offered the
@@ -4158,11 +4152,8 @@ async function creationExtrasStep(page: Page, size: Viewport) {
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type
 // d’arme control, none of them cut. Screenshot of the weapon editor at both sizes.
-test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function fighterStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
@@ -4247,10 +4238,10 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       await expect(f.getByTestId("tile-specialized")).toHaveText("spécialisée");
       await expect(f.getByTestId("point-blank")).toBeVisible();
     } else await expect(f.getByTestId("tile-specialized")).toHaveCount(0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1280, height: 800 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       const where = `${weapon}, fr, ${vp.width}x${vp.height}`;
       await expectNoClippedText(
@@ -4265,16 +4256,16 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
       if (weapon === "Heavy Crossbow")
         await snap(page, `fighter-crossbow-fr-${vp.width}x${vp.height}`);
     }
-    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.setViewportSize(size);
   }
 
   await chooseLanguage(page, "en");
   await openWorkspace(page, "Inventory");
   await chooseLanguage(page, "fr");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await page
       .getByTestId("item-long_sword")
@@ -4289,15 +4280,12 @@ test("fighter: 18/50 tile, attack card line and weapon editor uncut in French, 1
     await wf.getByRole("button", { name: "Annuler" }).click();
     await expect(wf).toBeHidden();
   }
-});
+}
 
 // The mage's Learn control (ADR 0030 step 20) in the lookup's detail: the button, then the
 // roll's answer (and "in the spellbook" once learned), uncut in French at 1280x800 and 2560x1440.
-test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in French, 1280 to 2560; Add writes the spell", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function mageLearnStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const created = await apiCall(page, "POST", "/api/characters", {
     name: "Mordenkainen l'Archimage de Greyhawk",
@@ -4327,10 +4315,10 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   await expect(detail.getByRole("heading")).toHaveText("Sommeil");
   await expect(learn.getByRole("button", { name: /^Apprendre/ })).toBeVisible();
   await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await expectNoClippedText(
       learn,
@@ -4338,7 +4326,7 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
     );
     await snap(page, `mage-learn-add-buttons-fr-${vp.width}x${vp.height}`);
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   // The failure's answer, the longest one (with the server's retry level): the dice are real, so
   // the response is fixed here; the server's own failure is a Go test (learnsvc).
   await page.route("**/api/character/spellbook/learn", (route) =>
@@ -4356,27 +4344,27 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
   );
   await learn.getByRole("button", { name: /^Apprendre/ }).click();
   await expect(learn.getByTestId("learn-result")).toContainText("niveau 2");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(learn, `Learn failure, fr, ${where}`);
     await snap(page, `mage-learn-failed-fr-${where}`);
   }
   await page.unroute("**/api/character/spellbook/learn");
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   const answered = page.waitForResponse("**/api/character/spellbook/learn");
   await learn.getByRole("button", { name: /^Apprendre/ }).click();
   const real = (await (await answered).json()) as { roll: number };
   await expect(learn.getByTestId("learn-result")).toContainText(
     String(real.roll),
   );
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(learn, `Learn answer, fr, ${where}`);
@@ -4389,7 +4377,7 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
 
   // Ajouter (ADR 0030 step 20.6): the add's state key reads the spellbook again, so the detail
   // shows the spell in the book (the refusals and the no-die rule are Go tests, learnsvc).
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page
     .getByRole("combobox", { name: "Rechercher des sorts..." })
     .fill("Alarm");
@@ -4416,17 +4404,14 @@ test("mage: the lookup's Learn and Add buttons and Learn's answer uncut in Frenc
     logEntry(page, "Ajouté au grimoire : Alarme (sans jet)"),
   ).toHaveAttribute("data-status", "voided");
   await snap(page, "mage-add-undone-journal-fr-1280x800");
-});
+}
 
 // The lookup says why a spell cannot be written in the spellbook (ADR 0030 step 20.1), in the
 // server's own words: a level-5 mage with Intelligence 9 (highest spell level 4) sees the reason
 // instead of Learn and Add on a level-5 spell, and the buttons on a level-4 one. The reason
 // matches the server's refusal (a unit test compares the codes; the refusal is a Go test).
-test("mage: a spell above the Intelligence's limit shows its reason, no Learn or Add, in English and French at 1920x1080 and 2560x1440", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1920, height: 1080 });
+async function mageLimitStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   const created = await apiCall(page, "POST", "/api/characters", {
     name: "Elminster",
@@ -4472,10 +4457,10 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
     );
     await expect(learn.getByRole("button")).toHaveCount(0);
     await expect(learn.getByTestId("add-spell")).toHaveCount(0);
-    for (const vp of [
+    for (const vp of sizesAt(size, [
       { width: 1920, height: 1080 },
       { width: 2560, height: 1440 },
-    ]) {
+    ])) {
       await page.setViewportSize(vp);
       await expectNoClippedText(
         learn,
@@ -4483,7 +4468,7 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
       );
       await snap(page, `mage-lookup-reason-${lang}-${vp.width}x${vp.height}`);
     }
-    await page.setViewportSize({ width: 1920, height: 1080 });
+    await page.setViewportSize(size);
     // A spell the Intelligence allows keeps its buttons.
     await box.fill("alarm");
     await expect(page.getByTestId("spell-row").first()).toHaveAttribute(
@@ -4493,18 +4478,15 @@ test("mage: a spell above the Intelligence's limit shows its reason, no Learn or
     await expect(learn.getByTestId("add-spell")).toBeVisible();
     await expect(learn.getByTestId("learn-refused")).toHaveCount(0);
   }
-});
+}
 
 // The cleric's screens (ADR 0030 steps 14 and 16) uncut in French at 1280x800 and 2560x1440: the
 // Turning tab (Table 61 at the realized level, the longest outcome labels), the turning result card
 // and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
 // failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
 // Go test, castsvc).
-test("cleric: turning panel, turning result and spell failure uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function clericStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   let created = await apiCall(page, "POST", "/api/characters", {
     name: "Frère Anselme de la Haute-Marche",
@@ -4532,24 +4514,24 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   await page.getByRole("tab", { name: "Renvoi" }).click();
   const turning = page.getByTestId("turn-undead");
   await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     await expectNoClippedText(
       turning,
       `turning panel, fr, ${vp.width}x${vp.height}`,
     );
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await turning.getByRole("button", { name: "Repousser : Squelette" }).click();
   const turned = page.getByTestId("turn-result");
   await expect(turned).toContainText("Clerc de niveau 1");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(turned, `turning result, fr, ${where}`);
@@ -4561,7 +4543,7 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
     await snap(page, `cleric-turn-fr-${where}`);
   }
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page.route("**/api/spells/*/cast", (route) =>
     route.fulfill({
       json: {
@@ -4581,27 +4563,24 @@ test("cleric: turning panel, turning result and spell failure uncut in French, 1
   await page.getByRole("button", { name: "Lancer Bless" }).click();
   const failure = page.getByTestId("cast-failure");
   await expect(failure).toHaveAttribute("data-failed", "true");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(failure, `spell failure, fr, ${where}`);
     await snap(page, `cleric-spell-failure-fr-${where}`);
   }
   await page.unroute("**/api/spells/*/cast");
-});
+}
 
 // The thief's screens (ADR 0030 steps 1, 17 and 19) uncut in French at 1280x800 and 2560x1440: the
 // creation form's skill points and armour fields, the Skills tab's thieving skills with the
 // budget warnings (70 points at 1st, 40 in one skill: both breached), the Spend editor's
 // over-budget refusal (ADR 0037 step 10) and the attack card's backstab option.
-test("thief: creation fields, thieving skills with the budget warnings and backstab uncut in French, 1280 to 2560", async ({
-  page,
-}) => {
-  test.setTimeout(60_000);
-  await page.setViewportSize({ width: 1280, height: 800 });
+async function thiefStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
   // The creation route's "Points de vie et talents" step of a thief; leaving it accepts the
@@ -4630,16 +4609,16 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(
     step.getByTestId("minimums-bard").locator("[data-unmet]"),
   ).toHaveCount(3); // Dex 8, Int 12 and Cha 12 against 12, 13 and 15
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(step, `thief class minimums, fr, ${where}`);
     await snap(page, `thief-class-minimums-fr-${where}`);
   }
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await next.click();
   await next.click();
   await step.getByLabel("DEX", { exact: true }).fill("12");
@@ -4715,11 +4694,11 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await step.getByRole("radio", { name: "Voleur", exact: true }).click();
   await goOn();
   await expect(step.getByTestId("skill-budget")).toContainText("Restants : 60");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(entry, `thief creation fields, fr, ${where}`);
@@ -4728,7 +4707,7 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await page.goto("/");
   await expect(page.getByTestId("character")).toBeVisible();
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   const call = (method: string, url: string, body: unknown) =>
     apiCall(page, method, url, body);
   expect(
@@ -4812,10 +4791,10 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Compétences" }).click();
   const skills = page.getByTestId("skills-blocks");
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(skills, `thieving skills, fr, ${where}`);
@@ -4883,11 +4862,11 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await expect(editor.getByRole("alert")).toHaveText(
     "Budget dépassé : 66 pour 60 disponibles.",
   );
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(editor, `skill points editor, fr, ${where}`);
@@ -4898,20 +4877,20 @@ test("thief: creation fields, thieving skills with the budget warnings and backs
   await editor.getByTestId("thief-points-cancel").click();
   await page.unroute("**/api/skills/points/preview");
 
-  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.setViewportSize(size);
   await page.getByRole("tab", { name: "Armes" }).click();
   const f = page.getByRole("form", { name: "Attaque" });
   await f.getByTestId("backstab").check();
-  for (const vp of [
+  for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
-  ]) {
+  ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(f, `backstab attack card, fr, ${where}`);
     await snap(page, `thief-backstab-card-fr-${where}`);
   }
-});
+}
 
 // The version badge (ADR 0024 step 1.4): it sits inside a box the screen already has, never in a band
 // of its own: the dashboard's dice footer (right end), a header card (roster, creation), the login
@@ -5794,3 +5773,28 @@ test.describe("pages walks", () => {
     });
   }
 });
+
+/**
+ * The class screens walk: the level-up prompt and its grants, then the fighter, mage, cleric and thief
+ * screens, each step making its own character through the API, one size per walk.
+ */
+const CLASS_STEPS: [string, Step][] = [
+  ["level-up prompt", levelUpPromptStep],
+  ["level-up grants", levelUpGrantsStep],
+  ["level-up free spell", levelUpFreeSpellStep],
+  ["fighter", fighterStep],
+  ["mage, Learn and Add", mageLearnStep],
+  ["mage, above the Intelligence limit", mageLimitStep],
+  ["cleric", clericStep],
+  ["thief", thiefStep],
+];
+
+for (const size of [VIEWPORTS[0], VIEWPORTS[4]]) {
+  test(`class screens walk at ${size.width}x${size.height}`, async ({
+    page,
+    stack,
+  }) => {
+    test.setTimeout(90_000);
+    await runWalk(page, size, CLASS_STEPS, stack);
+  });
+}

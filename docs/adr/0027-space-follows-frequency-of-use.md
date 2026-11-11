@@ -215,7 +215,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 6. **Act stage: the now band keeps one height** (replaces ADR 0022 step 2.5's 60 % cap;
    *amended 2026-11-11, user: the journal jumped as tabs changed*).
    1. Until the player drags the split, the now band (act panel | result panel) has **one fixed
-      height for every tab**, that of the tallest tab's content (640 px, Turning's), and the journal
+      height for every tab**, that of the tallest tab's content (680 px: Turning's, measured at 676 with its tab header), and the journal
       takes the rest of the stage, at least 14rem (step 2.5). Changing tab never moves the
       journal's top edge. When the stage is too short for the band plus the journal's minimum, the
       band gives way and keeps what is left; a tab (or a result) taller than the band scrolls

@@ -2620,7 +2620,7 @@ async function journalSplitStep(page: Page) {
   const handle = page.getByTestId("journal-handle");
   const heightOf = async (l: Locator) => (await l.boundingBox())!.height;
   // Default: the band has its fixed resting height or less, the journal at least 14rem.
-  expect(await heightOf(band)).toBeLessThanOrEqual(640 + 1);
+  expect(await heightOf(band)).toBeLessThanOrEqual(680 + 1);
   // Measure the journal once the logged entry has rendered and the layout has stopped moving.
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
   const settled = async () => {
@@ -4479,6 +4479,39 @@ async function mageLimitStep(page: Page, size: Viewport) {
 // and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
 // failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
 // Go test, castsvc).
+/**
+ * Every Act tab the character has, at each of the walk's sizes: the journal's top edge is the same on
+ * all of them (ADR 0027 step 6.1) and a tab taller than the band scrolls inside its panel, nothing cut.
+ */
+async function expectJournalTopSteadyOnEveryTab(
+  page: Page,
+  size: Viewport,
+  who: string,
+) {
+  const actions = page.getByRole("region", { name: /^(Actions|Action)$/ });
+  const names = (await actions.getByRole("tab").allInnerTexts()).map((n) =>
+    n.replace(/\s*\d+$/, "").trim(),
+  );
+  for (const vp of sizesAt(size, VIEWPORTS)) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    let top: number | null = null;
+    for (const name of names) {
+      await actions.getByRole("tab", { name, exact: false }).first().click();
+      await expect(actions.getByRole("tabpanel")).not.toBeEmpty();
+      const now = (await page.getByTestId("journal-slot").boundingBox())!.y;
+      if (top === null) top = now;
+      expect(now, `${who}: journal top on ${name}, ${where}`).toBeCloseTo(
+        top,
+        0,
+      );
+      await expectNoPageScroll(page);
+      await expectNoClippedText(actions, `${who}: ${name} tab, ${where}`);
+    }
+    await actions.getByRole("tab").first().click();
+  }
+}
+
 async function clericStep(page: Page, size: Viewport) {
   await page.setViewportSize(size);
   await openDashboard(page);
@@ -4505,6 +4538,7 @@ async function clericStep(page: Page, size: Viewport) {
   await reloadSettled(page);
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
+  await expectJournalTopSteadyOnEveryTab(page, size, "cleric");
   await page.getByRole("tab", { name: "Renvoi" }).click();
   const turning = page.getByTestId("turn-undead");
   await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
@@ -5782,9 +5816,30 @@ const freshPicks =
     await step(page, size, stack, context);
   };
 
+async function psionicistActTabsStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "mind_blank" },
+        { kind: "power", id: "thought_shield" },
+        { kind: "power", id: "mind_thrust" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  await page.keyboard.press("Escape");
+  await expectJournalTopSteadyOnEveryTab(page, size, "psionicist");
+}
+
 const PSIONICIST_STEPS: [string, Step][] = (
   [
     ["PSP block and rest popover", pspStep],
+    ["act tabs", psionicistActTabsStep],
     ["powers tab", powersStep],
     ["maintained card", maintainedStep],
     ["contact forms", contactFormsStep],

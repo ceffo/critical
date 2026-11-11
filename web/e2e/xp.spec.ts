@@ -318,13 +318,12 @@ test("level up: roll a d6, undo and redo, heal to the new max, enter a die, then
     logEntry(page, "Level 2: d6 4, max HP +4 (6 → 10), die entered"),
   ).toBeVisible();
 
-  // The grant's link opens the points editor in the Skills tab.
+  // The grant's link opens the points editor in a dialog.
   await grants.getByRole("button", { name: "Spend the skill points" }).click();
-  await expect(page.getByRole("tab", { name: "Skills" })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
-  await expect(page.getByTestId("thief-points-editor")).toBeVisible();
+  await expect(
+    page.getByTestId("spend-dialog").getByTestId("thief-points-editor"),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
 
   // Delete the XP: the XP gives level 1, the max HP is for level 2. Nothing is removed, the card
   // warns in French and prompts for nothing.

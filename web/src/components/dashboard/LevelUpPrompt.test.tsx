@@ -212,6 +212,59 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(await markup("fr", tag(none))).toBe("");
   });
 
+  // ADR 0037 step 15 (amended): the entry stays while the character has a pool, rows listed at 0
+  // left, and an over-budget pool says how many slots to remove.
+  it("keeps the to-spend tag for a character with a pool, even at 0 left", async () => {
+    const tag = (
+      <ToSpendTag
+        toSpend={none}
+        pools={{ nonWeaponSlots: { spent: 4, available: 4, left: 0 } }}
+        onOpenEditor={noop}
+        onOpenFreeSpell={noop}
+      />
+    );
+    const fr = await markup("fr", tag);
+    expect(fr).toContain(">À dépenser<");
+    const rows = await markup(
+      "en",
+      <GrantRows
+        grants={none}
+        gained={false}
+        pools={{ nonWeaponSlots: { spent: 4, available: 4, left: 0 } }}
+        onOpenEditor={noop}
+        onOpenFreeSpell={noop}
+      />,
+    );
+    expect(rows).toContain(">Proficiencies<");
+    expect(rows).toContain(">Choose<");
+  });
+
+  it("words an over-budget pool: what to remove, and the figures", async () => {
+    const pools = { nonWeaponSlots: { spent: 11, available: 10, left: -1 } };
+    const rows = (lang: string, p = pools) =>
+      markup(
+        lang,
+        <GrantRows
+          grants={none}
+          gained={false}
+          pools={p}
+          onOpenEditor={noop}
+          onOpenFreeSpell={noop}
+        />,
+      );
+    expect(await rows("en")).toContain(
+      "Remove 1 slot to continue: you have 11 of 10",
+    );
+    expect(await rows("fr")).toContain(
+      "Retirez 1 emplacement pour continuer : vous en avez 11 sur 10",
+    );
+    expect(
+      await rows("en", {
+        nonWeaponSlots: { spent: 12, available: 10, left: -2 },
+      }),
+    ).toContain("Remove 2 slots to continue: you have 12 of 10");
+  });
+
   it("leaves the prompt alone: no reminder panel under it", async () => {
     const toSpend = { ...none, weaponSlots: 1 };
     const owed = await render(

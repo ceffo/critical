@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { chooseLanguage, openDashboard } from "./helpers";
+import { chooseLanguage, openDashboard, openSpend } from "./helpers";
 
 // What only a browser proves for the proficiency pop-up (ADR 0037 step 19.4): the name and the
 // ability part of a Skills tab row are two real click targets (the name rolls nothing, the other
@@ -48,8 +48,8 @@ test("proficiency description: from the Skills tab row and the picker, en and fr
   await expect(panel.getByTestId("skill-musical_instrument")).toBeFocused();
 
   // The editor's picker: the catalogue's name opens it with the class's cost; adding still adds.
-  await panel.getByTestId("proficiency-edit").click();
-  const editor = panel.getByTestId("proficiency-editor");
+  await openSpend(page, "nonWeapon");
+  const editor = page.getByTestId("proficiency-editor");
   await editor.getByTestId("proficiency-search").fill("agri");
   await editor.getByTestId("proficiency-name-agriculture").click();
   await expect(dialog.getByTestId("proficiency-description")).toContainText(

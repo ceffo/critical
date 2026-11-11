@@ -91,6 +91,7 @@ describe("SkillsTab class skills section", () => {
     expect(html).not.toContain("Bard skills");
     expect(html).not.toContain("Thief skills");
     expect(html).not.toContain("thief-points-edit");
+    expect(html).not.toContain("proficiency-edit");
     expect(html).not.toContain("skill-armor");
   });
 
@@ -101,7 +102,7 @@ describe("SkillsTab class skills section", () => {
     });
     expect(html).toContain("Bard skills");
     expect(html).not.toContain("Thief skills");
-    expect(html).toContain("thief-points-edit");
+    expect(html).not.toContain("thief-points-edit");
   });
 
   it("shows the thief skills for a thief", async () => {
@@ -144,9 +145,9 @@ describe("SkillsTab sections follow the served sets", () => {
 });
 
 // ADR 0040 step 3.5: a character whose classes grant two skill sets gets two sections, each with
-// its own budget and its own Spend button, rendered from the list (no class name in the client).
+// its own checks and no spending, rendered from the list (no class name in the client).
 describe("SkillsTab with two skill sets", () => {
-  it("shows each set with its own budget and spend button", async () => {
+  it("shows each set with its own checks and no spending", async () => {
     const budget = (available: number, spent: number) => ({
       level: 3,
       first: 20,
@@ -171,59 +172,14 @@ describe("SkillsTab with two skill sets", () => {
     expect(html).toContain("Bard skills");
     expect(html).toContain('data-testid="skill-set-thief"');
     expect(html).toContain('data-testid="skill-set-bard"');
-    expect(html).toContain("Spent 10, left 140");
-    expect(html).toContain("Spent 20, left 30");
-    expect(html.match(/data-testid="thief-points-edit"/g)).toHaveLength(2);
+    // Spending lives in the character card's dialog, never in the tab.
+    expect(html).not.toContain("left 140");
+    expect(html).not.toContain("thief-points-edit");
   });
 });
 
-const thiefBudget = {
-  level: 2,
-  first: 60,
-  perLevel: 30,
-  available: 90,
-  spent: 5,
-  left: 85,
-  perSkillFirst: 30,
-  perSkillPerLevel: 15,
-  perSkillCap: 45,
-};
-
-// ADR 0030 steps 17 and 18: the budget with its formula and each skill's terms are always text.
+// ADR 0030 steps 17 and 18: each skill's terms are always text.
 describe("SkillsTab budget and terms", () => {
-  it("shows the available points with their formula, spent, left and the thief's cap", async () => {
-    const html = await render({
-      ...base,
-      skillSets: [skillSet("thief", [rogueSkill], { budget: thiefBudget })],
-    });
-    expect(html).toContain("Available: 60 + 30 × 1 = 90 (level 2)");
-    expect(html).toContain("Spent 5, left 85");
-    expect(html).toContain("At most 45 per skill (30 + 15 × 1 = 45)");
-    expect(html).toContain("5 of 45 points");
-  });
-
-  it("shows a bard's budget without a per-skill cap", async () => {
-    const html = await render({
-      ...base,
-      skillSets: [
-        skillSet("bard", [rogueSkill], {
-          budget: {
-            ...thiefBudget,
-            first: 20,
-            perLevel: 15,
-            available: 35,
-            left: 30,
-            perSkillFirst: 0,
-            perSkillPerLevel: 0,
-            perSkillCap: 0,
-          },
-        }),
-      ],
-    });
-    expect(html).toContain("Available: 20 + 15 × 1 = 35 (level 2)");
-    expect(html).not.toContain("per skill");
-  });
-
   it("writes each skill's terms, and says when the cap or the floor applied", async () => {
     const html = await render({
       ...base,
@@ -272,5 +228,14 @@ describe("SkillsTab proficiency row", () => {
     // The class skill stays one roll button.
     expect(html).toContain('data-testid="skill-hide_in_shadows"');
     expect(html).not.toContain("proficiency-name-hide_in_shadows");
+  });
+});
+
+describe("SkillsTab with nothing to roll", () => {
+  it("says so and names where to spend", async () => {
+    const html = await render({ ...base, proficiencies: [], skillSets: [] });
+    expect(html).toContain('data-testid="skills-empty"');
+    expect(html).toContain("To spend");
+    expect(html).not.toContain("skills-blocks");
   });
 });

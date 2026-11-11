@@ -4,6 +4,7 @@ import {
   chooseLanguage,
   combatLog,
   openDashboard,
+  openSpend,
 } from "./helpers";
 import { expectNoClippedText } from "./noClip";
 
@@ -75,10 +76,8 @@ test("character details: view, edit with a field error, save, reload", async ({
   await page.keyboard.press("Escape");
 
   // The languages in the Skills tab's editor, with the non-weapon picks whose pool they spend.
-  await page.getByRole("tab", { name: "Skills" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Skills" });
-  await panel.getByTestId("proficiency-edit").click();
-  const editor = panel.getByTestId("proficiency-editor");
+  await openSpend(page, "nonWeapon");
+  const editor = page.getByTestId("proficiency-editor");
   const pool = editor.getByTestId("proficiency-languages");
   const common = pool.getByRole("checkbox", { name: "Common", exact: true });
   await expect(common).toBeChecked();
@@ -312,8 +311,7 @@ test("details card: options without the language catalogue show no picker", asyn
   await expect(pop.getByText("common", { exact: true })).toBeVisible();
   await page.keyboard.press("Escape");
   await page.getByRole("tab", { name: "Skills" }).click();
-  const panel = page.getByRole("tabpanel", { name: "Skills" });
-  await panel.getByTestId("proficiency-edit").click();
-  await expect(panel.getByTestId("proficiency-search")).toBeVisible();
-  await expect(panel.getByTestId("language-picker")).toHaveCount(0);
+  await openSpend(page, "nonWeapon");
+  await expect(page.getByTestId("proficiency-search")).toBeVisible();
+  await expect(page.getByTestId("language-picker")).toHaveCount(0);
 });

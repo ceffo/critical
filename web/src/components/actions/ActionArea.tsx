@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Backpack,
@@ -20,7 +20,6 @@ import { SkillsTab } from "./SkillsTab";
 import { TurnUndeadPanel } from "./TurnUndeadPanel";
 import { PowersTab } from "@/components/powers/tab/PowersTab";
 import { useCharacterStore } from "@/stores/character";
-import { useSkillsEditor } from "@/stores/skillsEditor";
 import { combatItems } from "@/lib/combatItems";
 import { useActFeatures } from "@/lib/actFeatures";
 
@@ -57,19 +56,7 @@ export function ActionArea({
 }) {
   const { t } = useTranslation();
   const [chosen, setActive] = useState<TabId>("weapons");
-  // An editor of the Skills tab opened from elsewhere (the card's level-up grants, ADR 0037 step
-  // 15) shows the tab; leaving the tab closes its editor.
-  useEffect(
-    () =>
-      useSkillsEditor.subscribe((s, prev) => {
-        if (s.editor && s.editor !== prev.editor) setActive("skills");
-      }),
-    [],
-  );
-  const select = (id: TabId) => {
-    if (id !== "skills") useSkillsEditor.getState().close();
-    setActive(id);
-  };
+  const select = (id: TabId) => setActive(id);
   const turns = useCharacterStore((s) => s.character?.derived.turning != null);
   // The Powers tab is for a character with known powers (a psionicist), as Turning is for a class that turns.
   const { hasPowers, showSpellsTab } = useActFeatures();

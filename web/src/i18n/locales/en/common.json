@@ -38,6 +38,11 @@
         "skillPoints_other": "{{count}} skill points",
         "freeSpell": "1 free level {{spellLevel}} spell"
       },
+      "settled": {
+        "weaponSlots": "Weapon proficiencies",
+        "nonWeaponSlots": "Proficiencies",
+        "skillPoints": "Skill points"
+      },
       "choose": "Choose",
       "spend": "Spend",
       "open": {
@@ -2340,6 +2345,7 @@
     "headingMulti": "Experience"
   },
   "skills": {
+    "empty": "Nothing to roll here yet. Choose proficiencies, or spend skill points, from “To spend” on the character card.",
     "proficiencies": "Proficiencies",
     "percent": "{{value}}%",
     "rollLabel": "Roll {{name}}",
@@ -3414,6 +3420,8 @@
     "toSpend_one": "{{count}} slot to spend",
     "toSpend_other": "{{count}} slots to spend",
     "over": "Over budget: {{spent}} slots for {{available}} available. You may remove some, not add any.",
+    "overBudget_one": "Remove {{count}} slot to continue: you have {{spent}} of {{available}}",
+    "overBudget_other": "Remove {{count}} slots to continue: you have {{spent}} of {{available}}",
     "overShort": "over budget",
     "previewStale": "These figures are those of the last choices the server could read.",
     "picked_one": "Your proficiencies ({{count}})",

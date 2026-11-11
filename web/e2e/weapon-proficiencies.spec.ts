@@ -11,6 +11,7 @@ import {
   openWeapons,
   openWorkspace,
   chooseWeapon,
+  openSpend,
 } from "./helpers";
 
 // What only a browser proves for the weapon proficiency UI (ADR 0037 steps 7, 8, 9, 12, 14): the
@@ -21,8 +22,8 @@ async function openEditor(page: import("@playwright/test").Page) {
   await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Skills" }).click();
   const skills = page.getByRole("tabpanel", { name: "Skills" });
-  await skills.getByTestId("weapon-edit").click();
-  return { skills, editor: skills.getByTestId("weapon-editor") };
+  await openSpend(page, "weapon");
+  return { skills, editor: page.getByTestId("weapon-editor") };
 }
 
 test("fighter: pick and specialize in the editor, Undo from the journal, tags follow with no reload", async ({

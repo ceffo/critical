@@ -31,7 +31,7 @@ jobs:
   auto-merge:
     name: enable auto-merge or label
     if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 10
     steps:
       - name: Read the Dependabot metadata

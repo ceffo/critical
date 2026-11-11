@@ -20,7 +20,7 @@ jobs:
   not-main:
     name: refuse a run from another ref than main
     if: ${{ github.ref != 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 2
     steps:
       - name: Use main
@@ -33,7 +33,7 @@ jobs:
   mark:
     name: mark the next release as a major
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 5
     permissions:
       contents: write # the marker tag next-major

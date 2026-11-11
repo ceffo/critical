@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
-import { Sword } from "@phosphor-icons/react";
+import { Skull, Sparkle, Sword } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { useAttackStore } from "@/stores/attack";
@@ -188,6 +188,38 @@ export const attackKind: KindView<RollResult, RollResult> = {
   live: (r) => r,
 };
 
+/**
+ * The natural d20 the card marks: 20 or 1, from the roll the server already serves (ADR 0001: it is
+ * plain arithmetic, so a natural 20 can still miss and a natural 1 can still hit). Null for any
+ * other die.
+ */
+export function naturalOf(r: Pick<RollResult, "d20Roll">): 20 | 1 | null {
+  return r.d20Roll === 20 ? 20 : r.d20Roll === 1 ? 1 : null;
+}
+
+/**
+ * The natural 20 / natural 1 chip beside the verdict (ADR 0027 step 8.6): the words and an icon, on
+ * the gold fill (20) or the danger fill (1), both with their AA text of ADR 0026 steps 1 and 5.5.
+ */
+function NaturalChip({ natural }: { natural: 20 | 1 }) {
+  const { t } = useTranslation();
+  const Icon = natural === 20 ? Sparkle : Skull;
+  return (
+    <span
+      data-testid="natural-chip"
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-0.5 text-body font-semibold",
+        natural === 20
+          ? "bg-highlight-fill text-on-highlight"
+          : "bg-danger text-on-accent",
+      )}
+    >
+      <Icon aria-hidden weight="fill" />
+      {t(natural === 20 ? "result.natural20" : "result.natural1")}
+    </span>
+  );
+}
+
 /** "Crit check 7 · multiplier 63 → ×3 (51–90)"; entries without the multiplier d100 show the old text. */
 function critText(t: TFunction, r: RollResult): string {
   const placeholder = r.critPlaceholder || r.critFrom === undefined;
@@ -263,9 +295,22 @@ function AttackCard({
     s.entries.some((e) => e.id === r.logEntryId && e.status === "voided"),
   );
   const correctable = interactive && r.logEntryId !== undefined && !voided;
+  const natural = naturalOf(r);
   return (
     <div className="flex flex-col gap-3" data-testid="attack-result">
-      <div className="flex items-center gap-3">
+      <div
+        className={cn(
+          "flex items-center gap-3",
+          natural !== null &&
+            // The natural's own border (ADR 0027 step 8.6): gold for a 20, danger for a 1.
+            cn(
+              "rounded-lg border-2 p-2",
+              natural === 20 ? "border-highlight" : "border-danger",
+            ),
+        )}
+        data-natural={natural ?? undefined}
+        data-testid="attack-roll"
+      >
         <HexDie
           value={r.d20Roll}
           label={t("journal.d20", { value: r.d20Roll })}
@@ -273,32 +318,35 @@ function AttackCard({
         <div className="min-w-0 flex-1">
           <ResultLine
             verdict={
-              settled ? (
-                <>
-                  <Verdict
-                    ok={r.hit}
-                    yes={t("result.hit")}
-                    no={t("result.miss")}
-                  />
-                  {r.verdict && (
-                    <span
-                      className="text-label text-muted-foreground"
-                      data-testid="verdict-by-gm"
-                    >
-                      {t("result.unknownAc.byGm")}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <span
-                  data-testid="verdict"
-                  className="chip shrink-0 px-2.5 py-0.5 text-body font-semibold text-muted-foreground"
-                  title={t("result.unknownAc.unsettled")}
-                  aria-label={t("result.unknownAc.unsettled")}
-                >
-                  ?
-                </span>
-              )
+              <>
+                {settled ? (
+                  <>
+                    <Verdict
+                      ok={r.hit}
+                      yes={t("result.hit")}
+                      no={t("result.miss")}
+                    />
+                    {r.verdict && (
+                      <span
+                        className="text-label text-muted-foreground"
+                        data-testid="verdict-by-gm"
+                      >
+                        {t("result.unknownAc.byGm")}
+                      </span>
+                    )}
+                  </>
+                ) : (
+                  <span
+                    data-testid="verdict"
+                    className="chip shrink-0 px-2.5 py-0.5 text-body font-semibold text-muted-foreground"
+                    title={t("result.unknownAc.unsettled")}
+                    aria-label={t("result.unknownAc.unsettled")}
+                  >
+                    ?
+                  </span>
+                )}
+                {natural !== null && <NaturalChip natural={natural} />}
+              </>
             }
           >
             <span className="text-key tabular-nums" data-testid="hits-ac">

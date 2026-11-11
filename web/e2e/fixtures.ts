@@ -197,6 +197,8 @@ export interface StackOptions {
   character: Record<string, unknown>;
   /** Spells appended to the fixture catalogue, in artifact format with an id (e.g. enough of them to need several lookup pages; see `catalogueSpell`); wrapped because Playwright mangles array-valued options. */
   extraSpells: { rows: unknown[] };
+  /** The dice seed of this test's API (ADR 0025 step 8.5), for a spec that needs a given first roll. */
+  dice: number;
 }
 
 const mime: Record<string, string> = {
@@ -301,6 +303,7 @@ export const test = base.extend<
   journalAll: [true, { option: true }],
   character: [{}, { option: true }],
   extraSpells: [{ rows: [] }, { option: true }],
+  dice: [diceSeed, { option: true }],
 
   webServer: [
     // eslint-disable-next-line no-empty-pattern -- Playwright requires a destructuring pattern
@@ -315,7 +318,7 @@ export const test = base.extend<
     { scope: "worker" },
   ],
 
-  stack: async ({ character, extraSpells, webServer }, provide) => {
+  stack: async ({ character, extraSpells, dice, webServer }, provide) => {
     // Holds only the seeds and catalogue a test overrides.
     const tmp = await mkdtemp(path.join(os.tmpdir(), "critical-e2e-"));
     const apiPort = await freePort();
@@ -332,7 +335,7 @@ export const test = base.extend<
         CRITICAL_ENV: "dev",
         // Every die of this API rolls the same sequence on every run (ADR 0025 step 8.5). One API per test,
         // so a test's rolls depend on its own calls only, never on the other tests or the worker count.
-        CRITICAL_DICE_SEED: String(diceSeed),
+        CRITICAL_DICE_SEED: String(dice),
         CRITICAL_SEEDS_DIR: await seedsWith(tmp, character),
         CRITICAL_CATALOGUE: await catalogueWith(tmp, extraSpells.rows),
         CRITICAL_ADDR: `127.0.0.1:${apiPort}`,

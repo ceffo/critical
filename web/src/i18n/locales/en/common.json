@@ -1354,6 +1354,8 @@
     "immunity": "Wisdom {{score}}: immune to {{spell}}, nothing to roll",
     "hit": "Hit",
     "miss": "Miss",
+    "natural20": "Natural 20",
+    "natural1": "Natural 1",
     "crit": "Crit check {{check}} · multiplier {{roll}} → ×{{mult, number}} ({{from}}–{{to}})",
     "passed": "Passed",
     "failed": "Failed",

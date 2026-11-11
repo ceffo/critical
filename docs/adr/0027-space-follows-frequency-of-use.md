@@ -256,6 +256,17 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       AC correction stay reachable, folded.
    5. The card is filled by its content: no third of it left empty at 1440x900 or 1707x1300 for an
       attack or a save.
+   6. **A natural 20 and a natural 1 get their own card treatment** (*amended 2026-11-11, user
+      accepted the defaults of the item: a card treatment only, no motion, no sound, the natural 1 in
+      a negative tone*). An attack whose d20 shows 20 or 1 (the `d20Roll` the server already serves;
+      no API change) puts a 2 px border round its roll row (die, verdict, chip) and a chip beside the
+      verdict: a natural 20 is gold (`border-highlight`, chip `highlight-fill` with `on-highlight`,
+      a sparkle icon, "Natural 20" / "20 naturel"), a natural 1 is danger (`border-danger`, chip
+      `danger` with `on-accent`, a skull icon, "Natural 1" / "1 naturel"). The words and the icon
+      carry it, never the colour alone; the tokens are the ladder's (ADR 0026 steps 1 and 5.5), so
+      the contrast holds in every theme. Nothing animates. The rules and the journal's wording are
+      untouched (ADR 0001: a natural 20 or 1 is plain arithmetic, so a natural 20 can show beside a
+      Miss and a natural 1 beside a Hit when the modifiers say so).
 
    *Checked by* the saves and skills specs' adjust flow (one happy path each) and `layout.spec`'s
    adjusted-card test in French and English.

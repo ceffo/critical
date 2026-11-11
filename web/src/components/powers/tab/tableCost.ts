@@ -50,6 +50,19 @@ export function pickedRows(
 const whole = (s: string): number | null =>
   /^\d+$/.test(s.trim()) ? Number.parseInt(s.trim(), 10) : null;
 
+/** A field the table form still needs before it can preview and send (the one condition `tableRequest` and the marks read). */
+export type TableNeed = "target" | "mind" | "level";
+
+/** What the target lacks: its name, its mind said, a level that is a whole number from 1 (the table's cost needs it). */
+export function tableNeeds(target: TargetDraft): TableNeed[] {
+  const needs: TableNeed[] = [];
+  if (!target.target.trim()) needs.push("target");
+  if (!target.mindSaid) needs.push("mind");
+  const level = whole(target.level);
+  if (level === null || level < 1) needs.push("level");
+  return needs;
+}
+
 /**
  * The request the form makes, or null while the target is unnamed, its mind not said or its level is not a whole number
  * from 1 (the table's cost needs it). `cost` is the DM's, sent only once the server said the table
@@ -62,9 +75,9 @@ export function tableRequest(
   labelled: PowerModifier[],
   cost?: string,
 ): ContactRequest | null {
+  if (tableNeeds(target).length > 0) return null;
   const name = target.target.trim();
-  const level = whole(target.level);
-  if (!target.mindSaid || !name || level === null || level < 1) return null;
+  const level = whole(target.level)!;
   const req: ContactRequest = {
     target: name,
     mind: target.mind,

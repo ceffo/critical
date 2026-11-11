@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { EMPTY_ATTACK, attackRequest } from "./attack";
+import { EMPTY_ATTACK, attackNeeds, attackRequest } from "./attack";
 
 describe("attackRequest", () => {
   it("needs a target", () => {
@@ -52,5 +52,28 @@ describe("attackRequest", () => {
     expect(
       attackRequest({ ...d, modifiers: [{ value: "30", reason: "" }] }),
     ).toBeNull();
+  });
+});
+
+describe("attackNeeds", () => {
+  it("names what the request lacks, and is empty exactly when a request is made", () => {
+    expect(attackNeeds(EMPTY_ATTACK)).toEqual(["target"]);
+    const named = { ...EMPTY_ATTACK, target: "Orc" };
+    expect(attackNeeds(named)).toEqual([]);
+    expect(attackNeeds({ ...named, level: "x" })).toEqual(["level"]);
+    const defended = { ...named, defence: "mind_blank" };
+    expect(attackNeeds(defended)).toEqual(["rolls"]);
+    expect(
+      attackNeeds({
+        ...defended,
+        rolls: [
+          { roll: "10", success: true },
+          { roll: "21", success: false },
+        ],
+      }),
+    ).toEqual(["rolls"]);
+    for (const d of [EMPTY_ATTACK, named, defended]) {
+      expect(attackRequest(d) === null).toBe(attackNeeds(d).length > 0);
+    }
   });
 });

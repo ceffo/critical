@@ -279,13 +279,19 @@
         "contactMind": "Mind in contact",
         "noContact": "No contact held",
         "noRolls": "No defence set: no roll to enter.",
-        "needTarget": "Name the opponent in the Target band.",
+        "needs": "Still needed: {{fields}}.",
+        "need": {
+          "target": "the opponent’s name",
+          "mind": "its mind, open or closed",
+          "level": "its level",
+          "rolls": "both rolls"
+        },
+        "required": "required",
         "initialCost": "Initial cost",
         "maintenanceCost": "Upkeep per turn",
         "confirm": "Cost set by the power.",
         "tableCost": "Cost {{cost}} PSPs · score {{target}}",
         "notEnough": "Not enough PSPs ({{current}} left).",
-        "needOpponent": "Name the opponent, its mind and its level in the Target band.",
         "dmCost": "Cost (DM)",
         "previewFailed": "The cost could not be read.",
         "resolve": "Resolve"

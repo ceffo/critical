@@ -7,7 +7,8 @@ import { localized } from "@/i18n/localized";
 import { cn } from "@/lib/utils";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCatalogue } from "./useCatalogue";
-import { stepLevel, type TargetDraft } from "./bar";
+import { stepLevel, type TargetDraft, type TargetNeed } from "./bar";
+import { Required } from "./Required";
 import { heldMinds } from "./model";
 
 /**
@@ -17,9 +18,12 @@ import { heldMinds } from "./model";
  */
 export function TargetBand({
   target,
+  needs,
   onChange,
 }: {
   target: TargetDraft;
+  /** The fields the open form still lacks: marked, and announced as required. */
+  needs: TargetNeed[];
   onChange: (next: TargetDraft) => void;
 }) {
   const { t, i18n } = useTranslation();
@@ -60,22 +64,35 @@ export function TargetBand({
           </button>
         ))}
       </span>
-      <input
-        className={`${fieldClass} !w-40`}
-        autoComplete="off"
-        maxLength={MAX_TARGET_LEN}
-        aria-label={t("powers.attack.target")}
-        placeholder={t("powers.tab.newTarget")}
-        data-testid="target-name"
-        value={target.target}
-        onChange={(e) => set({ target: e.target.value })}
-      />
+      <span className="flex items-center gap-1">
+        {needs.includes("target") && <Required />}
+        <input
+          className={`${fieldClass} !w-40`}
+          autoComplete="off"
+          aria-required={needs.includes("target") || undefined}
+          maxLength={MAX_TARGET_LEN}
+          aria-label={t("powers.attack.target")}
+          placeholder={t("powers.tab.newTarget")}
+          data-testid="target-name"
+          value={target.target}
+          onChange={(e) => set({ target: e.target.value })}
+        />
+      </span>
       <span
         role="radiogroup"
         aria-label={t("powers.attack.mind")}
+        aria-required={needs.includes("mind") || undefined}
         className="flex items-center gap-1.5"
       >
-        <span className={labelClass}>{t("powers.attack.mind")}</span>
+        <span className={labelClass}>
+          {t("powers.attack.mind")}
+          {needs.includes("mind") && (
+            <>
+              {" "}
+              <Required />
+            </>
+          )}
+        </span>
         {(["open", "closed"] as const).map((mind) => (
           <button
             key={mind}
@@ -95,7 +112,15 @@ export function TargetBand({
         ))}
       </span>
       <span className="flex items-center gap-1">
-        <span className={labelClass}>{t("powers.attack.level")}</span>
+        <span className={labelClass}>
+          {t("powers.attack.level")}
+          {needs.includes("level") && (
+            <>
+              {" "}
+              <Required />
+            </>
+          )}
+        </span>
         <Button
           className="px-1.5"
           aria-label={t("powers.tab.levelLess")}
@@ -108,6 +133,7 @@ export function TargetBand({
           inputMode="numeric"
           autoComplete="off"
           aria-label={t("powers.attack.level")}
+          aria-required={needs.includes("level") || undefined}
           value={target.level}
           onChange={(e) => set({ level: e.target.value })}
         />

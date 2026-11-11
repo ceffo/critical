@@ -31,20 +31,41 @@ export const EMPTY_ATTACK: AttackDraft = {
 const whole = (s: string): number | null =>
   /^[+-]?\d+$/.test(s.trim()) ? Number.parseInt(s.trim(), 10) : null;
 
-/** The request the draft makes, or null while the target, the level, a roll or a modifier is not valid. */
-export function attackRequest(d: AttackDraft): AttackRequest | null {
+/** A field the attack form still needs before it can send (the one condition: the request and the marks read it). */
+export type AttackNeed = "target" | "level" | "rolls";
+
+/**
+ * What the draft lacks: the target, a readable level (empty is level 0, the mind and the defence are
+ * defaults), and, with a defence up, the DM's two rolls (a whole number from 1 to 20).
+ */
+export function attackNeeds(d: AttackDraft): AttackNeed[] {
+  const needs: AttackNeed[] = [];
   const target = d.target.trim();
-  if (!target || target.length > MAX_TARGET_LEN) return null;
+  if (!target || target.length > MAX_TARGET_LEN) needs.push("target");
   const level = d.level.trim() === "" ? 0 : whole(d.level);
-  if (level === null || level < 0) return null;
+  if (level === null || level < 0) needs.push("level");
+  if (
+    d.defence &&
+    d.rolls.some((r) => {
+      const n = whole(r.roll);
+      return n === null || n < 1 || n > 20;
+    })
+  )
+    needs.push("rolls");
+  return needs;
+}
+
+/** The request the draft makes, or null while a need (`attackNeeds`) or a modifier is not valid. */
+export function attackRequest(d: AttackDraft): AttackRequest | null {
+  if (attackNeeds(d).length > 0) return null;
+  const target = d.target.trim();
+  const level = d.level.trim() === "" ? 0 : whole(d.level)!;
   const req: AttackRequest = { target, mind: d.mind, level, modifiers: [] };
   if (d.defence) {
     req.defence = d.defence;
     req.rolls = [];
     for (const r of d.rolls) {
-      const n = whole(r.roll);
-      if (n === null || n < 1 || n > 20) return null;
-      req.rolls.push({ roll: n, success: r.success });
+      req.rolls.push({ roll: whole(r.roll)!, success: r.success });
     }
   }
   if (d.modifiers.length > MAX_MODIFIERS) return null;

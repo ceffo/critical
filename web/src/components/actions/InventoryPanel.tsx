@@ -103,7 +103,7 @@ export function InventoryPanel() {
   const run = useTableStore((s) => s.run);
   const submit = useTableStore((s) => s.submit);
   const busy = useTableStore((s) => s.busy) || rolling;
-  const toComposer = useDiceStore((s) => s.setFormula);
+  const toComposer = useDiceStore((s) => s.fill);
   // "add", a piece id being edited, or nothing.
   const [form, setForm] = useState<"add" | string | null>(null);
   const [filter, setFilter] = useState<Category | "all">("all");

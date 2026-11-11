@@ -154,7 +154,8 @@ B's choice and is marked "(design)".
         under these steps).
    6. **Dice footer card**, full width, one line, in every activity: the **settings cog first** (it
       opens the settings popover of ADR 0009 step 6), then the dice, the formula, −1 / +1, Roll and
-      the favourites strip (step 1.2).
+      the favourites strip (step 1.2). *Amended 2026-11-11 ([ADR 0027](0027-space-follows-frequency-of-use.md)
+      step 15.4): the dice bar is collapsed to one button by default.*
    7. **Allocation** (design), from the outer padding, gutters, character card and rail:
 
       | Viewport  | Stage width | Below the header (character card, rail, stage height) | Act: act panel \| result |
@@ -170,7 +171,9 @@ B's choice and is marked "(design)".
       bounding boxes): at every layout viewport the header card at rest (3 effect rows) is at most
       120 px tall, the page does not scroll and `expectNoClippedText` passes in each activity; at
       1440x900 the character card shows everything from the name to the fifth saving throw without
-      scrolling, and the Weapons tab's weapon-in-hand row is fully inside the act panel.
+      scrolling (*amended 2026-11-11, [ADR 0027](0027-space-follows-frequency-of-use.md) step 5.7:
+      the card may scroll below the fifth save, where its lower half, the details, languages and
+      save bonuses, sits; at 1080 high and more it does not scroll*), and the Weapons tab's weapon-in-hand row is fully inside the act panel.
 3. **Space and type** (amends ADR 0017).
    1. **Header budget** (amends ADR 0017 step 6): the header card is at most **120 px** tall at rest,
       its outline included (was 112 px for an unframed header); it holds the brand, turn, initiative

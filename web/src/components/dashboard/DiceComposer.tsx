@@ -1,8 +1,10 @@
-import { useEffect, type MouseEvent } from "react";
+import { useEffect, useRef, type MouseEvent } from "react";
 import { useTranslation } from "react-i18next";
 import {
   CaretLeft,
   CaretRight,
+  CaretDown,
+  CaretUp,
   Minus,
   Plus,
   Star,
@@ -15,7 +17,9 @@ import { cn } from "@/lib/utils";
 import { fieldClass } from "./fieldStyles";
 
 /**
- * The dice composer, one line in the dice footer card (ADR 0022 step 2.6): the dice, the formula,
+ * The dice composer is collapsed to one button by default (ADR 0027 step 5.7); the button expands
+ * it, Escape or a roll collapses it, and focus follows (the formula field on expand, the button on
+ * collapse). The expanded composer is one line in the dice footer card (ADR 0022 step 2.6): the dice, the formula,
  * −1 / +1, Roll, then the favourites strip, which scrolls sideways when it outgrows the line (each
  * chip stays whole, step 1.2). Dice buttons and the text field build a formula; the server parses,
  * rolls and logs it (Roll, Enter); favourites live on the server. Nothing is rolled or evaluated
@@ -30,6 +34,17 @@ export function DiceComposer() {
   }, [fetchFavourites]);
 
   const empty = s.formula.trim() === "";
+  const toggle = useRef<HTMLButtonElement>(null);
+  const field = useRef<HTMLInputElement>(null);
+  const seen = useRef(s.open);
+  // Focus follows the state change: into the formula when it expands, back to the button when it
+  // collapses (the button that was clicked, Roll, is gone by then).
+  useEffect(() => {
+    if (seen.current === s.open) return;
+    seen.current = s.open;
+    (s.open ? field : toggle).current?.focus();
+  }, [s.open]);
+  const Caret = s.open ? CaretDown : CaretUp;
   return (
     <form
       data-shortcuts-off=""
@@ -39,171 +54,196 @@ export function DiceComposer() {
         ev.preventDefault();
         void s.roll();
       }}
+      onKeyDown={(ev) => {
+        if (ev.key === "Escape" && s.open) {
+          ev.stopPropagation();
+          s.setOpen(false);
+        }
+      }}
     >
-      <span className="section-label shrink-0">{t("dice.title")}</span>
-      <div className="flex shrink-0 gap-1">
-        {DICE_SIDES.map((sides) => {
-          const count = dieCount(s.formula, sides);
-          const name = dieName(sides);
-          return (
-            <button
-              key={sides}
-              type="button"
-              className={cn(
-                "flex h-7 min-w-10 items-center justify-center gap-1 px-2 text-body font-medium tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-                count > 0 ? "chip-chosen" : "chip hover:bg-raised-hover",
-              )}
-              aria-label={t("dice.add", { die: name })}
-              title={
-                count > 0 ? t("dice.count", { count, die: name }) : undefined
-              }
-              data-testid={`die-${sides}`}
-              onClick={() => s.add(sides)}
-              onContextMenu={(ev: MouseEvent) => {
-                ev.preventDefault();
-                s.remove(sides);
-              }}
-            >
-              {name}
-              {count > 0 && (
-                <span
-                  className="font-semibold"
-                  data-testid={`die-badge-${sides}`}
-                >
-                  ×{count}
-                </span>
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="flex shrink-0 items-center gap-1">
-        <input
-          className={cn(
-            fieldClass,
-            "!w-40 tabular-nums",
-            s.error && "border-danger text-danger",
-          )}
-          type="text"
-          aria-label={t("dice.formula")}
-          placeholder={t("dice.placeholder")}
-          aria-invalid={s.error !== null}
-          title={s.error ?? undefined}
-          maxLength={200}
-          autoComplete="off"
-          spellCheck={false}
-          value={s.formula}
-          onChange={(ev) => s.setFormula(ev.target.value)}
-        />
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("dice.minus")}
-          onClick={() => s.step(-1)}
-        >
-          <Minus aria-hidden />
-        </Button>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          aria-label={t("dice.plus")}
-          onClick={() => s.step(1)}
-        >
-          <Plus aria-hidden />
-        </Button>
-        <Button type="button" size="sm" disabled={empty} onClick={s.clear}>
-          {t("dice.clear")}
-        </Button>
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          disabled={empty}
-          aria-label={t("dice.saveFavourite")}
-          title={t("dice.saveFavourite")}
-          onClick={() => void s.saveFavourite()}
-        >
-          <Star aria-hidden />
-        </Button>
-        <Button type="submit" size="sm" disabled={empty || s.rolling}>
-          {t("dice.roll")}
-        </Button>
-      </div>
-      <ul
-        className="flex min-h-7 min-w-0 flex-1 items-center gap-2 overflow-x-auto"
-        data-scroll-x
-        aria-label={t("dice.favourites")}
-        data-testid="dice-favourites"
+      <Button
+        ref={toggle}
+        type="button"
+        size="sm"
+        variant="ghost"
+        className="section-label shrink-0 gap-1"
+        aria-expanded={s.open}
+        data-testid="dice-toggle"
+        onClick={() => s.setOpen(!s.open)}
       >
-        {s.favourites.length === 0 && (
-          <li className="text-label text-muted-foreground">
-            {t("dice.noFavourites")}
-          </li>
-        )}
-        {s.favourites.map((f, i) => (
-          <li
-            key={f.id}
-            className="chip flex shrink-0 items-center"
-            data-testid="dice-favourite"
+        {t("dice.title")}
+        <Caret aria-hidden className="size-3" />
+      </Button>
+      {s.open && (
+        <>
+          <div className="flex shrink-0 gap-1">
+            {DICE_SIDES.map((sides) => {
+              const count = dieCount(s.formula, sides);
+              const name = dieName(sides);
+              return (
+                <button
+                  key={sides}
+                  type="button"
+                  className={cn(
+                    "flex h-7 min-w-10 items-center justify-center gap-1 px-2 text-body font-medium tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    count > 0 ? "chip-chosen" : "chip hover:bg-raised-hover",
+                  )}
+                  aria-label={t("dice.add", { die: name })}
+                  title={
+                    count > 0
+                      ? t("dice.count", { count, die: name })
+                      : undefined
+                  }
+                  data-testid={`die-${sides}`}
+                  onClick={() => s.add(sides)}
+                  onContextMenu={(ev: MouseEvent) => {
+                    ev.preventDefault();
+                    s.remove(sides);
+                  }}
+                >
+                  {name}
+                  {count > 0 && (
+                    <span
+                      className="font-semibold"
+                      data-testid={`die-badge-${sides}`}
+                    >
+                      ×{count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1">
+            <input
+              className={cn(
+                fieldClass,
+                "!w-40 tabular-nums",
+                s.error && "border-danger text-danger",
+              )}
+              type="text"
+              ref={field}
+              aria-label={t("dice.formula")}
+              placeholder={t("dice.placeholder")}
+              aria-invalid={s.error !== null}
+              title={s.error ?? undefined}
+              maxLength={200}
+              autoComplete="off"
+              spellCheck={false}
+              value={s.formula}
+              onChange={(ev) => s.setFormula(ev.target.value)}
+            />
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("dice.minus")}
+              onClick={() => s.step(-1)}
+            >
+              <Minus aria-hidden />
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              aria-label={t("dice.plus")}
+              onClick={() => s.step(1)}
+            >
+              <Plus aria-hidden />
+            </Button>
+            <Button type="button" size="sm" disabled={empty} onClick={s.clear}>
+              {t("dice.clear")}
+            </Button>
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              disabled={empty}
+              aria-label={t("dice.saveFavourite")}
+              title={t("dice.saveFavourite")}
+              onClick={() => void s.saveFavourite()}
+            >
+              <Star aria-hidden />
+            </Button>
+            <Button type="submit" size="sm" disabled={empty || s.rolling}>
+              {t("dice.roll")}
+            </Button>
+          </div>
+          <ul
+            className="flex min-h-7 min-w-0 flex-1 items-center gap-2 overflow-x-auto"
+            data-scroll-x
+            aria-label={t("dice.favourites")}
+            data-testid="dice-favourites"
           >
-            {s.favourites.length > 1 && (
-              <button
-                type="button"
-                className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
-                aria-label={t("dice.moveFavouriteEarlier", {
-                  formula: f.formula,
-                })}
-                disabled={i === 0}
-                onClick={() => void s.moveFavourite(f.id, -1)}
-              >
-                <CaretLeft aria-hidden className="size-3" />
-              </button>
+            {s.favourites.length === 0 && (
+              <li className="text-label text-muted-foreground">
+                {t("dice.noFavourites")}
+              </li>
             )}
-            <button
-              type="button"
-              className="h-7 px-2 text-body tabular-nums outline-none hover:text-tint focus-visible:ring-3 focus-visible:ring-ring/50"
-              title={t("dice.rollFavourite", { formula: f.formula })}
-              aria-label={t("dice.rollFavourite", { formula: f.formula })}
-              disabled={s.rolling}
-              onClick={() => void s.roll(f.formula)}
-            >
-              {f.formula}
-            </button>
-            {s.favourites.length > 1 && (
-              <button
-                type="button"
-                className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
-                aria-label={t("dice.moveFavouriteLater", {
-                  formula: f.formula,
-                })}
-                disabled={i === s.favourites.length - 1}
-                onClick={() => void s.moveFavourite(f.id, 1)}
+            {s.favourites.map((f, i) => (
+              <li
+                key={f.id}
+                className="chip flex shrink-0 items-center"
+                data-testid="dice-favourite"
               >
-                <CaretRight aria-hidden className="size-3" />
-              </button>
-            )}
-            <button
-              type="button"
-              className="rounded-r-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
-              aria-label={t("dice.removeFavourite", { formula: f.formula })}
-              onClick={() => void s.removeFavourite(f.id)}
+                {s.favourites.length > 1 && (
+                  <button
+                    type="button"
+                    className="rounded-l-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
+                    aria-label={t("dice.moveFavouriteEarlier", {
+                      formula: f.formula,
+                    })}
+                    disabled={i === 0}
+                    onClick={() => void s.moveFavourite(f.id, -1)}
+                  >
+                    <CaretLeft aria-hidden className="size-3" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="h-7 px-2 text-body tabular-nums outline-none hover:text-tint focus-visible:ring-3 focus-visible:ring-ring/50"
+                  title={t("dice.rollFavourite", { formula: f.formula })}
+                  aria-label={t("dice.rollFavourite", { formula: f.formula })}
+                  disabled={s.rolling}
+                  onClick={() => void s.roll(f.formula)}
+                >
+                  {f.formula}
+                </button>
+                {s.favourites.length > 1 && (
+                  <button
+                    type="button"
+                    className="px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 disabled:invisible"
+                    aria-label={t("dice.moveFavouriteLater", {
+                      formula: f.formula,
+                    })}
+                    disabled={i === s.favourites.length - 1}
+                    onClick={() => void s.moveFavourite(f.id, 1)}
+                  >
+                    <CaretRight aria-hidden className="size-3" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded-r-md px-1 py-1 text-muted-foreground outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                  aria-label={t("dice.removeFavourite", { formula: f.formula })}
+                  onClick={() => void s.removeFavourite(f.id)}
+                >
+                  <X aria-hidden className="size-3" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          {s.error && (
+            <p
+              className="shrink-0 text-body text-danger"
+              role="alert"
+              data-testid="dice-error"
             >
-              <X aria-hidden className="size-3" />
-            </button>
-          </li>
-        ))}
-      </ul>
-      {s.error && (
-        <p
-          className="shrink-0 text-body text-danger"
-          role="alert"
-          data-testid="dice-error"
-        >
-          {t("dice.invalid")}
-        </p>
+              {t("dice.invalid")}
+            </p>
+          )}
+        </>
       )}
     </form>
   );

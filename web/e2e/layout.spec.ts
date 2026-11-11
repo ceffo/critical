@@ -11,6 +11,7 @@ import {
   createInFlow,
   nextRound,
   openDashboard,
+  openDice,
   openSettings,
   openWeapons,
   openWorkspace,
@@ -1440,6 +1441,70 @@ async function cardDetailsStep(page: Page, size: Viewport, stack: Stack) {
   }
 }
 
+// The dice bar (ADR 0027 step 5.7): one button by default, expanded by it (focus into the formula),
+// collapsed by Escape and by a roll. Expanded, it covers no control and cuts no text at the layout
+// sizes, in French and English; the page does not scroll.
+async function diceBarStep(page: Page, size: Viewport, stack: Stack) {
+  await dismissEffects(stack);
+  await openDashboard(page);
+  const footer = page.getByTestId("dice-footer");
+  const toggle = page.getByTestId("dice-toggle");
+  const formula = footer.getByLabel(/^(Formula|Formule)$/);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `dice bar, ${lang}, ${vp.width}x${vp.height}`;
+      await expect(toggle, where).toHaveAttribute("aria-expanded", "false");
+      await expect(formula, where).toHaveCount(0);
+      await expectNoPageScroll(page);
+      await expectNoClippedText(footer, `${where}, collapsed`);
+      await toggle.click();
+      await expect(formula, where).toBeFocused();
+      await expectNoPageScroll(page);
+      await expectNoClippedText(footer, `${where}, expanded`);
+      // Nothing in the bar is cut by the footer's box or overlaps a neighbour.
+      const box = (await footer.boundingBox())!;
+      const controls = footer.locator("button:visible, input:visible");
+      const n = await controls.count();
+      let prevRight = -1;
+      for (let i = 0; i < n; i++) {
+        const b = (await controls.nth(i).boundingBox())!;
+        // The favourites strip scrolls sideways; its chips may reach past the footer.
+        if (
+          await controls.nth(i).evaluate((e) => !!e.closest("[data-scroll-x]"))
+        )
+          continue;
+        expect(
+          b.x,
+          `${where}: control ${i} inside, left`,
+        ).toBeGreaterThanOrEqual(box.x);
+        expect(
+          b.x + b.width,
+          `${where}: control ${i} inside, right`,
+        ).toBeLessThanOrEqual(box.x + box.width + 0.5);
+        expect(
+          b.x,
+          `${where}: control ${i} clear of the last`,
+        ).toBeGreaterThanOrEqual(prevRight - 0.5);
+        prevRight = b.x + b.width;
+      }
+      if (lang === "fr" && vp.width >= 1920)
+        await snap(page, `dice-bar-open-fr-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(formula, where).toHaveCount(0);
+      await expect(toggle, where).toBeFocused();
+    }
+  }
+  // A roll collapses it again.
+  await chooseLanguage(page, "en");
+  await toggle.click();
+  await footer.getByTestId("die-6").click();
+  await footer.getByRole("button", { name: "Roll", exact: true }).click();
+  await expect(formula).toHaveCount(0);
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+}
+
 async function pieceSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await openWorkspace(page, "Inventory");
@@ -2565,6 +2630,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["Ajouter", ajouterStep],
   ["skills editor", skillsEditorStep],
   ["card details", cardDetailsStep],
+  ["dice bar", diceBarStep],
   ["proficiency pop-up", profPopupStep],
   ["effects timeline", effectsTimelineStep],
   ["long rest", longRestStep],
@@ -2988,6 +3054,7 @@ async function composerStep(page: Page) {
   const formula = page
     .getByRole("form", { name: "Dice" })
     .getByLabel("Formula");
+  // "To the dice" expands the composer by itself.
 
   await openWorkspace(page, "Inventory");
   await page
@@ -3017,6 +3084,7 @@ async function composerStep(page: Page) {
 
   await formula.fill("");
   await dice.getByRole("button", { name: "Roll 1d8+8" }).click();
+  await expect(formula).toHaveCount(0);
   // The roll shows at once in the header's last result, from any activity (ADR 0022 step 2.2).
   const last = page.getByTestId("last-result");
   await expect(last.getByTestId("last-result-text")).toContainText("d8+8");
@@ -3025,6 +3093,7 @@ async function composerStep(page: Page) {
   );
   expect(total).toBeGreaterThanOrEqual(9);
   expect(total).toBeLessThanOrEqual(16);
+  await openDice(page);
   await expect(formula).toHaveValue("d8+8");
   // In the Act activity the journal has the entry and the result panel shows it.
   await openWorkspace(page, "Act");

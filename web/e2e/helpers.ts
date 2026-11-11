@@ -119,6 +119,16 @@ export async function readsAfter(
 }
 
 /** Open the dashboard and wait until server state is loaded. */
+/** Expands the dice composer (it is one button until opened and again after each roll). */
+export async function openDice(page: Page) {
+  const toggle = page.getByTestId("dice-toggle");
+  if ((await toggle.getAttribute("aria-expanded")) !== "true")
+    await toggle.click();
+  await expect(
+    page.getByRole("form", { name: "Dice" }).getByLabel("Formula"),
+  ).toBeVisible();
+}
+
 export async function openDashboard(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);

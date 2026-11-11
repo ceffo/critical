@@ -71,7 +71,7 @@ export function SpellDetail({
 }) {
   const { t, i18n } = useTranslation();
   const { description } = spellTexts(i18n.language, spell);
-  const toComposer = useDiceStore((s) => s.setFormula);
+  const toComposer = useDiceStore((s) => s.fill);
   const roll = useDiceStore((s) => s.roll);
   const rolling = useDiceStore((s) => s.rolling);
   const addSpellEffect = useSpellStore((s) => s.addSpellEffect);

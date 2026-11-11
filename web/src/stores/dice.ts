@@ -18,6 +18,11 @@ interface DiceStore {
   error: string | null;
   favourites: DiceFavourite[];
   rolling: boolean;
+  /** Whether the composer is expanded; collapsed (one button) by default and after a roll. */
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  /** Puts `formula` in the composer and expands it (a "to the dice" button elsewhere). */
+  fill: (formula: string) => void;
   setFormula: (formula: string) => void;
   add: (sides: number) => void;
   remove: (sides: number) => void;
@@ -61,6 +66,9 @@ export const useDiceStore = create<DiceStore>((set, get) => {
     error: null,
     favourites: [],
     rolling: false,
+    open: false,
+    setOpen: (open) => set({ open }),
+    fill: (formula) => set({ formula, error: null, open: true }),
     setFormula: edit,
     add: (sides) => edit(addDie(get().formula, sides)),
     remove: (sides) => edit(removeDie(get().formula, sides)),
@@ -79,6 +87,7 @@ export const useDiceStore = create<DiceStore>((set, get) => {
           entry = res.logEntryId;
         }, false);
         // The action module has read the journal again: the roll's entry is in it.
+        if (ok) set({ open: false });
         if (ok && entry !== undefined) useJournalStore.getState().select(entry);
         return ok;
       } finally {

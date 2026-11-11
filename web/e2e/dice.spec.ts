@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, openDashboard, readsAfter } from "./helpers";
+import { combatLog, openDashboard, openDice, readsAfter } from "./helpers";
 
 // What only a browser proves: the composer's buttons and field build a formula, Enter and Roll reach
 // the server, the card and the journal render the dice entry, Reroll adds a new entry, and a favourite
@@ -9,6 +9,11 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   page,
 }) => {
   await openDashboard(page);
+  await expect(page.getByTestId("dice-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await openDice(page);
   const composer = page.getByRole("form", { name: "Dice" });
   const card = page.getByRole("region", { name: "Detail", exact: true });
   const journal = combatLog(page);
@@ -25,8 +30,10 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   await expect(formula).toHaveValue("2d6+1");
   await expect(composer.getByTestId("die-badge-4")).toHaveCount(0);
 
-  // Roll: the card shows the server's roll, the total adds up from what the card shows.
+  // Roll: it collapses the composer; the card shows the server's roll, the total adds up from what the card shows.
   await composer.getByRole("button", { name: "Roll", exact: true }).click();
+  await expect(formula).toHaveCount(0);
+  await expect(page.getByTestId("dice-toggle")).toBeFocused();
   const result = card.getByTestId("dice-result");
   await expect(result).toBeVisible();
   await expect(result.getByTestId("dice-formula")).toHaveText("2d6+1");
@@ -67,6 +74,7 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
 
   // A formula the server refuses turns the field red; editing clears it.
   // The refusal changed nothing: the page reads nothing again (ADR 0018 step 11).
+  await openDice(page);
   await formula.fill("2d6*3");
   const reads = await readsAfter(page, async () => {
     await composer.getByRole("button", { name: "Roll", exact: true }).click();
@@ -80,6 +88,7 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   // Enter rolls; the star saves the formula on the server.
   await formula.press("Enter");
   await expect(result.getByTestId("dice-formula")).toHaveText("d%+d4");
+  await openDice(page);
   await composer.getByRole("button", { name: "Save as a favourite" }).click();
   const fav = composer.getByTestId("dice-favourite");
   await expect(fav).toHaveCount(1);
@@ -95,6 +104,7 @@ test("dice composer: build, roll, reroll, save a favourite, roll it", async ({
   // The favourites and their order survive a reload (kept by the server); a chip rolls.
   await page.reload();
   await expect(page.getByTestId("hp-value")).toHaveText(/\d+ \/ \d+/);
+  await openDice(page);
   const favReloaded = page
     .getByRole("form", { name: "Dice" })
     .getByTestId("dice-favourite");

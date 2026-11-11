@@ -3,6 +3,7 @@ import {
   apiSettled,
   chooseLanguage,
   currentRound,
+  LOOKUP_RAIL,
   openDashboard,
   openWeapons,
 } from "./helpers";
@@ -70,7 +71,7 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
   const act = rail.getByRole("button", { name: "Act", exact: true });
   await act.focus();
   await page.keyboard.press("ArrowDown");
-  const spells = rail.getByRole("button", { name: "Spells", exact: true });
+  const spells = rail.getByRole("button", { name: LOOKUP_RAIL });
   await expect(spells).toBeFocused();
   await expect(act).toHaveAttribute("aria-current", "page");
   await page.keyboard.press("End");

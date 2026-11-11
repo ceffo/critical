@@ -3,6 +3,7 @@ import {
   apiCall,
   expectNoReload,
   logEntry,
+  LOOKUP_RAIL,
   markNoReload,
   openDashboard,
   openWorkspace,
@@ -312,7 +313,7 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
   await expect(
     page
       .getByRole("navigation", { name: "Activities" })
-      .getByRole("button", { name: "Spells", exact: true }),
+      .getByRole("button", { name: LOOKUP_RAIL }),
   ).toHaveAttribute("aria-current", "page");
   await expect(rows.first()).toBeVisible();
   // Only 2nd-level spells are listed.

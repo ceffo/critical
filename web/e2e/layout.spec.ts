@@ -5162,476 +5162,441 @@ test("new version toast: beside the badge after two newer answers, no extra heig
 // column (below the HP and the HP change) and the rest popover over it, with a paying power kept up
 // so the warning and the stop-and-recover caption are on screen, uncut in French and English, 1280 to
 // 2560. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("PSP block and rest popover", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(120_000);
-    await openDashboard(page);
-    await keepPowerUp(page);
-    const card = page.getByTestId("character");
-    const panel = page.getByTestId("psp-panel");
-    await expect(panel.getByTestId("psp-value")).toHaveText("37 / 40");
+async function pspStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await keepPowerUp(page);
+  const card = page.getByTestId("character");
+  const panel = page.getByTestId("psp-panel");
+  await expect(panel.getByTestId("psp-value")).toHaveText("37 / 40");
 
-    // The card reads HP, HP change, then the PSPs.
-    const top = async (l: Locator) => (await l.boundingBox())?.y ?? -1;
-    const hp = await top(card.getByTestId("hp-value"));
-    const change = await top(card.getByRole("group", { name: "HP change" }));
-    const psp = await top(panel);
-    expect(hp).toBeGreaterThan(0);
-    expect(change, "HP change under the HP").toBeGreaterThan(hp);
-    expect(psp, "PSP block under the HP change").toBeGreaterThan(change);
+  // The card reads HP, HP change, then the PSPs.
+  const top = async (l: Locator) => (await l.boundingBox())?.y ?? -1;
+  const hp = await top(card.getByTestId("hp-value"));
+  const change = await top(card.getByRole("group", { name: "HP change" }));
+  const psp = await top(panel);
+  expect(hp).toBeGreaterThan(0);
+  expect(change, "HP change under the HP").toBeGreaterThan(hp);
+  expect(psp, "PSP block under the HP change").toBeGreaterThan(change);
 
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expect(panel).toBeVisible();
+      const box = await panel.boundingBox();
+      expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
+      expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
+      await expectNoClippedText(panel, `PSP block, ${where}`);
+      await expectWholeWords(panel, `PSP block, ${where}`);
+      await expectNoPageScroll(page);
+
+      await panel.getByTestId("psp-adjust").click();
+      const adjust = page.getByTestId("psp-adjust-popover");
+      await expect(adjust).toBeVisible();
+      await expectNoClippedText(adjust, `adjust popover, ${where}`);
+      await expectWholeWords(adjust, `adjust popover, ${where}`);
       await page.keyboard.press("Escape");
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expect(panel).toBeVisible();
-        const box = await panel.boundingBox();
-        expect(box?.width, `panel width, ${where}`).toBeGreaterThanOrEqual(200);
-        expect(box?.width, `panel width, ${where}`).toBeLessThanOrEqual(384);
-        await expectNoClippedText(panel, `PSP block, ${where}`);
-        await expectWholeWords(panel, `PSP block, ${where}`);
-        await expectNoPageScroll(page);
+      await expect(adjust).toHaveCount(0);
 
-        await panel.getByTestId("psp-adjust").click();
-        const adjust = page.getByTestId("psp-adjust-popover");
-        await expect(adjust).toBeVisible();
-        await expectNoClippedText(adjust, `adjust popover, ${where}`);
-        await expectWholeWords(adjust, `adjust popover, ${where}`);
-        await page.keyboard.press("Escape");
-        await expect(adjust).toHaveCount(0);
-
-        await panel.getByTestId("psp-rest").click();
-        const rest = page.getByTestId("psp-rest-popover");
-        await expect(rest.getByTestId("psp-rest-stops")).toBeVisible();
-        await expectNoClippedText(rest, `rest popover, ${where}`);
-        await expectWholeWords(rest, `rest popover, ${where}`);
-        const inside = await rest.boundingBox();
-        expect(inside?.x, `rest popover left, ${where}`).toBeGreaterThanOrEqual(
-          0,
-        );
-        expect(
-          (inside?.x ?? 0) + (inside?.width ?? 0),
-          `rest popover right, ${where}`,
-        ).toBeLessThanOrEqual(vp.width);
-        if (vp.width >= 1920)
-          await snap(page, `psp-rest-${lang}-${vp.width}x${vp.height}`);
-        await page.keyboard.press("Escape");
-        await expect(rest).toHaveCount(0);
-        if (vp.width >= 1920)
-          await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
-      }
+      await panel.getByTestId("psp-rest").click();
+      const rest = page.getByTestId("psp-rest-popover");
+      await expect(rest.getByTestId("psp-rest-stops")).toBeVisible();
+      await expectNoClippedText(rest, `rest popover, ${where}`);
+      await expectWholeWords(rest, `rest popover, ${where}`);
+      const inside = await rest.boundingBox();
+      expect(inside?.x, `rest popover left, ${where}`).toBeGreaterThanOrEqual(
+        0,
+      );
+      expect(
+        (inside?.x ?? 0) + (inside?.width ?? 0),
+        `rest popover right, ${where}`,
+      ).toBeLessThanOrEqual(vp.width);
+      if (vp.width >= 1920)
+        await snap(page, `psp-rest-${lang}-${vp.width}x${vp.height}`);
+      await page.keyboard.press("Escape");
+      await expect(rest).toHaveCount(0);
+      if (vp.width >= 1920)
+        await snap(page, `psp-${lang}-${vp.width}x${vp.height}`);
     }
-  });
-});
+  }
+}
 
 // ADR 0047: Act > Pouvoirs (the round's power and the adjustment, the defence chips, the target band,
 // the groups of rows), uncut in French and English, 1280 to 2560, in combat so the chips are live.
 // Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("Powers tab", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "mind_blank" },
-          { kind: "power", id: "thought_shield" },
-          { kind: "power", id: "mind_thrust" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "discipline", id: "metapsionics" },
-          { kind: "power", id: "intensify" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+async function powersStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "mind_blank" },
+        { kind: "power", id: "thought_shield" },
+        { kind: "power", id: "mind_thrust" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "discipline", id: "metapsionics" },
+        { kind: "power", id: "intensify" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
+    await tab.getByTestId("target-name").fill("Orc");
+    // The standing mind blank raised, so the band shows its Stop beside the chip.
+    const standing = tab.locator(
+      "[data-testid=defence-chip][data-defence=standing]",
+    );
+    if ((await standing.count()) === 0)
+      await tab
+        .getByTestId("defence-chip")
+        .filter({ hasText: /Mind Blank|Néant spirituel/ })
         .click();
-      const tab = page.getByTestId("powers-tab");
-      await expect(tab.getByTestId("defence-chip").first()).toBeVisible();
-      await tab.getByTestId("target-name").fill("Orc");
-      // The standing mind blank raised, so the band shows its Stop beside the chip.
-      const standing = tab.locator(
-        "[data-testid=defence-chip][data-defence=standing]",
+    await expect(standing).toHaveCount(1);
+    await expect(
+      tab.getByRole("button", { name: /^(Stop maintaining|Arrêter)/ }),
+    ).toHaveCount(1);
+    // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
+    const rowBoxes = async () => {
+      const origin = (await tab.boundingBox())!;
+      return Promise.all(
+        (await tab.getByTestId("power-row").all()).map(async (r) => {
+          const b = (await r.boundingBox())!;
+          return { ...b, x: b.x - origin.x, y: b.y - origin.y };
+        }),
       );
-      if ((await standing.count()) === 0)
-        await tab
-          .getByTestId("defence-chip")
-          .filter({ hasText: /Mind Blank|Néant spirituel/ })
-          .click();
-      await expect(standing).toHaveCount(1);
+    };
+    const select = (id: string) =>
+      tab
+        .locator(`[data-testid=power-row][data-id=${id}]`)
+        .getByRole("button")
+        .last()
+        .click();
+    const bar = page.getByTestId("action-bar");
+    const close = () => bar.getByRole("button").first().click();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await tab.getByTestId("target-band").locator("select").selectOption({
+        index: 1,
+      });
+      await expect(bar).toHaveCount(0);
       await expect(
-        tab.getByRole("button", { name: /^(Stop maintaining|Arrêter)/ }),
-      ).toHaveCount(1);
-      // Relative to the tab: the stage may scroll when the bar opens, the rows must not move within it.
-      const rowBoxes = async () => {
-        const origin = (await tab.boundingBox())!;
-        return Promise.all(
-          (await tab.getByTestId("power-row").all()).map(async (r) => {
-            const b = (await r.boundingBox())!;
-            return { ...b, x: b.x - origin.x, y: b.y - origin.y };
-          }),
-        );
-      };
-      const select = (id: string) =>
-        tab
-          .locator(`[data-testid=power-row][data-id=${id}]`)
-          .getByRole("button")
-          .last()
-          .click();
-      const bar = page.getByTestId("action-bar");
-      const close = () => bar.getByRole("button").first().click();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await tab.getByTestId("target-band").locator("select").selectOption({
-          index: 1,
-        });
-        await expect(bar).toHaveCount(0);
-        await expect(
-          tab.getByTestId("attack-score-target").first(),
-        ).toBeVisible();
-        await expectNoClippedText(tab, `powers tab, ${where}`);
-        await expectWholeWords(tab, `powers tab, ${where}`);
-        await expectNoPageScroll(page);
-        const closed = await rowBoxes();
-        expect(closed.length).toBeGreaterThan(3);
-        const forms: [string, string][] = [
-          ["mind_thrust", "attack-form"],
-          ["intensify", "use-power"],
-        ];
-        for (const [id, form] of forms) {
-          await select(id);
-          await expect(bar.getByTestId(form)).toBeVisible();
-          expect(await rowBoxes(), `rows with ${form} open, ${where}`).toEqual(
-            closed,
-          );
-          await expectNoClippedText(tab, `${form}, ${where}`);
-          await expectWholeWords(tab, `${form}, ${where}`);
-          await expectNoPageScroll(page);
-          if (vp.width >= 1920)
-            await snap(page, `powers-${form}-${lang}-${vp.width}x${vp.height}`);
-          await close();
-          await expect(bar).toHaveCount(0);
-        }
-        await tab.getByTestId("incoming-attack").click();
-        await expect(bar.getByTestId("defend-form")).toBeVisible();
-        expect(await rowBoxes(), `rows with incoming open, ${where}`).toEqual(
+        tab.getByTestId("attack-score-target").first(),
+      ).toBeVisible();
+      await expectNoClippedText(tab, `powers tab, ${where}`);
+      await expectWholeWords(tab, `powers tab, ${where}`);
+      await expectNoPageScroll(page);
+      const closed = await rowBoxes();
+      expect(closed.length).toBeGreaterThan(3);
+      const forms: [string, string][] = [
+        ["mind_thrust", "attack-form"],
+        ["intensify", "use-power"],
+      ];
+      for (const [id, form] of forms) {
+        await select(id);
+        await expect(bar.getByTestId(form)).toBeVisible();
+        expect(await rowBoxes(), `rows with ${form} open, ${where}`).toEqual(
           closed,
         );
-        await expectNoClippedText(tab, `incoming, ${where}`);
-        await expectWholeWords(tab, `incoming, ${where}`);
+        await expectNoClippedText(tab, `${form}, ${where}`);
+        await expectWholeWords(tab, `${form}, ${where}`);
         await expectNoPageScroll(page);
         if (vp.width >= 1920)
-          await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
+          await snap(page, `powers-${form}-${lang}-${vp.width}x${vp.height}`);
         await close();
+        await expect(bar).toHaveCount(0);
       }
+      await tab.getByTestId("incoming-attack").click();
+      await expect(bar.getByTestId("defend-form")).toBeVisible();
+      expect(await rowBoxes(), `rows with incoming open, ${where}`).toEqual(
+        closed,
+      );
+      await expectNoClippedText(tab, `incoming, ${where}`);
+      await expectWholeWords(tab, `incoming, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-incoming-${lang}-${vp.width}x${vp.height}`);
+      await close();
     }
-  });
-});
+  }
+}
 
 // The Maintained card of Act > Pouvoirs (ADR 0047 item 10): a tangent row with a long mind name, its
 // cost, Stop and the balance, uncut in French and English, 1280 to 2560. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
-test.describe("Maintained card", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "power", id: "mind_thrust" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    await chooseLanguage(page, "fr");
-    await page.keyboard.press("Escape");
-    await page.getByRole("tab", { name: "Pouvoirs" }).click();
-    const tab = page.getByTestId("powers-tab");
-    await keepATangent(
-      page,
-      tab,
-      "Gardien des Mille Portes de la Citadelle Oubliée",
-    );
-    const card = page.getByTestId("maintained-card");
-    await expect(card).toBeVisible();
-    await expect(card.getByTestId("maintained-balance")).toBeVisible();
-    for (const lang of ["fr", "en"] as const) {
-      if (lang === "en") {
-        await chooseLanguage(page, "en");
-        await page.keyboard.press("Escape");
-      }
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expect(card.getByTestId("maintained-balance")).toBeVisible();
-        await expectNoClippedText(card, `maintained card, ${where}`);
-        await expectWholeWords(card, `maintained card, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(page, `maintained-${lang}-${vp.width}x${vp.height}`);
-      }
+async function maintainedStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "power", id: "mind_thrust" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  await chooseLanguage(page, "fr");
+  await page.keyboard.press("Escape");
+  await page.getByRole("tab", { name: "Pouvoirs" }).click();
+  const tab = page.getByTestId("powers-tab");
+  await keepATangent(
+    page,
+    tab,
+    "Gardien des Mille Portes de la Citadelle Oubliée",
+  );
+  const card = page.getByTestId("maintained-card");
+  await expect(card).toBeVisible();
+  await expect(card.getByTestId("maintained-balance")).toBeVisible();
+  for (const lang of ["fr", "en"] as const) {
+    if (lang === "en") {
+      await chooseLanguage(page, "en");
+      await page.keyboard.press("Escape");
     }
-  });
-});
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expect(card.getByTestId("maintained-balance")).toBeVisible();
+      await expectNoClippedText(card, `maintained card, ${where}`);
+      await expectWholeWords(card, `maintained card, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `maintained-${lang}-${vp.width}x${vp.height}`);
+    }
+  }
+}
 
 // The bar's two forms of a power paid on contact, uncut in French and English, 1280 to 2560: the
 // table-cost form (its controls from the table's rows, the server's cost) and the state with no contact
 // held. Screenshots at 1920x1080 and 2560x1440, French first (ADR 0027 step 2).
-test.describe("Powers tab, contact forms", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "power", id: "contact" },
-          { kind: "power", id: "mindlink" },
-          { kind: "power", id: "mind_thrust" },
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    await nextRound(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+async function contactFormsStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+        { kind: "power", id: "mind_thrust" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await nextRound(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    const band = tab.getByTestId("target-band");
+    const bar = page.getByTestId("action-bar");
+    const select = (id: string) =>
+      tab
+        .locator(`[data-testid=power-row][data-id=${id}]`)
+        .getByRole("button")
+        .last()
         .click();
-      const tab = page.getByTestId("powers-tab");
-      const band = tab.getByTestId("target-band");
-      const bar = page.getByTestId("action-bar");
-      const select = (id: string) =>
-        tab
-          .locator(`[data-testid=power-row][data-id=${id}]`)
-          .getByRole("button")
-          .last()
-          .click();
-      await band.getByTestId("target-name").fill("");
-      await select("mindlink");
-      await expect(bar.getByTestId("no-contact")).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(tab, `no contact, ${where}`);
-        await expectWholeWords(tab, `no contact, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(
-            page,
-            `powers-no-contact-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-      await bar.getByRole("button").first().click();
-      await band.getByTestId("target-name").fill("Orc");
-      await band
-        .getByRole("radio", { name: lang === "fr" ? "Ouvert" : "Open" })
-        .click();
-      await band.getByRole("textbox").nth(1).fill("3");
-      await select("contact");
-      const form = bar.getByTestId("table-form");
-      await expect(form.getByTestId("table-preview")).toBeVisible();
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        await expectNoClippedText(tab, `table form, ${where}`);
-        await expectWholeWords(tab, `table form, ${where}`);
-        await expectNoPageScroll(page);
-        if (vp.width >= 1920)
-          await snap(
-            page,
-            `powers-table-form-${lang}-${vp.width}x${vp.height}`,
-          );
-      }
-      await bar.getByRole("button").first().click();
+    await band.getByTestId("target-name").fill("");
+    await select("mindlink");
+    await expect(bar.getByTestId("no-contact")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(tab, `no contact, ${where}`);
+      await expectWholeWords(tab, `no contact, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-no-contact-${lang}-${vp.width}x${vp.height}`);
     }
-  });
-});
+    await bar.getByRole("button").first().click();
+    await band.getByTestId("target-name").fill("Orc");
+    await band
+      .getByRole("radio", { name: lang === "fr" ? "Ouvert" : "Open" })
+      .click();
+    await band.getByRole("textbox").nth(1).fill("3");
+    await select("contact");
+    const form = bar.getByTestId("table-form");
+    await expect(form.getByTestId("table-preview")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(tab, `table form, ${where}`);
+      await expectWholeWords(tab, `table form, ${where}`);
+      await expectNoPageScroll(page);
+      if (vp.width >= 1920)
+        await snap(page, `powers-table-form-${lang}-${vp.width}x${vp.height}`);
+    }
+    await bar.getByRole("button").first().click();
+  }
+}
 
 // ADR 0047: the action bar is pinned to the panel's bottom edge, outside the scrolling lists. With 16
 // known powers (11 rows and 5 defence chips: the most the test catalogue allows) at 1280x800, 1920x1080 and 2560x1440, in French and English: the armed bar sits whole
 // inside the Act panel wherever the list is scrolled, the last row stays reachable above it, and the
 // bar follows the last row in the tab order. Screenshots at 1280x800 and 1920x1080, French first.
-test.describe("Powers tab, long list", () => {
-  test.use({
-    character: { ...psionicist, level: 20, xp_total: 5_000_000, wis: 20 },
-  });
-  test("the armed bar stays inside the panel, 16 powers", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    const picks = [
-      "mindlink",
-      "psionic_blast",
-      "contact",
-      "mind_blank",
-      "mind_thrust",
-      "ego_whip",
-      "id_insinuation",
-      "psychic_crush",
-      "thought_shield",
-      "mental_barrier",
-      "intellect_fortress",
-      "tower_of_iron_will",
-      "switch_personality",
-      "intensify",
-      "displacement",
-      "graft_weapon",
-    ];
-    expect(
-      await apiCall(page, "PUT", "/api/psionics/picks", {
-        picks: [
-          { kind: "discipline", id: "telepathy" },
-          { kind: "discipline", id: "metapsionics" },
-          { kind: "discipline", id: "psychometabolism" },
-          ...picks.map((id) => ({ kind: "power", id })),
-        ],
-      }),
-    ).toBe(true);
-    await reloadSettled(page);
-    for (const lang of ["fr", "en"] as const) {
-      await chooseLanguage(page, lang);
-      await page.keyboard.press("Escape");
-      await page
-        .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
-        .click();
-      const tab = page.getByTestId("powers-tab");
-      const panel = page.getByRole("tabpanel");
-      const rows = tab.getByTestId("power-row");
-      // The five defence modes are chips, not rows.
-      await expect(rows).toHaveCount(picks.length - 5);
-      const bar = page.getByTestId("action-bar");
-      for (const vp of VIEWPORTS.filter((v) =>
-        [1280, 1920, 2560].includes(v.width),
-      )) {
-        await page.setViewportSize(vp);
-        const where = `${lang}, ${vp.width}x${vp.height}`;
-        const inside = async (what: string) => {
-          const b = (await bar.boundingBox())!;
-          const p = (await panel.boundingBox())!;
-          expect(b.y, `bar top, ${what}, ${where}`).toBeGreaterThanOrEqual(
-            p.y - 0.5,
-          );
-          expect(
-            b.y + b.height,
-            `bar bottom, ${what}, ${where}`,
-          ).toBeLessThanOrEqual(p.y + p.height + 0.5);
-          return b;
-        };
-        // Armed from the first row, the list scrolled to its top.
-        await panel.evaluate((el) => (el.scrollTop = 0));
-        await rows.first().getByRole("button").last().click();
-        await expect(bar).toBeVisible();
-        await inside("first row armed");
-        await expectNoClippedText(tab, `bar over the top, ${where}`);
-        await expectWholeWords(tab, `bar over the top, ${where}`);
-        await expectNoPageScroll(page);
-        // Scrolled to the end: the last row sits above the bar, whole and clickable.
-        await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
-        const b = await inside("list scrolled to the end");
-        const last = (await rows.last().boundingBox())!;
+async function longListStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  const picks = [
+    "mindlink",
+    "psionic_blast",
+    "contact",
+    "mind_blank",
+    "mind_thrust",
+    "ego_whip",
+    "id_insinuation",
+    "psychic_crush",
+    "thought_shield",
+    "mental_barrier",
+    "intellect_fortress",
+    "tower_of_iron_will",
+    "switch_personality",
+    "intensify",
+    "displacement",
+    "graft_weapon",
+  ];
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "discipline", id: "metapsionics" },
+        { kind: "discipline", id: "psychometabolism" },
+        ...picks.map((id) => ({ kind: "power", id })),
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    await page
+      .getByRole("tab", { name: lang === "fr" ? "Pouvoirs" : "Powers" })
+      .click();
+    const tab = page.getByTestId("powers-tab");
+    const panel = page.getByRole("tabpanel");
+    const rows = tab.getByTestId("power-row");
+    // The five defence modes are chips, not rows.
+    await expect(rows).toHaveCount(picks.length - 5);
+    const bar = page.getByTestId("action-bar");
+    for (const vp of sizesAt(
+      size,
+      VIEWPORTS.filter((v) => [1280, 1920, 2560].includes(v.width)),
+    )) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      const inside = async (what: string) => {
+        const b = (await bar.boundingBox())!;
+        const p = (await panel.boundingBox())!;
+        expect(b.y, `bar top, ${what}, ${where}`).toBeGreaterThanOrEqual(
+          p.y - 0.5,
+        );
         expect(
-          last.y + last.height,
-          `last row above the bar, ${where}`,
-        ).toBeLessThanOrEqual(b.y + 0.5);
-        if (vp.width <= 1920)
-          await snap(page, `powers-bar-end-${lang}-${vp.width}x${vp.height}`);
-        // The bar is the next stop after the last row's control, in tab order.
-        await rows.last().getByRole("button").last().focus();
-        await page.keyboard.press("Tab");
-        expect(
-          await bar.evaluate((el) => el.contains(document.activeElement)),
-          `tab order, ${where}`,
-        ).toBe(true);
-        // Arming the last row keeps the bar whole too.
-        await rows.last().getByRole("button").last().click();
-        await expect(bar).toBeVisible();
-        await inside("last row armed");
-        await bar.getByRole("button").first().click();
-        await expect(bar).toHaveCount(0);
-      }
+          b.y + b.height,
+          `bar bottom, ${what}, ${where}`,
+        ).toBeLessThanOrEqual(p.y + p.height + 0.5);
+        return b;
+      };
+      // Armed from the first row, the list scrolled to its top.
+      await panel.evaluate((el) => (el.scrollTop = 0));
+      await rows.first().getByRole("button").last().click();
+      await expect(bar).toBeVisible();
+      await inside("first row armed");
+      await expectNoClippedText(tab, `bar over the top, ${where}`);
+      await expectWholeWords(tab, `bar over the top, ${where}`);
+      await expectNoPageScroll(page);
+      // Scrolled to the end: the last row sits above the bar, whole and clickable.
+      await panel.evaluate((el) => (el.scrollTop = el.scrollHeight));
+      const b = await inside("list scrolled to the end");
+      const last = (await rows.last().boundingBox())!;
+      expect(
+        last.y + last.height,
+        `last row above the bar, ${where}`,
+      ).toBeLessThanOrEqual(b.y + 0.5);
+      if (vp.width <= 1920)
+        await snap(page, `powers-bar-end-${lang}-${vp.width}x${vp.height}`);
+      // The bar is the next stop after the last row's control, in tab order.
+      await rows.last().getByRole("button").last().focus();
+      await page.keyboard.press("Tab");
+      expect(
+        await bar.evaluate((el) => el.contains(document.activeElement)),
+        `tab order, ${where}`,
+      ).toBe(true);
+      // Arming the last row keeps the bar whole too.
+      await rows.last().getByRole("button").last().click();
+      await expect(bar).toBeVisible();
+      await inside("last row armed");
+      await bar.getByRole("button").first().click();
+      await expect(bar).toHaveCount(0);
     }
-  });
-});
+  }
+}
 
 // ADR 0043 step 9: the known powers stage (the allowance tiles, the picks with their costs and scores,
 // the refusal, the picker with its search, discipline chips once and the add-a-discipline select), uncut in French and English, 1280 to
 // 2560. The refusal is on screen: it is the longest text of the stage. Screenshots at 1920x1080 and
 // 2560x1440, French first (ADR 0027 step 2).
-test.describe("Known powers", () => {
-  test.use({ character: psionicist });
-  test("uncut in French and English, 1280 to 2560", async ({ page }) => {
-    test.setTimeout(90_000);
-    await openDashboard(page);
-    const panel = await openSortsPowers(page);
-    // The discipline names show once, as the filter chips; a discipline is added from the select.
-    const addDiscipline = panel.getByRole("combobox", {
-      name: "Add a discipline",
-    });
-    await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(
-      1,
-    );
-    for (const name of ["Telepathy", "Clairsentience"])
-      await addDiscipline.selectOption({ label: name });
-    await panel
-      .getByRole("combobox", { name: "Search powers..." })
-      .fill("mind");
-    await panel
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Blank" })
-      .getByRole("button", { name: "Add Mind Blank" })
-      .click();
-    await panel
-      .getByTestId("power-row")
-      .filter({ hasText: "Mind Thrust" })
-      .getByRole("button", { name: "Add Mind Thrust" })
-      .click();
-    await addDiscipline.selectOption({ label: "Psychokinesis" });
-    await expect(panel.getByTestId("powers-refusal")).toBeVisible();
-    // The known list beside the browser, then a power's detail open in its place.
-    for (const view of ["list", "detail"] as const) {
-      if (view === "detail") {
-        await panel.getByTestId("power-row").first().click();
-        await expect(panel.getByTestId("power-detail")).toBeVisible();
-      }
-      for (const lang of ["fr", "en"] as const) {
-        await chooseLanguage(page, lang);
-        await page.keyboard.press("Escape");
-        for (const vp of VIEWPORTS) {
-          await page.setViewportSize(vp);
-          const where = `${view}, ${lang}, ${vp.width}x${vp.height}`;
-          await expect(panel).toBeVisible();
-          await expectNoClippedText(panel, `known powers, ${where}`);
-          await expectWholeWords(panel, `known powers, ${where}`);
-          await expectNoPageScroll(page);
-          if (vp.width >= 1920)
-            await snap(
-              page,
-              `known-powers-${view}-${lang}-${vp.width}x${vp.height}`,
-            );
-        }
+async function knownPowersStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  const panel = await openSortsPowers(page);
+  // The discipline names show once, as the filter chips; a discipline is added from the select.
+  const addDiscipline = panel.getByRole("combobox", {
+    name: "Add a discipline",
+  });
+  await expect(panel.getByRole("button", { name: "Telepathy" })).toHaveCount(1);
+  for (const name of ["Telepathy", "Clairsentience"])
+    await addDiscipline.selectOption({ label: name });
+  await panel.getByRole("combobox", { name: "Search powers..." }).fill("mind");
+  await panel
+    .getByTestId("power-row")
+    .filter({ hasText: "Mind Blank" })
+    .getByRole("button", { name: "Add Mind Blank" })
+    .click();
+  await panel
+    .getByTestId("power-row")
+    .filter({ hasText: "Mind Thrust" })
+    .getByRole("button", { name: "Add Mind Thrust" })
+    .click();
+  await addDiscipline.selectOption({ label: "Psychokinesis" });
+  await expect(panel.getByTestId("powers-refusal")).toBeVisible();
+  // The known list beside the browser, then a power's detail open in its place.
+  for (const view of ["list", "detail"] as const) {
+    if (view === "detail") {
+      await panel.getByTestId("power-row").first().click();
+      await expect(panel.getByTestId("power-detail")).toBeVisible();
+    }
+    for (const lang of ["fr", "en"] as const) {
+      await chooseLanguage(page, lang);
+      await page.keyboard.press("Escape");
+      for (const vp of sizesAt(size, VIEWPORTS)) {
+        await page.setViewportSize(vp);
+        const where = `${view}, ${lang}, ${vp.width}x${vp.height}`;
+        await expect(panel).toBeVisible();
+        await expectNoClippedText(panel, `known powers, ${where}`);
+        await expectWholeWords(panel, `known powers, ${where}`);
+        await expectNoPageScroll(page);
+        if (vp.width >= 1920)
+          await snap(
+            page,
+            `known-powers-${view}-${lang}-${vp.width}x${vp.height}`,
+          );
       }
     }
-  });
-});
+  }
+}
 
 // One page header on every full-screen page: Roster, character creation, Admin and Ruleset share the
 // brand (mark and wordmark in full, with its accessible name), the title, the version and the way
@@ -5798,3 +5763,68 @@ for (const size of [VIEWPORTS[0], VIEWPORTS[4]]) {
     await runWalk(page, size, CLASS_STEPS, stack);
   });
 }
+
+/**
+ * The psionicist walk: the PSP block, the Powers tab, the Maintained card, the contact forms and the known
+ * powers, one size per walk. The long list needs a level 20 character, so it has a walk of its own.
+ */
+// Each step starts with no picks and nothing maintained: an earlier step's would change what the
+// disciplines select and the Powers tab offer.
+const freshPicks =
+  (step: Step): Step =>
+  async (page, size, stack, context) => {
+    const res = await page.request.fetch(`${stack.webUrl}/api/psionics/picks`, {
+      method: "PUT",
+      data: { picks: [] },
+      headers: { Origin: stack.webUrl },
+    });
+    expect(res.ok(), await res.text()).toBe(true);
+    // The PSP step keeps Intensify up: stopping it (a no-op when it is not kept) leaves nothing maintained.
+    await page.request.fetch(
+      `${stack.webUrl}/api/psionics/powers/intensify/stop`,
+      {
+        method: "POST",
+        data: {},
+        headers: { Origin: stack.webUrl },
+      },
+    );
+    await step(page, size, stack, context);
+  };
+
+const PSIONICIST_STEPS: [string, Step][] = (
+  [
+    ["PSP block and rest popover", pspStep],
+    ["powers tab", powersStep],
+    ["maintained card", maintainedStep],
+    ["contact forms", contactFormsStep],
+    ["known powers", knownPowersStep],
+  ] as [string, Step][]
+).map(([name, step]) => [name, freshPicks(step)]);
+
+test.describe("psionicist walks", () => {
+  test.use({ character: psionicist });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[4]]) {
+    test(`psionicist walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, PSIONICIST_STEPS, stack);
+    });
+  }
+});
+
+test.describe("psionicist long list walks", () => {
+  test.use({
+    character: { ...psionicist, level: 20, xp_total: 5_000_000, wis: 20 },
+  });
+  for (const size of [VIEWPORTS[0], VIEWPORTS[3], VIEWPORTS[4]]) {
+    test(`powers long list walk at ${size.width}x${size.height}`, async ({
+      page,
+      stack,
+    }) => {
+      test.setTimeout(90_000);
+      await runWalk(page, size, [["long list", longListStep]], stack);
+    });
+  }
+});

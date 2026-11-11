@@ -24,6 +24,7 @@ import {
   isLight,
   systemPrefersDark,
   themeVars,
+  themeColumns,
   themesFor,
   watchSystemScheme,
   type Mode,
@@ -44,11 +45,14 @@ function Choice({
   label,
   testId,
   mode,
+  columns,
   children,
 }: {
   label: string;
   testId?: string;
   mode?: string;
+  /** Lay the choices in an even grid of this many columns instead of a wrapping row. */
+  columns?: number;
   children: ReactNode;
 }) {
   return (
@@ -57,7 +61,12 @@ function Choice({
       <div
         role="radiogroup"
         aria-label={label}
-        className="flex flex-wrap gap-1"
+        className={columns ? "grid gap-1" : "flex flex-wrap gap-1"}
+        style={
+          columns
+            ? { gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }
+            : undefined
+        }
       >
         {children}
       </div>
@@ -161,6 +170,7 @@ export function SettingsPopover() {
           label={t("settings.theme")}
           testId="settings-theme"
           mode={light ? "light" : "dark"}
+          columns={themeColumns(themesFor(light).length)}
         >
           {themesFor(light).map((id) => (
             <button

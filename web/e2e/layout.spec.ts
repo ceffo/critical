@@ -1041,6 +1041,21 @@ test("settings popover: a long Google name is uncut at 1920 and 2560", async ({
   }
 });
 
+// ADR 0026 step 3.1: the theme grid never leaves one theme alone on a row.
+async function expectNoLoneRow(list: Locator, what: string) {
+  const tops = await list
+    .getByRole("radio")
+    .evaluateAll((els) =>
+      els.map((e) => Math.round(e.getBoundingClientRect().top)),
+    );
+  const perRow = new Map<number, number>();
+  for (const t of tops) perRow.set(t, (perRow.get(t) ?? 0) + 1);
+  expect(
+    [...perRow.values()].every((n) => n >= 2),
+    `${what}: themes per row ${[...perRow.values()].join(",")}`,
+  ).toBe(true);
+}
+
 // ADR 0026 step 4: a dark and a light theme per device, the mode picks which applies, "system"
 // switches live with the OS; both choices survive a reload and the inline script paints the
 // effective one before the app runs.
@@ -1112,6 +1127,7 @@ test("settings: language, appearance and both themes apply live and persist acro
   ).toHaveAttribute("aria-checked", "true");
   await expectNoClippedText(popover, "settings popover, fr");
   await expectWholeWords(popover, "settings popover, fr");
+  await expectNoLoneRow(popover.getByTestId("settings-theme"), "dark list, fr");
   await snap(page, "settings-popover-fr");
 
   // Système follows the OS live, between the two chosen themes.
@@ -1133,6 +1149,11 @@ test("settings: language, appearance and both themes apply live and persist acro
       .getByTestId("settings-theme")
       .getByRole("radio", { name: "Parchemin", exact: true }),
   ).toHaveAttribute("aria-checked", "true");
+  await expectNoLoneRow(
+    popover.getByTestId("settings-theme"),
+    "light list, fr",
+  );
+  await snap(page, "settings-popover-fr-light");
   await expect.poll(() => rootVar(page, "--tint")).toMatch(PARCHMENT);
   await popover.getByRole("radio", { name: "Sombre", exact: true }).click();
   await expect(

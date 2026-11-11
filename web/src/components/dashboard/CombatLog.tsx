@@ -282,7 +282,7 @@ function LogRow({
       <button
         type="button"
         className="flex min-h-6 min-w-0 flex-1 items-start gap-x-2 rounded-sm py-[3px] text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-pressed={selected}
+        aria-pressed={selected || latest}
         data-testid="log-select"
         onClick={onSelect}
       >

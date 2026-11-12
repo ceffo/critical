@@ -31,7 +31,9 @@ test("character details: view, edit with a field error, save, reload", async ({
   await expect(pop.getByText("Bard", { exact: true })).toBeVisible();
   // The PHB race the rules read (ADR 0030 step 1); there is no free-text race detail any more.
   await expect(pop.getByText("Half-elf", { exact: true })).toBeVisible();
-  await expect(pop.getByText("Not set").first()).toBeVisible();
+  // Unset fields are not listed: one link opens the form instead.
+  await expect(pop.getByText("Not set")).toHaveCount(0);
+  await expect(pop.getByTestId("details-set")).toBeVisible();
 
   for (const vp of VIEWPORTS) {
     await page.setViewportSize(vp);

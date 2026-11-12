@@ -640,6 +640,8 @@
       "spell": "Sorts"
     },
     "target": "{{value}}+",
+    "bonus": "{{name}} +{{value}}",
+    "bonusLabel": "Bonus aux jets",
     "mindAffecting": "Contre l’esprit",
     "mindAffectingHint": "Magie qui attaque l’esprit (charme, peur, illusion, suggestion…) : le prochain jet ajoute l’ajustement défensif contre la magie de votre Sagesse",
     "spell": "Sort",
@@ -2151,6 +2153,7 @@
     "cancel": "Annuler",
     "saving": "Enregistrement...",
     "none": "Non renseigné",
+    "set": "Renseigner",
     "class": "Classe",
     "level": "Niveau",
     "raceCode": "Race (règles)",

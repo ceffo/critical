@@ -49,6 +49,20 @@ export function codeOrEmpty(v: string | undefined, codes: string[]): string {
   return v !== undefined && codes.includes(v) ? v : "";
 }
 
+/**
+ * The optional details the character has not set, in display order. Alignment and sex are not
+ * among them: a character that lacks one is asked for it (ADR 0032 step 8.2), not left out.
+ */
+export function unsetDetails(c: Character): string[] {
+  const out: string[] = [];
+  if (c.age === null) out.push("age");
+  if (c.height_cm === null) out.push("height");
+  if (c.weight_kg === null) out.push("weight");
+  for (const f of TEXT_FIELDS) if (c[f] === "") out.push(f);
+  if (c.languages.length === 0) out.push("languages");
+  return out;
+}
+
 export function toDraft(d: CharacterDetails, language = "fr"): Draft {
   const units = unitsFor(language);
   return {

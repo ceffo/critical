@@ -209,9 +209,20 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       without scrolling.
    6. **Allocation** (amends step 2.7's table): the stage loses the card's extra width, about 1022 px
       at 1440x900 and 1233 px at 1707x1300; the act : result split of step 2.5 is unchanged.
+   7. **The card's lower half** (*added 2026-11-11, user: every default accepted*; amends ADR 0022
+      step 2.8). Under the saves the "Moi" column shows the character's **details** (the set fields
+      only), its **languages** and the **race's save bonuses** (from the served `raceSaveBonus`; they
+      are listed here because adding them to the one-line save rows made them wrap). The region
+      takes the room left and scrolls on its own; under 900 px high it keeps a 6 rem floor, so the
+      card scrolls and the region stays reachable. At 1440x900 in French with long names it may
+      collapse to nothing: the details are still in the popover, which hides unset fields and has
+      one "Renseigner" / "Complete" link to the form. ADR 0022 step 2.8's "the card shows the name
+      to the fifth save without scrolling" becomes: the fifth save is inside the card with the card
+      at its top, and at 1080 high and more neither the card nor the region scrolls.
 
    *Checked by* `layout.spec`: the "no cut text in French" test with a one-line check on each save
-   row and the heading at 1440x900 and 1707x1300, and the content target of step 2.8.
+   row and the heading at 1440x900 and 1707x1300, and the content target of step 2.8; for 5.7
+   `CharacterDetails.dom.test.tsx` and the "card details" step of the dashboard walks.
 6. **Act stage: the now band keeps one height** (replaces ADR 0022 step 2.5's 60 % cap;
    *amended 2026-11-11, user: the journal jumped as tabs changed*).
    1. Until the player drags the split, the now band (act panel | result panel) has **one fixed
@@ -426,8 +437,16 @@ Per screen, the user's words (the work items of the layout pass carry the full t
     2. **"Lancer" is quiet**: on Act, "Attaquer" stays the one main button (step 3.4).
     3. "Aucun favori" is a small hint (`text-label`, muted); the controls use the shared chip and
        button pieces. The rest of step 2.6 (cog first, one line) stands.
+    4. **The dice bar is collapsed by default** (*added 2026-11-11, user: every default accepted*):
+       the footer shows one "Dés" / "Dice" button (`aria-expanded`) in place of the composer. It
+       expands the bar (focus goes to the formula field); Escape, the same button or a roll
+       collapses it again (focus goes back to the button). "To the dice" buttons elsewhere fill the
+       formula and expand it. A refused formula keeps it open. Expanded, it covers no control and
+       cuts no text at the layout sizes, as before.
 
-    *Checked by* the dice spec and `layout.spec`'s no-cut audit of the footer in French.
+    *Checked by* the dice spec and `layout.spec`'s no-cut audit of the footer in French; for 15.4
+    `DiceComposer.dom.test.tsx` and the "dice bar" step of the dashboard walks (collapsed and
+    expanded, French and English, no control cut or overlapped).
 
 ## Consequences
 

@@ -267,7 +267,7 @@ function PickRow({
               extraSlots: figure?.extraSlots,
               cost: shownCost,
             }}
-            className="w-fit max-w-full rounded-sm text-left text-body outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="w-fit max-w-full rounded-sm text-left text-body hover:underline"
           />
           <span
             className="text-label break-words text-ink-muted"
@@ -399,13 +399,13 @@ function CatalogueGroup({
                   modifier: r.option.modifier,
                   cost: r.cost,
                 }}
-                className="flex min-h-7 min-w-0 flex-1 items-center rounded-md px-2.5 py-0.5 text-left transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+                className="flex min-h-7 min-w-0 flex-1 items-center rounded-md px-2.5 py-0.5 text-left transition-colors hover:bg-raised-hover"
               >
                 <span className="min-w-0 break-words">{r.name}</span>
               </ProficiencyNameButton>
               <button
                 type="button"
-                className="flex items-center gap-1.5 rounded-md px-2.5 py-0.5 transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                className="flex items-center gap-1.5 rounded-md px-2.5 py-0.5 transition-colors hover:bg-raised-hover disabled:text-ink-muted"
                 disabled={has}
                 aria-label={label}
                 title={label}

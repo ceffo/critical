@@ -79,11 +79,11 @@ export function SkillsTab() {
                   >
                     <ProficiencyNameButton
                       facts={facts}
-                      className="min-w-0 flex-1 rounded-md px-2.5 py-0.5 text-left transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+                      className="min-w-0 flex-1 rounded-md px-2.5 py-0.5 text-left transition-colors hover:bg-raised-hover"
                     />
                     <button
                       type="button"
-                      className="flex items-center rounded-md px-2.5 py-0.5 transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                      className="flex items-center rounded-md px-2.5 py-0.5 transition-colors hover:bg-raised-hover disabled:text-ink-muted"
                       disabled={rolling || unusable}
                       aria-label={label}
                       title={label}
@@ -100,7 +100,7 @@ export function SkillsTab() {
                 {/* The shared clickable row (the saves' rows): a raised stripe, hover and focus. */}
                 <button
                   type="button"
-                  className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50 disabled:text-ink-muted"
+                  className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors hover:bg-raised-hover disabled:text-ink-muted"
                   disabled={rolling || unusable}
                   aria-label={label}
                   title={label}

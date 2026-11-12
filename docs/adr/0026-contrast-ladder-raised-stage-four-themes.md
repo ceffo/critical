@@ -103,6 +103,20 @@ steps 1-3**, and the tests decide. Where a value of the round misses a rule, the
    4. **Not adopted**: the review's "every accent 1.8:1 off tint". Danger cannot meet it (Context);
       it stands out as a filled verdict pill (step 5.5) and by hue.
    5. The card outline has no floor: with the tone step it no longer carries the boundary alone.
+   6. **One focus ring, one target floor.** Every focusable control, native or not, shows the same
+      ring: a 2 px solid outline in `--ring` (the tint) at a 2 px offset, set once by a global
+      `:focus-visible` rule in `index.css`. A component never styles its own ring (no `ring-*`, no
+      `outline-*` of its own); a popup container that takes focus programmatically opts out with
+      `outline-none`. Every control is at least 24 x 24 CSS px to hit (WCAG 2.5.8): a smaller one
+      keeps its look and grows an invisible hit area (`hit-24` / `hit-24-up` in `index.css`, or the
+      label it sits in). Text that carries the warning accent reaches 4.5:1 on every tone it can
+      sit on (page, card, raised, hover and selected), so the light themes' warning is L .45 to .47.
+      _Enforced by_ the "focus ring and targets" step of the dashboard walk in `layout.spec.ts`
+      (every tab stop's computed outline in all ten theme-modes; the 24 px hit area of the name, the
+      level, the version badge, the "to spend" tag and the mind-affecting checkbox) and the warning
+      test of `theme.test.ts`. _Amended 2026-11-11; was: a ring styled per component, and warning
+      text checked on the card and the raised step only (light Arcane .51, 4.12:1 on the selected
+      tone)._
 
    _Enforced by_ the "contrast" describe block of `theme.test.ts`, extended with the ΔL and 3:1
    pairs, run over every theme and mode of step 3.

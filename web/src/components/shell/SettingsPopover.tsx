@@ -75,7 +75,7 @@ function Choice({
 }
 
 const segment =
-  "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-4";
+  "flex min-h-7 flex-auto items-center justify-center gap-1 rounded-md px-2 py-1 text-body transition-colors [&_svg]:size-4";
 
 /** A theme's swatch in its own colours for that mode: its tint on its card, ringed by its page. */
 function Swatch({ id, light }: { id: string; light: boolean }) {
@@ -120,7 +120,7 @@ export function SettingsPopover() {
         data-testid="settings-trigger"
         aria-label={t("settings.open")}
         title={t("settings.open")}
-        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-raised-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
+        className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-raised-hover hover:text-foreground data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
       >
         <GearSix />
       </PopoverTrigger>

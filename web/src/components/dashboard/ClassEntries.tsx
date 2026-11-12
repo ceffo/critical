@@ -46,7 +46,7 @@ export function ClassEntries({
       <PopoverTrigger
         aria-label={t("app.classEntry.summaryOpen", { summary })}
         data-testid="class-summary"
-        className="flex w-full min-w-0 cursor-pointer items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-left text-body font-medium break-words outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+        className="flex w-full min-w-0 cursor-pointer items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-left text-body font-medium break-words hover:bg-raised-hover"
       >
         <span className="min-w-0">{summary}</span>
         {entries.some((e) => limitOf(e.class)) && (
@@ -94,7 +94,7 @@ export function ClassEntries({
                   })}
                   data-testid={`class-entry-${e.class}`}
                   data-state={e.state}
-                  className="grid w-full min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 rounded-md px-2.5 pt-1 text-left outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+                  className="grid w-full min-w-0 cursor-pointer grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 rounded-md px-2.5 pt-1 text-left hover:bg-raised-hover"
                 >
                   <span className="flex min-w-0 flex-wrap items-center gap-x-2 text-body font-medium break-words">
                     {name}

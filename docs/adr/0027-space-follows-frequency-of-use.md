@@ -212,20 +212,22 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 
    *Checked by* `layout.spec`: the "no cut text in French" test with a one-line check on each save
    row and the heading at 1440x900 and 1707x1300, and the content target of step 2.8.
-6. **Act stage: the now band fits its tab** (replaces ADR 0022 step 2.5's 60 % cap).
-   1. Until the player drags the split, the now band (act panel | result panel) is **as tall as the
-      active tab's content**, and the journal takes the rest of the stage, at least 14rem (step 2.5).
-      Changing tab resizes the band. When the tab's content is taller than the stage minus the
-      journal's minimum and the handle, the act panel scrolls inside.
-      *Implementation note (2026-10-17):* a result taller than the tab (an attack against an unknown
-      AC with the GM's Hit / Miss) also sets the band's height, so that every-turn control does not
-      hide under a scroll (step 1.7); the band is the taller of the two, with no cap.
+6. **Act stage: the now band keeps one height** (replaces ADR 0022 step 2.5's 60 % cap;
+   *amended 2026-11-11, user: the journal jumped as tabs changed*).
+   1. Until the player drags the split, the now band (act panel | result panel) has **one fixed
+      height for every tab**, that of the tallest tab's content (680 px: Turning's, measured at 676 with its tab header), and the journal
+      takes the rest of the stage, at least 14rem (step 2.5). Changing tab never moves the
+      journal's top edge. When the stage is too short for the band plus the journal's minimum, the
+      band gives way and keeps what is left; a tab (or a result) taller than the band scrolls
+      inside its panel. A short tab leaves empty room under its content: that is the price of the
+      steady journal.
    2. **Weapons does not scroll** at 1440x900 in French with the header at rest.
    3. The split handle is unchanged (ADR 0022 step 5.4): a drag sets the journal's height (and the
       band takes the rest), a click collapses it; both stay per-device preferences.
 
-   *Checked by* `layout.spec`'s "act panel" test: at 1440x900 in French, the Weapons tab's
-   `scrollHeight` equals its `clientHeight` and the journal is at least 14rem tall.
+   *Checked by* `layout.spec`'s "act panel" step of the dashboard walks (the journal's top edge is the
+   same on every Act tab at each walk size) and its French step (at 1440x900 the Weapons tab's
+   `scrollHeight` equals its `clientHeight` and the journal is at least 14rem tall).
 7. **Weapons tab** (amends ADR 0022 step 2.5 "Weapons tab").
    1. **Switching weapon**: one button to switch to the **previous weapon** (the one the server
       stores in the attack form), its caption the swap icon and the weapon's name, its tooltip
@@ -320,8 +322,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
           spell, a damage or utility spell and a hostile buff (Blindness, Pain Touch, Slow, the
           Malisons) get a plain button. The cast endpoint still takes an explicit `onSelf` on any
           of them.
-       2. **The menu holds one entry, the alternate** of the default: "Sur un allié" when the
-          default is the Bard, "Sur moi" otherwise.
+       2. **The menu holds both targets, the default ticked** (*amended 2026-11-11: it held only
+          the alternate, so the arrow had no visible meaning*): "Sur moi" and "Sur un allié", the
+          default first, from the served `cast_target`. The arrow shows only when the menu holds two
+          entries; its name says who the spell lands on and its tooltip lists the two targets
+          (en and fr). The buttons keep the same width and column alignment, split or not.
        3. **The default target**: always the Bard for a self-only or "self or other" spell; for an
           area, the Bard unless the buff is hostile; never for "other". **Hostile** means a
           modifier that hurts the bearer at the caster level, dice at their largest: to-hit,
@@ -335,7 +340,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        `TestRepoSeeds_EveryBuffDefaultTargetAndChoice` (every buff of the seeds),
        `TestInfo_ServesTheTargetChoice`, `TestGetInfo_ServesTheCastTarget`, castsvc's
        `TestCast_PerSeedEntry` (Slow off the Bard by default and on him when asked, Stoneskin on an
-       ally) and the cast spec (no arrow on Rary's, one entry on Strength).
+       ally) and the cast spec (no arrow on Rary's, two entries with the default ticked on Strength).
     2. **"Repos long"** always visible (promoted, step 1.6), no parenthesis, a crescent-moon icon;
        **"Préparer"** beside it.
     3. **Slots as dots in three states** per level: empty (a slot not used, no spell prepared in it),
@@ -359,9 +364,12 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        is the server's slot count per level: the browser only compares two numbers the server gave
        it, and the server still refuses an over-budget save.
     6. A spell name opens the details popup (step 10.4).
+    7. **Side by side, only the columns scroll**: the editor takes the act panel's full height and
+       the panel itself never scrolls; with a long book (30 and more spells) the grimoire column
+       scrolls inside itself, from 1280x800 to 2560x1440.
 
-    *Checked by* the spells spec's prepare flow (one happy path) and a unit test of the over-budget
-    gate.
+    *Checked by* the spells spec's prepare flow (one happy path), a unit test of the over-budget
+    gate and the layout spec's "prepare, long spellbook" step.
 12. **Skills tab** (amends ADR 0022 step 2.5 "Skills tab"; the UI side of ADR 0014 step 5).
     1. **Columns: the name and the ability with its modifier as a pill** ("DEX 17 [−1]"). The
        "Seuil" and "Dernier" columns go (the target and verdict are on the result card).
@@ -434,8 +442,8 @@ Per screen, the user's words (the work items of the layout pass carry the full t
 - ADR 0022's tiers were implicit (the 44 px Attack, the always-visible zones); step 1 makes them the
   rule every later layout change is judged by, and the review checklist
   (`docs/agent-workflow.md`, "Review") carries steps 2 and 3.
-- **The 60 % cap goes** (step 6): with a short tab the journal gets more room, with a tall one
-  (Spells, Skills before step 12) less; the 14rem minimum and the drag stay the player's way out.
+- **The 60 % cap goes** (step 6): the band keeps one height (step 6.1, amended): the journal no longer follows the tab;
+  the 14rem minimum and the drag stay the player's way out.
 - The weapon chips of ADR 0022 step 2.5 were themselves the regression the user named; the previous
   weapon is already stored by the server, so step 7.1 needs no API change.
 - Every check adjusted on the result card (step 8.3) leaves ADR 0014 step 5's pre-roll adjustment

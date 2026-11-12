@@ -61,7 +61,7 @@
   --magic: oklch(0.47 0.079 200);
   --danger: oklch(0.5 0.2 25);
   --success: oklch(0.485 0.133 150);
-  --warning: oklch(0.51 0.117 62);
+  --warning: oklch(0.47 0.108 62);
   --on-accent: oklch(0.985 0.005 285);
   --on-highlight: oklch(0.15 0.03 285);
   --ink-muted: color-mix(in oklab, var(--ink) 74%, transparent);
@@ -482,7 +482,16 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
+  }
+  /*
+   * The one focus ring (ADR 0026 step 2.2 and 2.6): every focusable control, native or not, shows
+   * this outline in the theme's `--ring` (the tint, 3:1 on the card). A component never styles its
+   * own ring; popup containers that take focus programmatically opt out with `outline-none`.
+   */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
   }
   html {
     @apply font-sans;
@@ -492,6 +501,37 @@
   body {
     @apply bg-background text-foreground;
     margin: 0;
+  }
+}
+
+/*
+ * A 24 px minimum target (WCAG 2.5.8) without changing the look: an invisible box centred on the
+ * control, at least 24 px high and as wide as the control (or 24 px). The control keeps its size.
+ */
+@utility hit-24 {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 1.5rem);
+    height: max(100%, 1.5rem);
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* The same, growing upward only, for a control whose lower neighbour sits right under it. */
+@utility hit-24-up {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: max(100%, 1.5rem);
+    height: max(100%, 1.5rem);
+    transform: translateX(-50%);
   }
 }
 

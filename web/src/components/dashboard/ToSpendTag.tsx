@@ -43,7 +43,7 @@ export function ToSpendTag({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          "inline-flex h-5 shrink-0 items-center rounded-full bg-selected px-2 text-label font-medium text-foreground outline-none transition-colors hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50",
+          "hit-24 inline-flex h-5 shrink-0 items-center rounded-full bg-selected px-2 text-label font-medium text-foreground transition-colors hover:bg-raised-hover",
           open && "bg-raised-hover",
         )}
         title={t("app.levelUp.toSpendHint")}

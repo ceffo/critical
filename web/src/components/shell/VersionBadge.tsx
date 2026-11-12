@@ -79,7 +79,7 @@ export function VersionBadge({
           aria-haspopup="dialog"
           title={t("changelog.open")}
           onClick={() => setPanel(true)}
-          className="flex cursor-pointer items-center gap-1.5 rounded-md px-1 outline-none hover:bg-raised-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="hit-24 flex cursor-pointer items-center gap-1.5 rounded-md px-1 hover:bg-raised-hover hover:text-foreground"
         >
           {label}
         </button>

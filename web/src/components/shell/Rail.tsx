@@ -54,7 +54,7 @@ export function Rail({
               key={a}
               aria-current={on ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&_svg]:size-5",
+                "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors [&_svg]:size-5",
                 on
                   ? "selected font-medium"
                   : "text-muted-foreground hover:bg-raised-hover hover:text-foreground",

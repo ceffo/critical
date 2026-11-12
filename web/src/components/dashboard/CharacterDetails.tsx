@@ -65,7 +65,7 @@ export function CharacterDetails({
           disabled={!character}
           title={t("details.open")}
           data-testid="details-trigger"
-          className="block max-w-full break-words rounded-sm text-left text-key outline-none hover:text-amb-300 focus-visible:ring-3 focus-visible:ring-ring/50 data-popup-open:text-amb-300"
+          className="hit-24-up block max-w-full break-words rounded-sm text-left text-key hover:text-amb-300 data-popup-open:text-amb-300"
         >
           {name}
         </PopoverTrigger>

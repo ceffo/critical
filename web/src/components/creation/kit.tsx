@@ -89,7 +89,7 @@ export function Seg<T extends string>({
           disabled={o.disabled}
           onClick={() => onChange(o.value)}
           className={cn(
-            "flex min-h-7 items-center justify-center gap-1 rounded-md px-3 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:text-ink-muted [&_svg]:size-4",
+            "flex min-h-7 items-center justify-center gap-1 rounded-md px-3 py-1 text-body disabled:cursor-not-allowed disabled:text-ink-muted [&_svg]:size-4",
             o.value === value ? "chip-chosen" : "chip hover:bg-raised-hover",
           )}
         >
@@ -186,7 +186,7 @@ export function Choice({
       data-testid={testId}
       onClick={() => !off && onPick()}
       className={cn(
-        "flex min-w-0 flex-col gap-1 rounded-lg p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+        "flex min-w-0 flex-col gap-1 rounded-lg p-3 text-left",
         on ? "chip-chosen" : "bg-raised",
         !on && !off && "hover:bg-raised-hover",
         off && "cursor-not-allowed opacity-60",

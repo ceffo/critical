@@ -70,7 +70,7 @@ export function SaveSpell({
         </span>
         <button
           type="button"
-          className="rounded p-0.5 outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="rounded p-0.5 hover:bg-raised-hover"
           aria-label={t("saves.spellClear", { name })}
           title={t("saves.spellClear", { name })}
           disabled={disabled}
@@ -146,7 +146,7 @@ export function SaveSpell({
                 <li key={c.id}>
                   <button
                     type="button"
-                    className="w-full rounded px-2 py-1 text-left text-body outline-none hover:bg-raised-hover focus-visible:ring-3 focus-visible:ring-ring/50"
+                    className="w-full rounded px-2 py-1 text-left text-body hover:bg-raised-hover"
                     aria-label={t("saves.spellPick", { name })}
                     data-testid="save-spell-option"
                     onClick={() => {

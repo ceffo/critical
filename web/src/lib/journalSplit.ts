@@ -5,6 +5,12 @@
 export const JOURNAL_MIN_PX = 224;
 /** The now band keeps room for the act panel's tabs and a first row when the journal is dragged up. */
 export const NOW_MIN_PX = 160;
+/**
+ * The now band's resting height: that of the tallest act tab's content (Turning's: 676 px measured, with its tab header), the
+ * same for every tab so the journal's top edge never moves when the tab changes (ADR 0027 step 6.1).
+ * It gives way to the journal's minimum in a short stage; a taller tab scrolls inside the panel.
+ */
+export const NOW_BAND_PX = 680;
 /** One arrow-key press on the handle moves it by this much. */
 export const SPLIT_STEP_PX = 16;
 

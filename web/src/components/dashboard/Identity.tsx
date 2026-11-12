@@ -144,7 +144,8 @@ export function Identity({
                       })
                     : undefined
                 }
-                className="relative shrink-0 pb-1 text-body text-muted-foreground tabular-nums outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50"
+                data-testid="level-open"
+                className="hit-24 shrink-0 pb-1 text-body text-muted-foreground tabular-nums hover:text-foreground"
               >
                 {t("app.levelValue", {
                   level: character.derived.realizedLevel,
@@ -236,10 +237,7 @@ export function Identity({
                 })}
                 data-testid={buffed ? "str-cell" : `ability-${k}`}
                 onClick={() => void rollAbility(k)}
-                className={cn(
-                  CELL,
-                  "cursor-pointer outline-none hover:bg-input focus-visible:ring-3 focus-visible:ring-ring/50",
-                )}
+                className={cn(CELL, "cursor-pointer hover:bg-input")}
               />
             );
             if (!buffed)

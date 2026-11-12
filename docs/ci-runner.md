@@ -1,14 +1,26 @@
 # CI runner
 
-Every workflow job runs on one self-hosted GitHub Actions runner (`runs-on: [self-hosted, critical]`), a VM on
-the owner's Proxmox host. GitHub-hosted minutes were exhausted, and the runner also means the e2e job no longer
-installs Chromium's system packages on each run. [agent-workflow.md](agent-workflow.md) ("CI and PRs") describes
-the jobs themselves.
+The heavy and privileged jobs run on self-hosted GitHub Actions runners (`runs-on: [self-hosted, critical]`), VM
+instances on the owner's Proxmox host; the small jobs run on GitHub-hosted `ubuntu-latest`. Standard GitHub-hosted
+runners are free in a public repository ([GitHub billing docs, "Actions billing"](https://docs.github.com/en/billing/concepts/product-billing/github-actions)),
+so the hosted jobs cost nothing. The Actions budget did run out on 2026-11-11 (the heavy CodeQL and CI load that
+day), which is why everything moved here; with only the small jobs hosted that stops mattering. If a hosted job
+ever queues or fails for billing, check Settings → Billing first. [agent-workflow.md](agent-workflow.md)
+("CI and PRs") describes the jobs themselves.
+
+| Where | Jobs | Why |
+|---|---|---|
+| GitHub-hosted `ubuntu-latest` | `changes`, `validate`, `generated`, `pr-title`, Dependabot auto-merge | Small, parallel-friendly, no queue (about 2 s start, against minutes behind the runners); a fork's code never runs on the VM anyway |
+| Homelab runners | `e2e`, `dev-smoke`, `image`, release, promote, major, main catch-up | Chromium's system packages are preinstalled (no per-run apt), docker is there, and release/promote hold the environment secrets and deploy key |
+
+Queueing was the whole PR-latency regression when every job shared one runner (median wait 4 min, p90 15-20 min,
+CRI-333); keeping the cheap jobs off it, and running several runner instances, brings it back.
 
 ```mermaid
 flowchart LR
-    GH["GitHub (ceffo/critical)"] -->|"long poll, outbound only"| R["runner service on ci-runner VM"]
-    R --> J["job: validate, e2e, dev-smoke, image, release..."]
+    GH["GitHub (ceffo/critical)"] -->|"small jobs"| H["ubuntu-latest (hosted)"]
+    GH -->|"long poll, outbound only"| R["N runner services on the ci-runner VM"]
+    R --> J["job: e2e, dev-smoke, image, release..."]
     J --> D["docker on the VM"]
 ```
 
@@ -22,7 +34,12 @@ flowchart LR
 | Runner | `~/actions-runner`, systemd service `actions.runner.ceffo-critical.centauri-ci`, label `critical` |
 
 The e2e suite takes about 5 minutes here (budget in [ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)).
-One runner runs one job at a time: a CI run's jobs queue behind each other.
+One runner service runs one job at a time; GitHub gives a queued job to any idle runner with the label, so
+`centauri-ci`, `centauri-ci-2` and `centauri-ci-3` (below) run three jobs at once on the VM. Jobs on the VM are
+safe side by side: e2e and dev-smoke use free ports and throwaway compose projects, the image job tags and removes
+`critical:ci-<run id>-<attempt>`, and the Playwright browser download is serialized with `flock` on
+`~/.cache/ms-playwright.lock`. Each runner has its own `_work` directory; Go and npm caches under `$HOME` are
+safe to share. If e2e slows down with three jobs at once, give the VM more cores (`qm set 106 --cores 8 --memory 12288`, reboot).
 
 ## Fork pull requests never run here
 
@@ -72,6 +89,25 @@ repository.
    open a pull request and see CI run on it. To check the machine alone, copy the repository to it and run
    `just validate`, `just e2e` and `just dev-smoke`.
 
+### More runner instances (parallel jobs)
+
+Needs the user: a registration token per runner (Settings → Actions → Runners → New self-hosted runner; it expires
+in an hour; never put it in a file, a commit or an issue). On the VM, as `ci`, for `n` in 2 and 3, with a fresh
+token each:
+
+```bash
+n=2
+mkdir ~/actions-runner-$n && tar -C ~/actions-runner-$n -xzf ~/actions-runner/actions-runner-linux-x64-*.tar.gz
+# or download the same release tarball again if the archive is gone
+cp ~/actions-runner/.env ~/actions-runner-$n/.env
+cd ~/actions-runner-$n
+./config.sh --unattended --url https://github.com/ceffo/critical --token <token> \
+  --name centauri-ci-$n --labels critical --replace
+sudo ./svc.sh install ci && sudo ./svc.sh start
+```
+
+Check: the repository's runner list shows every `centauri-ci*` Idle; reboot the VM and they all come back.
+Remove one like the first runner (its own directory, `./config.sh remove`).
+
 Removing the runner: **Settings → Actions → Runners → Remove** (or `./config.sh remove --token <token>`), then
-destroy the VM. To go back to GitHub-hosted runners, switch the `runs-on` lines back to `ubuntu-latest` and
-restore the Chromium apt steps of the e2e job (git history of `ci.yml`).
+destroy the VM. To move a job to GitHub-hosted runners, switch its `runs-on` line to `ubuntu-latest` (for e2e, also restore the Chromium apt steps of the e2e job (git history of `ci.yml`)).

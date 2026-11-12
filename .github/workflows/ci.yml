@@ -26,10 +26,9 @@ jobs:
   # still starts.
   changes:
     name: changes
-    # Never a fork's pull request: this runner is a machine of the owner's (docs/ci-runner.md). The jobs that
-    # need changes are skipped with it.
+    # Never a fork's pull request (docs/ci-runner.md): the jobs that need changes are skipped with it.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, critical]
+    runs-on: ubuntu-latest
     # checks: read lets the script see whether e2e passed on the previous head before a pure branch update keeps it.
     permissions:
       contents: read
@@ -55,10 +54,9 @@ jobs:
 
   validate:
     name: validate
-    # Never a fork's pull request: this runner is a machine of the owner's (docs/ci-runner.md). The jobs that
-    # need changes are skipped with it.
+    # Never a fork's pull request (docs/ci-runner.md): the jobs that need changes are skipped with it.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, critical]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -119,16 +117,18 @@ jobs:
         working-directory: web
       # Chromium's system packages (fonts, xvfb, libnss3...) are installed once on the runner (docs/ci-runner.md),
       # so no apt step runs here; the browser build is downloaded only when Playwright's version moved on.
+      # flock: runner instances on the same VM share ~/.cache/ms-playwright; one download at a time.
       - name: Install Playwright Chromium
-        run: npx playwright install chromium
+        run: mkdir -p "$HOME/.cache" && flock "$HOME/.cache/ms-playwright.lock" npx playwright install chromium
         working-directory: web
       - name: Run the e2e suite
         # The suite's budget is 3 minutes (ADR 0048, docs/agent-workflow.md); 6 here makes a regression fail on this
         # step instead of the job timeout hiding which step was slow: the tripwire for a regression.
         timeout-minutes: 6
         run: just e2e
+      # Only a failure needs the screens and traces; nothing reads them after a green run.
       - name: Upload e2e results
-        if: ${{ !cancelled() }}
+        if: ${{ failure() }}
         uses: actions/upload-artifact@v7
         with:
           name: e2e-results
@@ -137,7 +137,8 @@ jobs:
           if-no-files-found: ignore
 
   # Builds the production image with the fixture catalogue and smoke-checks it (ADR 0024 steps 1
-  # and 7.1). Nothing is pushed and no build cache is exported.
+  # and 7.1). Nothing is pushed and no build cache is exported. The tag carries the run id and attempt: runner
+  # instances on the same VM share one Docker daemon, so two image jobs must not share a tag.
   image:
     name: image
     needs: changes
@@ -148,20 +149,22 @@ jobs:
       - uses: actions/checkout@v7
       - name: Build the image (fixture catalogue)
         run: >-
-          docker build -t critical:ci
+          docker build -t "critical:ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
           --build-context catalogue=api/testdata
           --build-context changelog=api/testdata
           --build-arg COMMIT="$GITHUB_SHA" --build-arg VERSION=0.0.0 .
       # 0.0.0: a stand-in version, to check that the one baked in is the one /api/health reports.
       - name: Smoke-check the image
-        run: scripts/image-smoke.sh critical:ci "$GITHUB_SHA" 0.0.0
+        run: scripts/image-smoke.sh "critical:ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$GITHUB_SHA" 0.0.0
+      - name: Remove the image
+        if: ${{ always() }}
+        run: docker rmi -f "critical:ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" || true
 
   generated:
     name: generated code is up to date
-    # Never a fork's pull request: this runner is a machine of the owner's (docs/ci-runner.md). The jobs that
-    # need changes are skipped with it.
+    # Never a fork's pull request (docs/ci-runner.md): the jobs that need changes are skipped with it.
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, critical]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

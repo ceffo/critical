@@ -13,9 +13,9 @@ permissions:
 jobs:
   pr-title:
     name: conventional-commit title
-    # Never a fork's pull request: the runner is a machine of the owner's (docs/ci-runner.md).
+    # Never a fork's pull request (docs/ci-runner.md).
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
-    runs-on: [self-hosted, critical]
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - uses: actions/checkout@v7

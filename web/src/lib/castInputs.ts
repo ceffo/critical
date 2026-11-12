@@ -3,6 +3,7 @@
 // validates every cast; this only picks which inputs to show and what to send.
 import type { CastOptions } from "@/api/spells";
 import type {
+  CastOn,
   CastTarget,
   SpellbookEntry,
   SpellMode,
@@ -84,4 +85,15 @@ export function planCast(
       mode: mode?.key,
     },
   };
+}
+
+/**
+ * The targets the arrow's menu lists, from the served `cast_target` only: where the main part lands
+ * (`default`) first, then the other one. A menu that would hold a single entry is no menu: the
+ * button has no arrow then.
+ */
+export function castMenu(target?: CastTarget): CastOn[] {
+  if (!target) return [];
+  const entries = [target.default, target.alternate];
+  return entries.filter((on, i) => entries.indexOf(on) === i);
 }

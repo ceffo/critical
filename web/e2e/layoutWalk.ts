@@ -147,6 +147,8 @@ export async function expectCompactJournal(
       (await turns[i - 1].boundingBox())!,
       (await turns[i].boundingBox())!,
     ];
+    // From 2200 px the rounds flow in two columns (ADR 0017 step 1): the blocks touch within a column.
+    if (Math.abs(b.x - a.x) > 40) continue;
     expect(
       Math.abs(b.y - (a.y + a.height)),
       `no gap between turn blocks, ${where}`,
@@ -170,15 +172,23 @@ export async function expectCompactJournal(
     entryText.x - logBox.x,
     `entry text near the left, ${where}`,
   ).toBeLessThan(150);
+  // Times are right-aligned within a column (two columns from 2200 px wide).
   const rightEdges = await log
     .getByTestId("log-time")
     .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().right));
   expect(rightEdges.length, `times, ${where}`).toBeGreaterThanOrEqual(2);
-  for (const r of rightEdges)
-    expect(
-      Math.abs(r - rightEdges[0]),
-      `time right-aligned, ${where}`,
-    ).toBeLessThanOrEqual(1);
+  const columns: number[][] = [];
+  for (const r of rightEdges) {
+    const col = columns.find((c) => Math.abs(c[0] - r) <= 500);
+    if (col) col.push(r);
+    else columns.push([r]);
+  }
+  for (const col of columns)
+    for (const r of col)
+      expect(
+        Math.abs(r - col[0]),
+        `time right-aligned, ${where}`,
+      ).toBeLessThanOrEqual(1);
   await expect(
     log.locator('[data-kind="round_advance"]'),
     `a turn's opening rows, ${where}`,

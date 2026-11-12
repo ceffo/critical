@@ -42,7 +42,7 @@ function useHeight(ref: React.RefObject<HTMLDivElement | null>): number {
 
 /**
  * The Act activity's stage (ADR 0022 step 2.5): the "now" band (the act panel beside the result
- * panel, act : result = minmax(28rem, 1.35fr) | minmax(24rem, 1fr) from 1280 px wide; below that the
+ * panel, act : result = minmax(28rem, 1.35fr) | minmax(24rem, 1fr) from 1280 px wide, 1fr | 1fr from 2200 px (ADR 0017 step 1, wide screens); below that the
  * two minimums no longer fit beside the rail and the character card, so the result panel stacks under
  * the act panel and the band scrolls as one), then the split handle, then the journal. By default the band has one fixed height, the tallest tab's, whatever the active tab
  * (ADR 0027 step 6.1, so the journal's top edge never moves), and the journal (at least 14rem) takes
@@ -140,7 +140,7 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
       data-testid="act-stage"
     >
       <div
-        className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto min-[1280px]:grid-cols-[minmax(28rem,1.35fr)_minmax(24rem,1fr)] min-[1280px]:grid-rows-[minmax(0,1fr)] min-[1280px]:overflow-y-visible"
+        className="grid min-h-0 grid-cols-1 gap-3 overflow-y-auto min-[1280px]:grid-cols-[minmax(28rem,1.35fr)_minmax(24rem,1fr)] min-[2200px]:grid-cols-[minmax(28rem,1fr)_minmax(24rem,1fr)] min-[1280px]:grid-rows-[minmax(0,1fr)] min-[1280px]:overflow-y-visible"
         style={band}
         data-testid="now-band"
       >

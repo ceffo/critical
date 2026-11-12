@@ -71,7 +71,7 @@ describe("cast entry actions", () => {
     // CastResultView, the API error).
     expect(
       t("lookup.addEffectLabel", { name: "Image miroir", level: 15 }),
-    ).toBe("Ajouter Image miroir comme effet au niveau 15");
+    ).toBe("Suivre comme effet : Image miroir, niveau 15");
     expect(
       t("result.cast.effectHeading", { name: "Image miroir", casterLevel: 15 }),
     ).toBe("Effet ajouté : Image miroir, niveau 15");

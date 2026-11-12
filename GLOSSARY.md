@@ -245,7 +245,7 @@ A psionic power of the catalogue (format 13, 152 of them, en and fr): a name, a 
 _Code_: Power
 
 **Known powers** (fr: pouvoirs connus):
-The list of picks a psionicist holds, in his order: a discipline, a power, or a relearn of a science or devotion; the **allowance** is Table 4's cumulative count of each kind at his psionics level, and what the list takes is **used**. Stored per character, served in the derived data and saved whole over `PUT /api/psionics/picks` as one undoable `psionic_pick` entry; a list over the rules is refused with the rule's code. [ADR 0043](docs/adr/0043-psionics.md) step 9.
+The list of picks a psionicist holds, in his order: a discipline, a power, or a relearn of a science or devotion (kept as a rule term, shown as "Relearn: +1 score" / "Réapprendre : +1 au score": +1 to its score, one more slot); the **allowance** is Table 4's cumulative count of each kind at his psionics level, and what the list takes is **used**. Stored per character, served in the derived data and saved whole over `PUT /api/psionics/picks` as one undoable `psionic_pick` entry; a list over the rules is refused with the rule's code. [ADR 0043](docs/adr/0043-psionics.md) step 9.
 _Code_: PowerKnowledge, Allowance, Used
 
 **Primary discipline** (fr: discipline primaire) _(planned)_:
@@ -348,7 +348,7 @@ The weapon attack: to-hit, **critical hit**, damage. [ADR 0002](docs/adr/0002-at
 [ADR 0001](docs/adr/0001-critical-hits.md), [ADR 0003](docs/adr/0003-damage.md).
 _Code_: TargetSize, AttackBreakdown, AttackForm, AttackFormPatch, AttackFormView, AttackPreview, AttackRate, AttackRateView, AttackRequest, Attacks
 
-**Target AC**, **Unknown AC**:
+**Target AC**, **Unknown AC** (UI: "AC unknown" / "CA inconnue", a button that forgets the target AC):
 The AC the DM gives for the target, or none yet, settled by the **DM's verdict**.
 [ADR 0012](docs/adr/0012-attack-against-unknown-ac.md).
 
@@ -388,7 +388,7 @@ _Code_: SkillSet, SetPoints, SetSkill, SkillSetSkill
 _Avoid_: "kind of thief / bard skill" for a set (that is the **check kind**).
 
 **Proficiency slot** (fr: emplacement de compétence):
-One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend**.
+One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend** (UI: "Slots to spend" / "Assigner", the chip on the character card with a tooltip saying what is waiting (slots, skill points, free spells) and that it opens the way to assign them, shown only while a slot or skill point is unspent or a pool is over budget; the fr is short so the card header keeps one line).
 [ADR 0037](docs/adr/0037-proficiencies.md) steps 3, 10 and 11.
 _Code_: ProficiencySlots, NonweaponPool, Spending
 
@@ -470,7 +470,7 @@ _Code_: SpellbookEntry, SpellbookOption, SpellbookRules, StartingBook, StartingS
 A spell a level grants without a roll (the mage's): the realized level that grants it and the spell level it must be of. [ADR 0030](docs/adr/0030-classes-and-races.md) step 20.8.
 _Code_: FreeSpell, FreeSpells
 
-**Learn** (fr: apprendre) / **Add** (fr: ajouter):
+**Learn** (fr: apprendre) / **Add** (fr: ajouter; UI: "Add to spellbook" / "Ajouter au grimoire", so it is not read as the spell page's "Track as effect" / "Suivre comme effet"):
 Write a spell into the spellbook with the Intelligence roll, or with none; each entry keeps its
 **origin**. [ADR 0030](docs/adr/0030-classes-and-races.md) step 20.
 
@@ -511,7 +511,7 @@ _Code_: Items, ItemInput, ItemPatch, ConsumedItem, ConsumeItem, Category
 **Inventory** (fr: inventaire):
 The character's list of items, and its screen. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0035](docs/adr/0035-equipment-screens.md) items 2 and 7.
 
-**Behaviour** (fr: comportement):
+**Behaviour** (fr: comportement; UI: the item form field "How it is used" / "Mode d'usage", its options "Quantity" / "Quantité" for `stock`, "Charges", "Daily"; the form's "Effect dice" and "Effect save" read "Dice rolled on use" / "Dés lancés à l'usage" and "Save against the effect" / "JS contre l'effet"):
 How an item's count moves: `stock`, `charges`, `daily`; **use** and **restock**. [ADR 0016](docs/adr/0016-inventory.md) steps 1 to 3.
 
 **Ammunition** (fr: munition):

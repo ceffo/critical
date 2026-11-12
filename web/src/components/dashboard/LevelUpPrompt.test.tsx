@@ -204,27 +204,48 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
       />
     );
     const fr = await markup("fr", tag({ ...none, skillPoints: 5 }));
-    expect(fr).toContain(">À dépenser<");
+    expect(fr).toContain(">Assigner<");
     expect(fr).toContain('data-testid="to-spend-tag"');
+    // The tooltip says what waits and that opening it assigns it (a button, so keyboard-reachable).
+    expect(fr).toContain("Ouvrir pour les assigner");
+    expect(await markup("en", tag({ ...none, skillPoints: 5 }))).toContain(
+      "Open to assign them.",
+    );
     expect(await markup("en", tag({ ...none, weaponSlots: 1 }))).toContain(
-      ">To spend<",
+      ">Slots to spend<",
     );
     expect(await markup("fr", tag(none))).toBe("");
   });
 
-  // ADR 0037 step 15 (amended): the entry stays while the character has a pool, rows listed at 0
-  // left, and an over-budget pool says how many slots to remove.
-  it("keeps the to-spend tag for a character with a pool, even at 0 left", async () => {
-    const tag = (
+  // ADR 0037 step 15 (amended again): the tag is gone once every slot is spent; a pool over budget
+  // keeps it, since slots must be removed.
+  it("hides the to-spend tag when every pool is at 0 left, keeps it over budget", async () => {
+    const tagFor = (
+      pools: React.ComponentProps<typeof ToSpendTag>["pools"],
+    ) => (
       <ToSpendTag
         toSpend={none}
-        pools={{ nonWeaponSlots: { spent: 4, available: 4, left: 0 } }}
+        pools={pools}
         onOpenEditor={noop}
         onOpenFreeSpell={noop}
       />
     );
-    const fr = await markup("fr", tag);
-    expect(fr).toContain(">À dépenser<");
+    expect(
+      await markup(
+        "en",
+        tagFor({
+          weaponSlots: { spent: 2, available: 2, left: 0 },
+          nonWeaponSlots: { spent: 4, available: 4, left: 0 },
+          skillPoints: {},
+        }),
+      ),
+    ).toBe("");
+    expect(
+      await markup(
+        "en",
+        tagFor({ nonWeaponSlots: { spent: 5, available: 4, left: -1 } }),
+      ),
+    ).toContain('data-testid="to-spend-tag"');
     const rows = await markup(
       "en",
       <GrantRows
@@ -327,7 +348,7 @@ describe("the level-up free spell (ADR 0030 step 20.8)", () => {
       "fr",
       <ToSpendTag toSpend={owed} onOpenEditor={noop} onOpenFreeSpell={noop} />,
     );
-    expect(fr).toContain(">À dépenser<");
+    expect(fr).toContain(">Assigner<");
     const rows = await markup(
       "fr",
       <GrantRows

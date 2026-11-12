@@ -438,14 +438,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
     or undone; while any `toSpend` count is above 0, an "À dépenser" tag beside the class opens a
     popover with the same links (a tag, not a panel: the card never scrolls for it at 1440x900,
     ADR 0022 step 2.8, ADR 0027 step 1).)_
+    _(Amended 2026-11-12, user: the tag showing at 0 left is a bug: it is gone once every slot and skill point is spent, and stays while a pool is over budget; fr "Assigner" with a tooltip explaining the unspent slots, en "Slots to spend".)_
     _(Amended 2026-11-11, decided by the user on implementation: the Skills tab only rolls; spending
     leaves the Act activity. The "À dépenser" entry stays on the card whenever the character has a
     pool, its rows listing every pool at 0 left, an over-budget one worded "Remove N slot(s) to
     continue: you have X of Y" (en + fr) instead of a bare 0. A row opens a dialog over any tab and
     any activity that hosts the same weapon, non-weapon and skill-point editors: one spending path,
     the server's refusals unchanged, no tab switch. Tests: `SkillsTab.test.tsx` "shows each set with
-    its own checks and no spending", `LevelUpPrompt.test.tsx` "keeps the to-spend tag for a
-    character with a pool, even at 0 left" and "words an over-budget pool: what to remove, and the
+    its own checks and no spending", `LevelUpPrompt.test.tsx` "hides the to-spend tag when every pool is at 0 left, keeps it over budget"
+    and "words an over-budget pool: what to remove, and the
     figures", `level-up-grants.spec` "an editor opened from the card is a dialog over any tab and
     any activity".)_
 

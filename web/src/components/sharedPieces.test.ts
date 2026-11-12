@@ -81,6 +81,14 @@ const FIXED_TERMS = new Set([
   "takeClass.open",
   // The Powers tab's button for an attack the DM makes on the character: the user's own name for it.
   "powers.tab.bar.incoming",
+  // Captions that read as a status or a second "Add" on their own (the user's words, 2026-11-10):
+  // "AC unknown", "Add to spellbook" / "Track as effect" on one spell page, "Copy the app's link",
+  // and the psionic "Relearn: +1 score" (a rule term kept with its explanation).
+  "attack.unknownAc",
+  "lookup.learn.add",
+  "lookup.addEffectShort",
+  "admin.copy",
+  "powers.relearn",
 ]);
 
 /** The i18n keys a button shows as its caption: `t("…")` calls among its children. */

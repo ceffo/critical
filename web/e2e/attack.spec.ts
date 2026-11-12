@@ -313,10 +313,10 @@ test("an attack against an unknown AC is settled by the GM's Hit", async ({
   const ac = form.getByLabel("Target AC");
   await expect(ac).toHaveValue("");
   await expect(ac).toHaveAttribute("placeholder", "?");
-  // A known AC can be forgotten again with Unknown.
+  // A known AC can be forgotten again with AC unknown.
   await ac.fill("4");
   await expect(form.getByText("vs AC 4")).toBeVisible();
-  await form.getByRole("button", { name: "Unknown" }).click();
+  await form.getByRole("button", { name: "AC unknown", exact: true }).click();
   await expect(ac).toHaveValue("");
   await expect(form.getByText("AC unknown")).toBeVisible();
 

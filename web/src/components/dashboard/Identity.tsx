@@ -188,8 +188,8 @@ export function Identity({
             "grid gap-1",
             // An 18/xx Strength takes a wider first tile (ADR 0030 step 9), never a cut one.
             strength && strength.effectiveExceptional > 0
-              ? "grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_minmax(0,1.35fr)]"
-              : "grid-cols-[repeat(6,minmax(0,1fr))_minmax(0,1.35fr)]",
+              ? "grid-cols-[minmax(0,1.5fr)_repeat(5,minmax(0,1fr))_auto]"
+              : "grid-cols-[repeat(6,minmax(0,1fr))_auto]",
           )}
           aria-label={t("app.abilities")}
         >

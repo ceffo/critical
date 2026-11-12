@@ -213,7 +213,7 @@ B's choice and is marked "(design)".
       *Amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) steps 5.2 and 6 (2026-10-17):* "latest" is a 2 px tint
       outline; the focused card of the activity rises one tone with a 2 px outline; cards and
       groups get header bands (tones, not lines: "no rules" stands).
-   2. **Section labels** are back: 11 px (`text-label`), **uppercase, letter-spaced (0.08em)**,
+   2. **Section labels** are back: 12 px (`text-label`, *11 px until ADR 0017's text-floor amendment*), **uppercase, letter-spaced (0.08em)**,
       `text-ink` (the full ink, one step above `text-ink-muted`, for contrast; design: "TARGET", "HIT POINTS", "SAVING THROWS · CLICK TO ROLL", "LEVEL 1",
       column headers). This replaces ADR 0009 step 5's "no tiny uppercase letter-spaced labels".
       Field labels next to a control ("Initiative", "Situational") stay sentence case.

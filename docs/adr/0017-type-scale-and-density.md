@@ -4,7 +4,7 @@
 steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md); step 6's budget rechecked,
 unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17); step 6
 amended by [ADR 0027](0027-space-follows-frequency-of-use.md) step 4 (2026-10-17, proposed: 5 turn
-columns, effect edit / remove on hover and focus)
+columns, effect edit / remove on hover and focus); step 2 amended below (12 px floor, heading rule)
 
 ## Context
 
@@ -27,7 +27,7 @@ letters.
 
    | Role            | Token           | Size / line-height | Weight                          | Use it for                                                                                               |
    | --------------- | --------------- | ------------------ | ------------------------------- | -------------------------------------------------------------------------------------------------------- |
-   | Label, caption  | `text-label`    | 11 / 16 px         | regular (`font-medium` allowed) | field labels, stat names (STR, THAC0), column headers, hints, units, timestamps, badges                  |
+   | Label, caption  | `text-label`    | 12 / 16 px         | regular (`font-medium` allowed) | field labels, stat names (STR, THAC0), column headers, hints, units, timestamps, badges                  |
    | Body            | `text-body`     | 13 / 18 px         | regular (`font-medium` allowed) | running text, values in lists, buttons, inputs, selects, list rows, menu items                           |
    | Panel title     | `text-title`    | 14 / 20 px         | semibold (set by the token)     | the heading of a panel, card or popover; the character's name                                            |
    | Key value       | `text-key`      | 16 / 20 px         | semibold (set by the token)     | numbers the player reads at a glance: ability scores, THAC0, damage dice, a d20, a weapon's name in hand |
@@ -39,6 +39,19 @@ letters.
    - Hierarchy comes from the role, weight and tone (`text-muted-foreground` for secondary text),
      never from a sixth size. *Amended by [ADR 0022](0022-activity-focus-layout.md) step 3.4:* a sixth role, `text-hero`
      (32 / 36 px), for the number a whole zone is about.
+   - *Amended (text floor):* the smallest text is **12 px** (`text-label`, it was 11 px), so no visible
+     text anywhere is below 12 px, in either language. ADR 0009 step 5's 12 px minimum, lifted by
+     this ADR for density, is back. A browser step in `layout.spec` (`textFloorStep`,
+     `textFloorPagesStep`) measures the computed size of every visible text node on Act, Spells,
+     Inventory, Experience, the roster, the admin page and the ruleset page, and fails below 12 px.
+     The French no-cut checks (ADR 0027 step 2) stay green at 1280x800 and above, so no text was
+     kept at 11 px as "decoration".
+   - *Amended (heading rule):* a panel gets a **title** (`text-title`, or `text-headline` for the
+     name of the thing a screen is about: a spell or power in its detail, a creation step) only when
+     it is the one subject of the screen. Every other panel, card or group in a screen of several
+     is headed by a **section label** (`section-label`: small caps, tracked, ADR 0022 step 4.2),
+     never by a sentence-case title beside labels. So "Known powers" (a panel among the counts,
+     disciplines and powers it lists) is a section label.
 
 3. **Mapping old classes (for the sweeps).** Apply mechanically, then check the one-headline rule:
 

@@ -633,6 +633,7 @@ async function actPanelStep(page: Page, size: Viewport, stack: Stack) {
   for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const size = `${vp.width}x${vp.height}`;
+    let journalTop: number | null = null;
     for (const tab of ACT_TABS) {
       await actions.getByRole("tab", { name: tab }).click();
       await expect(panel).toHaveAttribute("id", `panel-${tab.toLowerCase()}`);
@@ -640,6 +641,10 @@ async function actPanelStep(page: Page, size: Viewport, stack: Stack) {
       if (tab === "Spells")
         await expect(panel).toContainText("Hideous Laughter");
       await expectNoPageScroll(page);
+      // ADR 0027 step 6.1: the journal's top edge is the same on every tab.
+      const top = (await page.getByTestId("journal-slot").boundingBox())!.y;
+      if (journalTop === null) journalTop = top;
+      expect(top, `journal top on ${tab}, ${size}`).toBeCloseTo(journalTop, 0);
       await expectNoClippedText(actions, `${tab} tab, ${size}`);
       if (SHOTS.has(size)) await snap(page, `act-${tab.toLowerCase()}-${size}`);
       if (tab === "Spells") {
@@ -668,18 +673,6 @@ async function actPanelStep(page: Page, size: Viewport, stack: Stack) {
     expect(
       Math.abs(icon.x + icon.width / 2 - (btn.x + 22)),
     ).toBeLessThanOrEqual(1);
-    // No empty band: the act panel ends under its content (the attack form) plus its padding,
-    // unless the result panel beside it is taller.
-    const content = (await attackForm(page).boundingBox())!;
-    const box = (await actions.boundingBox())!;
-    const result = (await page
-      .getByRole("region", { name: "Detail", exact: true })
-      .boundingBox())!;
-    if (result.height < box.height - 1)
-      expect(
-        box.y + box.height - (content.y + content.height),
-        `space under the weapons, ${size}`,
-      ).toBeLessThanOrEqual(24);
   }
   // The long weapon in hand wraps inside its row at the narrowest viewport.
   await page.setViewportSize(size);
@@ -824,8 +817,8 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
       await expect(bar.getByTestId("modifier-tag")).toHaveCount(1);
     }
     if (vp.width === 1440) {
-      // ADR 0027 step 6: the now band is as tall as the Weapons tab, which does not scroll, and the
-      // journal (at least 14rem) takes the rest.
+      // ADR 0027 step 6: the Weapons tab does not scroll, and the journal (at least 14rem) takes
+      // the rest.
       const weapons = page.getByRole("tabpanel");
       await expect(weapons).toHaveAttribute("id", "panel-weapons");
       await expectNoScroll(weapons, `Weapons tab, ${where}`);
@@ -1330,19 +1323,27 @@ async function spellsTabStep(page: Page, size: Viewport, stack: Stack) {
       fit.room,
     );
     await snap(page, `fr-preparation-${size}`);
-    // Both columns end at the panel's content bottom (its 14 px padding), nothing scrolls but them.
-    const inner = (await panel.boundingBox())!;
-    for (const name of ["Préparation du jour", "Grimoire"]) {
-      const col = (await form.getByRole("region", { name }).boundingBox())!;
+    // The band keeps one height (ADR 0027 step 6.1): when the editor is taller than the panel it
+    // scrolls inside it (the stacked columns at 1280x800); otherwise both columns end at the panel's
+    // content bottom (its 14 px padding).
+    const scrolls = await panel.evaluate(
+      (el) => el.scrollHeight - el.clientHeight,
+    );
+    if (scrolls > 1) {
       expect(
-        Math.abs(inner.y + inner.height - 14 - (col.y + col.height)),
-        `${name} bottom, ${size}`,
-      ).toBeLessThanOrEqual(2);
+        await panel.evaluate((el) => getComputedStyle(el).overflowY),
+        `act panel scrolls inside, ${size}`,
+      ).toBe("auto");
+    } else {
+      const inner = (await panel.boundingBox())!;
+      for (const name of ["Préparation du jour", "Grimoire"]) {
+        const col = (await form.getByRole("region", { name }).boundingBox())!;
+        expect(
+          Math.abs(inner.y + inner.height - 14 - (col.y + col.height)),
+          `${name} bottom, ${size}`,
+        ).toBeLessThanOrEqual(2);
+      }
     }
-    expect(
-      await panel.evaluate((el) => el.scrollHeight - el.clientHeight),
-      `act panel scroll, ${size}`,
-    ).toBeLessThanOrEqual(1);
     await actions.getByRole("button", { name: "Annuler" }).click();
   }
 }
@@ -2618,11 +2619,9 @@ async function journalSplitStep(page: Page) {
   const band = page.getByTestId("now-band");
   const handle = page.getByTestId("journal-handle");
   const heightOf = async (l: Locator) => (await l.boundingBox())!.height;
-  // Default: the band takes at most 60 % of the stage, the journal at least 14rem.
-  const stage = await heightOf(page.getByTestId("act-stage"));
-  expect(await heightOf(band)).toBeLessThanOrEqual(stage * 0.6 + 1);
-  // The band is as tall as its content, so the journal's height follows the content: measure it
-  // once the logged entry has rendered and the layout has stopped moving.
+  // Default: the band has its fixed resting height or less, the journal at least 14rem.
+  expect(await heightOf(band)).toBeLessThanOrEqual(680 + 1);
+  // Measure the journal once the logged entry has rendered and the layout has stopped moving.
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
   const settled = async () => {
     let last = -1;
@@ -2639,26 +2638,24 @@ async function journalSplitStep(page: Page) {
   const before = await settled();
   expect(before).toBeGreaterThanOrEqual(224);
 
-  // Drag the handle down by 120 px: the journal shrinks by as much, the band grows. Down, not up:
-  // the default band is only as tall as its content, so the journal starts large and an upward
-  // drag has little room before the band's minimum (NOW_MIN_PX).
+  // Drag the handle up by 120 px: the journal grows by as much, the band shrinks. Up, not down:
+  // the default journal may already be at its 14rem minimum, which a downward drag cannot go under.
   const h = (await handle.boundingBox())!;
   await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2);
   await page.mouse.down();
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 60, {
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 60, {
     steps: 4,
   });
-  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 + 120, {
+  await page.mouse.move(h.x + h.width / 2, h.y + h.height / 2 - 120, {
     steps: 4,
   });
   await page.mouse.up();
   const dragged = await heightOf(slot);
-  expect(Math.abs(dragged - (before - 120))).toBeLessThanOrEqual(2);
-  expect(dragged).toBeGreaterThanOrEqual(224);
-  // Keyboard: ArrowDown shrinks it by one step.
+  expect(Math.abs(dragged - (before + 120))).toBeLessThanOrEqual(2);
+  // Keyboard: ArrowUp grows it by one step.
   await handle.focus();
-  await page.keyboard.press("ArrowDown");
-  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+  await page.keyboard.press("ArrowUp");
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged + 16, 0);
   await snap(page, "act-journal-dragged");
 
   // A drag never toggles: still expanded, handle states it.
@@ -2682,7 +2679,7 @@ async function journalSplitStep(page: Page) {
   await expect(page.getByTestId("journal-bar")).toContainText("Split goblin");
   await page.getByTestId("journal-handle").click();
   await expect(combatLog(page).getByRole("listitem").first()).toBeVisible();
-  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged - 16, 0);
+  await expect.poll(() => heightOf(slot)).toBeCloseTo(dragged + 16, 0);
 }
 
 // The audit itself: it reports a cut line and a box hiding tall text, and passes text that wraps or
@@ -4482,6 +4479,39 @@ async function mageLimitStep(page: Page, size: Viewport) {
 // and its journal row, and a cast's spell failure on the result card. Wisdom 9 gives a spell
 // failure chance; the failed cast is a fixed response (the dice are real; the failure itself is a
 // Go test, castsvc).
+/**
+ * Every Act tab the character has, at each of the walk's sizes: the journal's top edge is the same on
+ * all of them (ADR 0027 step 6.1) and a tab taller than the band scrolls inside its panel, nothing cut.
+ */
+async function expectJournalTopSteadyOnEveryTab(
+  page: Page,
+  size: Viewport,
+  who: string,
+) {
+  const actions = page.getByRole("region", { name: /^(Actions|Action)$/ });
+  const names = (await actions.getByRole("tab").allInnerTexts()).map((n) =>
+    n.replace(/\s*\d+$/, "").trim(),
+  );
+  for (const vp of sizesAt(size, VIEWPORTS)) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    let top: number | null = null;
+    for (const name of names) {
+      await actions.getByRole("tab", { name, exact: false }).first().click();
+      await expect(actions.getByRole("tabpanel")).not.toBeEmpty();
+      const now = (await page.getByTestId("journal-slot").boundingBox())!.y;
+      if (top === null) top = now;
+      expect(now, `${who}: journal top on ${name}, ${where}`).toBeCloseTo(
+        top,
+        0,
+      );
+      await expectNoPageScroll(page);
+      await expectNoClippedText(actions, `${who}: ${name} tab, ${where}`);
+    }
+    await actions.getByRole("tab").first().click();
+  }
+}
+
 async function clericStep(page: Page, size: Viewport) {
   await page.setViewportSize(size);
   await openDashboard(page);
@@ -4508,6 +4538,7 @@ async function clericStep(page: Page, size: Viewport) {
   await reloadSettled(page);
   await openWorkspace(page, "Act");
   await chooseLanguage(page, "fr");
+  await expectJournalTopSteadyOnEveryTab(page, size, "cleric");
   await page.getByRole("tab", { name: "Renvoi" }).click();
   const turning = page.getByTestId("turn-undead");
   await expect(turning.getByTestId("turn-cell-skeleton")).toBeVisible();
@@ -5785,9 +5816,30 @@ const freshPicks =
     await step(page, size, stack, context);
   };
 
+async function psionicistActTabsStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "PUT", "/api/psionics/picks", {
+      picks: [
+        { kind: "discipline", id: "telepathy" },
+        { kind: "power", id: "mind_blank" },
+        { kind: "power", id: "thought_shield" },
+        { kind: "power", id: "mind_thrust" },
+        { kind: "power", id: "contact" },
+        { kind: "power", id: "mindlink" },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  await chooseLanguage(page, "fr");
+  await page.keyboard.press("Escape");
+  await expectJournalTopSteadyOnEveryTab(page, size, "psionicist");
+}
+
 const PSIONICIST_STEPS: [string, Step][] = (
   [
     ["PSP block and rest popover", pspStep],
+    ["act tabs", psionicistActTabsStep],
     ["powers tab", powersStep],
     ["maintained card", maintainedStep],
     ["contact forms", contactFormsStep],

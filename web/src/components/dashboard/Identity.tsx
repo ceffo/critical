@@ -79,8 +79,8 @@ export function Identity({
     onOpenSpells();
   };
 
-  // The pools the character has: the entry stays while there is one, even at 0 left (ADR 0037 step
-  // 15, amended).
+  // The pools the character has: the tag stays while one has slots left or is over
+  // budget, and goes once all are spent (ADR 0037 step 15, amended).
   const slots = character?.derived.proficiencySlots;
   const pools: SpendPools = {
     weaponSlots: slots?.weapon ?? undefined,

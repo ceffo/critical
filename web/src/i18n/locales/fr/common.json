@@ -27,7 +27,7 @@
       "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
       "grantsTitle": "Le niveau {{level}} apporte",
       "toSpendHint": "Emplacements, points de talent et sorts gratuits pas encore pris",
-      "toSpendTitle": "À dépenser",
+      "toSpendTitle": "Places libres",
       "gained": "+{{what}}",
       "grant": {
         "weaponSlots_one": "{{count}} emplacement de maîtrise d’arme",

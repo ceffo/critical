@@ -6203,6 +6203,55 @@ test.describe("psionicist long list walks", () => {
 });
 
 /**
+ * ADR 0009 step 3: below 1024 px the page shows the "needs a wider window" message instead of the
+ * layout, follows a resize across the threshold with no reload, and scrolls with nothing overlapping.
+ * Only a browser resizes a window and lays the page out.
+ */
+async function minWidthStep(page: Page) {
+  await openDashboard(page);
+  const message = page.getByTestId("min-width-message");
+  const app = page.getByTestId("rail");
+  for (const lang of ["en", "fr"] as const) {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await chooseLanguage(page, lang);
+    await page.keyboard.press("Escape");
+    for (const size of [
+      { width: 1024, height: 768 },
+      { width: 1023, height: 768 },
+      { width: 390, height: 844 },
+    ]) {
+      await page.setViewportSize(size);
+      const narrow = size.width < 1024;
+      await expect(message, `message at ${size.width}, ${lang}`).toBeVisible({
+        visible: narrow,
+      });
+      await expect(app).toBeVisible({ visible: !narrow });
+      if (!narrow) continue;
+      await expect(message.getByRole("heading")).toHaveText(
+        lang === "en"
+          ? "This app needs a wider window"
+          : "Cette application a besoin d'une fenêtre plus large",
+      );
+      expect(
+        await page.evaluate(() => {
+          const root = document.scrollingElement ?? document.documentElement;
+          const r = document
+            .querySelector("[data-testid=min-width-message]")!
+            .getBoundingClientRect();
+          return {
+            sideways: root.scrollWidth > root.clientWidth,
+            inside: r.left >= 0 && r.right <= root.clientWidth,
+          };
+        }),
+        `no sideways scroll, message inside the window, ${size.width}, ${lang}`,
+      ).toEqual({ sideways: false, inside: true });
+      await expectNoClippedText(page.locator("body"), `${size.width}, ${lang}`);
+      await snap(page, `min-width-${size.width}-${lang}`);
+    }
+  }
+}
+
+/**
  * The browser behaviours walk: what only a browser proves (drag, focus, persistence in local storage, a
  * client store, a heartbeat), at 1440x900. The toast and the composer step set their own viewports.
  */
@@ -6212,6 +6261,7 @@ const BEHAVIOUR_STEPS: [string, Step][] = [
   ["settings", settingsStep],
   ["workspaces to the dice composer", composerStep],
   ["new version toast", newVersionStep],
+  ["minimum width message", minWidthStep],
 ];
 
 test.describe("behaviours walk", () => {

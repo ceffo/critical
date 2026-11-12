@@ -7,6 +7,7 @@ import { readSession } from "./api/auth";
 import { AdminPage } from "./components/admin/AdminPage";
 import { RulesetPage } from "./components/ruleset/RulesetPage";
 import { LoginPage } from "./components/login/LoginPage";
+import { MinWidthGate } from "./components/shell/MinWidthGate";
 import { NoCurrent } from "./components/shell/NoCurrent";
 import { Playing } from "./components/shell/Playing";
 import { startFor } from "./lib/session";
@@ -34,14 +35,16 @@ void readSession().then((session) => {
   }
   if (session.kind === "in") useSessionStore.getState().setMe(session.me);
   render(
-    start.show === "admin" ? (
-      <AdminPage />
-    ) : start.show === "ruleset" ? (
-      <RulesetPage />
-    ) : start.show === "create" && !start.hasCurrent ? (
-      <NoCurrent />
-    ) : (
-      <Playing />
-    ),
+    <MinWidthGate>
+      {start.show === "admin" ? (
+        <AdminPage />
+      ) : start.show === "ruleset" ? (
+        <RulesetPage />
+      ) : start.show === "create" && !start.hasCurrent ? (
+        <NoCurrent />
+      ) : (
+        <Playing />
+      )}
+    </MinWidthGate>,
   );
 });

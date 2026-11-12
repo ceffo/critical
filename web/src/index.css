@@ -180,7 +180,7 @@
  */
 @theme {
   --text-*: initial;
-  --text-label: 0.6875rem;
+  --text-label: 0.75rem;
   --text-label--line-height: 1rem;
   --text-body: 0.8125rem;
   --text-body--line-height: 1.125rem;
@@ -199,7 +199,7 @@
 }
 
 /*
- * Section label (ADR 0022 step 4.2): "TARGET", "HIT POINTS", "LAST RESULT"... 11 px, uppercase,
+ * Section label (ADR 0022 step 4.2): "TARGET", "HIT POINTS", "LAST RESULT"... 12 px, uppercase,
  * letter-spaced, in the full ink (one step above muted, for contrast). Field labels next to a control stay sentence case and don't use it.
  */
 @utility section-label {

@@ -67,3 +67,33 @@ export async function expectWholeWords(region: Locator, what: string) {
   const broken = await region.evaluate(brokenWords);
   expect(broken, `words broken mid-word in ${what}`).toEqual([]);
 }
+
+/** The smallest text size the app shows, in CSS px (ADR 0017 step 2). */
+export const TEXT_FLOOR_PX = 12;
+
+/**
+ * Every visible text node under `root` whose computed font size is below the floor, as
+ * "<size>px <text>". Hidden boxes and screen-reader-only text (1 px wide) are not shown, so skipped.
+ */
+export function textBelowFloor(root: Element, floor: number): string[] {
+  const small: string[] = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const text = (n.textContent ?? "").trim();
+    const el = n.parentElement;
+    if (!text || !el || el.closest("[hidden]")) continue;
+    const box = el.getBoundingClientRect();
+    if (box.width <= 1 || box.height <= 1) continue;
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || style.display === "none") continue;
+    const size = parseFloat(style.fontSize);
+    if (size < floor) small.push(`${size}px ${text.slice(0, 40)}`);
+  }
+  return small;
+}
+
+/** Fails, listing them, when visible text in `region` is smaller than the floor. */
+export async function expectTextFloor(region: Locator, what: string) {
+  const small = await region.evaluate(textBelowFloor, TEXT_FLOOR_PX);
+  expect(small, `text below ${TEXT_FLOOR_PX}px in ${what}`).toEqual([]);
+}

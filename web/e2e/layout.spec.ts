@@ -42,6 +42,7 @@ import {
   brokenWords,
   clippedText,
   expectNoClippedText,
+  expectTextFloor,
   expectWholeWords,
 } from "./noClip";
 
@@ -2808,6 +2809,56 @@ type Step = (
 ) => Promise<void>;
 
 /**
+ * ADR 0017 step 2: no visible text is set below the 12 px floor, on the four activities of the
+ * dashboard. Computed styles are a browser's answer, no unit test can give them.
+ */
+async function textFloorStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    const rail = page.getByTestId("rail").getByRole("button");
+    for (const [i, activity] of [
+      "Act",
+      "Spells",
+      "Inventory",
+      "Experience",
+    ].entries()) {
+      await rail.nth(i).click();
+      await expectTextFloor(
+        page.locator("body"),
+        `${activity}, ${lang}, ${size.width}x${size.height}`,
+      );
+    }
+  }
+}
+
+/** The same floor on the roster, the admin page and the ruleset page. */
+async function textFloorPagesStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  await page.getByTestId("roster-open").click();
+  await expect(page.getByTestId("roster")).toBeVisible();
+  await expectTextFloor(
+    page.locator("body"),
+    `roster, ${size.width}x${size.height}`,
+  );
+  await page.keyboard.press("Escape");
+  await page.goto("/admin");
+  await expect(page.getByTestId("admin-users")).toBeVisible();
+  await expectTextFloor(
+    page.locator("body"),
+    `admin, ${size.width}x${size.height}`,
+  );
+  await page.goto("/ruleset");
+  await expect(page.getByTestId("crit-table")).toBeVisible();
+  await expectTextFloor(
+    page.locator("body"),
+    `ruleset, ${size.width}x${size.height}`,
+  );
+}
+
+/**
  * The dashboard walk: every screen and state of the dashboard in turn, in one test on one stack, at one
  * size. Each step runs the no-cut, whole-word and page-scroll checks of its region. The server state
  * carries over from step to step (what a step adds stays), so the steps that change the character
@@ -2818,6 +2869,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["end effects", endEffectsStep],
   ["shell", shellStep],
   ["item power row", itemPowerRowStep],
+  ["text floor", textFloorStep],
   ["act panel", actPanelStep],
   ["French and long names", frenchLongNamesStep],
   ["saves label line", savesLabelStep],
@@ -6064,6 +6116,7 @@ async function pageHeaderThemesStep(page: Page, size: Viewport) {
 const PAGES_STEPS: [string, Step][] = [
   ["page header", pageHeaderStep],
   ["page header themes", pageHeaderThemesStep],
+  ["text floor, roster, admin, ruleset", textFloorPagesStep],
   ["ruleset, admin", rulesetAdminStep],
   ["ruleset, player", rulesetPlayerStep],
   ["admin section", adminStep],

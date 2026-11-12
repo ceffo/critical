@@ -500,7 +500,7 @@ function AttackCard({
         </summary>
         <div className="mt-2 flex flex-col gap-3">
           {/* The d20 and the margin are the tiles above; the rest of the to-hit math is here. */}
-          <dl className="grid grid-cols-3 gap-2">
+          <dl className="grid grid-cols-[repeat(3,minmax(min-content,1fr))] gap-2">
             <Fact label={t("result.critRoll")}>{r.d100CritRoll}</Fact>
             {r.d100MultiplierRoll !== undefined && (
               <Fact label={t("result.multRoll")}>{r.d100MultiplierRoll}</Fact>

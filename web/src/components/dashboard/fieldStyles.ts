@@ -6,7 +6,7 @@
 export const fieldClass =
   "h-7 w-full min-w-0 rounded-lg border border-input bg-surface px-2 text-body disabled:text-ink-muted";
 
-/** Sentence-case label for fields and stat names (ADR 0017 `text-label`, 11px). */
+/** Sentence-case label for fields and stat names (ADR 0017 `text-label`, 12px). */
 export const labelClass = "text-label font-medium text-muted-foreground";
 
 /**

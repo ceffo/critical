@@ -685,6 +685,9 @@
       "add": "Ajouter",
       "save": "Enregistrer",
       "cancel": "Annuler",
+      "next": "Suivant",
+      "back": "Retour",
+      "more": "Plus d'options",
       "notANumber": "Entrez un nombre entier"
     },
     "heading": "Objets",

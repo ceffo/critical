@@ -37,6 +37,7 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   const f = form(page);
   await f.getByLabel("Name").fill("Arrows +3 (blessed)");
   await f.getByLabel("Category").selectOption("ammunition");
+  await f.getByRole("button", { name: "Next" }).click();
   await f.getByLabel("Count").fill("6");
   await f.getByLabel("Magical bonus").fill("3");
   await f.getByLabel("Ammo kind").selectOption("arrow");
@@ -79,6 +80,7 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   const f = form(page);
   await f.getByLabel("Name").fill("Scroll of flames");
   await f.getByLabel("Category").selectOption("magic");
+  await f.getByRole("button", { name: "Next" }).click();
   await f.getByLabel("Magic kind").selectOption("scroll");
   await f.getByRole("button", { name: "Add", exact: true }).click();
   await expect(form(page)).toHaveCount(0);

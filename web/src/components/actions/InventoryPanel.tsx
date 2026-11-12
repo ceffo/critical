@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Backpack,
   Crosshair,
@@ -17,6 +17,7 @@ import {
   Warning,
 } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { ClassWarningTag, NonproficientTag } from "@/components/ClassWarning";
 import { InventoryCard, ROW_ACTIONS } from "./InventoryCard";
 import { useItemsStore } from "@/stores/items";
@@ -91,7 +92,7 @@ function isCounted(i: Item): boolean {
  * show in an amber band; Check opens them above the list, each with Edit and Dismiss (ADR 0033
  * step 27). − uses one (the API rolls the effect, logs it, and removes a charges item at 0); + adds
  * one, and exists only on stock items. The dice chip puts the piece's effect dice in the dice
- * composer. ✎ edits any field in place, 🗑 removes the piece, "Add" opens a form. Every change is a
+ * composer. ✎ edits any field in a dialog over the list (no row moves), 🗑 removes the piece, "Add" opens a form. Every change is a
  * log entry the journal can pop. The card is as tall as its rows and scrolls inside when the stage
  * is shorter (ADR 0027 step 14.3).
  */
@@ -109,15 +110,9 @@ export function InventoryPanel() {
   const [filter, setFilter] = useState<Category | "all">("all");
   const [reviewOpen, setReviewOpen] = useState(false);
   const close = () => setForm(null);
-  // Edit from the "To check" panel opens the form in the list below it, often out of view: bring it up.
-  useEffect(() => {
-    if (form === null) return;
-    document
-      .querySelector("[data-testid='inventory-form']")
-      ?.scrollIntoView({ block: "nearest" });
-  }, [form]);
   const toReview = items.filter((i) => i.review.length > 0);
   const shown = piecesIn(items, filter);
+  const editing = items.find((i) => i.id === form);
   const nameOf = (i: Item) => localized(i18n.language, i.name);
 
   const editor = (i: Item) => (
@@ -297,43 +292,51 @@ export function InventoryPanel() {
               className={cn(ITEM_COLS, "gap-y-1")}
               aria-label={t("items.title")}
             >
-              {shown.map((i) =>
-                form === i.id ? (
-                  <li
-                    key={i.id}
-                    className="col-span-full"
-                    data-testid="inventory-form"
-                  >
-                    {editor(i)}
-                  </li>
-                ) : (
-                  <ItemRow
-                    key={i.id}
-                    item={i}
-                    busy={busy}
-                    onDice={() => i.effectDice && toComposer(i.effectDice)}
-                    onUse={() => void spendItem(i.id)}
-                    onRestock={() => void run(() => postRestockItem(i.id, 1))}
-                    onEquip={() =>
-                      void run(() =>
-                        postItemState(
-                          i.id,
-                          equipped(i)
-                            ? { state: "carried" }
-                            : { state: i.equipState || "carried", swap: true },
-                        ),
-                      )
-                    }
-                    onEdit={() => setForm(i.id)}
-                    onRemove={() => void run(() => deleteItem(i.id))}
-                  />
-                ),
-              )}
+              {shown.map((i) => (
+                <ItemRow
+                  key={i.id}
+                  item={i}
+                  busy={busy}
+                  onDice={() => i.effectDice && toComposer(i.effectDice)}
+                  onUse={() => void spendItem(i.id)}
+                  onRestock={() => void run(() => postRestockItem(i.id, 1))}
+                  onEquip={() =>
+                    void run(() =>
+                      postItemState(
+                        i.id,
+                        equipped(i)
+                          ? { state: "carried" }
+                          : { state: i.equipState || "carried", swap: true },
+                      ),
+                    )
+                  }
+                  onEdit={() => setForm(i.id)}
+                  onRemove={() => void run(() => deleteItem(i.id))}
+                />
+              ))}
             </ul>
           )}
         </InventoryCard>
       </div>
       <AcCard />
+      {/* The edit opens over the list, so no other row moves. */}
+      <Dialog
+        open={editing !== undefined}
+        onOpenChange={(open) => {
+          if (!open) close();
+        }}
+      >
+        <DialogContent className="max-w-3xl overflow-y-auto">
+          {editing && (
+            <>
+              <DialogTitle className="sr-only">
+                {t("items.form.editTitle", { name: nameOf(editing) })}
+              </DialogTitle>
+              {editor(editing)}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

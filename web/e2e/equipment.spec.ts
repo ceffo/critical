@@ -232,6 +232,7 @@ test("AC: follows the Armor spell and an Equip with no entry of its own; the ove
   const f = form(page);
   await f.getByLabel("Name").fill("Chain mail");
   await f.getByLabel("Category").selectOption("armour");
+  await f.getByRole("button", { name: "Next" }).click();
   await f.getByLabel("Base AC").fill("5");
   await f.getByRole("button", { name: "Add", exact: true }).click();
   await expect(form(page)).toHaveCount(0);

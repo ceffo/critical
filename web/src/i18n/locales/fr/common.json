@@ -109,6 +109,10 @@
     "logoutHint": "Déconnecter {{name}}",
     "logoutHintNoEmail": "Déconnecter ce compte"
   },
+  "minWidth": {
+    "title": "Cette application a besoin d'une fenêtre plus large",
+    "body": "Élargissez la fenêtre à {{width}} px au minimum pour l'utiliser."
+  },
   "login": {
     "title": "Connexion",
     "lead": "Connectez-vous pour jouer vos personnages.",

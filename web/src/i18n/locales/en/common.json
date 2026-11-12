@@ -109,6 +109,10 @@
     "logoutHint": "Log out of {{name}}",
     "logoutHintNoEmail": "Log out of this account"
   },
+  "minWidth": {
+    "title": "This app needs a wider window",
+    "body": "Make the window at least {{width}} px wide to use it."
+  },
   "login": {
     "title": "Log in",
     "lead": "Log in to play your characters.",

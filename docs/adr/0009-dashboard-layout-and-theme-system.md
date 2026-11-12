@@ -30,7 +30,9 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
    first visit and stays mounted while hidden, so its state (tab, forms, scroll) survives switching.
 3. **Viewport range.** The layout holds from 1280 to 2560 CSS px wide at full width (no max-width
    centring) and has no horizontal scroll down to 1024. Below 1024 and mobile layouts are out of
-   scope. *Amended by [ADR 0017](0017-type-scale-and-density.md) step 1:* the root font size is a
+   scope: below 1024 every screen but Login shows one plain full-page message ("This app needs a
+   wider window", English and French, with the app mark) instead of the layout; the page scrolls, and
+   the message shows and hides as the window is resized, with no reload. *Amended by [ADR 0017](0017-type-scale-and-density.md) step 1:* the root font size is a
    fixed 16 px (it was `clamp(16px, 0.3125vw + 12px, 20px)`); extra width goes to columns and
    content, not to bigger type.
 4. **Tokens.** *Replaced by [ADR 0020](0020-visual-identity.md) steps 1-4 (three palettes per

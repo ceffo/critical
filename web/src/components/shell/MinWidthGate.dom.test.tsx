@@ -28,19 +28,19 @@ describe("MinWidthGate", () => {
     windowOf(1024);
     const en = await renderApp(
       <MinWidthGate>
-        <p>the app</p>
+        <i data-testid="app" />
       </MinWidthGate>,
     );
-    expect(screen.getByText("the app")).toBeTruthy();
+    expect(screen.getByTestId("app")).toBeTruthy();
     en.unmount();
     windowOf(1023);
     const gate = (
       <MinWidthGate>
-        <p>the app</p>
+        <i data-testid="app" />
       </MinWidthGate>
     );
     const view = await renderApp(gate);
-    expect(screen.queryByText("the app")).toBeNull();
+    expect(screen.queryByTestId("app")).toBeNull();
     expect(screen.getByRole("heading").textContent).toBe(
       "This app needs a wider window",
     );
@@ -55,14 +55,14 @@ describe("MinWidthGate", () => {
     const resize = windowOf(1280);
     await renderApp(
       <MinWidthGate>
-        <p>the app</p>
+        <i data-testid="app" />
       </MinWidthGate>,
     );
     resize(800);
-    expect(screen.queryByText("the app")).toBeNull();
+    expect(screen.queryByTestId("app")).toBeNull();
     expect(screen.getByTestId("min-width-message")).toBeTruthy();
     resize(1024);
-    expect(screen.getByText("the app")).toBeTruthy();
+    expect(screen.getByTestId("app")).toBeTruthy();
     expect(screen.queryByTestId("min-width-message")).toBeNull();
   });
 });

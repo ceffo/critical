@@ -33,7 +33,11 @@ domain, it was just for ingestion, to kickstart the whole thing".
    domain term; the UI uses the UI word in both languages. The glossary lists both. Today's
    pairs: Buff is shown as Effect / Effet (saved buffs as Saved effects / Effets enregistrés,
    the journal kind as Effect / Effet); the action log is shown as the Journal / Journal; a
-   received spell is "Received spell" / "Sort reçu".
+   received spell is "Received spell" / "Sort reçu"; "Add to spellbook" / "Ajouter au grimoire"
+   and "Track as effect" / "Suivre comme effet" on a spell page; the target AC's button "AC
+   unknown" / "CA inconnue"; the chip "Slots to spend" / "À dépenser" (unchanged in fr: a longer word wraps the card header); an item's
+   "How it is used" / "Mode d'usage" with "Quantity" / "Quantité" (stock); the app's link is
+   copied by "Copy the app's link" / "Copier le lien de l'application".
 3. **The French UI follows the table, not the French PHB.** The user's rulings: a round is
    **tour** (Tour suivant, Numéro du tour; "round" leaves the French, exposure included); a
    saving throw is **jet de sauvegarde** (abbreviation JS); the DM is **MJ**; a check is a

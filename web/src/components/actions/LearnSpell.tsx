@@ -135,7 +135,6 @@ export function LearnSpell({
             disabled={busy}
             onClick={() => void add()}
             title={addTitle}
-            aria-label={addTitle}
             data-testid="add-spell"
           >
             <BookmarkSimple aria-hidden />

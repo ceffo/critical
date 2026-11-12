@@ -245,7 +245,7 @@ export function SpellDetail({
               data-testid="spell-add-effect"
               onClick={() => void run(() => addSpellEffect(spell.id))}
             >
-              <Plus aria-hidden /> {t("buffs.addShort")}
+              <Plus aria-hidden /> {t("lookup.addEffectShort")}
             </Button>
           )}
         </section>

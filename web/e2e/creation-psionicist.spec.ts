@@ -79,6 +79,15 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
   await panel.getByRole("button", { name: /^Ajouter Contact/ }).click();
   await expect(panel.getByTestId("known-power")).toHaveCount(1);
 
+  // A known science offers its relearn, the explanation in the caption.
+  await expect(
+    panel.getByRole("button", { name: /^Réapprendre : \+1/ }),
+  ).toBeVisible();
+
+  // The smaller screen keeps the caption whole too (its own scrolling is not the point there).
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await expectNoClippedText(panel, "known powers at 1280");
+
   for (const vp of [
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },

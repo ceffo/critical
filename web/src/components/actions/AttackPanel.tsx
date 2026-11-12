@@ -285,7 +285,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
       aria-label={t("attack.target")}
       className="flex flex-col gap-2 rounded-lg bg-raised px-3 py-1.5"
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-2">
         <span className="section-label">{t("attack.target")}</span>
         <div className="flex items-center gap-1">
           <Stepper
@@ -305,6 +305,7 @@ function TargetBar({ view }: { view: AttackFormView }) {
               type="button"
               variant="ghost"
               size="sm"
+              className="px-1"
               title={t("attack.unknownAcHint")}
               onClick={() => void update({ targetAc: null })}
             >

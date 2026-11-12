@@ -160,7 +160,8 @@ export function LookupPanel() {
             />
           }
         >
-          <Funnel aria-hidden /> {t("lookup.filtersShort")}
+          <Funnel aria-hidden />{" "}
+          {priest ? t("lookup.sphere") : t("lookup.school")}
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start">
           <DropdownMenuRadioGroup

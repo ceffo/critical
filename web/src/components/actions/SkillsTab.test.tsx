@@ -235,7 +235,7 @@ describe("SkillsTab with nothing to roll", () => {
   it("says so and names where to spend", async () => {
     const html = await render({ ...base, proficiencies: [], skillSets: [] });
     expect(html).toContain('data-testid="skills-empty"');
-    expect(html).toContain("To spend");
+    expect(html).toContain("Slots to spend");
     expect(html).not.toContain("skills-blocks");
   });
 });

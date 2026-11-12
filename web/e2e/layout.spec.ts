@@ -821,7 +821,7 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
       };
       const ac = await middle(bar.getByLabel("CA de la cible"));
       for (const el of [
-        bar.getByRole("button", { name: "Inconnue" }),
+        bar.getByRole("button", { name: "CA inconnue" }),
         bar.getByRole("radiogroup", { name: "Taille de la cible" }),
         bar.getByRole("button", { name: "Modificateur situationnel" }),
       ])
@@ -1005,7 +1005,7 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
           `stat label "${await label.textContent()}", ${where}`,
         ).toBe(1);
       }
-      // ADR 0027 steps 13.1 and 1.5: the school behind "Filtres", a tag on the count line when set.
+      // ADR 0027 steps 13.1 and 1.5: the school behind "École", a tag on the count line when set.
       await stage.getByRole("button", { name: "Filtrer par école" }).click();
       await page
         .getByRole("menuitemradio", { name: "Illusion/Fantasme", exact: true })
@@ -1641,6 +1641,20 @@ async function itemFormStep(page: Page, size: Viewport) {
       );
       if (fr && vp.width >= 1920)
         await snap(page, `item-form-step2-fr-${vp.width}x${vp.height}`);
+    }
+    // The extras (how it is used, the dice rolled and the save against the effect) uncut too.
+    await f.getByText(fr ? "Plus d'options" : "More options").click();
+    await expect(
+      f.getByLabel(fr ? "Dés lancés à l'usage" : "Dice rolled on use"),
+    ).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        f,
+        `add form extras, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      if (fr && vp.width >= 1920)
+        await snap(page, `item-form-extras-fr-${vp.width}x${vp.height}`);
     }
     await f.getByRole("button", { name: fr ? "Retour" : "Back" }).click();
     await expect(f.getByLabel(fr ? "Nom" : "Name")).toHaveValue(
@@ -3602,7 +3616,9 @@ async function adminStep(
   const users = page.getByTestId("admin-users");
   await expect(users.getByTestId("admin-user")).toHaveCount(4);
   await expect(invites.getByRole("listitem")).toHaveCount(1);
-  await invites.getByRole("button", { name: /^Copier le lien/ }).click();
+  await invites
+    .getByRole("button", { name: /^Copier le lien de l.application/ })
+    .click();
   await expect(invites.getByRole("status")).toHaveText("Lien copié");
 
   for (const lang of ["fr", "en"] as const) {
@@ -4748,7 +4764,9 @@ async function mageLearnStep(page: Page, size: Viewport) {
   // The search settles on Sleep before the click (the first row is selected meanwhile).
   await expect(detail.getByRole("heading")).toHaveText("Sommeil");
   await expect(learn.getByRole("button", { name: /^Apprendre/ })).toBeVisible();
-  await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
+  await expect(learn.getByTestId("add-spell")).toHaveText(
+    "Ajouter au grimoire",
+  );
   for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 2560, height: 1440 },
@@ -4829,7 +4847,9 @@ async function mageLearnStep(page: Page, size: Viewport) {
   await page.evaluate(() => (document.activeElement as HTMLElement)?.blur());
   await page.keyboard.press("ControlOrMeta+z");
   await expect(learn).not.toContainText("Dans le grimoire");
-  await expect(learn.getByTestId("add-spell")).toHaveText("Ajouter");
+  await expect(learn.getByTestId("add-spell")).toHaveText(
+    "Ajouter au grimoire",
+  );
   await page
     .getByRole("navigation", { name: "Activités" })
     .getByRole("button", { name: "Agir", exact: true })

@@ -207,7 +207,7 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(fr).toContain(">À dépenser<");
     expect(fr).toContain('data-testid="to-spend-tag"');
     expect(await markup("en", tag({ ...none, weaponSlots: 1 }))).toContain(
-      ">To spend<",
+      ">Slots to spend<",
     );
     expect(await markup("fr", tag(none))).toBe("");
   });

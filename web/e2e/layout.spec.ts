@@ -2669,6 +2669,66 @@ async function weaponInHandStep(page: Page, size: Viewport, stack: Stack) {
   await expect(attackForm(page).getByTestId("weapon-in-hand")).not.toBeEmpty();
 }
 
+/**
+ * ADR 0017 step 1 (wide screens): from 2200 px wide the stage's result column is as wide as the act
+ * panel (1fr | 1fr, instead of 1.35fr | 1fr) and the journal flows in two columns, so the same height
+ * shows twice the rows; below it nothing changes (one journal column, the 1.35 : 1 split). No widget
+ * and no journal line passes a readable length (about 1000 px, a column of the two).
+ */
+async function expectWideStage(
+  page: Page,
+  size: Viewport,
+  where: string,
+  withRows = true,
+) {
+  const wide = size.width >= 2200;
+  const at = `${where}, ${size.width}x${size.height}`;
+  const band = page.getByTestId("now-band");
+  const [act, result] = await Promise.all([
+    band.locator(":scope > *").nth(0).boundingBox(),
+    band.locator(":scope > *").nth(1).boundingBox(),
+  ]);
+  const ratio = result!.width / act!.width;
+  if (wide)
+    expect(ratio, `result column as wide as act, ${at}`).toBeGreaterThan(0.95);
+  else expect(ratio, `1.35 : 1 split kept, ${at}`).toBeLessThan(0.8);
+  expect(act!.width, `act panel readable, ${at}`).toBeLessThanOrEqual(
+    960 * 1.4,
+  );
+  const log = combatLog(page);
+  if (!withRows) {
+    if (size.width >= 1920)
+      await snap(page, `wide-stage-${where}-${size.width}x${size.height}`);
+    return;
+  }
+  const rows = await log.getByRole("listitem").all();
+  expect(rows.length, `journal rows, ${at}`).toBeGreaterThanOrEqual(4);
+  const lefts = new Set<number>();
+  for (const row of rows) {
+    const box = await row.boundingBox();
+    if (!box) continue;
+    lefts.add(Math.round(box.x / 40));
+    if (wide)
+      expect(box.width, `journal line length, ${at}`).toBeLessThanOrEqual(1000);
+  }
+  expect(lefts.size, `journal columns, ${at}`).toBe(wide ? 2 : 1);
+  await expectNoClippedText(log, `journal, ${at}`);
+  if (size.width >= 1920)
+    await snap(page, `wide-stage-${where}-${size.width}x${size.height}`);
+}
+
+async function wideStageStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  for (const [i, src] of ["Orc axe", "Potion sip", "Trap", "Fall"].entries())
+    await recordHp(page, i % 2 ? "heal" : "damage", 2 + i, src);
+  await expectWideStage(page, size, "bard");
+  await openWorkspace(page, "Spells");
+  await expectNoPageScroll(page);
+  if (size.width >= 1920)
+    await snap(page, `wide-spells-${size.width}x${size.height}`);
+  await openWorkspace(page, "Act");
+}
+
 async function journalRowsStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await recordHp(page, "damage", 7, "Orc axe");
@@ -2878,6 +2938,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["attack card", attackCardStep],
   ["last result", lastResultStep],
   ["journal rows", journalRowsStep],
+  ["wide stage", wideStageStep],
   ["spells tab", spellsTabStep],
   ["spell description", spellDescriptionStep],
   ["inventory, AC shield", acShieldStep],
@@ -6214,6 +6275,7 @@ async function psionicistActTabsStep(page: Page, size: Viewport) {
   await chooseLanguage(page, "fr");
   await page.keyboard.press("Escape");
   await expectJournalTopSteadyOnEveryTab(page, size, "psionicist");
+  await expectWideStage(page, size, "psionicist", false);
 }
 
 const PSIONICIST_STEPS: [string, Step][] = (

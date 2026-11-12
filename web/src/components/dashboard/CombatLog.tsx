@@ -115,96 +115,100 @@ export function CombatLog() {
       {/* The scroller is its rows' containing block (relative): an absolute box inside, such as a
           round marker's sr-only label, then scrolls and clips with it instead of stretching the page. */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto pb-2">
-        {groups.map((g, i) => {
-          const marker = roundMarker(t, g.round, g.current);
-          return (
-            <section
-              key={g.key}
-              className={cn(
-                // The narrow round marker, then the round's entries. Round blocks touch; every other
-                // one is on the sub-band tone, never a rule between them (ADR 0027 step 9.1).
-                "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-1 px-2",
-                i % 2 === 1 && "bg-sub-band",
-              )}
-              aria-label={roundLabel(t, g.round)}
-              data-current={g.current}
-              data-testid="journal-round"
-            >
-              <h3
+        {/* From 2200 px wide the rounds flow in two balanced columns, so the same height shows twice
+            the rows instead of a line a metre long (ADR 0017 step 1, wide screens). */}
+        <div className="min-[2200px]:columns-2 min-[2200px]:gap-x-4">
+          {groups.map((g, i) => {
+            const marker = roundMarker(t, g.round, g.current);
+            return (
+              <section
+                key={g.key}
                 className={cn(
-                  "flex h-6 items-center justify-center text-label font-semibold tabular-nums",
-                  // The current round's one mark: its marker in the tint (ADR 0027 step 9.1).
-                  g.current ? "text-tint" : "text-muted-foreground",
+                  // The narrow round marker, then the round's entries. Round blocks touch; every other
+                  // one is on the sub-band tone, never a rule between them (ADR 0027 step 9.1).
+                  "grid grid-cols-[2.25rem_minmax(0,1fr)] items-start gap-x-1 px-2",
+                  i % 2 === 1 && "bg-sub-band",
                 )}
-                title={marker.full}
-                data-testid="journal-round-marker"
+                aria-label={roundLabel(t, g.round)}
+                data-current={g.current}
+                data-testid="journal-round"
               >
-                {marker.short ? (
-                  <span aria-hidden>{marker.short}</span>
+                <h3
+                  className={cn(
+                    "flex h-6 items-center justify-center text-label font-semibold tabular-nums",
+                    // The current round's one mark: its marker in the tint (ADR 0027 step 9.1).
+                    g.current ? "text-tint" : "text-muted-foreground",
+                  )}
+                  title={marker.full}
+                  data-testid="journal-round-marker"
+                >
+                  {marker.short ? (
+                    <span aria-hidden>{marker.short}</span>
+                  ) : (
+                    <Campfire aria-hidden className="size-4" />
+                  )}
+                  <span className="sr-only">{marker.full}</span>
+                </h3>
+                {g.entries.length === 0 ? (
+                  <p className="flex min-h-6 items-center px-2 text-body text-muted-foreground">
+                    {entries.length === 0
+                      ? t("log.empty")
+                      : filter === "rolls"
+                        ? t("journal.noRollsThisRound")
+                        : hidden > 0 && shown.length === 0
+                          ? t("journal.onlySetupHidden")
+                          : t("log.nothingThisRound")}
+                  </p>
                 ) : (
-                  <Campfire aria-hidden className="size-4" />
+                  <div className="flex min-w-0 flex-col">
+                    {g.transactions.map((tx) => {
+                      // A round's opening rows read as the round's own (ADR 0027 step 9.6), each with
+                      // its own Undone tag; any other multi-entry transaction is framed.
+                      const framed = tx.length > 1 && !opensRound(tx);
+                      const rows = (
+                        <ul className="flex flex-col">
+                          {tx.map((e) => (
+                            <LogRow
+                              key={e.id}
+                              entry={e}
+                              selected={e.id === shownId && !shownIsLatest}
+                              latest={e.id === shownId && shownIsLatest}
+                              onSelect={() => select(e.id)}
+                              grouped={framed}
+                              undoneGroup={isUndone(tx)}
+                            />
+                          ))}
+                        </ul>
+                      );
+                      if (!framed) return <div key={tx[0].id}>{rows}</div>;
+                      // One request recorded several entries (ADR 0018): framed as one unit, and
+                      // undone as one.
+                      const undone = isUndone(tx);
+                      return (
+                        <div
+                          key={tx[0].id}
+                          className={cn(
+                            "border-l-2",
+                            undone ? "border-input" : "border-tint",
+                          )}
+                          data-testid="log-transaction"
+                          data-undone={undone}
+                        >
+                          {undone && (
+                            <p className="px-2 pt-0.5">
+                              <VoidedTag />
+                            </p>
+                          )}
+                          {rows}
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
-                <span className="sr-only">{marker.full}</span>
-              </h3>
-              {g.entries.length === 0 ? (
-                <p className="flex min-h-6 items-center px-2 text-body text-muted-foreground">
-                  {entries.length === 0
-                    ? t("log.empty")
-                    : filter === "rolls"
-                      ? t("journal.noRollsThisRound")
-                      : hidden > 0 && shown.length === 0
-                        ? t("journal.onlySetupHidden")
-                        : t("log.nothingThisRound")}
-                </p>
-              ) : (
-                <div className="flex min-w-0 flex-col">
-                  {g.transactions.map((tx) => {
-                    // A round's opening rows read as the round's own (ADR 0027 step 9.6), each with
-                    // its own Undone tag; any other multi-entry transaction is framed.
-                    const framed = tx.length > 1 && !opensRound(tx);
-                    const rows = (
-                      <ul className="flex flex-col">
-                        {tx.map((e) => (
-                          <LogRow
-                            key={e.id}
-                            entry={e}
-                            selected={e.id === shownId && !shownIsLatest}
-                            latest={e.id === shownId && shownIsLatest}
-                            onSelect={() => select(e.id)}
-                            grouped={framed}
-                            undoneGroup={isUndone(tx)}
-                          />
-                        ))}
-                      </ul>
-                    );
-                    if (!framed) return <div key={tx[0].id}>{rows}</div>;
-                    // One request recorded several entries (ADR 0018): framed as one unit, and
-                    // undone as one.
-                    const undone = isUndone(tx);
-                    return (
-                      <div
-                        key={tx[0].id}
-                        className={cn(
-                          "border-l-2",
-                          undone ? "border-input" : "border-tint",
-                        )}
-                        data-testid="log-transaction"
-                        data-undone={undone}
-                      >
-                        {undone && (
-                          <p className="px-2 pt-0.5">
-                            <VoidedTag />
-                          </p>
-                        )}
-                        {rows}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </section>
-          );
-        })}
+              </section>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

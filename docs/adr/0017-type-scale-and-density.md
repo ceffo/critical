@@ -4,7 +4,7 @@
 steps 3 and 5); steps 2, 4, 5, 6 and 7 amended by [ADR 0022](0022-activity-focus-layout.md); step 6's budget rechecked,
 unchanged, by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 6.6 (2026-10-17); step 6
 amended by [ADR 0027](0027-space-follows-frequency-of-use.md) step 4 (2026-10-17, proposed: 5 turn
-columns, effect edit / remove on hover and focus); step 2 amended below (12 px floor, heading rule)
+columns, effect edit / remove on hover and focus); step 2 amended below (12 px floor, heading rule); step 1 amended below (wide screens, 2200 px)
 
 ## Context
 
@@ -22,6 +22,13 @@ letters.
 1. **Fixed root.** The root font size is `16px` at every viewport (`web/src/index.css`, `:root`).
    No `clamp()` or `vw` on it. `1rem` is always 16 px; column widths keep their own clamps (ADR 0009
    step 1).
+   *Amended (wide screens):* the root stays 16 px at 2560 too; extra width goes to columns, never to
+   bigger type. From **2200 px** wide (`min-[2200px]`, so 1280 to 1920 are unchanged) the Act stage's
+   result column is as wide as the act panel (`1fr | 1fr`, it was `1.35fr | 1fr`), and the journal's
+   rounds flow in two balanced columns (`ActStage.tsx`, `CombatLog.tsx`), so the same height shows twice
+   the rows and no journal line is longer than about 1000 px. Bigger type at 2560 stays a possible
+   second step if the user asks. `layout.spec` (`expectWideStage`, step "wide stage" and the psionicist
+   act tabs) checks the split, the two columns and the line length at 1920 and 2560.
 2. **Type scale by role.** Five Tailwind v4 `@theme` tokens in `web/src/index.css`, each with its
    line-height (and weight where it has one). Text uses only these:
 

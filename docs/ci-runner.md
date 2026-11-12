@@ -38,7 +38,12 @@ One runner service runs one job at a time; GitHub gives a queued job to any idle
 `centauri-ci`, `centauri-ci-2` and `centauri-ci-3` (below) run three jobs at once on the VM. Jobs on the VM are
 safe side by side: e2e and dev-smoke use free ports and throwaway compose projects, the image job tags and removes
 `critical:ci-<run id>-<attempt>`, and the Playwright browser download is serialized with `flock` on
-`~/.cache/ms-playwright.lock`. Each runner has its own `_work` directory; Go and npm caches under `$HOME` are
+`~/.cache/ms-playwright.lock`. A cancelled run (a newer push) can be killed before its cleanup trap, leaking its docker
+network; about 30 leaks exhaust the daemon's address pools and every `docker network create` then fails with "all predefined
+address pools have been fully subnetted". `dev-smoke` and `image` therefore start with `scripts/ci-docker-sweep.sh`,
+which removes smoke containers and networks older than an hour (never a running job's). If it ever recurs, run
+`docker network prune -f` on the VM by hand, and consider `"default-address-pools": [{"base":"10.200.0.0/16","size":24}]`
+in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; Go and npm caches under `$HOME` are
 safe to share. If e2e slows down with three jobs at once, give the VM more cores (`qm set 106 --cores 8 --memory 12288`, reboot).
 
 ## Fork pull requests never run here

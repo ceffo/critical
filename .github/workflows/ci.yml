@@ -81,6 +81,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
+      # Cancelled runs leak docker networks; a full address-pool table fails every later job.
+      - run: scripts/ci-docker-sweep.sh
       - uses: actions/setup-go@v7
         with:
           go-version-file: api/go.mod
@@ -147,6 +149,8 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      - name: Sweep stale smoke containers and networks
+        run: scripts/ci-docker-sweep.sh
       - name: Build the image (fixture catalogue)
         run: >-
           docker build -t "critical:ci-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"

@@ -47,7 +47,7 @@ the PR's own change had not moved. The 5-minute budget was already exceeded.
    budget is not this ADR's work (sibling items); the budget rule is the target they are held to.
 7. **A skipped e2e counts as a success.** `e2e` stays a required check of `main`
    (`scripts/github-branch-protection.sh`): GitHub treats a job skipped by its `if` as passing, and
-   `.claude/scripts/land.sh` accepts a `SKIPPED` conclusion, so a PR that skipped e2e is mergeable.
+   `fleet land` (`.claude/bin/fleet land`) accepts a `SKIPPED` conclusion, so a PR that skipped e2e is mergeable.
 
 ## Consequences
 

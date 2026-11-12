@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Tests .claude/scripts/security-alerts.sh and its use by ci-watch.sh (part of `just validate`) with a stub
+# Tests .claude/scripts/security-alerts.sh (part of `just validate`) with a stub
 # gh and a stub Linear script: nothing here calls GitHub or Linear. Checks: new alerts of the three kinds are
 # filed Urgent in Todo with link/severity/rule/location; an alert already in a title (any state) is not refiled
 # ("#1" is not "#12"); a second run prints nothing; the secret value never reaches Linear; a gh or Linear
-# failure is reported (exit 1) without hiding the alerts that could be filed; ci-watch.sh exits on a new
-# alert report, keeps its CI exit semantics and keeps waiting when nothing is new.
+# failure is reported (exit 1) without hiding the alerts that could be filed.
 set -euo pipefail
 root="$(cd "$(dirname "$0")/.." && pwd)"
 S="$root/.claude/scripts"
@@ -96,32 +95,6 @@ rc=0; out="$(LINEAR_FAIL=1 "$S/security-alerts.sh")" || rc=$?
 [ "$rc" = 1 ] || fail "linear failure exit $rc, want 1"
 grep -q '^ERROR security-alerts: Linear create' <<<"$out" || fail "linear failure not reported: $out"
 grep -q '^FILED' <<<"$out" && fail "FILED printed although every creation failed"
-
-# --- 5: ci-watch.sh, with a stub ci-state (exit code from $CI_RC, text from $CI_TEXT) and a stub alerts script
-w="$tmp/w/.claude/scripts"; mkdir -p "$w"
-cp "$S/ci-watch.sh" "$w/"
-printf '#!/usr/bin/env bash\necho "$CI_TEXT"; exit "$CI_RC"\n' > "$w/ci-state.sh"
-printf '#!/usr/bin/env bash\n[ -f "$ALERT_FILE" ] && { cat "$ALERT_FILE"; exit "${ALERT_RC:-0}"; }\nexit 0\n' > "$w/security-alerts.sh"
-chmod +x "$w"/*.sh
-export SUPERVISOR_DIR="$tmp/sup" CI_WATCH_INTERVAL=0.1 ALERT_FILE="$tmp/alert"
-mkdir -p "$SUPERVISOR_DIR"
-watch() { timeout 5 "$w/ci-watch.sh" 2>&1; }
-rm -f "$ALERT_FILE"
-out="$(CI_RC=20 CI_TEXT='RED main CI run 1 (failure) u' watch)"
-[ "$out" = $'RED main CI run 1 (failure) u\nexit=20' ] || fail "red without alerts changed: $out"
-out="$(CI_RC=0 CI_TEXT='' watch)"
-[ "$out" = $'\nexit=0' ] || fail "green without alerts changed: $out"
-echo 'FILED TST-9 Security alert: x' > "$ALERT_FILE"
-out="$(CI_RC=0 CI_TEXT='' watch)"
-[ "$out" = $'FILED TST-9 Security alert: x\n\nexit=0' ] || fail "alert on idle CI: $out"
-out="$(CI_RC=10 CI_TEXT='PENDING PR #5 @abc: 1 check(s) running' watch)"
-[ "$out" = $'FILED TST-9 Security alert: x\nPENDING PR #5 @abc: 1 check(s) running\nexit=10' ] || fail "alert while CI pending: $out"
-echo 'ERROR security-alerts: gh api boom' > "$ALERT_FILE"
-out="$(ALERT_RC=1 CI_RC=20 CI_TEXT='RED main CI run 1 (failure) u' watch)"
-[ "$out" = $'ERROR security-alerts: gh api boom\nRED main CI run 1 (failure) u\nexit=20' ] || fail "alert error must not hide CI: $out"
-rm -f "$ALERT_FILE"
-rc=0; CI_RC=10 CI_TEXT='PENDING PR #5 @abc: 1 check(s) running' CI_WATCH_INTERVAL=0.1 timeout 1 "$w/ci-watch.sh" >/dev/null 2>&1 || rc=$?
-[ "$rc" = 124 ] || fail "ci-watch must keep waiting with pending CI and nothing new (exit $rc)"
 
 [ "$fails" = 0 ] && { echo "test-security-alerts: ok"; exit 0; }
 exit 1

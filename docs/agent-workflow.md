@@ -321,7 +321,7 @@ commit that run gates. `validate` and `generated` always run (required checks). 
 counts as a success, so the PR is mergeable and green; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
 `ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still
 applies to it. PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
-`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Who merges is `FLEET_MERGER=supervisor` in `.claude/fleet.env`: the supervisor merges through `fleet land` only (squash, pinned to the checked head sha; a `SKIPPED` check counts as passed, [ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)), after the user's approval of the PR. Developers, reviewers and testers never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more. `fleet ship` refuses a body without the **What changes for you locally** and `Closes` lines (`FLEET_SHIP_BODY_REQUIRE`).
+`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Who merges is `FLEET_MERGER=supervisor` in `.claude/fleet.env`: the supervisor merges through `fleet land` only (squash, pinned to the checked head sha; a `SKIPPED` check counts as passed, [ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)), on green CI; a PR that changes an ADR, an API or data contract, or the user's local workflow waits for the user's OK first. Developers, reviewers and testers never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more. `fleet ship` refuses a body without the **What changes for you locally** and `Closes` lines (`FLEET_SHIP_BODY_REQUIRE`).
 
 ## Commits
 

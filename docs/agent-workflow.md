@@ -1,9 +1,10 @@
 # Agent Workflow Configuration
 
-Project-specific settings for the generic `developer`, `code-reviewer`, `tester`, `scoper` and
-`supervisor` agents in `.claude/agents/`. The agents hold no project knowledge of their own: they
-read this file (linked from `AGENTS.md`) and the docs it points to. Section headings below are a
-contract; keep them stable.
+Project-specific settings for the generic `developer`, `code-reviewer`, `tester`, `scoper`, `designer`
+and `supervisor` agents in `.claude/agents/` (installed from the agents-dev-fleet; the fleet's own
+settings are in `.claude/fleet.env`, its commands behind `.claude/bin/fleet`). The agents hold no
+project knowledge of their own: they read this file (linked from `AGENTS.md`) and the docs it points
+to. **Section headings below are a contract; keep them stable.**
 
 ## Project docs to read
 
@@ -24,8 +25,8 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 
 - Full gate, from the repo root: `just validate` (backend lint + tests + build, frontend lint +
   typecheck + production build). Mandatory before any work item is reported done. On success it stamps
-  the tree it ran on (`scripts/gate-stamp.sh`); the supervisor's `ship.sh` refuses a HEAD without that
-  stamp, so commit first and run the gate last: any commit after it (a comment, a fixture) needs a rerun.
+  the tree it ran on (`scripts/gate-stamp.sh`); `fleet ship --verify` (`FLEET_VERIFY_CMD`) turns a HEAD without
+  that stamp into a FAIL verdict, so commit first and run the gate last: any commit after it (a comment, a fixture) needs a rerun.
 - Narrow checks while iterating: `just vet-api`, `just lint-api`, `just test-api`, `just lint-web`,
   `just typecheck-web`, `just build-api`, `just build-web`; `go test -run X ./path` from `api/` for
   a single test.
@@ -65,8 +66,8 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
 
 ## Worktree setup
 
-- Worktree root: `~/code/critical.worktrees/` (briefs in `briefs/`, reports in `reports/`,
-  supervisor ledger in `supervisor/ledger.md`).
+- Worktree root: `~/code/critical.worktrees/` beside the checkout (briefs in `briefs/`, reports in `reports/`,
+  supervisor state store in `supervisor/state.db`); these are the fleet's defaults.
 - Main checkout: `~/code/critical`; default branch `main`; remote `origin`.
 - After creating a worktree: `cd web && npm ci` (`web/node_modules` is gitignored). Go needs nothing.
 - After pulling `main` in the main checkout: `just dev` reinstalls web deps (`npm install`) when
@@ -112,45 +113,36 @@ merge instead of hand-merging.
 
 ## Tracker
 
-Linear: team `CRI`, project "critical-hit". The workspace shape (priorities, states, labels) is written once
-in [`scripts/linear-mapping.json`](../scripts/linear-mapping.json) and described in [linear.md](linear.md);
-this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-tracker.md).
+Backend: `linear` (`FLEET_TRACKER`, `LINEAR_TEAM=CRI` and `LINEAR_PROJECT=critical-hit` in `.claude/fleet.env`).
+Every agent uses `.claude/bin/fleet tracker` (`show`, `list`, `ready`; the supervisor and scoper also `create`,
+`update`, `block`, `comment`, `state`, `setup`). Run it without arguments for the usage. The API key is
+`$LINEAR_API_KEY` or `~/.config/agents-dev-fleet/linear-api-key` (mode 600). The workspace shape (priorities, states,
+labels) is written once in [`scripts/linear-mapping.json`](../scripts/linear-mapping.json) and described in
+[linear.md](linear.md); this file links it, never copies it. The decision is [ADR 0031](adr/0031-linear-tracker.md).
 
-- Work item = Linear issue; id `CRI-<n>` (e.g. `CRI-42`). Old bead ids (`critical-518.3`) are looked up in
-  `docs/beads-id-map.json` (`{"critical-x":"CRI-n"}`); the old text is in the annotated git tag
-  `beads-archive` (`git show beads-archive:.beads/issues.jsonl`).
-- Tools. Agents use the Linear MCP tools listed in their `tools:` (`mcp__linear-server__…`): read
-  (`get_issue`, `list_issues` with `query` for search, `list_comments`) for developer, code-reviewer and
-  tester; read plus write (`save_issue`, `save_comment`, `list_issue_labels`, `list_issue_statuses`) for the
-  supervisor and the scoper. Where a shell is the better tool, `scripts/linear.sh '<GraphQL>'` (needs
-  `$LINEAR_API_KEY` or the key file written by `just linear-setup`; never in the repo).
-- Queue: `scripts/linear-ready.sh [--json]` (state Todo, no open blocker, no `needs-info` / `deferred`
-  label, not an `epic`; Urgent first, then oldest). Pending questions:
-  `.claude/scripts/pending-questions.sh`.
-- States: Todo (open) → In Progress (claimed by the supervisor at dispatch:
-  `.claude/scripts/linear-state.sh CRI-n "In Progress"`) → In Review (PR opened, by
-  `.claude/scripts/ship.sh`) → Done (by Linear's GitHub integration when the PR merges; nobody closes by
-  hand). A PR closed unmerged goes back to Todo (`linear-state.sh CRI-n Todo "PR #n closed unmerged"`).
-  Deferred work is Backlog with the label `deferred`. The PR title ends with `(CRI-n)` and its body has a
-  `Closes CRI-n` line, which is what the integration reads.
-- Everything that writes (`save_issue`, `save_comment`, `linear-state.sh`) is the supervisor's or the
-  scoper's; developers, reviewers and testers read only. Tracker state lives in Linear, not in git: there
-  is no export, no tracker PR and nothing tracker-related to merge or commit.
-- Priority: Urgent / High / Medium / Low / None (old P0 / P1 / P2 / P3 / P4). Types are labels: Bug,
-  Feature, `chore`, `docs`, `question`; a task has no type label.
-- Labels in use: `needs-info` (cannot start: waiting on the user; the issue description holds a
-  "## Questions" section, each question with the default applied meanwhile), `risky` (needs review),
-  `epic`, `deferred`, plus the area labels (`backend`, `frontend`, `infra`, `data-prep`, `tooling`,
-  `mvp-saturday`). Every open `needs-info` or `question` issue is a pending question the supervisor
-  restates to the user in every reply (`.claude/scripts/pending-questions.sh`).
-- Hierarchy: an epic is a parent issue labelled `epic` (sub-issues via `parentId`); blocking is a
-  "blocked by" relation (`save_issue` `blockedBy`).
-- Work items are written in the vertical-slice convention: one issue = schema + Go engine + REST
-  endpoint + React panel for one feature; split only when too big for one PR (backend issue first,
-  UI issue blocked by it).
-- Rules items: acceptance criteria name the ADR steps to implement (one criterion per step);
-  a missing ADR is filed first.
+- Work item = Linear issue; id `CRI-<n>` (e.g. `CRI-42`; file-safe key for branches, briefs and reports: `CRI-<n>`). Old
+  bead ids (`critical-518.3`) are looked up in `docs/beads-id-map.json` (`{"critical-x":"CRI-n"}`); the old text is in
+  the annotated git tag `beads-archive` (`git show beads-archive:.beads/issues.jsonl`).
+- States: Todo (open) -> In Progress (claimed by the supervisor at dispatch) -> In Review (change opened, by
+  `fleet ship`) -> Done (Linear's GitHub integration closes it when the PR merges; nobody closes by hand). A change
+  closed unmerged goes back to Todo. Deferred work is Backlog plus the label `deferred`. The PR title ends with
+  `(CRI-n)` and its body has a `Closes CRI-n` line, which is what the integration reads. Tracker state lives in
+  Linear, not in git: no export, no tracker PR, nothing tracker-related to commit.
+  Linear team setting: "When PR opened" = In Review (its default moves the item back to In Progress after `fleet ship`).
+- Priority: Urgent / High / Medium / Low / None (old P0 / P1 / P2 / P3 / P4). Types are labels: Bug, Feature,
+  `chore`, `docs`, `question`; a task has no type label.
+- Labels: `needs-info` (cannot start: waiting on the user; the description holds a "## Questions" section, each
+  question with the default applied meanwhile), `risky` (needs review), `epic`, `deferred`, `question`, plus the area
+  labels (`backend`, `frontend`, `infra`, `data-prep`, `tooling`, `mvp-saturday`). Every open `needs-info` or
+  `question` issue is a pending question the supervisor restates to the user in every reply
+  (`.claude/bin/fleet pending-questions`).
+- Hierarchy: an epic is a parent issue labelled `epic` (sub-issues via `--parent`); blocking is a "blocked by"
+  relation (`--blocked-by`, `fleet tracker block`).
+- Slicing convention: one issue = schema + Go engine + REST endpoint + React panel for one feature; split only when
+  too big for one PR (backend issue first, UI issue blocked by it). Rules items: acceptance criteria name the ADR
+  steps to implement (one criterion per step); a missing ADR is filed first.
 - Defaults when filing autonomously: priority Low (Medium for a correctness bug in rules math).
+- Only the supervisor and the scoper write to the tracker.
 
 ## Rulebooks
 
@@ -329,7 +321,7 @@ commit that run gates. `validate` and `generated` always run (required checks). 
 counts as a success, so the PR is mergeable and green; `ci-skip` does not imply `no-release`. Adding or removing a label re-runs CI. Don't use
 `ci-skip` on a change to the justfile, compose, air, scripts or storage: the local dev gate still
 applies to it. PR body has a **What changes for you locally** line (dev commands, ports, tools, local data, one-off steps; or "nothing") and ends with
-`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Only the user merges PRs. Agents and the supervisor never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more.
+`🤖 Generated with [Claude Code](https://claude.com/claude-code)`. Who merges is `FLEET_MERGER=supervisor` in `.claude/fleet.env`: the supervisor merges through `fleet land` only (squash, pinned to the checked head sha; a `SKIPPED` check counts as passed, [ADR 0048](adr/0048-e2e-runs-on-ui-and-api-paths.md)), after the user's approval of the PR. Developers, reviewers and testers never merge and never ask whether to merge: a PR is reported as ready (CI green), nothing more. `fleet ship` refuses a body without the **What changes for you locally** and `Closes` lines (`FLEET_SHIP_BODY_REQUIRE`).
 
 ## Commits
 
@@ -339,6 +331,26 @@ same format (checked in CI by `.github/workflows/pr-title.yml`): it becomes the 
 and the release version bump is read from it. Never commit broken tests or a failing build.
 Trailer: `Co-Authored-By:` naming the
 model actually running.
+
+## Overrides
+
+### All agents
+
+- Rulebooks: the `rules-lookup` agent and `just rulebooks` (section "Rulebooks" above) are critical's own; the fleet knows nothing of them.
+
+### Supervisor
+
+- Security alerts: the fleet has no equivalent of `.claude/scripts/security-alerts.sh` (files each open Dependabot,
+  code-scanning and secret-scanning alert as an Urgent Todo item in CRI / critical-hit, skipping those already filed).
+  The supervisor runs it at the start of a session and about hourly while idle, and handles what it prints (`FILED CRI-n ...`).
+- Ship gate: `fleet ship` has no pre-push refusal. Before shipping the supervisor runs `scripts/gate-stamp.sh check <worktree>`
+  (HEAD must be the tree `just validate` passed on) and checks that the title, body and branch name no tracker id the PR
+  does not close (Linear would link and move that item); `fleet ship --verify` repeats the stamp check afterwards.
+- Catch-up is a rebase, as the fleet's default; `FLEET_VALIDATE_CMD=just validate` runs on each rebased worktree.
+
+### Designer
+
+- Runs on Opus (see "Model selection"); building the approved design is UI work and stays on Sonnet.
 
 ## Memory
 

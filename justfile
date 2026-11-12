@@ -6,7 +6,7 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-class-ids check-linear check-linear-queue check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture check-api check-web
+validate: check-no-tracker-ids check-no-class-ids check-linear check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture check-api check-web
     @echo "--- Project Validation Successful ---"
     @scripts/gate-stamp.sh write
 
@@ -44,16 +44,11 @@ check-no-sqlite:
     fi
     echo "--- No SQLite in the server ---"
 
-# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh and the supervisor's Linear scripts (.claude/scripts) against a local stub server; no real Linear call.
+# scripts/linear.sh (Linear GraphQL helper), scripts/linear-setup.sh, scripts/linear-configure.sh and .claude/scripts/security-alerts.sh against a local stub server; no real Linear call.
 check-linear:
     scripts/test-linear.sh
-    scripts/test-ship-linear.sh
     scripts/test-linear-configure.sh
     scripts/test-security-alerts.sh
-
-# scripts/linear-ready.sh and the Linear mode of pending-questions.sh against a local stub server; no real Linear call.
-check-linear-queue:
-    scripts/test-linear-queue.sh
 
 # The CI slow-job skip rule (scripts/test-ci-skip-slow.sh): docs-only paths and the ci-skip label.
 check-ci-skip:

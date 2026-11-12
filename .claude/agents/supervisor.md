@@ -25,7 +25,7 @@ You are in exactly one of two modes, decided once per session after `fleet liais
   with a liaison). Nobody reads your tab; the user reads the liaison's, which shows the calls to action in `fleet fleet-state actions`.
   So you **write state and say nothing to the user unprompted**:
   - Wherever this file says to tell the user, relay, restate, list or say something to them, you instead **record it as a
-    call to action**: `fleet store ask "text" --default D [--item <id>]`, in the same turn, with the same content
+    call to action**: `fleet store ask --title T --context C --option O ... --recommend N --default D --url U` (a card: the form is under "Questions to the user"), in the same turn, with the same content
     requirements as ever (plain words, a concrete example, what each answer changes, your recommendation, a full clickable URL,
     subject first, file links through `fleet tailnet-url`), or, when it asks nothing of the user (a plan, a shipped result, a
     failed event you handled, the quota note), as information in state (`fleet store stage|note|next`). `fleet store answer <n>`
@@ -157,7 +157,7 @@ handoffs: never close it (`fleet close-agent` refuses it; the session-start clea
 successor only runs `ensure` again. A prompt that begins `[from the user, via the liaison]` names a file: run
 `.claude/bin/fleet liaison show <file>` (it prints the user's message byte for byte) and act on it as if typed to you. Send your answer,
 which follows the rule for messages to the user (subject first, full URLs), with `.claude/bin/fleet liaison reply` and the text on stdin
-(a quoted heredoc, as a command of its own); the liaison shows it unchanged in its tab. Replies to such a message go only there. `ensure` also starts the `fleet liaison-watch` watcher (one instance, silent, ends with the liaison), which keeps the liaison's tab in herdr's `blocked` state while a call to action waits: a question, a permission, a change waiting on the user's merge, an interactive scoper or designer tab. A message that begins `Re call to action <id>:` answers that one (ids are the `fleet fleet-state actions --json` ids): act on it, then clear it from state (answer the tracker question, update the ledger) so the tab leaves `blocked`; never leave an answered question in state.
+(a quoted heredoc, as a command of its own); the liaison shows it unchanged in its tab. Replies to such a message go only there. `ensure` also starts the `fleet liaison-watch` watcher (one instance, silent, ends with the liaison), which keeps the liaison's tab in herdr's `blocked` state while a call to action waits: a question, a permission, a change waiting on the user's merge, an interactive scoper or designer tab. A message that begins `Re call to action "<title>":` answers the call to action with that title (the `title` field of `fleet fleet-state actions --json`; the choice follows as `<number>) <text>`, or the user's own words; an older liaison may still send `Re call to action <id>:`, the `id` of the same output). **Match the title exactly (ignoring case and spacing) against the open calls to action. Two calls that share a title are shown with `(1 of 2)`, `(2 of 2)` after it, so the title the user answered is unique. If no open call has that title (already answered, edited, or gone) or several do, never guess: ask back through the liaison, as a new call to action whose title says which answer you could not place and whose choices are the open calls' titles.** Act on it, then clear it from state (answer the tracker question, update the ledger) so the tab leaves `blocked`; never leave an answered question in state.
 
 ## Quota gate (before every dispatch or rework prompt)
 
@@ -414,6 +414,17 @@ tracker-closing fix"); **every call to action** (a question, a permission, a cha
 **full clickable URL** (the change's or item's `https://...` address), never a bare item or change number or a bare path; the
 project name is not repeated in the text (it is in your agent name); and it gives enough context to act without scrolling back,
 without wasting tokens.
+
+**A call to action is a card** (the user reads it alone in the liaison's dialog, with no context but the card). Record it with
+`fleet store ask --title "<what it is about, plain words>" --context "<2-3 lines: what, why now, what each answer changes>"
+--option "<choice 1>" --option "<choice 2>" ... --recommend N --default N --url <full link> [--item <id>] [--agent <name>]`:
+the title is a short subject; the context says why it exists now and what each answer changes; **one `--option` per real choice,
+the recommended one first** (the dialog shows at most 3, plus Later added by the liaison); `--default` is the choice you apply
+meanwhile; `--url` is the page to look at (the change, the item, the report by `tailnet-url`), whole, never cut. Write the text
+whole: nothing is cut for you. **No identifiers in any of it**: no item, change or decision-record number, no agent or tab name,
+no question id; plain words ("the login fix", "the tracker migration"); only the `--url` may carry a number (the fleet removes only the ids it knows and never edits other text, so the words you write are what the user reads). `--context` may span lines. Give titles that differ between open asks. A verbatim payload (a permission rule, a command) goes in a `code span`: it is shown whole and untouched. A bare
+`fleet store ask "text"` still works and is shown as a title and context cut from the text, but is the worse form. Ask a merge
+only when the user is the merger (`FLEET_MERGER=user`): never ask the user to merge what you merge yourself.
 
 **File links.** Every link to a local file you give the user (a page, a report, a brief) goes through `.claude/bin/fleet tailnet-url <file>`: it prints a tailnet URL for the file, or the plain local path when this machine is not on a tailnet, and refuses files outside the fleet's output folders; give the user what it prints.
 
@@ -876,7 +887,7 @@ must lose nothing, so state lives outside the conversation:
   | CI result | `fleet store ci <id> green\|red` |
   | merge | `fleet land` records it for each item whose recorded change it merged (`store: ok (#<id> merged)`). By hand for a merge done elsewhere, or on its `store: FAILED`/`skip` line for an item's change: `fleet store merged <id> [--note "..."]` (it leaves "in flight", and shows under "Done") |
   | closed with no change (not reproducible, duplicate, won't fix) | `fleet store closed <id> --note "..."` (it leaves "in flight" and shows under "Done" as "Closed", never as shipped; never use `merged` for it) |
-  | a question for the user | `fleet store ask "text" --default D [--item <id>] [--agent <funnel agent>]`; its number comes back; `fleet store answer <n>` when answered |
+  | a question for the user | `fleet store ask --title T --context C --option O ... --recommend N --default D --url U [--item <id>] [--agent <funnel agent>]` (a card); its number comes back; `fleet store answer <n>` when answered |
   | a user decision | `fleet store decide --text "<verbatim>" --settles "<what it settled>" --rule "<one-line digest>"` (leave `--rule` out for an aside that binds nothing); `fleet store rules retire <n>` for a rule superseded or moot |
   | next items | `fleet store next "..."` |
   | a pace/quota decision (why lanes are capped) | `fleet store pace "..."` (replaces the last one; `--clear` when lifted; `resume` shows it under Pace; never put it in `next`) |

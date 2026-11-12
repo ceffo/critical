@@ -130,7 +130,7 @@ export function KnownPowersList({
       aria-label={t("powers.known")}
     >
       <div className="card-band bleed-x-4 flex shrink-0 flex-col gap-2 py-2.5">
-        <h2 className="text-headline">{t("powers.known")}</h2>
+        <h2 className="section-label">{t("powers.known")}</h2>
         <dl className="grid grid-cols-[repeat(auto-fill,minmax(7.5rem,1fr))] gap-2">
           {COUNT_KEYS.map((k) => (
             <div

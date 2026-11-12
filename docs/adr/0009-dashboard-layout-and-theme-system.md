@@ -59,7 +59,7 @@ hairline panels) the house rules of the design-taste-frontend skill reject.
 5. **House rules (design-taste-frontend, adapted to Nocturne).** No gradients (a flat accent tint
    instead). No tiny uppercase letter-spaced labels: sentence case (*replaced by [ADR 0022](0022-activity-focus-layout.md) step 4.2:* section labels
    are uppercase and letter-spaced; *amended by
-   [ADR 0017](0017-type-scale-and-density.md) step 2:* labels are 11 px, the 12 px minimum is gone;
+   [ADR 0017](0017-type-scale-and-density.md) step 2:* labels were 11 px and the 12 px minimum was gone, *restored by ADR 0017's text-floor amendment:* 12 px;
    sizes come from its five role tokens). Surfaces are
    separated by a tone step (ground → surface → `neu-900`), not hairlines (*amended by [ADR 0022](0022-activity-focus-layout.md)
    step 4.1:* every zone is an outlined card on the ground, 12 px apart, with no rule anywhere). Shadows only on what

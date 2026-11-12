@@ -204,8 +204,13 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
       />
     );
     const fr = await markup("fr", tag({ ...none, skillPoints: 5 }));
-    expect(fr).toContain(">Places libres<");
+    expect(fr).toContain(">Assigner<");
     expect(fr).toContain('data-testid="to-spend-tag"');
+    // The tooltip says what waits and that opening it assigns it (a button, so keyboard-reachable).
+    expect(fr).toContain("Ouvrir pour les assigner");
+    expect(await markup("en", tag({ ...none, skillPoints: 5 }))).toContain(
+      "Open to assign them.",
+    );
     expect(await markup("en", tag({ ...none, weaponSlots: 1 }))).toContain(
       ">Slots to spend<",
     );
@@ -343,7 +348,7 @@ describe("the level-up free spell (ADR 0030 step 20.8)", () => {
       "fr",
       <ToSpendTag toSpend={owed} onOpenEditor={noop} onOpenFreeSpell={noop} />,
     );
-    expect(fr).toContain(">Places libres<");
+    expect(fr).toContain(">Assigner<");
     const rows = await markup(
       "fr",
       <GrantRows

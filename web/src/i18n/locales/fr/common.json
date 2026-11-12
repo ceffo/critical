@@ -26,8 +26,8 @@
       "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
       "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
       "grantsTitle": "Le niveau {{level}} apporte",
-      "toSpendHint": "Emplacements, points de talent et sorts gratuits pas encore pris",
-      "toSpendTitle": "Places libres",
+      "toSpendHint": "Emplacements de maîtrise d’arme et de compétence, points de talent et sorts gratuits pas encore assignés. Ouvrir pour les assigner.",
+      "toSpendTitle": "Assigner",
       "gained": "+{{what}}",
       "grant": {
         "weaponSlots_one": "{{count}} emplacement de maîtrise d’arme",

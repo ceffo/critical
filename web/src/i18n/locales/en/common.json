@@ -26,7 +26,7 @@
       "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
       "realizedAboveHint": "Undo the roll or correct the XP.",
       "grantsTitle": "Level {{level}} grants",
-      "toSpendHint": "Slots, skill points and free spells not taken yet",
+      "toSpendHint": "Proficiency slots (weapon and non-weapon), skill points and free spells not taken yet. Open to assign them.",
       "toSpendTitle": "Slots to spend",
       "gained": "+{{what}}",
       "grant": {

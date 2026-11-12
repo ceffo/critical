@@ -388,7 +388,7 @@ _Code_: SkillSet, SetPoints, SetSkill, SkillSetSkill
 _Avoid_: "kind of thief / bard skill" for a set (that is the **check kind**).
 
 **Proficiency slot** (fr: emplacement de compétence):
-One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend** (UI: "Slots to spend" / "Places libres", the chip on the character card, shown only while a slot or skill point is unspent or a pool is over budget; the fr is short so the card header keeps one line).
+One unit of the proficiency budget, **weapon** or **non-weapon**; **over budget** or **to spend** (UI: "Slots to spend" / "Assigner", the chip on the character card with a tooltip saying what is waiting (slots, skill points, free spells) and that it opens the way to assign them, shown only while a slot or skill point is unspent or a pool is over budget; the fr is short so the card header keeps one line).
 [ADR 0037](docs/adr/0037-proficiencies.md) steps 3, 10 and 11.
 _Code_: ProficiencySlots, NonweaponPool, Spending
 

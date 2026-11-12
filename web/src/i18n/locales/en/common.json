@@ -687,6 +687,9 @@
       "add": "Add",
       "save": "Save",
       "cancel": "Cancel",
+      "next": "Next",
+      "back": "Back",
+      "more": "More options",
       "notANumber": "Enter a whole number"
     },
     "heading": "Items",

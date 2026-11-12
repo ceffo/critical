@@ -39,6 +39,16 @@ import { PowersEditor } from "./PowersEditor";
 import { useSpellNamesStore } from "@/stores/spellNames";
 
 const BEHAVIOURS: ItemBehaviour[] = ["stock", "charges", "daily"];
+/** The shared fields folded under "More options" (every category has them). */
+const EXTRA_FIELDS: ItemField[] = [
+  "behaviour",
+  "maxCount",
+  "effectDice",
+  "effectSave",
+  "component",
+  "notes",
+  "powers",
+];
 /** Save categories an item effect may allow (the server rejects anything else). */
 const SAVES = [
   "para_poison",
@@ -70,11 +80,19 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
   const id = useId();
   const [draft, setDraft] = useState<ItemDraft>(initial);
   const [errors, setErrors] = useState<Partial<Record<ItemField, string>>>({});
+  // Adding is two steps: what it is (name, category), then that category's fields. Editing shows
+  // both at once, in a dialog.
+  const [step, setStep] = useState<1 | 2>(1);
+  const identity = !!editing || step === 1;
+  const details = !!editing || step === 2;
+  // The shared extras (behaviour, effect, note, powers) fold under "More options" unless the piece
+  // is being edited or its category is about powers.
+  const [moreOpen, setMoreOpen] = useState(!!editing);
   const set = <K extends ItemField>(k: K, v: ItemDraft[K]) => {
     setDraft((d) => ({ ...d, [k]: v }));
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
-  const shows = (f: ItemField) => hasField(draft.category, f);
+  const shows = (f: ItemField) => details && hasField(draft.category, f);
   const spellNames = useSpellNamesStore((s) => s.names);
   // The catalogue's spells by name in the UI language, for a scroll's spell (ADR 0033 step 2).
   const spellOptions = Object.values(spellNames)
@@ -85,6 +103,11 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (!details) {
+      setMoreOpen((o) => o || draft.category === "magic");
+      setStep(2);
+      return;
+    }
     const { body, errors: parseErrors } = draftToBody(draft, i18n.language);
     const local = Object.fromEntries(
       Object.entries(parseErrors as DraftErrors).map(([k, v]) => [
@@ -94,6 +117,8 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
     );
     if (Object.keys(local).length > 0) {
       setErrors(local);
+      if (Object.keys(local).some((k) => EXTRA_FIELDS.includes(k as ItemField)))
+        setMoreOpen(true);
       return;
     }
     const toSend = editing ? changedFields(editing, body, i18n.language) : body;
@@ -103,12 +128,16 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
     }
     const rejected = await onSave(toSend);
     // The server's message, or the wording of its code (ADR 0023: not_allowed).
-    if (rejected?.field)
+    if (rejected?.field) {
+      if (EXTRA_FIELDS.includes(rejected.field as ItemField)) setMoreOpen(true);
+      if (rejected.field === "name" || rejected.field === "category")
+        setStep(1);
       setErrors({
         [rejected.field]: t(`equipment.form.errors.${rejected.message}`, {
           defaultValue: rejected.message,
         }),
       });
+    }
   }
 
   const field = (
@@ -205,26 +234,42 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
       data-testid="item-form"
     >
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {field("name", t("items.form.name"), text("name"), "col-span-2")}
-        {field("category", t("equipment.form.category"), (props) => (
-          <select
-            {...props}
-            className={cn(fieldClass, errors.category && "border-destructive")}
-            value={draft.category}
-            onChange={(e) => {
-              const c = e.target.value as Category;
-              set("category", c);
-              if (c === "magic" && draft.magicKind === "")
-                set("magicKind", "misc");
-            }}
+        {!identity && (
+          <p
+            className="col-span-2 flex min-w-0 flex-col break-words sm:col-span-4"
+            data-testid="item-summary"
           >
-            {CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {t(`equipment.category.${c}`)}
-              </option>
-            ))}
-          </select>
-        ))}
+            <span className="font-medium">{draft.name}</span>
+            <span className="text-label text-muted-foreground">
+              {t(`equipment.category.${draft.category}`)}
+            </span>
+          </p>
+        )}
+        {identity &&
+          field("name", t("items.form.name"), text("name"), "col-span-2")}
+        {identity &&
+          field("category", t("equipment.form.category"), (props) => (
+            <select
+              {...props}
+              className={cn(
+                fieldClass,
+                errors.category && "border-destructive",
+              )}
+              value={draft.category}
+              onChange={(e) => {
+                const c = e.target.value as Category;
+                set("category", c);
+                if (c === "magic" && draft.magicKind === "")
+                  set("magicKind", "misc");
+              }}
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {t(`equipment.category.${c}`)}
+                </option>
+              ))}
+            </select>
+          ))}
         {shows("magicKind") &&
           field(
             "magicKind",
@@ -233,7 +278,8 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
               t(`equipment.magicKinds.${k as MagicKind}`),
             ),
           )}
-        {holdsSpell(draft) &&
+        {details &&
+          holdsSpell(draft) &&
           field(
             "spellId",
             t("equipment.form.spell"),
@@ -458,7 +504,7 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
             text("acMissile", { inputMode: "numeric" }),
           )}
         {/* The armour's or shield's "+N" (ADR 0033 step 17): its magic power, ac -N. */}
-        {hasPlus(draft.category) && (
+        {details && hasPlus(draft.category) && (
           <div
             role="group"
             aria-labelledby={`${id}-plus`}
@@ -502,86 +548,120 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
           </div>
         )}
 
-        {/* Shared (ADR 0016 steps 1 to 5). */}
-        {field("behaviour", t("items.form.behaviour"), (props) => (
-          <select
-            {...props}
-            className={fieldClass}
-            value={draft.behaviour}
-            onChange={(e) => set("behaviour", e.target.value as ItemBehaviour)}
-          >
-            {BEHAVIOURS.map((b) => (
-              <option key={b} value={b}>
-                {t(`items.behaviour.${b}`)}
-              </option>
-            ))}
-          </select>
-        ))}
-        {field(
-          "count",
-          t("items.form.count"),
-          text("count", { inputMode: "numeric" }),
+        {/* Shared (ADR 0016 steps 1 to 5): the count always; the rest under More options. */}
+        {details && (
+          <>
+            {field(
+              "count",
+              t("items.form.count"),
+              text("count", { inputMode: "numeric" }),
+            )}
+          </>
         )}
-        {draft.behaviour === "daily" &&
-          field(
-            "maxCount",
-            t("items.form.maxCount"),
-            text("maxCount", { inputMode: "numeric" }),
-          )}
-        {field(
-          "effectDice",
-          t("items.form.effectDice"),
-          text("effectDice", { placeholder: "2d6, 1d8+2" }),
-        )}
-        {field("effectSave", t("items.form.effectSave"), (props) => (
-          <select
-            {...props}
-            className={fieldClass}
-            value={draft.effectSave}
-            onChange={(e) => set("effectSave", e.target.value)}
+        {details && (
+          <details
+            className="col-span-2 sm:col-span-4"
+            open={moreOpen}
+            onToggle={(e) => setMoreOpen(e.currentTarget.open)}
+            data-testid="item-more"
           >
-            <option value="">{t("items.form.noSave")}</option>
-            {SAVES.map((s) => (
-              <option key={s} value={s}>
-                {t(`saves.categories.${s}`)}
-              </option>
-            ))}
-          </select>
-        ))}
-        {field("component", t("equipment.form.component"), (props) => (
-          <select
-            {...props}
-            className={cn(fieldClass, errors.component && "border-destructive")}
-            title={t("equipment.form.componentHint")}
-            value={draft.component}
-            onChange={(e) => set("component", e.target.value as Component | "")}
-          >
-            <option value="">{t("equipment.form.noComponent")}</option>
-            {COMPONENTS.map((c) => (
-              <option key={c} value={c}>
-                {t(`equipment.components.${c}`)}
-              </option>
-            ))}
-          </select>
-        ))}
-        {field(
-          "notes",
-          t("items.form.notes"),
-          text("notes"),
-          "col-span-2 sm:col-span-4",
+            <summary className="cursor-pointer text-label text-muted-foreground">
+              {t("items.form.more")}
+            </summary>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {field("behaviour", t("items.form.behaviour"), (props) => (
+                <select
+                  {...props}
+                  className={fieldClass}
+                  value={draft.behaviour}
+                  onChange={(e) =>
+                    set("behaviour", e.target.value as ItemBehaviour)
+                  }
+                >
+                  {BEHAVIOURS.map((b) => (
+                    <option key={b} value={b}>
+                      {t(`items.behaviour.${b}`)}
+                    </option>
+                  ))}
+                </select>
+              ))}
+              {draft.behaviour === "daily" &&
+                field(
+                  "maxCount",
+                  t("items.form.maxCount"),
+                  text("maxCount", { inputMode: "numeric" }),
+                )}
+              {field(
+                "effectDice",
+                t("items.form.effectDice"),
+                text("effectDice", { placeholder: "2d6, 1d8+2" }),
+              )}
+              {field("effectSave", t("items.form.effectSave"), (props) => (
+                <select
+                  {...props}
+                  className={fieldClass}
+                  value={draft.effectSave}
+                  onChange={(e) => set("effectSave", e.target.value)}
+                >
+                  <option value="">{t("items.form.noSave")}</option>
+                  {SAVES.map((s) => (
+                    <option key={s} value={s}>
+                      {t(`saves.categories.${s}`)}
+                    </option>
+                  ))}
+                </select>
+              ))}
+              {field("component", t("equipment.form.component"), (props) => (
+                <select
+                  {...props}
+                  className={cn(
+                    fieldClass,
+                    errors.component && "border-destructive",
+                  )}
+                  title={t("equipment.form.componentHint")}
+                  value={draft.component}
+                  onChange={(e) =>
+                    set("component", e.target.value as Component | "")
+                  }
+                >
+                  <option value="">{t("equipment.form.noComponent")}</option>
+                  {COMPONENTS.map((c) => (
+                    <option key={c} value={c}>
+                      {t(`equipment.components.${c}`)}
+                    </option>
+                  ))}
+                </select>
+              ))}
+              {field(
+                "notes",
+                t("items.form.notes"),
+                text("notes"),
+                "col-span-2 sm:col-span-4",
+              )}
+              <PowersEditor
+                powers={draft.powers}
+                onChange={(powers) => set("powers", powers)}
+                others={hasPlus(draft.category)}
+                templates={draft.category === "magic"}
+                error={errors.powers}
+              />
+            </div>
+          </details>
         )}
-        <PowersEditor
-          powers={draft.powers}
-          onChange={(powers) => set("powers", powers)}
-          others={hasPlus(draft.category)}
-          templates={draft.category === "magic"}
-          error={errors.powers}
-        />
       </div>
       <div className="flex gap-2">
         <Button type="submit" size="sm" disabled={busy}>
-          {editing ? t("items.form.save") : t("items.form.add")}
+          {editing
+            ? t("items.form.save")
+            : step === 1
+              ? t("items.form.next")
+              : t("items.form.add")}
         </Button>
+        {!editing && step === 2 && (
+          <Button type="button" size="sm" onClick={() => setStep(1)}>
+            {t("items.form.back")}
+          </Button>
+        )}
         <Button type="button" size="sm" onClick={onCancel}>
           {t("items.form.cancel")}
         </Button>

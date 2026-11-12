@@ -1607,12 +1607,80 @@ async function diceBarStep(page: Page, size: Viewport, stack: Stack) {
   await expect(toggle).toHaveAttribute("aria-expanded", "false");
 }
 
+// The typed add form is two steps and the edit opens over the list: no row moves, and nothing is
+// cut in French or English (checked in French first, ADR 0027 step 2).
+async function itemFormStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await openWorkspace(page, "Inventory");
+  const rows = page.locator("li[data-category]");
+  const positions = async () =>
+    (await rows.evaluateAll((els) =>
+      els.map((e) => {
+        const r = e.getBoundingClientRect();
+        return [e.getAttribute("data-testid"), r.x, r.y, r.height];
+      }),
+    )) as unknown[];
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    const fr = lang === "fr";
+    await openTypedAdd(page, lang);
+    const f = page.getByTestId("item-form");
+    await f
+      .getByLabel(fr ? "Nom" : "Name")
+      .fill("Hache de bataille des longs hivers");
+    await f.getByLabel(fr ? "Catégorie" : "Category").selectOption("weapon");
+    await f.getByRole("button", { name: fr ? "Suivant" : "Next" }).click();
+    await expect(f.getByTestId("item-summary")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      await expectNoPageScroll(page);
+      await expectNoClippedText(
+        f,
+        `add form step 2, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      if (fr && vp.width >= 1920)
+        await snap(page, `item-form-step2-fr-${vp.width}x${vp.height}`);
+    }
+    await f.getByRole("button", { name: fr ? "Retour" : "Back" }).click();
+    await expect(f.getByLabel(fr ? "Nom" : "Name")).toHaveValue(
+      "Hache de bataille des longs hivers",
+    );
+    await f.getByRole("button", { name: fr ? "Annuler" : "Cancel" }).click();
+    await expect(f).toHaveCount(0);
+
+    await page.setViewportSize(size);
+    const before = await positions();
+    expect(before.length).toBeGreaterThan(3);
+    await rows
+      .nth(1)
+      .getByRole("button", { name: fr ? /^Modifier / : /^Edit / })
+      .click();
+    await expect(f).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        f,
+        `edit dialog, ${lang}, ${vp.width}x${vp.height}`,
+      );
+      if (fr && vp.width >= 1920)
+        await snap(page, `item-edit-dialog-fr-${vp.width}x${vp.height}`);
+    }
+    await page.keyboard.press("Escape");
+    await expect(f).toHaveCount(0);
+    await page.setViewportSize(size);
+    const after = await positions();
+    expect(after, `no row moved after the edit, ${lang}`).toEqual(before);
+  }
+}
+
 async function pieceSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await openWorkspace(page, "Inventory");
   await chooseLanguage(page, "fr");
   await openTypedAdd(page, "fr");
   const wf = page.getByTestId("item-form");
+  await wf.getByRole("button", { name: "Suivant" }).click();
+  await wf.getByText("Plus d'options").click();
   await wf.getByLabel("Composante de sort").selectOption("gem");
   for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
@@ -1633,6 +1701,9 @@ async function piecePowersStep(page: Page, size: Viewport) {
     await wf
       .getByLabel(lang === "fr" ? "Catégorie" : "Category")
       .selectOption("magic");
+    await wf
+      .getByRole("button", { name: lang === "fr" ? "Suivant" : "Next" })
+      .click();
     await wf.getByTestId("power-templates").click();
     await page.getByTestId("power-template-ring_of_protection").click();
     await wf.getByTestId("power-add").click();
@@ -1757,6 +1828,7 @@ async function acShieldStep(page: Page, size: Viewport) {
   const f = page.getByTestId("item-form");
   await f.getByLabel("Name").fill("Chain mail of the long winter watch");
   await f.getByLabel("Category").selectOption("armour");
+  await f.getByRole("button", { name: "Next" }).click();
   await f.getByLabel("Base AC").fill("5");
   await f.getByRole("button", { name: "Add", exact: true }).click();
   await page
@@ -1766,6 +1838,7 @@ async function acShieldStep(page: Page, size: Viewport) {
   await openTypedAdd(page);
   await f.getByLabel("Name").fill("Body shield");
   await f.getByLabel("Category").selectOption("shield");
+  await f.getByRole("button", { name: "Next" }).click();
   await f.getByLabel("Shield kind").selectOption("body");
   await f.getByLabel("AC bonus (melee)").fill("1");
   await f.getByLabel("AC bonus (missiles)").fill("2");
@@ -2758,6 +2831,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["inventory, AC shield", acShieldStep],
   ["scroll spell", scrollSpellStep],
   ["piece editor spell component", pieceSpellStep],
+  ["item form steps and edit dialog", itemFormStep],
   ["piece editor powers", piecePowersStep],
   ["Ajouter", ajouterStep],
   ["skills editor", skillsEditorStep],

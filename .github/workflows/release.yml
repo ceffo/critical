@@ -53,7 +53,7 @@ jobs:
        github.event.workflow_run.head_branch == 'main' &&
        github.event.workflow_run.head_repository.full_name == github.repository) ||
       (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 35
     # The environment scopes FLY_API_TOKEN and RULEBOOKS_DEPLOY_KEY. One job, inline, not a reusable
     # workflow: a called workflow's job does not see its environment's secrets.

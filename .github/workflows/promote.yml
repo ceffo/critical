@@ -29,7 +29,7 @@ jobs:
   not-main:
     name: refuse a run from another ref than main
     if: ${{ github.ref != 'refs/heads/main' }}
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 2
     steps:
       - name: Use main
@@ -43,7 +43,7 @@ jobs:
   resolve:
     name: resolve the version
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 5
     permissions:
       contents: read
@@ -86,7 +86,7 @@ jobs:
     name: promote to production
     needs: resolve
     if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, critical]
     timeout-minutes: 30
     # The environment scopes FLY_API_TOKEN (the production app's deploy token): no other job can read it.
     environment: production

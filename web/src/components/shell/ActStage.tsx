@@ -165,7 +165,7 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
           )}
           tabIndex={0}
           title={t("shell.journal.handleHint")}
-          className="group flex h-full w-24 cursor-row-resize touch-none items-center justify-center rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="group flex h-full w-24 cursor-row-resize touch-none items-center justify-center rounded-md"
           data-testid="journal-handle"
           onPointerDown={onPointerDown}
           onKeyDown={onKeyDown}

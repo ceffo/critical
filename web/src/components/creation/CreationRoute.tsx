@@ -89,7 +89,7 @@ function Intro({ onStart }: { onStart: () => void }) {
                   role="radio"
                   aria-checked={lang === l}
                   className={cn(
-                    "min-h-7 rounded-md px-2 py-1 text-label outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "min-h-7 rounded-md px-2 py-1 text-label",
                     lang === l ? "chip-chosen" : "chip hover:bg-raised-hover",
                   )}
                   onClick={() => update({ lang: l })}

@@ -403,3 +403,78 @@ export const LONG_REASON =
 /** A long spell name and stat text: the lookup's list and detail wrap them, never cut (step 1). */
 export const LONG_SPELL =
   "Comprehensively Unreasonably Long Spell Name Of The Ancient Archmages";
+
+/**
+ * A control's hit area is at least 24 x 24 CSS px (WCAG 2.5.8): the four corners of a 24 px square
+ * centred on the control (one px in) still land on the control, a part of it, or the label it sits in,
+ * so a pseudo-element or a label counts as part of the target and a bare 14 px box does not.
+ */
+export async function expectMinTarget(locator: Locator, what: string) {
+  await expect(locator, what).toBeVisible();
+  const extent = await locator.evaluate((el) => {
+    const owner = el.closest("label") ?? el;
+    const r = owner.getBoundingClientRect();
+    const [cx, cy] = [r.left + r.width / 2, r.top + r.height / 2];
+    const on = (x: number, y: number) => {
+      const hit = document.elementFromPoint(x, y);
+      return !!hit && (owner.contains(hit) || hit.contains(owner));
+    };
+    // The contiguous run of pixels through the box's centre that lands on the control, per axis.
+    const run = (dx: number, dy: number) => {
+      let n = 0;
+      for (const sign of [1, -1])
+        for (let i = sign === 1 ? 0 : 1; i < 40; i++)
+          if (on(cx + sign * i * dx, cy + sign * i * dy)) n++;
+          else break;
+      return n;
+    };
+    return { width: run(1, 0), height: run(0, 1) };
+  });
+  expect(extent.width, `${what}: target width`).toBeGreaterThanOrEqual(24);
+  expect(extent.height, `${what}: target height`).toBeGreaterThanOrEqual(24);
+}
+
+/**
+ * Every focusable control shows the one focus ring: a 2 px solid outline in the theme's `--ring`.
+ * Each visible tab stop is focused after a key press (so `:focus-visible` matches) and its computed
+ * outline compared with the token's.
+ */
+export async function expectOneFocusRing(page: Page, where: string) {
+  await page.keyboard.press("Shift+Tab");
+  const bad = await page.evaluate(() => {
+    const probe = document.createElement("div");
+    probe.style.outline = "2px solid var(--ring)";
+    document.body.append(probe);
+    const want = getComputedStyle(probe).outlineColor;
+    probe.remove();
+    const sel =
+      'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const bad: string[] = [];
+    let n = 0;
+    for (const el of document.querySelectorAll<HTMLElement>(sel)) {
+      const r = el.getBoundingClientRect();
+      if (
+        r.width === 0 ||
+        r.height === 0 ||
+        getComputedStyle(el).visibility === "hidden" ||
+        el.closest("[inert], [aria-hidden=true]") ||
+        el.classList.contains("sr-only")
+      )
+        continue;
+      el.focus();
+      if (document.activeElement !== el) continue;
+      n++;
+      const cs = getComputedStyle(el);
+      if (
+        cs.outlineStyle !== "solid" ||
+        cs.outlineWidth !== "2px" ||
+        cs.outlineColor !== want
+      )
+        bad.push(
+          `${el.tagName.toLowerCase()}[${el.getAttribute("data-testid") ?? el.getAttribute("aria-label") ?? el.textContent?.slice(0, 20)}] ${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`,
+        );
+    }
+    return n < 10 ? [`only ${n} focusable controls found`] : bad;
+  });
+  expect(bad, `focus ring, ${where}`).toEqual([]);
+}

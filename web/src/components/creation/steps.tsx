@@ -278,7 +278,7 @@ export function ClassStep(props: StepProps) {
                     aria-label={t("creation.level.pick", { level: r.level })}
                     onClick={() => update({ level: r.level })}
                     className={cn(
-                      "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-body tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                      "flex h-8 min-w-9 items-center justify-center rounded-md px-2 text-body tabular-nums",
                       draft.level === r.level
                         ? "chip-chosen font-semibold"
                         : "chip hover:bg-raised-hover",
@@ -583,7 +583,7 @@ export function ScoresStep({
                     })
                   }
                   className={cn(
-                    "flex items-baseline gap-2 rounded-md px-3 py-2 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "flex items-baseline gap-2 rounded-md px-3 py-2 text-left",
                     draft.method === m.code
                       ? "chip-chosen"
                       : "chip hover:bg-raised-hover",
@@ -652,7 +652,7 @@ export function ScoresStep({
                             }
                             data-testid={`score-total-${i}`}
                             className={cn(
-                              "flex w-full flex-wrap items-center gap-2 rounded-md px-2 py-1 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                              "flex w-full flex-wrap items-center gap-2 rounded-md px-2 py-1 text-left",
                               draft.picked === i
                                 ? "chip-chosen"
                                 : "bg-raised enabled:hover:bg-raised-hover",
@@ -750,7 +750,7 @@ export function ScoresStep({
                             })}
                             data-testid={`place-${a}`}
                             className={cn(
-                              "inline-flex h-6 min-w-8 items-center justify-center rounded-md px-1.5 tabular-nums outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                              "inline-flex h-6 min-w-8 items-center justify-center rounded-md px-1.5 tabular-nums",
                               shown != null
                                 ? "chip-chosen"
                                 : "chip text-ink-muted",

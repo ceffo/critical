@@ -99,7 +99,7 @@ export function AddPiece({
                 value={id}
                 title={t(`equipment.add.tabHint.${id}`)}
                 className={cn(
-                  "rounded-md px-2 py-0.5 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "rounded-md px-2 py-0.5 text-body",
                   tab === id
                     ? "chip-chosen font-medium"
                     : "text-muted-foreground hover:text-foreground",
@@ -189,7 +189,7 @@ function CataloguePick({
                 key={c}
                 type="button"
                 className={cn(
-                  "h-7 px-2 text-body font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                  "h-7 px-2 text-body font-medium transition-colors",
                   category === c
                     ? "chip-chosen"
                     : "chip text-muted-foreground hover:text-foreground",
@@ -256,7 +256,7 @@ function CataloguePick({
                       type="button"
                       aria-pressed={chosen?.code === r.code}
                       className={cn(
-                        "col-span-full grid grid-cols-subgrid items-center rounded-md px-3 py-1 text-left text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                        "col-span-full grid grid-cols-subgrid items-center rounded-md px-3 py-1 text-left text-body",
                         chosen?.code === r.code
                           ? "chip-chosen"
                           : "bg-raised hover:text-tint",

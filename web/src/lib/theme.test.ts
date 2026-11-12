@@ -278,6 +278,20 @@ describe("contrast (ADR 0026 step 2, ADR 0020 step 4)", () => {
           ).toBeGreaterThanOrEqual(AA_TEXT);
     });
 
+    it(`${name}: the warning text reads on every tone it can sit on (page, card, raised, hover, selected)`, () => {
+      for (const bg of [
+        "--ground",
+        "--surface",
+        "--neu-900",
+        "--neu-800",
+        "--amb-800",
+      ])
+        expect(
+          ratio(T(v, "--warning"), T(v, bg)),
+          `warning on ${bg}: ${v["--warning"]} on ${v[bg]}`,
+        ).toBeGreaterThanOrEqual(AA_TEXT);
+    });
+
     it(`${name}: on-accent reads on every accent used as a fill, on-highlight on the highlight fill`, () => {
       for (const role of ACCENTS)
         expect(

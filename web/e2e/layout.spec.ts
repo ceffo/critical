@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { test, expect, snap, catalogueSpell, type Stack } from "./fixtures";
 import {
   addBuff,
@@ -52,6 +54,8 @@ import {
   LONG_REASON,
   LONG_SPELL,
   sizesAt,
+  expectMinTarget,
+  expectOneFocusRing,
   expectNoPageScroll,
   escapedAbsolutes,
   expectZones,
@@ -1358,6 +1362,104 @@ async function spellsTabStep(page: Page, size: Viewport, stack: Stack) {
   }
 }
 
+/**
+ * ADR 0027 step 11.7: with a long spellbook (every wizard spell of the test catalogue, 31 rows at the levels the mage reaches) the preparation
+ * editor fills the act panel and only the grimoire column scrolls; the panel and the page do not.
+ */
+async function prepareLongBookStep(page: Page, size: Viewport, stack: Stack) {
+  const catalogue = JSON.parse(
+    readFileSync(
+      fileURLToPath(
+        new URL("../../api/testdata/catalogue.json", import.meta.url),
+      ),
+      "utf8",
+    ),
+  ) as { spells: { id: string; class: string }[] };
+  await openDashboard(page);
+  expect(
+    await apiCall(page, "POST", "/api/characters", {
+      name: "Zéphyrin le Collectionneur",
+      class: "mage",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "male" },
+      str: 9,
+      dex: 12,
+      con: 11,
+      int: 19,
+      wis: 12,
+      cha: 10,
+      hpMax: 4,
+      xp: 0,
+    }),
+  ).toBe(true);
+  expect(
+    await apiCall(page, "POST", "/api/xp", { base: 400000, bonus: false }),
+  ).toBe(true);
+  // The slots follow the levels rolled: roll every owed hit die (a level each) before the preparation.
+  await reloadSettled(page);
+  const roll = page.getByTestId("level-up-roll");
+  await expect(roll).toBeVisible();
+  while (await roll.isVisible()) {
+    await roll.click();
+    await page.waitForTimeout(200);
+  }
+  const known = (await (
+    await fetch(`${stack.apiUrl}/api/spells/preparation`)
+  ).json()) as { spellbook: { id: string }[] };
+  const have = new Set(known.spellbook.map((s) => s.id));
+  for (const { id } of catalogue.spells.filter((s) => s.class === "Wizard")) {
+    if (have.has(id)) continue;
+    expect(
+      await apiCall(page, "POST", "/api/character/spellbook/add", {
+        spellId: id,
+      }),
+      `add ${id}`,
+    ).toBe(true);
+  }
+  await reloadSettled(page);
+  const actions = page.getByRole("region", { name: "Actions" });
+  const panel = actions.getByRole("tabpanel");
+  await actions.getByRole("tab", { name: "Spells" }).click();
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await actions.getByRole("button", { name: "Prepare spells" }).click();
+    const form = actions.getByRole("form", { name: "Prepare today's spells" });
+    const book = form.getByRole("region", { name: "Spellbook" });
+    await expect(book.locator("li")).not.toHaveCount(0);
+    expect(
+      await book.locator("li").count(),
+      `a long book, ${where}`,
+    ).toBeGreaterThanOrEqual(30);
+    await expectNoPageScroll(page);
+    // The panel does not scroll; the grimoire list does, and ends at the panel's content bottom.
+    expect(
+      await panel.evaluate((el) => el.scrollHeight - el.clientHeight),
+      `act panel scroll, ${where}`,
+    ).toBeLessThanOrEqual(1);
+    const list = book.locator("div.overflow-y-auto");
+    const m = await list.evaluate((el) => ({
+      sh: el.scrollHeight,
+      ch: el.clientHeight,
+    }));
+    expect(m.sh, `the spellbook column scrolls, ${where}`).toBeGreaterThan(
+      m.ch,
+    );
+    const inner = (await panel.boundingBox())!;
+    const col = (await book.boundingBox())!;
+    expect(
+      Math.abs(inner.y + inner.height - 14 - (col.y + col.height)),
+      `spellbook column bottom, ${where}`,
+    ).toBeLessThanOrEqual(2);
+    await snap(page, `prepare-long-book-${where}`);
+    await actions.getByRole("button", { name: "Cancel" }).click();
+  }
+}
+
 async function skillsEditorStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
@@ -2566,9 +2668,9 @@ async function journalRowsStep(page: Page, size: Viewport) {
   expect(
     await heal
       .getByTestId("log-select")
-      .evaluate((el) => getComputedStyle(el).boxShadow),
+      .evaluate((el) => getComputedStyle(el).outlineStyle),
     "focus ring",
-  ).not.toBe("none");
+  ).toBe("solid");
 
   for (const lang of ["en", "fr"] as const) {
     await chooseLanguage(page, lang);
@@ -2592,6 +2694,36 @@ async function journalRowsStep(page: Page, size: Viewport) {
     await page.waitForTimeout(150);
     await expectNoClippedText(log, `journal rows, ${theme}`);
     await snap(page, `journal-rows-fr-${theme.toLowerCase()}`);
+  }
+}
+
+// One focus ring on every tab stop in every theme (ADR 0026 step 2.2), and the 24 px targets of the
+// small controls (the name, the level, the version, the mind-affecting checkbox).
+async function focusRingTargetsStep(page: Page) {
+  await openDashboard(page);
+  await expectMinTarget(page.getByTestId("details-trigger"), "character name");
+  await expectMinTarget(page.getByTestId("level-open"), "level");
+  await expectMinTarget(page.getByTestId("version-open"), "version badge");
+  await expectMinTarget(
+    page.getByTestId("save-mind-affecting"),
+    "against the mind",
+  );
+  for (const [mode, themes] of [
+    ["Dark", ["Arcane", "Deep", "Plain", "Forest", "Ember", "Amber"]],
+    ["Light", ["Arcane", "Parchment", "Plain", "Forest"]],
+  ] as const) {
+    await chooseSetting(page, mode);
+    for (const name of themes) {
+      await chooseTheme(page, name);
+      await expectOneFocusRing(page, `${mode} ${name}`);
+      if (name === "Arcane" || name === "Parchment") {
+        await page.getByTestId("version-open").focus();
+        await snap(
+          page,
+          `focus-ring-${mode.toLowerCase()}-${name.toLowerCase()}`,
+        );
+      }
+    }
   }
 }
 
@@ -2635,6 +2767,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["effects timeline", effectsTimelineStep],
   ["long rest", longRestStep],
   ["settings popover", settingsPopoverStep],
+  ["focus ring and targets", focusRingTargetsStep],
   ["non-proficiency", nonProficiencyStep],
   ["weapon in hand", weaponInHandStep],
   ["class warnings", classWarningsStep],
@@ -2642,6 +2775,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["class lines, three classes", (p, s) => classLinesStep(p, s, "three")],
   ["class lines, dual-class", (p, s) => classLinesStep(p, s, "dual")],
   ["weapon proficiency editor", weaponProfEditorStep],
+  ["prepare, long spellbook", prepareLongBookStep],
 ];
 
 async function runWalk(
@@ -4125,6 +4259,7 @@ async function levelUpGrantsStep(page: Page, size: Viewport) {
     await expectNoClippedText(grants, `level-up grants, ${where}`);
     await expectWholeWords(grants, `level-up grants, ${where}`);
     await expectNoClippedText(tag, `to-spend tag, ${where}`);
+    await expectMinTarget(tag, `to-spend tag, ${where}`);
     await snap(page, `level-up-grants-fr-${vp.width}x${vp.height}`);
     await tag.click();
     await expect(popover).toContainText("35 points de talent");

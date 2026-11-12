@@ -246,7 +246,7 @@ export function InventoryPanel() {
                   key={c}
                   type="button"
                   className={cn(
-                    "h-7 px-2 text-body font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+                    "h-7 px-2 text-body font-medium transition-colors",
                     filter === c
                       ? "chip-chosen"
                       : "chip text-muted-foreground hover:text-foreground",
@@ -433,7 +433,7 @@ function ItemRow({
         {i.effectDice && (
           <button
             type="button"
-            className="chip inline-flex max-w-full items-center gap-1 px-2 py-0.5 text-body font-medium tabular-nums outline-none hover:text-tint focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="chip inline-flex max-w-full items-center gap-1 px-2 py-0.5 text-body font-medium tabular-nums hover:text-tint"
             title={t("dice.send", { formula: i.effectDice })}
             aria-label={t("dice.send", { formula: i.effectDice })}
             data-testid="item-dice"

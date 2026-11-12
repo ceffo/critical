@@ -333,8 +333,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
           spell, a damage or utility spell and a hostile buff (Blindness, Pain Touch, Slow, the
           Malisons) get a plain button. The cast endpoint still takes an explicit `onSelf` on any
           of them.
-       2. **The menu holds one entry, the alternate** of the default: "Sur un allié" when the
-          default is the Bard, "Sur moi" otherwise.
+       2. **The menu holds both targets, the default ticked** (*amended 2026-11-11: it held only
+          the alternate, so the arrow had no visible meaning*): "Sur moi" and "Sur un allié", the
+          default first, from the served `cast_target`. The arrow shows only when the menu holds two
+          entries; its name says who the spell lands on and its tooltip lists the two targets
+          (en and fr). The buttons keep the same width and column alignment, split or not.
        3. **The default target**: always the Bard for a self-only or "self or other" spell; for an
           area, the Bard unless the buff is hostile; never for "other". **Hostile** means a
           modifier that hurts the bearer at the caster level, dice at their largest: to-hit,
@@ -348,7 +351,7 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        `TestRepoSeeds_EveryBuffDefaultTargetAndChoice` (every buff of the seeds),
        `TestInfo_ServesTheTargetChoice`, `TestGetInfo_ServesTheCastTarget`, castsvc's
        `TestCast_PerSeedEntry` (Slow off the Bard by default and on him when asked, Stoneskin on an
-       ally) and the cast spec (no arrow on Rary's, one entry on Strength).
+       ally) and the cast spec (no arrow on Rary's, two entries with the default ticked on Strength).
     2. **"Repos long"** always visible (promoted, step 1.6), no parenthesis, a crescent-moon icon;
        **"Préparer"** beside it.
     3. **Slots as dots in three states** per level: empty (a slot not used, no spell prepared in it),
@@ -372,9 +375,12 @@ Per screen, the user's words (the work items of the layout pass carry the full t
        is the server's slot count per level: the browser only compares two numbers the server gave
        it, and the server still refuses an over-budget save.
     6. A spell name opens the details popup (step 10.4).
+    7. **Side by side, only the columns scroll**: the editor takes the act panel's full height and
+       the panel itself never scrolls; with a long book (30 and more spells) the grimoire column
+       scrolls inside itself, from 1280x800 to 2560x1440.
 
-    *Checked by* the spells spec's prepare flow (one happy path) and a unit test of the over-budget
-    gate.
+    *Checked by* the spells spec's prepare flow (one happy path), a unit test of the over-budget
+    gate and the layout spec's "prepare, long spellbook" step.
 12. **Skills tab** (amends ADR 0022 step 2.5 "Skills tab"; the UI side of ADR 0014 step 5).
     1. **Columns: the name and the ability with its modifier as a pill** ("DEX 17 [−1]"). The
        "Seuil" and "Dernier" columns go (the target and verdict are on the result card).

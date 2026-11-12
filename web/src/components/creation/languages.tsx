@@ -110,7 +110,7 @@ function LanguageChips({ options, draft, update }: StepProps) {
                 })
               }
               className={cn(
-                "flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-body outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
+                "flex min-h-7 items-center gap-1 rounded-md px-2 py-1 text-body",
                 on ? "chip-chosen" : "chip hover:bg-raised-hover",
                 !inList && !on && "text-ink-muted",
               )}

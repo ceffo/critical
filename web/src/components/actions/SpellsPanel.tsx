@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useSpellStore, validEntry } from "@/stores/spells";
@@ -17,7 +18,7 @@ import type { CastTarget, SpellSlot } from "@/types/spells";
 import { cn } from "@/lib/utils";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
-import { planCast } from "@/lib/castInputs";
+import { castMenu, planCast } from "@/lib/castInputs";
 import { slotDots } from "@/lib/slotDots";
 import { Dots } from "./Dots";
 import type { CastOptions } from "@/api/spells";
@@ -98,13 +99,14 @@ function SlotDots({
 
 /**
  * "Lancer" as a split button (ADR 0027 step 10.1): the main part casts with the server's default
- * target (no `onSelf`); the arrow offers the other target the server serves for the spell
- * (`cast_target.alternate`), and shows only when the server serves one. Every Cast is the same
- * width, split or not (the main part plus the 24 px arrow), so the buttons line up down a column;
- * it is a quiet button (one filled button per panel: Attack is the Weapons tab's), and leads with
- * the Spells icon, as Attack leads with its sword and Next turn carries its arrow.
+ * target (no `onSelf`); the arrow lists the targets the server serves for the spell
+ * (`cast_target`, the default ticked), and shows only when there are two to choose from. Every Cast
+ * is the same width, split or not (the main part plus the 24 px arrow), so the buttons line up down
+ * a column; it is a quiet button (one filled button per panel: Attack is the Weapons tab's), and
+ * leads with the Spells icon, as Attack leads with its sword and Next turn carries its arrow. The
+ * arrow's name and tooltip say what it opens: who the spell lands on.
  */
-function CastButton({
+export function CastButton({
   name,
   disabled,
   target,
@@ -116,11 +118,13 @@ function CastButton({
   onCast: (onSelf?: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const menu = castMenu(target);
+  const split = menu.length > 1;
   return (
     <span className="flex shrink-0">
       <Button
         size="lg"
-        className={cn(target ? "min-w-22 rounded-r-none" : "min-w-28")}
+        className={cn(split ? "min-w-22 rounded-r-none" : "min-w-28")}
         disabled={disabled}
         aria-label={t("spellSlots.castLabel", { name })}
         title={t("spellSlots.castLabel", { name })}
@@ -129,7 +133,7 @@ function CastButton({
         <Sparkle aria-hidden data-icon="inline-start" />
         {t("spellSlots.cast")}
       </Button>
-      {target && (
+      {target && split && (
         <DropdownMenu>
           <DropdownMenuTrigger
             disabled={disabled}
@@ -138,20 +142,26 @@ function CastButton({
                 size="icon-lg"
                 className="-ml-px w-6 rounded-l-none"
                 aria-label={t("spellSlots.castTarget", { name })}
-                title={t("spellSlots.castTarget", { name })}
+                title={t("spellSlots.castTargetHint", { name })}
               />
             }
           >
             <CaretDown aria-hidden />
           </DropdownMenuTrigger>
           <DropdownMenuContent>
-            <DropdownMenuItem
-              onClick={() => onCast(target.alternate === "self")}
-            >
-              {target.alternate === "self"
-                ? t("spellSlots.castOnSelf")
-                : t("spellSlots.castOnAlly")}
-            </DropdownMenuItem>
+            <DropdownMenuRadioGroup value={target.default}>
+              {menu.map((on) => (
+                <DropdownMenuRadioItem
+                  key={on}
+                  value={on}
+                  onClick={() => onCast(on === "self")}
+                >
+                  {on === "self"
+                    ? t("spellSlots.castOnSelf")
+                    : t("spellSlots.castOnAlly")}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
       )}
@@ -355,7 +365,7 @@ export function SpellsPanel() {
                           <button
                             type="button"
                             className={cn(
-                              "min-w-32 flex-1 cursor-pointer rounded-sm text-left text-body break-words outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50",
+                              "min-w-32 flex-1 cursor-pointer rounded-sm text-left text-body break-words hover:underline",
                               slot.used && "text-muted-foreground line-through",
                             )}
                             title={t("spellSlots.details", { name: baseName })}

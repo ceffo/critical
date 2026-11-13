@@ -116,6 +116,16 @@ warnings: a weapon the class wields without a warning is one it may pick, ADR 00
 its definition; the hit dice are still read from the rule tables (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).
 
+**Specialist wizards** (planned, [ADR 0050](adr/0050-specialist-wizards.md)) are eight more classes of
+the wizard group: the mage's definition plus the `school_specialization` feature, whose parameters
+name the class's **schools**, its **opposition schools**, Table 22's races (outside them a
+`specialist_race` warning) and, for the illusionist, the races that may take it in a multi-class
+character (the gnome). A wizard spell carries **school** codes; for a specialist entry it is opposed
+(any of its schools in the opposition: never learned or prepared), else of his school (any of its
+schools his: +15% to learn, the **school slot**, the free spell, +1 on his saves against it), else
+other (-15% to learn). An entry's class may be switched to another class of its group (mage and
+specialists) by its owner, XP and level kept; opposed spells stay in the book, never prepared.
+
 ```mermaid
 erDiagram
     CLASS_ENTRY }o--|| CLASS : "is a"
@@ -326,6 +336,9 @@ attack mode's check against a defence mode's. The **opponent** is the request's 
 - **Power.** A class feature is not a power; "power" belongs to psionics, and to an item power
   in [ADR 0016](adr/0016-inventory.md), which is an effect an item carries.
 - **Discipline vs school.** A discipline is psionic, a school is a wizard spell grouping.
+- **Specialist vs specialization.** A **specialist wizard** is a class (ADR 0050); **weapon
+  specialization** is a fighter's per-weapon pick (ADR 0037). An **extra slot** is one a spell grants
+  (ADR 0008 step 9); a **school slot** is the specialist's one more per spell level.
 - **Primary / active class.** The code's `classes.Primary`, the web's `primaryClass` and
   `primaryLevel` and the phrase "first active class entry" are one thing: the **primary class
   entry**. A rename of the web helpers to the glossary word is a follow-up the user picks.

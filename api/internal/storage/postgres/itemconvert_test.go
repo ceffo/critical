@@ -118,6 +118,11 @@ func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testi
 		it.Count = 3
 		f.t.Items[rowKey(owner, id)] = it
 	}
+	// The gem used between the two releases: its old count is 0 (spent), its left is the ability's.
+	gem := f.t.Items[rowKey(owner, "power_gem_dispel")]
+	gem.Count = 0
+	f.t.Items[rowKey(owner, "power_gem_dispel")] = gem
+	gemLeft := abilitiesOf(t, f, owner, "power_gem_dispel")[0].Limit.Left
 	flask := f.t.Items[rowKey(owner, "fire_flask")]
 	flask.Count = 3
 	f.t.Items[rowKey(owner, "fire_flask")] = flask
@@ -129,6 +134,7 @@ func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testi
 	assert.Equal(t, int64(1), f.t.Items[rowKey(owner, "wand_lightning")].Count)
 	assert.Equal(t, int64(3), f.t.Items[rowKey(owner, "fire_flask")].Count, "a stock keeps its quantity")
 	assert.Equal(t, 4, abilitiesOf(t, f, owner, "wand_lightning")[0].Limit.Left, "left is the ability's, untouched")
+	assert.Equal(t, gemLeft, abilitiesOf(t, f, owner, "power_gem_dispel")[0].Limit.Left, "a spent gem's left is untouched too")
 	again, err := convertItems(context.Background(), f, f, campaignSeeds())
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{}, again)

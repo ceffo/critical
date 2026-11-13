@@ -3,6 +3,7 @@ package composition_test
 import (
 	"context"
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -194,4 +195,176 @@ func TestUndo_ADR0049Step20_AnOldUseOfAWandGivesBackItsChargeThroughTheAbility(t
 	got := itemOf(t, bs, ctx, id, "wand_lightning")
 	assert.Equal(t, 4, got.Abilities[0].Limit.Left, "the old before-count went into the counter")
 	assert.Equal(t, 1, got.Count, "the quantity is left alone")
+}
+
+// ADR 0049 step 7 and ADR 0025 step 4 (the writer lock): two uses of a per_day ability with one use left, at
+// the same instant (a double click, two tabs): exactly one is paid, the other is refused as exhausted, and
+// the log holds one entry. Repeated on fresh tables so the race has many chances.
+func TestUseAbility_ADR0049Step7_TwoConcurrentUsesOfTheLastDoseOnePays(t *testing.T) {
+	for range 25 {
+		dice := &attackDice{t: t, dies: []int{1, 2, 3, 4, 5, 6}, calls: map[string]int{}}
+		bs, ctx, id := abilityTable(t, dice)
+		require.Equal(t, 1, itemOf(t, bs, ctx, id, "power_gem_dispel").Abilities[0].Limit.Left)
+
+		errs := make([]error, 2)
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		for n := range errs {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				_, errs[n] = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		paid, refused := 0, 0
+		for _, err := range errs {
+			if err == nil {
+				paid++
+				continue
+			}
+			require.ErrorIs(t, err, itemsvc.ErrAbilityExhausted)
+			refused++
+		}
+		assert.Equal(t, 1, paid, "exactly one use is paid")
+		assert.Equal(t, 1, refused)
+		assert.Equal(t, 0, itemOf(t, bs, ctx, id, "power_gem_dispel").Abilities[0].Limit.Left)
+		entries, err := bs.Log.List(ctx, id, 100)
+		require.NoError(t, err)
+		assert.Len(t, entries, 1, "one entry")
+	}
+}
+
+// ADR 0049 step 7: a use at the same time as an editor save of the same item loses neither write: the
+// use's whole-item write does not undo the edit (the note), the edit's does not give the dose back.
+func TestUseAbility_ADR0049Step7_AUseAndAnEditorSaveLoseNeitherWrite(t *testing.T) {
+	for range 25 {
+		dice := &attackDice{t: t, dies: []int{1, 2, 3, 4, 5, 6}, calls: map[string]int{}}
+		bs, ctx, id := abilityTable(t, dice)
+		note := "edited while used"
+
+		var useErr, editErr error
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			<-start
+			_, useErr = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+		}()
+		go func() {
+			defer wg.Done()
+			<-start
+			_, editErr = bs.Items.Update(ctx, id, "power_gem_dispel", itemsvc.ItemPatch{Notes: &note})
+		}()
+		close(start)
+		wg.Wait()
+
+		require.NoError(t, useErr)
+		require.NoError(t, editErr)
+		got := itemOf(t, bs, ctx, id, "power_gem_dispel")
+		assert.Equal(t, 0, got.Abilities[0].Limit.Left, "the use is kept")
+		assert.Equal(t, note, got.Notes, "the edit is kept")
+	}
+}
+
+// ADR 0049 step 20, both old kinds on both shapes: an item_use or item_restock entry logged before
+// abilities (a count-only snapshot) is popped now. On a wand (a charges ability) its before-count goes
+// into the counter and the quantity stays 1; on the Fire flasks (a with_item ability: the stock is the
+// count) it goes into the count, the ability untouched.
+func TestUndo_ADR0049Step20_OldUseAndRestockEntriesOnAWandAndAFlask(t *testing.T) {
+	tests := []struct {
+		name          string
+		kind          actionlog.Kind
+		itemID        string
+		before, after int
+		wantLeft      int // the wand's counter after the pop, -1: no counter
+		wantCount     int
+	}{
+		{name: "old use of a wand", kind: actionlog.KindItemUse, itemID: "wand_lightning", before: 4, after: 3, wantLeft: 4, wantCount: 1},
+		{name: "old restock of a wand", kind: actionlog.KindItemRestock, itemID: "wand_lightning", before: 2, after: 4, wantLeft: 2, wantCount: 1},
+		{name: "old use of a flask", kind: actionlog.KindItemUse, itemID: "fire_flask", before: 5, after: 4, wantLeft: -1, wantCount: 5},
+		{name: "old restock of a flask", kind: actionlog.KindItemRestock, itemID: "fire_flask", before: 3, after: 5, wantLeft: -1, wantCount: 3},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bs, ctx, id := abilityTable(t, &attackDice{t: t, calls: map[string]int{}})
+			snap, err := itemsvc.CountSnapshot(tt.itemID, tt.before, tt.after)
+			require.NoError(t, err)
+			entryID, err := bs.Log.Record(ctx, actionlog.NewEntry{
+				CharacterID: id, Kind: tt.kind, Payload: json.RawMessage(`{"itemId":"` + tt.itemID + `"}`), Snapshots: []actionlog.Snapshot{snap},
+			})
+			require.NoError(t, err)
+			before := itemOf(t, bs, ctx, id, tt.itemID)
+
+			_, err = bs.Log.Undo(ctx, id, entryID)
+			require.NoError(t, err)
+			got := itemOf(t, bs, ctx, id, tt.itemID)
+			assert.Equal(t, tt.wantCount, got.Count)
+			if tt.wantLeft >= 0 {
+				assert.Equal(t, tt.wantLeft, got.Abilities[0].Limit.Left)
+			} else {
+				assert.Equal(t, before.Abilities, got.Abilities, "a stock's ability is untouched")
+			}
+		})
+	}
+}
+
+// ADR 0049 steps 2 and 7: the last dose of a potion through either endpoint (the ability's use, the
+// inventory's minus) removes the potion in the same entry; undo brings it back whole, redo removes it again.
+func TestUseLastDose_ADR0049Step2_BothEndpointsRemoveUndoBringsBackRedoRemoves(t *testing.T) {
+	uses := map[string]func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error{
+		"ability endpoint": func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error {
+			_, err := bs.Items.UseAbility(ctx, id, itemID, "use")
+			return err
+		},
+		"spend-one endpoint": func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error {
+			_, err := bs.Items.UseItem(ctx, id, itemID)
+			return err
+		},
+	}
+	for name, use := range uses {
+		t.Run(name, func(t *testing.T) {
+			bs, ctx, id := abilityTable(t, &attackDice{t: t, dies: []int{1, 2, 3, 4, 5, 6}, calls: map[string]int{}})
+			created, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+				Name: localized.Of("Draught"), Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicPotion,
+				Behaviour: itemsvc.BehaviourStock, Count: 1,
+				Abilities: []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}}},
+			})
+			require.NoError(t, err)
+			itemID := created.Item.ID
+			has := func() bool {
+				items, err := bs.Items.List(ctx, id)
+				require.NoError(t, err)
+				for _, it := range items {
+					if it.ID == itemID {
+						return true
+					}
+				}
+				return false
+			}
+			require.True(t, has())
+
+			require.NoError(t, use(bs, ctx, id, itemID))
+			assert.False(t, has(), "the last dose removes the potion")
+			entries, err := bs.Log.List(ctx, id, 1)
+			require.NoError(t, err)
+			_, err = bs.Log.Undo(ctx, id, entries[0].ID)
+			require.NoError(t, err)
+			require.True(t, has(), "undo brings it back")
+			back := itemOf(t, bs, ctx, id, itemID)
+			assert.Equal(t, 1, back.Count)
+			assert.Equal(t, created.Item.Abilities, back.Abilities)
+
+			redo, err := bs.Log.RedoTarget(ctx, id)
+			require.NoError(t, err)
+			require.NotNil(t, redo)
+			_, err = bs.Log.Redo(ctx, id, redo.ID)
+			require.NoError(t, err)
+			assert.False(t, has(), "redo removes it again")
+		})
+	}
 }

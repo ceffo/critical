@@ -142,8 +142,8 @@ README and the shots are the picture, French first. Rules of ADR 0033 not named 
      `TestInitiative_ADR0035Item6_4_RerollKeepsTheModifiers` and
      `TestInitiativeRestorer_ADR0035Item6_RestoresTheModifiers`.
    - `castsvc`: `TestCast_ADR0035Item6_2_CastingCorrectsTheInitiative`.
-   - `itemsvc`: `TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative`,
-     `TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime`; a scroll's spell (ADR 0033
+   - `itemsvc`: `TestUseAbility_ADR0049Step15_InitiativeByKindScrollAndMisc`,
+     `TestUseAbility_ADR0049Step15_ANamedScrollAddsItsSpellsCastingTime`; a scroll's spell (ADR 0033
      step 2): `TestUpdate_ADR0033Step2_AScrollNamesItsSpell`,
      `TestItems_ADR0033Step2_OnlyAScrollNamesAKnownSpell`.
    - `composition`: `TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound` (undo,

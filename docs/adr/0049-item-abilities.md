@@ -499,8 +499,9 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      abilities is the ability's own flag.
    - **Spend one** (step 2): `POST /api/items/{id}/use` keeps its path and becomes the inventory's minus
      for any item with a stock, **whatever abilities it holds** (the Fire flasks' minus spends a flask and
-     rolls nothing; step 22's "only for an item without an ability" is read as "never acts on an ability":
-     it is the one count change of step 2). It refuses (409 `item_not_usable`) an item with no stock or
+     rolls nothing). **This amends step 22**, which read "only for an item without an ability and no
+     effect dice": the supervisor's ruling (2026-11-13) keeps the Fire flasks' minus working, so the
+     old use is "never acts on an ability", the one count change of step 2. It refuses (409 `item_not_usable`) an item with no stock or
      holding a per_day or charges ability. It logs an `item_use` entry with no `abilityId`, corrects no
      initiative, and a potion or scroll at 0 is removed in the same entry. **Until Act · Items and the
      Inventory move (slices 5 and 6) the web's Use button on a wand, a gem or a sword finds nothing to
@@ -510,7 +511,17 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      boot step sets `count` to 1 for every converted item holding a per_day or charges ability (the
      ability's `left` keeps what the count was at conversion; it also covers the rows slice 2 converted:
      what a use between the two releases did to the old count is not read back), logs `quantities=N`
-     with its line, and writes nothing on a second start. `behaviour`, `max_count`, `effect_dice` and
+     with its line, and writes nothing on a second start. The editor cannot have made such an item with a
+     quantity above 1 (it refuses a per_day or charges ability on a quantity above 1, and a count edit to
+     more than 1 on one), so the only quantities the step discards are the old counters of the
+     conversion itself. **After this release, an older release reads such an item with count 1** (a wand
+     of 4 charges is one charge, a gem 1 use): the boot step is not reversible, and the rollback past
+     slice 3 is the dump restore, not a switch back to the previous release.
+   - **A use is atomic through the writer lock** (ADR 0025 step 4): every write transaction, `UseAbility`
+     and the editor's save, the rest and the undo included, takes the one writer lock first, so a second
+     use of a one-left ability waits, reads the result and is refused (409 `exhausted`), and a use and an
+     editor save of the same item run one after the other: neither whole-item write is lost. Tested on
+     the in-memory store (same contract) and proved on PostgreSQL with concurrent requests. `behaviour`, `max_count`, `effect_dice` and
      `effect_save` are read by no use, rest or restock rule any more (the editor and the wire still carry
      them until slice 6 and the contract); the seed writes `count` = the quantity. `Removed` is the rule
      of step 2 (a potion or a scroll at 0), not the old `charges` behaviour; a restock needs a stock

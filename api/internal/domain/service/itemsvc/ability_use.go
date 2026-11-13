@@ -80,7 +80,9 @@ type AbilityUseResult struct {
 // item_use entry is written with the item's snapshot (popping it gives back
 // the counter, or the item a with_item use removed); then the round's
 // initiative is corrected as the last entry (step 15). The ability works
-// whatever the item's state.
+// whatever the item's state. The read-then-write of a counter is atomic: InTx
+// takes the one writer lock first (ADR 0025 step 4), so a concurrent use or
+// edit of the item waits and then reads this one's result.
 func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*AbilityUseResult, error) {
 	var res *AbilityUseResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {

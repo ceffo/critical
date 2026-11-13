@@ -1,3 +1,4 @@
+import type { TFunction } from "i18next";
 import type {
   AbilityUseResult,
   Item,
@@ -52,4 +53,20 @@ export function loggedAbilityUse(r: AbilityUseResult): UseResult {
     max: r.max,
     effects: r.effects,
   };
+}
+
+/**
+ * An ability's limit as the player reads it (ADR 0049 step 14): `∞`, `1 / 2 per day`, `3 / 10
+ * charges` (with the cost of a use when it is more than one), `× 3` for the item's own quantity.
+ * The numbers are the server's; this only words them. Shared by Act · Items and the Inventory.
+ */
+export function limitText(
+  t: TFunction,
+  ability: Pick<ItemAbility, "limit">,
+  quantity: number,
+): string {
+  const { kind, left = 0, max = 0, cost = 1 } = ability.limit;
+  return kind === "charges" && cost > 1
+    ? t("actions.items.limit.chargesCost", { left, max, cost })
+    : t(`actions.items.limit.${kind}`, { left, max, count: quantity });
 }

@@ -16,17 +16,17 @@ export function piecesIn(items: Item[], filter: Category | "all"): Item[] {
   return filter === "all" ? items : items.filter((i) => i.category === filter);
 }
 
-/** One part of a row's stats line; the behaviour part carries its hint. */
+/** One part of a row's stats line. */
 export interface StatPart {
   text: string;
-  behaviour?: boolean;
 }
 
 /**
  * The stats line of a piece's row, by category (ADR 0033 steps 3 to 5): a weapon's kind, damage,
  * magic and speed; ammunition's kind, damage and magic; an armour's base AC, skills column and
  * type; a shield's kind and bonus; a magic piece's kind, then the spell a scroll holds (ADR 0033
- * step 2) named in the player's language by `spellName`; and the count behaviour of what is counted.
+ * step 2) named in the player's language by `spellName`. The quantity and the abilities are not here:
+ * the row has a control and chips for them (ADR 0049 step 16).
  */
 export function pieceStats(
   i: Item,
@@ -37,8 +37,6 @@ export function pieceStats(
   const add = (text: string | false | undefined | null) => {
     if (text) parts.push({ text });
   };
-  const behaviour = () =>
-    parts.push({ text: t(`items.behaviour.${i.behaviour}`), behaviour: true });
   const damage = () => {
     if (i.damageSm) add(i.damageSm);
     if (i.damageL && i.damageL !== i.damageSm)
@@ -76,7 +74,6 @@ export function pieceStats(
     case "ammunition":
       add(t(`equipment.ammoKinds.${i.ammoKind}`, { defaultValue: i.ammoKind }));
       damage();
-      behaviour();
       break;
     case "armour":
       add(t("equipment.stats.ac", { ac: i.baseAc }));
@@ -107,10 +104,8 @@ export function pieceStats(
     case "magic":
       if (i.magicKind) add(t(`equipment.magicKinds.${i.magicKind}`));
       if (i.magicKind === "scroll" && i.spellId) add(spellName(i.spellId));
-      behaviour();
       break;
     case "gear":
-      behaviour();
       break;
   }
   return parts;

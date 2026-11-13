@@ -446,3 +446,23 @@ func TestItems_Step20_EveryAnswerCarriesItsWarnings(t *testing.T) {
 		assert.Contains(t, rec.Body.String(), `"warnings":["armour_not_allowed"]`, c[0]+" "+c[1])
 	}
 }
+
+// ADR 0049 step 2: the quantity rules are served per category, a plain
+// category with `magicKinds: []` (never null) and magic answered per kind,
+// with the bound a quantity has.
+func TestItems_Step2_EquipmentRulesWireShape(t *testing.T) {
+	h, _ := newRouter(t)
+	rec := do(h, "GET", "/api/equipment/rules", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"maxQuantity":999,"categories":[
+		{"category":"weapon","hasQuantity":false,"magicKinds":[]},
+		{"category":"ammunition","hasQuantity":true,"magicKinds":[]},
+		{"category":"armour","hasQuantity":false,"magicKinds":[]},
+		{"category":"shield","hasQuantity":false,"magicKinds":[]},
+		{"category":"magic","hasQuantity":false,"magicKinds":[
+			{"kind":"potion","hasQuantity":true},{"kind":"scroll","hasQuantity":true},
+			{"kind":"ring","hasQuantity":false},{"kind":"rod","hasQuantity":false},
+			{"kind":"staff","hasQuantity":false},{"kind":"wand","hasQuantity":false},
+			{"kind":"misc","hasQuantity":false}]},
+		{"category":"gear","hasQuantity":true,"magicKinds":[]}]}`, rec.Body.String())
+}

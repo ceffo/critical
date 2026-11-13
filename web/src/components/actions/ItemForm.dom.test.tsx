@@ -1,13 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderApp, type Language } from "@/test/render";
-import { emptyDraft } from "@/lib/itemForm";
+import { draftFromItem, emptyDraft } from "@/lib/itemForm";
+import { pieceFixture } from "@/test/pieceFixture";
+import { equipmentRules } from "@/test/equipmentRules";
+import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 import { ItemForm } from "./ItemForm";
 
 // The typed add form (ADR 0033 step 1): step 1 is what the piece is, step 2 only its category's
 // fields; Back keeps what was typed.
 
 async function form(lng: Language = "en") {
+  useEquipmentRulesStore.setState({ rules: equipmentRules });
   const onSave = vi.fn().mockResolvedValue(null);
   const view = await renderApp(
     <ItemForm
@@ -90,7 +94,7 @@ describe("ItemForm, adding in two steps", () => {
       expect(field(f), f).toBeNull();
   });
 
-  it("a plain item shows its count; every shared field sits under More options", async () => {
+  it("a plain item shows its quantity; the shared fields sit under More options", async () => {
     const v = await form();
     await startStep2(v, "Rope", "gear");
     expect(field("count")).not.toBeNull();
@@ -99,14 +103,12 @@ describe("ItemForm, adding in two steps", () => {
     const more = screen.getByTestId("item-more") as HTMLDetailsElement;
     expect(more.open).toBe(false);
     await v.user.click(screen.getByText("More options"));
-    for (const f of [
-      "behaviour",
-      "effectDice",
-      "effectSave",
-      "component",
-      "notes",
-    ])
+    for (const f of ["component", "notes"])
       expect(more.contains(field(f)), f).toBe(true);
+    // ADR 0049 step 13: the behaviour and the effect dice are gone from the item form.
+    for (const f of ["behaviour", "maxCount", "effectDice", "effectSave"])
+      expect(field(f), f).toBeNull();
+    expect(screen.getByLabelText("Quantity")).toHaveValue("1");
   });
 
   it("Back keeps what was typed, and Add sends it", async () => {
@@ -140,21 +142,147 @@ describe("ItemForm, adding in two steps", () => {
   });
 });
 
-describe("ItemForm, count behaviour", () => {
+// ADR 0049 steps 2 and 16: the quantity is shown where the category has one; the abilities are
+// for every category.
+describe("ItemForm, quantity and abilities", () => {
   it.each(["weapon", "armour", "shield"])(
-    "a %s offers no behaviour",
+    "a %s has no quantity field",
     async (category) => {
       const v = await form();
       await startStep2(v, "Piece", category);
-      await v.user.click(screen.getByText("More options"));
-      expect(field("behaviour")).toBeNull();
+      expect(field("count")).toBeNull();
     },
   );
 
-  it("gear and magic keep their behaviour", async () => {
+  it.each(["ammunition", "gear"])("%s has a quantity", async (category) => {
     const v = await form();
-    await startStep2(v, "Torch", "gear");
-    await v.user.click(screen.getByText("More options"));
-    expect(field("behaviour")).not.toBeNull();
+    await startStep2(v, "Piece", category);
+    expect(field("count")).not.toBeNull();
+  });
+
+  it("a magic ring has none, a potion has one", async () => {
+    const v = await form();
+    await startStep2(v, "Thing", "magic");
+    await v.user.selectOptions(screen.getByLabelText("Magic kind"), "ring");
+    expect(field("count")).toBeNull();
+    await v.user.selectOptions(screen.getByLabelText("Magic kind"), "potion");
+    expect(field("count")).not.toBeNull();
+  });
+
+  it("adds a per-day ability to a sword and sends it", async () => {
+    const v = await form();
+    await startStep2(v, "Holy sword", "weapon");
+    expect(screen.getByText("No ability.")).toBeVisible();
+    await v.user.click(
+      screen.getByRole("button", { name: "Add an ability to this item" }),
+    );
+    // A weapon has no quantity, so "With the item" is not offered.
+    const kind = screen.getByLabelText("Limit");
+    expect(
+      Array.from((kind as HTMLSelectElement).options).map((o) => o.value),
+    ).toEqual(["unlimited", "per_day", "charges"]);
+    await v.user.type(
+      screen.getByLabelText("Name", {
+        selector: "[data-testid='ability-name']",
+      }),
+      "Turn zombies",
+    );
+    const max = screen.getByLabelText("Per day");
+    await v.user.clear(max);
+    await v.user.type(max, "2");
+    // Left follows the max of a new ability.
+    expect(screen.getByLabelText("Left")).toHaveValue("2");
+    await v.user.click(
+      screen.getByRole("button", {
+        name: "Roll dice when this ability is used",
+      }),
+    );
+    await v.user.type(screen.getByLabelText("Dice rolled on use"), "2d6");
+    await v.user.click(screen.getByRole("button", { name: "Add" }));
+    expect(v.onSave.mock.calls[0][0].abilities).toEqual([
+      {
+        id: "",
+        name: { en: "Turn zombies" },
+        limit: { kind: "per_day", max: 2, left: 2 },
+        effects: [{ kind: "dice", dice: "2d6" }],
+      },
+    ]);
+  });
+
+  it("offers an ability spent with the item on a stock, and speaks French", async () => {
+    const v = await form("fr");
+    await v.user.type(screen.getByLabelText("Nom"), "Fiole");
+    await v.user.selectOptions(screen.getByLabelText("Catégorie"), "gear");
+    await v.user.click(screen.getByRole("button", { name: "Suivant" }));
+    expect(screen.getByText("Capacités")).toBeVisible();
+    await v.user.click(
+      screen.getByRole("button", { name: "Ajouter une capacité à cet objet" }),
+    );
+    expect(screen.getByLabelText("Limite")).toHaveValue("with_item");
+    expect(screen.getByRole("option", { name: "Avec l'objet" })).toBeVisible();
+    expect(screen.getByLabelText("Quantité")).toBeVisible();
+  });
+
+  // The refusal reads the rules' bound (one source), worded in both languages.
+  it.each([
+    ["en", "Quantity", "Enter a whole number from 0 to 999"],
+    ["fr", "Quantité", "Entrez un nombre entier de 0 à 999"],
+  ] as const)("refuses 1000 in %s", async (lng, label, message) => {
+    const v = await form(lng);
+    await v.user.type(
+      screen.getByLabelText(lng === "en" ? "Name" : "Nom"),
+      "Rope{Enter}",
+    );
+    const q = screen.getByLabelText(label);
+    await v.user.clear(q);
+    await v.user.type(q, "1000");
+    await v.user.click(
+      screen.getByRole("button", { name: lng === "en" ? "Add" : "Ajouter" }),
+    );
+    expect(screen.getByTestId("field-error")).toHaveTextContent(message);
+    expect(v.onSave).not.toHaveBeenCalled();
+  });
+
+  // The rules could not be read: the form says so, and a stored with_item ability keeps its option
+  // so a save does not drop it.
+  it("with the rules unread, shows an error and keeps a stored with_item ability", async () => {
+    useEquipmentRulesStore.setState({ rules: null, failed: false });
+    // The rules request fails (the network is down).
+    const down = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("down"));
+    const onSave = vi.fn().mockResolvedValue(null);
+    const flask = pieceFixture({
+      id: "flask",
+      name: { en: "Flask" },
+      category: "gear",
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [],
+          usable: true,
+        },
+      ],
+    });
+    const v = await renderApp(
+      <ItemForm
+        initial={draftFromItem(flask, "en")}
+        editing={flask}
+        busy={false}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+    expect(await screen.findByTestId("rules-error")).toBeVisible();
+    down.mockRestore();
+    expect(screen.getByLabelText("Limit")).toHaveValue("with_item");
+    await v.user.type(
+      screen.getByLabelText("Name", { selector: "[data-field='name'] input" }),
+      "s",
+    );
+    await v.user.click(screen.getByRole("button", { name: "Save" }));
+    // The ability is unchanged, so no abilities key is sent and nothing drops it.
+    expect(onSave.mock.calls[0][0]).not.toHaveProperty("abilities");
   });
 });

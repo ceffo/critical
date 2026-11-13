@@ -4,7 +4,7 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
-import { type AbilityRow, abilityRows } from "@/lib/itemAbilities";
+import { type AbilityRow, abilityRows, limitText } from "@/lib/itemAbilities";
 import { equipped } from "@/lib/equipment";
 
 /**
@@ -69,11 +69,8 @@ function AbilityLine({
   const itemName = localized(lang, item.name);
   const abilityName = ability.name ? localized(lang, ability.name) : "";
   const name = abilityName ? `${itemName} · ${abilityName}` : itemName;
-  const { kind, left = 0, max = 0, cost = 1 } = ability.limit;
-  const limit =
-    kind === "charges" && cost > 1
-      ? t("actions.items.limit.chargesCost", { left, max, cost })
-      : t(`actions.items.limit.${kind}`, { left, max, count: item.count });
+  const { kind } = ability.limit;
+  const limit = limitText(t, ability, item.count);
   // An unequipped item that could be equipped is tagged, and still used (ADR 0049 step 17).
   const stowed = item.equipState !== "" && !equipped(item);
   const refused = ability.usable === false;

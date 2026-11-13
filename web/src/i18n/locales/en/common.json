@@ -670,20 +670,8 @@
   },
   "items": {
     "title": "Inventory",
-    "useOne": "Use one {{name}}",
     "addOne": "Add one {{name}}",
-    "count": "{{count}} / {{max}}",
     "magicalBonus": "Magical bonus",
-    "behaviour": {
-      "stock": "Quantity",
-      "charges": "Charges",
-      "daily": "Daily"
-    },
-    "behaviourHint": {
-      "stock": "Used and restocked; stays listed at 0",
-      "charges": "Used only; gone at 0",
-      "daily": "Used only; refilled by a long rest"
-    },
     "form": {
       "openAdd": "Add item",
       "addTitle": "Add item",
@@ -692,12 +680,7 @@
       "remove": "Remove {{name}}",
       "name": "Name",
       "type": "Type",
-      "behaviour": "How it is used",
-      "count": "Count",
-      "maxCount": "Daily number",
       "ammoKind": "Ammo kind",
-      "effectDice": "Dice rolled on use",
-      "effectSave": "Save against the effect",
       "noSave": "No save",
       "notes": "Note",
       "add": "Add",
@@ -707,14 +690,19 @@
       "back": "Back",
       "more": "More options",
       "notANumber": "Enter a whole number",
-      "notAStrength": "Enter a Strength: 17, 18/50 or 18/00"
+      "notAStrength": "Enter a Strength: 17, 18/50 or 18/00",
+      "quantity": "Quantity",
+      "notAQuantity": "Enter a whole number from 0 to {{max}}",
+      "rulesFailed": "The rules could not be read: the quantity and some limits are not offered. Reload to try again."
     },
     "heading": "Items",
     "columns": {
       "name": "Name",
       "effect": "Effect",
       "quantity": "Quantity"
-    }
+    },
+    "spendOne": "Spend one {{name}}",
+    "storedQuantity": "Stored quantity: this item is a single object"
   },
   "spellSlots": {
     "longRest": "Long rest",
@@ -3071,6 +3059,38 @@
         "mage": "a mage",
         "thief": "a thief"
       }
+    },
+    "abilities": {
+      "title": "Abilities",
+      "hint": "What the item does when used, and how often",
+      "none": "No ability.",
+      "ability": "Ability {{n}}",
+      "name": "Name",
+      "namePlaceholder": "The item's name",
+      "limit": "Limit",
+      "kinds": {
+        "unlimited": "Unlimited",
+        "per_day": "Per day",
+        "charges": "Charges",
+        "with_item": "With the item"
+      },
+      "perDay": "Per day",
+      "total": "Charges",
+      "left": "Left",
+      "leftHint": "What is left now; set it by hand to recharge",
+      "cost": "Cost per use",
+      "costHint": "Charges spent by one use",
+      "note": "Note",
+      "effect": "Dice {{n}}",
+      "dice": "Dice rolled on use",
+      "diceHint": "Rolled and shown when used, applied to nothing",
+      "save": "Save against the effect",
+      "remove": "Remove ability {{n}}",
+      "removeEffect": "Remove dice {{n}}",
+      "addDice": "Dice",
+      "addDiceHint": "Roll dice when this ability is used",
+      "add": "Ability",
+      "addHint": "Add an ability to this item"
     }
   },
   "intro": {

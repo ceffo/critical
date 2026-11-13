@@ -38,17 +38,23 @@ import { ItemForm } from "./ItemForm";
 import { AddPiece } from "./AddPiece";
 import { AcCard } from "@/components/ac/AcCard";
 import { formatSigned } from "@/lib/format";
-import { CATEGORIES, type Category, type Item } from "@/types/items";
+import {
+  CATEGORIES,
+  type Category,
+  type Item,
+  type ItemAbility,
+} from "@/types/items";
+import { limitText } from "@/lib/itemAbilities";
 import { pieceStats, piecesIn, equipped } from "@/lib/equipment";
 
 /**
- * Possessions grid (ADR 0035 item 2): icon | name, tags and stats | dice chip | count | Equip /
- * Unequip | edit / delete on hover. The name wraps, never cut (ADR 0022 step 1); the rows share the
- * columns through `subgrid`. Below 1280 px the list is too narrow beside the AC card for six
- * columns: each row wraps its controls under the name instead.
+ * Possessions grid (ADR 0035 item 2, ADR 0049 step 16): icon | name, tags, stats and ability
+ * chips | quantity | Equip / Unequip | edit / delete on hover. The name wraps, never cut (ADR 0022
+ * step 1); the rows share the columns through `subgrid`. Below 1280 px the list is too narrow beside
+ * the AC card for five columns: each row wraps its controls under the name instead.
  */
 const ITEM_COLS =
-  "grid grid-cols-[auto_minmax(10rem,1fr)_auto_auto_auto_auto] items-center gap-x-3 max-[1279px]:flex max-[1279px]:flex-col";
+  "grid grid-cols-[auto_minmax(10rem,1fr)_auto_auto_auto] items-center gap-x-3 max-[1279px]:flex max-[1279px]:flex-col";
 const ITEM_ROW =
   "col-span-full grid grid-cols-subgrid items-center max-[1279px]:flex max-[1279px]:flex-wrap max-[1279px]:gap-x-3 max-[1279px]:gap-y-1";
 
@@ -73,9 +79,10 @@ function CategoryIcon({ item }: { item: Item }) {
  * the player's order, the category chips the only filter; each piece with its "Equipped" tag and
  * Equip / Unequip (one logged move, ADR 0033 step 7). The pieces the conversion could not settle
  * show in an amber band; Check opens them above the list, each with Edit and Dismiss (ADR 0033
- * step 27). − uses one (the API rolls the effect, logs it, and removes a charges item at 0); + adds
- * one, and exists only on stock items; a weapon, an armour and a shield have neither. The dice chip puts the piece's effect dice in the dice
- * composer. ✎ edits any field in a dialog over the list (no row moves), 🗑 removes the piece, "Add" opens a form. Every change is a
+ * step 27). The band reads the pieces' `review` codes (ADR 0049 step 21.3). − spends one and + adds one
+ * (ADR 0049 step 2), on the pieces the server says have a stock (`usable`); there is no Use here:
+ * an ability is used in Act · Items, and the row shows each as a chip with its limit (a dice chip
+ * puts its dice in the dice composer). ✎ edits any field in a dialog over the list (no row moves), 🗑 removes the piece, "Add" opens a form. Every change is a
  * log entry the journal can pop. The card is as tall as its rows and scrolls inside when the stage
  * is shorter (ADR 0027 step 14.3).
  */
@@ -280,8 +287,8 @@ export function InventoryPanel() {
                   key={i.id}
                   item={i}
                   busy={busy}
-                  onDice={() => i.effectDice && toComposer(i.effectDice)}
-                  onUse={() => void spendItem(i.id)}
+                  onDice={toComposer}
+                  onSpend={() => void spendItem(i.id)}
                   onRestock={() => void run(() => postRestockItem(i.id, 1))}
                   onEquip={() =>
                     void run(() =>
@@ -328,7 +335,7 @@ function ItemRow({
   item: i,
   busy,
   onDice,
-  onUse,
+  onSpend,
   onRestock,
   onEquip,
   onEdit,
@@ -336,8 +343,8 @@ function ItemRow({
 }: {
   item: Item;
   busy: boolean;
-  onDice: () => void;
-  onUse: () => void;
+  onDice: (formula: string) => void;
+  onSpend: () => void;
   onRestock: () => void;
   onEquip: () => void;
   onEdit: () => void;
@@ -346,8 +353,9 @@ function ItemRow({
   const { t, i18n } = useTranslation();
   const name = localized(i18n.language, i.name);
   const spellName = useSpellName();
-  // The server decides: a weapon, an armour or a shield has no count controls (ADR 0049 step 2).
+  // The server decides which pieces have a quantity the player moves (ADR 0049 step 2: `usable`).
   const counted = i.usable;
+  const abilities = i.abilities ?? [];
   return (
     <li
       className={cn(
@@ -405,43 +413,36 @@ function ItemRow({
           {pieceStats(i, t, spellName).map((part, n) => (
             <span key={n}>
               {n > 0 && " · "}
-              {part.behaviour ? (
-                <span
-                  title={t(`items.behaviourHint.${i.behaviour}`)}
-                  data-testid="item-behaviour"
-                >
-                  {part.text}
-                </span>
-              ) : (
-                part.text
-              )}
+              {part.text}
             </span>
           ))}
         </span>
-      </div>
-      <div className="min-w-0">
-        {i.effectDice && (
-          <button
-            type="button"
-            className="chip inline-flex max-w-full items-center gap-1 px-2 py-0.5 text-body font-medium tabular-nums hover:text-tint"
-            title={t("dice.send", { formula: i.effectDice })}
-            aria-label={t("dice.send", { formula: i.effectDice })}
-            data-testid="item-dice"
-            onClick={onDice}
+        {abilities.length > 0 && (
+          <ul
+            className="mt-1 flex min-w-0 flex-wrap gap-1"
+            aria-label={t("equipment.abilities.title")}
+            data-testid="item-abilities"
           >
-            <DiceFive aria-hidden className="size-4 shrink-0" />
-            <span className="break-words">{i.effectDice}</span>
-          </button>
+            {abilities.map((a) => (
+              <AbilityChip
+                key={a.id}
+                ability={a}
+                quantity={i.count}
+                onDice={onDice}
+              />
+            ))}
+          </ul>
         )}
       </div>
       <div className="flex items-center justify-center gap-1">
-        {counted && (
+        {counted ? (
           <>
             <Button
               size="icon-sm"
               disabled={busy || i.count === 0}
-              onClick={onUse}
-              aria-label={t("items.useOne", { name })}
+              onClick={onSpend}
+              aria-label={t("items.spendOne", { name })}
+              title={t("items.spendOne", { name })}
             >
               <Minus />
             </Button>
@@ -449,24 +450,30 @@ function ItemRow({
               className="min-w-11 text-center font-semibold tabular-nums"
               data-testid="item-count"
             >
-              {i.behaviour === "daily"
-                ? t("items.count", { count: i.count, max: i.maxCount })
-                : i.count}
+              {i.count}
             </span>
-            {i.behaviour === "stock" ? (
-              <Button
-                size="icon-sm"
-                disabled={busy}
-                onClick={onRestock}
-                aria-label={t("items.addOne", { name })}
-              >
-                <Plus />
-              </Button>
-            ) : (
-              // Keeps the counts aligned: charges and daily items have no +.
-              <span className="size-7" aria-hidden />
-            )}
+            <Button
+              size="icon-sm"
+              disabled={busy}
+              onClick={onRestock}
+              aria-label={t("items.addOne", { name })}
+              title={t("items.addOne", { name })}
+            >
+              <Plus />
+            </Button>
           </>
+        ) : (
+          // One object: its quantity is not the player's to move; a stored count above 1 is shown
+          // as it is (ADR 0049 step 2, the review band says to check it).
+          i.count > 1 && (
+            <span
+              className="text-center font-semibold tabular-nums"
+              title={t("items.storedQuantity")}
+              data-testid="item-count"
+            >
+              × {i.count}
+            </span>
+          )
         )}
       </div>
       <div>
@@ -511,6 +518,56 @@ function ItemRow({
           <Trash />
         </Button>
       </div>
+    </li>
+  );
+}
+
+/**
+ * One ability of a row as a chip (ADR 0049 step 16): its name (none when it has none: the row
+ * names the item), its limit as the player reads it, and, for a dice effect, a button that puts the dice in the
+ * composer. Whether it can be used is Act · Items' to say; the chip is muted when the server says
+ * it cannot. Wraps, never cut (ADR 0022 step 1).
+ */
+function AbilityChip({
+  ability,
+  quantity,
+  onDice,
+}: {
+  ability: ItemAbility;
+  quantity: number;
+  onDice: (formula: string) => void;
+}) {
+  const { t, i18n } = useTranslation();
+  const name = ability.name ? localized(i18n.language, ability.name) : "";
+  const dice = ability.effects[0]?.dice;
+  return (
+    <li
+      className={cn(
+        "chip inline-flex max-w-full flex-wrap items-center gap-x-1.5 px-2 py-0.5 text-label",
+        ability.usable === false && "text-muted-foreground",
+      )}
+      data-testid={`ability-chip-${ability.id}`}
+    >
+      {name && <span className="min-w-0 break-words font-medium">{name}</span>}
+      <span
+        className="min-w-0 break-words tabular-nums text-muted-foreground"
+        data-testid="ability-chip-limit"
+      >
+        {limitText(t, ability, quantity)}
+      </span>
+      {dice && (
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 tabular-nums hover:text-tint"
+          title={t("dice.send", { formula: dice })}
+          aria-label={t("dice.send", { formula: dice })}
+          data-testid="item-dice"
+          onClick={() => onDice(dice)}
+        >
+          <DiceFive aria-hidden className="size-3.5 shrink-0" />
+          <span className="break-words">{dice}</span>
+        </button>
+      )}
     </li>
   );
 }

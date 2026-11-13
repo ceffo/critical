@@ -464,6 +464,20 @@ export interface EquipmentCatalogue {
   shields: CatalogueShield[];
 }
 
+/**
+ * GET /api/equipment/rules (wire.EquipmentRulesDTO), ADR 0049 step 2: which categories have a quantity
+ * the player sets. `magicKinds` is filled for `magic` only, whose answer is per kind.
+ */
+export interface EquipmentRules {
+  /** The most a quantity may be (itemsvc.MaxQuantity): the form's field and its check. */
+  maxQuantity: number;
+  categories: {
+    category: Category;
+    hasQuantity: boolean;
+    magicKinds: { kind: MagicKind; hasQuantity: boolean }[];
+  }[];
+}
+
 /** POST /api/items/{id}/state (itemhdl StateRequest): swap takes off the armour or shield worn. */
 export interface StateBody {
   state: ItemState;

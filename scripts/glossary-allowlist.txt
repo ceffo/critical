@@ -138,3 +138,5 @@ Table  # Technical: the strength owner's validated PHB Table 1 rows (see Strengt
 LegacyFields  # Technical: the old columns (behaviour, count, max count, effect dice) a seed row in the new shape derives from its abilities, for the previous release (ADR 0049 step 18)
 BootConversion  # Technical: what one run of the boot conversion did (counts for the log line, ADR 0049 step 18)
 Converted  # Technical: the result of the pure conversion of an item's old fields (ADR 0049 step 19)
+CategoryRule  # Technical: whether a category has a quantity the player sets, served as reference data to the editor (ADR 0049 step 2)
+KindRule  # Technical: the same answer for one magic kind (ADR 0049 step 2)

@@ -101,14 +101,13 @@ func TestItems_UseNotUsable(t *testing.T) {
 
 func TestItems_UseWireShape(t *testing.T) {
 	h, m := newRouter(t)
-	m.items.EXPECT().UseItem(mock.Anything, int64(1), "wand_lightning").Return(&itemsvc.UseResult{
-		ItemID: "wand_lightning", Name: "Wand of lightning", Type: "wand", Behaviour: itemsvc.BehaviourCharges,
-		Removed: true, Remaining: 0, MaxCount: 4, Rolls: []int{}, LogEntryID: 9,
+	m.items.EXPECT().UseItem(mock.Anything, int64(1), "potion").Return(&itemsvc.UseResult{
+		ItemID: "potion", Name: "Potion of healing", Type: "potion", Removed: true, Remaining: 0, LogEntryID: 9,
 	}, nil)
-	rec := do(h, "POST", "/api/items/wand_lightning/use", "{}")
+	rec := do(h, "POST", "/api/items/potion/use", "{}")
 	require.Equal(t, http.StatusOK, rec.Code)
-	assert.JSONEq(t, `{"itemId":"wand_lightning","name":"Wand of lightning","type":"wand","behaviour":"charges",
-		"removed":true,"remaining":0,"maxCount":4,"dice":"","rolls":[],"modifier":0,"total":0,"save":"","notes":"","logEntryId":9}`, rec.Body.String())
+	assert.JSONEq(t, `{"itemId":"potion","name":"Potion of healing","type":"potion",
+		"removed":true,"remaining":0,"maxCount":0,"dice":"","rolls":[],"modifier":0,"total":0,"save":"","notes":"","logEntryId":9}`, rec.Body.String())
 }
 
 func TestItems_Restock(t *testing.T) {
@@ -149,7 +148,7 @@ func TestItems_Restock(t *testing.T) {
 	}
 }
 
-const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","spellId":"","state":"carried","equipState":"","usable":true,
+const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","spellId":"","state":"carried","equipState":"","usable":false,
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
 	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[],"warnings":[]}`
 
@@ -243,7 +242,7 @@ func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"","spellId":"",
-		"state":"worn","equipState":"worn","usable":true,"type":"gem","behaviour":"daily","magicalBonus":0,
+		"state":"worn","equipState":"worn","usable":false,"type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
 		"damageSm":"","damageL":"",`+noWeapon+`,"review":[],"warnings":[]}]`,

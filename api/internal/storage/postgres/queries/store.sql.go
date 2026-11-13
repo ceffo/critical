@@ -1025,6 +1025,49 @@ func (q *Queries) ListCharacterLanguages(ctx context.Context) ([]ListCharacterLa
 	return items, nil
 }
 
+const listCountedItemAbilities = `-- name: ListCountedItemAbilities :many
+SELECT character_id, id, count, abilities
+FROM items WHERE abilities IS NOT NULL AND abilities <> '[]' AND count <> 1 ORDER BY character_id, position, id
+`
+
+type ListCountedItemAbilitiesRow struct {
+	CharacterID int64
+	ID          string
+	Count       int64
+	Abilities   sql.NullString
+}
+
+// The quantity of ADR 0049 step 2 for an item whose counter is an ability's (per_day or charges): one
+// object, so its count is 1. Read the converted rows whose count is not 1, decide in Go which hold
+// such an ability (the list is JSON text), and write the count; a rerun finds none.
+func (q *Queries) ListCountedItemAbilities(ctx context.Context) ([]ListCountedItemAbilitiesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listCountedItemAbilities)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCountedItemAbilitiesRow{}
+	for rows.Next() {
+		var i ListCountedItemAbilitiesRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.ID,
+			&i.Count,
+			&i.Abilities,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listLegacyItems = `-- name: ListLegacyItems :many
 SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save,
        notes, powers
@@ -1572,6 +1615,21 @@ type SetItemAbilitiesParams struct {
 
 func (q *Queries) SetItemAbilities(ctx context.Context, arg SetItemAbilitiesParams) error {
 	_, err := q.db.ExecContext(ctx, setItemAbilities, arg.Abilities, arg.CharacterID, arg.ID)
+	return err
+}
+
+const setItemQuantity = `-- name: SetItemQuantity :exec
+UPDATE items SET count = $1::bigint WHERE character_id = $2::bigint AND id = $3
+`
+
+type SetItemQuantityParams struct {
+	Count       int64
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) SetItemQuantity(ctx context.Context, arg SetItemQuantityParams) error {
+	_, err := q.db.ExecContext(ctx, setItemQuantity, arg.Count, arg.CharacterID, arg.ID)
 	return err
 }
 

@@ -55,7 +55,9 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   // The use shows at once in the header's last result, from the Inventory.
   await expect(page.getByTestId("last-result")).toContainText("Fire flasks");
   await act(page);
-  await expect(resultCard(page)).toContainText("5d6");
+  // The minus is spend one (ADR 0049 step 2): the flasks hold a dice ability, and the minus rolls none.
+  await expect(resultCard(page)).not.toContainText("5d6");
+  await expect(resultCard(page)).toContainText("Fire flasks: 4 left");
   await expect(logEntry(page, "Used Fire flasks")).toContainText("(4 left)");
 
   await inventory(page);

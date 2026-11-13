@@ -400,53 +400,6 @@ func (_c *MockDAL_List_Call) RunAndReturn(run func(context.Context, int64) ([]it
 	return _c
 }
 
-// ResetDaily provides a mock function with given fields: ctx, characterID
-func (_m *MockDAL) ResetDaily(ctx context.Context, characterID int64) error {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ResetDaily")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockDAL_ResetDaily_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetDaily'
-type MockDAL_ResetDaily_Call struct {
-	*mock.Call
-}
-
-// ResetDaily is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockDAL_Expecter) ResetDaily(ctx interface{}, characterID interface{}) *MockDAL_ResetDaily_Call {
-	return &MockDAL_ResetDaily_Call{Call: _e.mock.On("ResetDaily", ctx, characterID)}
-}
-
-func (_c *MockDAL_ResetDaily_Call) Run(run func(ctx context.Context, characterID int64)) *MockDAL_ResetDaily_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockDAL_ResetDaily_Call) Return(_a0 error) *MockDAL_ResetDaily_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockDAL_ResetDaily_Call) RunAndReturn(run func(context.Context, int64) error) *MockDAL_ResetDaily_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // Reviews provides a mock function with given fields: ctx, characterID
 func (_m *MockDAL) Reviews(ctx context.Context, characterID int64) ([]itemsvc.Review, error) {
 	ret := _m.Called(ctx, characterID)

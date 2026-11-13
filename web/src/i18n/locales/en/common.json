@@ -2523,6 +2523,8 @@
     "item_empty": "That item is empty.",
     "item_not_restockable": "That item cannot be restocked.",
     "item_not_usable": "That item cannot be used.",
+    "ability_not_found": "That item has no such ability.",
+    "exhausted": "Nothing is left of that ability.",
     "slot_already_used": "That spell slot is already used.",
     "invalid_slot_index": "That spell slot does not exist.",
     "unknown_spell_mode": "That spell has no such option.",

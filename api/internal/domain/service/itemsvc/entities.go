@@ -26,9 +26,6 @@ func (b Behaviour) Valid() bool {
 	return b == BehaviourStock || b == BehaviourCharges || b == BehaviourDaily
 }
 
-// Restockable reports whether the count may go up at the table (stock only).
-func (b Behaviour) Restockable() bool { return b == BehaviourStock }
-
 // RemovedAtZero reports whether the item is gone once its count reaches 0.
 func (b Behaviour) RemovedAtZero() bool { return b == BehaviourCharges }
 
@@ -148,24 +145,32 @@ func (r StrengthRating) Exceeds(score, exceptional int) bool {
 }
 
 // Spendable tells whether a spell that consumes the component code component
-// can spend the piece (ADR 0033 step 1.1, ADR 0008): that component, not a
-// daily item (it recharges and is never spent by a spell), some left. The one
-// rule behind both the cast and the list of items offered for a spell.
+// can spend the piece (ADR 0033 step 1.1, ADR 0049 step 3): that component, a
+// stock of it left, and no per_day or charges ability (a limited item is never
+// spent by a spell). The one rule behind both the cast and the list of items
+// offered for a spell.
 func (i Item) Spendable(component string) bool {
-	return i.Component != "" && i.Component == component && i.Behaviour != BehaviourDaily && i.Count > 0 && i.Usable()
+	return i.Component != "" && i.Component == component && i.Count > 0 && !i.Category.OneObject() && !i.holdsPerObjectLimit()
 }
+
+// holdsPerObjectLimit reports whether the piece has a per_day or charges
+// ability: a counter that belongs to the one object (ADR 0049 step 4).
+func (i Item) holdsPerObjectLimit() bool { return OneCounterPerObject(i.Abilities) }
 
 // HoldsSpell reports whether the piece may name a spell: a magic scroll.
 func (i Item) HoldsSpell() bool { return i.Category == CategoryMagic && i.MagicKind == MagicScroll }
 
-// Removed reports whether this item, as returned by a use, is gone: a
-// charges item at 0.
-func (i Item) Removed() bool { return i.Behaviour.RemovedAtZero() && i.Count == 0 }
+// Removed reports whether this item, as returned by a use, is gone: a potion
+// or a scroll at a quantity of 0 (ADR 0049 step 2); undo puts it back.
+func (i Item) Removed() bool {
+	return i.Category == CategoryMagic && i.HasStock() && i.Count == 0
+}
 
-// Usable reports whether the piece can be used or restocked at the table: a
-// weapon, an armour or a shield never can, whatever its behaviour (ADR 0049
-// step 2). The wire serves it so the web does not derive the rule.
-func (i Item) Usable() bool { return !i.Category.OneObject() }
+// Usable reports whether the piece has a quantity the player moves at the
+// table (spend one, restock): ammunition, gear, a potion or a scroll (ADR 0049
+// step 2). Everything else is one object, whose quantity the player does not
+// change. The wire serves it so the web does not derive the rule.
+func (i Item) Usable() bool { return i.HasStock() }
 
 // Equipped reports whether the piece is worn or wielded: its powers are on
 // (step 9).

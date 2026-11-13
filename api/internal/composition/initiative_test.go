@@ -42,7 +42,7 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	require.NoError(t, err)
 	wand, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
 		Name: localized.Of("Wand of frost"), Category: itemsvc.CategoryMagic, MagicKind: "wand",
-		Behaviour: itemsvc.BehaviourCharges, Count: 5, MaxCount: 5,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}),
 	})
 	require.NoError(t, err)
 
@@ -55,7 +55,7 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	}, rolled.Modifiers)
 	assert.Equal(t, 11, rolled.Total())
 
-	_, err = bs.Items.UseItem(ctx, id, wand.Item.ID)
+	_, err = bs.Items.UseAbility(ctx, id, wand.Item.ID, "use")
 	require.NoError(t, err)
 	corrected, err := bs.Buffs.GetInitiative(ctx, id)
 	require.NoError(t, err)
@@ -81,7 +81,8 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	require.NoError(t, err)
 	for _, it := range items {
 		if it.ID == wand.Item.ID {
-			assert.Equal(t, 5, it.Count, "the charge comes back with it")
+			assert.Equal(t, 5, it.Abilities[0].Limit.Left, "the charge comes back with it")
+			assert.Equal(t, 1, it.Count, "the wand is one object")
 		}
 	}
 
@@ -131,7 +132,7 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	require.NoError(t, err)
 	scroll, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
 		Name: localized.Of("Scroll"), Category: itemsvc.CategoryMagic, MagicKind: "scroll",
-		Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem}),
 	})
 	require.NoError(t, err)
 	spellOf := func() string {
@@ -163,7 +164,7 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	require.Equal(t, 1, round)
 	assert.Equal(t, 7, rolled.Total())
 
-	_, err = bs.Items.UseItem(ctx, id, scroll.Item.ID)
+	_, err = bs.Items.UseAbility(ctx, id, scroll.Item.ID, "use")
 	require.NoError(t, err)
 	corrected, err := bs.Buffs.GetInitiative(ctx, id)
 	require.NoError(t, err)
@@ -173,4 +174,10 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	}, corrected.Modifiers)
 	assert.Equal(t, 8, corrected.Total())
 	assert.Equal(t, map[string]int{"die": 1}, dice.calls, "the correction rolls nothing")
+}
+
+// useAbility is the one ability "use" an item holds in these tests: what the old behaviour and count
+// of a wand, a potion or a scroll were (ADR 0049 step 19).
+func useAbility(l itemsvc.Limit) []itemsvc.Ability {
+	return []itemsvc.Ability{{ID: "use", Limit: l}}
 }

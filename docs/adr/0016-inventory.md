@@ -44,19 +44,19 @@ unless named otherwise.
    | `charges` | yes | refused (409) | removed | untouched |
    | `daily` | yes | refused (409) | stays listed | refilled to its daily number |
 
-   Tests: `TestBehaviour_Rules`, `TestUse_RemovesChargesItemAtZeroOnly`, `TestRestock_AddsToStockAndLogs`,
-   `TestRestock_RejectsChargesAndDaily`, `TestUseItem_SpendsStockAmmo`.
+   Tests: `TestBehaviour_Rules`, `TestUse_ADR0049Step2_RemovesAPotionOrScrollAtZeroOnly`, `TestRestock_AddsToStockAndLogs`,
+   `TestRestock_ADR0049Step4_RejectsWhatHasNoStockOrACounter`, `TestUseItem_SpendsStockAmmo`.
 2. **Use and restock are logged.** Spending one of any item (the attack's arrow, the inventory's
    minus) is one count change with an `items:<id>` snapshot; the use that takes a `charges` item to 0
    deletes it in the same entry, and popping that entry puts it back in its list position with one
    charge. Using an item with effect dice rolls them. A restock adds 1 to 999 to a `stock` item as
    one `item_restock` entry.
-   Tests: `TestUseItem_RollsEffectDiceAndLogsWithSnapshot`, `TestUseItem_LastChargeRemovesTheItem`,
+   Tests: `TestUseItem_ADR0049Step2_SpendOneRollsAndCorrectsNothing`, `TestUseItem_ADR0049Step2_LastDoseRemovesThePotion`,
    `TestRestock_RejectsOutOfRangeCounts`, `TestRestorers_PutBackARemovedItem`,
    `TestUseSnapshot_MarksARemovedItem`.
 3. **Long rest refills daily items only.** Each `daily` item goes back to its daily number; stock and
    charges are untouched. Passing time refills nothing ([ADR 0005](0005-rounds-and-time.md) step 7).
-   Tests: `TestResetDaily_ResetsThenLists`, `TestLongRest_ResetsBothInOneLoggedTransaction`.
+   Tests: `TestResetDaily_ADR0049Step6_RefillsPerDayOnly`, `TestLongRest_ADR0049Step6_ResetsBothInOneLoggedTransaction`.
 4. **Item editor.** Items are added, edited (only the fields sent) and removed through the editor;
    each is one entry (`item_add`, `item_edit`, `item_remove`) with the `items:<id>` snapshot.
    Popping the newest entry deletes a created item, writes back every "before" field of an edited

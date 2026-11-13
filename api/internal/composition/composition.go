@@ -263,7 +263,7 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, fmt.Errorf("convert items: %w", err)
 	}
-	slog.Info("items converted to abilities", "converted", conv.Converted, "review", conv.Review)
+	slog.Info("items converted to abilities", "converted", conv.Converted, "review", conv.Review, "quantities", conv.Quantities)
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
 		return nil, err
 	}

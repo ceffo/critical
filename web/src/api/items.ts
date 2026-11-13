@@ -1,4 +1,5 @@
 import type {
+  AbilityUseResult,
   EquipmentCatalogue,
   Item,
   ItemBody,
@@ -16,6 +17,17 @@ export function fetchItems(): Promise<Item[]> {
 
 export function postUseItem(id: string): Promise<UseResult> {
   return post<UseResult>(`/api/items/${encodeURIComponent(id)}/use`, {});
+}
+
+/** Use one ability of an item (ADR 0049 step 7): pays its limit, rolls its effects, logs the use. */
+export function postUseAbility(
+  itemId: string,
+  abilityId: string,
+): Promise<AbilityUseResult> {
+  return post<AbilityUseResult>(
+    `/api/items/${encodeURIComponent(itemId)}/abilities/${encodeURIComponent(abilityId)}/use`,
+    {},
+  );
 }
 
 export function postRestockItem(

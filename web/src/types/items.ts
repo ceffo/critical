@@ -141,8 +141,9 @@ export interface Item {
   /** The state Equip moves the piece to (server rule, ADR 0033 step 6); empty: carried only. */
   equipState: ItemState | "";
   /**
-   * Whether the piece can be used or restocked (server rule: a weapon, an armour and a shield never
-   * can, ADR 0049 step 2). The web filters and hides controls by it, never by the category.
+   * Whether the piece has a stock the player moves, spend one and restock (server rule: ammunition,
+   * gear, a potion or a scroll; ADR 0049 step 2). The web filters and hides controls by it, never by
+   * the category. Whether an ability can be used is on the ability.
    */
   usable: boolean;
   /** The free-text label of before the equipment model, read only (not shown, read by nothing). */
@@ -244,6 +245,52 @@ export interface ItemAbility {
   note?: string;
   limit: ItemAbilityLimit;
   effects: ItemAbilityEffect[];
+  /**
+   * Served, never sent: whether a use is paid now, and why not (ADR 0049 steps 5 and 14). The web
+   * derives neither.
+   */
+  usable?: boolean;
+  reason?: AbilityRefusal;
+}
+
+/** Why an ability cannot be used: its limit cannot pay (ADR 0049 step 5). */
+export type AbilityRefusal = "exhausted";
+
+/** One effect of an ability's use (itemsvc EffectResult): a dice effect's rolls, applied to nothing. */
+export interface AbilityEffectResult {
+  kind: "dice";
+  dice: string;
+  rolls: number[];
+  /** The flat "+K" of the dice ("1d8+2"); absent for none. */
+  modifier?: number;
+  total: number;
+  save?: string;
+  label?: string;
+}
+
+/**
+ * POST /api/items/{id}/abilities/{abilityId}/use (itemhdl AbilityUseResultDTO), ADR 0049 step 7: the
+ * limit as it stands after the use and each effect's result. The item_use log payload carries the
+ * same fields plus the first dice effect in the flat shape of `UseResult`.
+ */
+export interface AbilityUseResult {
+  itemId: string;
+  abilityId: string;
+  /** The item's name; `abilityName` is the ability's own, absent when it has none. */
+  name: string;
+  abilityName?: LocalizedText;
+  type: string;
+  limit: AbilityLimitKind;
+  /** The counter after the use, for per_day and charges only. */
+  left?: number;
+  max?: number;
+  /** The counter or the quantity left to read; 0 for unlimited. */
+  remaining: number;
+  /** The use spent the last potion or scroll: the item is gone until the use is popped. */
+  removed: boolean;
+  effects: AbilityEffectResult[];
+  notes?: string;
+  logEntryId: number;
 }
 
 /** One of an item's powers: its trigger (minStr; absent: always on) and its effects. */
@@ -253,7 +300,10 @@ export interface ItemPowerDef {
   effects: BuffEffects;
 }
 
-/** POST /api/items/{id}/use (itemhdl UseResultDTO); the item_use log payload has the same shape. */
+/**
+ * POST /api/items/{id}/use (itemhdl UseResultDTO), spend one (ADR 0049 step 2): nothing is rolled, the
+ * dice fields are the journal's shape of a use with none. The item_use log payload has the same shape.
+ */
 export interface UseResult {
   itemId: string;
   name: string;

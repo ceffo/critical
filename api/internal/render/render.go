@@ -225,6 +225,9 @@ var mappings = []mapping{
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict, code: "item_empty"},
 	{target: itemsvc.ErrNotUsable, status: http.StatusConflict, code: "item_not_usable"},
 	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict, code: "item_not_restockable"},
+	// ADR 0049 steps 5 and 7: an ability the item does not have, and one whose limit cannot pay a use.
+	{target: itemsvc.ErrAbilityNotFound, status: http.StatusNotFound, code: "ability_not_found"},
+	{target: itemsvc.ErrAbilityExhausted, status: http.StatusConflict, code: "exhausted"},
 	{target: spellsvc.ErrSpellNotFound, status: http.StatusNotFound, code: "spell_not_found"},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict, code: "slot_already_used"},
 	{target: spellsvc.ErrInvalidSlotIndex, status: http.StatusBadRequest, code: "invalid_slot_index"},

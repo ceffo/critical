@@ -2,6 +2,7 @@ package router_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 
@@ -27,6 +28,10 @@ func TestItems_ADR0049Step4_AbilitiesInTheBodyAndOnTheWire(t *testing.T) {
 	}}
 	const wire = `[{"id":"dispel","name":{"en":"Dispel"},"note":"once a day","limit":{"kind":"per_day","max":1,"left":1},
 		"effects":[{"kind":"dice","dice":"2d6","save":"rod_staff_wand","label":"fire"}]}]`
+
+	// Served, an ability also says whether a use is paid now (step 5); never read from a body.
+	const served = `[{"id":"dispel","name":{"en":"Dispel"},"note":"once a day","limit":{"kind":"per_day","max":1,"left":1},
+		"effects":[{"kind":"dice","dice":"2d6","save":"rod_staff_wand","label":"fire"}],"usable":true}]`
 
 	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Abilities: &abilities}).
 		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil).Once()
@@ -63,7 +68,7 @@ func TestItems_ADR0049Step4_AbilitiesInTheBodyAndOnTheWire(t *testing.T) {
 	var got []map[string]any
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	require.Len(t, got, 2)
-	assert.JSONEq(t, wire, string(mustRaw(t, got[0]["abilities"])))
+	assert.JSONEq(t, served, string(mustRaw(t, got[0]["abilities"])))
 	assert.NotContains(t, got[1], "abilities", "an item not converted yet is served without the key")
 }
 
@@ -102,4 +107,73 @@ func TestItems_ADR0049Step5_LeftIsAlwaysServedForTheKindsThatHaveIt(t *testing.T
 	for n, w := range want {
 		assert.JSONEq(t, w, string(got[0].Abilities[n].Limit))
 	}
+}
+
+// ADR 0049 steps 5 and 14: every ability is served with `usable` and, when it cannot be used,
+// the `reason`: the web re-derives nothing.
+func TestItems_ADR0049Step14_UsableAndReasonPerAbility(t *testing.T) {
+	h, m := newRouter(t)
+	noWarnings(m)
+	it := wandItem
+	it.Abilities = []itemsvc.Ability{
+		{ID: "ready", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 2, Left: 1}},
+		{ID: "spent", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 2, Left: 0}},
+		{ID: "short", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 1, Cost: 2}},
+		{ID: "free", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}},
+	}
+	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{it}, nil)
+	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return(nil, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil)
+	rec := do(h, "GET", "/api/items", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got []struct {
+		Abilities []struct {
+			ID     string `json:"id"`
+			Usable bool   `json:"usable"`
+			Reason string `json:"reason"`
+		} `json:"abilities"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	type state struct {
+		usable bool
+		reason string
+	}
+	want := map[string]state{"ready": {true, ""}, "spent": {false, "exhausted"}, "short": {false, "exhausted"}, "free": {true, ""}}
+	require.Len(t, got[0].Abilities, len(want))
+	for _, a := range got[0].Abilities {
+		assert.Equal(t, want[a.ID], state{a.Usable, a.Reason}, a.ID)
+	}
+}
+
+// ADR 0049 step 7: POST /api/items/{id}/abilities/{abilityId}/use answers the limit after the use
+// and each effect's result; an exhausted ability is a 409 `exhausted`, an unknown one a 404.
+func TestItems_ADR0049Step7_UseAnAbility(t *testing.T) {
+	h, m := newRouter(t)
+	three, four := 3, 4
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "wand", "use").Return(&itemsvc.AbilityUseResult{
+		ItemID: "wand", AbilityID: "use", Name: "Wand of lightning", Type: "wand", Limit: itemsvc.LimitCharges,
+		Left: &three, Max: &four, Remaining: 3, LogEntryID: 9,
+		Effects: []itemsvc.EffectResult{{Kind: itemsvc.EffectDice, Dice: "6d6", Rolls: []int{1, 2, 3, 4, 5, 6}, Total: 21, Save: "rod_staff_wand"}},
+	}, nil).Once()
+	rec := do(h, "POST", "/api/items/wand/abilities/use/use", "{}")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"itemId":"wand","abilityId":"use","name":"Wand of lightning","type":"wand","limit":"charges","left":3,"max":4,
+		"remaining":3,"removed":false,"logEntryId":9,
+		"effects":[{"kind":"dice","dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand"}]}`, rec.Body.String())
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "turn").
+		Return(nil, fmt.Errorf("%w: Sword (turn)", itemsvc.ErrAbilityExhausted)).Once()
+	rec = do(h, "POST", "/api/items/sword/abilities/turn/use", "{}")
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"exhausted"`)
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "fly").
+		Return(nil, fmt.Errorf("%w: Sword", itemsvc.ErrAbilityNotFound)).Once()
+	rec = do(h, "POST", "/api/items/sword/abilities/fly/use", "{}")
+	assert.Equal(t, http.StatusNotFound, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"ability_not_found"`)
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "nope", "use").
+		Return(nil, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound)).Once()
+	assert.Equal(t, http.StatusNotFound, do(h, "POST", "/api/items/nope/abilities/use/use", "{}").Code)
 }

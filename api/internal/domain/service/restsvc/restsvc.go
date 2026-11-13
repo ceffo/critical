@@ -185,7 +185,8 @@ func (s *service) LongRest(ctx context.Context, characterID int64) (Result, erro
 }
 
 // snapshots always covers the slot list (a rest must block voiding any
-// older cast, even when nothing was used) and every item whose count changed.
+// older cast, even when nothing was used) and every item whose ability
+// counters changed (ADR 0049 step 6), each as a whole item.
 func snapshots(slotsBefore, slots []spellsvc.SpellSlot, itemsBefore, items []itemsvc.Item) ([]actionlog.Snapshot, restRecord, error) {
 	rec := restRecord{ItemsRefilled: []string{}}
 	for _, sl := range slotsBefore {
@@ -198,16 +199,16 @@ func snapshots(slotsBefore, slots []spellsvc.SpellSlot, itemsBefore, items []ite
 		return nil, rec, err
 	}
 	snaps := []actionlog.Snapshot{slotSnap}
-	was := make(map[string]int, len(itemsBefore))
+	was := make(map[string]itemsvc.Item, len(itemsBefore))
 	for _, it := range itemsBefore {
-		was[it.ID] = it.Count
+		was[it.ID] = it
 	}
 	for _, it := range items {
 		before, ok := was[it.ID]
-		if !ok || before == it.Count {
+		if !ok || before.SameCounters(it) {
 			continue
 		}
-		snap, err := itemsvc.CountSnapshot(it.ID, before, it.Count)
+		snap, err := itemsvc.ItemSnapshot(before, it)
 		if err != nil {
 			return nil, rec, err
 		}

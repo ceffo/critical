@@ -24,7 +24,6 @@ type Querier interface {
 	ListItems(ctx context.Context, characterID int64) ([]Item, error)
 	// The review list (ADR 0033 step 27).
 	ListReviews(ctx context.Context, characterID int64) ([]ListReviewsRow, error)
-	ResetDailyItems(ctx context.Context, characterID int64) error
 	SetItemCount(ctx context.Context, arg SetItemCountParams) (int64, error)
 	UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, error)
 }

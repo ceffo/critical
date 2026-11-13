@@ -171,8 +171,9 @@ func TestConvertLegacy_ADR0049Step19_Table(t *testing.T) {
 	}
 }
 
-// ADR 0049 step 19 (slice 2): the seed in the new shape stores the old columns the previous release
-// still reads; MirrorLegacy is the inverse of ConvertLegacy for the seed's items.
+// ADR 0049 steps 2 and 19: the seed in the new shape stores the old columns the web still reads, its
+// count the quantity (a counter is the ability's left); MirrorLegacy is the inverse of ConvertLegacy
+// for the seed's items.
 func TestMirrorLegacy_ADR0049Step23_InvertsTheConversion(t *testing.T) {
 	for _, in := range []itemsvc.Item{
 		legacy(itemsvc.CategoryGear, "", itemsvc.BehaviourStock, 5, 5, "5d6"),
@@ -182,7 +183,7 @@ func TestMirrorLegacy_ADR0049Step23_InvertsTheConversion(t *testing.T) {
 	} {
 		c := itemsvc.ConvertLegacy(in)
 		got := itemsvc.MirrorLegacy(c.Quantity, c.Abilities)
-		want := itemsvc.LegacyFields{Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount, EffectDice: in.EffectDice, EffectSave: in.EffectSave}
+		want := itemsvc.LegacyFields{Behaviour: in.Behaviour, Count: c.Quantity, MaxCount: in.MaxCount, EffectDice: in.EffectDice, EffectSave: in.EffectSave}
 		assert.Equal(t, want, got, in.MagicKind+string(in.Behaviour))
 	}
 }
@@ -213,23 +214,26 @@ func TestRestore_ADR0049Step20_OldSnapshotIsConvertedAndKeepsTheStoredName(t *te
 	require.Len(t, got.Abilities, 1)
 	assert.Equal(t, itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: 0}, got.Abilities[0].Limit)
 	assert.Equal(t, localized.Text{"en": "Dispel Magic"}, got.Abilities[0].Name)
-	assert.Equal(t, 0, got.Count, "the stored count keeps its old meaning in this slice")
+	assert.Equal(t, 1, got.Count, "the gem is one object: the old count of 0 was its daily counter, now the ability's left")
 }
 
 // ADR 0049 step 20: popping the removal of a charges item brings it back as a charges ability.
 func TestRestore_ADR0049Step20_RemovedChargesItemComesBackAsCharges(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	snap, err := itemsvc.UseSnapshot(wand) // the old use spent the last charge; "wand" has no abilities key written
-	require.NoError(t, err)
-	dal.EXPECT().SetCount(mock.Anything, int64(1), "wand_lightning", 1).Return(itemsvc.ErrItemNotFound).Once()
 	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
+	dal.EXPECT().SetCount(mock.Anything, int64(1), "wand_lightning", 1).Return(itemsvc.ErrItemNotFound).Once()
 	var got itemsvc.Item
 	dal.EXPECT().Insert(mock.Anything, int64(1), mock.Anything).Run(func(_ context.Context, _ int64, it itemsvc.Item) { got = it }).Return(nil).Once()
-	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snap.Before))
+	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("wand_lightning", oldWandRemoved)))
 	require.Len(t, got.Abilities, 1)
 	assert.Equal(t, itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 1, Left: 1, Cost: 1}, got.Abilities[0].Limit)
+	assert.Equal(t, 1, got.Count)
 }
+
+// oldWandRemoved is the "before" of an entry the previous releases logged for a use that spent a
+// wand's last charge: the whole wand, one charge, no abilities key.
+const oldWandRemoved = `{"count":1,"item":{"position":4,"name":{"en":"Wand of lightning"},"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[],"piece":{"category":"magic","magicKind":"wand","state":"carried"}}}`
 
 // ADR 0049 step 20: a snapshot that has the abilities key is written back as it was (no second conversion).
 func TestRestore_ADR0049Step20_SnapshotWithAbilitiesIsNotConvertedAgain(t *testing.T) {

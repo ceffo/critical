@@ -23,7 +23,10 @@ import (
 var (
 	diamonds = itemsvc.Item{ID: "diamond", Name: localized.Of("Diamond"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 41}
 	rubies   = itemsvc.Item{ID: "ruby", Name: localized.Of("Ruby"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2}
-	powerGem = itemsvc.Item{ID: "power_gem_dispel", Name: localized.Of("Power Gem: Dispel Magic"), Component: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1}
+	powerGem = itemsvc.Item{
+		ID: "power_gem_dispel", Name: localized.Of("Power Gem: Dispel Magic"), Component: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 1, MaxCount: 1,
+		Abilities: []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: 1}}},
+	}
 )
 
 func (f *fixture) gemSpellSetup(items ...itemsvc.Item) {

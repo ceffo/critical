@@ -20,9 +20,6 @@ RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, ma
 UPDATE items SET count = count + sqlc.arg(n) WHERE character_id = sqlc.arg(character_id)::bigint AND id = sqlc.arg(id)
 RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities;
 
--- name: ResetDailyItems :exec
-UPDATE items SET count = max_count WHERE character_id = sqlc.arg(character_id)::bigint AND behaviour = 'daily';
-
 -- name: SetItemCount :execrows
 UPDATE items SET count = @count WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
 

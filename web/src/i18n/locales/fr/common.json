@@ -2523,6 +2523,8 @@
     "item_empty": "Cet objet est vide.",
     "item_not_restockable": "Cet objet ne peut pas être réapprovisionné.",
     "item_not_usable": "Cet objet ne peut pas être utilisé.",
+    "ability_not_found": "Cet objet n'a pas cette capacité.",
+    "exhausted": "Cette capacité est épuisée.",
     "slot_already_used": "Cet emplacement de sort est déjà utilisé.",
     "invalid_slot_index": "Cet emplacement de sort n'existe pas.",
     "unknown_spell_mode": "Ce sort n'a pas cette option.",

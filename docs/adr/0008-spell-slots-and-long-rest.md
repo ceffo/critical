@@ -97,7 +97,7 @@ named otherwise.
 11. **Long rest.** One transaction marks every slot unused (the preparation stays) and refills the
     per-day items ([ADR 0016](0016-inventory.md) step 3), and nothing else: stock and charges are
     not refilled. If either part fails nothing changes.
-    Tests: `TestResetSlots`, `TestLongRest_ResetsBothInOneLoggedTransaction`,
+    Tests: `TestResetSlots`, `TestLongRest_ADR0049Step6_ResetsBothInOneLoggedTransaction`,
     `TestLongRest_ItemFailureFailsTheRest`, `TestLongRest_SlotFailureSkipsItems`.
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 7, on implementation: the transaction also ends every maintained psionic power and recovers a night's sleep of PSPs, 8 hours at the CPsiH's sleeping rate, capped at the maximum)_
@@ -106,7 +106,7 @@ named otherwise.
     slot list (even when no slot was used) and every item whose count changed. Because of that
     snapshot, an older cast cannot be voided past the rest (refused, the rest is on top); voiding
     the rest itself spends the slots and items again.
-    Tests: `TestLongRest_ResetsBothInOneLoggedTransaction` (snapshots, payload),
+    Tests: `TestLongRest_ADR0049Step6_ResetsBothInOneLoggedTransaction` (snapshots, payload),
     `TestUndo` (actionlogsvc: only the newest transaction is popped, so an older cast is not
     voidable past the rest).
 

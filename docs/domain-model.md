@@ -244,8 +244,15 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   optional name and note, one usage limit (unlimited, per day, charges, with the item) and a list of
   effects (only the dice effect so far: rolled and shown, applied to nothing). An item not yet
   converted from its behaviour has no list (NULL); one converted with none has an empty list. An item
-  power is a different thing: passive, on while the item is worn, with no limit.
-  [ADR 0049](adr/0049-item-abilities.md) steps 4, 5, 10 and 18.
+  power is a different thing: passive, on while the item is worn, with no limit. **Use acts on an
+  ability** in one transaction: it pays the limit by its kind (a refusal, `exhausted`, changes
+  nothing), runs the effects in order and writes one `item_use` entry whose snapshot holds the whole
+  item, so undo and redo restore the counter (or a potion or scroll the use removed); in combat it
+  corrects the round's initiative (Table 56 by magic kind, a scroll by its spell's casting time, any
+  other category by the miscellaneous row). The long rest refills per-day abilities. An item whose
+  counter is an ability's is one object (its count is 1); the inventory's minus on a stock is a
+  separate spend-one, with no ability and no initiative.
+  [ADR 0049](adr/0049-item-abilities.md) steps 2, 4 to 7, 10, 15 and 18.
 
 ## Ruleset and house rules
 

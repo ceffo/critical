@@ -461,15 +461,6 @@ func (q *Queries) ListReviews(ctx context.Context, characterID int64) ([]ListRev
 	return items, nil
 }
 
-const resetDailyItems = `-- name: ResetDailyItems :exec
-UPDATE items SET count = max_count WHERE character_id = $1::bigint AND behaviour = 'daily'
-`
-
-func (q *Queries) ResetDailyItems(ctx context.Context, characterID int64) error {
-	_, err := q.db.ExecContext(ctx, resetDailyItems, characterID)
-	return err
-}
-
 const setItemCount = `-- name: SetItemCount :execrows
 UPDATE items SET count = $1 WHERE character_id = $2::bigint AND id = $3
 `

@@ -132,10 +132,11 @@ type LegacyFields struct {
 }
 
 // MirrorLegacy is ConvertLegacy's inverse for the seed: the old columns of an
-// item whose quantity and abilities are given. The first ability decides the
-// behaviour (with_item or none: stock; charges; per_day: daily), the count is
-// the ability's left or the quantity, and the first dice effect is the item's
-// effect dice.
+// item whose quantity and abilities are given, which the web and the editor
+// still read until the contract (ADR 0049 step 22). The first ability decides
+// the behaviour (with_item or none: stock; charges; per_day: daily) and the max
+// count; the count is the quantity (a counter lives in the ability's left, step
+// 2), and the first dice effect is the item's effect dice.
 func MirrorLegacy(quantity int, abilities []Ability) LegacyFields {
 	out := LegacyFields{Behaviour: BehaviourStock, Count: quantity, MaxCount: quantity}
 	if len(abilities) == 0 {
@@ -144,9 +145,9 @@ func MirrorLegacy(quantity int, abilities []Ability) LegacyFields {
 	first := abilities[0]
 	switch first.Limit.Kind {
 	case LimitCharges:
-		out.Behaviour, out.Count, out.MaxCount = BehaviourCharges, first.Limit.Left, first.Limit.Left
+		out.Behaviour, out.MaxCount = BehaviourCharges, max(first.Limit.Left, quantity)
 	case LimitPerDay:
-		out.Behaviour, out.Count, out.MaxCount = BehaviourDaily, first.Limit.Left, first.Limit.Max
+		out.Behaviour, out.MaxCount = BehaviourDaily, max(first.Limit.Max, quantity)
 	}
 	for _, e := range first.Effects {
 		if e.Kind == EffectDice {
@@ -182,4 +183,7 @@ func NamedFrom(abilities, named []Ability) []Ability {
 type BootConversion struct {
 	Converted int
 	Review    int
+	// Quantities is the items whose count the boot step set to their quantity, 1
+	// (ADR 0049 step 2): the ones whose counter is an ability's.
+	Quantities int
 }

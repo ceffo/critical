@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -198,7 +199,8 @@ func (s *service) keepCurrent(ctx context.Context, characterID int64, id string,
 // withLegacyAbilities is item with the abilities ConvertLegacy gives the old
 // fields of a snapshot that has no abilities key (ADR 0049 step 20), so
 // popping an entry of before abilities never leaves the item unconverted or
-// strips the abilities the boot conversion gave it. Abilities that the item
+// strips the abilities the boot conversion gave it; its count becomes the
+// quantity of the conversion. Abilities that the item
 // now stored has under the same id lend their names (the conversion cannot
 // know a name an edit or the seed gave). A snapshot with the key is as it was.
 func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c itemState, item Item) (Item, error) {
@@ -213,6 +215,9 @@ func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c 
 		return item, nil
 	}
 	item.Abilities = converted
+	// The quantity the conversion gives (ADR 0049 step 2): a charged or daily item
+	// is one object, its old count being the counter now in the ability.
+	item.Count = conv.Quantity
 	cur, err := s.dal.Get(ctx, characterID, item.ID)
 	switch {
 	case errors.Is(err, ErrItemNotFound):
@@ -252,11 +257,34 @@ func (s *service) keepCurrentFields(ctx context.Context, characterID int64, id s
 	return item, nil
 }
 
-// UseSnapshot is the snapshot of one Use: after is the item Use returned,
-// the "before" count is one more (Use always spends exactly one). When the
-// use removed the item (a charges item spent to 0), "before" carries the
-// whole item, so popping the use brings it back with 1 charge, and "after"
-// is absent.
+// withCounter is the item with its counter set to n, the way an entry of before
+// abilities counted it (ADR 0049 step 20): the first per_day or charges
+// ability's left, never above its max.
+func (i Item) withCounter(n int) Item {
+	out := i
+	out.Abilities = slices.Clone(i.Abilities)
+	for k, a := range out.Abilities {
+		if a.Limit.PaysPerObject() {
+			out.Abilities[k].Limit.Left = min(n, a.Limit.Max)
+			break
+		}
+	}
+	return out
+}
+
+// ItemSnapshot is the snapshot of an item going from before to after (nil: it
+// did not exist, or no longer exists): the whole item on both sides, so
+// popping the entry gives back its counters, or the item itself when the
+// change removed it (a long rest refilling per_day abilities).
+func ItemSnapshot(before, after Item) (actionlog.Snapshot, error) {
+	return itemSnapshot(before.ID, &before, &after)
+}
+
+// UseSnapshot is the snapshot of one spend-one: after is the item Use
+// returned, the "before" count is one more (Use always spends exactly one).
+// When the use removed the item (a potion or a scroll spent to 0), "before"
+// carries the whole item, so popping the use brings it back with 1, and
+// "after" is absent.
 func UseSnapshot(after Item) (actionlog.Snapshot, error) {
 	before := itemState{Count: after.Count + 1}
 	if after.Removed() {
@@ -267,7 +295,7 @@ func UseSnapshot(after Item) (actionlog.Snapshot, error) {
 }
 
 // CountSnapshot is the snapshot of one item's count going from before to
-// after (a long rest refilling a daily item, a restock).
+// after (a restock).
 func CountSnapshot(itemID string, before, after int) (actionlog.Snapshot, error) {
 	return itemSnaps.Snapshot(itemID, &itemState{Count: before}, &itemState{Count: after})
 }
@@ -321,10 +349,21 @@ func (s *service) restoreItem(ctx context.Context, characterID int64, id string,
 		}
 		return err
 	}
+	// An entry of before abilities (ADR 0049 step 20) counted a wand's charges
+	// or a gem's daily uses in the item's count: for an item whose counter is an
+	// ability's now, that count goes back into the counter and the quantity is
+	// left alone. Payloads are never rewritten; the pop reads them anew.
+	cur, err := s.dal.Get(ctx, characterID, id)
+	switch {
+	case err == nil && cur.holdsPerObjectLimit():
+		return s.dal.Update(ctx, characterID, cur.withCounter(c.Count))
+	case err != nil && !errors.Is(err, ErrItemNotFound):
+		return err
+	}
 	// The item is inserted only when it is gone, so there are no stored
 	// powers to keep: a snapshot from before powers brings it back without
 	// them (ADR 0016 Consequences).
-	err := s.dal.SetCount(ctx, characterID, id, c.Count)
+	err = s.dal.SetCount(ctx, characterID, id, c.Count)
 	if errors.Is(err, ErrItemNotFound) && c.Item != nil {
 		item := c.item(id)
 		if c.Item.Piece == nil {

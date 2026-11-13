@@ -11,7 +11,7 @@ _Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-2
 
 _Amended by [ADR 0030](0030-classes-and-races.md) step 22.3 (the racial to-hit bonus, accepted by the user 2026-11-13), implemented 2026-11-13: steps 2 and 12 gain the to-hit modifier `race` (the race's `weapon_to_hit` trait, [ADR 0040](0040-classes-are-data.md) step 4, when the weapon's type is one it lists; detail the race code; not magical, to hit only), listed after Dexterity and before the weapon's magic; the Consequences' order gains it. Tests: ADR 0030 step 22.3's._
 
-_Step 4 amended 2026-11-13 (the strength bow; the user's triage of 2026-11-13, the book's rule rather than a composite-bow house rule), implemented 2026-11-13: a bow takes a Strength penalty always and a Strength bonus only as a strength bow, up to its Strength rating ([ADR 0033](0033-equipment.md) step 3); a crossbow never takes Strength. Step 4.1 (a warning, no roll, below an exceptional rating) is **proposed**, awaiting the user's OK. [ADR 0003](0003-damage.md) step 7 follows. **Behaviour change**: before, a bow took no Strength at all, so an archer with a Strength penalty now takes it with every bow._
+_Step 4 amended 2026-11-13 (the strength bow; the user's triage of 2026-11-13, the book's rule rather than a composite-bow house rule), implemented 2026-11-13: a bow takes a Strength penalty always and a Strength bonus only as a strength bow, up to its Strength rating ([ADR 0033](0033-equipment.md) step 3); a crossbow never takes Strength. Step 4.1 (a warning, no roll, when an archer without exceptional Strength wields a bow built for it) is **proposed**, awaiting the user's OK. [ADR 0003](0003-damage.md) step 7 follows. **Behaviour change**: before, a bow took no Strength at all, so an archer with a Strength penalty now takes it with every bow._
 
 ## Context
 
@@ -70,16 +70,19 @@ return a distinct value for each call and expect an exact number of calls.
    `TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack`.
 
    4.1. _(Proposed 2026-11-13, awaiting the user's OK; the default applied meanwhile.)_ **Below
-   the rating.** A weaker archer still shoots a strength bow: he takes his own (lower) Strength
-   (PHB p.73 "Bows": a bow's pull seldom stops its use, only its full effect). Only a bow built for
-   exceptional Strength (rated 18/01 or more) asks more: PHB p.73, such a custom bow takes a
-   successful bend bars/lift gates roll to string or use for a character without exceptional
-   Strength.
-   Proposal: a wielded bow rated 18/01 or more above the character's Strength (the sheet's)
-   carries the class warning `bow_too_strong` ([ADR 0033](0033-equipment.md) step 20's list); no
-   roll is made and nothing is refused. A bow rated 18 or less never warns. The alternative,
-   nothing at all, is a one-line removal. Tests: `itemsvc`
-   `TestBowWarnings_Step4_1_ABowBuiltForMoreThanTheArchersExceptionalStrength`.
+   the rating.** A weaker archer still shoots a strength bow: he takes the lower adjustment, his
+   own Strength's (step 4). The book asks more only of a bow built for exceptional Strength: PHB
+   p.73 "Bows", such a custom bow (for 18/01 or more) takes a successful bend bars/lift gates roll
+   to string or use for a character without exceptional Strength.
+   Proposal, as the book scopes it: a wielded bow rated 18/01 or more, in the hands of a character
+   whose Strength in effect (the attack's, with the Strength buffs, read from `buffsvc`) is below
+   18/01, carries the class warning `bow_too_strong` ([ADR 0033](0033-equipment.md) step 20's
+   list). No roll is made and nothing is refused. A character with exceptional Strength is never
+   warned, whatever the rating (18/50 with a bow rated 18/90: no warning, the 18/50 row applies),
+   and a bow rated 18 or less never warns. The alternative, nothing at all, is a one-line removal.
+   Tests: `itemsvc` `TestBowWarnings_Step4_1_ABowBuiltForExceptionalStrengthWithoutIt`,
+   `TestWarnings_Step4_1_TheBowWarningReadsTheStrengthInEffect`, `composition`
+   `TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack`.
 
 5. **Dexterity.** The PHB Table 2 missile attack adjustment for every missile weapon, bow or
    hurled; none in melee. _(Read from the character view's `DexMissile`, not from `combatsvc`'s own

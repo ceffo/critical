@@ -110,9 +110,11 @@ export function holdsSpell(
 }
 
 /**
- * The weapon types of the bows, which may carry a Strength rating (ADR 0033 step 3; the server's
- * itemsvc.IsBowType, which refuses a rating on any other piece). A composite bow is typed as its
- * short or long bow; a crossbow is not one.
+ * The weapon types of the bows, which may carry a Strength rating (ADR 0033 step 3). A copy of
+ * the server's list, `bowTypes` behind itemsvc.IsBowType (api/internal/domain/service/itemsvc/
+ * categories.go): change both together. Only which field the form offers depends on it; the
+ * server refuses a rating on any other piece. A composite bow is typed as its short or long bow; a
+ * crossbow is not one.
  */
 const BOW_TYPES: readonly WeaponType[] = ["long_bow", "short_bow"];
 

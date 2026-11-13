@@ -344,8 +344,8 @@ name or comment); this ADR names none yet.
     - bard: worn armour better than chain mail (catalogue row other than those of the `leather`,
       `padded_studded`, `elven_chain` and `metal` columns); any worn shield;
     - fighter: none;
-    - everyone: a two-handed weapon wielded with a worn shield (`hands`); a wielded bow rated for
-      more exceptional Strength than the character's (`bow_too_strong`, [ADR
+    - everyone: a two-handed weapon wielded with a worn shield (`hands`); a wielded bow rated 18/01
+      or more for a character without exceptional Strength in effect (`bow_too_strong`, [ADR
       0002](0002-attack-resolution.md) step 4.1, proposed 2026-11-13).
     A homebrew weapon without a catalogue code is judged by its weapon type and damage types; when
     those do not settle it (`other_melee` for a thief), no warning. Amends ADR 0030's Consequences

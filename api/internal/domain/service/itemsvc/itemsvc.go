@@ -161,6 +161,16 @@ type Deps struct {
 	// Rulesets gives the character its ruleset, whose weapon lift the class
 	// warnings read (ADR 0041 steps 2.5 and 3). Required.
 	Rulesets ruleset.Resolver
+	// Strength is the character's Strength in effect (buffsvc), the one the
+	// attack uses: the bow_too_strong warning reads it (ADR 0002 step 4.1).
+	// Nil reads the sheet's Strength instead.
+	Strength EffectiveStrength
+}
+
+// EffectiveStrength is the character's Strength with its Strength buffs
+// (buffsvc.SVC.GetEffectiveStr).
+type EffectiveStrength interface {
+	GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error)
 }
 
 // ClassLookup is the class definitions (ruletablesvc.Tables.Class).
@@ -195,6 +205,7 @@ type service struct {
 	initiativeItems *ruletablesvc.InitiativeItems
 	spells          Spells
 	rulesets        ruleset.Resolver
+	strength        EffectiveStrength
 }
 
 // New constructs the service.
@@ -205,6 +216,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 	s := &service{
 		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
 		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells, rulesets: d.Rulesets,
+		strength: d.Strength,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

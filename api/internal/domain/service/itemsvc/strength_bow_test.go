@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -156,10 +157,12 @@ func TestValidate_ADR0033Step3_OnlyABowHasAStrengthRating(t *testing.T) {
 }
 
 // ADR 0002 step 4.1 (proposed): a wielded bow rated for exceptional Strength
-// (18/01 or more) above the character's Strength warns bow_too_strong (PHB
-// p.73: a bend bars/lift gates roll to use it, which the app does not make);
-// a rating of 18 or less never warns, and neither does a carried bow.
-func TestBowWarnings_Step4_1_ABowBuiltForMoreThanTheArchersExceptionalStrength(t *testing.T) {
+// (18/01 or more) warns bow_too_strong in the hands of a character without
+// exceptional Strength (below 18/01; PHB p.73: a bend bars/lift gates roll to
+// use it, which the app does not make). A character with exceptional
+// Strength is never warned, a rating of 18 or less never warns, and neither
+// does a carried bow.
+func TestBowWarnings_Step4_1_ABowBuiltForExceptionalStrengthWithoutIt(t *testing.T) {
 	carried := rated(longBow, 18, 90)
 	carried.State = itemsvc.StateCarried
 	tests := []struct {
@@ -169,11 +172,12 @@ func TestBowWarnings_Step4_1_ABowBuiltForMoreThanTheArchersExceptionalStrength(t
 		warn     bool
 	}{
 		{"17 with a bow rated 18/50", 17, 0, rated(longBow, 18, 50), true},
-		{"18/50 with a bow rated 18/90", 18, 50, rated(longBow, 18, 90), true},
-		{"18/90 with a bow rated 18/90", 18, 90, rated(longBow, 18, 90), false},
-		{"18/00 with a bow rated 18/90", 18, 100, rated(longBow, 18, 90), false},
-		{"19 with a bow rated 18/00", 19, 0, rated(longBow, 18, 100), false},
-		{"18 with a bow rated 19", 18, 100, rated(longBow, 19, 0), true},
+		{"plain 18 with a bow rated 18/01", 18, 0, rated(longBow, 18, 1), true},
+		{"plain 18 with a bow rated 19", 18, 0, rated(longBow, 19, 0), true},
+		{"18/50 with a bow rated 18/90: exceptional, not warned", 18, 50, rated(longBow, 18, 90), false},
+		{"18/01 with a bow rated 18/00: exceptional, not warned", 18, 1, rated(longBow, 18, 100), false},
+		{"18/00 with a bow rated 19: exceptional, not warned", 18, 100, rated(longBow, 19, 0), false},
+		{"19 with a bow rated 20", 19, 0, rated(longBow, 20, 0), false},
 		{"12 with a bow rated 18", 12, 0, rated(longBow, 18, 0), false},
 		{"12 with a bow rated 17", 12, 0, rated(longBow, 17, 0), false},
 		{"12 with an unrated bow", 12, 0, longBow, false},
@@ -186,6 +190,44 @@ func TestBowWarnings_Step4_1_ABowBuiltForMoreThanTheArchersExceptionalStrength(t
 				assert.Equal(t, []itemsvc.Warning{{ItemID: tt.bow.ID, Code: itemsvc.WarnBowTooStrong}}, got)
 			} else {
 				assert.Empty(t, got)
+			}
+		})
+	}
+}
+
+// fixedStrength is a Strength reader that answers one Strength in effect.
+type fixedStrength buffsvc.Strength
+
+func (f fixedStrength) GetEffectiveStr(context.Context, int64) (buffsvc.Strength, error) {
+	return buffsvc.Strength(f), nil
+}
+
+// ADR 0002 step 4.1: the warning reads the Strength in effect, the one the
+// attack uses, not the sheet's: a 17 archer raised to 18/00 by a buff draws
+// the bow rated 18/00 and is not warned; one whose buffs leave him at 17 is.
+func TestWarnings_Step4_1_TheBowWarningReadsTheStrengthInEffect(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		eff  buffsvc.Strength
+		warn bool
+	}{
+		{"sheet 17, 18/00 in effect", buffsvc.Strength{Base: 17, Effective: 18, EffectiveExceptional: 100}, false},
+		{"sheet 17, 17 in effect", buffsvc.Strength{Base: 17, Effective: 17}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := readsCharacter(t)
+			f.Strength = fixedStrength(tc.eff)
+			svc, _ := itemsvc.New(mocks.NewMockDAL(t), f.Deps)
+			got, err := svc.Warnings(context.Background(), 1, []itemsvc.Item{rated(longBow, 18, 100)})
+			require.NoError(t, err)
+			codes := []string{}
+			for _, w := range got {
+				codes = append(codes, w.Code)
+			}
+			if tc.warn {
+				assert.Contains(t, codes, itemsvc.WarnBowTooStrong)
+			} else {
+				assert.NotContains(t, codes, itemsvc.WarnBowTooStrong)
 			}
 		})
 	}

@@ -130,7 +130,8 @@ const (
 
 // bowTypes are the weapon types of the bows (PHB Table 44: the short, long and
 // composite bows; a composite bow is typed as its short or long bow). A
-// crossbow is not one.
+// crossbow is not one. The web's BOW_TYPES (web/src/lib/itemForm.ts) repeats
+// it to offer the field: change both together.
 var bowTypes = []string{TypeLongBow, TypeShortBow}
 
 // IsBowType reports whether the weapon type t is a bow's: what may carry a

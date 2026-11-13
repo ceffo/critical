@@ -14,8 +14,8 @@ import (
 // A bow's Strength rating on the wire (ADR 0033 step 3) and in the attack (ADR 0002 step 4):
 // PATCH /api/items/{id} sets it with an object and clears it with null, GET /api/items serves it
 // (null for none), the attack form's preview takes the strength bow's adjustments, a rating on any
-// other weapon is refused on the field, and a bow built for more exceptional Strength than the
-// archer has is warned bow_too_strong.
+// other weapon is refused on the field, and a bow built for exceptional Strength in the hands of an
+// archer without it is warned bow_too_strong.
 func TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack(t *testing.T) {
 	tb, m := newTable(t)
 	bob, bobID := tb.login("bob@example.com")
@@ -96,7 +96,7 @@ func TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack(t *testing.T) {
 	assert.Empty(t, stored().Warnings)
 
 	require.Equal(t, http.StatusOK, tb.call(bob, "PATCH", "/api/items/"+bow, `{"strengthRating":{"score":18,"exceptional":90}}`, nil))
-	assert.Equal(t, []string{"bow_too_strong"}, stored().Warnings, "built for 18/90, drawn at 18/50")
+	assert.Empty(t, stored().Warnings, "built for 18/90, drawn at 18/50: exceptional Strength, no bend bars roll")
 	assert.Equal(t, &modifier{Kind: "strength", Detail: "18", StrExceptional: 50, Value: 1}, strength(), "the archer's own 18/50")
 
 	require.Equal(t, http.StatusOK, tb.call(bob, "PATCH", "/api/items/"+bow, `{"notes":"yew"}`, nil))
@@ -106,6 +106,18 @@ func TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack(t *testing.T) {
 	assert.Nil(t, edited.Item.StrengthRating)
 	assert.Nil(t, stored().StrengthRating, "null: cleared")
 	assert.Nil(t, strength())
+
+	// ADR 0002 step 4.1: an archer without exceptional Strength (17, in effect: no buff) wielding
+	// a bow built for 18/01 or more is warned.
+	tam, err := m.AddCharacterOf(context.Background(), bobID, charactersvc.Character{
+		Name: "Tam", Class: "fighter", Str: 17, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 30,
+	})
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, tb.call(bob, "PUT", "/api/characters/current", `{"id":`+itoa(tam)+`}`, nil))
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/items", `{"catalogueCode":"long_bow","equip":true,"strengthRating":{"score":18,"exceptional":1}}`, &created))
+	assert.Equal(t, []string{"bow_too_strong"}, created.Item.Warnings, "built for 18/01, drawn at 17")
+	assert.Equal(t, &rating{Score: 18, Exceptional: 1}, created.Item.StrengthRating, "picked from the catalogue with its rating")
+	require.Equal(t, http.StatusOK, tb.call(bob, "PUT", "/api/characters/current", `{"id":`+itoa(ulf)+`}`, nil))
 
 	var refusal struct {
 		Field string `json:"field"`

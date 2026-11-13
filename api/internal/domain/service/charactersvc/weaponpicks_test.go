@@ -120,7 +120,7 @@ func TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost(t *te
 	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "long_bow", SpecializationSlots: 3}, fighter[0])
 	assert.Equal(t, charactersvc.WeaponTypeOption{Type: "light_crossbow", SpecializationSlots: 2}, fighter[2])
 	assert.Equal(t, []charactersvc.WeaponTypeOption{
-		{Type: "sling"}, {Type: "other_melee"}, {Type: "other_missile"},
+		{Type: "sling"}, {Type: "staff_sling"}, {Type: "other_melee"},
 	}, charactersvc.ClassWeaponTypeOptions(def("cleric")))
 	for _, o := range charactersvc.ClassWeaponTypeOptions(def("bard")) {
 		assert.Zero(t, o.SpecializationSlots, "a bard picks %s but never specializes", o.Type)

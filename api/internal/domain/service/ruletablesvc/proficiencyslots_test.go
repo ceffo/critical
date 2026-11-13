@@ -70,7 +70,7 @@ func TestClassWeaponTypes_Step7_DerivedFromTheEquipmentList(t *testing.T) {
 		return c.Equipment
 	}
 	assert.Equal(t, []string{"dagger", "dart", "sling", "other_melee"}, pick("mage").PickTypes)
-	assert.Equal(t, []string{"sling", "other_melee", "other_missile"}, pick("cleric").PickTypes)
+	assert.Equal(t, []string{"sling", "staff_sling", "other_melee"}, pick("cleric").PickTypes)
 	assert.Equal(t, []string{
 		"short_bow", "hand_crossbow", "dagger", "dart", "sling", "short_sword", "long_sword", "other_melee",
 	}, pick("thief").PickTypes)
@@ -106,6 +106,6 @@ func TestWeaponPickTypes_Step7_AnyClassFromItsEquipment(t *testing.T) {
 	got := ruletablesvc.WeaponPickTypes(reg, eq)
 	assert.Equal(t, map[string][]string{
 		"test_lister": {"dagger", "other_melee"},
-		"test_blunt":  {"sling", "other_melee", "other_missile"},
+		"test_blunt":  {"sling", "staff_sling", "other_melee"},
 	}, got)
 }

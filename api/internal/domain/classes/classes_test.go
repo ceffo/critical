@@ -240,6 +240,10 @@ func TestImport_Step8_TheRegistryRefusesBrokenEquipmentAndTraits(t *testing.T) {
 	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus, Categories: []string{"luck"}}), "unknown save category")
 	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitNoExceptionalStrength, Poison: true}), "unexpected")
 	require.NoError(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus, Categories: []string{"spell"}}))
+	// ADR 0030 step 22.3: hurled is a weapon_to_hit param, refused elsewhere, and needs the types.
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitConSaveBonus, Categories: []string{"spell"}, Hurled: true}), "unexpected")
+	require.ErrorContains(t, withTrait(classes.Trait{Kind: classes.TraitWeaponToHit, Hurled: true, Bonus: 1}), "missing")
+	require.NoError(t, withTrait(classes.Trait{Kind: classes.TraitWeaponToHit, WeaponTypes: []string{"sling"}, Hurled: true, Bonus: 1}))
 	_, err := classes.New([]classes.Class{skald()}, groups("rogue"), []classes.Race{{ID: "human"}})
 	require.ErrorContains(t, err, "identity")
 }

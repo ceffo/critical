@@ -167,7 +167,7 @@ stateDiagram-v2
 One of the six PHB races. A race has **traits**: ability adjustments, level limits per class,
 the languages, and the percentage adjustments of the thief skills
 ([ADR 0030](adr/0030-classes-and-races.md) steps 17, 21 and 22). Traits are data in the catalogue
-([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`, `weapon_to_hit`: the elf's and halfling's to-hit bonus by weapon type, a `race` modifier on the attack),
+([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`, `weapon_to_hit`: the elf's and halfling's to-hit bonus by weapon type, and with every hurled weapon when `hurled`, a `race` modifier on the attack),
 the others text; a human is a race with no traits. The level limits and the classes a race
 admits are book data; how they apply (they warn; the racial lift for multi-class and dual-class)
 is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).

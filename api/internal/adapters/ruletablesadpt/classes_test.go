@@ -143,7 +143,7 @@ func TestDefinitions_Step1_6_TheEquipmentListsMap(t *testing.T) {
 		Weapons:   []classes.WeaponRef{{Code: "knife", WeaponType: "other_melee"}, {Code: "quarterstaff", WeaponType: "other_melee"}},
 		PickTypes: []string{"dagger", "dart", "sling", "other_melee"},
 	}, eq("mage"))
-	assert.Equal(t, classes.Equipment{Shields: true, BluntOnly: true, PickTypes: []string{"sling", "other_melee", "other_missile"}}, eq("cleric"))
+	assert.Equal(t, classes.Equipment{Shields: true, BluntOnly: true, PickTypes: []string{"sling", "staff_sling", "other_melee"}}, eq("cleric"))
 	thief := eq("thief")
 	assert.Equal(t, []string{"none", "leather", "padded_studded", "elven_chain"}, thief.Armour)
 	assert.False(t, thief.Shields)
@@ -172,18 +172,20 @@ func TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows(t *testing.T
 		"halfling": {classes.TraitConSaveBonus, classes.TraitNoExceptionalStrength, classes.TraitWeaponToHit},
 	}, kinds)
 	for _, tc := range []struct {
-		race  string
-		types []string
+		race   string
+		types  []string
+		hurled bool
 	}{
 		// Bows of any sort but crossbows (composite ones are long_bow and short_bow), short and long swords.
-		{"elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}},
-		// Slings and thrown weapons (the hurled types; a melee dagger is judged at the attack).
-		{"halfling", []string{"sling", "dagger", "dart", "other_thrown"}},
+		{"elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}, false},
+		// Slings (the staff sling is its own type) and every thrown weapon (any hurled piece, judged at the attack).
+		{"halfling", []string{"sling", "staff_sling"}, true},
 	} {
 		r, _ := defs.Race(tc.race)
 		tr, ok := r.Trait(classes.TraitWeaponToHit)
 		require.True(t, ok, tc.race)
 		assert.Equal(t, tc.types, tr.WeaponTypes, tc.race)
+		assert.Equal(t, tc.hurled, tr.Hurled, tc.race)
 		assert.Equal(t, 1, tr.Bonus, tc.race)
 	}
 	gnome, _ := defs.Race("gnome")

@@ -46,6 +46,41 @@ var (
 		Wielded: true, ID: "throwing_dagger", Name: localized.Of("Throwing Dagger"), BaseDamage: "1d4", DamageLarge: "1d3",
 		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeDagger,
 	}
+	// The staff sling is its own type (ADR 0030 step 23); the blowgun is an other missile weapon.
+	raceStaffSling = combatsvc.Weapon{
+		Wielded: true, ID: "staff_sling", Name: localized.Of("Staff Sling"), BaseDamage: "1d4", DamageLarge: "1d4",
+		Kind: combatsvc.WeaponMissile, AmmoKind: "bullet", Type: itemsvc.TypeStaffSling,
+	}
+	raceBlowgun = combatsvc.Weapon{
+		Wielded: true, ID: "blowgun", Name: localized.Of("Blowgun"), BaseDamage: "1d3", DamageLarge: "1d2",
+		Kind: combatsvc.WeaponMissile, AmmoKind: "needle", TwoHanded: true, Type: itemsvc.TypeOtherMissile,
+	}
+	// A spear, a hand axe and a club, each hurled (a missile piece without ammunition) and in melee.
+	raceThrownSpear = combatsvc.Weapon{
+		Wielded: true, ID: "thrown_spear", Name: localized.Of("Spear"), BaseDamage: "1d6", DamageLarge: "1d8",
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee,
+	}
+	raceSpear = combatsvc.Weapon{
+		Wielded: true, ID: "spear", Name: localized.Of("Spear"), BaseDamage: "1d6", DamageLarge: "1d8",
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee,
+	}
+	raceThrownHandAxe = combatsvc.Weapon{
+		Wielded: true, ID: "thrown_hand_axe", Name: localized.Of("Hand Axe"), BaseDamage: "1d6", DamageLarge: "1d4",
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherThrown,
+	}
+	raceHandAxe = combatsvc.Weapon{
+		Wielded: true, ID: "hand_axe", Name: localized.Of("Hand Axe"), BaseDamage: "1d6", DamageLarge: "1d4",
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherThrown,
+	}
+	raceThrownClub = combatsvc.Weapon{
+		Wielded: true, ID: "thrown_club", Name: localized.Of("Club"), BaseDamage: "1d6", DamageLarge: "1d3",
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee,
+	}
+	raceClub = combatsvc.Weapon{
+		Wielded: true, ID: "club", Name: localized.Of("Club"), BaseDamage: "1d6", DamageLarge: "1d3",
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee,
+	}
+	raceNeedles  = itemsvc.Item{ID: "needles", Name: localized.Of("Needles"), Category: itemsvc.CategoryAmmunition, AmmoKind: "needle", Count: 10}
 	raceQuarrels = itemsvc.Item{ID: "quarrels", Name: localized.Of("Quarrels"), Category: itemsvc.CategoryAmmunition, AmmoKind: "quarrel", Count: 10}
 	raceBullets  = itemsvc.Item{ID: "bullets", Name: localized.Of("Bullets"), Category: itemsvc.CategoryAmmunition, AmmoKind: "bullet", Count: 10}
 )
@@ -59,6 +94,8 @@ func ammoFor(w combatsvc.Weapon) *itemsvc.Item {
 		return &raceQuarrels
 	case "bullet":
 		return &raceBullets
+	case "needle":
+		return &raceNeedles
 	}
 	return nil
 }
@@ -73,7 +110,7 @@ func raceChar(t *testing.T, race, weaponType string) charactersvc.View {
 	r, ok := cataloguetest.Definitions(t).Race(race)
 	require.True(t, ok, "no race %s in the fixture", race)
 	if tr, ok := r.Trait(classes.TraitWeaponToHit); ok {
-		v.RaceToHitTypes, v.RaceToHitBonus = tr.WeaponTypes, tr.Bonus
+		v.RaceToHitTypes, v.RaceToHitHurled, v.RaceToHitBonus = tr.WeaponTypes, tr.Hurled, tr.Bonus
 	}
 	return v
 }
@@ -92,9 +129,18 @@ var raceToHitCases = []raceToHitCase{
 	{"elf with a composite long bow: +1", "elf", raceCompositeLongBow, 1},
 	{"elf with a light crossbow: none", "elf", raceLightCrossbow, 0},
 	{"elf with a dagger: none", "elf", plainDagger, 0},
+	{"elf with a hurled spear: none", "elf", raceThrownSpear, 0},
 	{"halfling with a sling: +1", "halfling", raceSling, 1},
+	{"halfling with a staff sling: +1", "halfling", raceStaffSling, 1},
+	{"halfling with a blowgun: none", "halfling", raceBlowgun, 0},
 	{"halfling with a hurled dagger: +1", "halfling", raceThrownDagger, 1},
 	{"halfling with a dagger in melee: none (not thrown)", "halfling", plainDagger, 0},
+	{"halfling with a hurled spear: +1", "halfling", raceThrownSpear, 1},
+	{"halfling with a spear in melee: none", "halfling", raceSpear, 0},
+	{"halfling with a hurled hand axe: +1", "halfling", raceThrownHandAxe, 1},
+	{"halfling with a hand axe in melee: none", "halfling", raceHandAxe, 0},
+	{"halfling with a hurled club: +1", "halfling", raceThrownClub, 1},
+	{"halfling with a club in melee: none", "halfling", raceClub, 0},
 	{"halfling with a short sword: none", "halfling", raceShortSword, 0},
 	{"halfling with a short bow: none", "halfling", plainShortBow, 0},
 	{"human with a long sword: none", "human", raceLongSword, 0},
@@ -140,14 +186,16 @@ func withRace(base []combatsvc.Modifier, race string, bonus int) []combatsvc.Mod
 
 // noRaceTrait is char without its race's to-hit trait: the same attack with no race bonus.
 func noRaceTrait(char charactersvc.View) charactersvc.View {
-	char.RaceToHitTypes, char.RaceToHitBonus = nil, 0
+	char.RaceToHitTypes, char.RaceToHitHurled, char.RaceToHitBonus = nil, false, 0
 	return char
 }
 
 // ADR 0030 step 22.3: an elf gets +1 to hit with bows of any sort but crossbows and with short
-// and long swords; a halfling with slings and thrown weapons (a dagger only when hurled), PHB
-// chapter 2. The bonus is one named modifier of kind race (Detail the race code), read from the
-// weapon's type, after the ability terms; it moves the effective THAC0 and nothing else.
+// and long swords; a halfling with both slings (the staff sling included, not the blowgun) and
+// with any weapon hurled at the target, whatever its type (the same weapon in melee gets none),
+// PHB chapter 2. The bonus is one named modifier of kind race (Detail the race code), read from
+// the weapon's type or its being hurled, never its name, after the ability terms; it moves the
+// effective THAC0 and nothing else.
 func TestResolveAttack_Step22_3_RaceToHitByWeaponType(t *testing.T) {
 	for _, tc := range raceToHitCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -260,6 +260,7 @@ type raceTraitDTO struct {
 		Categories  []string `json:"categories"`
 		Poison      bool     `json:"poison"`
 		WeaponTypes []string `json:"weapon_types"`
+		Hurled      bool     `json:"hurled"`
 		Bonus       int      `json:"bonus"`
 	} `json:"params"`
 }
@@ -350,7 +351,7 @@ func definitions(raw []byte) (*classes.Registry, error) {
 		for j, t := range r.Traits {
 			traits[j] = classes.Trait{
 				Kind: t.Kind, Categories: t.Params.Categories, Poison: t.Params.Poison,
-				WeaponTypes: t.Params.WeaponTypes, Bonus: t.Params.Bonus,
+				WeaponTypes: t.Params.WeaponTypes, Hurled: t.Params.Hurled, Bonus: t.Params.Bonus,
 			}
 		}
 		races[i] = classes.Race{ID: r.ID, Name: r.Name, Requirements: reqs, Identity: r.Identity.identity(), Traits: traits}

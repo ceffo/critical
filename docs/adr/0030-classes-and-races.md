@@ -907,31 +907,47 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        _(As built 2026-11-13)_ The bonus is the race's `weapon_to_hit` trait ([ADR
        0040](0040-classes-are-data.md) step 4), carried by the catalogue's race definitions: the elf's
        `weapon_types` are `long_bow`, `short_bow` (composite bows are of these two types, step 23),
-       `short_sword` and `long_sword`, the halfling's `sling`, `dagger`, `dart` and `other_thrown`
-       (step 23's types of the weapons made to be hurled), each with `bonus` 1. The derived block
-       carries the trait (`RaceToHitTypes`, `RaceToHitBonus`), the character view projects it, and
+       `short_sword` and `long_sword`, each with `bonus` 1. The derived block carries the trait
+       (`RaceToHitTypes`, `RaceToHitHurled`, `RaceToHitBonus`), the character view projects it, and
        the attack (and its preview, [ADR 0002](0002-attack-resolution.md) step 12) adds one to-hit
        modifier of kind `race` (detail: the race code), not magical, after the Strength and
-       Dexterity terms, when the weapon's type is one the trait lists; a weapon without a type gets
+       Dexterity terms, when the weapon's type is one the trait lists, or when the trait is `hurled`
+       and the weapon is hurled; any other weapon, and one without a type that is not hurled, gets
        none. It adds no damage term.
-       _(proposed)_ The thrown types (`dagger`, `dart`, `other_thrown`) count only on a hurled
-       attack, a missile piece ([ADR 0016](0016-inventory.md) step 8): the book gives the bonus
-       "when using thrown weapons", and a dagger held in melee is not thrown, so a halfling stabbing
-       with the catalogue's (melee) dagger gets nothing, and a thrown dagger (a missile piece of the
-       dagger type) gets +1. This is a rule on the weapon types, not on a race.
-       _(proposed, the gap of reading by type)_ The bonus follows the catalogue's weapon types, so
-       two kinds of weapon the book's words may cover get nothing: the staff sling (a sling to the
-       book, typed `other_missile` with the blowgun, so listing that type would also give the
-       blowgun), and the weapons the book lets one throw but the catalogue types as melee (spear,
-       knife, club: `other_melee`, a melee piece). Default built: no bonus with them. Closing the gap
-       is a data change (a staff sling of its own type, or a thrown piece of a weapon), not a rule
-       on a weapon's name; the user rules on it with the thrown reading above.
+       _(As built 2026-11-13, the user's approval of the proposal, 2026-11-13; catalogue format 22,
+       [ADR 0021](0021-spell-catalogue.md) step 30)_ The halfling's slings and thrown weapons, by
+       data, with no rule on a weapon's name or a race:
+       - **Slings** are the types `sling` and `staff_sling` (step 23: the staff sling has its own
+         type, no longer `other_missile` with the blowgun, so the blowgun gets nothing). PHB Table 45
+         (p.69) lists the sling and the staff sling, each with bullets and stones.
+       - **Thrown weapons** are every weapon **hurled** at the target, whatever its type: a missile
+         piece that fires no ammunition (ADR 0016 step 8, [ADR 0033](0033-equipment.md) step 3; the
+         piece's kind, which the player sets, says it is hurled). The trait's `hurled` flag (format
+         22) gives the bonus to every such piece. A spear, a club or a knife (catalogue `other_melee`
+         melee pieces) the player sets to missile, a hand axe or a javelin (catalogue `other_thrown`
+         missile pieces), a hurled dagger or dart: +1. The same weapon as a melee piece: none ("when
+         using thrown weapons": a spear held in melee is not thrown). PHB Table 45 lists the club,
+         dagger, dart, hammer, hand axe, harpoon, javelin, knife and spear with a range; which piece
+         may be hurled is not restricted (the user's ruling, 2026-11-13: no restriction, a player may
+         already set any piece to missile).
+       - The halfling's data: `weapon_types` `sling`, `staff_sling`, `hurled` true, `bonus` 1. The
+         Go list of thrown types (dagger, dart, other thrown counted only when hurled) is gone: a
+         listed type always counts, `hurled` counts any hurled piece.
+       - A thrown melee weapon's Dexterity missile adjustment and range stay as they are (the user's
+         ruling, 2026-11-13: out of scope); only the race's bonus reads the piece's being hurled.
+       - Stored staff slings, picked before format 22 as `other_missile`, become `staff_sling` by
+         migration 041's data step (`retypeCatalogueWeapons`); a piece the player typed otherwise is
+         kept. A weapon proficiency in `other_missile` no longer covers a staff sling: a stored
+         pick is kept as it is ([ADR 0037](0037-proficiencies.md) step 16), and a character who was
+         proficient with a staff sling through it is not until the player picks `staff_sling`.
        Tests: `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt: the
        traits as data), `TestAttack_Step22_3_TheCatalogueTraitReachesTheAttack` (composition:
-       the catalogue's weapons, the gap included), `TestDerive_Step22_3_RaceToHitFromTheTrait` (charactersvc),
+       the catalogue's weapons, the staff sling and the hurled spear, hand axe and club included), `TestDerive_Step22_3_RaceToHitFromTheTrait` (charactersvc),
        `TestResolveAttack_Step22_3_RaceToHitByWeaponType`,
        `TestResolveAttack_Step22_3_RaceBonusIsNoDamage`, `TestPreviewAttack_Step22_3_ShowsTheRaceBonus`
-       (combatsvc).
+       (combatsvc: staff sling +1, blowgun none, a hurled spear, hand axe and club +1, each in melee
+       none, the elf unchanged), `TestMigrate_Step23_StoredCatalogueWeaponsTakeTheirRowsType`
+       (storage/postgres).
 
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 2 and 4, on implementation: the Table 9 bonus is the race's `con_save_bonus` trait (categories and poison as params), not `conSaveRaces`; 22.3, once accepted, is the `weapon_to_hit` trait; a human is a race with no traits, not a `race == "human"` test)_
 
@@ -970,8 +986,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     - **weapon type** (not catalogue data: each weapon of a character's possessions,
       [ADR 0021](0021-spell-catalogue.md) step 9, gains it beside `kind` and `ammo_kind`): a code
       from a fixed list, at least long bow, short bow (composite ones included), light crossbow,
-      heavy crossbow, hand crossbow, dagger, dart, sling, short sword, long sword, other melee,
-      other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a weapon name.
+      heavy crossbow, hand crossbow, dagger, dart, sling, staff sling, short sword, long sword,
+      other melee, other thrown, other missile. Steps 11, 12 and 22.3 read it; no rule matches a
+      weapon name.
+      _(Amended 2026-11-13, catalogue format 22: `staff_sling` is a type of its own, after `sling`;
+      the staff sling was `other_missile` with the blowgun. A class list naming `sling` does not
+      name it; the stored staff slings are retyped by migration 041, step 22.3.)_
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 1, 2 and 7, on implementation: format 11 adds the class and race definitions; every table with a column per class or group becomes rows keyed by class, group or race; Tables 10 and 11 move from a Go literal into the race definitions)_
 24. **The sheet comparison (retired).** _Retired by the user's ruling, 2026-10-19: "retire"
     (Kelsen's import is reconciled; the comparison was a one-off)._ It compared the figures of a

@@ -156,6 +156,11 @@ func (i Item) HoldsSpell() bool { return i.Category == CategoryMagic && i.MagicK
 
 // Removed reports whether this item, as returned by a use, is gone: a
 // charges item at 0.
+// Usable reports whether the piece can be used or restocked at the table: a
+// weapon, an armour or a shield never can, whatever its behaviour (ADR 0049
+// step 2). The wire serves it so the web does not derive the rule.
+func (i Item) Usable() bool { return !i.Category.OneObject() }
+
 func (i Item) Removed() bool { return i.Behaviour.RemovedAtZero() && i.Count == 0 }
 
 // Equipped reports whether the piece is worn or wielded: its powers are on

@@ -23,6 +23,7 @@ function piece(p: Partial<Item>): Item {
     spellId: "",
     state: "carried",
     equipState: "",
+    usable: true,
     type: "",
     behaviour: "stock",
     magicalBonus: 0,

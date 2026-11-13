@@ -26,7 +26,10 @@ type ItemDTO struct {
 	State   string `json:"state"`
 	// EquipState is the state Equip moves the piece to (worn or wielded),
 	// empty for a piece that is carried only (ADR 0033 step 6).
-	EquipState   string `json:"equipState"`
+	EquipState string `json:"equipState"`
+	// Usable is false for a weapon, an armour and a shield: never used or
+	// restocked, whatever the behaviour (ADR 0049 step 2). The server owns it.
+	Usable       bool   `json:"usable"`
 	Type         string `json:"type"`
 	Behaviour    string `json:"behaviour"`
 	MagicalBonus int    `json:"magicalBonus"`
@@ -134,7 +137,7 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 		}
 		out = append(out, ItemDTO{
 			ID: i.ID, Name: i.Name, Category: string(i.Category), MagicKind: i.MagicKind,
-			CatalogueCode: i.CatalogueCode, Component: i.Component, SpellID: i.SpellID, State: string(i.State), EquipState: string(i.EquipState()),
+			CatalogueCode: i.CatalogueCode, Component: i.Component, SpellID: i.SpellID, State: string(i.State), EquipState: string(i.EquipState()), Usable: i.Usable(),
 			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
 			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,

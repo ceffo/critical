@@ -67,3 +67,43 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await inventory(page);
   await expect(count(page, "fire_flask")).toHaveText("5");
 });
+
+// A weapon, an armour and a shield are never used (ADR 0049 step 2): the server says so
+// (`usable`), the Inventory rows carry no Use, count or +, and Act · Items lists only what is used.
+for (const size of [
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+]) {
+  test(`weapons, armour and shields have no use controls at ${size.width}x${size.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await openInventory(page);
+    const rows = page.locator("[data-testid^='item-'][data-category]");
+    const categories = await rows.evaluateAll((els) =>
+      els.map((e) => e.getAttribute("data-category")),
+    );
+    expect(categories).toContain("weapon");
+    for (const category of ["weapon", "armour", "shield"]) {
+      const ones = page.locator(`[data-category='${category}']`);
+      for (const [n] of (await ones.all()).entries()) {
+        const one = ones.nth(n);
+        await expect(one.getByTestId("item-count")).toHaveCount(0);
+        await expect(one.getByTestId("item-behaviour")).toHaveCount(0);
+        await expect(
+          one.getByRole("button", { name: /^(Use|Add) one / }),
+        ).toHaveCount(0);
+      }
+    }
+    await expect(minus(page, "Fire flasks")).toBeVisible();
+    await snap(page, `inventory-${size.width}x${size.height}`);
+
+    await act(page);
+    await page.getByRole("tab", { name: "Items" }).click();
+    const list = page.getByRole("list", { name: "Combat items" });
+    await expect(list).toBeVisible();
+    await expect(list.getByTestId("item-count")).not.toHaveCount(0);
+    await expect(list).toContainText("Fire flasks");
+    await snap(page, `act-items-${size.width}x${size.height}`);
+  });
+}

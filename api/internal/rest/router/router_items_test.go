@@ -40,10 +40,10 @@ func TestItems_ListWireShape(t *testing.T) {
 	rec := do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"arrows_plus1","name":{"en":"Arrows +1"},"category":"ammunition","magicKind":"","catalogueCode":"","component":"","spellId":"",
-		"state":"carried","equipState":"","type":"arrow","behaviour":"stock","magicalBonus":1,
+		"state":"carried","equipState":"","usable":true,"type":"arrow","behaviour":"stock","magicalBonus":1,
 		"ammoKind":"arrow","count":18,"maxCount":18,"effectDice":"","effectSave":"","notes":"","powers":[],
 		"damageSm":"1d6","damageL":"1d6",`+noWeapon+`,"review":[],"warnings":[]},
-		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","spellId":"","state":"wielded","equipState":"wielded","type":"",
+		{"id":"mace","name":{"en":"Mace +1"},"category":"weapon","magicKind":"","catalogueCode":"","component":"","spellId":"","state":"wielded","equipState":"wielded","usable":false,"type":"",
 		"behaviour":"stock","magicalBonus":0,"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[],"damageTypes":[],"damageSm":"1d6","damageL":"1d6","weaponType":"other_melee","weaponKind":"melee","size":"",
 		"speed":0,"magicToHit":1,"magicDamage":1,"twoHanded":false,"fires":"","strengthRating":null,"specialized":false,"nonproficientPenalty":0,"baseAc":0,"skillColumn":"",
@@ -87,6 +87,16 @@ func TestItems_DismissReview(t *testing.T) {
 
 	m.items.EXPECT().DismissReview(mock.Anything, int64(1), "x").Return(fmt.Errorf("%w: x", itemsvc.ErrItemNotFound))
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/items/x/review", "").Code)
+}
+
+// CRI-361: a weapon, an armour or a shield is refused with a field-less 409.
+func TestItems_UseNotUsable(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().UseItem(mock.Anything, int64(1), "plate").Return(nil, fmt.Errorf("%w: Plate mail (armour)", itemsvc.ErrNotUsable))
+	rec := do(h, "POST", "/api/items/plate/use", "{}")
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"item_not_usable"`)
+	assert.NotContains(t, rec.Body.String(), `"field"`)
 }
 
 func TestItems_UseWireShape(t *testing.T) {
@@ -139,7 +149,7 @@ func TestItems_Restock(t *testing.T) {
 	}
 }
 
-const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","spellId":"","state":"carried","equipState":"",
+const wandJSON = `{"id":"w","name":{"en":"Wand"},"category":"magic","magicKind":"wand","catalogueCode":"","component":"","spellId":"","state":"carried","equipState":"","usable":true,
 	"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","count":3,
 	"maxCount":4,"effectDice":"","effectSave":"","notes":"","powers":[],"damageSm":"","damageL":"",` + noWeapon + `,"review":[],"warnings":[]}`
 
@@ -233,7 +243,7 @@ func TestItems_ADR0033Step17_PowersInTheBody(t *testing.T) {
 	rec = do(h, "GET", "/api/items", "")
 	require.Equal(t, http.StatusOK, rec.Code)
 	assert.JSONEq(t, `[{"id":"power_gem_dispel","name":{"en":"Power Gem"},"category":"magic","magicKind":"misc","catalogueCode":"","component":"","spellId":"",
-		"state":"worn","equipState":"worn","type":"gem","behaviour":"daily","magicalBonus":0,
+		"state":"worn","equipState":"worn","usable":true,"type":"gem","behaviour":"daily","magicalBonus":0,
 		"ammoKind":"","count":1,"maxCount":1,"effectDice":"","effectSave":"","notes":"",
 		"powers":[{"id":"thunder_hammer","minStr":18,"effects":{"weapon_buff":5,"multiplier":2,"weapon_kind":"melee"}}],
 		"damageSm":"","damageL":"",`+noWeapon+`,"review":[],"warnings":[]}]`,

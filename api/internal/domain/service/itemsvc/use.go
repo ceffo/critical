@@ -69,6 +69,10 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 		if err != nil {
 			return err
 		}
+		if !item.Usable() {
+			// The decrement is rolled back with the transaction.
+			return fmt.Errorf("%w: %s (%s) is one object, never spent", ErrNotUsable, item.Name.Any(), item.Category)
+		}
 		r := &UseResult{
 			ItemID: item.ID, Name: item.Name.Any(), Type: item.Type, Behaviour: item.Behaviour,
 			Remaining: item.Count, MaxCount: item.MaxCount, Removed: item.Removed(),

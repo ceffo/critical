@@ -11,3 +11,7 @@ var ErrItemEmpty = errors.New("item is empty")
 // ErrNotRestockable is returned by Restock for a charges or daily item: only
 // stock items go up at the table.
 var ErrNotRestockable = errors.New("item cannot be restocked")
+
+// ErrNotUsable is returned by UseItem for a weapon, an armour or a shield:
+// one object, never spent (ADR 0049 step 2).
+var ErrNotUsable = errors.New("item cannot be used")

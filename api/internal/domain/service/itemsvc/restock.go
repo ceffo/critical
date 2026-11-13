@@ -47,7 +47,7 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 		if err != nil {
 			return err
 		}
-		if !item.Behaviour.Restockable() {
+		if !item.Usable() || !item.Behaviour.Restockable() {
 			return fmt.Errorf("%w: %s (%s) is only used, never restocked", ErrNotRestockable, item.Name.Any(), item.Behaviour)
 		}
 		snap, err := CountSnapshot(item.ID, item.Count-n, item.Count)

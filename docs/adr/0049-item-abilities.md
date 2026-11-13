@@ -149,7 +149,7 @@ classDiagram
 
    | Category | Quantity means | The player changes it | At 0 |
    |---|---|---|---|
-   | `weapon`, `armour`, `shield` | one object: always 1 | no (CRI-361's rule; a stored count above 1 is kept and shown, not edited) | n/a |
+   | `weapon`, `armour`, `shield` | one object: always 1 | no (a stored count above 1 is kept, not edited; the server refuses Use and Restock with 409 `item_not_usable` / `item_not_restockable` and serves `usable: false` on the item, which the web filters and hides controls by) | n/a |
    | `ammunition` | the stock; each attack spends one ([ADR 0002](0002-attack-resolution.md) step 10) | restock (+) and spend one (-) | stays listed |
    | `gear` | the stock (3 torches, 5 flasks of fire) | restock and spend one | stays listed |
    | `magic` potion, scroll | the doses or scrolls; each use of its `with_item` ability spends one | restock and spend one | the item is removed in the same entry (as a `charges` item today); undo puts it back |

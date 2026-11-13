@@ -425,3 +425,43 @@ func TestNew_RequiresClasses(t *testing.T) {
 	_, err := itemsvc.New(mocks.NewMockDAL(t), f.Deps)
 	require.Error(t, err)
 }
+
+// CRI-361 (ADR 0049 step 2): a weapon, an armour and a shield are one object,
+// never used or restocked, whatever their behaviour; nothing is logged and the
+// transaction rolls the count change back.
+func TestUseItem_RefusesOneObjectCategories(t *testing.T) {
+	for _, c := range []itemsvc.Category{itemsvc.CategoryWeapon, itemsvc.CategoryArmour, itemsvc.CategoryShield} {
+		for _, b := range []itemsvc.Behaviour{itemsvc.BehaviourStock, itemsvc.BehaviourCharges, itemsvc.BehaviourDaily} {
+			t.Run(string(c)+"/"+string(b), func(t *testing.T) {
+				dal := mocks.NewMockDAL(t)
+				f := deps(t) // the log mock fails on any call
+				f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(skills.WeaponProficiency{}, nil).Maybe()
+				svc, _ := itemsvc.New(dal, f.Deps)
+				dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Category: c, Behaviour: b, Count: 2}, nil)
+				_, err := svc.UseItem(context.Background(), 1, "x")
+				assert.ErrorIs(t, err, itemsvc.ErrNotUsable)
+			})
+		}
+	}
+}
+
+func TestRestock_RefusesOneObjectCategories(t *testing.T) {
+	for _, c := range []itemsvc.Category{itemsvc.CategoryWeapon, itemsvc.CategoryArmour, itemsvc.CategoryShield} {
+		t.Run(string(c), func(t *testing.T) {
+			dal := mocks.NewMockDAL(t)
+			f := deps(t)
+			f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(skills.WeaponProficiency{}, nil).Maybe()
+			svc, _ := itemsvc.New(dal, f.Deps)
+			dal.EXPECT().Increment(mock.Anything, int64(1), "x", 1).Return(itemsvc.Item{ID: "x", Category: c, Behaviour: itemsvc.BehaviourStock, Count: 2}, nil)
+			_, err := svc.Restock(context.Background(), 1, "x", 1)
+			assert.ErrorIs(t, err, itemsvc.ErrNotRestockable)
+		})
+	}
+}
+
+func TestItem_Usable(t *testing.T) {
+	for _, c := range itemsvc.Categories {
+		want := c != itemsvc.CategoryWeapon && c != itemsvc.CategoryArmour && c != itemsvc.CategoryShield
+		assert.Equal(t, want, itemsvc.Item{Category: c}.Usable(), string(c))
+	}
+}

@@ -223,6 +223,7 @@ var mappings = []mapping{
 	{target: combatsvc.ErrWeaponNotFound, status: http.StatusNotFound, code: "weapon_not_found", message: fixed("weapon not found")},
 	{target: itemsvc.ErrItemNotFound, status: http.StatusNotFound, code: "item_not_found"},
 	{target: itemsvc.ErrItemEmpty, status: http.StatusConflict, code: "item_empty"},
+	{target: itemsvc.ErrNotUsable, status: http.StatusConflict, code: "item_not_usable"},
 	{target: itemsvc.ErrNotRestockable, status: http.StatusConflict, code: "item_not_restockable"},
 	{target: spellsvc.ErrSpellNotFound, status: http.StatusNotFound, code: "spell_not_found"},
 	{target: spellsvc.ErrSlotAlreadyUsed, status: http.StatusConflict, code: "slot_already_used"},

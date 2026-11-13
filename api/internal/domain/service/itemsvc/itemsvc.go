@@ -36,11 +36,12 @@ type SVC interface {
 	Use(ctx context.Context, characterID int64, itemID string) (Item, error)
 	// UseItem spends one count of any item (Use), rolls its effect dice (if
 	// any) through the dice port and records the use in the action log with
-	// the item's snapshot, all in one transaction.
+	// the item's snapshot, all in one transaction. ErrNotUsable for a weapon,
+	// an armour or a shield.
 	UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error)
 	// Restock adds n (1..MaxRestock) to a stock item and logs it with the
 	// item's snapshot, in one transaction. ErrNotRestockable for a charges or
-	// daily item, ErrInvalidInput for n out of range.
+	// daily item or a weapon, an armour or a shield, ErrInvalidInput for n out of range.
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*RestockResult, error)
 	// ResetDaily refills every daily item of the character to its max (long
 	// rest) and returns the character's full item list.

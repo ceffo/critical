@@ -557,6 +557,7 @@
       "use": "Utiliser",
       "rollLabel": "Lancer {{name}}",
       "useLabel": "Utiliser {{name}}",
+      "empty": "Rien à utiliser ici. Les armes, armures et boucliers ne s'utilisent pas : retrouvez-les dans l'Inventaire.",
       "manage": "Gérer",
       "manageLabel": "Gérer l'inventaire"
     }
@@ -671,7 +672,6 @@
       "charges": "Utilisé seulement ; disparaît à 0",
       "daily": "Utilisé seulement ; rechargé par un repos long"
     },
-    "none": "Aucun objet.",
     "form": {
       "openAdd": "Ajouter un objet",
       "addTitle": "Ajouter un objet",
@@ -2522,6 +2522,7 @@
     "item_not_found": "Cet objet n'existe plus.",
     "item_empty": "Cet objet est vide.",
     "item_not_restockable": "Cet objet ne peut pas être réapprovisionné.",
+    "item_not_usable": "Cet objet ne peut pas être utilisé.",
     "slot_already_used": "Cet emplacement de sort est déjà utilisé.",
     "invalid_slot_index": "Cet emplacement de sort n'existe pas.",
     "unknown_spell_mode": "Ce sort n'a pas cette option.",

@@ -139,3 +139,22 @@ describe("ItemForm, adding in two steps", () => {
     expect(screen.getByText("Plus d'options")).toBeVisible();
   });
 });
+
+describe("ItemForm, count behaviour", () => {
+  it.each(["weapon", "armour", "shield"])(
+    "a %s offers no behaviour",
+    async (category) => {
+      const v = await form();
+      await startStep2(v, "Piece", category);
+      await v.user.click(screen.getByText("More options"));
+      expect(field("behaviour")).toBeNull();
+    },
+  );
+
+  it("gear and magic keep their behaviour", async () => {
+    const v = await form();
+    await startStep2(v, "Torch", "gear");
+    await v.user.click(screen.getByText("More options"));
+    expect(field("behaviour")).not.toBeNull();
+  });
+});

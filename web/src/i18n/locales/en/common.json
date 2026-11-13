@@ -557,6 +557,7 @@
       "use": "Use",
       "rollLabel": "Roll {{name}}",
       "useLabel": "Use {{name}}",
+      "empty": "Nothing to use here. Weapons, armour and shields are never used: see them in the Inventory.",
       "manage": "Manage",
       "manageLabel": "Manage the inventory"
     }
@@ -671,7 +672,6 @@
       "charges": "Used only; gone at 0",
       "daily": "Used only; refilled by a long rest"
     },
-    "none": "No items.",
     "form": {
       "openAdd": "Add item",
       "addTitle": "Add item",
@@ -2522,6 +2522,7 @@
     "item_not_found": "That item no longer exists.",
     "item_empty": "That item is empty.",
     "item_not_restockable": "That item cannot be restocked.",
+    "item_not_usable": "That item cannot be used.",
     "slot_already_used": "That spell slot is already used.",
     "invalid_slot_index": "That spell slot does not exist.",
     "unknown_spell_mode": "That spell has no such option.",

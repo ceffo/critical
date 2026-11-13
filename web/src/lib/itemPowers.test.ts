@@ -38,6 +38,7 @@ const gem: Item = {
   spellId: "",
   state: "worn",
   equipState: "worn",
+  usable: true,
   damageTypes: [],
   damageSm: "",
   damageL: "",

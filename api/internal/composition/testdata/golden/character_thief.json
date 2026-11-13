@@ -235,50 +235,67 @@
       ],
       "weaponPicks": [
         {
-          "type": "dagger",
+          "code": "dagger",
           "slots": 1,
           "allowed": true
         },
         {
-          "type": "short_bow",
+          "code": "short_bow",
           "slots": 1,
           "allowed": true
         }
       ],
-      "weaponTypes": [
+      "weapons": [
         {
-          "type": "short_bow",
+          "code": "composite_short_bow",
           "specializationSlots": 0
         },
         {
-          "type": "hand_crossbow",
+          "code": "short_bow",
           "specializationSlots": 0
         },
         {
-          "type": "dagger",
+          "code": "hand_crossbow",
           "specializationSlots": 0
         },
         {
-          "type": "dart",
+          "code": "dagger",
           "specializationSlots": 0
         },
         {
-          "type": "sling",
+          "code": "dart",
           "specializationSlots": 0
         },
         {
-          "type": "short_sword",
+          "code": "sling",
           "specializationSlots": 0
         },
         {
-          "type": "long_sword",
+          "code": "short_sword",
           "specializationSlots": 0
         },
         {
-          "type": "other_melee",
+          "code": "long_sword",
+          "specializationSlots": 0
+        },
+        {
+          "code": "club",
+          "specializationSlots": 0
+        },
+        {
+          "code": "knife",
+          "specializationSlots": 0
+        },
+        {
+          "code": "quarterstaff",
+          "specializationSlots": 0
+        },
+        {
+          "code": "broad_sword",
           "specializationSlots": 0
         }
-      ]
+      ],
+      "weaponRedo": []
     }
   },
   "missing": [

@@ -115,6 +115,12 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	delete(m, "RaceToHitTypes")
 	delete(m, "RaceToHitBonus")
 	delete(m, "RaceToHitHurled")
+	// The weapons a pick may name and the type picks left to redo (ADR 0037 steps 21.6 and
+	// 21.8.3) replace the weapon types; the weapon pick tests cover them.
+	if p, ok := m["Proficiencies"].(map[string]any); ok {
+		delete(p, "Weapons")
+		delete(p, "WeaponRedo")
+	}
 
 	return m
 }

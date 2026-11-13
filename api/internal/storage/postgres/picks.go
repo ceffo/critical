@@ -116,25 +116,21 @@ func grantOwnedWeaponTypes(ctx context.Context, q storeq.Querier) error {
 		if len(types) == 0 {
 			continue
 		}
-		picks, err := characterdal.DecodePicks(c.ProficiencyPicks)
+		picks, err := decodeTypePicks(c.ProficiencyPicks)
 		if err != nil {
 			return fmt.Errorf("character %d: %w", c.ID, err)
 		}
-		had := map[string]bool{}
-		for _, p := range picks.Weapon {
-			had[p.Type] = true
-		}
 		added := false
 		for _, t := range ruletablesvc.WeaponTypes {
-			if types[t] && !had[t] {
-				picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: t, Slots: skills.WeaponPickSlots})
+			if types[t] && !picks.hasType(t) {
+				picks.Weapon = append(picks.Weapon, typePick{Type: t, Slots: skills.WeaponPickSlots})
 				added = true
 			}
 		}
 		if !added {
 			continue
 		}
-		raw, err := characterdal.EncodePicks(picks)
+		raw, err := picks.encode()
 		if err != nil {
 			return err
 		}
@@ -202,11 +198,11 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier, defs *class
 				"character", c.ID, "class", classOf[c.ID], "types", types)
 			continue
 		}
-		picks, err := characterdal.DecodePicks(c.ProficiencyPicks)
+		picks, err := decodeTypePicks(c.ProficiencyPicks)
 		if err != nil {
 			return fmt.Errorf("character %d: %w", c.ID, err)
 		}
-		if slices.ContainsFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.IsSpecializationOf(def) }) {
+		if slices.ContainsFunc(picks.Weapon, func(p typePick) bool { return p.isTypeSpecializationOf(def) }) {
 			continue
 		}
 		first := types[0]
@@ -215,19 +211,19 @@ func specializeFlaggedWeapons(ctx context.Context, q storeq.Querier, defs *class
 				"character", c.ID, "specialization", first, "plain", types[1:])
 		}
 		slots := ruletablesvc.SpecializationSlots(def, first)
-		if i := slices.IndexFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == first }); i >= 0 {
+		if i := slices.IndexFunc(picks.Weapon, func(p typePick) bool { return p.Type == first }); i >= 0 {
 			picks.Weapon[i].Slots = slots
 		} else {
-			picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: first, Slots: slots})
+			picks.Weapon = append(picks.Weapon, typePick{Type: first, Slots: slots})
 		}
 		// The other flagged types are plain picks, added when missing: no attack loses its
 		// proficiency the day the rule lands.
 		for _, t := range types[1:] {
-			if !slices.ContainsFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == t }) {
-				picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: t, Slots: skills.WeaponPickSlots})
+			if !picks.hasType(t) {
+				picks.Weapon = append(picks.Weapon, typePick{Type: t, Slots: skills.WeaponPickSlots})
 			}
 		}
-		raw, err := characterdal.EncodePicks(picks)
+		raw, err := picks.encode()
 		if err != nil {
 			return err
 		}

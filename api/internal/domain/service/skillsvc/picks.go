@@ -45,22 +45,34 @@ type pickState struct {
 	Slots int    `json:"slots"`
 }
 
-// weaponPickState is one weapon pick in a snapshot or a payload.
+// weaponPickState is one weapon pick in a snapshot or a payload: a catalogue weapon code (ADR
+// 0037 step 21.7).
 type weaponPickState struct {
+	Code  string `json:"code"`
+	Slots int    `json:"slots"`
+}
+
+// typePickState is one weapon type pick of an entry logged before a pick named a weapon (ADR 0037
+// step 7 before step 21), and one type pick left to redo (step 21.8.3).
+type typePickState struct {
 	Type  string `json:"type"`
 	Slots int    `json:"slots"`
 }
 
 // picksState is the JSON encoding of a "proficiencies" snapshot, and the before and after of a
-// proficiencies entry: the picks by pool, in the player's order, and the languages. Entries
-// already in the log must stay decodable: add fields, never rename. Weapon is absent from the
-// entries logged before the weapon pool, Languages from those logged before the languages
-// moved to the Skills tab (ADR 0037 step 18): restoring one of them leaves the stored weapon
-// picks or languages.
+// proficiencies entry: the picks by pool, in the player's order, the type picks left to redo
+// and the languages. Entries already in the log must stay decodable: add fields, never rename.
+// Weapons (codes, ADR 0037 step 21.7) is absent from the entries logged before a pick named a
+// weapon, which carry Weapon (types) or, before the weapon pool, nothing; Languages is absent
+// from those logged before the languages moved to the Skills tab (step 18): restoring one of
+// them leaves the stored weapon picks (and the redo list) or languages.
 type picksState struct {
-	Nonweapon []pickState        `json:"nonweapon"`
-	Weapon    *[]weaponPickState `json:"weapon,omitempty"`
-	Languages *[]string          `json:"languages,omitempty"`
+	Nonweapon []pickState `json:"nonweapon"`
+	// Weapon is an older entry's type picks, read for nothing (step 21.7): the journal words it.
+	Weapon     *[]typePickState   `json:"weapon,omitempty"`
+	Weapons    *[]weaponPickState `json:"weapons,omitempty"`
+	WeaponRedo *[]typePickState   `json:"weaponRedo,omitempty"`
+	Languages  *[]string          `json:"languages,omitempty"`
 }
 
 // picksRecord is the payload of a proficiencies entry, the picks and the languages before and
@@ -79,23 +91,33 @@ func toState(p skills.Picks, languages []string) picksState {
 	for _, x := range p.Weapon {
 		weapon = append(weapon, weaponPickState(x))
 	}
-	out.Weapon = &weapon
+	out.Weapons = &weapon
+	redo := make([]typePickState, 0, len(p.WeaponRedo))
+	for _, x := range p.WeaponRedo {
+		redo = append(redo, typePickState(x))
+	}
+	out.WeaponRedo = &redo
 	langs := append([]string{}, languages...)
 	out.Languages = &langs
 	return out
 }
 
-// picks are the snapshot's picks; Weapon is nil for an entry logged before the weapon pool (the
-// stored weapon picks stay).
+// picks are the snapshot's picks; Weapon is nil for an entry logged before a pick named a weapon
+// (ADR 0037 step 21.7: the stored weapon picks and redo list stay).
 func (s picksState) picks() skills.Picks {
 	out := skills.Picks{Nonweapon: make([]skills.Pick, 0, len(s.Nonweapon))}
 	for _, x := range s.Nonweapon {
 		out.Nonweapon = append(out.Nonweapon, skills.Pick(x))
 	}
-	if s.Weapon != nil {
-		out.Weapon = make([]skills.WeaponPick, 0, len(*s.Weapon))
-		for _, x := range *s.Weapon {
+	if s.Weapons != nil {
+		out.Weapon = make([]skills.WeaponPick, 0, len(*s.Weapons))
+		for _, x := range *s.Weapons {
 			out.Weapon = append(out.Weapon, skills.WeaponPick(x))
+		}
+		if s.WeaponRedo != nil {
+			for _, x := range *s.WeaponRedo {
+				out.WeaponRedo = append(out.WeaponRedo, skills.WeaponRedo(x))
+			}
 		}
 	}
 	return out
@@ -215,9 +237,9 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 }
 
 // restorePicks writes a snapshot's picks and languages back: undo the save's "before", redo its
-// "after" (ADR 0019), inside the undo's transaction. A snapshot logged before the weapon pool
-// carries no weapon picks, one logged before the languages moved to the Skills tab no
-// languages: the stored ones stay.
+// "after" (ADR 0019), inside the undo's transaction. A snapshot logged before a pick named a
+// weapon (ADR 0037 step 21.7) carries no weapon codes, one logged before the languages moved to
+// the Skills tab no languages: the stored ones stay (the weapon picks with their redo list).
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
 	var stored charactersvc.View
 	loaded := false
@@ -234,7 +256,8 @@ func (s *service) restorePicks(ctx context.Context, characterID int64, _ string,
 		if err := load(); err != nil {
 			return err
 		}
-		picks.Weapon = stored.ProficiencyPicks.Clone().Weapon
+		kept := stored.ProficiencyPicks.Clone()
+		picks.Weapon, picks.WeaponRedo = kept.Weapon, kept.WeaponRedo
 	}
 	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)

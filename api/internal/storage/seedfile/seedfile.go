@@ -82,8 +82,9 @@ type Character struct {
 	// seed's.
 	PsionicPicks []psionics.Pick `json:"psionic_picks"`
 	// WeaponProficiencies are the seed character's weapon picks (ADR 0037
-	// steps 7 and 16.2): a weapon type and its slot, the types of the seed's
-	// weapons, written and never reconciled as Proficiencies are.
+	// steps 21.1 and 21.8.7): a catalogue weapon code and its slot, the codes
+	// of the seed's weapons, written and never reconciled as Proficiencies
+	// are.
 	WeaponProficiencies []SeedWeaponPick `json:"weapon_proficiencies"`
 }
 
@@ -93,9 +94,10 @@ type SeedPick struct {
 	Slots int    `json:"slots"`
 }
 
-// SeedWeaponPick is one weapon pick of the character seed.
+// SeedWeaponPick is one weapon pick of the character seed: a catalogue weapon
+// code (ADR 0037 step 21.1) and its slot.
 type SeedWeaponPick struct {
-	Type  string `json:"type"`
+	Code  string `json:"code"`
 	Slots int    `json:"slots"`
 }
 
@@ -158,17 +160,17 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 		}
 		seen[p.ID] = true
 	}
-	types := map[string]bool{}
+	codes := map[string]bool{}
 	for i, p := range c.WeaponProficiencies {
 		switch {
-		case !slices.Contains(ruletablesvc.WeaponTypes, p.Type):
-			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %d: unknown weapon type %q", i, p.Type)
-		case types[p.Type]:
-			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q twice", p.Type)
+		case p.Code == "":
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %d: code is required", i)
+		case codes[p.Code]:
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q twice", p.Code)
 		case p.Slots != skills.WeaponPickSlots:
-			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q: must spend %d slot", p.Type, skills.WeaponPickSlots)
+			return Character{}, false, fmt.Errorf("character.json: weapon proficiency %q: must spend %d slot", p.Code, skills.WeaponPickSlots)
 		}
-		types[p.Type] = true
+		codes[p.Code] = true
 	}
 	return c, true, nil
 }

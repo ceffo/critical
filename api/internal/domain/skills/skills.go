@@ -24,6 +24,12 @@ type Book interface {
 	// SpecializationCostedAt reports whether some catalogue class spends slots in all on a
 	// specialization in weaponType.
 	SpecializationCostedAt(weaponType string, slots int) bool
+	// Weapons are the catalogue weapons a weapon pick may name (ADR 0037 step 21.1), with their
+	// type, in offer order (step 21.6: the weapon types' order, then the catalogue's).
+	Weapons() []classes.WeaponRef
+	// Weapon is the catalogue weapon of code with its type, false for a code the catalogue does
+	// not hold.
+	Weapon(code string) (classes.WeaponRef, bool)
 }
 
 // LanguageBook is the language catalogue the languages are checked against (ADR 0032 step 4);
@@ -44,8 +50,8 @@ const (
 	CodeDuplicate  = "duplicate"
 	CodeOutOfRange = "out_of_range"
 	CodeNotAllowed = "not_allowed"
-	// CodeWeaponNotAllowed refuses a weapon pick of a type the class may not pick (ADR 0037 step
-	// 7).
+	// CodeWeaponNotAllowed refuses a weapon pick of a catalogue weapon the class may not pick (ADR
+	// 0037 step 21.2).
 	CodeWeaponNotAllowed = "weapon_not_allowed"
 )
 
@@ -55,6 +61,9 @@ const (
 	CodeSlotsOverBudget    = "slots_over_budget"
 	CodeSlotsToSpend       = "slots_to_spend"
 	CodeProficiencyUnknown = "proficiency_unknown"
+	// CodeWeaponPickToRedo is a weapon type pick the migration to weapon codes found no owned
+	// weapon for (ADR 0037 step 21.8.3): listed for the player to redo, its slots back to spend.
+	CodeWeaponPickToRedo = "weapon_pick_to_redo"
 )
 
 // Wire names of the skills' fields and pools.
@@ -65,7 +74,8 @@ const (
 	// PoolNonweapon names the non-weapon pool in the slot warnings.
 	PoolNonweapon = "nonweapon"
 	// FieldWeapon is the weapon picks: the budget refusal's field; a pick's field is
-	// FieldWeapon + "." + type.
+	// FieldWeapon + "." + its catalogue code (ADR 0037 step 21.6), a type left to redo's
+	// FieldWeapon + "." + its type.
 	FieldWeapon = "weapon"
 	// PoolWeapon names the weapon pool in the slot warnings.
 	PoolWeapon = "weapon"
@@ -82,10 +92,13 @@ const (
 
 // Warning is a skills rule the stored character breaks without being refused (ADR 0037 step
 // 11): a code, the field it is about and, for a slot warning, the pool and its figures
-// (slots_over_budget spent and available, slots_to_spend left; nil for the others).
+// (slots_over_budget spent and available, slots_to_spend left; nil for the others); for
+// weapon_pick_to_redo (step 21.8.3) the weapon type and the slots it spent.
 type Warning struct {
 	Code                   string
 	Field                  string
 	Pool                   string
 	Spent, Available, Left *int
+	Type                   string
+	Slots                  *int
 }

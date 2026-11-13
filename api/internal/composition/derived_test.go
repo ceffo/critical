@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/composition"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -43,7 +44,8 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 // -1, Tumbling DEX 17, Ventriloquism INT 14 -2, Riding WIS 8 +3, Appraising INT 14, Singing CHA 16,
 // Reading/Writing INT 14 +1, Local History CHA 16. The non-weapon pool (step 3) is a rogue's: 3 +
 // one slot every 4 realized levels + 4 for Intelligence 14; 8 spent.
-func kelsenPicks(level int) *skills.ProficiencySlots {
+func kelsenPicks(t *testing.T, level int) *skills.ProficiencySlots {
+	t.Helper()
 	pick := func(id, ability string, modifier, target int) skills.PickFigures {
 		return skills.PickFigures{ID: id, Slots: 1, Cost: 1, Ability: ability, Modifier: modifier, Known: true, Target: target, HasCheck: true}
 	}
@@ -51,11 +53,11 @@ func kelsenPicks(level int) *skills.ProficiencySlots {
 	pool.Available = 3 + level/4 + 4
 	pool.Left = pool.Available - 8
 	// ADR 0037 step 3, weapon pool: 2 + one slot every 4 realized levels; the seed's five weapon
-	// types spend 5.
+	// picks (ADR 0037 step 21.8.7: his weapons' codes) spend 5.
 	weapon := slots.WeaponPool{Initial: 2, PerLevels: 4, LevelGained: level / 4, Available: 2 + level/4, Spent: 5}
 	weapon.Left = weapon.Available - 5
-	wpick := func(t string) skills.WeaponPickFigures {
-		return skills.WeaponPickFigures{Type: t, Slots: 1, Allowed: true}
+	wpick := func(code string) skills.WeaponPickFigures {
+		return skills.WeaponPickFigures{Code: code, Slots: 1, Allowed: true}
 	}
 	// ADR 0037 step 8: Table 34's penalty for the rogue group.
 	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, Picks: []skills.PickFigures{
@@ -63,11 +65,13 @@ func kelsenPicks(level int) *skills.ProficiencySlots {
 		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), pick("singing", "cha", 0, 16),
 		pick("reading_writing", "int", 1, 15), pick("local_history", "cha", 0, 16),
 	}, WeaponPicks: []skills.WeaponPickFigures{
-		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("other_melee"),
-	}, WeaponTypes: func() (out []skills.WeaponTypeFigure) {
-		// The bard may pick every type (ADR 0042 step 16.1), none specialized.
-		for _, t := range ruletablesvc.WeaponTypes {
-			out = append(out, skills.WeaponTypeFigure{Type: t})
+		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("bastard_sword_two_handed"),
+	}, Weapons: func() (out []skills.WeaponFigure) {
+		// The bard may pick every catalogue weapon (ADR 0037 step 21.2), none specialized.
+		eq, ok := cataloguetest.Tables(t).Equipment()
+		require.True(t, ok)
+		for _, w := range eq.PickWeapons() {
+			out = append(out, skills.WeaponFigure{Code: w.Code})
 		}
 		return out
 	}()}
@@ -114,7 +118,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		}},
-		Proficiencies: kelsenPicks(15),
+		Proficiencies: kelsenPicks(t, 15),
 	}
 	limits15 := []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}
 	d, ledgerLevel, limits := derivedOf(t, bs, id)
@@ -157,7 +161,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
 		}},
-		Proficiencies: kelsenPicks(17),
+		Proficiencies: kelsenPicks(t, 17),
 	}, d)
 	assert.Equal(t, 17, ledgerLevel)
 	assert.Equal(t, []prepsvc.LevelLimit{

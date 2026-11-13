@@ -101,8 +101,7 @@ func TestKelsen_Step16_PicksAndPools(t *testing.T) {
 	} {
 		dir := tc.dir
 		t.Run(name, func(t *testing.T) {
-			book, err := ruletablesadpt.ReadProficiencies(dir, cataloguetest.Definitions(t))
-			require.NoError(t, err)
+			book := weaponBook(t, dir)
 			c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
 			require.NoError(t, err)
 			require.True(t, ok)

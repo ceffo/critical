@@ -95,6 +95,10 @@ func testBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
 	}, cross, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
+	eq, ok := cataloguetest.Tables(t).Equipment()
+	require.True(t, ok)
+	b, err = b.WithWeapons(eq.PickWeapons())
+	require.NoError(t, err)
 	return b
 }
 

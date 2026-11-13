@@ -232,12 +232,13 @@ func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *i
 	for _, c := range mods.ToHitFrom {
 		add(Modifier{Kind: ModBuff, Detail: c.Buff, ItemID: c.ItemID, Value: c.Value})
 	}
-	// ADR 0037 step 8 (amends ADR 0002 steps 2 and 12): a weapon type
-	// without a pick takes Table 34's penalty for the class group, after
-	// the buffs and before the situational modifier. A launcher is judged by
-	// its own type; a weapon without a type takes none.
-	if p := char.Proficiencies.NonproficientPenalty(weapon.Type); p != 0 {
-		add(Modifier{Kind: ModNonproficient, Detail: weapon.Type, Value: p})
+	// ADR 0037 step 21.3 (amending step 8, which amends ADR 0002 steps 2
+	// and 12): a weapon whose catalogue code no pick names takes Table 34's
+	// penalty for the class group, after the buffs and before the
+	// situational modifier, its detail the code. A launcher is judged by its
+	// own code; a weapon without a code is non-proficient (step 21.4).
+	if p := char.Proficiencies.NonproficientPenalty(weapon.Code); p != 0 {
+		add(Modifier{Kind: ModNonproficient, Detail: weapon.Code, Value: p})
 	}
 	if sit != nil && sit.Value != 0 {
 		add(Modifier{Kind: ModSituational, Detail: sit.Label, Value: sit.Value})

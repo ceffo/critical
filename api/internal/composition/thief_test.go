@@ -66,8 +66,8 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
 		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
-		// Proficient with the dagger, so no non-proficiency penalty (ADR 0037 step 8).
-		Proficiencies: skills.Picks{Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}}},
+		// Proficient with the dagger, so no non-proficiency penalty (ADR 0037 steps 8 and 21.3).
+		Proficiencies: skills.Picks{Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 1}}},
 	})
 	require.NoError(t, err)
 
@@ -89,7 +89,7 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	assert.True(t, check.Success, "60 at or under 55 + 10")
 
 	dagger := newWeapon("Dagger", "1d4", "1d3")
-	dagger.WeaponType = "dagger"
+	dagger.WeaponType, dagger.CatalogueCode = "dagger", "dagger"
 	_, err = bs.Items.Create(ctx, id, dagger)
 	require.NoError(t, err)
 	// A new piece is carried (ADR 0033 step 6): the attack needs it wielded.
@@ -340,7 +340,7 @@ func TestThief_Step19_BackstabAtAnUnknownACKeepsItsMultiplier(t *testing.T) {
 	})
 	require.NoError(t, err)
 	dagger := newWeapon("Dagger", "1d4", "1d3")
-	dagger.WeaponType = "dagger"
+	dagger.WeaponType, dagger.CatalogueCode = "dagger", "dagger"
 	_, err = bs.Items.Create(ctx, id, dagger)
 	require.NoError(t, err)
 	// A new piece is carried (ADR 0033 step 6): the attack needs it wielded.

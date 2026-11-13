@@ -88,6 +88,7 @@ const SLOT_CODES = new Set([
   "slots_to_spend",
   "slots_over_budget",
   "proficiency_unknown",
+  "weapon_pick_to_redo",
 ]);
 
 /** The fields the server warns about, for the character panel's summary ("1 avertissement : langues"). */

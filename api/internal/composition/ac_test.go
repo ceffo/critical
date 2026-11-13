@@ -131,7 +131,12 @@ func TestClassWarnings_Step20_ServedOnReadNeverRefused(t *testing.T) {
 
 	got, err := bs.Items.Warnings(ctx, id, nil)
 	require.NoError(t, err)
-	assert.Equal(t, []itemsvc.Warning{{ItemID: "chain_mail", Code: "armour_not_allowed"}, {ItemID: "sword", Code: "weapon_not_allowed"}}, got)
+	// The homebrew sword also has no catalogue code (ADR 0037 step 21.4).
+	assert.Equal(t, []itemsvc.Warning{
+		{ItemID: "chain_mail", Code: "armour_not_allowed"},
+		{ItemID: "sword", Code: "weapon_not_allowed"},
+		{ItemID: "sword", Code: "weapon_code_missing"},
+	}, got)
 	a, err := bs.AC.Get(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, []itemsvc.Warning{{ItemID: "chain_mail", Code: "armour_not_allowed"}}, a.Warnings, "the AC card carries the armour's only")

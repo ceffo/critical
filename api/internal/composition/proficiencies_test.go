@@ -9,6 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 )
 
 // ADR 0037 steps 1 and 2: GET /api/characters/options carries the non-weapon
@@ -58,36 +60,48 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Len(t, costs, 6)
 }
 
-// ADR 0037 steps 7 and 9: each class option carries the weapon types the class
-// may pick, in display order, with the specialization's slots for a class that
-// specializes (2, a bow 3) and 0 for the others, so the weapon editor sends the
-// server's cost.
-func TestProficiencies_Step7_OptionsWeaponTypes(t *testing.T) {
+// ADR 0037 steps 21.2, 21.5 and 21.6: each class option of GET /api/characters/options carries
+// the catalogue weapons the class may pick (weapons, in place of weaponTypes), in offer order, with
+// the specialization's slots for a class that specializes (its type's: a bow 3, the composite long
+// bow as the long bow, 2 otherwise) and 0 for the others, so the weapon editor sends the server's
+// cost: a fighter every row, the mage its five codes, the cleric its blunt rows and slings.
+func TestProficiencies_Step21_6_OptionsWeapons(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
+	type option struct {
+		Code                string `json:"code"`
+		SpecializationSlots int    `json:"specializationSlots"`
+	}
 	var body struct {
 		Classes []struct {
-			Class       string           `json:"class"`
-			WeaponTypes []map[string]any `json:"weaponTypes"`
+			Class   string   `json:"class"`
+			Weapons []option `json:"weapons"`
 		} `json:"classes"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &body))
-	byClass := map[string][]map[string]any{}
+	byClass := map[string][]option{}
 	for _, c := range body.Classes {
-		byClass[c.Class] = c.WeaponTypes
+		byClass[c.Class] = c.Weapons
 	}
+	eq, ok := cataloguetest.Tables(t).Equipment()
+	require.True(t, ok)
 	fighter := byClass["fighter"]
-	require.Len(t, fighter, 14, "a fighter may pick every weapon type")
-	assert.Equal(t, map[string]any{"type": "long_bow", "specializationSlots": float64(3)}, fighter[0], "a bow's specialization spends 3")
-	assert.Equal(t, map[string]any{"type": "long_sword", "specializationSlots": float64(2)}, fighter[10])
-	assert.Equal(t, []map[string]any{
-		{"type": "dagger", "specializationSlots": float64(0)},
-		{"type": "dart", "specializationSlots": float64(0)},
-		{"type": "sling", "specializationSlots": float64(0)},
-		{"type": "other_melee", "specializationSlots": float64(0)},
-	}, byClass["mage"], "a mage picks only its four types and never specializes")
-	require.Len(t, byClass["bard"], 14)
-	assert.Equal(t, float64(0), byClass["bard"][0]["specializationSlots"], "a bard picks any type but does not specialize")
+	require.Len(t, fighter, len(eq.Weapons), "a fighter may pick every catalogue weapon")
+	assert.Equal(t, option{Code: "composite_long_bow", SpecializationSlots: 3}, fighter[0], "a bow's specialization spends 3")
+	assert.Contains(t, fighter, option{Code: "long_sword", SpecializationSlots: 2})
+	assert.Contains(t, fighter, option{Code: "heavy_horse_lance", SpecializationSlots: 2})
+	assert.Equal(t, []option{{Code: "dagger"}, {Code: "dart"}, {Code: "sling"}, {Code: "knife"}, {Code: "quarterstaff"}},
+		byClass["mage"], "a mage picks only its five weapons and never specializes")
+	var cleric []string
+	for _, o := range byClass["cleric"] {
+		cleric = append(cleric, o.Code)
+	}
+	assert.ElementsMatch(t, []string{
+		"club", "footmans_flail", "horsemans_flail", "footmans_mace", "horsemans_mace", "morning_star",
+		"quarterstaff", "warhammer", "bec_de_corbin", "lucern_hammer", "sling", "staff_sling",
+	}, cleric, "the cleric's blunt weapons and its slings by their bullets")
+	require.Len(t, byClass["bard"], len(eq.Weapons))
+	assert.Zero(t, byClass["bard"][0].SpecializationSlots, "a bard picks any weapon but does not specialize")
 }
 
 // The fixture's copy is the real seed (api/testdata/README: same format; this

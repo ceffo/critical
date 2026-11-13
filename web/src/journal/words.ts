@@ -3,6 +3,7 @@
 import type { TFunction } from "i18next";
 import { formatSigned, formatStrength } from "@/lib/format";
 import { namedDetail, type ItemNamer } from "@/lib/itemPowers";
+import { weaponName } from "@/lib/weaponNames";
 
 /** A skill's display name; an id without a translation shows as is. */
 export function skillName(t: TFunction, id: string): string {
@@ -84,10 +85,14 @@ export function modLabel(
     return t("result.mods.class", {
       class: t(`details.classes.${m.detail ?? ""}`, { defaultValue: m.detail }),
     });
-  // The non-proficiency penalty (ADR 0037 step 8): the detail is the weapon type code.
+  // The non-proficiency penalty (ADR 0037 step 21.3): the detail is the weapon's catalogue code
+  // (empty for a weapon with none, step 21.4), named from the equipment catalogue; an entry logged
+  // before carries a weapon type, named the same way.
   if (m.kind === "nonproficient")
     return t("result.mods.nonproficient", {
-      type: t(`weapons.types.${m.detail ?? ""}`, { defaultValue: m.detail }),
+      weapon: m.detail
+        ? weaponName(t, m.detail)
+        : t("weaponProficiencies.noCode"),
     });
   // An 18/xx Strength (ADR 0030 step 9): the score and its percentile.
   if (m.kind === "strength" && m.strExceptional)

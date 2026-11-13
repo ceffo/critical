@@ -27,6 +27,10 @@ type WarningDTO struct {
 	// Class is the class entry of a level_limit warning (ADR 0042 step 7),
 	// its level in value and the race's limit in max.
 	Class string `json:"class,omitempty"`
+	// Type and Slots are a weapon_pick_to_redo warning's weapon type and the
+	// slots it spent (ADR 0037 step 21.8.3).
+	Type  string `json:"type,omitempty"`
+	Slots *int   `json:"slots,omitempty"`
 }
 
 // WarningsDTO maps the character's warnings, never nil.
@@ -43,7 +47,7 @@ func WarningsDTO(ws []charactersvc.Warning) []WarningDTO {
 func SkillWarningsDTO(ws []skills.Warning) []WarningDTO {
 	out := make([]WarningDTO, 0, len(ws))
 	for _, w := range ws {
-		out = append(out, WarningDTO{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left})
+		out = append(out, WarningDTO{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots})
 	}
 	return out
 }

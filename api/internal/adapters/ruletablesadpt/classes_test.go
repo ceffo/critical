@@ -127,8 +127,8 @@ func TestImport_Step8_RefusesARowForAnUnknownClass(t *testing.T) {
 }
 
 // ADR 0040 step 1.6: the equipment lists map as the PHB gives them (mage p.30, cleric p.33, thief
-// p.39, bard p.41; the fighter p.26 wears and wields anything) and the pick types derive from them
-// and the weapon catalogue (ADR 0037 step 7).
+// p.39, bard p.41; the fighter p.26 wears and wields anything) and the pick codes derive from them
+// and the weapon catalogue (ADR 0037 step 21.2).
 func TestDefinitions_Step1_6_TheEquipmentListsMap(t *testing.T) {
 	defs, err := phb(t).Definitions()
 	require.NoError(t, err)
@@ -138,18 +138,22 @@ func TestDefinitions_Step1_6_TheEquipmentListsMap(t *testing.T) {
 		return c.Equipment
 	}
 	assert.Equal(t, classes.Equipment{Shields: true}, eq("fighter"))
-	assert.Equal(t, classes.Equipment{
-		Armour: []string{"none"}, WeaponTypes: []string{"dagger", "dart", "sling"},
-		Weapons:   []classes.WeaponRef{{Code: "knife", WeaponType: "other_melee"}, {Code: "quarterstaff", WeaponType: "other_melee"}},
-		PickTypes: []string{"dagger", "dart", "sling", "other_melee"},
-	}, eq("mage"))
-	assert.Equal(t, classes.Equipment{Shields: true, BluntOnly: true, PickTypes: []string{"sling", "staff_sling", "other_melee"}}, eq("cleric"))
+	mage := eq("mage")
+	assert.Equal(t, []string{"none"}, mage.Armour)
+	assert.Equal(t, []string{"dagger", "dart", "sling"}, mage.WeaponTypes)
+	assert.Equal(t, []classes.WeaponRef{{Code: "knife", WeaponType: "other_melee"}, {Code: "quarterstaff", WeaponType: "other_melee"}}, mage.Weapons)
+	assert.Subset(t, mage.PickCodes, []string{"dagger", "dart", "sling", "knife", "quarterstaff"})
+	assert.NotContains(t, mage.PickCodes, "club", "an other_melee row the mage's list does not name")
+	cleric := eq("cleric")
+	assert.True(t, cleric.BluntOnly)
+	assert.Subset(t, cleric.PickCodes, []string{"sling", "staff_sling", "club", "lucern_hammer"})
+	assert.NotContains(t, cleric.PickCodes, "halberd")
 	thief := eq("thief")
 	assert.Equal(t, []string{"none", "leather", "padded_studded", "elven_chain"}, thief.Armour)
 	assert.False(t, thief.Shields)
 	assert.Equal(t, []string{"dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"}, thief.WeaponTypes)
 	assert.Equal(t, []string{"none", "leather", "padded_studded", "elven_chain", "metal"}, eq("bard").Armour)
-	assert.Nil(t, eq("bard").PickTypes, "the bard picks any weapon type")
+	assert.Nil(t, eq("bard").PickCodes, "the bard picks any weapon")
 }
 
 // ADR 0040 steps 2 and 4: the six races carry their traits and PHB Tables 10 and 11 rows. Expected

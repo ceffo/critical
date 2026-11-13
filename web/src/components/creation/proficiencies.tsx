@@ -19,7 +19,7 @@ export function ProficienciesStep(props: StepProps) {
   const { t } = useTranslation();
   const figures = answer.latest?.derived?.proficiencySlots ?? null;
   // The server's list for the draft (all its classes judged together, the weapon lift too).
-  const types = figures?.weaponTypes;
+  const weapons = figures?.weapons;
   return (
     <div className="flex min-w-0 flex-col gap-6">
       {/* The weapons first: a short list, where the non-weapon catalogue is long. */}
@@ -30,9 +30,9 @@ export function ProficienciesStep(props: StepProps) {
         <h2 id="creation-weapons-title" className="group-heading section-label">
           {t("weaponProficiencies.section")}
         </h2>
-        {!types ? null : types.length > 0 ? (
+        {!weapons ? null : weapons.length > 0 ? (
           <WeaponPicker
-            types={types}
+            weapons={weapons}
             picks={draft.weaponPicks}
             onChange={(weaponPicks) => update({ weaponPicks })}
             figures={figures}

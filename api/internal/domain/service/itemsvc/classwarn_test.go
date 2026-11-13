@@ -33,8 +33,20 @@ func warned(t testing.TB, class string, pieces ...itemsvc.Item) []itemsvc.Warnin
 }
 
 // multi is the class warnings of the pieces for a character of the fixture classes cls (its
-// active class entries, ADR 0042 step 16.1).
+// active class entries, ADR 0042 step 16.1): the class limits only, a homebrew piece's
+// weapon_code_missing (every class's, ADR 0037 step 21.4) left to allWarned.
 func multi(t testing.TB, cls []string, pieces ...itemsvc.Item) []itemsvc.Warning {
+	var out []itemsvc.Warning
+	for _, x := range allWarned(t, cls, pieces...) {
+		if x.Code != itemsvc.WarnWeaponCodeMissing {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// allWarned is every class warning of the pieces for a character of the fixture classes cls.
+func allWarned(t testing.TB, cls []string, pieces ...itemsvc.Item) []itemsvc.Warning {
 	limits := make([]classes.Equipment, 0, len(cls))
 	for _, class := range cls {
 		def, ok := cataloguetest.Definitions(t).Class(class)
@@ -79,7 +91,7 @@ func TestClassWarnings_Step20_Cleric(t *testing.T) {
 	assert.Empty(t, warned(t, "cleric", weapon("ms", "morning_star", "other_melee", "p", "b")), "P/B is allowed")
 	assert.Equal(t, []itemsvc.Warning{w("s", "weapon_not_allowed")}, warned(t, "cleric", weapon("s", "long_sword", "long_sword", "s")))
 	assert.Equal(t, []itemsvc.Warning{w("b", "weapon_not_allowed")}, warned(t, "cleric", weapon("b", "long_bow", "long_bow")), "a catalogue bow does no b")
-	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_not_allowed"), w("h", "weapon_type_missing")}, warned(t, "cleric", weapon("h", "", "", "p", "s")))
+	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_not_allowed")}, warned(t, "cleric", weapon("h", "", "", "p", "s")))
 	assert.Empty(t, warned(t, "cleric", weapon("h", "", "other_melee")), "homebrew with no damage type is not settled")
 }
 
@@ -158,8 +170,8 @@ func TestClassWarnings_Step20_ClericLauncherJudgedByItsAmmunition(t *testing.T) 
 	arrows := itemsvc.Item{ID: "ar", Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", DamageTypes: []string{"p", "b"}}
 	assert.Empty(t, warned(t, "cleric", launcher("b", "short_bow", "short_bow", "arrow"), arrows), "the ammunition piece says b")
 	assert.Empty(t, warned(t, "cleric", weapon("ms", "morning_star", "other_melee", "p", "b")))
-	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_type_missing")}, warned(t, "cleric", weapon("h", "", "")),
-		"homebrew with no damage type and no code is not settled: only its missing type is warned")
+	assert.Empty(t, warned(t, "cleric", weapon("h", "", "")),
+		"homebrew with no damage type and no code is not settled: only its missing code is warned")
 	assert.Equal(t, []itemsvc.Warning{w("d", "weapon_not_allowed")}, warned(t, "cleric", weapon("d", "dagger", "dagger", "p")))
 }
 
@@ -182,20 +194,25 @@ func TestClassWarnings_Step20_ArmourByColumn(t *testing.T) {
 	assert.Empty(t, warned(t, "fighter", armour("plate_mail", "none_allowed"), shield("s"), weapon("a", "battle_axe", "other_melee", "s")))
 }
 
-// ADR 0037 step 8 (proposed there): a wielded weapon with no weapon type carries
-// weapon_type_missing, for every class (the fighter too, whom step 20 never warns), since its
-// attacks take no non-proficiency penalty until the player sets one. A typed weapon, or a
-// typeless one not wielded, is not warned.
-func TestClassWarnings_Step8_WeaponTypeMissing(t *testing.T) {
+// ADR 0037 step 21.4 (replacing step 8's weapon_type_missing): a wielded weapon with no catalogue
+// code carries weapon_code_missing, for every class (the fighter too, whom step 20 never warns),
+// since no pick can name it and its attacks take the non-proficiency penalty until the player
+// sets its row; a typed homebrew weapon included. A coded weapon, or a code-less one not wielded,
+// is not warned, and weapon_type_missing is no longer served.
+func TestClassWarnings_Step21_4_WeaponCodeMissing(t *testing.T) {
 	for _, class := range []string{"fighter", "mage", "cleric", "thief", "bard"} {
-		got := warned(t, class, weapon("h", "", "", "b"))
-		assert.Contains(t, got, w("h", "weapon_type_missing"), class)
-		assert.NotContains(t, warned(t, class, weapon("d", "dagger", "dagger", "p")), w("d", "weapon_type_missing"), class)
+		got := allWarned(t, []string{class}, weapon("h", "", "", "b"))
+		assert.Contains(t, got, w("h", "weapon_code_missing"), class)
+		assert.Contains(t, allWarned(t, []string{class}, weapon("t", "", "other_melee", "b")), w("t", "weapon_code_missing"), class)
+		assert.NotContains(t, allWarned(t, []string{class}, weapon("d", "dagger", "dagger", "p")), w("d", "weapon_code_missing"), class)
 		carried := weapon("c", "", "", "b")
 		carried.State = itemsvc.StateCarried
-		assert.Empty(t, warned(t, class, carried), class)
+		assert.Empty(t, allWarned(t, []string{class}, carried), class)
+		for _, x := range got {
+			assert.NotEqual(t, "weapon_type_missing", x.Code, class)
+		}
 	}
-	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_type_missing")}, warned(t, "fighter", weapon("h", "", "")))
+	assert.Equal(t, []itemsvc.Warning{w("h", "weapon_code_missing")}, allWarned(t, []string{"fighter"}, weapon("h", "", "")))
 }
 
 // ADR 0040 step 1.6: a class the code has never seen is limited by its equipment alone: a test

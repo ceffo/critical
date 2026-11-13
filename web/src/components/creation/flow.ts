@@ -18,6 +18,8 @@ import {
 } from "@/types/character";
 
 import { isSpecialization } from "@/components/proficiencies/weapons";
+import { weaponName } from "@/lib/weaponNames";
+import type { TFunction } from "i18next";
 
 /*
  * The creation flow (ADR 0034 steps 3 to 6): its steps and what blocks Suivant, the draft the
@@ -751,17 +753,18 @@ export interface StepProps {
   language: string;
 }
 
-/** The weapon picks as one line ("Épée longue, Dague (spécialisé)"), empty when none. */
+/** The weapon picks as one line ("Épée longue, Dague (spécialisé)"), empty when none: each named
+ * from the equipment catalogue (ADR 0037 step 21.6, weaponName). */
 export function weaponPickNames(
-  t: (key: string, o?: { defaultValue?: string }) => string,
+  t: TFunction,
   picks: FlowDraft["weaponPicks"],
 ): string {
   return picks
     .map((p) => {
-      const type = t(`weapons.types.${p.type}`, { defaultValue: p.type });
+      const name = weaponName(t, p.code);
       return isSpecialization(p)
-        ? `${type} (${t("weaponProficiencies.specialized")})`
-        : type;
+        ? `${name} (${t("weaponProficiencies.specialized")})`
+        : name;
     })
     .join(", ");
 }

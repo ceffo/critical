@@ -245,6 +245,41 @@ func (q *Queries) CharacterSkillArmour(ctx context.Context, id int64) (Character
 	return i, err
 }
 
+const characterWeaponCodes = `-- name: CharacterWeaponCodes :many
+SELECT character_id, catalogue_code FROM items
+WHERE category = 'weapon' AND catalogue_code <> '' ORDER BY character_id, position, id
+`
+
+type CharacterWeaponCodesRow struct {
+	CharacterID   int64
+	CatalogueCode string
+}
+
+// The weapon picks data step after migration 042 (ADR 0037 step 21.8): the catalogue codes of each
+// character's weapons, in any state, in list order.
+func (q *Queries) CharacterWeaponCodes(ctx context.Context) ([]CharacterWeaponCodesRow, error) {
+	rows, err := q.db.QueryContext(ctx, characterWeaponCodes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterWeaponCodesRow{}
+	for rows.Next() {
+		var i CharacterWeaponCodesRow
+		if err := rows.Scan(&i.CharacterID, &i.CatalogueCode); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterWeaponTypes = `-- name: CharacterWeaponTypes :many
 SELECT DISTINCT character_id, weapon_type FROM items
 WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_type

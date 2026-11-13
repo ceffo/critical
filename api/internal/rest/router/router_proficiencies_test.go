@@ -17,9 +17,9 @@ import (
 
 // picked are a level 15 bard's pools with Intelligence 14, two non-weapon picks (Tumbling with
 // an extra slot, target Dex 17 + 1, and an id the catalogue no longer holds) and two weapon
-// picks, with their slot warnings.
+// picks by catalogue code, with their slot warnings and a type pick left to redo.
 func picked() *skillsvc.Proficiencies {
-	seven, three := 7, 3
+	seven, three, one := 7, 3, 1
 	return &skillsvc.Proficiencies{
 		Slots: &skills.ProficiencySlots{
 			Nonweapon: slots.NonweaponPool{Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 3, Left: 7},
@@ -28,26 +28,29 @@ func picked() *skillsvc.Proficiencies {
 				{ID: "tumbling", Slots: 2, Cost: 1, Extra: 1, Ability: "dex", Known: true, Target: 18, HasCheck: true},
 				{ID: "old_skill", Slots: 1, Cost: 1},
 			},
-			WeaponPicks: []skills.WeaponPickFigures{{Type: "long_sword", Slots: 1, Allowed: true}, {Type: "dagger", Slots: 1, Allowed: true}},
-			WeaponTypes: []skills.WeaponTypeFigure{{Type: "long_sword"}, {Type: "dagger", SpecializationSlots: 3}},
+			WeaponPicks: []skills.WeaponPickFigures{{Code: "long_sword", Slots: 1, Allowed: true}, {Code: "dagger", Slots: 1, Allowed: true}},
+			Weapons:     []skills.WeaponFigure{{Code: "long_sword"}, {Code: "dagger", SpecializationSlots: 3}},
+			WeaponRedo:  []skills.WeaponRedo{{Type: "other_melee", Slots: 1}},
 		},
 		Warnings: []skills.Warning{
 			{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &seven},
 			{Code: "slots_to_spend", Field: "weapon", Pool: "weapon", Left: &three},
 			{Code: "proficiency_unknown", Field: "nonweapon.old_skill"},
+			{Code: "weapon_pick_to_redo", Field: "weapon.other_melee", Type: "other_melee", Slots: &one},
 		},
 	}
 }
 
 const pickedBody = `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"old_skill","slots":1}],
-	"weapon":[{"type":"long_sword","slots":1},{"type":"dagger","slots":1}]}`
+	"weapon":[{"code":"long_sword","slots":1},{"code":"dagger","slots":1}]}`
 
 const pickedAnswer = `{
 	"proficiencySlots":{
 		"nonWeapon":{"initial":3,"perLevels":4,"levelGained":3,"intelligence":4,"available":10,"spent":3,"left":7,"languages":0},
 		"weapon":{"initial":2,"perLevels":4,"levelGained":3,"available":5,"spent":2,"left":3},
-		"weaponPicks":[{"type":"long_sword","slots":1,"allowed":true},{"type":"dagger","slots":1,"allowed":true}],
-		"weaponTypes":[{"type":"long_sword","specializationSlots":0},{"type":"dagger","specializationSlots":3}],
+		"weaponPicks":[{"code":"long_sword","slots":1,"allowed":true},{"code":"dagger","slots":1,"allowed":true}],
+		"weapons":[{"code":"long_sword","specializationSlots":0},{"code":"dagger","specializationSlots":3}],
+		"weaponRedo":[{"type":"other_melee","slots":1}],
 		"picks":[
 			{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":18},
 			{"id":"old_skill","slots":1,"cost":1,"extraSlots":0,"ability":"","modifier":0,"known":false,"target":null}
@@ -55,17 +58,19 @@ const pickedAnswer = `{
 	"warnings":[
 		{"code":"slots_to_spend","field":"nonweapon","pool":"nonweapon","left":7},
 		{"code":"slots_to_spend","field":"weapon","pool":"weapon","left":3},
-		{"code":"proficiency_unknown","field":"nonweapon.old_skill"}
+		{"code":"proficiency_unknown","field":"nonweapon.old_skill"},
+		{"code":"weapon_pick_to_redo","field":"weapon.other_melee","type":"other_melee","slots":1}
 	]}`
 
-// ADR 0037 steps 7 and 12: PUT /api/proficiencies takes the whole lists {nonweapon: [{id,
-// slots}], weapon: [{type, slots}]} and answers both pools with their terms, each non-weapon
-// pick's cost, extra slots and check target, each weapon pick, and the slot warnings; POST
-// /api/proficiencies/preview answers the same shape for the same body.
-func TestProficiencies_Step12_WireShape(t *testing.T) {
+// ADR 0037 steps 12 and 21.6: PUT /api/proficiencies takes the whole lists {nonweapon: [{id,
+// slots}], weapon: [{code, slots}]} and answers both pools with their terms, each non-weapon
+// pick's cost, extra slots and check target, each weapon pick by code, the weapons the
+// character may pick (weapons, in place of weaponTypes), the type picks left to redo, and the
+// warnings; POST /api/proficiencies/preview answers the same shape for the same body.
+func TestProficiencies_Step21_6_WeaponPicksByCode(t *testing.T) {
 	want := skillsvc.Edit{Picks: skills.Picks{
 		Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "old_skill", Slots: 1}},
-		Weapon:    []skills.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
+		Weapon:    []skills.WeaponPick{{Code: "long_sword", Slots: 1}, {Code: "dagger", Slots: 1}},
 	}}
 	for _, tc := range []struct{ method, path string }{
 		{"PUT", "/api/proficiencies"},
@@ -93,14 +98,23 @@ func TestProficiencies_Step12_WireShape(t *testing.T) {
 	})
 	t.Run("an absent pool is left as stored (nil to the service)", func(t *testing.T) {
 		h, m := newRouter(t)
-		weaponOnly := skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Type: "sling", Slots: 1}}}}
+		weaponOnly := skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Code: "sling", Slots: 1}}}}
 		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), weaponOnly).Return(&skillsvc.Proficiencies{}, nil).Once()
-		rec := do(h, "PUT", "/api/proficiencies", `{"weapon":[{"type":"sling","slots":1}]}`)
+		rec := do(h, "PUT", "/api/proficiencies", `{"weapon":[{"code":"sling","slots":1}]}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 		nonweaponOnly := skillsvc.Edit{Picks: skills.Picks{Nonweapon: []skills.Pick{}}}
 		m.skills.EXPECT().PreviewProficiencies(mock.Anything, int64(1), nonweaponOnly).Return(&skillsvc.Proficiencies{}, nil).Once()
 		rec = do(h, "POST", "/api/proficiencies/preview", `{"nonweapon":[]}`)
 		require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	})
+	t.Run("an older client's type pick reaches the rules without a code", func(t *testing.T) {
+		h, m := newRouter(t)
+		typed := skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Slots: 1}}}}
+		m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), typed).
+			Return(nil, &domain.FieldError{Field: "weapon", Message: "empty"}).Once()
+		rec := do(h, "PUT", "/api/proficiencies", `{"weapon":[{"type":"other_melee","slots":1}]}`)
+		require.Equal(t, http.StatusBadRequest, rec.Code)
+		assert.JSONEq(t, `{"error":"empty","code":"invalid_input","field":"weapon"}`, rec.Body.String())
 	})
 }
 
@@ -151,13 +165,13 @@ func TestProficiencies_Step12_Refusals(t *testing.T) {
 
 	m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), mock.Anything).
 		Return(nil, &domain.FieldError{Field: "weapon.long_sword", Message: "weapon_not_allowed"}).Once()
-	rec = do(h, "PUT", "/api/proficiencies", `{"weapon":[{"type":"long_sword","slots":1}]}`)
+	rec = do(h, "PUT", "/api/proficiencies", `{"weapon":[{"code":"long_sword","slots":1}]}`)
 	require.Equal(t, http.StatusBadRequest, rec.Code)
 	assert.JSONEq(t, `{"error":"weapon_not_allowed","code":"invalid_input","field":"weapon.long_sword"}`, rec.Body.String())
 
 	m.skills.EXPECT().SetProficiencies(mock.Anything, int64(1), mock.Anything).
 		Return(nil, fmt.Errorf("save: %w", &domain.BudgetError{Field: "weapon", Spent: 6, Limit: 5})).Once()
-	rec = do(h, "PUT", "/api/proficiencies", `{"weapon":[{"type":"dagger","slots":1}]}`)
+	rec = do(h, "PUT", "/api/proficiencies", `{"weapon":[{"code":"dagger","slots":1}]}`)
 	require.Equal(t, http.StatusConflict, rec.Code)
 	assert.JSONEq(t, `{"error":"save: weapon over budget: 6 of 5","code":"over_budget","field":"weapon","spent":6,"limit":5}`, rec.Body.String())
 }

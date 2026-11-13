@@ -169,7 +169,7 @@ func TestProficiencies_Step13_WeaponPickUndoRedo(t *testing.T) {
 	kelsen := *me.CurrentID
 
 	type weaponView struct {
-		Type    string `json:"type"`
+		Code    string `json:"code"`
 		Slots   int    `json:"slots"`
 		Allowed bool   `json:"allowed"`
 	}
@@ -194,7 +194,7 @@ func TestProficiencies_Step13_WeaponPickUndoRedo(t *testing.T) {
 	types := func(s slotsView) []string {
 		out := []string{}
 		for _, w := range s.WeaponPicks {
-			out = append(out, w.Type)
+			out = append(out, w.Code)
 		}
 		return out
 	}
@@ -204,23 +204,23 @@ func TestProficiencies_Step13_WeaponPickUndoRedo(t *testing.T) {
 		return l
 	}
 	seeded := read()
-	assert.Equal(t, []string{"short_bow", "dagger", "dart", "long_sword", "other_melee"}, types(seeded))
+	assert.Equal(t, []string{"short_bow", "dagger", "dart", "long_sword", "bastard_sword_two_handed"}, types(seeded))
 	assert.Equal(t, 5, seeded.Weapon.Available)
 	assert.Equal(t, 5, seeded.Weapon.Spent)
 	before := readLog()
 
-	save := `{"weapon":[{"type":"short_bow","slots":1},{"type":"dagger","slots":1},{"type":"sling","slots":1},` +
-		`{"type":"long_sword","slots":1},{"type":"other_melee","slots":1}]}`
+	save := `{"weapon":[{"code":"short_bow","slots":1},{"code":"dagger","slots":1},{"code":"sling","slots":1},` +
+		`{"code":"long_sword","slots":1},{"code":"bastard_sword_two_handed","slots":1}]}`
 	var saved picksAnswer
 	require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "PUT", "/api/proficiencies", save, &saved))
 	now := read()
-	assert.Equal(t, []string{"short_bow", "dagger", "sling", "long_sword", "other_melee"}, types(now))
+	assert.Equal(t, []string{"short_bow", "dagger", "sling", "long_sword", "bastard_sword_two_handed"}, types(now))
 	assert.Len(t, now.Picks, len(seeded.Picks), "the non-weapon picks stay")
 	after := readLog()
 	assert.Equal(t, "proficiencies", after.Entries[0].Kind, "one entry, the newest")
 	assert.Len(t, after.Entries, len(before.Entries)+1)
 
-	over := strings.Replace(save, `]}`, `,{"type":"dart","slots":1}]}`, 1)
+	over := strings.Replace(save, `]}`, `,{"code":"dart","slots":1}]}`, 1)
 	var refused map[string]any
 	require.Equal(t, http.StatusConflict, tb.showing(root, kelsen, "PUT", "/api/proficiencies", over, &refused))
 	assert.Equal(t, "over_budget", refused["code"])
@@ -240,7 +240,7 @@ func TestProficiencies_Step13_WeaponPickUndoRedo(t *testing.T) {
 
 // ADR 0037 steps 7, 10 and 14 through the API: a level 3 bard has 2 weapon slots (a rogue's next
 // comes at 4); created with three weapon picks it is a 409 on the weapon pool and nothing is
-// created; with two it is created and reads them; an unknown type is a 400 naming its field.
+// created; with two it is created and reads them; an unknown code is a 400 naming its field.
 func TestProficiencies_Step14_CreationWithWeaponPicks(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
@@ -249,15 +249,15 @@ func TestProficiencies_Step14_CreationWithWeaponPicks(t *testing.T) {
 	}
 	var refused map[string]any
 	require.Equal(t, http.StatusConflict, tb.call(bob, "POST", "/api/characters",
-		with(`[{"type":"dagger","slots":1},{"type":"sling","slots":1},{"type":"long_bow","slots":1}]`), &refused))
+		with(`[{"code":"dagger","slots":1},{"code":"sling","slots":1},{"code":"long_bow","slots":1}]`), &refused))
 	assert.Equal(t, "weapon", refused["field"])
-	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", with(`[{"type":"katana","slots":1}]`), &refused))
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", with(`[{"code":"katana","slots":1}]`), &refused))
 	assert.Equal(t, "weapon.katana", refused["field"])
 	var list listView
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
 	assert.Empty(t, list.Characters, "nothing created")
 
-	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", with(`[{"type":"dagger","slots":1},{"type":"long_bow","slots":1}]`), &list))
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", with(`[{"code":"dagger","slots":1},{"code":"long_bow","slots":1}]`), &list))
 	var c struct {
 		Derived struct {
 			Slots struct {
@@ -266,7 +266,7 @@ func TestProficiencies_Step14_CreationWithWeaponPicks(t *testing.T) {
 					Left      int `json:"left"`
 				} `json:"weapon"`
 				WeaponPicks []struct {
-					Type string `json:"type"`
+					Code string `json:"code"`
 				} `json:"weaponPicks"`
 			} `json:"proficiencySlots"`
 		} `json:"derived"`
@@ -275,5 +275,5 @@ func TestProficiencies_Step14_CreationWithWeaponPicks(t *testing.T) {
 	assert.Equal(t, 2, c.Derived.Slots.Weapon.Available)
 	assert.Equal(t, 0, c.Derived.Slots.Weapon.Left)
 	require.Len(t, c.Derived.Slots.WeaponPicks, 2)
-	assert.Equal(t, "long_bow", c.Derived.Slots.WeaponPicks[1].Type)
+	assert.Equal(t, "long_bow", c.Derived.Slots.WeaponPicks[1].Code)
 }

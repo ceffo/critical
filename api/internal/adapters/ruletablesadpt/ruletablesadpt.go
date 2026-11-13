@@ -122,9 +122,9 @@ func Parse(raw, equipment, languages, defs []byte) (*ruletablesvc.Tables, error)
 	if err != nil {
 		return nil, err
 	}
-	// ADR 0037 step 7: the weapon types a class may pick, derived once from
-	// its equipment list and the weapon catalogue.
-	if reg, err = reg.WithPickTypes(ruletablesvc.WeaponPickTypes(reg, eq)); err != nil {
+	// ADR 0037 step 21.2: the catalogue weapons a class may pick, derived
+	// once from its equipment list and the weapon catalogue.
+	if reg, err = reg.WithPickCodes(ruletablesvc.WeaponPickCodes(reg, eq)); err != nil {
 		return nil, fmt.Errorf("definitions: %w", err)
 	}
 	tables = tables.WithDefinitions(reg)

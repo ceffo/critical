@@ -4,18 +4,22 @@ import "github.com/ceffo/critical/api/internal/domain/skills"
 
 // PicksDTO is a character's proficiency picks as the editor and the creation send them (ADR 0037
 // step 12): `nonweapon` the non-weapon picks, each a catalogue id and the slots spent on it,
-// `weapon` the weapon picks, each a weapon type (ADR 0030 step 23) and its slots (1), in the
-// player's order. A pool absent or null is left as stored (none at creation); an empty list
-// removes its picks.
+// `weapon` the weapon picks, each a catalogue weapon code (ADR 0037 step 21.6) and its slots (1,
+// or the specialization's), in the player's order. A pool absent or null is left as stored (none
+// at creation); an empty list removes its picks, and a sent weapon pool clears the type picks
+// left to redo (step 21.8.3). A pick without a `code` (an older client's `type`) is refused.
 type PicksDTO struct {
 	Nonweapon []PickInputDTO       `json:"nonweapon"`
 	Weapon    []WeaponPickInputDTO `json:"weapon"`
 }
 
-// WeaponPickInputDTO is one weapon pick: the weapon type and the slots spent.
+// WeaponPickInputDTO is one weapon pick: the catalogue weapon code and the slots spent. Type is
+// an older client's weapon type pick (ADR 0037 step 21.6): read so the body decodes, never used, so
+// the pick reaches the rules without a code and is refused empty on field weapon.
 type WeaponPickInputDTO struct {
-	Type  string `json:"type"`
+	Code  string `json:"code"`
 	Slots int    `json:"slots"`
+	Type  string `json:"type,omitempty"`
 }
 
 // PickInputDTO is one pick: the catalogue id and the slots spent.
@@ -40,7 +44,7 @@ func (p *PicksDTO) Picks() skills.Picks {
 	if p.Weapon != nil {
 		out.Weapon = make([]skills.WeaponPick, 0, len(p.Weapon))
 		for _, x := range p.Weapon {
-			out.Weapon = append(out.Weapon, skills.WeaponPick{Type: x.Type, Slots: x.Slots})
+			out.Weapon = append(out.Weapon, skills.WeaponPick{Code: x.Code, Slots: x.Slots})
 		}
 	}
 	return out
@@ -53,15 +57,25 @@ type ProficiencySlotsDTO struct {
 	Weapon      WeaponPoolDTO    `json:"weapon"`
 	Picks       []PickDTO        `json:"picks"`
 	WeaponPicks []WeaponPickDTO  `json:"weaponPicks"`
-	// WeaponTypes are the weapon types the character may pick, with the slots a specialization
-	// of each spends (0 for none), ADR 0042 step 16.1. Additive.
-	WeaponTypes []WeaponTypeDTO `json:"weaponTypes"`
+	// Weapons are the catalogue weapons the character may pick, with the slots a specialization
+	// of each spends (0 for none), ADR 0042 step 16.1 as amended by ADR 0037 step 21.6, in offer
+	// order. It replaces weaponTypes.
+	Weapons []WeaponDTO `json:"weapons"`
+	// WeaponRedo are the weapon type picks left to redo (step 21.8.3), each also warned
+	// weapon_pick_to_redo.
+	WeaponRedo []WeaponRedoDTO `json:"weaponRedo"`
 }
 
-// WeaponTypeDTO is one pickable weapon type and its specialization cost.
-type WeaponTypeDTO struct {
-	Type                string `json:"type"`
+// WeaponDTO is one pickable catalogue weapon and its specialization cost.
+type WeaponDTO struct {
+	Code                string `json:"code"`
 	SpecializationSlots int    `json:"specializationSlots"`
+}
+
+// WeaponRedoDTO is one weapon type pick left to redo: the type and the slots it spent.
+type WeaponRedoDTO struct {
+	Type  string `json:"type"`
+	Slots int    `json:"slots"`
 }
 
 // WeaponPoolDTO is ADR 0037 step 3's weapon pool: `available` = `initial`
@@ -77,11 +91,11 @@ type WeaponPoolDTO struct {
 	Left        int `json:"left"`
 }
 
-// WeaponPickDTO is one weapon pick: the weapon type, the slots spent and
-// `allowed` false for a type the class may not pick (ADR 0037 step 7), kept
-// from older data but never added.
+// WeaponPickDTO is one weapon pick: the catalogue weapon code, the slots
+// spent and `allowed` false for a weapon the class may not pick (ADR 0037
+// step 21.2), kept from older data but never added.
 type WeaponPickDTO struct {
-	Type    string `json:"type"`
+	Code    string `json:"code"`
 	Slots   int    `json:"slots"`
 	Allowed bool   `json:"allowed"`
 }
@@ -130,9 +144,13 @@ func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 		NonWeapon: NonweaponPoolDTO(p.Nonweapon), Weapon: WeaponPoolDTO(p.Weapon),
 		Picks: make([]PickDTO, 0, len(p.Picks)), WeaponPicks: make([]WeaponPickDTO, 0, len(p.WeaponPicks)),
 	}
-	out.WeaponTypes = make([]WeaponTypeDTO, 0, len(p.WeaponTypes))
-	for _, w := range p.WeaponTypes {
-		out.WeaponTypes = append(out.WeaponTypes, WeaponTypeDTO(w))
+	out.Weapons = make([]WeaponDTO, 0, len(p.Weapons))
+	for _, w := range p.Weapons {
+		out.Weapons = append(out.Weapons, WeaponDTO(w))
+	}
+	out.WeaponRedo = make([]WeaponRedoDTO, 0, len(p.WeaponRedo))
+	for _, r := range p.WeaponRedo {
+		out.WeaponRedo = append(out.WeaponRedo, WeaponRedoDTO(r))
 	}
 	for _, w := range p.WeaponPicks {
 		out.WeaponPicks = append(out.WeaponPicks, WeaponPickDTO(w))

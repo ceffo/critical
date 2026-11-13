@@ -5,7 +5,7 @@ import { useCharacterStore } from "@/stores/character";
 import type {
   Character,
   ProficiencySlots,
-  WeaponTypeOption,
+  WeaponOption,
 } from "@/types/character";
 import { PickEditor } from "./PickEditor";
 
@@ -18,9 +18,9 @@ vi.mock("./pickEditor", async (orig) => ({
   schedulePreview: () => () => {},
 }));
 
-const LEAD = "A fighter may also specialize in one weapon type";
+const LEAD = "A fighter may also specialize in one weapon,";
 
-function slots(weaponTypes: WeaponTypeOption[]): ProficiencySlots {
+function slots(weapons: WeaponOption[]): ProficiencySlots {
   return {
     nonWeapon: {} as ProficiencySlots["nonWeapon"],
     picks: [],
@@ -32,8 +32,8 @@ function slots(weaponTypes: WeaponTypeOption[]): ProficiencySlots {
       spent: 2,
       left: 2,
     },
-    weaponPicks: [{ type: "long_sword", slots: 2, allowed: true }],
-    weaponTypes,
+    weaponPicks: [{ code: "long_sword", slots: 2, allowed: true }],
+    weapons,
   };
 }
 
@@ -67,8 +67,8 @@ describe("PickEditor's specialization lead", () => {
         race="human"
         languages={[]}
         slots={slots([
-          { type: "long_sword", specializationSlots: cost },
-          { type: "dagger", specializationSlots: cost },
+          { code: "long_sword", specializationSlots: cost },
+          { code: "dagger", specializationSlots: cost },
         ])}
         onDone={() => {}}
       />,

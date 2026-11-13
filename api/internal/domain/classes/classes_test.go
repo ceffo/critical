@@ -213,9 +213,9 @@ func TestEquipment_Step1_6_TheListsAnswerTheLimits(t *testing.T) {
 	assert.True(t, blunt.Limited())
 	assert.False(t, classes.Equipment{Shields: true}.Limited())
 
-	assert.True(t, classes.Equipment{PickTypes: []string{"dagger"}}.WeaponTypeAllowed("dagger"))
-	assert.False(t, classes.Equipment{PickTypes: []string{"dagger"}}.WeaponTypeAllowed("sling"))
-	assert.True(t, classes.Equipment{}.WeaponTypeAllowed("sling"), "no derived list: any type")
+	assert.True(t, classes.Equipment{PickCodes: []string{"dagger"}}.WeaponPickAllowed("dagger"))
+	assert.False(t, classes.Equipment{PickCodes: []string{"dagger"}}.WeaponPickAllowed("sling"))
+	assert.True(t, classes.Equipment{}.WeaponPickAllowed("sling"), "no derived list: any weapon")
 }
 
 // ADR 0040 step 8: a broken equipment list or race trait is refused at start.

@@ -20,6 +20,7 @@ import type { LogEntry } from "@/types/log";
 import type { LocalizedText } from "@/types/localized";
 import type { KindView } from "../kindView";
 import { skillName } from "../words";
+import { weaponName } from "@/lib/weaponNames";
 
 /** Payload of xp_add, xp_edit and xp_remove entries (xpsvc changeRecord). */
 interface XpPayload {
@@ -260,7 +261,8 @@ export const skillPointsKind: KindView<SkillPointsPayload> = {
 };
 
 /** Payload of a proficiencies entry (skillsvc picksRecord): each pool's picks before and after,
- * by id or weapon type and slots; `weapon` null for an entry logged before the weapon pool;
+ * by id, catalogue weapon code (`weapons`, ADR 0037 step 21.7) or, in an entry logged before, weapon
+ * type (`weapon`, `byType`), and slots; `weapon` null for an entry logged before the weapon pool;
  * `languages` the languages before and after (ADR 0037 step 18), null for an entry logged before
  * they moved to the Skills tab. */
 interface PicksPayload {
@@ -269,6 +271,7 @@ interface PicksPayload {
   weapon: {
     before: Record<string, number>;
     after: Record<string, number>;
+    byType: boolean;
   } | null;
   languages: { before: string[]; after: string[] } | null;
 }
@@ -277,6 +280,7 @@ type PickList =
   | {
       nonweapon?: { id: string; slots: number }[];
       weapon?: { type: string; slots: number }[];
+      weapons?: { code: string; slots: number }[];
       languages?: string[];
     }
   | undefined;
@@ -291,9 +295,11 @@ const bySlots = (l: PickList): Record<string, number> | null =>
     : null;
 
 const weaponBySlots = (l: PickList): Record<string, number> | null =>
-  l && Array.isArray(l.weapon)
-    ? Object.fromEntries(l.weapon.map((x) => [x.type, x.slots]))
-    : null;
+  l && Array.isArray(l.weapons)
+    ? Object.fromEntries(l.weapons.map((x) => [x.code, x.slots]))
+    : l && Array.isArray(l.weapon)
+      ? Object.fromEntries(l.weapon.map((x) => [x.type, x.slots]))
+      : null;
 
 /** The keys whose slots changed between before and after (0: none), in first-seen order. */
 const changed = (
@@ -318,7 +324,14 @@ export const proficienciesKind: KindView<PicksPayload> = {
     return {
       before,
       after,
-      weapon: wb || wa ? { before: wb ?? {}, after: wa ?? {} } : null,
+      weapon:
+        wb || wa
+          ? {
+              before: wb ?? {},
+              after: wa ?? {},
+              byType: !Array.isArray(p?.after?.weapons),
+            }
+          : null,
       languages:
         Array.isArray(lb) && Array.isArray(la)
           ? { before: lb, after: la }
@@ -359,7 +372,9 @@ export const proficienciesKind: KindView<PicksPayload> = {
             .map((k) => {
               const to = w.after[k] ?? 0;
               const args = {
-                name: t(`weapons.types.${k}`, { defaultValue: k }),
+                name: w.byType
+                  ? t(`weapons.types.${k}`, { defaultValue: k })
+                  : weaponName(t, k),
                 from: w.before[k] ?? 0,
                 to,
               };

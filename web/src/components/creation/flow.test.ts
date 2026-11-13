@@ -110,18 +110,18 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
     let d: FlowDraft = { ...EMPTY_DRAFT, cls: "fighter" };
     d = mergeDraft(d, {
       picks: [{ id: "tumbling", slots: 1 }],
-      weaponPicks: [{ type: "long_sword", slots: 2 }],
+      weaponPicks: [{ code: "long_sword", slots: 2 }],
     });
     d = mergeDraft(d, { cls: "fighter" }); // the same class again keeps them
     expect(d.picks).toEqual([{ id: "tumbling", slots: 1 }]);
     d = mergeDraft(d, { level: 2 }); // any other change keeps them
-    expect(d.weaponPicks).toEqual([{ type: "long_sword", slots: 2 }]);
+    expect(d.weaponPicks).toEqual([{ code: "long_sword", slots: 2 }]);
     expect(
       buildBody({ classes: [] } as unknown as CreationOptions, d, "0", "fr")
         .body.proficiencies,
     ).toEqual({
       nonweapon: [{ id: "tumbling", slots: 1 }],
-      weapon: [{ type: "long_sword", slots: 2 }],
+      weapon: [{ code: "long_sword", slots: 2 }],
     });
     // A specialization or a weapon type may not be the new class's (ADR 0037 steps 7 and 9).
     d = mergeDraft(d, { cls: "mage" });
@@ -312,12 +312,12 @@ describe("buildBody", () => {
     expect(none.body.proficiencies).toBeUndefined();
     const weapons = buildBody(
       options,
-      { ...draft, weaponPicks: [{ type: "dagger", slots: 1 }] },
+      { ...draft, weaponPicks: [{ code: "dagger", slots: 1 }] },
       "2500",
       "en",
     );
     expect(weapons.body.proficiencies).toEqual({
-      weapon: [{ type: "dagger", slots: 1 }],
+      weapon: [{ code: "dagger", slots: 1 }],
     });
   });
 });

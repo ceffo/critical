@@ -31,11 +31,11 @@
   { "id": "local_history", "slots": 1 }
  ],
  "weapon_proficiencies": [
-  { "type": "short_bow", "slots": 1 },
-  { "type": "dagger", "slots": 1 },
-  { "type": "dart", "slots": 1 },
-  { "type": "long_sword", "slots": 1 },
-  { "type": "other_melee", "slots": 1 }
+  { "code": "short_bow", "slots": 1 },
+  { "code": "dagger", "slots": 1 },
+  { "code": "dart", "slots": 1 },
+  { "code": "long_sword", "slots": 1 },
+  { "code": "bastard_sword_two_handed", "slots": 1 }
  ],
  "slots": []
 }

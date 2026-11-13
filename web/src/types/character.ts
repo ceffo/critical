@@ -247,19 +247,27 @@ export interface WeaponPool {
   left: number;
 }
 
-/** One weapon pick (ADR 0037 steps 7 and 9): the weapon type and the slots spent (1, or the
- * specialization's cost); `allowed` false for a kept type the class may not pick. */
+/** One weapon pick (ADR 0037 step 21.1): the catalogue weapon code and the slots spent (1, or the
+ * specialization's cost, its type's); `allowed` false for a kept weapon the class may not pick. */
 export interface WeaponPickFigures {
-  type: string;
+  code: string;
   slots: number;
   allowed: boolean;
 }
 
-/** One weapon type a class may pick and its specialization's slots (0: the class does not
- * specialize), from the creation options. */
-export interface WeaponTypeOption {
-  type: string;
+/** One catalogue weapon a class may pick and its specialization's slots (0: the class does not
+ * specialize), from the creation options or the derived figures (ADR 0037 step 21.6). */
+export interface WeaponOption {
+  code: string;
   specializationSlots: number;
+}
+
+/** A weapon type pick the migration to weapon codes found no owned weapon for (ADR 0037 step
+ * 21.8.3): listed for the player to redo, its slots back to spend; also warned
+ * `weapon_pick_to_redo`. */
+export interface WeaponRedo {
+  type: string;
+  slots: number;
 }
 
 /** The slot pools and the picks' figures (`derived.proficiencySlots`). */
@@ -269,13 +277,16 @@ export interface ProficiencySlots {
   /** Absent from a release before the weapon pool. */
   weapon?: WeaponPool;
   weaponPicks?: WeaponPickFigures[];
-  /** The weapon types the character may pick now, the server's rule (ADR 0042 step 16.1). */
-  weaponTypes?: WeaponTypeOption[];
+  /** The catalogue weapons the character may pick now, the server's rule (ADR 0042 step 16.1 as
+   * amended by ADR 0037 step 21.6), in offer order. */
+  weapons?: WeaponOption[];
+  /** The weapon type picks left to redo (ADR 0037 step 21.8.3). */
+  weaponRedo?: WeaponRedo[];
 }
 
-/** One weapon pick as sent: the weapon type and its slots. */
+/** One weapon pick as sent: the catalogue weapon code and its slots. */
 export interface WeaponPickInput {
-  type: string;
+  code: string;
   slots: number;
 }
 
@@ -472,6 +483,10 @@ export interface Character {
     /** ADR 0042 step 7: `level_limit` (field `level`) names the class entry above the race's
      * limit, its level in `value` and the limit in `max`. */
     class?: string;
+    /** ADR 0037 step 21.8.3: `weapon_pick_to_redo` (field `weapon.<type>`) names the weapon type
+     * left to redo and the slots it spent. */
+    type?: string;
+    slots?: number;
   }[];
 }
 
@@ -583,10 +598,10 @@ export interface CreationOptions {
     levelXp?: LevelXp[];
     /** The class's ability minimums (PHB Table 13), shown on its card and not enforced; absent from an older release. */
     minimums?: { ability: string; min: number }[];
-    /** ADR 0037 steps 7 and 9: the weapon types the class may pick, in display order, each with
-     * the slots its specialization spends in all (0: the class does not specialize). Absent from
-     * an older release. */
-    weaponTypes?: WeaponTypeOption[];
+    /** ADR 0037 steps 21.2 and 21.6: the catalogue weapons the class may pick, in offer order,
+     * each with the slots its specialization spends in all (0: the class does not specialize).
+     * Absent from an older release. */
+    weapons?: WeaponOption[];
     /** ADR 0030 step 20.7: the class's starting spellbook, `startingSpells` the spells it is
      * offered pre-ticked (removable); null for a class without a spellbook, absent from an older
      * release. */

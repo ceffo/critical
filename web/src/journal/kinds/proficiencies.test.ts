@@ -25,6 +25,16 @@ describeKind("proficiencies", fixtures, {
       text: "Emplacements de compétence : Pistage 0 → 2 · Emplacements de maîtrise d’arme : Épée longue 1 → 2 (spécialisation)",
     },
   },
+  // ADR 0037 step 21.7: picks by catalogue code, named from the equipment catalogue (the code
+  // when it is not loaded, the type's word when the code is a type's).
+  weaponCodes: {
+    en: {
+      text: "Weapon proficiency slots: Long sword 1 → 2 (specialization), heavy_horse_lance 0 → 1",
+    },
+    fr: {
+      text: "Emplacements de maîtrise d’arme : Épée longue 1 → 2 (spécialisation), heavy_horse_lance 0 → 1",
+    },
+  },
   languages: {
     en: { text: "Proficiency slots: Tumbling 1 → 2 · Languages: + gnomish" },
     fr: {

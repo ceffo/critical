@@ -7,15 +7,25 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
-// picksJSON is the stored form of characters.proficiency_picks (migrations 025 and 026): an
-// object by pool, {"nonweapon": [{"id", "slots"}], "weapon": [{"type", "slots"}]}; an absent pool
-// is none, '{}' no pick at all. Add pools, never rename.
+// picksJSON is the stored form of characters.proficiency_picks (migrations 025, 026 and 042): an
+// object by pool, {"nonweapon": [{"id", "slots"}], "weapon": [{"code", "slots"}]}, and the type
+// picks left to redo, "weapon_redo": [{"type", "slots"}] (ADR 0037 step 21.8.3); an absent pool
+// is none, '{}' no pick at all. Before migration 042 a weapon pick was {"type", "slots"}: the
+// migration's data step turns those into codes; one read after it (written by the release before,
+// in a rolling deploy) is read as a type pick to redo, never as a weapon. Add pools, never rename.
 type picksJSON struct {
-	Nonweapon []pickJSON       `json:"nonweapon,omitempty"`
-	Weapon    []weaponPickJSON `json:"weapon,omitempty"`
+	Nonweapon  []pickJSON       `json:"nonweapon,omitempty"`
+	Weapon     []weaponPickJSON `json:"weapon,omitempty"`
+	WeaponRedo []weaponRedoJSON `json:"weapon_redo,omitempty"`
 }
 
 type weaponPickJSON struct {
+	Code  string `json:"code,omitempty"`
+	Type  string `json:"type,omitempty"`
+	Slots int    `json:"slots"`
+}
+
+type weaponRedoJSON struct {
 	Type  string `json:"type"`
 	Slots int    `json:"slots"`
 }
@@ -33,7 +43,10 @@ func EncodePicks(p skills.Picks) (string, error) {
 		out.Nonweapon = append(out.Nonweapon, pickJSON(x))
 	}
 	for _, x := range p.Weapon {
-		out.Weapon = append(out.Weapon, weaponPickJSON(x))
+		out.Weapon = append(out.Weapon, weaponPickJSON{Code: x.Code, Slots: x.Slots})
+	}
+	for _, x := range p.WeaponRedo {
+		out.WeaponRedo = append(out.WeaponRedo, weaponRedoJSON(x))
 	}
 	raw, err := json.Marshal(out)
 	if err != nil {
@@ -55,7 +68,15 @@ func DecodePicks(raw string) (skills.Picks, error) {
 		out.Nonweapon = append(out.Nonweapon, skills.Pick(x))
 	}
 	for _, x := range in.Weapon {
-		out.Weapon = append(out.Weapon, skills.WeaponPick(x))
+		if x.Code == "" && x.Type != "" {
+			// A type pick of the older form (ADR 0037 step 21.8.3): to redo.
+			out.WeaponRedo = append(out.WeaponRedo, skills.WeaponRedo{Type: x.Type, Slots: x.Slots})
+			continue
+		}
+		out.Weapon = append(out.Weapon, skills.WeaponPick{Code: x.Code, Slots: x.Slots})
+	}
+	for _, x := range in.WeaponRedo {
+		out.WeaponRedo = append(out.WeaponRedo, skills.WeaponRedo(x))
 	}
 	return out, nil
 }

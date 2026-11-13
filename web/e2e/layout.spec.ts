@@ -2050,9 +2050,13 @@ async function nonProficiencyStep(page: Page, size: Viewport) {
 
   expect(
     await call("PUT", "/api/proficiencies", {
-      weapon: ["short_bow", "dagger", "dart", "sling", "other_melee"].map(
-        (type) => ({ type, slots: 1 }),
-      ),
+      weapon: [
+        "short_bow",
+        "dagger",
+        "dart",
+        "sling",
+        "bastard_sword_two_handed",
+      ].map((code) => ({ code, slots: 1 })),
     }),
   ).toBe(true);
   expect(
@@ -2080,8 +2084,10 @@ async function nonProficiencyStep(page: Page, size: Viewport) {
   const penalty = card
     .getByTestId("to-hit-modifiers")
     .getByRole("listitem")
-    .filter({ hasText: "Non-proficiency (Long sword)" });
-  await expect(penalty).toHaveText(/Non-proficiency \(Long sword\)\s*−3/);
+    .filter({ hasText: "Non-proficiency (Fixture long sword)" });
+  await expect(penalty).toHaveText(
+    /Non-proficiency \(Fixture long sword\)\s*−3/,
+  );
   // The journal's entry opens in the same Detail view: its row is the selected one.
   await expect(
     combatLog(page)
@@ -2089,19 +2095,18 @@ async function nonProficiencyStep(page: Page, size: Viewport) {
       .first(),
   ).toHaveAttribute("aria-pressed", "true");
 
-  // The typeless homebrew weapon: wielded, tagged, no penalty in its preview.
+  // The homebrew weapon has no catalogue code (ADR 0037 step 21.4): wielded, tagged, and
+  // non-proficient in its preview.
   await chooseWeapon(page, "Homebrew cudgel");
   const missing =
-    '[data-testid="class-warning"][data-code="weapon_type_missing"]';
+    '[data-testid="class-warning"][data-code="weapon_code_missing"]';
   await expect(attackForm(page).locator(missing)).toHaveText(
-    "No weapon type: weapon proficiency not checked",
+    "No catalogue weapon: not proficient until you set its row",
   );
   const form = (await (await page.request.get("/api/attack/form")).json()) as {
     preview: { modifiers: { kind: string }[] };
   };
-  expect(form.preview.modifiers.map((m) => m.kind)).not.toContain(
-    "nonproficient",
-  );
+  expect(form.preview.modifiers.map((m) => m.kind)).toContain("nonproficient");
 
   const rail = page.getByTestId("rail").getByRole("button");
   for (const lang of ["en", "fr"] as const) {
@@ -2112,12 +2117,12 @@ async function nonProficiencyStep(page: Page, size: Viewport) {
     const words =
       lang === "fr"
         ? [
-            "Non-maîtrise (Épée longue)",
-            "Sans type d'arme : compétence martiale non vérifiée",
+            "Non-maîtrise (Banc d'essai long sword)",
+            "Arme hors catalogue : non maîtrisée tant que sa ligne n'est pas choisie",
           ]
         : [
-            "Non-proficiency (Long sword)",
-            "No weapon type: weapon proficiency not checked",
+            "Non-proficiency (Fixture long sword)",
+            "No catalogue weapon: not proficient until you set its row",
           ];
     for (const vp of sizesAt(size, [
       { width: 1920, height: 1080 },
@@ -2204,7 +2209,10 @@ async function classWarningsStep(page: Page, size: Viewport) {
     {
       id: "great_claymore",
       state: "wielded",
+      // Picked from a catalogue row, so the class limits alone are warned (a weapon with no
+      // code also carries weapon_code_missing, ADR 0037 step 21.4: the non-proficiency step).
       body: {
+        catalogueCode: "two_handed_sword",
         name: { en: "Great claymore", fr: "Grande claymore à deux mains" },
         category: "weapon",
         damageSm: "1d10",
@@ -4214,8 +4222,9 @@ async function creationStep(page: Page, size: Viewport) {
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
     // The review lists the proficiencies the step picked and the summary beside it is gone: no
     // fact shows twice.
+    // Named from the equipment catalogue (ADR 0037 step 21.6): the fixture's placeholder name.
     await expect(step.getByTestId("review-weapon-picks")).toContainText(
-      tr("Épée longue", "Long sword"),
+      tr("Banc d'essai long sword", "Fixture long sword"),
     );
     await expect(step.getByTestId("review-proficiency-picks")).toContainText(
       tr("Soins", "Healing"),
@@ -4629,11 +4638,13 @@ async function fighterStep(page: Page, size: Viewport) {
   // lands in the middle of the calls below.
   await reloadSettled(page);
   await expect(page.getByText("Borin Gueule-de-Fer").first()).toBeVisible();
-  // Weapon pieces (ADR 0033 step 1), equipped to be held (step 6).
+  // Weapon pieces (ADR 0033 step 1), equipped to be held (step 6), picked from their catalogue
+  // rows: a weapon pick names the row's code (ADR 0037 step 21.1).
   for (const [id, w] of [
     [
       "long_sword",
       {
+        catalogueCode: "long_sword",
         name: { en: "Long Sword", fr: "Épée longue" },
         category: "weapon",
         behaviour: "stock",
@@ -4647,6 +4658,7 @@ async function fighterStep(page: Page, size: Viewport) {
     [
       "heavy_crossbow",
       {
+        catalogueCode: "heavy_crossbow",
         name: { en: "Heavy Crossbow", fr: "Arbalète lourde" },
         category: "weapon",
         behaviour: "stock",
@@ -4668,8 +4680,8 @@ async function fighterStep(page: Page, size: Viewport) {
   expect(
     await call("PUT", "/api/proficiencies", {
       weapon: [
-        { type: "long_sword", slots: 1 },
-        { type: "heavy_crossbow", slots: 2 },
+        { code: "long_sword", slots: 1 },
+        { code: "heavy_crossbow", slots: 2 },
       ],
     }),
   ).toBe(true);

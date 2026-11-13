@@ -72,7 +72,9 @@ test("fighter: pick and specialize in the editor, Undo from the journal, tags fo
   await snap(page, "weapon-editor-dark");
   await editor.getByTestId("weapon-save").click();
   await expect(editor).toBeHidden();
-  const entry = "Weapon proficiency slots: Long sword 0 → 2 (specialization)";
+  // A pick is a catalogue weapon (ADR 0037 step 21.6), named from the equipment catalogue.
+  const entry =
+    "Weapon proficiency slots: Fixture long sword 0 → 2 (specialization)";
   await expectUndoOn(page, entry);
 
   // The tags followed the save with no reload.
@@ -88,7 +90,7 @@ test("fighter: pick and specialize in the editor, Undo from the journal, tags fo
   // The journal words the entry in French.
   await chooseLanguage(page, "fr");
   const undo = page.getByTestId("undo");
-  await expect(undo).toHaveAttribute("title", /Long sword|Épée longue/);
+  await expect(undo).toHaveAttribute("title", /Banc d'essai long sword/);
   await expect(undo).toHaveAttribute("title", /spécialisation/);
   await snap(page, "journal-fr-specialization");
   await chooseLanguage(page, "en");

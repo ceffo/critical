@@ -1,0 +1,19 @@
+-- A weapon proficiency pick names a catalogue weapon, not a weapon type (ADR 0037 step 21.1).
+--
+-- A data step run just after this file (pickOwnedWeapons, ADR 0037 step 21.8) turns each stored
+-- type pick {"type", "slots"} of characters.proficiency_picks into picks {"code", "slots"} of the
+-- character's own weapons of that type (its weapon items, in any state, whose catalogue row is of
+-- the type), in list order; a specialization goes to the first of them. A type pick with no owned
+-- weapon of the type, or whose type is no weapon type, gives no pick: it is listed under
+-- "weapon_redo" [{"type", "slots"}] for the player to redo, its slots back to spend. A character
+-- whose weapon picks are already codes is left as it is, so a second run changes nothing. Nothing
+-- is refused: a character left over budget sees the warning. The action log is not rewritten.
+--
+-- Not additive for a rolling deploy (ADR 0024 step 5.2), as migration 026 was not for the weapon
+-- pool: in the minutes both releases run, the older one reads a code pick as a pick of no type (its
+-- attacks show the non-proficiency penalty) and a weapon save of its own writes type picks again.
+-- The newer release reads such a type pick as one to redo (characterdal.DecodePicks), never as a
+-- weapon, so the player redoes it. Rolling back past this migration restores the dump taken before
+-- it (ADR 0024 step 6.1). Schema only (ADR 0025 step 2.2): this file only documents the column the
+-- step writes.
+COMMENT ON COLUMN characters.proficiency_picks IS 'proficiency picks by pool (ADR 0037 steps 12 and 21): {"nonweapon": [{"id", "slots"}], "weapon": [{"code", "slots"}], "weapon_redo": [{"type", "slots"}]}';

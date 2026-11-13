@@ -243,6 +243,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err != nil {
 		return nil, err
 	}
+	// ADR 0037 step 21.1: a weapon pick names a catalogue weapon.
+	if proficiencies, err = proficiencies.WithWeapons(equipment.PickWeapons()); err != nil {
+		return nil, err
+	}
 	if err := checkProficiencyDescriptions(cat, proficiencies); err != nil {
 		return nil, err
 	}

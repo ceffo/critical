@@ -230,6 +230,12 @@ type Derived struct {
 	// RaceSaveBonus is step 22.1: the race's bonus per category, a named
 	// modifier on the roll (0: none), never a change of the target.
 	RaceSaveBonus Saves
+	// RaceToHitTypes and RaceToHitBonus are step 22.3: the race's
+	// weapon_to_hit trait (ADR 0040 step 4), the weapon types its to-hit
+	// bonus applies to and the bonus, a named modifier on the attack (nil
+	// and 0: none). To hit only, never damage.
+	RaceToHitTypes []string
+	RaceToHitBonus int
 	// DexMissile and DexDefence are PHB Table 2's two columns at the sheet's
 	// Dexterity (ADR 0046 step 2.1): the missile attack adjustment and the
 	// defensive (armour class) adjustment, read once here.

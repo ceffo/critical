@@ -56,6 +56,27 @@ var bowAndCrossbowTypes = []string{
 	itemsvc.TypeLightCrossbow, itemsvc.TypeHeavyCrossbow, itemsvc.TypeHandCrossbow,
 }
 
+// thrownTypes are the weapon types (ADR 0030 step 23) of the weapons made to
+// be hurled: a race's to-hit bonus listing one counts it only on a hurled
+// attack (raceToHit).
+var thrownTypes = []string{itemsvc.TypeDagger, itemsvc.TypeDart, itemsvc.TypeOtherThrown}
+
+// raceToHit is ADR 0030 step 22.3: the race's weapon_to_hit bonus
+// (View.RaceToHitBonus, ADR 0040 step 4) when the weapon's type is one the
+// trait lists, never read from the weapon's name; 0 otherwise or for a weapon
+// without a type. A thrown type counts only hurled, as a missile piece (ADR
+// 0016 step 8): PHB chapter 2 gives the bonus "when using thrown weapons", and
+// a dagger in melee is not thrown.
+func raceToHit(char charactersvc.View, weapon Weapon) int {
+	if weapon.Type == "" || !slices.Contains(char.RaceToHitTypes, weapon.Type) {
+		return 0
+	}
+	if slices.Contains(thrownTypes, weapon.Type) && weapon.Kind != WeaponMissile {
+		return 0
+	}
+	return char.RaceToHitBonus
+}
+
 // PointBlankAllowed reports whether an attack with weapon may take the
 // point-blank option (ADR 0030 step 12): a specialized bow or crossbow, by
 // its weapon type.
@@ -72,7 +93,7 @@ func BackstabAllowed(char charactersvc.View, weapon Weapon) bool {
 
 // attackModifiers lists the to-hit modifiers in the order of ADR 0002 steps
 // 4 to 9 (Strength, Dexterity, weapon or buff "+N", ammunition, buffs,
-// situational), weapon specialization after the weapon's magic (ADR 0030
+// situational), the race's bonus after Dexterity (ADR 0030 step 22.3), weapon specialization after the weapon's magic (ADR 0030
 // step 12), the backstab after it (step 19) and the non-proficiency penalty
 // between the buffs and the situational modifier (ADR 0037 step 8). A nil or zero situational
 // adds nothing. opt.pointBlank is the point-blank option, ErrInvalidInput for
@@ -111,6 +132,11 @@ func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *i
 	// missile attack, bow or hurled.
 	if weapon.Kind == WeaponMissile {
 		add(Modifier{Kind: ModDexterity, Detail: strconv.Itoa(char.Dex), Value: char.DexMissile})
+	}
+	// ADR 0030 step 22.3: the race's bonus with the weapon's type, a named
+	// modifier (Detail the race code), not magical, to hit only.
+	if b := raceToHit(char, weapon); b != 0 {
+		add(Modifier{Kind: ModRace, Detail: char.Race, Value: b})
 	}
 
 	// ADR 0002 step 6: weapon magic, the weapon's own +N, or a buff or an

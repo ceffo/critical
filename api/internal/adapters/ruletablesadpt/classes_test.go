@@ -154,8 +154,9 @@ func TestDefinitions_Step1_6_TheEquipmentListsMap(t *testing.T) {
 
 // ADR 0040 steps 2 and 4: the six races carry their traits and PHB Tables 10 and 11 rows. Expected
 // values are the book's: the dwarf's, gnome's and halfling's Constitution saves (Table 9, PHB
-// chapter 2) and the halfling's lack of an exceptional Strength (Table 7 note); the human has no
-// trait.
+// chapter 2), the halfling's lack of an exceptional Strength (Table 7 note) and the elf's and
+// halfling's to-hit bonus by weapon type (ADR 0030 step 22.3: PHB chapter 2, Elves and Halflings);
+// the human has no trait.
 func TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows(t *testing.T) {
 	defs, err := phb(t).Definitions()
 	require.NoError(t, err)
@@ -167,9 +168,24 @@ func TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows(t *testing.T
 		}
 	}
 	assert.Equal(t, map[string][]string{
-		"dwarf": {classes.TraitConSaveBonus}, "gnome": {classes.TraitConSaveBonus},
-		"halfling": {classes.TraitConSaveBonus, classes.TraitNoExceptionalStrength},
+		"dwarf": {classes.TraitConSaveBonus}, "elf": {classes.TraitWeaponToHit}, "gnome": {classes.TraitConSaveBonus},
+		"halfling": {classes.TraitConSaveBonus, classes.TraitNoExceptionalStrength, classes.TraitWeaponToHit},
 	}, kinds)
+	for _, tc := range []struct {
+		race  string
+		types []string
+	}{
+		// Bows of any sort but crossbows (composite ones are long_bow and short_bow), short and long swords.
+		{"elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}},
+		// Slings and thrown weapons (the hurled types; a melee dagger is judged at the attack).
+		{"halfling", []string{"sling", "dagger", "dart", "other_thrown"}},
+	} {
+		r, _ := defs.Race(tc.race)
+		tr, ok := r.Trait(classes.TraitWeaponToHit)
+		require.True(t, ok, tc.race)
+		assert.Equal(t, tc.types, tr.WeaponTypes, tc.race)
+		assert.Equal(t, 1, tr.Bonus, tc.race)
+	}
 	gnome, _ := defs.Race("gnome")
 	tr, ok := gnome.Trait(classes.TraitConSaveBonus)
 	require.True(t, ok)

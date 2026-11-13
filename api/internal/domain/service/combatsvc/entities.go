@@ -20,7 +20,7 @@ const (
 	ModAmmoMagic   ModifierKind = "ammo_magic"   // the arrow's +N, Detail = ammo name, ItemID = the ammo item
 	ModBuff        ModifierKind = "buff"         // a buff's or item power's to-hit/damage/save bonus, Detail = buff (or item) name
 	ModSituational ModifierKind = "situational"  // entered at the table, Detail = its label
-	ModRace        ModifierKind = saves.TermRace // the race's save bonus (ADR 0030 step 22.1), Detail = the race code
+	ModRace        ModifierKind = saves.TermRace // the race's save bonus (ADR 0030 step 22.1) or to-hit bonus (step 22.3), Detail = the race code
 	// ModWisdom is PHB Table 5's magical defence adjustment (ADR 0006 step 9.4) on a save flagged
 	// as against magic that attacks the mind; Detail is the Wisdom score.
 	ModWisdom ModifierKind = saves.TermWisdom

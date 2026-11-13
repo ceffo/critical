@@ -116,6 +116,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
       `blunt_only`, when a catalogue weapon of the type deals bludgeoning damage, a launcher by its
       ammunition), which is what seedcheck proves today: the second Go list goes.
    _(As built in format 11, class equipment names catalogue weapons only: the importer checks that every `weapons` code is in the equipment's weapons with the same `weapon_type`, and every `weapon_types` entry is a type of some weapon. The thief's lasso is in no catalogue weapon, so it is dropped from the class data; Go's classwarn list kept it until the equipment limits moved onto the data (step 11, as built), which loses it.)_
+   _(Amended 2026-11-13 by [ADR 0037](0037-proficiencies.md) step 21.2, on implementation: a weapon pick names a catalogue weapon, so what is derived from `equipment` is the **weapons** a class may pick, by the wielding rule itself (`Equipment.AllowsWeapon` on each catalogue row), in place of the types: `Equipment.PickCodes` replaces `PickTypes`. The `equipment` data is unchanged.)_
    7. `experience`: the class's XP thresholds, rows `{level, xp}` inside the class entry (the class is the
       entry's; PHB Tables 14, 20, 23, 25), replacing the column per class.
    8. `hit_dice`: `{die, dice_levels, after}` and the Constitution column (`warrior` or
@@ -541,6 +542,7 @@ flowchart LR
     (`Proficiencies.SpecializationCostedAt`: some catalogue class costs that type at that count). The start-up check sits in `ruletablesadpt/classtables.go`;
     it also refuses a type's `column` that is no Table 35 weapon and a type's `slots` under 1. `WeaponSpecialization_Step13_TheFighterKeepsTodaysNumbers` asserts the fighter's slots and rates; the
     composition golden is unchanged.)_
+    _(Noted 2026-11-13 for [ADR 0037](0037-proficiencies.md) step 21.5, on implementation: the specialization now names one catalogue weapon, and the `types` params stay keyed by **weapon type**, valid as they are: the cost and the Table 35 column of a specialization are read from the specialized weapon's catalogue type (`SlotsFor` and `ColumnFor` on that type), so a composite long bow costs and fires as a long bow. `WeaponPick.IsSpecializationOf` reads the type from the pick's catalogue row; no params, format or start-up check changes.)_
 
 14. **The catalogue format.** Steps 12 and 13 change the artifact, so the catalogue **bumps to the next
     format number** (the supervisor allots it; the API then reads that format only, as

@@ -426,9 +426,17 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    ability's name is a language map stored inside the JSON list (as the snapshots already hold names),
    its note and a dice effect's label are plain typed text. "A `with_item` ability needs a quantity" is
    read as: refused on a piece whose quantity is no stock (a weapon, armour, shield, ring, rod, staff,
-   wand or misc item); `per_day` and `charges` are refused unless the count is 1. A snapshot with no
-   `abilities` key (every one written before this slice, and one of an unconverted item) restores the
-   item as not converted; step 20's conversion of old snapshots is slice 2.
+   wand or misc item); `per_day` and `charges` are refused above a count of 1 (a one-object piece
+   spent to 0 keeps its ability and stays editable). The list is bounded (20 abilities, 10 effects an
+   ability, 100 characters a name per language and a label, 2000 a note) because it is copied into
+   every snapshot and log entry. A snapshot with no `abilities` key (every one written before this
+   slice, and one of an unconverted item) restores the item as not converted, not as "keep the
+   current" as powers do; step 20's conversion of old snapshots is slice 2, and its boot conversion
+   must go through `keepCurrent` or an undo of an old entry would strip the converted abilities.
+   A stored row reads with unknown keys ignored (a rollback past a later slice still reads it); the
+   wire stays strict. **Amends ADR 0023 step 2** for this data: the ability's name is a language map
+   stored inside the item's JSON, not a keyed row, as snapshots already inline an item's name; keyed
+   rows would need a lifecycle and garbage collection under undo. Revisit if catalogue abilities appear.
 2. **The conversion.** The pure function, the boot step, the review reasons, the snapshot restorer for
    old shapes, the seed in the new shape, the Power Gem's name (steps 18 to 20, 23). Needs 1.
 3. **Use of an ability.** The endpoint, the limit payment, the `dice` effect, the logged entry and its

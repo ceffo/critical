@@ -63,6 +63,23 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		return p
 	}
 
+	tooMany := func() itemsvc.Item {
+		p := rope
+		for n := 0; n <= itemsvc.MaxAbilities; n++ {
+			p.Abilities = append(p.Abilities, unlimited("a"+strings.Repeat("b", n)))
+		}
+		return p
+	}
+	manyEffects := func() itemsvc.Ability {
+		a := unlimited("a")
+		for n := 0; n <= itemsvc.MaxAbilityEffects; n++ {
+			a.Effects = append(a.Effects, itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d6"})
+		}
+		return a
+	}
+	spent := wand
+	spent.Count = 0
+
 	refused := map[string]itemsvc.Item{
 		// Step 4.
 		"an id that is no slug":             withAbility(rope, unlimited("Turn Zombies")),
@@ -70,6 +87,10 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"a duplicate id":                    two("climb", "climb"),
 		"a name in an unknown language":     withAbility(rope, itemsvc.Ability{ID: "a", Name: localized.Text{"xx": "Climb"}, Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}),
 		"a note too long":                   withAbility(rope, itemsvc.Ability{ID: "a", Note: strings.Repeat("x", itemsvc.MaxAbilityNote+1), Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}),
+		"too many abilities":                tooMany(),
+		"too many effects":                  withAbility(rope, manyEffects()),
+		"a name too long":                   withAbility(rope, itemsvc.Ability{ID: "a", Name: localized.Text{"en": strings.Repeat("x", itemsvc.MaxAbilityName+1)}, Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}),
+		"a label too long":                  withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d6", Label: strings.Repeat("x", itemsvc.MaxEffectLabel+1)})),
 		"per_day on a stack of 3":           withAbility(rope, perDay(1, 1)),
 		"charges on a stack of 3":           withAbility(rope, charges(5, 5, 1)),
 		"with_item on a wand (no quantity)": withAbility(wand, itemsvc.Ability{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}}),
@@ -105,10 +126,19 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 	}
 
 	accepted := map[string]itemsvc.Item{
-		"none (not converted)":      rope,
-		"an empty list":             {ID: "r", Name: localized.Of("Rope"), Category: itemsvc.CategoryGear, State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourStock, Count: 3, MaxCount: 3, Abilities: []itemsvc.Ability{}},
-		"an unlimited, no effect":   withAbility(rope, unlimited("climb")),
-		"per_day on a one object":   withAbility(wand, perDay(1, 0)),
+		"none (not converted)":     rope,
+		"an empty list":            {ID: "r", Name: localized.Of("Rope"), Category: itemsvc.CategoryGear, State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourStock, Count: 3, MaxCount: 3, Abilities: []itemsvc.Ability{}},
+		"an unlimited, no effect":  withAbility(rope, unlimited("climb")),
+		"per_day on a one object":  withAbility(wand, perDay(1, 0)),
+		"per_day on a spent piece": withAbility(spent, perDay(1, 0)),
+		"charges on a spent piece": withAbility(spent, charges(5, 0, 1)),
+		"the most abilities": func() itemsvc.Item {
+			p := rope
+			for n := 0; n < itemsvc.MaxAbilities; n++ {
+				p.Abilities = append(p.Abilities, unlimited("a"+strings.Repeat("b", n)))
+			}
+			return p
+		}(),
 		"per_day 99":                withAbility(wand, perDay(99, 99)),
 		"charges at their bounds":   withAbility(wand, charges(100, 0, 100)),
 		"with_item on a potion":     withAbility(potion, itemsvc.Ability{ID: "drink", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}}),
@@ -226,6 +256,25 @@ func TestRestore_ADR0049Step4_SnapshotWithoutAbilitiesRestoresNotConverted(t *te
 	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, old))
 }
 
+// ADR 0049 step 4: an edit of a one-object piece spent to 0 that carries a per_day ability is
+// accepted (the stock "spend one" can take it there); the same piece at 2 is refused.
+func TestUpdate_ADR0049Step4_SpentPieceWithPerDayStaysEditable(t *testing.T) {
+	ring := itemsvc.Item{
+		ID: "ring", Name: localized.Of("Ring"), Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicRing,
+		State: itemsvc.StateCarried, Behaviour: itemsvc.BehaviourStock, Count: 0, MaxCount: 1,
+		Abilities: []itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: 0}}},
+	}
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Get(mock.Anything, int64(1), "ring").Return(ring, nil)
+	dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil).Once()
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil).Once()
+	notes := "cursed"
+	_, err := svc.Update(context.Background(), 1, "ring", itemsvc.ItemPatch{Notes: &notes})
+	require.NoError(t, err)
+}
+
 // ADR 0049 step 18: the stored encoding tells "not converted" (NULL, nil) from "converted with
 // none" ("[]", empty) and reads every field back; an unknown key is refused.
 func TestAbilities_ADR0049Step18_StoredEncodingRoundTrips(t *testing.T) {
@@ -257,6 +306,47 @@ func TestAbilities_ADR0049Step18_StoredEncodingRoundTrips(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, full, got)
 
-	_, err = itemsvc.DecodeAbilities(`[{"id":"a","limit":{"kind":"unlimited"},"effects":[],"bogus":1}]`, true)
+	// A key a later slice wrote is ignored on read (a rollback must still read the row).
+	got, err = itemsvc.DecodeAbilities(`[{"id":"a","limit":{"kind":"unlimited"},"effects":[],"heal":1}]`, true)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	assert.Equal(t, "a", got[0].ID)
+	_, err = itemsvc.DecodeAbilities(`not json`, true)
 	require.Error(t, err)
+}
+
+// ADR 0049 step 18: an item not converted (NULL) patched with [] becomes converted-with-none, and
+// popping that edit restores NULL (nil), not an empty list; a patch without abilities (null on the
+// wire) leaves the column as it is.
+func TestUpdate_ADR0049Step18_NullToEmptyAndUndoBackToNull(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Get(mock.Anything, int64(1), "rope").Return(rope, nil).Twice()
+	empty := rope
+	empty.Abilities = []itemsvc.Ability{}
+	dal.EXPECT().Update(mock.Anything, int64(1), empty).Return(nil).Once()
+	var got actionlog.NewEntry
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(7), nil).Once()
+	none := []itemsvc.Ability{}
+	res, err := svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Abilities: &none})
+	require.NoError(t, err)
+	assert.NotNil(t, res.Item.Abilities)
+	assert.Empty(t, res.Item.Abilities)
+
+	restore := mocks.NewMockDAL(t)
+	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
+	restore.EXPECT().Get(mock.Anything, int64(1), "rope").Return(empty, nil).Maybe()
+	restore.EXPECT().Update(mock.Anything, int64(1), rope).Return(nil).Once()
+	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
+
+	// No abilities in the patch: the stored value (here NULL) is untouched.
+	two := rope
+	two.Count = 2
+	dal.EXPECT().Update(mock.Anything, int64(1), two).Return(nil).Once()
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(8), nil).Once()
+	cnt := 2
+	res, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Count: &cnt})
+	require.NoError(t, err)
+	assert.Nil(t, res.Item.Abilities)
 }

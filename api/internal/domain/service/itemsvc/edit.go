@@ -454,9 +454,6 @@ func patched(old Item, p ItemPatch) Item {
 	}
 	if p.Abilities != nil {
 		item.Abilities = withAbilityIDs(*p.Abilities)
-		if item.Abilities == nil {
-			item.Abilities = []Ability{}
-		}
 	}
 	set(&item.MagicKind, p.MagicKind)
 	set(&item.Component, p.Component)

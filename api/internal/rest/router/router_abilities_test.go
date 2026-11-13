@@ -73,3 +73,33 @@ func mustRaw(t *testing.T, v any) []byte {
 	require.NoError(t, err)
 	return b
 }
+
+// ADR 0049 step 5: an exhausted per_day or charges limit is served with its left (0), never
+// without; unlimited and with_item serve none of max, left or cost.
+func TestItems_ADR0049Step5_LeftIsAlwaysServedForTheKindsThatHaveIt(t *testing.T) {
+	h, m := newRouter(t)
+	noWarnings(m)
+	it := wandItem
+	it.Abilities = []itemsvc.Ability{
+		{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 2, Left: 0}},
+		{ID: "b", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 0, Cost: 1}},
+		{ID: "c", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}},
+		{ID: "d", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}},
+	}
+	m.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{it}, nil)
+	m.items.EXPECT().Reviews(mock.Anything, int64(1)).Return(nil, nil)
+	m.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(nil, nil)
+	rec := do(h, "GET", "/api/items", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var got []struct {
+		Abilities []struct {
+			Limit json.RawMessage `json:"limit"`
+		} `json:"abilities"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	require.Len(t, got[0].Abilities, 4)
+	want := []string{`{"kind":"per_day","max":2,"left":0}`, `{"kind":"charges","max":5,"left":0,"cost":1}`, `{"kind":"unlimited"}`, `{"kind":"with_item"}`}
+	for n, w := range want {
+		assert.JSONEq(t, w, string(got[0].Abilities[n].Limit))
+	}
+}

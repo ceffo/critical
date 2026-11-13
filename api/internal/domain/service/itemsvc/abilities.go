@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
@@ -38,6 +39,15 @@ const (
 	MaxCharges = 100
 	// MaxAbilityNote bounds an ability's note, as an item's notes.
 	MaxAbilityNote = 2000
+	// MaxAbilities is the most abilities an item holds; the list is copied into
+	// every snapshot and log entry, so it is bounded.
+	MaxAbilities = 20
+	// MaxAbilityEffects is the most effects one ability holds.
+	MaxAbilityEffects = 10
+	// MaxAbilityName bounds each language's text of an ability's name.
+	MaxAbilityName = 100
+	// MaxEffectLabel bounds a dice effect's label.
+	MaxEffectLabel = 100
 )
 
 // Limit is an ability's usage limit (ADR 0049 step 5). Max, Left and Cost
@@ -84,8 +94,9 @@ type Ability struct {
 var abilityIDRE = regexp.MustCompile(`^[a-z0-9]+(_[a-z0-9]+)*$`)
 
 // PaysPerObject reports whether the limit is one counter per object (per_day
-// and charges): the item may carry such an ability only at quantity 1 (ADR
-// 0049 step 4).
+// and charges): the item may carry such an ability only while it is one
+// object, never more than one (ADR 0049 step 4; a one-object piece spent to 0
+// keeps it, so it stays editable).
 func (l Limit) PaysPerObject() bool { return l.Kind == LimitPerDay || l.Kind == LimitCharges }
 
 // HasStock reports whether the piece's quantity is a stock of something
@@ -105,6 +116,9 @@ func (i Item) HasStock() bool {
 // field "abilities", one refusal message per rule. None (nil, not converted
 // yet) and an empty list are fine.
 func (i Item) validAbilities() error {
+	if len(i.Abilities) > MaxAbilities {
+		return domain.FieldErrorf("abilities", "An item holds at most %d abilities", MaxAbilities)
+	}
 	seen := make(map[string]bool, len(i.Abilities))
 	for n, a := range i.Abilities {
 		fail := func(format string, args ...any) error {
@@ -120,14 +134,22 @@ func (i Item) validAbilities() error {
 		if lang, bad := a.Name.UnknownLanguage(); bad {
 			return fail("unknown language %q in the name", lang)
 		}
+		for lang, text := range a.Name {
+			if utf8.RuneCountInString(text) > MaxAbilityName {
+				return fail("the name (%s) must be at most %d characters", lang, MaxAbilityName)
+			}
+		}
+		if len(a.Effects) > MaxAbilityEffects {
+			return fail("at most %d effects", MaxAbilityEffects)
+		}
 		if len(a.Note) > MaxAbilityNote {
 			return fail("the note must be at most %d characters", MaxAbilityNote)
 		}
 		if err := a.Limit.valid(); err != nil {
 			return fail("%s", err.Error())
 		}
-		if a.Limit.PaysPerObject() && i.Count != 1 {
-			return fail("a %s ability needs a quantity of 1 (one counter per object)", a.Limit.Kind)
+		if a.Limit.PaysPerObject() && i.Count > 1 {
+			return fail("a %s ability needs a quantity of 1 at most (one counter per object)", a.Limit.Kind)
 		}
 		if a.Limit.Kind == LimitWithItem && !i.HasStock() {
 			return fail("a with_item ability needs an item that has a quantity (ammunition, gear, a potion or a scroll)")
@@ -184,6 +206,9 @@ func (e Effect) valid() error {
 	}
 	if _, _, _, err := ParseDice(e.Dice); err != nil {
 		return fmt.Errorf("the dice must look like 2d6 or 1d8+2")
+	}
+	if utf8.RuneCountInString(e.Label) > MaxEffectLabel {
+		return fmt.Errorf("the label must be at most %d characters", MaxEffectLabel)
 	}
 	if e.Save != "" && !slices.Contains(saves.Categories, e.Save) {
 		return fmt.Errorf("unknown save category %q", e.Save)
@@ -297,16 +322,15 @@ func EncodeAbilities(abilities []Ability) (text string, ok bool, err error) {
 }
 
 // DecodeAbilities reads a stored list: ok false (NULL) is nil, not converted
-// yet; "[]" is converted with none. Unknown keys are refused, so a typo in a
-// migration cannot drop a field.
+// yet; "[]" is converted with none. Unknown keys are ignored: a row written
+// by a later slice must still read after a rollback (writes stay strict, the
+// wire refuses unknown keys).
 func DecodeAbilities(raw string, ok bool) ([]Ability, error) {
 	if !ok {
 		return nil, nil
 	}
 	var js []jsonAbility
-	dec := json.NewDecoder(strings.NewReader(raw))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&js); err != nil {
+	if err := json.Unmarshal([]byte(raw), &js); err != nil {
 		return nil, fmt.Errorf("decode abilities: %w", err)
 	}
 	return fromJSONAbilities(js), nil

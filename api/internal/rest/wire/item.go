@@ -1,6 +1,8 @@
 package wire
 
 import (
+	"encoding/json"
+
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -118,12 +120,32 @@ type AbilityDTO struct {
 
 // LimitDTO is an ability's usage limit (ADR 0049 step 5): kind is unlimited,
 // per_day, charges or with_item; max, left and cost are sent only for the
-// kinds that have them.
+// kinds that have them, and always for those (an exhausted left is 0, not
+// absent).
 type LimitDTO struct {
 	Kind string `json:"kind"`
 	Max  int    `json:"max,omitempty"`
 	Left int    `json:"left,omitempty"`
 	Cost int    `json:"cost,omitempty"`
+}
+
+// MarshalJSON writes max and left for per_day and charges, cost for charges,
+// zeros included.
+func (l LimitDTO) MarshalJSON() ([]byte, error) {
+	type out struct {
+		Kind string `json:"kind"`
+		Max  *int   `json:"max,omitempty"`
+		Left *int   `json:"left,omitempty"`
+		Cost *int   `json:"cost,omitempty"`
+	}
+	o := out{Kind: l.Kind}
+	switch l.Kind {
+	case string(itemsvc.LimitPerDay):
+		o.Max, o.Left = &l.Max, &l.Left
+	case string(itemsvc.LimitCharges):
+		o.Max, o.Left, o.Cost = &l.Max, &l.Left, &l.Cost
+	}
+	return json.Marshal(o)
 }
 
 // EffectDTO is one effect of an ability (ADR 0049 step 10); only "dice" exists

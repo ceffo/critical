@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
@@ -748,7 +749,11 @@ func TestItems_ADR0049Step18_AbilitiesNilEmptyAndListSurviveTheStore(t *testing.
 		assert.Nil(t, a.Abilities, "a seeded item is not converted")
 	}
 
-	list := []itemsvc.Ability{{ID: "climb", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}}
+	list := []itemsvc.Ability{{
+		ID: "dispel", Name: localized.Text{"en": "Dispel", "fr": "Dissipation"}, Note: "n",
+		Limit:   itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 10, Left: 0, Cost: 1},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"}},
+	}}
 	for name, want := range map[string][]itemsvc.Ability{"a list": list, "none": {}, "not converted": nil} {
 		it.Abilities = want
 		require.NoError(t, s.Items().Update(ctx, characterID, it), name)

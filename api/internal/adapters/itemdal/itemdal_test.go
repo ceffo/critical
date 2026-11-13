@@ -21,6 +21,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/textdal"
 	textq "github.com/ceffo/critical/api/internal/adapters/textdal/queries"
 	textmocks "github.com/ceffo/critical/api/internal/adapters/textdal/queries/mocks"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
@@ -136,15 +137,23 @@ func TestIncrement_AddsNAndReturnsTheUpdatedItem(t *testing.T) {
 	ctx := context.Background()
 	dal, q, tq := mocked(t)
 
-	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 3, CharacterID: owner, ID: "wand_lightning"}).Return(wandRow, nil).Once()
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 3, CharacterID: owner, ID: "wand_lightning", MaxCount: itemsvc.MaxQuantity}).Return(wandRow, nil).Once()
 	tq.EXPECT().GetText(ctx, int64(13)).Return(wandName(), nil).Once()
 	got, err := dal.Increment(ctx, owner, "wand_lightning", 3)
 	require.NoError(t, err)
 	assert.Equal(t, wandItem, got)
 
-	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 1, CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 1, CharacterID: owner, ID: "nope", MaxCount: itemsvc.MaxQuantity}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "nope"}).Return(queries.Item{}, sql.ErrNoRows).Once()
 	_, err = dal.Increment(ctx, owner, "nope", 1)
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
+
+	// ADR 0049 step 2: no row updated for an item that exists is the quantity bound, not an unknown id.
+	q.EXPECT().IncrementItem(ctx, queries.IncrementItemParams{N: 9, CharacterID: owner, ID: "wand_lightning", MaxCount: itemsvc.MaxQuantity}).Return(queries.Item{}, sql.ErrNoRows).Once()
+	q.EXPECT().GetItem(ctx, queries.GetItemParams{CharacterID: owner, ID: "wand_lightning"}).Return(wandRow, nil).Once()
+	_, err = dal.Increment(ctx, owner, "wand_lightning", 9)
+	require.ErrorIs(t, err, itemsvc.ErrQuantityBound)
+	require.ErrorIs(t, err, domain.ErrInvalidInput)
 }
 
 // SetCount writes the count given; no row updated is ErrItemNotFound.

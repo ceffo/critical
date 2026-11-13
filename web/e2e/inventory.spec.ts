@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace, undoEntry } from "./helpers";
+import {
+  apiCall,
+  chooseLanguage,
+  logEntry,
+  openDashboard,
+  openWorkspace,
+  reloadSettled,
+  undoEntry,
+} from "./helpers";
 
 // Inventory tab: one happy path (use, restock, undo). The behaviour rules (charges, stock, daily,
 // long-rest refill, empty refusal) are Go tests in itemsvc and restsvc.
@@ -107,3 +115,28 @@ for (const size of [
     await snap(page, `act-items-${size.width}x${size.height}`);
   });
 }
+
+// With nothing to use left (the weapons, armour and shield stay), Act · Items says why and points to
+// the Inventory, in English and in French.
+test("Act · Items empty state points to the Inventory (en, fr)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  for (const id of ["fire_flask", "wand_lightning", "power_gem_dispel"])
+    expect(await apiCall(page, "DELETE", `/api/items/${id}`, undefined)).toBe(
+      true,
+    );
+  await reloadSettled(page);
+  await act(page);
+  await page.getByRole("tab", { name: "Items" }).click();
+  await expect(
+    page.getByText(/Weapons, armour and shields are never used/),
+  ).toBeVisible();
+  await snap(page, "act-items-empty-en");
+
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Objets" }).click();
+  await expect(page.getByText(/ne s'utilisent pas/)).toBeVisible();
+  await snap(page, "act-items-empty-fr");
+});

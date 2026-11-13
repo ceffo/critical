@@ -85,6 +85,7 @@ func TestUseItem_ADR0035Item6_2_AMagicItemUsedCorrectsTheInitiative(t *testing.T
 			svc, err := itemsvc.New(dal, f.Deps)
 			require.NoError(t, err)
 			dal.EXPECT().Decrement(mock.Anything, int64(1), tt.item.ID).Return(tt.item, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), tt.item.ID).Return(tt.item, nil).Maybe()
 			recorded := 0
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).RunAndReturn(
 				func(context.Context, actionlog.NewEntry) (int64, error) { recorded++; return 9, nil })
@@ -120,6 +121,7 @@ func TestUseItem_ADR0035Item6_2_CorrectsThroughTheCorrectorWithoutTheBuffs(t *te
 	require.NoError(t, err)
 	wand := itemsvc.Item{ID: "w", Name: localized.Of("Wand of frost"), Category: itemsvc.CategoryMagic, MagicKind: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 4}
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "w").Return(wand, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "w").Return(wand, nil).Maybe()
 
 	store.EXPECT().GetRoundNumber(mock.Anything, int64(1)).Return(3, nil).Once()
 	store.EXPECT().GetInitiative(mock.Anything, int64(1)).Return(&buffsvc.Initiative{D10: 5, LogEntryID: 10}, nil).Once()

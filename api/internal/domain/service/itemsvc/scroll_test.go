@@ -183,6 +183,7 @@ func TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime(t *testing.
 			used.SpellID = tt.spell
 			used.Count = 0
 			dal.EXPECT().Decrement(mock.Anything, int64(1), "scroll").Return(used, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "scroll").Return(used, nil).Maybe()
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil).Once()
 			f.initiative.EXPECT().CorrectInitiative(mock.Anything, int64(1), tt.want).Return(nil, nil).Once()
 

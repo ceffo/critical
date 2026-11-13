@@ -33,6 +33,7 @@ func TestUse_ReturnsUpdatedItem(t *testing.T) {
 	svc, err := itemsvc.NewWithConfig(itemsvc.DefaultConfig(), dal, deps(t).Deps)
 	require.NoError(t, err)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand").Return(itemsvc.Item{ID: "wand", Count: 3}, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand").Return(itemsvc.Item{ID: "wand", Count: 3}, nil).Maybe()
 
 	got, err := svc.Use(context.Background(), 1, "wand")
 	require.NoError(t, err)
@@ -104,6 +105,7 @@ func TestUse_RemovesChargesItemAtZeroOnly(t *testing.T) {
 			dal := mocks.NewMockDAL(t) // Delete fails the test unless expected
 			svc, _ := itemsvc.New(dal, deps(t).Deps)
 			dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(tt.item, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(tt.item, nil).Maybe()
 			if tt.removed {
 				dal.EXPECT().Delete(mock.Anything, int64(1), "x").Return(nil).Once()
 			}
@@ -119,6 +121,7 @@ func TestUse_RemoveErrorFails(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges}, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Behaviour: itemsvc.BehaviourCharges}, nil).Maybe()
 	dal.EXPECT().Delete(mock.Anything, int64(1), "x").Return(errors.New("boom"))
 	_, err := svc.Use(context.Background(), 1, "x")
 	require.Error(t, err)
@@ -248,10 +251,12 @@ func TestUseItem_RollsEffectDiceAndLogsWithSnapshot(t *testing.T) {
 	f := deps(t)
 	svc, err := itemsvc.New(dal, f.Deps)
 	require.NoError(t, err)
-	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{
+	rolled := itemsvc.Item{
 		ID: "wand_lightning", Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges, Count: 3, MaxCount: 4,
 		EffectDice: "6d6", EffectSave: "rod_staff_wand",
-	}, nil)
+	}
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(rolled, nil)
+	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand_lightning").Return(rolled, nil)
 	for _, v := range []int{1, 2, 3, 4, 5, 6} {
 		f.dice.EXPECT().RollDie(6).Return(v).Once()
 	}
@@ -281,6 +286,7 @@ func TestUseItem_NoDiceRollsNothing(t *testing.T) {
 	f := deps(t) // the dice mock fails the test on any call
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "gem").Return(itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "gem").Return(itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Behaviour: itemsvc.BehaviourDaily, Count: 0, MaxCount: 1}, nil).Maybe()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 
 	res, err := svc.UseItem(context.Background(), 1, "gem")
@@ -294,7 +300,12 @@ func TestUseItem_EmptyAndUnknownLogNothing(t *testing.T) {
 	for _, target := range []error{itemsvc.ErrItemEmpty, itemsvc.ErrItemNotFound} {
 		dal := mocks.NewMockDAL(t)
 		svc, _ := itemsvc.New(dal, deps(t).Deps) // log and dice mocks fail on any call
-		dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
+		if errors.Is(target, itemsvc.ErrItemNotFound) {
+			dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
+		} else {
+			dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x"}, nil)
+			dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{}, fmt.Errorf("%w: x", target))
+		}
 		_, err := svc.UseItem(context.Background(), 1, "x")
 		assert.True(t, errors.Is(err, target))
 	}
@@ -306,6 +317,7 @@ func TestUseItem_SpendsStockAmmo(t *testing.T) {
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "arrows").Return(itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "arrows").Return(itemsvc.Item{ID: "arrows", Name: localized.Of("Arrows"), Behaviour: itemsvc.BehaviourStock, AmmoKind: "arrow", Count: 0}, nil).Maybe()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(3), nil)
 	res, err := svc.UseItem(context.Background(), 1, "arrows")
 	require.NoError(t, err)
@@ -320,6 +332,7 @@ func TestUseItem_LastChargeRemovesTheItem(t *testing.T) {
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "wand_lightning").Return(wand, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand, nil).Maybe()
 	dal.EXPECT().Delete(mock.Anything, int64(1), "wand_lightning").Return(nil).Once()
 	for _, v := range []int{6, 5, 4, 3, 2, 1} {
 		f.dice.EXPECT().RollDie(6).Return(v).Once()
@@ -342,9 +355,11 @@ func TestRestock_AddsToStockAndLogs(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Increment(mock.Anything, int64(1), "arrows_plus3", 1).Return(itemsvc.Item{
+	arrows := itemsvc.Item{
 		ID: "arrows_plus3", Name: localized.Of("Arrows +3"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 1,
-	}, nil).Once()
+	}
+	dal.EXPECT().Get(mock.Anything, int64(1), "arrows_plus3").Return(arrows, nil)
+	dal.EXPECT().Increment(mock.Anything, int64(1), "arrows_plus3", 1).Return(arrows, nil).Once()
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(7), nil)
 
@@ -369,6 +384,7 @@ func TestRestock_RejectsChargesAndDaily(t *testing.T) {
 			dal := mocks.NewMockDAL(t)
 			svc, _ := itemsvc.New(dal, deps(t).Deps) // log mock fails on any call
 			dal.EXPECT().Increment(mock.Anything, int64(1), "x", 1).Return(itemsvc.Item{ID: "x", Behaviour: b, Count: 2}, nil)
+			dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Behaviour: b, Count: 2}, nil).Maybe()
 			_, err := svc.Restock(context.Background(), 1, "x", 1)
 			assert.ErrorIs(t, err, itemsvc.ErrNotRestockable)
 		})
@@ -387,7 +403,7 @@ func TestRestock_RejectsOutOfRangeCounts(t *testing.T) {
 func TestRestock_UnknownItem(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Increment(mock.Anything, int64(1), "nope", 2).Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
+	dal.EXPECT().Get(mock.Anything, int64(1), "nope").Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
 	_, err := svc.Restock(context.Background(), 1, "nope", 2)
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
@@ -426,7 +442,7 @@ func TestNew_RequiresClasses(t *testing.T) {
 	require.Error(t, err)
 }
 
-// CRI-361 (ADR 0049 step 2): a weapon, an armour and a shield are one object,
+// ADR 0049 step 2: a weapon, an armour and a shield are one object,
 // never used or restocked, whatever their behaviour; nothing is logged and the
 // transaction rolls the count change back.
 func TestUseItem_RefusesOneObjectCategories(t *testing.T) {
@@ -437,7 +453,8 @@ func TestUseItem_RefusesOneObjectCategories(t *testing.T) {
 				f := deps(t) // the log mock fails on any call
 				f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(skills.WeaponProficiency{}, nil).Maybe()
 				svc, _ := itemsvc.New(dal, f.Deps)
-				dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Category: c, Behaviour: b, Count: 2}, nil)
+				// Only Get is expected: a Decrement would fail the strict mock, so the count never moves.
+				dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Category: c, Behaviour: b, Count: 2}, nil)
 				_, err := svc.UseItem(context.Background(), 1, "x")
 				assert.ErrorIs(t, err, itemsvc.ErrNotUsable)
 			})
@@ -452,7 +469,8 @@ func TestRestock_RefusesOneObjectCategories(t *testing.T) {
 			f := deps(t)
 			f.chars.EXPECT().WeaponProficiency(mock.Anything, mock.Anything).Return(skills.WeaponProficiency{}, nil).Maybe()
 			svc, _ := itemsvc.New(dal, f.Deps)
-			dal.EXPECT().Increment(mock.Anything, int64(1), "x", 1).Return(itemsvc.Item{ID: "x", Category: c, Behaviour: itemsvc.BehaviourStock, Count: 2}, nil)
+			// Only Get is expected: an Increment would fail the strict mock.
+			dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Category: c, Behaviour: itemsvc.BehaviourStock, Count: 2}, nil)
 			_, err := svc.Restock(context.Background(), 1, "x", 1)
 			assert.ErrorIs(t, err, itemsvc.ErrNotRestockable)
 		})
@@ -463,5 +481,14 @@ func TestItem_Usable(t *testing.T) {
 	for _, c := range itemsvc.Categories {
 		want := c != itemsvc.CategoryWeapon && c != itemsvc.CategoryArmour && c != itemsvc.CategoryShield
 		assert.Equal(t, want, itemsvc.Item{Category: c}.Usable(), string(c))
+	}
+}
+
+// A weapon, an armour or a shield with a component is never spent by a spell (castsvc
+// consume_item, prepsvc), the item's own rule applying outside the inventory too.
+func TestSpendable_NeverAOneObjectPiece(t *testing.T) {
+	for _, c := range itemsvc.Categories {
+		got := itemsvc.Item{Category: c, Component: itemsvc.ComponentGem, Behaviour: itemsvc.BehaviourStock, Count: 1}.Spendable(itemsvc.ComponentGem)
+		assert.Equal(t, c != itemsvc.CategoryWeapon && c != itemsvc.CategoryArmour && c != itemsvc.CategoryShield, got, string(c))
 	}
 }

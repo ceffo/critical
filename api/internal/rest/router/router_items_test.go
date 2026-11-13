@@ -89,7 +89,7 @@ func TestItems_DismissReview(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/items/x/review", "").Code)
 }
 
-// CRI-361: a weapon, an armour or a shield is refused with a field-less 409.
+// ADR 0049 step 2: a weapon, an armour or a shield is refused with a field-less 409.
 func TestItems_UseNotUsable(t *testing.T) {
 	h, m := newRouter(t)
 	m.items.EXPECT().UseItem(mock.Anything, int64(1), "plate").Return(nil, fmt.Errorf("%w: Plate mail (armour)", itemsvc.ErrNotUsable))

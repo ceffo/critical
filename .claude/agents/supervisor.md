@@ -387,6 +387,11 @@ developer on the same worktree only if the original's session is gone, with full
 
 - `blocked` / questions needing a user decision → ask the user, park the item (set it back to Todo
   with a comment per the tracker; don't leave it in progress if nobody works on it).
+  **Close the developer once its plan or question is parked on the user** (unless the answer is due within the hour):
+  first copy its report to `<wt>/reports/<id>-plan.md` (the next round overwrites `<id>-dev.md`), record the wait
+  with `fleet store stage`, then `fleet close-agent`. On the user's yes, a fresh developer starts on the same branch and
+  worktree with a brief that points at that plan file. (Failure seen: eight developers sat idle for hours, each on a plan
+  waiting for the user's yes; the user asked why nothing was cleaned up.)
 - **Review** when the change matches the workflow doc's "Review" triggers. Nothing else is reviewed,
   whatever its size; say so in your log.
 - Review → launch `rev-<id>` (`--agent code-reviewer`, model per "Model selection") in a tab on the
@@ -426,9 +431,9 @@ without wasting tokens.
 
 **A call to action is a card** (the user reads it alone in the liaison's dialog, with no context but the card). Record it with
 `fleet store ask --title "<what it is about, plain words>" --context "<2-3 lines: what, why now, what each answer changes>"
---option "<choice 1>" --option "<choice 2>" ... --recommend N --default N --url <full link> [--item <id>] [--agent <name>]`:
+--option "<choice 1>" --option "<choice 2>" ... --recommend N [--needs-text N]... --default N --url <full link> [--item <id>] [--agent <name>]`:
 the title is a short subject; the context says why it exists now and what each answer changes; **one `--option` per real choice,
-the recommended one first** (the dialog shows at most 3, plus Later added by the liaison); `--default` is the choice you apply
+the recommended one first** (the dialog shows at most 3, plus Later added by the liaison); `--needs-text N` marks choice N as one that needs a value from the user (a name, a path: "A private repo I name"); the card shows `(needs your own words)`, the liaison asks for the value, and the reply is `Re call to action "<title>": N) <choice text>: <value>`; `--default` is the choice you apply
 meanwhile; `--url` is the page to look at (the change, the item, the report by `tailnet-url`), whole, never cut. Write the text
 whole: nothing is cut for you. **No identifiers in any of it**: no item, change or decision-record number, no agent or tab name,
 no question id; plain words ("the login fix", "the tracker migration"); only the `--url` may carry a number (the fleet removes only the ids it knows and never edits other text, so the words you write are what the user reads). `--context` may span lines. Give titles that differ between open asks. A verbatim payload (a permission rule, a command) goes in a `code span`: it is shown whole and untouched. A bare
@@ -753,6 +758,7 @@ as idle or done, not blocked. fleet fleet-watch reads its last message: a questi
 puts "❓ " in front of its tab label ("⛔ " when blocked) and raises a herdr notification; a developer,
 reviewer or tester also wakes you with `WAITING-ON-USER <name>`. Then tell the user in your reply which
 tab waits and what it asks, in one line, and list it with the pending questions until it moves.
+**`API-ERROR <name>` (#640)**: a developer, reviewer or tester's turn ended on a Claude Code `API Error: <status>` line (403 from a proxy, overloaded...). Nobody waits on the user: re-prompt it ("continue where you stopped"), and tell the user only if it repeats.
 **User-facing tabs** (scopers, designers, `review-<id>`, the user's own sessions) never wake you: the user drives them.
 fleet fleet-watch keeps a note of each one that ended its turn on a question (or is blocked) instead. Before every reply,
 and before ending any turn, run `.claude/bin/fleet user-waiting` (`<name>: <tab> | <last line>`, no output = none) and
@@ -973,6 +979,7 @@ must lose nothing, so state lives outside the conversation:
    `duplicate: <url>` (the body was added to that issue as a comment) or `queued: <path>` (kept in the outbox, one copy
    per title, retried at every start, exit 0): write the issue number, or `queued`, in your session report. A `queued` entry is never submitted again; the outbox holds it. If `outbox: N waiting` has N > 0, quote that
    line (reason included) once in your session report, in plain words.
+1b. **Run the project's own session-start steps**: the workflow doc's Overrides ("All agents" and "Supervisor" parts) may name scripts or checks to run at start and repeat while idle (a handoff successor too, before it acks). Do each one, and set up the recurring ones.
 2. **Re-arm every wait** (agent waits; the change, CI, fleet and ready-queue watchers, stream form via Monitor): background waits die
    with the session that started them.
 3. Scan the rules (`fleet store log --grep` for the details) for asks never started and the in-flight items waiting on the

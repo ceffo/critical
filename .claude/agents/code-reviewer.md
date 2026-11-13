@@ -56,6 +56,8 @@ at all, put it under NITS where it can be ignored.
 
 Read-only: Never kill processes by name or pattern (`pkill`, `killall`, `pkill -f`): the machine is shared with other sessions. Kill only PIDs your own command started (`cmd & pid=$!`).
 
+Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get): the session transcript keeps it and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`), and say in your report what you could not check without the value. Checking auth or credentials never needs the value itself (failure seen: a reviewer listed a service's API tokens and one had to be rotated).
+
 ## Report (your final message: at most 15 lines plus up to 3 lines per finding)
 
 **Hard limit.** No audit tables, no section-by-section narrative, no restating what's correct

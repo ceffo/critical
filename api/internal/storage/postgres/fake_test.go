@@ -1221,6 +1221,32 @@ func (f *fakeStore) ListUnconvertedItems(context.Context) ([]storeq.ListUnconver
 	return out, nil
 }
 
+func (f *fakeStore) ListCountedItemAbilities(context.Context) ([]storeq.ListCountedItemAbilitiesRow, error) {
+	var out []storeq.ListCountedItemAbilitiesRow
+	for key, it := range f.t.Items {
+		raw, ok := f.t.Abilities[key]
+		if !ok || raw == "[]" || it.Count == 1 {
+			continue
+		}
+		out = append(out, storeq.ListCountedItemAbilitiesRow{
+			CharacterID: it.CharacterID, ID: it.ID, Count: it.Count, Abilities: sql.NullString{String: raw, Valid: true},
+		})
+	}
+	slices.SortFunc(out, func(a, b storeq.ListCountedItemAbilitiesRow) int {
+		return cmp.Or(cmp.Compare(a.CharacterID, b.CharacterID), cmp.Compare(a.ID, b.ID))
+	})
+	return out, nil
+}
+
+func (f *fakeStore) SetItemQuantity(_ context.Context, arg storeq.SetItemQuantityParams) error {
+	key := rowKey(arg.CharacterID, arg.ID)
+	if it, ok := f.t.Items[key]; ok {
+		it.Count = arg.Count
+		f.t.Items[key] = it
+	}
+	return nil
+}
+
 func (f *fakeStore) SetItemAbilities(_ context.Context, arg storeq.SetItemAbilitiesParams) error {
 	key := rowKey(arg.CharacterID, arg.ID)
 	if _, ok := f.t.Items[key]; !ok {

@@ -1970,11 +1970,18 @@ async function scrollSpellStep(page: Page, size: Viewport) {
       spellId: "long_spell",
       behaviour: "stock",
       count: 2,
+      abilities: [{ id: "use", limit: { kind: "with_item" }, effects: [] }],
     }),
   ).toBe(true);
   expect(await call("POST", "/api/round/advance", {})).toBe(true);
+  // Using the scroll's ability corrects the round's initiative by its spell (ADR 0049 step 15); the
+  // inventory's minus (spend one) would correct nothing.
   expect(
-    await call("POST", "/api/items/scroll_of_the_ancient_archmages/use", {}),
+    await call(
+      "POST",
+      "/api/items/scroll_of_the_ancient_archmages/abilities/use/use",
+      {},
+    ),
   ).toBe(true);
   await reloadSettled(page);
   await chooseLanguage(page, "fr");

@@ -141,19 +141,6 @@ func (p Items) Increment(ctx context.Context, characterID int64, itemID string, 
 	})
 }
 
-// ResetDaily refills every daily item of the character to its max count.
-func (p Items) ResetDaily(ctx context.Context, characterID int64) error {
-	return p.s.write(ctx, func(t *tables) error {
-		for k, r := range t.items {
-			if k.characterID == characterID && r.Behaviour == itemsvc.BehaviourDaily {
-				r.Count = r.MaxCount
-				t.items[k] = r
-			}
-		}
-		return nil
-	})
-}
-
 // SetCount writes an item's count back (an action-log void restoring a
 // snapshot).
 func (p Items) SetCount(ctx context.Context, characterID int64, itemID string, count int) error {

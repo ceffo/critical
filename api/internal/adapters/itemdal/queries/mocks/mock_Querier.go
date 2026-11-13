@@ -521,53 +521,6 @@ func (_c *MockQuerier_ListReviews_Call) RunAndReturn(run func(context.Context, i
 	return _c
 }
 
-// ResetDailyItems provides a mock function with given fields: ctx, characterID
-func (_m *MockQuerier) ResetDailyItems(ctx context.Context, characterID int64) error {
-	ret := _m.Called(ctx, characterID)
-
-	if len(ret) == 0 {
-		panic("no return value specified for ResetDailyItems")
-	}
-
-	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
-		r0 = rf(ctx, characterID)
-	} else {
-		r0 = ret.Error(0)
-	}
-
-	return r0
-}
-
-// MockQuerier_ResetDailyItems_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ResetDailyItems'
-type MockQuerier_ResetDailyItems_Call struct {
-	*mock.Call
-}
-
-// ResetDailyItems is a helper method to define mock.On call
-//   - ctx context.Context
-//   - characterID int64
-func (_e *MockQuerier_Expecter) ResetDailyItems(ctx interface{}, characterID interface{}) *MockQuerier_ResetDailyItems_Call {
-	return &MockQuerier_ResetDailyItems_Call{Call: _e.mock.On("ResetDailyItems", ctx, characterID)}
-}
-
-func (_c *MockQuerier_ResetDailyItems_Call) Run(run func(ctx context.Context, characterID int64)) *MockQuerier_ResetDailyItems_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64))
-	})
-	return _c
-}
-
-func (_c *MockQuerier_ResetDailyItems_Call) Return(_a0 error) *MockQuerier_ResetDailyItems_Call {
-	_c.Call.Return(_a0)
-	return _c
-}
-
-func (_c *MockQuerier_ResetDailyItems_Call) RunAndReturn(run func(context.Context, int64) error) *MockQuerier_ResetDailyItems_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SetItemCount provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) SetItemCount(ctx context.Context, arg queries.SetItemCountParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

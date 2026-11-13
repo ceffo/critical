@@ -287,23 +287,8 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 	})
 	t.Run("renamed by the conversion: the envelope's id", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
+		dal.EXPECT().Get(mock.Anything, int64(1), "dagger_2").Return(itemsvc.Item{ID: "dagger_2", Category: itemsvc.CategoryGear, Count: 3}, nil).Once()
 		dal.EXPECT().SetCount(mock.Anything, int64(1), "dagger_2", 3).Return(nil).Once()
 		require.NoError(t, restore(dal, snaptest.EnvID("dagger_2", `{"count":3}`)))
 	})
-}
-
-// Dice may carry a flat modifier: 1d8+2 rolls one die and adds 2.
-func TestUseItem_DiceWithModifier(t *testing.T) {
-	dal := mocks.NewMockDAL(t)
-	f := deps(t)
-	svc, _ := itemsvc.New(dal, f.Deps)
-	dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
-	dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil).Maybe()
-	f.dice.EXPECT().RollDie(8).Return(5).Once()
-	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
-	res, err := svc.UseItem(context.Background(), 1, "x")
-	require.NoError(t, err)
-	assert.Equal(t, []int{5}, res.Rolls)
-	assert.Equal(t, 7, res.Total)
-	assert.Equal(t, 2, res.Modifier, "the flat +2 of 1d8+2")
 }

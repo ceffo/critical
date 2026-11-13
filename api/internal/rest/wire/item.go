@@ -29,8 +29,10 @@ type ItemDTO struct {
 	// EquipState is the state Equip moves the piece to (worn or wielded),
 	// empty for a piece that is carried only (ADR 0033 step 6).
 	EquipState string `json:"equipState"`
-	// Usable is false for a weapon, an armour and a shield: never used or
-	// restocked, whatever the behaviour (ADR 0049 step 2). The server owns it.
+	// Usable is true for a piece with a stock (ammunition, gear, a potion, a
+	// scroll): its quantity moves by spend one and restock; false for a
+	// one-object piece (ADR 0049 step 2). The server owns it; whether an
+	// ability can be used is on the ability.
 	Usable       bool   `json:"usable"`
 	Type         string `json:"type"`
 	Behaviour    string `json:"behaviour"`
@@ -116,6 +118,11 @@ type AbilityDTO struct {
 	Note    string         `json:"note,omitempty"`
 	Limit   LimitDTO       `json:"limit"`
 	Effects []EffectDTO    `json:"effects"`
+	// Usable and Reason are served, never read: whether a use is paid now, and
+	// the reason code when not ("exhausted"; ADR 0049 steps 5 and 14), so the
+	// web re-derives nothing. Both are ignored in a request body.
+	Usable bool   `json:"usable"`
+	Reason string `json:"reason,omitempty"`
 }
 
 // LimitDTO is an ability's usage limit (ADR 0049 step 5): kind is unlimited,
@@ -173,20 +180,21 @@ func AbilitiesFromDTO(dtos []AbilityDTO) []itemsvc.Ability {
 	return out
 }
 
-// AbilitiesToDTO is the wire list of an item's abilities: nil (omitted) for a
-// piece not converted yet.
-func AbilitiesToDTO(abilities []itemsvc.Ability) *[]AbilityDTO {
-	if abilities == nil {
+// AbilitiesToDTO is the wire list of an item's abilities, each with whether it
+// can be used now: nil (omitted) for a piece not converted yet.
+func AbilitiesToDTO(item itemsvc.Item) *[]AbilityDTO {
+	if item.Abilities == nil {
 		return nil
 	}
-	out := make([]AbilityDTO, 0, len(abilities))
-	for _, a := range abilities {
+	out := make([]AbilityDTO, 0, len(item.Abilities))
+	for _, a := range item.Abilities {
+		reason := item.UseRefusal(a)
 		effects := make([]EffectDTO, 0, len(a.Effects))
 		for _, e := range a.Effects {
 			effects = append(effects, EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Save: e.Save, Label: e.Label})
 		}
 		out = append(out, AbilityDTO{
-			ID: a.ID, Name: a.Name, Note: a.Note, Effects: effects,
+			ID: a.ID, Name: a.Name, Note: a.Note, Effects: effects, Usable: reason == "", Reason: reason,
 			Limit: LimitDTO{Kind: string(a.Limit.Kind), Max: a.Limit.Max, Left: a.Limit.Left, Cost: a.Limit.Cost},
 		})
 	}
@@ -230,7 +238,7 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 			CatalogueCode: i.CatalogueCode, Component: i.Component, SpellID: i.SpellID, State: string(i.State), EquipState: string(i.EquipState()), Usable: i.Usable(),
 			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
-			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers, Abilities: AbilitiesToDTO(i.Abilities),
+			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers, Abilities: AbilitiesToDTO(i),
 			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,

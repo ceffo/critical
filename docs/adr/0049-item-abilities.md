@@ -481,6 +481,50 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
 3. **Use of an ability.** The endpoint, the limit payment, the `dice` effect, the logged entry and its
    undo, the long rest refill, spend-one for the inventory's minus, `usable` and `reason` on the wire,
    the initiative correction for an ability (steps 5 to 7, 15). Needs 2.
+   *Built.* How it reads the steps (the cut-over slice 2 left to this one, in one change):
+   - **Use acts on an ability** (step 7): `POST /api/items/{id}/abilities/{abilityId}/use`. The limit is
+     paid first, by kind (per_day one of `left`, charges `cost` of `left`, with_item one of the quantity
+     by an atomic decrement, unlimited nothing; a potion or a scroll spent to 0 is removed in the same
+     entry); then the effects, in list order, each `dice` rolling once per die; then one `item_use` entry
+     with the whole item's snapshot before and after (so undo and redo restore the counter, or put the
+     removed potion back); then the initiative (step 15). A refusal is 404 `item_not_found` or
+     `ability_not_found`, 409 `exhausted` (a `charges` ability whose `left` is below its `cost` too), and
+     changes nothing. The entry adds `abilityId`, `abilityName`, `limit`, `left`, `max` and `effects` and
+     keeps the flat fields the journal words (`dice`, `rolls`, `total`, `save` from the first dice
+     effect, `remaining` the counter or quantity, `maxCount` the max); `applied` comes with the first
+     effect that applies something (slice 7), a dice effect applies nothing.
+   - **Per ability, the server serves `usable` and `reason`** (`exhausted`, step 14); the item's own
+     `usable` is now "has a stock the player moves" (ammunition, gear, potion, scroll), so a wand, a gem
+     or a sword is `usable: false` as an item: the web hides the minus and plus by it, and the use of its
+     abilities is the ability's own flag.
+   - **Spend one** (step 2): `POST /api/items/{id}/use` keeps its path and becomes the inventory's minus
+     for any item with a stock, **whatever abilities it holds** (the Fire flasks' minus spends a flask and
+     rolls nothing; step 22's "only for an item without an ability" is read as "never acts on an ability":
+     it is the one count change of step 2). It refuses (409 `item_not_usable`) an item with no stock or
+     holding a per_day or charges ability. It logs an `item_use` entry with no `abilityId`, corrects no
+     initiative, and a potion or scroll at 0 is removed in the same entry. **Until Act · Items and the
+     Inventory move (slices 5 and 6) the web's Use button on a wand, a gem or a sword finds nothing to
+     call**: those items are `usable: false`, so the Act · Items tab no longer lists them; slices 3 and 5
+     should merge together.
+   - **The cut-over:** the counter is `left` (per_day, charges) and the quantity is `count` (stock). The
+     boot step sets `count` to 1 for every converted item holding a per_day or charges ability (the
+     ability's `left` keeps what the count was at conversion; it also covers the rows slice 2 converted:
+     what a use between the two releases did to the old count is not read back), logs `quantities=N`
+     with its line, and writes nothing on a second start. `behaviour`, `max_count`, `effect_dice` and
+     `effect_save` are read by no use, rest or restock rule any more (the editor and the wire still carry
+     them until slice 6 and the contract); the seed writes `count` = the quantity. `Removed` is the rule
+     of step 2 (a potion or a scroll at 0), not the old `charges` behaviour; a restock needs a stock
+     and no per_day or charges ability; a spell never spends an item with such an ability (step 3).
+   - **The long rest** (step 6): every `per_day` ability back to `max`, in the rest's transaction; the
+     entry's snapshot of each changed item is the whole item (an old rest entry, a count-only snapshot,
+     popped now writes its count into the ability's `left`).
+   - **Old entries** (step 20): a count-only snapshot popped on an item whose counter is an ability's
+     writes the count into that ability's `left` (clamped to its `max`) and leaves the quantity; a
+     whole-item snapshot without the `abilities` key is converted, and its `count` becomes the
+     conversion's quantity. Nothing in the log is rewritten.
+   - **Initiative** (step 15): an ability's use corrects it with the item's magic kind row, a scroll by
+     its spell, any other category by the `misc` row (Q3); not table math of the rules engine, a lookup
+     in Table 56 by the existing corrector.
 4. **Quantity by category.** Restock and spend rules by category, removal at 0 for a potion or scroll,
    `per_day` and `charges` needing a quantity of 1, a spell spends a component (steps 2 and 3). Needs
    2. (The server part of CRI-361 is done by then.)

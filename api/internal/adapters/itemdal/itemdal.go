@@ -171,14 +171,6 @@ func (d *DAL) named(ctx context.Context, r queries.Item) (itemsvc.Item, error) {
 	return toItem(r, name)
 }
 
-// ResetDaily refills every daily item of the character to its max count.
-func (d *DAL) ResetDaily(ctx context.Context, characterID int64) error {
-	if err := d.q.ResetDailyItems(ctx, characterID); err != nil {
-		return fmt.Errorf("reset daily items: %w", err)
-	}
-	return nil
-}
-
 // Delete removes an item (a charges item spent to 0) and its name's rows.
 // ErrItemNotFound when the id is unknown.
 func (d *DAL) Delete(ctx context.Context, characterID int64, itemID string) error {

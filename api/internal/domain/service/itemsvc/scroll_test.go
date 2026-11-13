@@ -155,7 +155,7 @@ func TestItems_ADR0033Step2_OnlyAScrollNamesAKnownSpell(t *testing.T) {
 // initiative with that spell's casting time, by the cast's rules
 // (buffsvc.ScrollInitiative); a spell the catalogue no longer knows reads as
 // special; an unnamed scroll is still not counted.
-func TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime(t *testing.T) {
+func TestUseAbility_ADR0049Step15_ANamedScrollAddsItsSpellsCastingTime(t *testing.T) {
 	catalogue := map[string]string{"magic_missile": "1", "fireball": "3", "identify": "1 rd."}
 	term := func(spell string, value int, timing buffsvc.CastTiming) buffsvc.InitiativeModifier {
 		return buffsvc.InitiativeModifier{
@@ -181,15 +181,13 @@ func TestUseItem_ADR0035Item6_2_ANamedScrollAddsItsSpellsCastingTime(t *testing.
 			f.Spells = spellsKnowing(t, catalogue)
 			svc, err := itemsvc.New(dal, f.Deps)
 			require.NoError(t, err)
-			used := scroll
-			used.SpellID = tt.spell
-			used.Count = 0
-			dal.EXPECT().Decrement(mock.Anything, int64(1), "scroll").Return(used, nil)
-			dal.EXPECT().Get(mock.Anything, int64(1), "scroll").Return(used, nil).Maybe()
+			held := scroll
+			held.SpellID = tt.spell
+			expectUse(dal, withUse(held, itemsvc.Limit{Kind: itemsvc.LimitWithItem}))
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil).Once()
 			f.initiative.EXPECT().CorrectInitiative(mock.Anything, int64(1), tt.want).Return(nil, nil).Once()
 
-			_, err = svc.UseItem(context.Background(), 1, "scroll")
+			_, err = svc.UseAbility(context.Background(), 1, "scroll", "use")
 			require.NoError(t, err)
 		})
 	}

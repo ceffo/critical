@@ -15,3 +15,11 @@ var ErrNotRestockable = errors.New("item cannot be restocked")
 // ErrNotUsable is returned by UseItem for a weapon, an armour or a shield:
 // one object, never spent (ADR 0049 step 2).
 var ErrNotUsable = errors.New("item cannot be used")
+
+// ErrAbilityNotFound is returned by UseAbility for an ability id the item does
+// not have (ADR 0049 step 7).
+var ErrAbilityNotFound = errors.New("ability not found")
+
+// ErrAbilityExhausted is returned by UseAbility when the ability's limit
+// cannot pay a use: nothing left (ADR 0049 step 5, code `exhausted`).
+var ErrAbilityExhausted = errors.New("ability exhausted")

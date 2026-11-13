@@ -109,8 +109,8 @@ func TestReadItems_Defaults(t *testing.T) {
 	assert.Equal(t, "[]", items[0].PowersJSON)
 }
 
-// ADR 0049 step 23: an item in the new shape (quantity, abilities) is read with the old columns the
-// previous release still reads derived from them; the old keys cannot go with it; a bad ability is refused.
+// ADR 0049 steps 2 and 23: an item in the new shape (quantity, abilities) is read with the old columns the
+// web still reads derived from them, its count the quantity (a counter is the ability's left); the old keys cannot go with it; a bad ability is refused.
 func TestReadItems_ADR0049Step23_NewShape(t *testing.T) {
 	items, err := seedfile.ReadItems(write(t, `[
 	  {"id":"wand","name":{"en":"Wand"},"type":"wand","quantity":1,
@@ -120,7 +120,7 @@ func TestReadItems_ADR0049Step23_NewShape(t *testing.T) {
 	]`))
 	require.NoError(t, err)
 	wand, gem, arrows := items[0], items[1], items[2]
-	assert.Equal(t, []any{"charges", 3, 3, "6d6", "rod_staff_wand"}, []any{wand.Behaviour, wand.Count, wand.Max(), wand.EffectDice, wand.EffectSave})
+	assert.Equal(t, []any{"charges", 1, 3, "6d6", "rod_staff_wand"}, []any{wand.Behaviour, wand.Count, wand.Max(), wand.EffectDice, wand.EffectSave})
 	assert.Equal(t, []any{"daily", 1, 2}, []any{gem.Behaviour, gem.Count, gem.Max()}, "quantity defaults to 1; daily left and max")
 	assert.Equal(t, "Dispel Magic", gem.AbilityList[0].Name["en"])
 	assert.Equal(t, []any{"stock", 18, 18}, []any{arrows.Behaviour, arrows.Count, arrows.Max()})

@@ -137,6 +137,16 @@ FROM items WHERE abilities IS NULL ORDER BY character_id, position, id;
 UPDATE items SET abilities = sqlc.arg(abilities)::text
 WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id AND abilities IS NULL;
 
+-- The quantity of ADR 0049 step 2 for an item whose counter is an ability's (per_day or charges): one
+-- object, so its count is 1. Read the converted rows whose count is not 1, decide in Go which hold
+-- such an ability (the list is JSON text), and write the count; a rerun finds none.
+-- name: ListCountedItemAbilities :many
+SELECT character_id, id, count, abilities
+FROM items WHERE abilities IS NOT NULL AND abilities <> '[]' AND count <> 1 ORDER BY character_id, position, id;
+
+-- name: SetItemQuantity :exec
+UPDATE items SET count = sqlc.arg(count)::bigint WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
+
 -- name: InsertReview :exec
 INSERT INTO equipment_review (character_id, item_id, reason) VALUES (sqlc.arg(character_id)::bigint, @item_id, @reason)
 ON CONFLICT DO NOTHING;

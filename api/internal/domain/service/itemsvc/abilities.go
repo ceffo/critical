@@ -99,6 +99,13 @@ var abilityIDRE = regexp.MustCompile(`^[a-z0-9]+(_[a-z0-9]+)*$`)
 // keeps it, so it stays editable).
 func (l Limit) PaysPerObject() bool { return l.Kind == LimitPerDay || l.Kind == LimitCharges }
 
+// OneCounterPerObject reports whether one of the abilities is a per_day or
+// charges counter: the item is one object, and its count is its quantity, 1
+// (ADR 0049 step 2).
+func OneCounterPerObject(abilities []Ability) bool {
+	return slices.ContainsFunc(abilities, func(a Ability) bool { return a.Limit.PaysPerObject() })
+}
+
 // HasStock reports whether the piece's quantity is a stock of something
 // (ADR 0049 step 2): ammunition, gear, a potion or a scroll. A with_item
 // ability spends from it.

@@ -1,16 +1,18 @@
 // Package itemsvc owns a character's equipment, the one possessions list of
 // ADR 0033: weapons, ammunition, armour, shields, magic items and gear are
 // one model (Item), each piece carried, worn or wielded (SetState). An
-// item's Behaviour says how its count moves. Use spends one of any item (a
-// charges item is removed at 0), Restock adds to a stock item, ResetDaily
-// refills the daily items on a long rest. Every change at the table is one
-// action-log entry with the item's "items:<id>" snapshot, so popping it
-// restores the count (and a removed item).
+// item has a quantity and abilities (ADR 0049). UseAbility pays an ability's
+// limit and runs its effects, Use and UseItem spend one of a stock (a potion
+// or a scroll spent to 0 is removed), Restock adds to a stock, ResetDaily
+// refills the per_day abilities on a long rest. Every change at the table is
+// one action-log entry with the item's "items:<id>" snapshot, so popping it
+// restores the counters (and a removed item).
 package itemsvc
 
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -29,22 +31,27 @@ type SVC interface {
 	// List is the character's items in sheet order.
 	List(ctx context.Context, characterID int64) ([]Item, error)
 	// Use spends one count of the item atomically and returns the updated
-	// item; a charges item spent to 0 is removed (Item.Removed). It must run
+	// item; a potion or a scroll spent to 0 is removed (Item.Removed). It must run
 	// in the caller's transaction (the attack that fires an arrow) and the
 	// caller logs UseSnapshot of the result. ErrItemNotFound for an unknown
 	// id, ErrItemEmpty at 0.
 	Use(ctx context.Context, characterID int64, itemID string) (Item, error)
-	// UseItem spends one count of any item (Use), rolls its effect dice (if
-	// any) through the dice port and records the use in the action log with
-	// the item's snapshot, all in one transaction. ErrNotUsable for a weapon,
-	// an armour or a shield.
+	// UseItem spends one of a stock item's quantity (the inventory's minus, ADR
+	// 0049 step 2): no ability, no effect, no initiative; logged as an item_use
+	// entry with the item's snapshot, in one transaction. ErrNotUsable for an
+	// item with no stock or with a per_day or charges ability.
 	UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error)
+	// UseAbility uses one ability of an item (ADR 0049 step 7): pays its limit,
+	// runs its effects, logs the use and corrects the round's initiative, in
+	// one transaction. ErrItemNotFound, ErrAbilityNotFound, ErrAbilityExhausted.
+	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*AbilityUseResult, error)
 	// Restock adds n (1..MaxRestock) to a stock item and logs it with the
-	// item's snapshot, in one transaction. ErrNotRestockable for a charges or
-	// daily item or a weapon, an armour or a shield, ErrInvalidInput for n out of range.
+	// item's snapshot, in one transaction. ErrNotRestockable for an item with
+	// no stock or with a per_day or charges ability, ErrInvalidInput for n out of range.
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*RestockResult, error)
-	// ResetDaily refills every daily item of the character to its max (long
-	// rest) and returns the character's full item list.
+	// ResetDaily refills every per_day ability of the character's items to its
+	// max (long rest, ADR 0049 step 6) and returns the character's full item
+	// list. It must run in the caller's transaction.
 	ResetDaily(ctx context.Context, characterID int64) ([]Item, error)
 	// Create adds an item (loot, a purchase) and logs it with the item's
 	// snapshot, in one transaction: typed, or picked from the catalogue
@@ -100,8 +107,6 @@ type DAL interface {
 	Decrement(ctx context.Context, characterID int64, itemID string) (Item, error)
 	// Increment adds n and returns the updated item, or ErrItemNotFound.
 	Increment(ctx context.Context, characterID int64, itemID string, n int) (Item, error)
-	// ResetDaily refills every daily item of the character to its max count.
-	ResetDaily(ctx context.Context, characterID int64) error
 	// SetCount writes a count back; ErrItemNotFound for an unknown id.
 	SetCount(ctx context.Context, characterID int64, itemID string, count int) error
 	// Delete removes an item; ErrItemNotFound for an unknown id.
@@ -254,11 +259,48 @@ func (s *service) Use(ctx context.Context, characterID int64, itemID string) (It
 	return item, nil
 }
 
-// ResetDaily refills the daily items only: stock and charges items are never
-// refilled by a rest.
+// ResetDaily is the item half of the long rest (ADR 0049 step 6): every
+// per_day ability of every item goes back to its max. charges and with_item
+// abilities are untouched (nothing recharges them), and only an item whose
+// counter changes is written. It returns the character's full list.
 func (s *service) ResetDaily(ctx context.Context, characterID int64) ([]Item, error) {
-	if err := s.dal.ResetDaily(ctx, characterID); err != nil {
-		return nil, fmt.Errorf("reset daily items: %w", err)
+	items, err := s.dal.List(ctx, characterID)
+	if err != nil {
+		return nil, fmt.Errorf("list items: %w", err)
 	}
-	return s.dal.List(ctx, characterID)
+	for n, it := range items {
+		refilled, ok := it.refilled()
+		if !ok {
+			continue
+		}
+		if err := s.dal.Update(ctx, characterID, refilled); err != nil {
+			return nil, fmt.Errorf("reset daily item %s: %w", it.ID, err)
+		}
+		items[n] = refilled
+	}
+	return items, nil
+}
+
+// refilled is the item with its per_day abilities back to their max, ok false
+// when none was short of it.
+func (i Item) refilled() (Item, bool) {
+	out, changed := i, false
+	for n, a := range i.Abilities {
+		if a.Limit.Kind != LimitPerDay || a.Limit.Left >= a.Limit.Max {
+			continue
+		}
+		if !changed {
+			out.Abilities, changed = slices.Clone(i.Abilities), true
+		}
+		out.Abilities[n].Limit.Left = a.Limit.Max
+	}
+	return out, changed
+}
+
+// SameCounters reports whether o has every ability counter i has: what a long
+// rest compares to know which items it refilled.
+func (i Item) SameCounters(o Item) bool {
+	return i.Count == o.Count && slices.EqualFunc(i.Abilities, o.Abilities, func(a, b Ability) bool {
+		return a.ID == b.ID && a.Limit == b.Limit
+	})
 }

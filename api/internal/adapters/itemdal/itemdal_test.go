@@ -147,14 +147,6 @@ func TestIncrement_AddsNAndReturnsTheUpdatedItem(t *testing.T) {
 	require.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 }
 
-func TestResetDaily_RunsTheDailyRefill(t *testing.T) {
-	ctx := context.Background()
-	dal, q, _ := mocked(t)
-
-	q.EXPECT().ResetDailyItems(ctx, owner).Return(nil).Once()
-	require.NoError(t, dal.ResetDaily(ctx, owner))
-}
-
 // SetCount writes the count given; no row updated is ErrItemNotFound.
 func TestSetCount_WritesTheCountElseNotFound(t *testing.T) {
 	ctx := context.Background()
@@ -268,9 +260,6 @@ func TestStorageErrors_AreReturnedAndStopTheWrite(t *testing.T) {
 
 	q.EXPECT().SetItemCount(ctx, queries.SetItemCountParams{Count: 1, CharacterID: owner, ID: "w"}).Return(0, assert.AnError).Once()
 	require.ErrorIs(t, dal.SetCount(ctx, owner, "w", 1), assert.AnError)
-
-	q.EXPECT().ResetDailyItems(ctx, owner).Return(assert.AnError).Once()
-	require.ErrorIs(t, dal.ResetDaily(ctx, owner), assert.AnError)
 }
 
 // ADR 0033 steps 1 to 6: every field of a piece round-trips through its

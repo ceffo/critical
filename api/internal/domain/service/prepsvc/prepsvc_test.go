@@ -203,7 +203,10 @@ func TestInfo_ServesTheItemsTheSpellCanSpend(t *testing.T) {
 		{ID: "ruby", Name: localized.Of("Ruby"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
 		{ID: "opal", Name: localized.Of("Opal"), Component: "gem", Behaviour: itemsvc.BehaviourCharges, Count: 1},
 		{ID: "spent", Name: localized.Of("Spent"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 0},
-		{ID: "daily", Name: localized.Of("Daily"), Component: "gem", Behaviour: itemsvc.BehaviourDaily, Count: 3},
+		{
+			ID: "daily", Name: localized.Of("Daily"), Component: "gem", Count: 3,
+			Abilities: []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 3, Left: 3}}},
+		},
 		{ID: "arrow", Name: localized.Of("Arrow"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
 		{ID: "label", Name: localized.Of("Old gem"), Type: "gem", Behaviour: itemsvc.BehaviourStock, Count: 1},
 	}, nil)

@@ -13,8 +13,9 @@ import (
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
 )
 
-// pendingConversion is the campaign's seeded database as it is before the conversion: every item's
-// abilities NULL, the Power Gem used today (count 0) and its hammer on.
+// pendingConversion is the campaign's seeded database as the previous releases left it before the
+// conversion: every item's abilities NULL, the Power Gem used today (count 0) and its hammer on,
+// the Wand of lightning's four charges as its count (the seed now stores a quantity of 1).
 func pendingConversion(t *testing.T) (*fakeStore, int64) {
 	t.Helper()
 	f := newFakeStore()
@@ -24,6 +25,9 @@ func pendingConversion(t *testing.T) (*fakeStore, int64) {
 	gem := f.t.Items[rowKey(owner, "power_gem_dispel")]
 	gem.Count = 0
 	f.t.Items[rowKey(owner, "power_gem_dispel")] = gem
+	wand := f.t.Items[rowKey(owner, "wand_lightning")]
+	wand.Count = 4
+	f.t.Items[rowKey(owner, "wand_lightning")] = wand
 	return f, owner
 }
 
@@ -38,9 +42,11 @@ func abilitiesOf(t *testing.T, f *fakeStore, owner int64, id string) []itemsvc.A
 	return got
 }
 
-// ADR 0049 step 18: the boot step converts every row with NULL abilities in one transaction, keeps
-// count and the old columns as stored, names the Power Gem's ability from the seed row's abilities,
-// puts the review reasons on the list, and a second run converts nothing.
+// ADR 0049 steps 2 and 18: the boot step converts every row with NULL abilities in one transaction,
+// sets the count of the items whose counter is an ability's to their quantity 1 (the ability's left
+// keeps what the count was), keeps every other count and the old columns as stored, names the Power
+// Gem's ability from the seed row's abilities, puts the review reasons on the list, and a second
+// run converts nothing.
 func TestConvertItems_ADR0049Step18_ConvertsOnceAndKeepsTheOldColumns(t *testing.T) {
 	f, owner := pendingConversion(t)
 	before := map[string]int64{}
@@ -54,8 +60,14 @@ func TestConvertItems_ADR0049Step18_ConvertsOnceAndKeepsTheOldColumns(t *testing
 	assert.Equal(t, n, got.Converted)
 	assert.Positive(t, got.Review, "the wand's charges total is on the review list")
 
+	assert.Equal(t, 2, got.Quantities, "the gem and the wand are one object each")
 	for k, it := range f.t.Items {
-		assert.Equal(t, before[k], it.Count, "%s keeps its count: the old meaning stays until Use moves", k)
+		switch k {
+		case rowKey(owner, "power_gem_dispel"), rowKey(owner, "wand_lightning"):
+			assert.Equal(t, int64(1), it.Count, "%s: the quantity of one object", k)
+		default:
+			assert.Equal(t, before[k], it.Count, "%s keeps its count", k)
+		}
 	}
 	gem := abilitiesOf(t, f, owner, "power_gem_dispel")
 	require.Len(t, gem, 1)
@@ -91,6 +103,37 @@ func TestConvertItems_ADR0049Step18_ConvertsOnlyTheRowsStillNull(t *testing.T) {
 	assert.Equal(t, `[{"id":"edited","limit":{"kind":"unlimited"},"effects":[]}]`, f.t.Abilities[rowKey(owner, "arrows_plus1")])
 }
 
+// ADR 0049 step 2, slice 3's cut-over: a database the previous slice converted (abilities written,
+// counts still the old counters) gets the quantity too at the next start: a count of 1 for every
+// item holding a per_day or charges ability, the ability's left untouched (what a use between the
+// two releases did to the old count is not read back), nothing for stock and unlimited abilities,
+// and a second start rewrites nothing.
+func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testing.T) {
+	f, owner := pendingConversion(t)
+	// What slice 2 left: abilities written, the counts as the old release moved them.
+	_, err := convertItems(context.Background(), f, f, campaignSeeds())
+	require.NoError(t, err)
+	for _, id := range []string{"power_gem_dispel", "wand_lightning"} {
+		it := f.t.Items[rowKey(owner, id)]
+		it.Count = 3
+		f.t.Items[rowKey(owner, id)] = it
+	}
+	flask := f.t.Items[rowKey(owner, "fire_flask")]
+	flask.Count = 3
+	f.t.Items[rowKey(owner, "fire_flask")] = flask
+
+	got, err := convertItems(context.Background(), f, f, campaignSeeds())
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.BootConversion{Quantities: 2}, got)
+	assert.Equal(t, int64(1), f.t.Items[rowKey(owner, "power_gem_dispel")].Count)
+	assert.Equal(t, int64(1), f.t.Items[rowKey(owner, "wand_lightning")].Count)
+	assert.Equal(t, int64(3), f.t.Items[rowKey(owner, "fire_flask")].Count, "a stock keeps its quantity")
+	assert.Equal(t, 4, abilitiesOf(t, f, owner, "wand_lightning")[0].Limit.Left, "left is the ability's, untouched")
+	again, err := convertItems(context.Background(), f, f, campaignSeeds())
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.BootConversion{}, again)
+}
+
 // ADR 0049 step 23: a fresh database is seeded in the new shape, abilities written, nothing left
 // for the boot step; the old columns mirror the abilities for the previous release.
 func TestSeed_ADR0049Step23_FreshDatabaseIsSeededConverted(t *testing.T) {
@@ -114,7 +157,7 @@ func TestSeed_ADR0049Step23_FreshDatabaseIsSeededConverted(t *testing.T) {
 	assert.Equal(t, int64(1), row.MaxCount)
 	wand := f.t.Items[rowKey(owner, "wand_lightning")]
 	assert.Equal(t, "charges", wand.Behaviour)
-	assert.Equal(t, int64(4), wand.Count)
+	assert.Equal(t, int64(1), wand.Count, "the quantity of one object; the four charges are the ability's left")
 	assert.Equal(t, "6d6", wand.EffectDice)
 }
 

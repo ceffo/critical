@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
@@ -65,6 +66,7 @@ func undoCases() []undoCase {
 			})).Return(nil).Once()
 		}},
 		{"an item's count (family items), the entry's character's", "items:wand_lightning", reencoded("item count of the equipment model (itemsvc)"), func(h *harness) {
+			h.Items.EXPECT().Get(mock.Anything, characterID, "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
 			h.Items.EXPECT().SetCount(mock.Anything, characterID, "wand_lightning", 4).Return(nil).Once()
 		}},
 		{"a weapon added by hand before the equipment model (family weapons): the piece", "weapons:dagger2", reencoded("weapon added before the equipment model (weaponsvc): absent"), func(h *harness) {

@@ -468,6 +468,7 @@ func Equipment(items []SeededItem, weapons []Weapon, catalogue []ruletablesvc.We
 		if conv.Pieces[i].Abilities == nil {
 			c := itemsvc.ConvertLegacy(conv.Pieces[i])
 			conv.Pieces[i].Abilities = c.Abilities
+			conv.Pieces[i].Count = c.Quantity // a charged or daily piece is one object (step 2)
 			for _, r := range c.Reasons {
 				conv.Reviews = append(conv.Reviews, itemsvc.Review{ItemID: conv.Pieces[i].ID, Reason: r})
 			}

@@ -29,6 +29,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type itemSvc interface {
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 	UseItem(ctx context.Context, characterID int64, itemID string) (*itemsvc.UseResult, error)
+	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*itemsvc.AbilityUseResult, error)
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*itemsvc.RestockResult, error)
 	Create(ctx context.Context, characterID int64, in itemsvc.ItemInput) (*itemsvc.ChangeResult, error)
 	Update(ctx context.Context, characterID int64, itemID string, p itemsvc.ItemPatch) (*itemsvc.ChangeResult, error)
@@ -47,6 +48,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
 	r.Patch("/api/items/{id}", render.Handle(Update(charID, svc)))
 	r.Delete("/api/items/{id}", render.Handle(Delete(charID, svc)))
 	r.Post("/api/items/{id}/use", render.Handle(Use(charID, svc)))
+	r.Post("/api/items/{id}/abilities/{abilityId}/use", render.Handle(UseAbility(charID, svc)))
 	r.Post("/api/items/{id}/restock", render.Handle(Restock(charID, svc)))
 	r.Post("/api/items/{id}/state", render.Handle(SetState(charID, svc)))
 	r.Delete("/api/items/{id}/review", render.Handle(DismissReview(charID, svc)))
@@ -62,14 +64,14 @@ func Catalogue(svc itemSvc) render.HandlerFunc {
 	}
 }
 
-// UseResultDTO is the wire shape of POST /api/items/{id}/use: the dice
-// rolled (each die, the flat modifier, the total) and the count left. Same camelCase names as
-// the item_use log payload.
+// UseResultDTO is the wire shape of POST /api/items/{id}/use, spend one (ADR
+// 0049 step 2): the quantity left. Nothing is rolled: the dice fields are the
+// journal's shape of a use with none. Same camelCase names as the item_use log
+// payload.
 type UseResultDTO struct {
 	ItemID     string `json:"itemId"`
 	Name       string `json:"name"`
 	Type       string `json:"type"`
-	Behaviour  string `json:"behaviour"`
 	Removed    bool   `json:"removed"`
 	Remaining  int    `json:"remaining"`
 	MaxCount   int    `json:"maxCount"`
@@ -82,7 +84,7 @@ type UseResultDTO struct {
 	LogEntryID int64  `json:"logEntryId"`
 }
 
-// Use spends one count of the item, rolls its effect and logs the use.
+// Use spends one of a stock item's quantity (the inventory's minus) and logs it.
 func Use(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		res, err := svc.UseItem(r.Context(), charID(r), chi.URLParam(r, "id"))
@@ -90,10 +92,49 @@ func Use(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			return err
 		}
 		render.OK(r.Context(), w, UseResultDTO{
-			ItemID: res.ItemID, Name: res.Name, Type: res.Type, Behaviour: string(res.Behaviour),
-			Removed: res.Removed, Remaining: res.Remaining,
-			MaxCount: res.MaxCount, Dice: res.Dice, Rolls: res.Rolls, Total: res.Total,
-			Modifier: res.Modifier, Save: res.Save, Notes: res.Notes, LogEntryID: res.LogEntryID,
+			ItemID: res.ItemID, Name: res.Name, Type: res.Type,
+			Removed: res.Removed, Remaining: res.Remaining, Rolls: []int{},
+			Notes: res.Notes, LogEntryID: res.LogEntryID,
+		})
+		return nil
+	}
+}
+
+// AbilityUseResultDTO is the wire shape of POST
+// /api/items/{id}/abilities/{abilityId}/use (ADR 0049 step 7): the limit as it
+// stands after the use and each effect's result. Same camelCase names as the
+// item_use log payload, which also carries the first dice effect in the
+// journal's flat fields (dice, rolls, modifier, total, save).
+type AbilityUseResultDTO struct {
+	ItemID      string         `json:"itemId"`
+	AbilityID   string         `json:"abilityId"`
+	Name        string         `json:"name"`
+	AbilityName localized.Text `json:"abilityName,omitempty"`
+	Type        string         `json:"type"`
+	Limit       string         `json:"limit"`
+	// Left and Max are sent for per_day and charges only; Remaining is the
+	// counter or the quantity left (0 for unlimited).
+	Left       *int                   `json:"left,omitempty"`
+	Max        *int                   `json:"max,omitempty"`
+	Remaining  int                    `json:"remaining"`
+	Removed    bool                   `json:"removed"`
+	Effects    []itemsvc.EffectResult `json:"effects"`
+	Notes      string                 `json:"notes,omitempty"`
+	LogEntryID int64                  `json:"logEntryId"`
+}
+
+// UseAbility uses one ability of an item: pays its limit, runs its effects,
+// logs the use (ADR 0049 step 7).
+func UseAbility(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		res, err := svc.UseAbility(r.Context(), charID(r), chi.URLParam(r, "id"), chi.URLParam(r, "abilityId"))
+		if err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, AbilityUseResultDTO{
+			ItemID: res.ItemID, AbilityID: res.AbilityID, Name: res.Name, AbilityName: res.AbilityName, Type: res.Type,
+			Limit: string(res.Limit), Left: res.Left, Max: res.Max, Remaining: res.Remaining, Removed: res.Removed,
+			Effects: res.Effects, Notes: res.Notes, LogEntryID: res.LogEntryID,
 		})
 		return nil
 	}

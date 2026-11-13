@@ -82,6 +82,10 @@ type Querier interface {
 	ListCharacterIdentity(ctx context.Context) ([]ListCharacterIdentityRow, error)
 	// The languages migration (014): every character's stored language list, to map to codes.
 	ListCharacterLanguages(ctx context.Context) ([]ListCharacterLanguagesRow, error)
+	// The quantity of ADR 0049 step 2 for an item whose counter is an ability's (per_day or charges): one
+	// object, so its count is 1. Read the converted rows whose count is not 1, decide in Go which hold
+	// such an ability (the list is JSON text), and write the count; a rerun finds none.
+	ListCountedItemAbilities(ctx context.Context) ([]ListCountedItemAbilitiesRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
 	// The skill sets migration (034): every character's legacy flat skill points, to copy under the
 	// skill set its class grants. Only the characters that have points and no skill sets yet.
@@ -123,6 +127,7 @@ type Querier interface {
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error
 	SetItemAbilities(ctx context.Context, arg SetItemAbilitiesParams) error
+	SetItemQuantity(ctx context.Context, arg SetItemQuantityParams) error
 	// The race of a character stored before races had codes (migration 007): only while it has none,
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error

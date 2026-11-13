@@ -149,7 +149,7 @@ func TestInitiative_ADR0035Item6_2_AWandAfterASpellReplacesItsTerm(t *testing.T)
 	tb := mageWith(t, dice, "magic_missile")
 	wand, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
 		Name: localized.Of("Wand of frost"), Category: itemsvc.CategoryMagic, MagicKind: "wand",
-		Behaviour: itemsvc.BehaviourCharges, Count: 5, MaxCount: 5,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}),
 	})
 	require.NoError(t, err)
 	_, _, _, _, _, err = tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
@@ -159,7 +159,7 @@ func TestInitiative_ADR0035Item6_2_AWandAfterASpellReplacesItsTerm(t *testing.T)
 	spell := tb.initiative(t)
 	assert.Equal(t, 7, spell.Total(), "6 + 1")
 
-	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, wand.Item.ID)
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.Item.ID, "use")
 	require.NoError(t, err)
 	used := tb.initiative(t)
 	assert.Equal(t, []buffsvc.InitiativeModifier{
@@ -283,14 +283,14 @@ func TestInitiative_ADR0035Item6_2_AScrollUsedIsNotCounted(t *testing.T) {
 	require.NoError(t, err)
 	scroll, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
 		Name: localized.Of("Scroll of fireball"), Category: itemsvc.CategoryMagic, MagicKind: "scroll",
-		Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem}),
 	})
 	require.NoError(t, err)
 	_, _, _, rolled, _, err := tb.bs.Buffs.AdvanceRound(tb.ctx, tb.id)
 	require.NoError(t, err)
 	assert.Equal(t, 13, rolled.Total(), "8 + the sword's 5")
 
-	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, scroll.Item.ID)
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, scroll.Item.ID, "use")
 	require.NoError(t, err)
 	got := tb.initiative(t)
 	assert.Equal(t, []buffsvc.InitiativeModifier{
@@ -309,18 +309,18 @@ func TestInitiative_ADR0035Item6_2_ItemOutOfCombatCastThenRerollTwoItems(t *test
 	tb := mageWith(t, dice, "magic_missile")
 	wand, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
 		Name: localized.Of("Wand of frost"), Category: itemsvc.CategoryMagic, MagicKind: "wand",
-		Behaviour: itemsvc.BehaviourCharges, Count: 5, MaxCount: 5,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}),
 	})
 	require.NoError(t, err)
 	potion, err := tb.bs.Items.Create(tb.ctx, tb.id, itemsvc.ItemInput{
 		Name: localized.Of("Potion of healing"), Category: itemsvc.CategoryMagic, MagicKind: "potion",
-		Behaviour: itemsvc.BehaviourStock, Count: 2,
+		Behaviour: itemsvc.BehaviourStock, Count: 2, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem}),
 	})
 	require.NoError(t, err)
 	_, err = tb.bs.Cast.AddEffect(tb.ctx, tb.id, castsvc.AddEffectRequest{SpellID: "haste"})
 	require.NoError(t, err)
 
-	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, wand.Item.ID)
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.Item.ID, "use")
 	require.NoError(t, err)
 	assert.Equal(t, 0, tb.countKind(t, actionlog.KindInitiativeCorrect), "round 0, no initiative: no correction")
 	assert.Nil(t, tb.initiative(t))
@@ -333,9 +333,9 @@ func TestInitiative_ADR0035Item6_2_ItemOutOfCombatCastThenRerollTwoItems(t *test
 	require.NoError(t, err, "a reroll right after a cast is allowed")
 	assert.Equal(t, 3, rerolled.D10)
 
-	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, wand.Item.ID)
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.Item.ID, "use")
 	require.NoError(t, err)
-	_, err = tb.bs.Items.UseItem(tb.ctx, tb.id, potion.Item.ID)
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, potion.Item.ID, "use")
 	require.NoError(t, err)
 	got := tb.initiative(t)
 	assert.Equal(t, 3, got.D10, "the correction keeps the die")

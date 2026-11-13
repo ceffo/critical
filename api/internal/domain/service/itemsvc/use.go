@@ -6,103 +6,93 @@ import (
 	"fmt"
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
-// UseResult is what one use of an item produced: the dice rolled (none for an
-// item without effect dice, like the Power Gem's Dispel) and the count left.
+// UseResult is what spending one of an item's stock produced (the inventory's
+// minus, ADR 0049 step 2): the count left. It rolls nothing and applies no
+// effect.
 type UseResult struct {
 	ItemID    string
 	Name      string
 	Type      string
-	Behaviour Behaviour
 	Remaining int
-	MaxCount  int
-	// Removed is true when this use spent the last charge of a charges item,
-	// which is gone from the inventory (popping the use brings it back).
-	Removed bool
-	// Dice is the effect dice ("6d6"), empty when the item rolls nothing.
-	Dice string
-	// Rolls are the individual dice, in order, Modifier the flat "+K" of
-	// the dice ("1d8+2"), and Total their sum.
-	Rolls    []int
-	Modifier int
-	Total    int
-	// Save is the save category the effect allows ("rod_staff_wand"), empty if none.
-	Save       string
+	// Removed is true when this spend took the last potion or scroll: the item
+	// is gone from the inventory (popping the use brings it back).
+	Removed    bool
 	Notes      string
 	LogEntryID int64
 }
 
 // useRecord is itemsvc's JSON encoding of a use inside its action-log entry
-// (payload), the same camelCase names as the /api/items/{id}/use response.
+// (payload), the same camelCase names as the use endpoints' responses.
 // Entries already in the log must stay decodable: add fields, never rename.
-// Kind is the item kind of entries logged before the one item model.
+// Kind is the item kind of entries logged before the one item model. An entry
+// without AbilityId is a spend-one (and every entry recorded before ADR 0049).
+// Behaviour, Dice, Rolls, Total, Save and Modifier keep the shape the journal
+// words: an ability's use fills the dice fields from its first dice effect and
+// Remaining and MaxCount from its counter.
 type useRecord struct {
-	ItemID    string `json:"itemId"`
-	Name      string `json:"name"`
-	Kind      string `json:"kind,omitempty"`
-	Type      string `json:"type"`
-	Behaviour string `json:"behaviour"`
-	Removed   bool   `json:"removed"`
-	Remaining int    `json:"remaining"`
-	MaxCount  int    `json:"maxCount"`
-	Dice      string `json:"dice,omitempty"`
-	Rolls     []int  `json:"rolls"`
-	Total     int    `json:"total"`
-	Save      string `json:"save,omitempty"`
-	Notes     string `json:"notes,omitempty"`
-	Modifier  int    `json:"modifier,omitempty"`
+	ItemID      string         `json:"itemId"`
+	AbilityID   string         `json:"abilityId,omitempty"`
+	Name        string         `json:"name"`
+	AbilityName localized.Text `json:"abilityName,omitempty"`
+	Kind        string         `json:"kind,omitempty"`
+	Type        string         `json:"type"`
+	Behaviour   string         `json:"behaviour,omitempty"`
+	// Limit, Left and Max are the ability's limit kind and its counter after
+	// the use (Left, Max only for per_day and charges).
+	Limit     string         `json:"limit,omitempty"`
+	Left      *int           `json:"left,omitempty"`
+	Max       *int           `json:"max,omitempty"`
+	Removed   bool           `json:"removed"`
+	Remaining int            `json:"remaining"`
+	MaxCount  int            `json:"maxCount"`
+	Dice      string         `json:"dice,omitempty"`
+	Rolls     []int          `json:"rolls"`
+	Total     int            `json:"total"`
+	Save      string         `json:"save,omitempty"`
+	Notes     string         `json:"notes,omitempty"`
+	Modifier  int            `json:"modifier,omitempty"`
+	Effects   []EffectResult `json:"effects,omitempty"`
 	// Uses logged before the UI built it also carry an English "breakdown",
 	// no longer read.
 }
 
-// UseItem spends one count of any item (the inventory's −), rolls the effect
-// dice and logs the use. Dice are rolled after the decrement, inside the same
-// transaction: any failure leaves the count (and a charges item at 0)
-// untouched.
+// UseItem spends one of a stock item's quantity (the inventory's minus, ADR
+// 0049 step 2): a count change with no ability, no effect and no initiative,
+// logged as an item_use entry without an abilityId. A potion or a scroll spent
+// to 0 is removed in the same entry; undo puts it back. The count moves in one
+// atomic statement, after the refusals are read: ErrNotUsable for an item with
+// no stock (a weapon, a ring) or one with a per_day or charges ability (its
+// counter is the ability's, Use acts on it), ErrItemEmpty at 0.
 func (s *service) UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error) {
 	var res *UseResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
-		// Read first and refuse before any write: a weapon, an armour or a shield
-		// is never spent, so its count never moves (ADR 0049 step 2).
 		before, err := s.dal.Get(ctx, characterID, itemID)
 		if err != nil {
 			return err
 		}
-		if !before.Usable() {
-			return fmt.Errorf("%w: %s (%s) is one object, never spent", ErrNotUsable, before.Name.Any(), before.Category)
+		if !before.Usable() || before.holdsPerObjectLimit() {
+			return fmt.Errorf("%w: %s (%s) has no stock to spend", ErrNotUsable, before.Name.Any(), before.Category)
 		}
 		item, err := s.Use(ctx, characterID, itemID)
 		if err != nil {
 			return err
 		}
 		r := &UseResult{
-			ItemID: item.ID, Name: item.Name.Any(), Type: item.Type, Behaviour: item.Behaviour,
-			Remaining: item.Count, MaxCount: item.MaxCount, Removed: item.Removed(),
-			Save: item.EffectSave, Notes: item.Notes, Rolls: []int{},
-		}
-		if item.EffectDice != "" {
-			rolls, mod, err := rollDice(s.dice, item.EffectDice)
-			if err != nil {
-				return fmt.Errorf("item %s effect: %w", item.ID, err)
-			}
-			r.Dice, r.Rolls, r.Modifier = item.EffectDice, rolls, mod
-			r.Total = mod
-			for _, v := range rolls {
-				r.Total += v
-			}
+			ItemID: item.ID, Name: item.Name.Any(), Type: item.Type,
+			Remaining: item.Count, Removed: item.Removed(), Notes: item.Notes,
 		}
 		snap, err := UseSnapshot(item)
 		if err != nil {
 			return err
 		}
 		payload, err := json.Marshal(useRecord{
-			ItemID: r.ItemID, Name: r.Name, Type: r.Type, Behaviour: string(r.Behaviour),
-			Removed: r.Removed, Remaining: r.Remaining,
-			MaxCount: r.MaxCount, Dice: r.Dice, Rolls: r.Rolls, Total: r.Total,
-			Save: r.Save, Notes: r.Notes, Modifier: r.Modifier,
+			ItemID: r.ItemID, Name: r.Name, Type: r.Type, Removed: r.Removed, Remaining: r.Remaining,
+			Rolls: []int{}, Notes: r.Notes,
 		})
 		if err != nil {
 			return fmt.Errorf("encode item use payload: %w", err)
@@ -118,7 +108,7 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 		}
 		r.LogEntryID = id
 		res = r
-		return s.correctInitiative(ctx, characterID, item)
+		return nil
 	})
 	if err != nil {
 		return nil, err
@@ -126,23 +116,29 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 	return res, nil
 }
 
-// correctInitiative is ADR 0035 item 6.2 for an item used: a magic piece
-// makes the round's initiative the same d10 plus its magic kind's PHB Table
-// 56 modifier. A scroll's row is the casting time of its spell: a scroll
-// that names its spell adds that spell's casting time
+// correctInitiative is ADR 0049 step 15 (ADR 0035 item 6.2) for an ability
+// used: the round's initiative takes the d10 plus the item's PHB Table 56
+// modifier by its magic kind. A scroll's row is the casting time of its spell:
+// a scroll that names its spell adds that spell's casting time
 // (buffsvc.ScrollInitiative); one that names none is not counted
-// (buffsvc.ItemInitiative). It is the use transaction's last entry. Any other piece (ammunition, gear) corrects nothing, nor does a use
-// before catalogue format 7 (no Table 56).
+// (buffsvc.ItemInitiative). An item of any other category (the sword's "turn
+// zombies", a rope) takes the miscellaneous row (the user's ruling Q3). It is
+// the use transaction's last entry. Nothing is corrected before catalogue
+// format 7 (no Table 56); out of combat the corrector itself does nothing.
 func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item) error {
-	if item.Category != CategoryMagic || s.initiativeItems == nil {
+	if s.initiativeItems == nil {
 		return nil
 	}
-	row, ok := s.initiativeItems.Row(item.MagicKind)
+	kind := item.MagicKind
+	if item.Category != CategoryMagic {
+		kind = MagicMisc
+	}
+	row, ok := s.initiativeItems.Row(kind)
 	if !ok {
 		return nil
 	}
-	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), item.MagicKind, row.Modifier, row.HasModifier)
-	if !row.HasModifier && item.SpellID != "" {
+	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), kind, row.Modifier, row.HasModifier)
+	if !row.HasModifier && item.Category == CategoryMagic && item.SpellID != "" {
 		var err error
 		if cause, err = s.scrollInitiative(ctx, item); err != nil {
 			return err

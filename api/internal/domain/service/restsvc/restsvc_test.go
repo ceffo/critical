@@ -73,16 +73,22 @@ func TestNew_NilDependency(t *testing.T) {
 	require.Error(t, err)
 }
 
-// The rest is one logged entry: the slot list always (so it blocks voiding
-// an older cast), plus each item whose count changed.
-func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
+// ADR 0049 step 6: the rest is one logged entry: the slot list always (so it
+// blocks voiding an older cast), plus each item whose ability counters changed,
+// as a whole item.
+func TestLongRest_ADR0049Step6_ResetsBothInOneLoggedTransaction(t *testing.T) {
 	f := newFixture(t)
 	before := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep", Used: true}, {Level: 3, SpellID: "haste"}}
 	after := []spellsvc.SpellSlot{{Level: 1, SpellID: "sleep"}, {Level: 3, SpellID: "haste"}}
 	f.spells.EXPECT().GetSlots(mock.Anything, int64(1)).Return(before, nil)
 	f.spells.EXPECT().ResetSlots(mock.Anything, int64(1)).Return(after, nil)
-	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 0}, {ID: "arrows", Count: 9}}, nil)
-	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return([]itemsvc.Item{{ID: "gem", Name: localized.Of("Gem"), Count: 1}, {ID: "arrows", Count: 9}}, nil)
+	perDay := func(left int) []itemsvc.Ability {
+		return []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: left}}}
+	}
+	gemUsed := itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Count: 1, Abilities: perDay(0)}
+	gemReady := itemsvc.Item{ID: "gem", Name: localized.Of("Gem"), Count: 1, Abilities: perDay(1)}
+	f.items.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{gemUsed, {ID: "arrows", Count: 9}}, nil)
+	f.items.EXPECT().ResetDaily(mock.Anything, int64(1)).Return([]itemsvc.Item{gemReady, {ID: "arrows", Count: 9}}, nil)
 	warn := []itemsvc.Warning{{ItemID: "gem", Code: itemsvc.WarnHands}}
 	f.items.EXPECT().Warnings(mock.Anything, int64(1), mock.Anything).Return(warn, nil)
 	f.psp.EXPECT().NightsPSPRecovery(mock.Anything, int64(1)).Return(0, nil).Once()
@@ -98,7 +104,7 @@ func TestLongRest_ResetsBothInOneLoggedTransaction(t *testing.T) {
 	assert.Equal(t, actionlog.KindLongRest, e.Kind)
 	slotSnap, err := prepsvc.SlotsSnapshot(before, after)
 	require.NoError(t, err)
-	gemSnap, err := itemsvc.CountSnapshot("gem", 0, 1)
+	gemSnap, err := itemsvc.ItemSnapshot(gemUsed, gemReady)
 	require.NoError(t, err)
 	assert.Equal(t, []actionlog.Snapshot{slotSnap, gemSnap}, e.Snapshots, "arrows did not change")
 	assert.JSONEq(t, `{"slotsReset":1,"itemsRefilled":["Gem"]}`, string(e.Payload))

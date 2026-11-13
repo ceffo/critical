@@ -30,7 +30,7 @@ function count(page: Page, id: string) {
 }
 
 function minus(page: Page, name: string) {
-  return page.getByRole("button", { name: `Use one ${name}` });
+  return page.getByRole("button", { name: `Spend one ${name}` });
 }
 
 function plus(page: Page, name: string) {
@@ -99,9 +99,8 @@ for (const size of [
       for (const [n] of (await ones.all()).entries()) {
         const one = ones.nth(n);
         await expect(one.getByTestId("item-count")).toHaveCount(0);
-        await expect(one.getByTestId("item-behaviour")).toHaveCount(0);
         await expect(
-          one.getByRole("button", { name: /^(Use|Add) one / }),
+          one.getByRole("button", { name: /^(Use|Spend one|Add one) / }),
         ).toHaveCount(0);
       }
     }

@@ -670,20 +670,8 @@
   },
   "items": {
     "title": "Inventaire",
-    "useOne": "Utiliser un(e) {{name}}",
     "addOne": "Ajouter un(e) {{name}}",
-    "count": "{{count}} / {{max}}",
     "magicalBonus": "Bonus magique",
-    "behaviour": {
-      "stock": "Quantité",
-      "charges": "Charges",
-      "daily": "Quotidien"
-    },
-    "behaviourHint": {
-      "stock": "Utilisé et réapprovisionné ; reste listé à 0",
-      "charges": "Utilisé seulement ; disparaît à 0",
-      "daily": "Utilisé seulement ; rechargé par un repos long"
-    },
     "form": {
       "openAdd": "Ajouter un objet",
       "addTitle": "Ajouter un objet",
@@ -692,12 +680,7 @@
       "remove": "Retirer {{name}}",
       "name": "Nom",
       "type": "Type",
-      "behaviour": "Mode d'usage",
-      "count": "Nombre",
-      "maxCount": "Nombre par jour",
       "ammoKind": "Type de munition",
-      "effectDice": "Dés lancés à l'usage",
-      "effectSave": "JS contre l'effet",
       "noSave": "Aucun JS",
       "notes": "Note",
       "add": "Ajouter",
@@ -707,14 +690,18 @@
       "back": "Retour",
       "more": "Plus d'options",
       "notANumber": "Entrez un nombre entier",
-      "notAStrength": "Entrez une Force : 17, 18/50 ou 18/00"
+      "notAStrength": "Entrez une Force : 17, 18/50 ou 18/00",
+      "quantity": "Quantité",
+      "notAQuantity": "Entrez un nombre entier de 0 à 999"
     },
     "heading": "Objets",
     "columns": {
       "name": "Nom",
       "effect": "Effet",
       "quantity": "Quantité"
-    }
+    },
+    "spendOne": "Dépenser un(e) {{name}}",
+    "storedQuantity": "Quantité enregistrée : cet objet est unique"
   },
   "spellSlots": {
     "longRest": "Repos long",
@@ -3071,6 +3058,38 @@
         "mage": "un magicien",
         "thief": "un voleur"
       }
+    },
+    "abilities": {
+      "title": "Capacités",
+      "hint": "Ce que l'objet fait quand on l'utilise, et combien de fois",
+      "none": "Aucune capacité.",
+      "ability": "Capacité {{n}}",
+      "name": "Nom",
+      "namePlaceholder": "Le nom de l'objet",
+      "limit": "Limite",
+      "kinds": {
+        "unlimited": "Illimitée",
+        "per_day": "Par jour",
+        "charges": "Charges",
+        "with_item": "Avec l'objet"
+      },
+      "perDay": "Par jour",
+      "total": "Charges",
+      "left": "Restant",
+      "leftHint": "Ce qui reste maintenant ; réglez-le à la main pour recharger",
+      "cost": "Coût par usage",
+      "costHint": "Charges dépensées par un usage",
+      "note": "Note",
+      "effect": "Dés {{n}}",
+      "dice": "Dés lancés à l'usage",
+      "diceHint": "Lancés et affichés à l'usage, appliqués à rien",
+      "save": "JS contre l'effet",
+      "remove": "Retirer la capacité {{n}}",
+      "removeEffect": "Retirer les dés {{n}}",
+      "addDice": "Dés",
+      "addDiceHint": "Lancer des dés quand cette capacité est utilisée",
+      "add": "Capacité",
+      "addHint": "Ajouter une capacité à cet objet"
     }
   },
   "intro": {

@@ -554,6 +554,15 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
 6. **Inventory and editor.** Quantity by category, no Use and no `isCounted` guess, abilities as chips,
    the Abilities section for the limit, the `dice` effect and the note, the behaviour field removed
    (steps 13 and 16). Needs 1 and 4; its Use-free rows can ship before 5.
+   *Built.* The row shows the quantity control only where the server serves `usable` (spend one, restock;
+   a one-object piece with a stored count above 1 shows it read-only as "× N"), no Use, and each ability as
+   a chip with its limit (a dice effect puts its dice in the composer); the limit wording is shared with
+   Act · Items. The editor's Abilities section (name, limit kind with `max`, `left` and `cost`, note, dice
+   effects with their save) replaces "How it is used", "Daily number", "Dice rolled on use" and "Save against
+   the effect"; "Quantity" (0 to 999, the server's bound) shows where the category has one, by a web copy of
+   `Item.HasStock` (the draft is not stored yet, so `usable` is not there to read): change both together.
+   The wire still requires `behaviour` on an add, so the form sends `stock` there (read by no rule); slice 10
+   drops it. The review band already read `review` (slice 2).
 7. **The `heal` effect.** Applied through the HP ledger in the use's transaction, with the editor
    field (step 9, 12). Needs 3 and 6.
 8. **The `buff` effect.** A timed buff through `buffsvc`, with the editor field and the buff's

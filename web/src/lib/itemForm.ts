@@ -6,13 +6,18 @@ import type {
   Category,
   Component,
   Item,
-  ItemBehaviour,
   ItemBody,
   MagicKind,
   StrengthRating,
 } from "@/types/items";
 import type { WeaponType } from "@/types/combat";
 import { formatStrength } from "./format";
+import {
+  abilitiesKey,
+  abilityDrafts,
+  draftsToAbilities,
+  type AbilityDraft,
+} from "./abilityEditor";
 import {
   draftsToPowers,
   plusOf,
@@ -33,11 +38,8 @@ export interface ItemDraft {
   component: Component | "";
   /** The spell a magic scroll holds (ADR 0033 step 2), a catalogue id; empty for none. */
   spellId: string;
-  behaviour: ItemBehaviour;
+  /** The quantity as typed (ADR 0049 step 2), 0 to MAX_QUANTITY. */
   count: string;
-  maxCount: string;
-  effectDice: string;
-  effectSave: string;
   notes: string;
   // Ammunition.
   ammoKind: string;
@@ -68,6 +70,8 @@ export interface ItemDraft {
   // Powers (ADR 0033 step 17): an armour's or a shield's "+N", and the other powers.
   plus: number;
   powers: PowerDraft[];
+  // Abilities (ADR 0049 step 4): the limit, the dice effect and the note of each.
+  abilities: AbilityDraft[];
 }
 
 /** Fields of the form, named like the API's. */
@@ -102,15 +106,24 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
   gear: [],
 };
 
+/** The highest quantity the server accepts (itemsvc.MaxQuantity, ADR 0049 step 2). */
+export const MAX_QUANTITY = 999;
+
 /**
- * Whether the form offers a count behaviour (and a daily refill): not for a weapon, an armour or a
- * shield, which are never used or restocked. A copy of the server's rule (itemsvc.Category.OneObject,
- * ADR 0049 step 2): change both together. Only which field the form offers depends on it; the server
- * refuses the use, and a piece's stored behaviour is kept and sent back unchanged.
+ * Whether the piece has a quantity the player sets: ammunition, gear, a potion or a scroll; every
+ * other piece is one object. A copy of the server's rule (itemsvc.Item.HasStock, ADR 0049 step 2,
+ * which serves it as `usable` on a stored piece): change both together. The draft is not stored yet,
+ * so the form cannot read `usable`; only which field it offers depends on this, the server refuses
+ * the rest.
  */
-export function hasBehaviour(category: Category): boolean {
+export function hasQuantity(
+  d: Pick<ItemDraft, "category" | "magicKind">,
+): boolean {
   return (
-    category !== "weapon" && category !== "armour" && category !== "shield"
+    d.category === "ammunition" ||
+    d.category === "gear" ||
+    (d.category === "magic" &&
+      (d.magicKind === "potion" || d.magicKind === "scroll"))
   );
 }
 
@@ -172,11 +185,7 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     magicKind: category === "magic" ? "misc" : "",
     component: "",
     spellId: "",
-    behaviour: "stock",
     count: "1",
-    maxCount: "1",
-    effectDice: "",
-    effectSave: "",
     notes: "",
     ammoKind: "arrow",
     magicalBonus: "0",
@@ -200,6 +209,7 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     acMissile: "1",
     plus: 0,
     powers: [],
+    abilities: [],
   };
 }
 
@@ -212,11 +222,7 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     magicKind: i.magicKind,
     component: i.component ?? "",
     spellId: i.spellId ?? "",
-    behaviour: i.behaviour,
     count: String(i.count),
-    maxCount: String(i.maxCount),
-    effectDice: i.effectDice,
-    effectSave: i.effectSave,
     notes: i.notes,
     ammoKind: i.ammoKind || empty.ammoKind,
     magicalBonus: String(i.magicalBonus),
@@ -240,6 +246,7 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     acMissile: i.category === "shield" ? String(i.acMissile) : empty.acMissile,
     plus: plusOf(i.powers ?? []),
     powers: powerDrafts(i.category, i.powers ?? []),
+    abilities: abilityDrafts(i.abilities, lang),
   };
 }
 
@@ -254,13 +261,14 @@ export function parseInteger(s: string): number {
  * not a Strength (17, 18/50).
  */
 export type DraftErrors = Partial<
-  Record<ItemField, "notANumber" | "notAStrength">
+  Record<ItemField, "notANumber" | "notAStrength" | "notAQuantity">
 >;
 
 /**
  * The request body for a draft, and the number fields that are not numbers. The name is sent in the
- * UI language `lang` only (ADR 0023 step 11: the server keeps the other languages). The daily number
- * is sent for daily items only; the category's own fields only (a melee weapon fires nothing).
+ * UI language `lang` only (ADR 0023 step 11: the server keeps the other languages). The category's
+ * own fields only (a melee weapon fires nothing). The abilities are sent as a whole list, which
+ * replaces the stored one (ADR 0049 step 4).
  */
 export function draftToBody(
   d: ItemDraft,
@@ -312,30 +320,30 @@ export function draftToBody(
     name: { [editLang(lang)]: d.name },
     category: d.category,
     component: d.component,
-    behaviour: d.behaviour,
     count: num("count", d.count),
-    effectDice: d.effectDice,
-    effectSave: d.effectSave,
     notes: d.notes,
   };
+  if (body.count !== undefined && body.count > MAX_QUANTITY)
+    errors.count = "notAQuantity";
   const out = body as Record<string, unknown>;
   for (const f of CATEGORY_FIELDS[d.category])
     out[f] = (all as Record<string, unknown>)[f];
-  if (d.behaviour === "daily") body.maxCount = num("maxCount", d.maxCount);
   // Only a magic scroll holds a spell; another piece sends none and the server drops it.
   if (holdsSpell(d)) body.spellId = d.spellId;
   // Every piece has powers (ADR 0033 step 17); the "+N" is an armour's or a shield's.
   const powers = draftsToPowers(d.category, d.plus, d.powers);
   if (powers) body.powers = powers;
   else errors.powers = "notANumber";
+  const abilities = draftsToAbilities(d.abilities, lang);
+  if (abilities) body.abilities = abilities;
+  else errors.abilities = "notANumber";
   // Only the category's number fields count as errors.
   for (const f of Object.keys(errors) as ItemField[])
     if (
-      !["count", "maxCount", "powers"].includes(f) &&
+      !["count", "powers", "abilities"].includes(f) &&
       !CATEGORY_FIELDS[d.category].includes(f)
     )
       delete errors[f];
-  if (d.behaviour !== "daily") delete errors.maxCount;
   return { body, errors };
 }
 
@@ -357,6 +365,9 @@ export function changedFields(
     } else if (k === "powers") {
       if (powersKey(body.powers ?? []) !== powersKey(item.powers ?? []))
         out[k] = v;
+    } else if (k === "abilities") {
+      if (abilitiesKey(body.abilities) !== abilitiesKey(item.abilities))
+        out[k] = v;
     } else if (k === "strengthRating") {
       const r = v as StrengthRating | null;
       if (strengthRatingText(r) !== strengthRatingText(item.strengthRating))
@@ -366,9 +377,6 @@ export function changedFields(
       if (!Array.isArray(was) || was.join("/") !== v.join("/")) out[k] = v;
     } else if (stored[k] !== v) out[k] = v;
   }
-  // Becoming daily always sends the daily number (the old max of a stock item is not one).
-  if (out.behaviour === "daily" && body.maxCount !== undefined)
-    out.maxCount = body.maxCount;
   return out as ItemBody;
 }
 

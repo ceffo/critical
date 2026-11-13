@@ -1,15 +1,18 @@
 import { describe, expect, it } from "vitest";
-import type { Item } from "@/types/items";
+import type { Item, ItemAbility } from "@/types/items";
 import {
   changedFields,
   draftFromItem,
+  type ItemDraft,
   draftToBody,
   emptyDraft,
   hasField,
+  hasQuantity,
   parseInteger,
   parseStrengthRating,
   ratesStrength,
 } from "./itemForm";
+import { newAbilityDraft } from "./abilityEditor";
 
 /** A piece as GET /api/items serves it: every category's fields, zero for the others. */
 function piece(p: Partial<Item>): Item {
@@ -119,17 +122,15 @@ describe("draftToBody", () => {
       name: { en: "Arrows +3" },
       category: "ammunition",
       component: "",
-      behaviour: "stock",
       count: 6,
       magicalBonus: 3,
       ammoKind: "arrow",
       damageSm: "1d6",
       damageL: "1d6",
       damageTypes: [],
-      effectDice: "",
-      effectSave: "",
       notes: "",
       powers: [],
+      abilities: [],
     });
   });
 
@@ -157,15 +158,36 @@ describe("draftToBody", () => {
     expect(hasField("gear", "magicKind")).toBe(false);
   });
 
-  it("sends the daily number for daily items only", () => {
+  // ADR 0049 steps 13 and 16: the item sends no behaviour, daily number or effect dice any more.
+  it("sends none of the old behaviour fields (ADR 0049 step 13)", () => {
+    const { body } = draftToBody(emptyDraft(), "en");
+    for (const k of ["behaviour", "maxCount", "effectDice", "effectSave"])
+      expect(body, k).not.toHaveProperty(k);
+  });
+
+  // ADR 0049 step 2: the quantity is shown where the category has one.
+  it.each([
+    ["ammunition", "", true],
+    ["gear", "", true],
+    ["magic", "potion", true],
+    ["magic", "scroll", true],
+    ["magic", "ring", false],
+    ["magic", "wand", false],
+    ["weapon", "", false],
+    ["armour", "", false],
+    ["shield", "", false],
+  ] as const)("has a quantity: %s %s is %s", (category, magicKind, want) => {
+    expect(hasQuantity({ category, magicKind })).toBe(want);
+  });
+
+  // The server bounds a quantity to 0-999 (ADR 0049 step 4).
+  it("flags a quantity above the server's 999", () => {
     expect(
-      draftToBody({ ...emptyDraft(), behaviour: "daily", maxCount: "2" }, "en")
-        .body.maxCount,
-    ).toBe(2);
-    expect(
-      draftToBody({ ...emptyDraft(), behaviour: "stock", maxCount: "2" }, "en")
-        .body,
-    ).not.toHaveProperty("maxCount");
+      draftToBody({ ...emptyDraft(), count: "1000" }, "en").errors,
+    ).toEqual({ count: "notAQuantity" });
+    expect(draftToBody({ ...emptyDraft(), count: "999" }, "en").errors).toEqual(
+      {},
+    );
   });
 
   it("flags text that is not a number instead of sending NaN; a blank bonus is 0; another category's field is not read", () => {
@@ -173,13 +195,11 @@ describe("draftToBody", () => {
       {
         ...emptyDraft("ammunition"),
         count: "six",
-        behaviour: "daily",
-        maxCount: "",
         baseAc: "x",
       },
       "en",
     );
-    expect(errors).toEqual({ count: "notANumber", maxCount: "notANumber" });
+    expect(errors).toEqual({ count: "notANumber" });
     const blank = draftToBody(
       { ...emptyDraft("ammunition"), magicalBonus: " " },
       "en",
@@ -188,18 +208,16 @@ describe("draftToBody", () => {
     expect(blank.body.magicalBonus).toBe(0);
   });
 
-  it("leaves a negative count and bad dice to the server", () => {
+  it("leaves a negative count to the server", () => {
     const { body, errors } = draftToBody(
       {
         ...emptyDraft(),
         count: "-1",
-        effectDice: "2x6",
       },
       "en",
     );
     expect(errors).toEqual({});
     expect(body.count).toBe(-1);
-    expect(body.effectDice).toBe("2x6");
   });
 });
 
@@ -245,19 +263,107 @@ describe("changedFields", () => {
     });
   });
 
-  it("sends the daily number when an item becomes daily, even if equal to its old max", () => {
-    const stock: Item = { ...wand, behaviour: "stock", count: 4, maxCount: 4 };
-    const { body } = draftToBody(
-      {
-        ...draftFromItem(stock, "en"),
-        behaviour: "daily",
-        maxCount: "4",
-      },
-      "en",
-    );
-    expect(changedFields(stock, body, "en")).toEqual({
-      behaviour: "daily",
-      maxCount: 4,
+  // ADR 0049 steps 4 and 16: the abilities go as a whole list; an untouched form sends none, and
+  // an unconverted piece (no list) edited with none added stays unconverted.
+  describe("abilities", () => {
+    const sword2 = piece({
+      id: "sw",
+      category: "weapon",
+      weaponKind: "melee",
+    });
+    const perDay: ItemAbility = {
+      id: "use",
+      name: { en: "Turn zombies", fr: "Renvoyer les zombies" },
+      note: "holy",
+      limit: { kind: "per_day", max: 2, left: 1 },
+      effects: [{ kind: "dice", dice: "2d6", save: "spell" }],
+      usable: true,
+    };
+    const sent = (item: Item, mutate: (d: ItemDraft) => ItemDraft) =>
+      changedFields(
+        item,
+        draftToBody(mutate(draftFromItem(item, "en")), "en").body,
+        "en",
+      );
+
+    it("an untouched form sends no abilities, converted or not", () => {
+      expect(sent(sword2, (d) => d)).toEqual({});
+      expect(sent({ ...sword2, abilities: [perDay] }, (d) => d)).toEqual({});
+    });
+
+    it("adds a per-day ability: the limit numbers, the note, the dice", () => {
+      const out = sent(sword2, (d) => ({
+        ...d,
+        abilities: [
+          {
+            ...newAbilityDraft("per_day"),
+            name: "Turn zombies",
+            max: "2",
+            left: "2",
+            note: "holy",
+            effects: [{ dice: "2d6", save: "spell", label: "" }],
+          },
+        ],
+      }));
+      expect(out.abilities).toEqual([
+        {
+          id: "",
+          name: { en: "Turn zombies" },
+          note: "holy",
+          limit: { kind: "per_day", max: 2, left: 2 },
+          effects: [{ kind: "dice", dice: "2d6", save: "spell" }],
+        },
+      ]);
+    });
+
+    it("an edit keeps the other languages of the name and never sends the served flags", () => {
+      const item = { ...sword2, abilities: [perDay] };
+      const out = sent(item, (d) => ({
+        ...d,
+        abilities: d.abilities.map((a) => ({ ...a, name: "Turn undead" })),
+      }));
+      expect(out.abilities?.[0].name).toEqual({
+        en: "Turn undead",
+        fr: "Renvoyer les zombies",
+      });
+      expect(out.abilities?.[0]).not.toHaveProperty("usable");
+    });
+
+    it("removing the last ability sends an empty list", () => {
+      const item = { ...sword2, abilities: [perDay] };
+      expect(sent(item, (d) => ({ ...d, abilities: [] })).abilities).toEqual(
+        [],
+      );
+    });
+
+    it("a charges limit sends its cost; unlimited and with_item send no numbers", () => {
+      const out = draftToBody(
+        {
+          ...emptyDraft(),
+          abilities: [
+            { ...newAbilityDraft("charges"), max: "10", left: "7", cost: "2" },
+            newAbilityDraft("unlimited"),
+            newAbilityDraft("with_item"),
+          ],
+        },
+        "en",
+      ).body.abilities;
+      expect(out?.map((a) => a.limit)).toEqual([
+        { kind: "charges", max: 10, left: 7, cost: 2 },
+        { kind: "unlimited" },
+        { kind: "with_item" },
+      ]);
+    });
+
+    it("flags a limit number that is not a number", () => {
+      const { errors } = draftToBody(
+        {
+          ...emptyDraft(),
+          abilities: [{ ...newAbilityDraft("per_day"), max: "two" }],
+        },
+        "en",
+      );
+      expect(errors).toEqual({ abilities: "notANumber" });
     });
   });
 

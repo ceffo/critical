@@ -32,16 +32,12 @@ describe("pieceStats: the spell a scroll holds (ADR 0033 step 2)", () => {
     expect(texts(scroll("burning_hands"), "en")).toEqual([
       "equipment.magicKinds.scroll",
       "Burning Hands",
-      "items.behaviour.stock",
     ]);
     expect(texts(scroll("burning_hands"), "fr")[1]).toBe("Mains brûlantes");
   });
 
   it("adds nothing for an unnamed scroll", () => {
-    expect(texts(scroll(""), "fr")).toEqual([
-      "equipment.magicKinds.scroll",
-      "items.behaviour.stock",
-    ]);
+    expect(texts(scroll(""), "fr")).toEqual(["equipment.magicKinds.scroll"]);
   });
 
   it("falls back to the id when the catalogue lacks the spell", () => {

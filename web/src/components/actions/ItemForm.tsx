@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import {
   changedFields,
   draftToBody,
-  hasBehaviour,
   hasField,
+  hasQuantity,
   holdsSpell,
   ratesStrength,
   type DraftErrors,
@@ -30,7 +30,6 @@ import {
   type Category,
   type Component,
   type Item,
-  type ItemBehaviour,
   type ItemBody,
   type MagicKind,
 } from "@/types/items";
@@ -38,27 +37,11 @@ import { WEAPON_TYPES, type WeaponType } from "@/types/combat";
 import { hasPlus, MAX_PLUS } from "@/lib/powerEditor";
 import { formatSigned } from "@/lib/format";
 import { PowersEditor } from "./PowersEditor";
+import { AbilitiesEditor } from "./AbilitiesEditor";
 import { useSpellNamesStore } from "@/stores/spellNames";
 
-const BEHAVIOURS: ItemBehaviour[] = ["stock", "charges", "daily"];
 /** The shared fields folded under "More options" (every category has them). */
-const EXTRA_FIELDS: ItemField[] = [
-  "behaviour",
-  "maxCount",
-  "effectDice",
-  "effectSave",
-  "component",
-  "notes",
-  "powers",
-];
-/** Save categories an item effect may allow (the server rejects anything else). */
-const SAVES = [
-  "para_poison",
-  "rod_staff_wand",
-  "petri_poly",
-  "breath",
-  "spell",
-];
+const EXTRA_FIELDS: ItemField[] = ["component", "notes", "powers"];
 
 interface Props {
   /** Starting values. */
@@ -87,7 +70,7 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
   const [step, setStep] = useState<1 | 2>(1);
   const identity = !!editing || step === 1;
   const details = !!editing || step === 2;
-  // The shared extras (behaviour, effect, note, powers) fold under "More options" unless the piece
+  // The shared extras (component, note, powers) fold under "More options" unless the piece
   // is being edited or its category is about powers.
   const [moreOpen, setMoreOpen] = useState(!!editing);
   const set = <K extends ItemField>(k: K, v: ItemDraft[K]) => {
@@ -123,7 +106,12 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
         setMoreOpen(true);
       return;
     }
-    const toSend = editing ? changedFields(editing, body, i18n.language) : body;
+    // The wire still requires a behaviour on an add (the server's validation, until the contract
+    // slice of ADR 0049 drops it): no rule reads it any more, so a new piece is sent as stock. An
+    // edit never sends it, so a stored one is left as it is.
+    const toSend = editing
+      ? changedFields(editing, body, i18n.language)
+      : { ...body, behaviour: "stock" as const };
     if (editing && Object.keys(toSend).length === 0) {
       onCancel();
       return;
@@ -561,15 +549,22 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
           </div>
         )}
 
-        {/* Shared (ADR 0016 steps 1 to 5): the count always; the rest under More options. */}
+        {/* The quantity (ADR 0049 step 2): only where the category has one. */}
+        {details &&
+          hasQuantity(draft) &&
+          field(
+            "count",
+            t("items.form.quantity"),
+            text("count", { inputMode: "numeric" }),
+          )}
+        {/* The abilities (ADR 0049 steps 4 and 16): limit, dice effect, note. */}
         {details && (
-          <>
-            {field(
-              "count",
-              t("items.form.count"),
-              text("count", { inputMode: "numeric" }),
-            )}
-          </>
+          <AbilitiesEditor
+            abilities={draft.abilities}
+            onChange={(abilities) => set("abilities", abilities)}
+            hasQuantity={hasQuantity(draft)}
+            error={errors.abilities}
+          />
         )}
         {details && (
           <details
@@ -582,50 +577,6 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
               {t("items.form.more")}
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {hasBehaviour(draft.category) &&
-                field("behaviour", t("items.form.behaviour"), (props) => (
-                  <select
-                    {...props}
-                    className={fieldClass}
-                    value={draft.behaviour}
-                    onChange={(e) =>
-                      set("behaviour", e.target.value as ItemBehaviour)
-                    }
-                  >
-                    {BEHAVIOURS.map((b) => (
-                      <option key={b} value={b}>
-                        {t(`items.behaviour.${b}`)}
-                      </option>
-                    ))}
-                  </select>
-                ))}
-              {hasBehaviour(draft.category) &&
-                draft.behaviour === "daily" &&
-                field(
-                  "maxCount",
-                  t("items.form.maxCount"),
-                  text("maxCount", { inputMode: "numeric" }),
-                )}
-              {field(
-                "effectDice",
-                t("items.form.effectDice"),
-                text("effectDice", { placeholder: "2d6, 1d8+2" }),
-              )}
-              {field("effectSave", t("items.form.effectSave"), (props) => (
-                <select
-                  {...props}
-                  className={fieldClass}
-                  value={draft.effectSave}
-                  onChange={(e) => set("effectSave", e.target.value)}
-                >
-                  <option value="">{t("items.form.noSave")}</option>
-                  {SAVES.map((s) => (
-                    <option key={s} value={s}>
-                      {t(`saves.categories.${s}`)}
-                    </option>
-                  ))}
-                </select>
-              ))}
               {field("component", t("equipment.form.component"), (props) => (
                 <select
                   {...props}

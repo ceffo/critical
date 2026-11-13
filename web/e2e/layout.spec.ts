@@ -1642,24 +1642,40 @@ async function itemFormStep(page: Page, size: Viewport) {
       if (fr && vp.width >= 1920)
         await snap(page, `item-form-step2-fr-${vp.width}x${vp.height}`);
     }
-    // The extras (how it is used, the dice rolled and the save against the effect) uncut too.
-    await f.getByText(fr ? "Plus d'options" : "More options").click();
+    // The abilities section (ADR 0049 step 16): a charges ability with its numbers, the note and a
+    // dice effect, the longest row, uncut in both languages.
+    await f
+      .getByRole("button", {
+        name: fr
+          ? "Ajouter une capacité à cet objet"
+          : "Add an ability to this item",
+      })
+      .click();
+    await f.getByLabel(fr ? "Limite" : "Limit").selectOption("charges");
+    await f
+      .getByRole("button", {
+        name: fr
+          ? "Lancer des dés quand cette capacité est utilisée"
+          : "Roll dice when this ability is used",
+      })
+      .click();
     await expect(
       f.getByLabel(fr ? "Dés lancés à l'usage" : "Dice rolled on use"),
     ).toBeVisible();
+    await f.getByText(fr ? "Plus d'options" : "More options").click();
     for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
       await expectNoClippedText(
         f,
-        `add form extras, ${lang}, ${vp.width}x${vp.height}`,
+        `add form abilities, ${lang}, ${vp.width}x${vp.height}`,
       );
       if (fr && vp.width >= 1920)
-        await snap(page, `item-form-extras-fr-${vp.width}x${vp.height}`);
+        await snap(page, `item-form-abilities-fr-${vp.width}x${vp.height}`);
     }
     await f.getByRole("button", { name: fr ? "Retour" : "Back" }).click();
-    await expect(f.getByLabel(fr ? "Nom" : "Name")).toHaveValue(
-      "Hache de bataille des longs hivers",
-    );
+    await expect(
+      f.getByLabel(fr ? "Nom" : "Name", { exact: true }),
+    ).toHaveValue("Hache de bataille des longs hivers");
     await f.getByRole("button", { name: fr ? "Annuler" : "Cancel" }).click();
     await expect(f).toHaveCount(0);
 

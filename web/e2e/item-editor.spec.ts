@@ -7,6 +7,7 @@ import {
   openDashboard,
   openWeapons,
   openWorkspace,
+  reloadSettled,
   undoEntry,
   openTypedAdd,
 } from "./helpers";
@@ -38,7 +39,7 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await f.getByLabel("Name").fill("Arrows +3 (blessed)");
   await f.getByLabel("Category").selectOption("ammunition");
   await f.getByRole("button", { name: "Next" }).click();
-  await f.getByLabel("Count").fill("6");
+  await f.getByLabel("Quantity").fill("6");
   await f.getByLabel("Magical bonus").fill("3");
   await f.getByLabel("Ammo kind").selectOption("arrow");
   await snap(page, "add-form");
@@ -109,4 +110,52 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   await expect(scroll.getByTestId("item-stats")).not.toContainText(
     "Burning Hands",
   );
+});
+
+// ADR 0049 step 16 (and 13): the editor's Abilities section adds a per-day ability to a sword, with
+// its note and a dice effect. It shows as a chip on the row with its limit, survives a reload and is
+// listed in Act · Items, where Use pays it. Only a browser proves the wiring from the form to the
+// chip, the persistence, and the Act tab reading the same abilities; the limit rules are Go tests
+// and the form's parsing is a unit test.
+test("add a per-day ability to a sword: chip on the row, kept after a reload, used from Act · Items", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openInventory(page);
+  const sword = row(page, "bastard_sword");
+  await sword.getByRole("button", { name: "Edit Bastard Sword +2" }).click();
+  const f = form(page);
+  await f.getByRole("button", { name: "Add an ability to this item" }).click();
+  await f.getByTestId("ability-name").fill("Turn zombies");
+  await f.getByLabel("Limit").selectOption("per_day");
+  await f.getByTestId("ability-max").fill("2");
+  await f.getByTestId("ability-note").fill("Holy light");
+  await f
+    .getByRole("button", { name: "Roll dice when this ability is used" })
+    .click();
+  await f.getByTestId("ability-dice").fill("1d6");
+  await snap(page, "sword-ability-form");
+  await f.getByRole("button", { name: "Save" }).click();
+  await expect(form(page)).toHaveCount(0);
+
+  const chip = sword.getByTestId("ability-chip-ability_1");
+  await expect(chip).toContainText("Turn zombies");
+  await expect(chip.getByTestId("ability-chip-limit")).toHaveText(
+    "2 / 2 per day",
+  );
+  await snap(page, "sword-ability-chip");
+
+  await reloadSettled(page);
+  await openWorkspace(page, "Inventory");
+  await expect(
+    row(page, "bastard_sword").getByTestId("ability-chip-limit"),
+  ).toHaveText("2 / 2 per day");
+
+  await openWorkspace(page, "Act");
+  await page.getByRole("tab", { name: "Items" }).click();
+  const line = page.getByTestId("ability-bastard_sword-ability_1");
+  await expect(line).toContainText("Bastard Sword +2 · Turn zombies");
+  await line.getByRole("button", { name: /^Use / }).click();
+  await expect(line.getByTestId("ability-limit")).toHaveText("1 / 2 per day");
+  await snap(page, "sword-ability-used");
 });

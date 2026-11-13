@@ -28,5 +28,86 @@
       "save": "rod_staff_wand"
     },
     "roll": true
+  },
+  "abilityCharges": {
+    "payload": {
+      "itemId": "wand_lightning",
+      "name": "Wand of lightning",
+      "abilityId": "bolt",
+      "abilityName": {
+        "en": "Lightning bolt",
+        "fr": "Éclair"
+      },
+      "type": "wand",
+      "limit": "charges",
+      "left": 2,
+      "max": 10,
+      "behaviour": "charges",
+      "removed": false,
+      "remaining": 2,
+      "maxCount": 10,
+      "dice": "6d6",
+      "rolls": [6, 1, 3, 4, 2, 5],
+      "total": 21,
+      "save": "rod_staff_wand",
+      "effects": [
+        {
+          "kind": "dice",
+          "dice": "6d6",
+          "rolls": [6, 1, 3, 4, 2, 5],
+          "total": 21,
+          "save": "rod_staff_wand"
+        }
+      ]
+    },
+    "roll": true
+  },
+  "abilityUnlimited": {
+    "payload": {
+      "itemId": "ring_light",
+      "name": "Ring of light",
+      "abilityId": "glow",
+      "type": "ring",
+      "limit": "unlimited",
+      "removed": false,
+      "remaining": 0,
+      "maxCount": 0,
+      "dice": "",
+      "rolls": [],
+      "total": 0,
+      "effects": []
+    },
+    "roll": true
+  },
+  "abilityUnlimitedDice": {
+    "payload": {
+      "itemId": "rod_x",
+      "name": "Rod",
+      "abilityId": "zap",
+      "type": "rod",
+      "limit": "unlimited",
+      "removed": false,
+      "remaining": 0,
+      "maxCount": 0,
+      "dice": "1d6",
+      "rolls": [4],
+      "total": 4,
+      "effects": [
+        {
+          "kind": "dice",
+          "dice": "1d6",
+          "rolls": [4],
+          "total": 4
+        },
+        {
+          "kind": "dice",
+          "dice": "2d4+1",
+          "rolls": [2, 3],
+          "modifier": 1,
+          "total": 6
+        }
+      ]
+    },
+    "roll": true
   }
 }

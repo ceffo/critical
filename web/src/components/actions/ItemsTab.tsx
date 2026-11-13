@@ -4,21 +4,23 @@ import { ArrowRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
-import { combatItems } from "@/lib/combatItems";
+import { type AbilityRow, abilityRows } from "@/lib/itemAbilities";
+import { equipped } from "@/lib/equipment";
 
 /**
- * Items tab of the Act panel (ADR 0022 step 2.5): combat consumables with their behaviour, count and dice, used
- * in one click (the server rolls and logs; the result card shows it). Editing and restocking are in
- * the Inventory activity. Names wrap, never cut (step 1).
+ * Items tab of the Act panel (ADR 0049 step 14): one row per ability of every item that has some,
+ * with its limit and Use. Whether a row can be used, and why not, is the server's (`usable`,
+ * `reason`); the web derives neither. Editing and restocking are in the Inventory activity. Names
+ * wrap, never cut (ADR 0022 step 1).
  */
 export function ItemsTab({ onManage }: { onManage: () => void }) {
   const { t, i18n } = useTranslation();
-  const items = combatItems(useItemsStore((s) => s.items));
-  const { spendItem, rolling } = useRollStore();
+  const rows = abilityRows(useItemsStore((s) => s.items));
+  const { activateAbility, rolling } = useRollStore();
 
   return (
     <div className="flex flex-col gap-3">
-      {items.length === 0 ? (
+      {rows.length === 0 ? (
         <p className="text-body text-muted-foreground">
           {t("actions.items.empty")}
         </p>
@@ -27,49 +29,14 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
           aria-label={t("actions.items.list")}
           className="flex flex-col gap-1"
         >
-          {items.map((i) => (
-            <li
-              key={i.id}
-              className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_4rem_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-raised"
-            >
-              <span className="text-body break-words">
-                {localized(i18n.language, i.name)}
-              </span>
-              <span
-                className="text-right text-body whitespace-nowrap text-muted-foreground tabular-nums"
-                data-testid="item-count"
-              >
-                {i.behaviour === "daily"
-                  ? t("actions.items.dailyCount", {
-                      behaviour: t(`items.behaviour.${i.behaviour}`),
-                      count: i.count,
-                      max: i.maxCount,
-                    })
-                  : t("actions.items.count", {
-                      behaviour: t(`items.behaviour.${i.behaviour}`),
-                      count: i.count,
-                    })}
-              </span>
-              <span className="text-right text-body text-muted-foreground tabular-nums">
-                {i.effectDice}
-              </span>
-              <Button
-                size="sm"
-                className="w-full"
-                disabled={rolling || i.count === 0}
-                aria-label={t(
-                  i.effectDice
-                    ? "actions.items.rollLabel"
-                    : "actions.items.useLabel",
-                  {
-                    name: localized(i18n.language, i.name),
-                  },
-                )}
-                onClick={() => void spendItem(i.id)}
-              >
-                {t(i.effectDice ? "actions.items.roll" : "actions.items.use")}
-              </Button>
-            </li>
+          {rows.map(({ item, ability }) => (
+            <AbilityLine
+              key={`${item.id}/${ability.id}`}
+              row={{ item, ability }}
+              lang={i18n.language}
+              rolling={rolling}
+              onUse={() => void activateAbility(item.id, ability.id)}
+            />
           ))}
         </ul>
       )}
@@ -84,5 +51,73 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
         <ArrowRight />
       </Button>
     </div>
+  );
+}
+
+function AbilityLine({
+  row: { item, ability },
+  lang,
+  rolling,
+  onUse,
+}: {
+  row: AbilityRow;
+  lang: string;
+  rolling: boolean;
+  onUse: () => void;
+}) {
+  const { t } = useTranslation();
+  const itemName = localized(lang, item.name);
+  const abilityName = ability.name ? localized(lang, ability.name) : "";
+  const name = abilityName ? `${itemName} · ${abilityName}` : itemName;
+  const { kind, left = 0, max = 0, cost = 1 } = ability.limit;
+  const limit =
+    kind === "charges" && cost > 1
+      ? t("actions.items.limit.chargesCost", { left, max, cost })
+      : t(`actions.items.limit.${kind}`, { left, max, count: item.count });
+  // An unequipped item that could be equipped is tagged, and still used (ADR 0049 step 17).
+  const stowed = item.equipState !== "" && !equipped(item);
+  const refused = ability.usable === false;
+  return (
+    <li
+      className="grid min-h-8 grid-cols-[minmax(0,1fr)_auto_5rem] items-center gap-3 rounded-lg px-3 py-1 hover:bg-raised"
+      data-testid={`ability-${item.id}-${ability.id}`}
+    >
+      <div className="flex min-w-0 flex-col">
+        <span className="text-body break-words">
+          {name}
+          {stowed && (
+            <span
+              className="ml-2 text-label text-muted-foreground"
+              data-testid="ability-stowed"
+            >
+              {t("actions.items.notEquipped")}
+            </span>
+          )}
+        </span>
+        {refused && ability.reason && (
+          <span
+            className="text-label text-muted-foreground"
+            data-testid="ability-reason"
+          >
+            {t(`actions.items.reason.${ability.reason}.${kind}`)}
+          </span>
+        )}
+      </div>
+      <span
+        className="text-right text-body break-words text-muted-foreground tabular-nums"
+        data-testid="ability-limit"
+      >
+        {limit}
+      </span>
+      <Button
+        size="sm"
+        className="w-full"
+        disabled={rolling || refused}
+        aria-label={t("actions.items.useLabel", { name })}
+        onClick={onUse}
+      >
+        {t("actions.items.use")}
+      </Button>
+    </li>
   );
 }

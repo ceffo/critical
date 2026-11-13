@@ -550,16 +550,28 @@
       "turning": "Turning"
     },
     "items": {
-      "list": "Combat items",
-      "count": "{{behaviour}} · {{count}}",
-      "dailyCount": "{{behaviour}} · {{count}} / {{max}}",
-      "roll": "Roll",
+      "list": "Item abilities",
       "use": "Use",
-      "rollLabel": "Roll {{name}}",
       "useLabel": "Use {{name}}",
-      "empty": "Nothing to use here. Weapons, armour and shields are never used: see them in the Inventory.",
+      "empty": "No item with an ability to use. Add abilities to your items in the Inventory.",
       "manage": "Manage",
-      "manageLabel": "Manage the inventory"
+      "manageLabel": "Manage the inventory",
+      "notEquipped": "not equipped",
+      "limit": {
+        "unlimited": "∞",
+        "per_day": "{{left}} / {{max}} per day",
+        "charges": "{{left}} / {{max}} charges",
+        "chargesCost": "{{left}} / {{max}} charges (−{{cost}} a use)",
+        "with_item": "× {{count}}"
+      },
+      "reason": {
+        "exhausted": {
+          "per_day": "Used up until the long rest",
+          "charges": "Not enough charges left",
+          "with_item": "None left",
+          "unlimited": "Not available"
+        }
+      }
     }
   },
   "attack": {
@@ -1798,7 +1810,9 @@
         "component": "spell component",
         "spellId": "spell",
         "powers": "powers"
-      }
+      },
+      "usedUnlimited": "Used {{name}}",
+      "rolledUnlimited": "Used {{name}}: {{dice}} = {{total}}"
     },
     "initiative": "Initiative {{value}} (d10) for round {{round}}",
     "initiativeWith": "Initiative {{value}} for round {{round}} ({{breakdown}})",

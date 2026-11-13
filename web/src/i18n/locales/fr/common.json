@@ -550,16 +550,28 @@
       "turning": "Renvoi"
     },
     "items": {
-      "list": "Objets de combat",
-      "count": "{{behaviour}} · {{count}}",
-      "dailyCount": "{{behaviour}} · {{count}} / {{max}}",
-      "roll": "Lancer",
+      "list": "Capacités des objets",
       "use": "Utiliser",
-      "rollLabel": "Lancer {{name}}",
       "useLabel": "Utiliser {{name}}",
-      "empty": "Rien à utiliser ici. Les armes, armures et boucliers ne s'utilisent pas : retrouvez-les dans l'Inventaire.",
+      "empty": "Aucun objet n'a de capacité à utiliser. Ajoutez des capacités à vos objets dans l'Inventaire.",
       "manage": "Gérer",
-      "manageLabel": "Gérer l'inventaire"
+      "manageLabel": "Gérer l'inventaire",
+      "notEquipped": "non équipé",
+      "limit": {
+        "unlimited": "∞",
+        "per_day": "{{left}} / {{max}} par jour",
+        "charges": "{{left}} / {{max}} charges",
+        "chargesCost": "{{left}} / {{max}} charges (−{{cost}} par usage)",
+        "with_item": "× {{count}}"
+      },
+      "reason": {
+        "exhausted": {
+          "per_day": "Épuisé jusqu'au repos long",
+          "charges": "Pas assez de charges",
+          "with_item": "Plus aucun",
+          "unlimited": "Indisponible"
+        }
+      }
     }
   },
   "attack": {
@@ -1798,7 +1810,9 @@
         "component": "composante de sort",
         "spellId": "sort",
         "powers": "pouvoirs"
-      }
+      },
+      "usedUnlimited": "Objet utilisé : {{name}}",
+      "rolledUnlimited": "Objet utilisé : {{name}}, {{dice}} = {{total}}"
     },
     "initiative": "Initiative {{value}} (d10) pour le tour {{round}}",
     "initiativeWith": "Initiative {{value}} pour le tour {{round}} ({{breakdown}})",

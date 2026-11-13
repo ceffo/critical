@@ -110,13 +110,63 @@ for (const size of [
 
     await act(page);
     await page.getByRole("tab", { name: "Items" }).click();
-    const list = page.getByRole("list", { name: "Combat items" });
+    const list = page.getByRole("list", { name: "Item abilities" });
     await expect(list).toBeVisible();
-    await expect(list.getByTestId("item-count")).not.toHaveCount(0);
+    await expect(list.getByTestId("ability-limit")).not.toHaveCount(0);
     await expect(list).toContainText("Fire flasks");
+    // Weapons, armour and shields (none holds an ability) are never listed.
+    await expect(list).not.toContainText("Long Sword");
     await snap(page, `act-items-${size.width}x${size.height}`);
   });
 }
+
+// Act · Items: one row per ability, Use pays its limit and the result card and the journal show it
+// (ADR 0049 steps 7 and 14); an exhausted ability stays, disabled, with the reason (the server's
+// `usable` and `reason`). The limits and refusals are Go tests; the wiring and the wording are here.
+test("Act · Items uses the Fire flasks, the Wand of lightning and the Power Gem", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  await act(page);
+  await page.getByRole("tab", { name: "Items" }).click();
+  const flasks = page.getByTestId("ability-fire_flask-use");
+  const wand = page.getByTestId("ability-wand_lightning-use");
+  const gem = page.getByTestId("ability-power_gem_dispel-use");
+  await expect(flasks.getByTestId("ability-limit")).toHaveText("× 5");
+  await expect(wand.getByTestId("ability-limit")).toHaveText("4 / 4 charges");
+  await expect(gem.getByTestId("ability-limit")).toHaveText("1 / 1 per day");
+
+  await flasks.getByRole("button", { name: "Use Fire flasks" }).click();
+  await expect(flasks.getByTestId("ability-limit")).toHaveText("× 4");
+  await expect(resultCard(page)).toContainText("Fire flasks: 4 left");
+  await expect(resultCard(page).getByTestId("item-rolls")).toBeVisible();
+
+  await wand.getByRole("button", { name: "Use Wand of lightning" }).click();
+  await expect(wand.getByTestId("ability-limit")).toHaveText("3 / 4 charges");
+  await expect(resultCard(page)).toContainText("Wand of lightning: 3 left");
+  await expect(resultCard(page)).toContainText("6d6");
+  await expect(logEntry(page, "Used Wand of lightning")).toContainText(
+    "(3 left)",
+  );
+
+  await gem.getByRole("button", { name: "Use Power Gem" }).click();
+  await expect(gem.getByTestId("ability-limit")).toHaveText("0 / 1 per day");
+  await expect(gem.getByRole("button", { name: /^Use / })).toBeDisabled();
+  await expect(gem.getByTestId("ability-reason")).toHaveText(
+    "Used up until the long rest",
+  );
+  await snap(page, "act-items-used-1920x1080");
+
+  await page.setViewportSize({ width: 2560, height: 1440 });
+  await snap(page, "act-items-used-2560x1440");
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Objets" }).click();
+  await expect(
+    page.getByTestId("ability-power_gem_dispel-use"),
+  ).toContainText("Épuisé jusqu'au repos long");
+  await snap(page, "act-items-used-fr-2560x1440");
+});
 
 // With nothing to use left (the weapons, armour and shield stay), Act · Items says why and points to
 // the Inventory, in English and in French.
@@ -133,12 +183,14 @@ test("Act · Items empty state points to the Inventory (en, fr)", async ({
   await act(page);
   await page.getByRole("tab", { name: "Items" }).click();
   await expect(
-    page.getByText(/Weapons, armour and shields are never used/),
+    page.getByText(/Add abilities to your items in the Inventory/),
   ).toBeVisible();
   await snap(page, "act-items-empty-en");
 
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Objets" }).click();
-  await expect(page.getByText(/ne s'utilisent pas/)).toBeVisible();
+  await expect(
+    page.getByText(/Ajoutez des capacités à vos objets dans l'Inventaire/),
+  ).toBeVisible();
   await snap(page, "act-items-empty-fr");
 });

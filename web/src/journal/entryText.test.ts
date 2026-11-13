@@ -643,6 +643,71 @@ describe("inventory entries", () => {
     expect(entryText(entry("item_use", old), t)).toBe("Used Gem (0 left)");
   });
 
+  // ADR 0049 step 12: a heal effect's HP shows in the entry's text, what the ledger took (capped).
+  it("renders a potion's heal in both languages, capped at max HP", async () => {
+    const potion = {
+      itemId: "potion",
+      abilityId: "use",
+      name: "Potion of healing",
+      type: "potion",
+      limit: "with_item",
+      removed: false,
+      remaining: 2,
+      maxCount: 0,
+      dice: "",
+      rolls: [],
+      total: 0,
+      effects: [
+        {
+          kind: "heal",
+          dice: "2d4+2",
+          rolls: [3, 4],
+          modifier: 2,
+          total: 9,
+          applied: { hpDelta: 9, hpBefore: 10, hpAfter: 19 },
+        },
+      ],
+    };
+    const en = await makeT("en");
+    expect(entryText(entry("item_use", potion), en)).toBe(
+      "Used Potion of healing (2 left), heals 9 HP",
+    );
+    const capped = {
+      ...potion,
+      effects: [
+        {
+          ...potion.effects[0],
+          applied: { hpDelta: 4, hpBefore: 15, hpAfter: 19 },
+        },
+      ],
+    };
+    expect(entryText(entry("item_use", capped), en)).toBe(
+      "Used Potion of healing (2 left), heals 4 HP (9 rolled, capped at max HP)",
+    );
+    // At full HP nothing is regained: no cap is claimed. An older entry with no `applied` words no heal.
+    const full = {
+      ...potion,
+      effects: [
+        {
+          ...potion.effects[0],
+          applied: { hpDelta: 0, hpBefore: 19, hpAfter: 19 },
+        },
+      ],
+    };
+    expect(entryText(entry("item_use", full), en)).toBe(
+      "Used Potion of healing (2 left), no HP regained",
+    );
+    const { applied: _unused, ...older } = potion.effects[0];
+    void _unused;
+    expect(
+      entryText(entry("item_use", { ...potion, effects: [older] }), en),
+    ).toBe("Used Potion of healing (2 left)");
+    const fr = await makeT("fr");
+    expect(entryText(entry("item_use", capped), fr)).toContain(
+      "soigne 4 PV (9 obtenus, plafonnés aux PV max)",
+    );
+  });
+
   it("renders a restock in both languages", async () => {
     const p = {
       itemId: "arrows_plus3",

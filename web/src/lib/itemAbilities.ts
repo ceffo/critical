@@ -31,7 +31,8 @@ export function abilityRows(items: Item[]): AbilityRow[] {
  * the first dice effect): the result card and the journal read both the same way.
  */
 export function loggedAbilityUse(r: AbilityUseResult): UseResult {
-  const first = r.effects[0];
+  // The flat fields are the first dice effect's, as the server logs them (a heal's rolls ride its effect).
+  const first = r.effects.find((e) => e.kind === "dice");
   return {
     itemId: r.itemId,
     name: r.name,

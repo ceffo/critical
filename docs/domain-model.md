@@ -242,7 +242,9 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   or not, and never to a crossbow.
 - **Item ability** and **usage limit**: an item holds a list of item abilities, each with an id, an
   optional name and note, one usage limit (unlimited, per day, charges, with the item) and a list of
-  effects (only the dice effect so far: rolled and shown, applied to nothing). An item not yet
+  effects (the dice effect: rolled and shown, applied to nothing; the heal effect: dice or the gap to max
+  HP, applied to the character through the HP ledger as the use entry's own HP delta, capped at max HP).
+  An item not yet
   converted from its behaviour has no list (NULL); one converted with none has an empty list. An item
   power is a different thing: passive, on while the item is worn, with no limit. **Use acts on an
   ability** in one transaction: it pays the limit by its kind (a refusal, `exhausted`, changes

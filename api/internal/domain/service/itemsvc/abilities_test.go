@@ -108,7 +108,12 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"charges cost 0":          withAbility(wand, charges(5, 5, 0)),
 		"charges cost above max":  withAbility(wand, charges(5, 5, 6)),
 		// Step 10.
-		"an unknown effect kind":          withAbility(rope, dice(itemsvc.Effect{Kind: "heal", Dice: "1d4"})),
+		"an unknown effect kind":          withAbility(rope, dice(itemsvc.Effect{Kind: "buff", Dice: "1d4"})),
+		"a dice effect that is full":      withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d4", Full: true})),
+		"a heal with dice and full":       withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "1d4", Full: true})),
+		"a heal with neither":             withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal})),
+		"a heal with bad dice":            withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "lots"})),
+		"a heal with a save":              withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "1d4", Save: "rod_staff_wand"})),
 		"a dice effect without dice":      withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice})),
 		"dice that are no dice":           withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "lots"})),
 		"dice with 0 sides":               withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "2d0"})),
@@ -143,6 +148,8 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"with_item on a stack":      withAbility(rope, itemsvc.Ability{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}}),
 		"a dice effect with a save": withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"})),
 		"dice with a modifier":      withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d8+2"})),
+		"a heal of dice":            withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "2d4+2", Label: "drink"})),
+		"a full heal":               withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Full: true})),
 	}
 	for name, in := range accepted {
 		t.Run("accepts "+name, func(t *testing.T) {
@@ -295,8 +302,12 @@ func TestAbilities_ADR0049Step18_StoredEncodingRoundTrips(t *testing.T) {
 
 	full := []itemsvc.Ability{{
 		ID: "dispel", Name: localized.Text{"en": "Dispel", "fr": "Dissipation"}, Note: "once a day",
-		Limit:   itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 10, Left: 4, Cost: 2},
-		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"}},
+		Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 10, Left: 4, Cost: 2},
+		Effects: []itemsvc.Effect{
+			{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"},
+			{Kind: itemsvc.EffectHeal, Dice: "2d4+2"},
+			{Kind: itemsvc.EffectHeal, Full: true},
+		},
 	}}
 	text, _, err = itemsvc.EncodeAbilities(full)
 	require.NoError(t, err)

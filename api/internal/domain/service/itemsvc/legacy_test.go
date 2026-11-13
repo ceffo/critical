@@ -55,6 +55,13 @@ func TestConvertLegacy_ADR0049Step19_Table(t *testing.T) {
 			nil,
 		},
 		{
+			// A potion of healing as the old model stored it: dice rolled, applied to nothing. It is no
+			// review: the conversion cannot know the dice were hit points, the player replaces the dice effect by a heal in the editor.
+			"stock potion with dice (a potion of healing)", legacy(itemsvc.CategoryMagic, itemsvc.MagicPotion, stock, 3, 3, "2d4+2"), 3,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitWithItem}, "2d4+2")},
+			nil,
+		},
+		{
 			"stock scroll, no dice", legacy(itemsvc.CategoryMagic, itemsvc.MagicScroll, stock, 2, 2, ""), 2,
 			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitWithItem}, "")},
 			nil,

@@ -209,6 +209,70 @@ describe("ItemForm, quantity and abilities", () => {
     ]);
   });
 
+  // ADR 0049 steps 9 and 12: a potion's heal is dice, or full (the gap to max HP, no dice to type);
+  // the save belongs to a dice effect only.
+  it.each([
+    [
+      "en",
+      "Add an ability to this item",
+      "Regain hit points when this ability is used",
+      "Hit points regained",
+      "Fill to max HP",
+      "Save against the effect",
+      "Add",
+    ],
+    [
+      "fr",
+      "Ajouter une capacité à cet objet",
+      "Regagner des points de vie quand cette capacité est utilisée",
+      "Points de vie regagnés",
+      "Jusqu'aux PV max",
+      "JS contre l'effet",
+      "Ajouter",
+    ],
+  ] as const)(
+    "adds a heal to a potion in %s: dice, or full with no dice",
+    async (lng, addAbility, addHeal, diceLabel, fullLabel, saveLabel, save) => {
+      const v = await form(lng);
+      await v.user.type(
+        screen.getByLabelText(lng === "en" ? "Name" : "Nom"),
+        "Potion of healing",
+      );
+      await v.user.selectOptions(
+        screen.getByLabelText(lng === "en" ? "Category" : "Catégorie"),
+        "magic",
+      );
+      await v.user.click(
+        screen.getByRole("button", { name: lng === "en" ? "Next" : "Suivant" }),
+      );
+      await v.user.selectOptions(
+        screen.getByLabelText(
+          lng === "en" ? "Magic kind" : "Type d’objet magique",
+        ),
+        "potion",
+      );
+      await v.user.click(screen.getByRole("button", { name: addAbility }));
+      await v.user.click(screen.getByRole("button", { name: addHeal }));
+      expect(screen.queryByLabelText(saveLabel)).toBeNull();
+      await v.user.type(screen.getByLabelText(diceLabel), "2d4+2");
+      await v.user.click(screen.getByRole("button", { name: save }));
+      expect(v.onSave.mock.calls[0][0].abilities).toEqual([
+        {
+          id: "",
+          limit: { kind: "with_item" },
+          effects: [{ kind: "heal", dice: "2d4+2" }],
+        },
+      ]);
+      v.onSave.mockClear();
+      await v.user.click(screen.getByLabelText(fullLabel));
+      expect(screen.getByLabelText(diceLabel)).toBeDisabled();
+      await v.user.click(screen.getByRole("button", { name: save }));
+      expect(v.onSave.mock.calls[0][0].abilities[0].effects).toEqual([
+        { kind: "heal", full: true },
+      ]);
+    },
+  );
+
   it("offers an ability spent with the item on a stock, and speaks French", async () => {
     const v = await form("fr");
     await v.user.type(screen.getByLabelText("Nom"), "Fiole");

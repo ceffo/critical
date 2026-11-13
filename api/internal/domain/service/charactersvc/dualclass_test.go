@@ -132,16 +132,28 @@ func TestProficiencyClasses_Step15_TheOldClassKeptAtItsLeftAtLevel(t *testing.T)
 	}, c.ProficiencyClasses())
 }
 
-// ADR 0042 step 12 as built: a dual-class's one active entry is read as
-// single-class, so Specializes is its own grant: the elf's mage never
-// specializes, before or after the crossover (the code before read the
-// frozen fighter's grant), while a mage who became a fighter does.
-func TestDerive_Step12_ADualClassSpecializesByItsActiveClass(t *testing.T) {
-	assert.False(t, derived(t, elf(7, 60_000)).Specializes, "mage 7, the fighter dormant")
-	assert.False(t, derived(t, elf(10, 250_000)).Specializes, "mage 10, past the crossover")
-	c := multi("human", frozen("mage", 5, 40_000), entry("fighter", 3, 5_000))
-	c.Class, c.RealizedLevel, c.XPTotal = "fighter", 3, 5_000
-	assert.True(t, derived(t, c).Specializes, "the active fighter's own")
+// ADR 0042 step 12 (amended 2026-11-13, PHB p.44-45 and p.52): a dual-class
+// specializes by its active class's grant, or by a frozen entry's once past
+// the crossover (the elf's fighter left at 9: not at mage 7 nor 9, at mage
+// 10); the code before read the active entry's grant only, so the elf never
+// specialized. A mage who became a fighter specializes by the active fighter.
+func TestDerive_Step12_ADualClassKeepsTheOldSpecializationPastTheCrossover(t *testing.T) {
+	mageThenFighter := multi("human", frozen("mage", 5, 40_000), entry("fighter", 3, 5_000))
+	mageThenFighter.Class, mageThenFighter.RealizedLevel, mageThenFighter.XPTotal = "fighter", 3, 5_000
+	for _, tc := range []struct {
+		name string
+		c    *charactersvc.Character
+		want bool
+	}{
+		{"mage 7, the fighter dormant", elf(7, 60_000), false},
+		{"mage 9, not above the fighter's 9", elf(9, 135_000), false},
+		{"mage 10, past the crossover", elf(10, 250_000), true},
+		{"the active fighter's own", mageThenFighter, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, derived(t, tc.c).Specializes)
+		})
+	}
 }
 
 // ADR 0042 step 13: a figure the character has without choosing to use it

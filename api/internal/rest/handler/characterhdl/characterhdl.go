@@ -278,7 +278,9 @@ type DerivedDTO struct {
 	// the order of the character's `classes`; absent for a single-class
 	// character, whose figures are the ones above.
 	Classes []EntryDerivedDTO `json:"classes,omitempty"`
-	// Specializes is ADR 0030 step 12: the class may specialize in a weapon.
+	// Specializes is ADR 0030 step 12 (ADR 0042 step 12): the character
+	// specializes in a weapon, a dual-class's old class past the crossover
+	// included; a new pick is offered by weaponTypes' specializationSlots.
 	Specializes bool `json:"specializes"`
 	// ExceptionalStrength is ADR 0030 steps 9 and 10: the class enters an
 	// 18/xx and reads the warrior's scale over 18 (its exceptional_strength

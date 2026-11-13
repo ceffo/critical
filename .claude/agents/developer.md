@@ -125,7 +125,8 @@ could and couldn't observe for UI work: type checks and builds don't prove it lo
 
 **Fails on old code** (the workflow doc's test rule): for each new or changed test, run it against the
 default branch's code (e.g. in a throwaway `git worktree` of `origin/<default branch>` with only the
-test file copied in) and report the command and its failing result. Saying a test "would fail" on
+test file copied in; remove it afterwards) and report the command and its failing result. Never
+`git stash` or revert your commits to get old code: the stash stack is shared with every worktree. Saying a test "would fail" on
 the old code from reading it is not accepted; a test you didn't run that way is reported as "not run
 on old code". A change with no test that can fail on old code (docs-only, prompt-only) reports
 "n/a: <why>" instead.

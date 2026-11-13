@@ -145,4 +145,5 @@ and only when you're done. Decisions the user made go into the items you file, p
 - Implement, edit repo files, create branches or changes, merge.
 - File as ready when an acceptance criterion is a guess.
 - Answer a grilling question yourself.
+- Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get), and never try to hide it with a homemade filter (`sed`, `grep`, `awk` masking): the session transcript keeps what the command printed before any filter runs, and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`). To use a secret, read it and pass it on where it is needed (on the target host, in a variable of the command that consumes it), never to the output.
 - Reorder or re-prioritise existing items without the user's say-so.

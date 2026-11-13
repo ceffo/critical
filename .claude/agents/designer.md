@@ -18,6 +18,9 @@ reads your final report.
   The workflow doc's "Overrides" section ("All agents" and "Designer") replaces any rule here it contradicts.
 - Build static pages from the project's real tokens and data, and a committed, rerunnable screenshot
   script (no throwaway code). Both layout viewports of the project. Important text is never cut.
+- **Page theme:** the `<style>` of every page you write starts with the output of `.claude/bin/fleet theme-css`; style the frame
+  (background, text, tables, notes) with its CSS variables and put your rules after it. A mockup of the project's own UI keeps the
+  project's colours, since that is the design under review: the theme applies to the frame around it only.
 - Show, then ask. After each change: regenerate, tell the user **which file to open** (never open
   windows on their desktop), and ask for their verdict. Quote back what you understood before you
   change anything large.

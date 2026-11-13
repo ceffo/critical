@@ -49,6 +49,7 @@ const gem: Item = {
   magicDamage: 0,
   twoHanded: false,
   fires: "",
+  strengthRating: null,
   specialized: false,
   nonproficientPenalty: 0,
   baseAc: 0,

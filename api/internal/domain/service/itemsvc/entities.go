@@ -92,6 +92,10 @@ type Item struct {
 	MagicDamage int
 	TwoHanded   bool
 	Fires       string // the ammo kind a launcher fires; empty: none
+	// StrengthRating is a bow's Strength rating (ADR 0033 step 3, ADR 0002
+	// step 4): the Strength a strength bow is built for. The zero value is an
+	// ordinary bow, and every piece that is not a bow (IsBowType).
+	StrengthRating StrengthRating
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12),
 	// derived on every read from the character's specialization pick of the
 	// weapon type (ADR 0037 step 9); never stored, never edited.
@@ -110,6 +114,33 @@ type Item struct {
 	ShieldKind string
 	ACMelee    int
 	ACMissile  int
+}
+
+// StrengthRating is the Strength a strength bow is built for (ADR 0033 step
+// 3, PHB p.73 "Bows"): a score, and at 18 its exceptional percentile (1 to
+// strength.ExceptionalMax; 0 for a plain 18). A Score of 0 is no rating: an
+// ordinary bow.
+type StrengthRating struct {
+	Score       int
+	Exceptional int
+}
+
+// Rated reports whether the bow has a rating (a strength bow).
+func (r StrengthRating) Rated() bool { return r.Score != 0 }
+
+// Exceeds reports whether the rating is above the Strength score/exceptional:
+// by score, then, at 18, by the exceptional percentile (18/00, 100, is the
+// highest 18; an exceptional part counts only at 18). False for no rating.
+func (r StrengthRating) Exceeds(score, exceptional int) bool {
+	switch {
+	case !r.Rated():
+		return false
+	case r.Score != score:
+		return r.Score > score
+	case score != 18:
+		return false
+	}
+	return r.Exceptional > exceptional
 }
 
 // Spendable tells whether a spell that consumes the component code component

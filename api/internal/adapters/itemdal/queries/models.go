@@ -4,6 +4,10 @@
 
 package queries
 
+import (
+	"database/sql"
+)
+
 type Item struct {
 	ID       string
 	Position int64
@@ -37,14 +41,16 @@ type Item struct {
 	TwoHanded     int64
 	Fires         string
 	// unused since the specialization is a weapon pick (ADR 0037 step 9); kept until a later migration drops it
-	Specialized int64
-	BaseAc      int64
-	SkillColumn string
-	ArmorRow    string
-	ShieldKind  string
-	AcMelee     int64
-	AcMissile   int64
-	SpellID     string
+	Specialized               int64
+	BaseAc                    int64
+	SkillColumn               string
+	ArmorRow                  string
+	ShieldKind                string
+	AcMelee                   int64
+	AcMissile                 int64
+	SpellID                   string
+	StrengthRating            sql.NullInt64
+	StrengthRatingExceptional int64
 }
 
 // one row per language of a text (ADR 0023): text_id is the key a name or description column holds

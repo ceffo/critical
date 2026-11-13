@@ -360,6 +360,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment, Classes: ruleTables,
 		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
+		// The bow warning's Strength in effect (ADR 0002 step 4.1): the buff
+		// service, built below from the items, read when a warning is computed.
+		Strength: bridgeadpt.EffectiveStrFunc(func(ctx context.Context, characterID int64) (buffsvc.Strength, error) {
+			if bs.Buffs == nil {
+				return buffsvc.Strength{}, fmt.Errorf("item warnings: no buff service")
+			}
+			return bs.Buffs.GetEffectiveStr(ctx, characterID)
+		}),
 	})
 	if err := bs.add(bs.Items, err); err != nil {
 		return nil, err

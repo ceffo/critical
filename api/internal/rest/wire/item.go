@@ -53,7 +53,11 @@ type ItemDTO struct {
 	MagicDamage int    `json:"magicDamage"`
 	TwoHanded   bool   `json:"twoHanded"`
 	Fires       string `json:"fires"`
-	Specialized bool   `json:"specialized"`
+	// StrengthRating is a bow's Strength rating (ADR 0033 step 3): the
+	// Strength a strength bow is built for; null for an ordinary bow and
+	// every other piece.
+	StrengthRating *StrengthRatingDTO `json:"strengthRating"`
+	Specialized    bool               `json:"specialized"`
 	// NonproficientPenalty is ADR 0037 step 8: the to-hit penalty an attack
 	// with the weapon takes for its type having no weapon pick (0: none).
 	NonproficientPenalty int `json:"nonproficientPenalty"`
@@ -71,6 +75,21 @@ type ItemDTO struct {
 	// Warnings are the piece's class warnings (ADR 0033 step 20): codes the
 	// web words, empty for none. Served with every piece.
 	Warnings []string `json:"warnings"`
+}
+
+// StrengthRatingDTO is a Strength rating: a score, and at 18 its exceptional
+// percentile (1 to 100, 100 for 18/00; 0 for none).
+type StrengthRatingDTO struct {
+	Score       int `json:"score"`
+	Exceptional int `json:"exceptional"`
+}
+
+// StrengthRatingToDTO is a rating's wire shape: nil (null) for none.
+func StrengthRatingToDTO(r itemsvc.StrengthRating) *StrengthRatingDTO {
+	if !r.Rated() {
+		return nil
+	}
+	return &StrengthRatingDTO{Score: r.Score, Exceptional: r.Exceptional}
 }
 
 // PowerDTO is one of an item's powers: its id, its trigger (minStr, omitted:
@@ -122,7 +141,8 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
-			Specialized: i.Specialized, NonproficientPenalty: i.NonproficientPenalty, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
+			StrengthRating: StrengthRatingToDTO(i.StrengthRating),
+			Specialized:    i.Specialized, NonproficientPenalty: i.NonproficientPenalty, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
 			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile, Review: []string{}, Warnings: codes,
 		})
 	}

@@ -212,12 +212,15 @@ type ItemBody struct {
 	MagicDamage  *int      `json:"magicDamage"`
 	TwoHanded    *bool     `json:"twoHanded"`
 	Fires        *string   `json:"fires"`
-	BaseAC       *int      `json:"baseAc"`
-	SkillColumn  *string   `json:"skillColumn"`
-	ArmorRow     *string   `json:"armorRow"`
-	ShieldKind   *string   `json:"shieldKind"`
-	ACMelee      *int      `json:"acMelee"`
-	ACMissile    *int      `json:"acMissile"`
+	// StrengthRating is a bow's Strength rating (ADR 0033 step 3): an
+	// object sets it, null clears it, absent keeps it (a PATCH).
+	StrengthRating ratingField `json:"strengthRating"`
+	BaseAC         *int        `json:"baseAc"`
+	SkillColumn    *string     `json:"skillColumn"`
+	ArmorRow       *string     `json:"armorRow"`
+	ShieldKind     *string     `json:"shieldKind"`
+	ACMelee        *int        `json:"acMelee"`
+	ACMissile      *int        `json:"acMissile"`
 	// Powers is the whole power list, as served (ADR 0033 step 17, amending
 	// ADR 0016 step 15): on a PATCH it replaces the stored one, absent keeps
 	// it. A power sent without an id gets power_<n>. An armour's or a
@@ -236,6 +239,36 @@ type ItemBody struct {
 	// type's pick (PUT /api/proficiencies), and a piece served back, or the editor of the release
 	// before, still decodes.
 	Specialized json.RawMessage `json:"specialized"`
+}
+
+// ratingField is the body's strengthRating: absent leaves the rating as it
+// is, JSON null clears it, an object sets it.
+type ratingField struct {
+	present bool
+	val     *wire.StrengthRatingDTO
+}
+
+func (f *ratingField) UnmarshalJSON(b []byte) error {
+	f.present = true
+	return json.Unmarshal(b, &f.val)
+}
+
+// rating is the rating sent; the zero value (none) for null or absent.
+func (f ratingField) rating() itemsvc.StrengthRating {
+	if f.val == nil {
+		return itemsvc.StrengthRating{}
+	}
+	return itemsvc.StrengthRating{Score: f.val.Score, Exceptional: f.val.Exceptional}
+}
+
+// patch is the rating to apply: nil when absent, the zero value (a clear)
+// for null, else the rating.
+func (f ratingField) patch() *itemsvc.StrengthRating {
+	if !f.present {
+		return nil
+	}
+	r := f.rating()
+	return &r
 }
 
 func decodeBody(r *http.Request) (ItemBody, error) {
@@ -293,7 +326,8 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			DamageL: deref(b.DamageL), WeaponType: deref(b.WeaponType), WeaponKind: deref(b.WeaponKind),
 			Size: deref(b.Size), Speed: deref(b.Speed), MagicToHit: deref(b.MagicToHit),
 			MagicDamage: deref(b.MagicDamage), TwoHanded: deref(b.TwoHanded), Fires: deref(b.Fires),
-			BaseAC: deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
+			StrengthRating: b.StrengthRating.rating(),
+			BaseAC:         deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
 			ArmorRow: deref(b.ArmorRow), ShieldKind: deref(b.ShieldKind), ACMelee: deref(b.ACMelee),
 			ACMissile: deref(b.ACMissile), Powers: powers(b.Powers),
 		})
@@ -317,7 +351,8 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			DamageTypes: b.DamageTypes, DamageSM: b.DamageSM, DamageL: b.DamageL, WeaponType: b.WeaponType,
 			WeaponKind: b.WeaponKind, Size: b.Size, Speed: b.Speed, MagicToHit: b.MagicToHit,
 			MagicDamage: b.MagicDamage, TwoHanded: b.TwoHanded, Fires: b.Fires,
-			BaseAC: b.BaseAC, SkillColumn: b.SkillColumn, ArmorRow: b.ArmorRow, ShieldKind: b.ShieldKind,
+			StrengthRating: b.StrengthRating.patch(),
+			BaseAC:         b.BaseAC, SkillColumn: b.SkillColumn, ArmorRow: b.ArmorRow, ShieldKind: b.ShieldKind,
 			ACMelee: b.ACMelee, ACMissile: b.ACMissile,
 		}
 		if b.Powers != nil {

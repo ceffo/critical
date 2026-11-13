@@ -35,6 +35,13 @@ const (
 	// allows, before the crossover (ADR 0042 step 13,
 	// classes.WarnOldAbility): allowed, warned.
 	WarnOldAbility = classes.WarnOldAbility
+	// WarnBowTooStrong: a wielded bow built for exceptional Strength (rated
+	// 18/01 or more) in the hands of a character without exceptional
+	// Strength (below 18/01, the Strength in effect) (ADR 0002 step 4.1, PHB
+	// p.73 "Bows": stringing or using one takes a bend bars/lift gates roll,
+	// which the app does not make). The attack is not refused: it takes the
+	// character's own Strength.
+	WarnBowTooStrong = "bow_too_strong"
 )
 
 // Warning is one class warning, served with the piece's id.
@@ -240,7 +247,41 @@ func (s *service) Warnings(ctx context.Context, characterID int64, items []Item)
 	if err != nil {
 		return nil, fmt.Errorf("character %d ruleset: %w", characterID, err)
 	}
-	return ClassWarnings(limits, rs.WeaponLift, old, items), nil
+	// ADR 0002 step 4.1: the Strength in effect, the attack's (the sheet's
+	// without a Strength reader), read only when a wielded bow is built for
+	// exceptional Strength: no other answer pays the read.
+	str, exc := c.Str, c.StrExceptional
+	if s.strength != nil && len(BowWarnings(0, 0, items)) > 0 {
+		eff, err := s.strength.GetEffectiveStr(ctx, characterID)
+		if err != nil {
+			return nil, fmt.Errorf("character %d strength: %w", characterID, err)
+		}
+		str, exc = eff.Effective, eff.EffectiveExceptional
+	}
+	return append(ClassWarnings(limits, rs.WeaponLift, old, items), BowWarnings(str, exc, items)...), nil
+}
+
+// BowWarnings is ADR 0002 step 4.1 (PHB p.73 "Bows"): a wielded bow whose
+// Strength rating is exceptional (18/01 or more, the custom bows) warns
+// bow_too_strong when the character's Strength score/exceptional (the one in
+// effect) is not exceptional (below 18/01). A character with exceptional
+// Strength is never warned, nor is any bow rated 18 or less: such an archer
+// only gets the lower adjustment (step 4).
+func BowWarnings(score, exceptional int, pieces []Item) []Warning {
+	if score > 18 || (score == 18 && exceptional > 0) {
+		return nil
+	}
+	var out []Warning
+	for _, p := range pieces {
+		r := p.StrengthRating
+		if p.Category != CategoryWeapon || p.State != StateWielded || !IsBowType(p.WeaponType) {
+			continue
+		}
+		if r.Score > 18 || (r.Score == 18 && r.Exceptional > 0) {
+			out = append(out, Warning{p.ID, WarnBowTooStrong})
+		}
+	}
+	return out
 }
 
 // limitsOf is the equipment of the active classes (ADR 0040 step 1.6, ADR

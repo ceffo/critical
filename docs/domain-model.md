@@ -222,7 +222,10 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   other costing a non-weapon slot (**proficiency slot**); a **proficiency crossover** is a
   Table 38 row of the groups a class learns at the table's cost.
 - **Equipment**: a **shield** and **weapon versus armour** are catalogue rows; an **AC override**
-  is the one AC the player sets by hand.
+  is the one AC the player sets by hand. A bow possession may carry a **Strength rating**, which
+  makes it a **strength bow**: its attacks take Strength's bonus up to the rating (the lower of
+  the archer's effective Strength and the rating); a Strength penalty applies to every bow, rated
+  or not, and never to a crossbow.
 
 ## Ruleset and house rules
 

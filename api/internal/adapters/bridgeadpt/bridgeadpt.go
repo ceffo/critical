@@ -20,6 +20,18 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
+// EffectiveStrFunc satisfies itemsvc.EffectiveStrength with a function: the
+// composition root hands it the buff service's GetEffectiveStr, read at call
+// time, since the buff service is built after the items it reads.
+type EffectiveStrFunc func(ctx context.Context, characterID int64) (buffsvc.Strength, error)
+
+// GetEffectiveStr is the character's Strength in effect.
+func (f EffectiveStrFunc) GetEffectiveStr(ctx context.Context, characterID int64) (buffsvc.Strength, error) {
+	return f(ctx, characterID)
+}
+
+var _ itemsvc.EffectiveStrength = EffectiveStrFunc(nil)
+
 // RoundStore is the buff store's round read.
 type RoundStore interface {
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)

@@ -29,4 +29,13 @@ describeKind("item_edit", fixtures, {
     en: { text: "Edited Scroll: spell burning_hands → none" },
     fr: { text: "Objet modifié : Scroll, sort burning_hands → aucun" },
   },
+  // ADR 0033 step 3: a bow's Strength rating, logged as 17 or 18/100, worded as the PHB writes it.
+  ratedBow: {
+    en: { text: "Edited Long bow: Strength rating none → 18/00" },
+    fr: { text: "Objet modifié : Long bow, force de l’arc aucune → 18/00" },
+  },
+  clearedRating: {
+    en: { text: "Edited Long bow: Strength rating 17 → none" },
+    fr: { text: "Objet modifié : Long bow, force de l’arc 17 → aucune" },
+  },
 });

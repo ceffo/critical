@@ -694,7 +694,8 @@
       "next": "Suivant",
       "back": "Retour",
       "more": "Plus d'options",
-      "notANumber": "Entrez un nombre entier"
+      "notANumber": "Entrez un nombre entier",
+      "notAStrength": "Entrez une Force : 17, 18/50 ou 18/00"
     },
     "heading": "Objets",
     "columns": {
@@ -1758,6 +1759,7 @@
       "removedItem": "Objet retiré : {{name}} ({{count}})",
       "edited": "Objet modifié : {{name}}, {{changes}}",
       "noSpell": "aucun",
+      "noRating": "aucune",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "nom",
@@ -1784,6 +1786,7 @@
         "magicDamage": "bonus aux dégâts",
         "twoHanded": "à deux mains",
         "fires": "tire",
+        "strengthRating": "force de l’arc",
         "specialized": "spécialisée",
         "baseAc": "CA de base",
         "skillColumn": "colonne des talents",
@@ -2103,7 +2106,9 @@
       "ammoKind": "Type de munition",
       "ammoNone": "aucune (lancée)",
       "weaponType": "Type d’arme",
-      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par tour)"
+      "weaponTypeHint": "Le type d’arme que lisent les règles de classe (attaques par tour)",
+      "strengthRating": "Force de l’arc",
+      "strengthRatingHint": "Un arc de force : la Force pour laquelle il est fait (17, 18/50) ; l’archer ajoute son bonus de Force jusqu'à elle. Vide : un arc ordinaire"
     },
     "columns": {
       "name": "Nom",
@@ -3033,6 +3038,7 @@
       "weapon_not_allowed": "Pas pour {{who}}",
       "hands": "Arme à deux mains avec un bouclier",
       "weapon_type_missing": "Sans type d'arme : compétence martiale non vérifiée",
+      "bow_too_strong": "Arc fait pour une Force exceptionnelle : tordre les barreaux pour s’en servir",
       "dual_class_old_ability": "De votre ancienne classe : le MJ peut vous retirer de l’expérience",
       "title": "Avertissements de classe",
       "who": {

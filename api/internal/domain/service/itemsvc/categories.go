@@ -128,6 +128,17 @@ const (
 	TypeOtherMissile  = "other_missile"
 )
 
+// bowTypes are the weapon types of the bows (PHB Table 44: the short, long and
+// composite bows; a composite bow is typed as its short or long bow). A
+// crossbow is not one. The web's BOW_TYPES (web/src/lib/itemForm.ts) repeats
+// it to offer the field: change both together.
+var bowTypes = []string{TypeLongBow, TypeShortBow}
+
+// IsBowType reports whether the weapon type t is a bow's: what may carry a
+// Strength rating (ADR 0033 step 3) and takes Strength as a bow (ADR 0002
+// step 4).
+func IsBowType(t string) bool { return slices.Contains(bowTypes, t) }
+
 // WeaponTypes is every weapon type code, in display order: ruletablesvc.WeaponTypes, the one
 // owner of the list (the column has no CHECK; the weapon proficiency picks read it too, ADR 0037
 // step 7). The web's WEAPON_TYPES repeats it; seedcheck's tests keep it and the seeds in line.

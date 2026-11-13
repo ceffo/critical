@@ -147,6 +147,23 @@ name or comment); this ADR names none yet.
    [ADR 0037](0037-proficiencies.md) step 9 derived from the character's specialization pick of
    the weapon type, read-only, never stored or edited). A weapon with one
    catalogue row per grip (bastard sword) is one piece with one grip; changing the grip is an edit.
+   _(Amended 2026-11-13, the strength bow, implemented 2026-11-13.)_ A **bow** (weapon type
+   `long_bow` or `short_bow`, composite bows included) also carries an optional **Strength rating**:
+   the Strength it is built for (PHB p.73 "Bows"), a score of 1 to 25 and, at 18, its exceptional
+   percentile (1 to 100, 100 for 18/00). None (the default, and every bow already stored) is an
+   ordinary bow; a rated bow is a strength bow, read by [ADR 0002](0002-attack-resolution.md)
+   step 4. Stored in the nullable `items.strength_rating` with `strength_rating_exceptional`
+   (migration 040: NULL for every existing piece, so nothing changes for a positive Strength). The
+   editor sets it (typed 17, 18/50 or 18/00) and clears it; on the wire `strengthRating` is
+   `{score, exceptional}` or null (a PATCH: an object sets, null clears, absent keeps). Any other
+   piece with a rating is refused (field `strengthRating`, `not_allowed`); a bow that becomes
+   another weapon drops it, logged with the edit (field `strengthRating`, "18/50", "" for none) and
+   held by the undo snapshots. The rating is the player's on a piece picked from the catalogue too.
+   Tests: `itemsvc` `TestValidate_ADR0033Step3_OnlyABowHasAStrengthRating`,
+   `TestUpdate_ADR0033Step3_ABowsStrengthRatingIsSetAndCleared`,
+   `TestUpdate_ADR0033Step3_ABowThatStopsBeingOneDropsItsRating`, `composition`
+   `TestStrengthBow_Step3_TheRatingOnTheWireAndInTheAttack`, web `itemForm.test.ts`,
+   `ItemForm.dom.test.tsx` ("a bow offers its Strength rating").
 4. **Ammunition** carries its ammo kind (`arrow`, `quarrel`, `bullet`, `needle`, `blowgun_dart`;
    the hand, light and heavy quarrels share `quarrel` and differ by their dice), its damage types, its
    damage S-M and L, and its magic (ADR 0002 step 7). A launcher's attack rolls the
@@ -327,7 +344,9 @@ name or comment); this ADR names none yet.
     - bard: worn armour better than chain mail (catalogue row other than those of the `leather`,
       `padded_studded`, `elven_chain` and `metal` columns); any worn shield;
     - fighter: none;
-    - everyone: a two-handed weapon wielded with a worn shield (`hands`).
+    - everyone: a two-handed weapon wielded with a worn shield (`hands`); a wielded bow rated 18/01
+      or more for a character without exceptional Strength in effect (`bow_too_strong`, [ADR
+      0002](0002-attack-resolution.md) step 4.1, proposed 2026-11-13).
     A homebrew weapon without a catalogue code is judged by its weapon type and damage types; when
     those do not settle it (`other_melee` for a thief), no warning. Amends ADR 0030's Consequences
     ("class armour limits (not enforced)", "the cleric's blunt-weapon restriction"): still not

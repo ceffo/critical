@@ -9,8 +9,10 @@ import type {
   ItemBehaviour,
   ItemBody,
   MagicKind,
+  StrengthRating,
 } from "@/types/items";
 import type { WeaponType } from "@/types/combat";
+import { formatStrength } from "./format";
 import {
   draftsToPowers,
   plusOf,
@@ -53,6 +55,8 @@ export interface ItemDraft {
   magicDamage: string;
   twoHanded: boolean;
   fires: string;
+  /** A bow's Strength rating as typed: 17, 18/50, 18/00; empty for none (ADR 0033 step 3). */
+  strengthRating: string;
   // Armour.
   baseAc: string;
   skillColumn: string;
@@ -83,6 +87,7 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
     "magicDamage",
     "twoHanded",
     "fires",
+    "strengthRating",
   ],
   ammunition: [
     "ammoKind",
@@ -102,6 +107,44 @@ export function holdsSpell(
   d: Pick<ItemDraft, "category" | "magicKind">,
 ): boolean {
   return d.category === "magic" && d.magicKind === "scroll";
+}
+
+/**
+ * The weapon types of the bows, which may carry a Strength rating (ADR 0033 step 3). A copy of
+ * the server's list, `bowTypes` behind itemsvc.IsBowType (api/internal/domain/service/itemsvc/
+ * categories.go): change both together. Only which field the form offers depends on it; the
+ * server refuses a rating on any other piece. A composite bow is typed as its short or long bow; a
+ * crossbow is not one.
+ */
+const BOW_TYPES: readonly WeaponType[] = ["long_bow", "short_bow"];
+
+/** Whether the form offers a Strength rating: a bow. */
+export function ratesStrength(
+  d: Pick<ItemDraft, "category" | "weaponType">,
+): boolean {
+  return d.category === "weapon" && BOW_TYPES.includes(d.weaponType);
+}
+
+/**
+ * A typed Strength rating: "" is none (null); a score, or 18 with a two-digit exceptional part
+ * (18/00 is 100). Undefined when the text is neither; the server judges the range.
+ */
+export function parseStrengthRating(
+  text: string,
+): StrengthRating | null | undefined {
+  const s = text.trim();
+  if (s === "") return null;
+  const m = /^(\d{1,2})(?:\/(\d{2}))?$/.exec(s);
+  if (!m) return undefined;
+  const exceptional = m[2] === undefined ? 0 : Number(m[2]) || 100;
+  return { score: Number(m[1]), exceptional };
+}
+
+/** A Strength rating as the form shows it: 17, 18/50, 18/00; empty for none. */
+export function strengthRatingText(
+  r: StrengthRating | null | undefined,
+): string {
+  return r ? formatStrength(r.score, r.exceptional) : "";
 }
 
 /** Whether the form shows (and sends) field for category. */
@@ -136,6 +179,7 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     magicDamage: "0",
     twoHanded: false,
     fires: "",
+    strengthRating: "",
     baseAc: "10",
     skillColumn: "none",
     armorRow: "leather",
@@ -175,6 +219,7 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     magicDamage: String(i.magicDamage),
     twoHanded: i.twoHanded,
     fires: i.fires,
+    strengthRating: strengthRatingText(i.strengthRating),
     baseAc: i.category === "armour" ? String(i.baseAc) : empty.baseAc,
     skillColumn: i.skillColumn || empty.skillColumn,
     armorRow: i.armorRow || empty.armorRow,
@@ -192,8 +237,13 @@ export function parseInteger(s: string): number {
   return /^[+-]?\d+$/.test(text) ? Number(text) : Number.NaN;
 }
 
-/** i18n key suffix per field that failed to parse as a number (a power's value: field powers). */
-export type DraftErrors = Partial<Record<ItemField, "notANumber">>;
+/**
+ * i18n key suffix per field that failed to parse (a power's value: field powers): not a number, or
+ * not a Strength (17, 18/50).
+ */
+export type DraftErrors = Partial<
+  Record<ItemField, "notANumber" | "notAStrength">
+>;
 
 /**
  * The request body for a draft, and the number fields that are not numbers. The name is sent in the
@@ -214,6 +264,14 @@ export function draftToBody(
     if (Number.isNaN(n)) errors[field] = "notANumber";
     return n;
   };
+  const rating = (text: string): StrengthRating | null => {
+    const r = parseStrengthRating(text);
+    if (r === undefined) {
+      errors.strengthRating = "notAStrength";
+      return null;
+    }
+    return r;
+  };
   const all: ItemBody = {
     magicKind: d.magicKind,
     ammoKind: d.ammoKind,
@@ -229,6 +287,8 @@ export function draftToBody(
     magicDamage: num("magicDamage", d.magicDamage, true),
     twoHanded: d.twoHanded,
     fires: d.weaponKind === "missile" ? d.fires : "",
+    // Only a bow is rated; any other weapon sends none, so a bow retyped drops its rating.
+    strengthRating: ratesStrength(d) ? rating(d.strengthRating) : null,
     baseAc: num("baseAc", d.baseAc),
     skillColumn: d.skillColumn,
     armorRow: d.armorRow,
@@ -284,6 +344,10 @@ export function changedFields(
       if (sentName(body) !== localized(lang, item.name)) out[k] = v;
     } else if (k === "powers") {
       if (powersKey(body.powers ?? []) !== powersKey(item.powers ?? []))
+        out[k] = v;
+    } else if (k === "strengthRating") {
+      const r = v as StrengthRating | null;
+      if (strengthRatingText(r) !== strengthRatingText(item.strengthRating))
         out[k] = v;
     } else if (Array.isArray(v)) {
       const was = stored[k];

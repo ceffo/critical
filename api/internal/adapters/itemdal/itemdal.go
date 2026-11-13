@@ -51,7 +51,25 @@ func toItem(r queries.Item, name localized.Text) (itemsvc.Item, error) {
 		Fires:  r.Fires,
 		BaseAC: int(r.BaseAc), SkillColumn: r.SkillColumn, ArmorRow: r.ArmorRow,
 		ShieldKind: r.ShieldKind, ACMelee: int(r.AcMelee), ACMissile: int(r.AcMissile),
+		StrengthRating: ratingOf(r.StrengthRating, r.StrengthRatingExceptional),
 	}, nil
+}
+
+// ratingOf is a bow's Strength rating as stored (ADR 0033 step 3): NULL is
+// none, an ordinary bow and every other piece.
+func ratingOf(score sql.NullInt64, exceptional int64) itemsvc.StrengthRating {
+	if !score.Valid {
+		return itemsvc.StrengthRating{}
+	}
+	return itemsvc.StrengthRating{Score: int(score.Int64), Exceptional: int(exceptional)}
+}
+
+// ratingColumns are a Strength rating's columns: NULL and 0 for none.
+func ratingColumns(r itemsvc.StrengthRating) (sql.NullInt64, int64) {
+	if !r.Rated() {
+		return sql.NullInt64{}, 0
+	}
+	return sql.NullInt64{Int64: int64(r.Score), Valid: true}, int64(r.Exceptional)
 }
 
 func flag(b bool) int64 {
@@ -173,6 +191,7 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 	if err != nil {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
 	}
+	rating, ratingExc := ratingColumns(it.StrengthRating)
 	err = d.q.InsertItem(ctx, queries.InsertItemParams{
 		CharacterID: characterID, ID: it.ID, Position: int64(it.Position), Name: key, Type: it.Type,
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
@@ -185,6 +204,7 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 		Fires: it.Fires, BaseAc: int64(it.BaseAC),
 		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
 		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
+		StrengthRating: rating, StrengthRatingExceptional: ratingExc,
 	})
 	if err != nil {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
@@ -224,6 +244,7 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 	if err != nil {
 		return err
 	}
+	rating, ratingExc := ratingColumns(it.StrengthRating)
 	key, err := d.q.UpdateItem(ctx, queries.UpdateItemParams{
 		Position: int64(it.Position), Type: it.Type, Behaviour: string(it.Behaviour),
 		MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind, Count: int64(it.Count),
@@ -236,6 +257,7 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 		Fires: it.Fires, BaseAc: int64(it.BaseAC),
 		SkillColumn: it.SkillColumn, ArmorRow: it.ArmorRow, ShieldKind: it.ShieldKind,
 		AcMelee: int64(it.ACMelee), AcMissile: int64(it.ACMissile),
+		StrengthRating: rating, StrengthRatingExceptional: ratingExc,
 	})
 	if errors.Is(err, sql.ErrNoRows) {
 		return fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, it.ID)

@@ -60,6 +60,8 @@ type ItemInput struct {
 	MagicDamage int
 	TwoHanded   bool
 	Fires       string
+	// StrengthRating is a bow's (ADR 0033 step 3); the zero value none.
+	StrengthRating StrengthRating
 	// Armour.
 	BaseAC      int
 	SkillColumn string
@@ -106,12 +108,15 @@ type ItemPatch struct {
 	MagicDamage *int
 	TwoHanded   *bool
 	Fires       *string
-	BaseAC      *int
-	SkillColumn *string
-	ArmorRow    *string
-	ShieldKind  *string
-	ACMelee     *int
-	ACMissile   *int
+	// StrengthRating sets a bow's rating; the zero value clears it. A piece
+	// that stops being a bow drops it unless the patch sets it.
+	StrengthRating *StrengthRating
+	BaseAC         *int
+	SkillColumn    *string
+	ArmorRow       *string
+	ShieldKind     *string
+	ACMelee        *int
+	ACMissile      *int
 }
 
 // ChangeResult is one add, edit or remove: the item as it is now (as it was,
@@ -287,7 +292,8 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
 		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
 		MagicToHit: in.MagicToHit, MagicDamage: in.MagicDamage, TwoHanded: in.TwoHanded, Fires: in.Fires,
-		BaseAC: in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
+		StrengthRating: in.StrengthRating,
+		BaseAC:         in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
 		ShieldKind: in.ShieldKind, ACMelee: in.ACMelee, ACMissile: in.ACMissile,
 	}), nil
 }
@@ -461,6 +467,13 @@ func patched(old Item, p ItemPatch) Item {
 	setInt(&item.ACMelee, p.ACMelee)
 	setInt(&item.ACMissile, p.ACMissile)
 	setBool(&item.TwoHanded, p.TwoHanded)
+	// A piece that stops being a bow drops its Strength rating (logged with
+	// the edit); one the patch sets is refused by Validate.
+	if p.StrengthRating != nil {
+		item.StrengthRating = *p.StrengthRating
+	} else if item.Category != CategoryWeapon || !IsBowType(item.WeaponType) {
+		item.StrengthRating = StrengthRating{}
+	}
 	return clean(item)
 }
 
@@ -569,6 +582,7 @@ func diff(a, b Item) []FieldChange {
 	add("magicDamage", num(a.MagicDamage), num(b.MagicDamage))
 	add("twoHanded", flag(a.TwoHanded), flag(b.TwoHanded))
 	add("fires", a.Fires, b.Fires)
+	add("strengthRating", ratingText(a.StrengthRating), ratingText(b.StrengthRating))
 	add("baseAc", num(a.BaseAC), num(b.BaseAC))
 	add("skillColumn", a.SkillColumn, b.SkillColumn)
 	add("armorRow", a.ArmorRow, b.ArmorRow)
@@ -576,6 +590,19 @@ func diff(a, b Item) []FieldChange {
 	add("acMelee", num(a.ACMelee), num(b.ACMelee))
 	add("acMissile", num(a.ACMissile), num(b.ACMissile))
 	return out
+}
+
+// ratingText is a Strength rating as an item_edit change value: the score,
+// "18/50" with an exceptional part ("18/100" for 18/00, which the web words),
+// "" for none.
+func ratingText(r StrengthRating) string {
+	switch {
+	case !r.Rated():
+		return ""
+	case r.Exceptional != 0:
+		return strconv.Itoa(r.Score) + "/" + strconv.Itoa(r.Exceptional)
+	}
+	return strconv.Itoa(r.Score)
 }
 
 // powersText is a power list as an item_edit change value (ADR 0033 step 17):

@@ -694,7 +694,8 @@
       "next": "Next",
       "back": "Back",
       "more": "More options",
-      "notANumber": "Enter a whole number"
+      "notANumber": "Enter a whole number",
+      "notAStrength": "Enter a Strength: 17, 18/50 or 18/00"
     },
     "heading": "Items",
     "columns": {
@@ -1758,6 +1759,7 @@
       "removedItem": "Removed {{name}} ({{count}})",
       "edited": "Edited {{name}}: {{changes}}",
       "noSpell": "none",
+      "noRating": "none",
       "change": "{{field}} {{before}} → {{after}}",
       "fields": {
         "name": "name",
@@ -1784,6 +1786,7 @@
         "magicDamage": "damage bonus",
         "twoHanded": "two-handed",
         "fires": "fires",
+        "strengthRating": "Strength rating",
         "specialized": "specialized",
         "baseAc": "base AC",
         "skillColumn": "skills column",
@@ -2103,7 +2106,9 @@
       "ammoKind": "Ammo kind",
       "ammoNone": "none (hurled)",
       "weaponType": "Weapon type",
-      "weaponTypeHint": "The weapon type the class rules read (attacks per round)"
+      "weaponTypeHint": "The weapon type the class rules read (attacks per round)",
+      "strengthRating": "Bow's Strength",
+      "strengthRatingHint": "A strength bow: the Strength it is built for (17, 18/50); the archer adds his Strength bonus up to it. Empty: an ordinary bow"
     },
     "columns": {
       "name": "Name",
@@ -3033,6 +3038,7 @@
       "weapon_not_allowed": "Not for {{who}}",
       "hands": "Two-handed weapon with a shield",
       "weapon_type_missing": "No weapon type: weapon proficiency not checked",
+      "bow_too_strong": "Bow built for exceptional Strength: bend bars to use it",
       "dual_class_old_ability": "Your old class’s: the DM may cost you experience",
       "title": "Class warnings",
       "who": {

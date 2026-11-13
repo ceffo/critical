@@ -10,6 +10,7 @@ import {
   draftToBody,
   hasField,
   holdsSpell,
+  ratesStrength,
   type DraftErrors,
   type ItemDraft,
   type ItemField,
@@ -443,6 +444,17 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
               ))}
             </select>
           ))}
+        {/* A bow's Strength rating (ADR 0033 step 3): a strength bow; empty for an ordinary one. */}
+        {shows("strengthRating") &&
+          ratesStrength(draft) &&
+          field(
+            "strengthRating",
+            t("weapons.form.strengthRating"),
+            text("strengthRating", {
+              placeholder: "18/50",
+              title: t("weapons.form.strengthRatingHint"),
+            }),
+          )}
 
         {/* Ammunition (ADR 0033 step 4). */}
         {shows("ammoKind") &&

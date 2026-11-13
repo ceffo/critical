@@ -2923,7 +2923,8 @@
         "weapon_with_use": "A weapon, armour or shield that had a use: check its ability, or remove it.",
         "quantity_above_one": "More than one object stored for a single-object item: check the quantity.",
         "charges_total": "Only the charges left were known: set the total in the editor.",
-        "ammo_not_stock": "Ammunition that was charged or daily: it is a plain stock now."
+        "ammo_not_stock": "Ammunition that was charged or daily: it is a plain stock now.",
+        "limit_clamped": "A number was above what an ability holds and was brought down: check it."
       }
     },
     "form": {

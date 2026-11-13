@@ -41,11 +41,18 @@ func convertItems(ctx context.Context, tx domain.TxRunner, q storeq.Querier, see
 			return err
 		}
 		for _, r := range rows {
-			c := itemsvc.ConvertLegacy(itemsvc.Item{
+			legacy := itemsvc.Item{
 				ID: r.ID, Category: itemsvc.Category(r.Category), MagicKind: r.MagicKind,
 				Behaviour: itemsvc.Behaviour(r.Behaviour), Count: int(r.Count), MaxCount: int(r.MaxCount),
 				EffectDice: r.EffectDice, EffectSave: r.EffectSave,
-			})
+			}
+			c := itemsvc.ConvertLegacy(legacy)
+			// Never store a list the editor would then refuse: a row the conversion cannot
+			// express (an unknown category, effect dice that do not parse) stops the boot,
+			// loudly and with the row, and the transaction leaves every row as it was.
+			if err := c.Check(legacy); err != nil {
+				return fmt.Errorf("convert item %s: %w", r.ID, err)
+			}
 			if r.CharacterID == seedOwnerID {
 				itemsvc.NamedFrom(c.Abilities, seedNames[r.ID])
 			}

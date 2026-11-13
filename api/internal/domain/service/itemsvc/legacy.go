@@ -18,6 +18,10 @@ const (
 	// ReasonAmmoNotStock: ammunition that was charged or daily; it is stock
 	// now.
 	ReasonAmmoNotStock = "ammo_not_stock"
+	// ReasonLimitClamped: a charges total or a daily number above what an
+	// ability holds (MaxCharges, MaxPerDay), or a daily count above its max,
+	// brought down to the ceiling; the player checks the number.
+	ReasonLimitClamped = "limit_clamped"
 )
 
 // LegacyAbilityID is the id of the ability the conversion gives (use_2 and so
@@ -77,14 +81,20 @@ func ConvertLegacy(it Item) Converted {
 			out.Abilities = append(out.Abilities, ability(Limit{Kind: LimitWithItem}))
 			break
 		}
-		total := max(it.Count, 1)
+		total := min(max(it.Count, 1), MaxCharges)
 		out.Quantity = 1
-		out.Abilities = append(out.Abilities, ability(Limit{Kind: LimitCharges, Max: total, Left: it.Count, Cost: 1}))
+		out.Abilities = append(out.Abilities, ability(Limit{Kind: LimitCharges, Max: total, Left: min(it.Count, total), Cost: 1}))
 		out.Reasons = append(out.Reasons, ReasonChargesTotal)
+		if it.Count > MaxCharges {
+			out.Reasons = append(out.Reasons, ReasonLimitClamped)
+		}
 	case BehaviourDaily:
 		out.Quantity = 1
 		perDay := min(max(it.MaxCount, 1), MaxPerDay)
 		out.Abilities = append(out.Abilities, ability(Limit{Kind: LimitPerDay, Max: perDay, Left: min(it.Count, perDay)}))
+		if it.MaxCount > MaxPerDay || it.Count > perDay {
+			out.Reasons = append(out.Reasons, ReasonLimitClamped)
+		}
 	default:
 		switch {
 		case len(effects) > 0:
@@ -100,6 +110,14 @@ func ConvertLegacy(it Item) Converted {
 		out.Reasons = append(out.Reasons, ReasonQuantityAboveOne)
 	}
 	return out
+}
+
+// Check is the abilities ConvertLegacy gave it validated as the editor would
+// (Item.Validate's ability rules, on the item they came from): the boot step
+// and the restorer never store a list the editor then refuses.
+func (c Converted) Check(it Item) error {
+	it.Abilities = c.Abilities
+	return it.validAbilities()
 }
 
 // LegacyFields is the old columns an item with these abilities keeps while the

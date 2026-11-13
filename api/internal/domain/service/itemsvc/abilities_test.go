@@ -364,9 +364,15 @@ func TestUpdate_ADR0049Step4_StoredCountAboveOneDoesNotBlockEditsButBlocksAbilit
 	_, err := svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Notes: &notes})
 	require.NoError(t, err)
 
+	// A count edit is a change of quantity: per-object abilities refuse more than one object.
+	more := converted.Count + 46
+	var fe *domain.FieldError
+	_, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Count: &more})
+	require.True(t, errors.As(err, &fe), "a count edit on a converted per-object item is refused: %v", err)
+	assert.Equal(t, "abilities", fe.Field)
+
 	changed := []itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: 1}}}
 	_, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Abilities: &changed})
-	var fe *domain.FieldError
 	require.True(t, errors.As(err, &fe), "%v", err)
 	assert.Equal(t, "abilities", fe.Field)
 

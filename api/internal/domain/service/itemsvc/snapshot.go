@@ -205,8 +205,9 @@ func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c 
 	if c.Item.Abilities != nil {
 		return item, nil
 	}
-	converted := ConvertLegacy(item).Abilities
-	if len(converted) == 0 {
+	conv := ConvertLegacy(item)
+	converted := conv.Abilities
+	if len(converted) == 0 || conv.Check(item) != nil {
 		// Nothing to give: the item stays as the snapshot had it (NULL when it
 		// had no list), which the next boot converts to the same empty list.
 		return item, nil

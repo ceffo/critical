@@ -2923,7 +2923,8 @@
         "weapon_with_use": "Une arme, armure ou bouclier qui avait un usage : vérifiez sa capacité, ou retirez-la.",
         "quantity_above_one": "Plusieurs objets enregistrés pour un objet unique : vérifiez la quantité.",
         "charges_total": "Seules les charges restantes étaient connues : réglez le total dans l’éditeur.",
-        "ammo_not_stock": "Des munitions qui avaient des charges ou un usage quotidien : c’est un simple stock maintenant."
+        "ammo_not_stock": "Des munitions qui avaient des charges ou un usage quotidien : c’est un simple stock maintenant.",
+        "limit_clamped": "Un nombre dépassait ce qu’une capacité peut contenir et a été ramené au maximum : vérifiez-le."
       }
     },
     "form": {

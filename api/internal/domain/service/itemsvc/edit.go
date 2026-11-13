@@ -376,7 +376,10 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		if err := item.Validate(); err != nil {
 			return err
 		}
-		if p.Abilities != nil {
+		// The per-object count check runs when the request adds or changes abilities,
+		// or changes the count (a stored converted wand keeps its old count and stays
+		// editable otherwise).
+		if p.Abilities != nil || (p.Count != nil && *p.Count != old.Count) {
 			if err := item.validAbilityCounts(); err != nil {
 				return err
 			}

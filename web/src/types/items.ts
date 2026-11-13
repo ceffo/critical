@@ -121,7 +121,8 @@ export type ReviewReason =
   | "weapon_with_use"
   | "quantity_above_one"
   | "charges_total"
-  | "ammo_not_stock";
+  | "ammo_not_stock"
+  | "limit_clamped";
 
 export interface Item {
   id: string;

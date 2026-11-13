@@ -453,15 +453,21 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      becomes 1) and stop reading `behaviour`, `max_count` and `effect_*`. Slices 2 and 3 should merge
      close together; a use between them is the only way the two counters diverge.
    - **The validator follows:** the `per_day`/`charges` "quantity 1 at most" refusal applies only to the
-     abilities a request adds or changes, never to a stored item (a converted wand keeps its count of 4,
-     the record's "kept, not edited"), so a converted item stays editable.
+     abilities a request adds or changes, or to a request that changes the count, never to a stored item
+     (a converted wand keeps its count of 4, the record's "kept, not edited"), so a converted item stays
+     editable: a rename passes, a count edit to more than 1 is refused.
+   - **Out-of-range values are clamped, and flagged:** a charges total above `MaxCharges` (100) or a daily
+     number above `MaxPerDay` (99), or a daily count above its max, is brought down and the item is on
+     the review list as `limit_clamped`. The boot step checks every converted list as the editor would
+     (`Converted.Check`) and stops, naming the row, rather than store a list the editor refuses (the
+     transaction leaves every row as it was); the restorer leaves such a snapshot item unconverted.
    - **Names are data, not a branch:** the Power Gem's "Dispel Magic" comes from the abilities of the
      seed row of the same item id (the seed character's), lent to an unnamed ability of the same ability
      id by `NamedFrom`, in the boot step and when a snapshot is popped. No item id is in the code.
    - **A weapon, armour or shield that was stock with dice** gets an `unlimited` ability with the dice
      effect (a `with_item` limit needs a stock, step 4); the same for a one-object magic item. It is on
      the review list as `weapon_with_use`. The other reasons: `quantity_above_one`, `charges_total`,
-     `ammo_not_stock` (codes the Inventory's band words).
+     `ammo_not_stock`, `limit_clamped` (codes the Inventory's band words).
    - **The seed** reads both shapes: an entry with `abilities` is the new shape (`quantity`, default 1;
      the old columns derived by `MirrorLegacy`, for the previous release); one without is converted by
      `ConvertLegacy`, as the boot step does. `seeds/items.json` is in the new shape.

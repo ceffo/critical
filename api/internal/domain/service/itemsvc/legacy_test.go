@@ -112,6 +112,31 @@ func TestConvertLegacy_ADR0049Step19_Table(t *testing.T) {
 			[]string{itemsvc.ReasonQuantityAboveOne},
 		},
 		{
+			"charges above the ceiling: clamped, reviewed", legacy(itemsvc.CategoryMagic, itemsvc.MagicWand, charges, 150, 150, ""), 1,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: itemsvc.MaxCharges, Left: itemsvc.MaxCharges, Cost: 1}, "")},
+			[]string{itemsvc.ReasonChargesTotal, itemsvc.ReasonLimitClamped},
+		},
+		{
+			"charges, none left", legacy(itemsvc.CategoryMagic, itemsvc.MagicWand, charges, 0, 0, ""), 1,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 1, Left: 0, Cost: 1}, "")},
+			[]string{itemsvc.ReasonChargesTotal},
+		},
+		{
+			"daily above the ceiling: clamped, reviewed", legacy(itemsvc.CategoryMagic, itemsvc.MagicMisc, daily, 120, 150, ""), 1,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: itemsvc.MaxPerDay, Left: itemsvc.MaxPerDay}, "")},
+			[]string{itemsvc.ReasonLimitClamped},
+		},
+		{
+			"daily with a count above its max: reviewed", legacy(itemsvc.CategoryMagic, itemsvc.MagicMisc, daily, 5, 2, ""), 1,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 2, Left: 2}, "")},
+			[]string{itemsvc.ReasonLimitClamped},
+		},
+		{
+			"potion with charges above the ceiling: doses are the quantity", legacy(itemsvc.CategoryMagic, itemsvc.MagicPotion, charges, 150, 150, ""), 150,
+			[]itemsvc.Ability{use(itemsvc.Limit{Kind: itemsvc.LimitWithItem}, "")},
+			nil,
+		},
+		{
 			"ammunition that was daily: as stock, reviewed", legacy(itemsvc.CategoryAmmunition, "", daily, 20, 20, ""), 20,
 			[]itemsvc.Ability{},
 			[]string{itemsvc.ReasonAmmoNotStock},
@@ -128,7 +153,15 @@ func TestConvertLegacy_ADR0049Step19_Table(t *testing.T) {
 			assert.Equal(t, tt.quantity, got.Quantity, "quantity")
 			assert.Equal(t, tt.abilities, got.Abilities, "abilities")
 			assert.Equal(t, tt.reasons, got.Reasons, "reasons")
-			// What the conversion writes must be what the editor accepts.
+			// What the conversion writes must be what the editor accepts, for every row.
+			assert.NoError(t, got.Check(tt.in), "Check")
+			renamed := tt.in
+			renamed.Abilities = got.Abilities
+			renamed.Count = tt.in.Count // the stored count keeps its old meaning
+			renamed.Name = localized.Of("Renamed")
+			if (tt.in.Category == itemsvc.CategoryGear || tt.in.Category == itemsvc.CategoryMagic) && (len(got.Abilities) == 0 || !got.Abilities[0].Limit.PaysPerObject()) {
+				assert.NoError(t, renamed.Validate(), "renamed item validates")
+			}
 			if !tt.in.Category.OneObject() && tt.in.Category != itemsvc.CategoryAmmunition {
 				piece := tt.in
 				piece.Abilities, piece.Count = got.Abilities, got.Quantity

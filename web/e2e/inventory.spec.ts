@@ -162,9 +162,9 @@ test("Act · Items uses the Fire flasks, the Wand of lightning and the Power Gem
   await snap(page, "act-items-used-2560x1440");
   await chooseLanguage(page, "fr");
   await page.getByRole("tab", { name: "Objets" }).click();
-  await expect(
-    page.getByTestId("ability-power_gem_dispel-use"),
-  ).toContainText("Épuisé jusqu'au repos long");
+  await expect(page.getByTestId("ability-power_gem_dispel-use")).toContainText(
+    "Épuisé jusqu'au repos long",
+  );
   await snap(page, "act-items-used-fr-2560x1440");
 });
 

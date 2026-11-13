@@ -562,7 +562,7 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    the effect"; "Quantity" (0 to 999, the server's bound) shows where the category has one. The editor asks
    the server, for a piece that is not stored yet too: `GET /api/equipment/rules` (reference data, read once
    like the catalogue) serves `{maxQuantity, categories: [{category, hasQuantity, magicKinds: [{kind, hasQuantity}]}]}`,
-   built from `Item.HasStock` (`TestQuantityRules_Step2_EqualHasStockForEveryCategoryAndKind`); the web
+   built from `Item.HasStock` (`TestQuantityRules_Step2_EqualTheTableAndHasStockForEveryCategoryAndKind`); the web
    holds no copy of the rule or of the 999 bound, and the `with_item` offer follows it (a stored `with_item` ability keeps its option, and a failed read shows an error in the form).
    The wire still requires `behaviour` on an add, so the form sends `stock` there (read by no rule); slice 10
    drops it. The review band already read `review` (slice 2).

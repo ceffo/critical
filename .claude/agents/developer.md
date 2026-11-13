@@ -1,7 +1,7 @@
 ---
 name: developer
 description: Implements one work item (a tracker issue) in its own git worktree, verifies it with the project's validation gate, and commits it. Never pushes, never opens changes, never writes to the tracker. Dispatched by the supervisor and resumed by it for every rework round; reports back with branch, worktree path and what was and wasn't verified.
-tools: Read, Write, Edit, Bash, Grep, Glob, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_get_observation, mcp__engram__mem_save
+tools: Read, Write, Edit, Bash, Grep, Glob, Skill, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_search, mcp__engram__mem_get_observation, mcp__engram__mem_save
 model: sonnet
 ---
 
@@ -29,6 +29,7 @@ You carry none. Read `AGENTS.md` and the workflow configuration doc it links (re
 are yours. The workflow doc gives: the validation gate and narrow checks, worktree setup, how to run
 the app, generated code and its triggers, tracker commands, scope limits, hard rules for
 implementers, commit format, the docs index (decision records) and the memory project name.
+When `AGENTS.md` or the workflow doc requires a skill for a kind of task, load it with the Skill tool before you start that task.
 
 **Overrides win.** The workflow doc's "Overrides" section (its "All agents" and "Developer" parts) replaces
 any rule in this file it contradicts; everything it doesn't mention stays as written here.
@@ -98,10 +99,35 @@ run the full gate from "Validation". It must pass in full. If it fails, fix it b
 Don't report `done` on a red gate; use `partial` or `blocked` and say what is red. After a clean
 merge of the default branch run it again.
 
+**Throwaway install that starts a Claude session** (`fleet liaison ensure`, `agent-start`): Claude Code stops a new
+session at its folder-trust prompt, and nothing but the user answers it (a keypress into the tab is refused; never edit
+`~/.claude.json`). Trust is keyed on the git repository root, a linked worktree uses its main checkout's root, and a git
+repository nested under a trusted folder (a `git init` in `mktemp -d` or in a subfolder of your worktree) is a folder of its
+own, so it prompts. So make the scratch install a **linked worktree of the checkout you are in** (already trusted), not a
+new repo:
+
+```
+S=<worktree root>/scratch-<key>        # beside your worktree, never inside it
+git worktree add "$S" -b scratch/<key> origin/<default branch>
+FLEET_INSTALL_BIN=<tmp>/fleet ./install.sh --binary-url file:///unused --tracker <backend> "$S"
+cd "$S" && env -u CLAUDE_PROJECT_DIR -u FLEET_NAME_PREFIX FLEET_MAIN="$S" .claude/bin/fleet liaison ensure
+```
+
+`FLEET_MAIN` makes the worktree its own project: its own `<name>.worktrees` spool and a name prefix from its folder, so it
+cannot touch the real liaison. `agent-start` prints a warning when the folder is not trusted: treat that as a failed setup, not
+something to answer. Clean up: close its tabs, `git worktree remove --force "$S"`, `git branch -D scratch/<key>`.
+
 Then exercise the acceptance criteria and any numbered checklist the supervisor passed you, each for
 real, using "Running the app for acceptance checks" from the workflow doc (a test, a request against
 a locally started instance with throwaway data, or both). Report each item pass / fail. Say what you
 could and couldn't observe for UI work: type checks and builds don't prove it looks right.
+
+**Fails on old code** (the workflow doc's test rule): for each new or changed test, run it against the
+default branch's code (e.g. in a throwaway `git worktree` of `origin/<default branch>` with only the
+test file copied in) and report the command and its failing result. Saying a test "would fail" on
+the old code from reading it is not accepted; a test you didn't run that way is reported as "not run
+on old code". A change with no test that can fail on old code (docs-only, prompt-only) reports
+"n/a: <why>" instead.
 
 ## Commits
 
@@ -131,8 +157,8 @@ ITEM: <id> — <title>
 STATUS: done | blocked | partial
 BRANCH: <branch>   WORKTREE: <absolute path>   HEAD: <sha>
 SUMMARY: what changed and why, 2–4 lines
-RISK: what makes this risky (per the workflow doc's review triggers) or "low"
-FULL VERIFICATION: gate pass|fail on <sha> | not yet (review: yes) — acceptance items pass/fail
+RISK: what makes this risky (per the workflow doc's review triggers; name any review-trigger file you touched, whatever the brief said) or "low"
+FULL VERIFICATION: gate pass|fail on <sha> | not yet (review: yes) — acceptance items pass/fail; fails-on-old-code: <command run on old code → result> | n/a: <why>
 UI: no | what you observed and what you couldn't
 GENERATED: none | what you regenerated
 MERGED DEFAULT BRANCH: no | yes, at <sha>

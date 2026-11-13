@@ -91,7 +91,8 @@ An MR review the user asks for is not the fleet's `rev-<id>`: it runs in its own
 `review-<id>` (listed in `<wt>/supervisor/user-facing-agents`, so its questions don't wake you). That
 session runs the skill the user named in full, delivers one self-contained HTML page (a findings table,
 a card per finding with the code and a paste-ready comment), discusses it with the user and posts only on
-their OK. You only start and close it (`fleet close-agent review-<id>`). Its brief states: comment drafts
+their OK. You only start and close it (`fleet close-agent review-<id>`). Its brief states: the page's `<style>` starts with the output of `.claude/bin/fleet theme-css` (its CSS variables, your rules after it);
+comment drafts
 follow the posting skill's format (label, word cap, anchored `file:line`), never free prose; before any
 post it loads the posting skill and follows its preview step; it never edits CLAUDE.md or skills, it
 proposes the change; every href on the page is link-checked before delivery. The MR URL in the brief
@@ -351,13 +352,15 @@ Manual: claim the item (`.claude/bin/fleet tracker state <id> "In Progress"`).
 Decide up front whether the change will need review (section 3): before writing `review:`, list the files
 and areas the item will likely touch (from its text and acceptance criteria) and compare them one by one
 with the workflow doc's "Review" triggers. Any match means `review: yes`; write `no` only when none
-matches, and name the areas you compared in the brief. Don't discover a trigger mid-run and amend the
+matches, and name the areas you compared in the brief. A sweep brief ("every command", "all call sites")
+reaches beyond the item's own area: compare against every file the sweep can reach, and either exclude the
+review-trigger files in the brief or write `review: yes`. Don't discover a trigger mid-run and amend the
 brief. Branch `feat/<id>-<slug>` or
 `fix/<id>-<slug>`; worktree `<wt>/<id>-<slug>`, which you create first (mechanical, so it's yours).
 **A change that is only one step of an item** (more steps follow) gets a branch **without the id**
 (`feat/<slug>-step1`): trackers that link by branch name (Linear's GitHub integration does, and moves the
 item to its merge status, Done by default) would close the item at that merge. Its title and body name no id,
-and you run `fleet ship` without the id, so the item stays In Progress; the worktree, agent, brief and report
+and you run `fleet ship --item <id> ...` (the id as an option, not a positional: the store records the change as a step, `step PR <n>`, the tracker is not moved) so the item stays In Progress, and `fleet land` leaves it in flight at that merge (stage `step PR <n> merged`); the worktree, agent, brief and report
 keep the id key. The last step ships the normal way (id branch, `Closes <id>`). Create the worktree:
 `git fetch origin && git worktree add <path> -b <branch> origin/<db>`. Launch `dev-<id>` in it with
 the model and a short brief: item id and title, branch, worktree, the acceptance criteria in your own
@@ -407,7 +410,7 @@ way.
 
 When the review has a clear verdict and only low findings (or nits), **no round wins over the
 checklist**: the checklist belongs to a round you are already ordering, and scenarios alone don't
-justify one. Skip the developer round and run the full gate on the final HEAD (mechanical; the scenarios
+justify one. Skip the developer round and run the full gate on the final HEAD with `.claude/bin/fleet gate <worktree>` (one `PASS` / `FAIL` line, failing packages named, exit 0/1; exit 2 and one line when `FLEET_VALIDATE_CMD` is empty: never pipe the gate through a filter, its exit code masks the gate's) (mechanical; the scenarios
 are the developer's to run, never yours). List the scenarios not run in the PR body's not-verified
 list, and tell the user which lows you left. A scenario that covers something the user uses daily, or a
 merge-path risk, is worth a round.
@@ -703,8 +706,8 @@ green, or one of our changes going green (the one-shot form exits on it, the str
 A `Stop` hook (`fleet hook supervisor-ci-guard`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for the default branch or a Dependabot change, a rerun for a
-flake), then append the id it printed with one line on what you did. The id is per run or per sha, so a rerun that
-goes red again stays handled: delete the id's line from `ci-red-handled` when you start the rerun. A handled-red change whose running check finishes wakes the watcher once (it left "running"), as intended. A red already in `ci-red-handled` never wakes the watcher by itself (the stream form drops its `HANDLED` lines from every event; the one-shot form waits on a state that is only handled reds). After a merge, the Release run
+flake), then append the id each RED line prints in its `[append to ci-red-handled: <id>]` hint, verbatim (a run id, or `pr<n>@<sha7>`), with one line on what you did. The id is per run or per sha, so a rerun that
+goes red again stays handled: delete the id's line from `ci-red-handled` when you start the rerun. Right after that the forge may still show the old attempt as failed: `fleet ci-state` prints it as `PENDING ... [rerun requested: waiting for the new attempt]` for `FLEET_CI_GRACE` seconds (default 300) instead of RED, and reports the red again at once once the new attempt has run and failed (or after the grace, if it never started). A handled-red change whose running check finishes wakes the watcher once (it left "running"), as intended. A red already in `ci-red-handled` never wakes the watcher by itself (the stream form drops its `HANDLED` lines from every event; the one-shot form waits on a state that is only handled reds). After a merge, the Release run
 it triggers is yours to see green: a deploy smoke failing on main is a red main. (A supervisor once left a
 release run to an idle developer: monitoring CI and keeping it in a good state is the supervisor's job.) A developer
 working live with the user is never left idle while you wait on CI: as soon as it reports, prompt it
@@ -735,6 +738,7 @@ the one-shot text on one line (the others). **Idle (nothing in flight: no live a
 **Only user-facing agents live (scopers, designers, `review-<id>` tabs, listed sessions; no developer, reviewer or tester), arm the one-shot form too**:
 `fleet fleet-watch`, and `ci-watch` or `upkeep wait` when a change or CI is open, each without `--stream`, with `run_in_background`.
 The Stop hook still wants a fleet watcher then, accepts either form, and its refusals (fleet-watch, ci-watch) name the one-shot.
+**A developer, reviewer or tester that is idle counts as user-facing here (#615)**: its herdr status is `idle` or `done`, so it has ended its turn, the watcher already reported it (`NEEDS-SUPERVISOR` or `WAITING-ON-USER`), and it waits on the user or on your next brief (e.g. a developer kept with `--keep-agent` to run a step after an approval). While every live developer, reviewer and tester is idle, arm the one-shot form too: it exits on the first turn end, block or report of any of them, and it reports a report written before it started at once, so nothing is missed. A stream would only expire every 30 minutes with an empty wake-up. Switch to the stream form as soon as you brief one of them (a prompt, a rework round) or one is `working` or `blocked`; the Stop hook (herdr status read) names the form that fits.
 Use the stream form as soon as a developer, reviewer or tester runs. Also use the one-shot form if the Monitor tool is missing from your tool list (an older Claude Code;
 see docs/installing.md): it exits on each event, re-arm it after every wake-up.
 Say which form runs in your first reply of the session.
@@ -859,7 +863,7 @@ Without a registered worktree an adopted change's catch-up or briefs fail with o
 - **Keeping a developer past its merge** (you still want something from it, e.g. a diagnosis unrelated to the change):
   land with `.claude/bin/fleet land --keep-agent <change>` instead of holding a green change back. The gate and the merge are the
   same; the developer, its worktree and its tab stay, the other steps run, and `worktree: skip ... kept` confirms it. A watcher never
-  keeps: land such a change yourself, not through `fleet pr-merge-watch`. For a change merged elsewhere (the user merged it, a `merged` event with no fleet land output), run `.claude/bin/fleet after-merge --keep-agent <n>` instead of the plain routine: it does the same. Record it in the store (`fleet store stage <id> "merged, dev-<id> kept: fleet after-merge <n> when done" --state waiting`): the routine has run, so no `merged` event will come, and nothing else tells a successor the cleanup is still due. When you are
+  keeps: land such a change yourself, not through `fleet pr-merge-watch`. For a change merged elsewhere (the user merged it, a `merged` event with no fleet land output), run `.claude/bin/fleet after-merge --keep-agent <n>` instead of the plain routine: it does the same. Record it in the store (`fleet store stage <id> "merged, dev-<id> kept: fleet after-merge <n> when done" --state waiting --reopen`; the store refuses a stage on a merged item without `--reopen`, so a stray note never revives a done item): the routine has run, so no `merged` event will come, and nothing else tells a successor the cleanup is still due. When you are
   done with the developer, run `.claude/bin/fleet after-merge <n>` without the option: that is the cleanup (`lane: ok (tab ... released ...)` means the next `fleet lane-watch prune` closes the tab if its agent had already exited). To re-run a `FAILED` step
   while keeping it, pass `--keep-agent` again (land's `WARNING` line says so).
 - On a **bot dependency change** (Dependabot, Renovate): if the project auto-merges routine ones on green CI
@@ -910,9 +914,9 @@ must lose nothing, so state lives outside the conversation:
   | dispatch (a first send) | `fleet store dispatch <id> --title T --agent A --model M --review yes\|no --wt W --brief B` |
   | a report read, a review started, a wait begun | `fleet store stage <id> "what it waits for" [--state waiting]` (`--state inflight` when it moves again) |
   | rework sent | `fleet store rework <id> --brief B` (the round counts up by itself) |
-  | change opened | `fleet ship` records it (`store: <id> ...`). By hand only for a change opened another way or when ship says it could not: `fleet store change <id> <kind> <ref>` (the change noun and its number, as the forge names it: `.claude/bin/fleet get FLEET_CHANGE_NOUN`) |
+  | change opened | `fleet ship` records it (`store: <id> ...`). By hand only for a change opened another way or when ship says it could not: `fleet store change <id> <kind> <ref> [--step]` (the change noun and its number, as the forge names it: `.claude/bin/fleet get FLEET_CHANGE_NOUN`; `--step` for a change that is one step of the item, so its merge leaves the item in flight) |
   | CI result | `fleet store ci <id> green\|red` |
-  | merge | `fleet land` records it for each item whose recorded change it merged (`store: ok (#<id> merged)`). By hand for a merge done elsewhere, or on its `store: FAILED`/`skip` line for an item's change: `fleet store merged <id> [--note "..."]` (it leaves "in flight", and shows under "Done") |
+  | merge | `fleet land` records it for each item whose recorded change it merged (`store: ok (#<id> merged)`; a step's item stays in flight: `store: ok (#<id> step PR <n> merged, item stays in flight)`). By hand for a merge done elsewhere, or on its `store: FAILED`/`skip` line for an item's change: `fleet store merged <id> [--note "..."]` (it leaves "in flight", and shows under "Done"); for a step (`step PR <n>` in `store show --item <id>`) the line names `fleet store stage <id> "step PR <n> merged"` instead: never `merged` |
   | closed with no change (not reproducible, duplicate, won't fix) | `fleet store closed <id> --note "..."` (it leaves "in flight" and shows under "Done" as "Closed", never as shipped; never use `merged` for it) |
   | a question for the user | `fleet store ask --title T --context C --option O ... --recommend N --default D --url U [--item <id>] [--agent <funnel agent>]` (a card); its number comes back; `fleet store answer <n>` when answered |
   | a user decision | `fleet store decide --text "<verbatim>" --settles "<what it settled>" --rule "<one-line digest>"` (leave `--rule` out for an aside that binds nothing); `fleet store rules retire <n>` for a rule superseded or moot |

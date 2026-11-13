@@ -1122,6 +1122,18 @@ func (f *fakeStore) CarryOverItems(_ context.Context, characterID int64) ([]stor
 	return rows, nil
 }
 
+func (f *fakeStore) RetypeCatalogueWeapons(_ context.Context, arg storeq.RetypeCatalogueWeaponsParams) (int64, error) {
+	var n int64
+	for key, it := range f.t.Items {
+		if it.Category == "weapon" && it.CatalogueCode == arg.CatalogueCode && it.WeaponType == arg.FromType {
+			it.WeaponType = arg.ToType
+			f.t.Items[key] = it
+			n++
+		}
+	}
+	return n, nil
+}
+
 func (f *fakeStore) WearItem(_ context.Context, arg storeq.WearItemParams) error {
 	key := rowKey(arg.CharacterID, arg.ID)
 	it, ok := f.t.Items[key]

@@ -57,25 +57,22 @@ var bowAndCrossbowTypes = []string{
 	itemsvc.TypeLightCrossbow, itemsvc.TypeHeavyCrossbow, itemsvc.TypeHandCrossbow,
 }
 
-// thrownTypes are the weapon types (ADR 0030 step 23) of the weapons made to
-// be hurled: a race's to-hit bonus listing one counts it only on a hurled
-// attack (raceToHit).
-var thrownTypes = []string{itemsvc.TypeDagger, itemsvc.TypeDart, itemsvc.TypeOtherThrown}
-
 // raceToHit is ADR 0030 step 22.3: the race's weapon_to_hit bonus
 // (View.RaceToHitBonus, ADR 0040 step 4) when the weapon's type is one the
-// trait lists, never read from the weapon's name; 0 otherwise or for a weapon
-// without a type. A thrown type counts only hurled, as a missile piece (ADR
-// 0016 step 8): PHB chapter 2 gives the bonus "when using thrown weapons", and
-// a dagger in melee is not thrown.
+// trait lists, or when the trait counts every hurled weapon
+// (View.RaceToHitHurled) and this one is hurled; never read from the
+// weapon's name, 0 otherwise. PHB chapter 2 gives the halfling's bonus "when
+// using thrown weapons and slings": the slings are the listed types, a
+// thrown weapon is any piece hurled at the target, whatever its type (a
+// spear, a club), and the same weapon in melee is not thrown.
 func raceToHit(char charactersvc.View, weapon Weapon) int {
-	if weapon.Type == "" || !slices.Contains(char.RaceToHitTypes, weapon.Type) {
-		return 0
+	if weapon.Type != "" && slices.Contains(char.RaceToHitTypes, weapon.Type) {
+		return char.RaceToHitBonus
 	}
-	if slices.Contains(thrownTypes, weapon.Type) && weapon.Kind != WeaponMissile {
-		return 0
+	if char.RaceToHitHurled && weapon.Hurled() {
+		return char.RaceToHitBonus
 	}
-	return char.RaceToHitBonus
+	return 0
 }
 
 // strengthMods are the Strength adjustments an attack takes and the score

@@ -77,16 +77,16 @@ func TestProficiencies_Step7_OptionsWeaponTypes(t *testing.T) {
 		byClass[c.Class] = c.WeaponTypes
 	}
 	fighter := byClass["fighter"]
-	require.Len(t, fighter, 13, "a fighter may pick every weapon type")
+	require.Len(t, fighter, 14, "a fighter may pick every weapon type")
 	assert.Equal(t, map[string]any{"type": "long_bow", "specializationSlots": float64(3)}, fighter[0], "a bow's specialization spends 3")
-	assert.Equal(t, map[string]any{"type": "long_sword", "specializationSlots": float64(2)}, fighter[9])
+	assert.Equal(t, map[string]any{"type": "long_sword", "specializationSlots": float64(2)}, fighter[10])
 	assert.Equal(t, []map[string]any{
 		{"type": "dagger", "specializationSlots": float64(0)},
 		{"type": "dart", "specializationSlots": float64(0)},
 		{"type": "sling", "specializationSlots": float64(0)},
 		{"type": "other_melee", "specializationSlots": float64(0)},
 	}, byClass["mage"], "a mage picks only its four types and never specializes")
-	require.Len(t, byClass["bard"], 13)
+	require.Len(t, byClass["bard"], 14)
 	assert.Equal(t, float64(0), byClass["bard"][0]["specializationSlots"], "a bard picks any type but does not specialize")
 }
 

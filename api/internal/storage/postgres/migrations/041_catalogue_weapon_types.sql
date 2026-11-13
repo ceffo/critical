@@ -1,0 +1,14 @@
+-- A catalogue weapon whose row now names a weapon type of its own (ADR 0030 step 23, catalogue
+-- format 22: the staff sling is staff_sling, no longer other_missile) gives that type to the pieces
+-- stored before (ADR 0033 step 23: a pick copies the row's type into the piece).
+--
+-- A data step run just after this file (retypeCatalogueWeapons) sets weapon_type to the row's type
+-- on every weapon piece of the row's catalogue code still typed other_missile; a piece the player
+-- typed otherwise is left as it is, and a second run finds nothing to change. No schema change:
+-- this file only documents the column the step writes.
+--
+-- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the column has no CHECK; the release before this
+-- one reads a staff_sling piece as a weapon of a type it does not list (no race bonus, no
+-- proficiency match) and refuses only an edit that keeps that type. Schema only (step 2.1): the
+-- data is Go.
+COMMENT ON COLUMN items.weapon_type IS 'weapon type code (ADR 0030 step 23), copied from the catalogue row on a pick; empty: none';

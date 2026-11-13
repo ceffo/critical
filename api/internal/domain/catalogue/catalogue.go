@@ -69,14 +69,19 @@ const FormatSkillSets = 19
 // (66 in all).
 const FormatMeditating = 20
 
-// FormatPowerEffects is format 21 (ADR 0021 step 29, ADR 0043 step 17):
-// format 20 plus the optional effect of a psionic power. It is the only
-// format the API reads (step 29.3): the formats 1 to 20 are refused like any
-// unknown format, with the advice to run `just catalogue`.
+// FormatPowerEffects was format 21 (ADR 0021 step 29, ADR 0043 step 17):
+// format 20 plus the optional effect of a psionic power.
 const FormatPowerEffects = 21
 
-// Formats lists the formats this API reads: format 21 only (step 29.3).
-var Formats = []int{FormatPowerEffects}
+// FormatStaffSling is format 22 (ADR 0021 step 30, ADR 0030 steps 22.3 and
+// 23): format 21 plus the staff_sling weapon type and the optional hurled
+// flag of a race's weapon_to_hit trait. It is the only format the API reads
+// (step 30.3): the formats 1 to 21 are refused like any unknown format, with
+// the advice to run `just catalogue`.
+const FormatStaffSling = 22
+
+// Formats lists the formats this API reads: format 22 only (step 30.3).
+var Formats = []int{FormatStaffSling}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

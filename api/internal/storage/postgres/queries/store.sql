@@ -413,3 +413,9 @@ WHERE NOT EXISTS (SELECT 1 FROM character_classes e WHERE e.character_id = c.id)
 INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level)
 VALUES (sqlc.arg(character_id), sqlc.arg(position), sqlc.arg(class), sqlc.arg(realized_level),
         sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level));
+
+-- The catalogue weapon types data step after migration 041 (ADR 0030 step 23): the weapon pieces of
+-- a catalogue code still typed from_type take to_type, the row's type.
+-- name: RetypeCatalogueWeapons :execrows
+UPDATE items SET weapon_type = sqlc.arg(to_type)::text
+WHERE category = 'weapon' AND catalogue_code = sqlc.arg(catalogue_code)::text AND weapon_type = sqlc.arg(from_type)::text;

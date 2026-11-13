@@ -121,6 +121,7 @@ const (
 	TypeDagger        = "dagger"
 	TypeDart          = "dart"
 	TypeSling         = "sling"
+	TypeStaffSling    = "staff_sling"
 	TypeShortSword    = "short_sword"
 	TypeLongSword     = "long_sword"
 	TypeOtherMelee    = "other_melee"

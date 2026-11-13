@@ -114,6 +114,7 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	// The race's to-hit trait (ADR 0030 step 22.3) is new; the attack tests cover it.
 	delete(m, "RaceToHitTypes")
 	delete(m, "RaceToHitBonus")
+	delete(m, "RaceToHitHurled")
 
 	return m
 }

@@ -1323,6 +1323,27 @@ func (q *Queries) RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (s
 	return new_id, err
 }
 
+const retypeCatalogueWeapons = `-- name: RetypeCatalogueWeapons :execrows
+UPDATE items SET weapon_type = $1::text
+WHERE category = 'weapon' AND catalogue_code = $2::text AND weapon_type = $3::text
+`
+
+type RetypeCatalogueWeaponsParams struct {
+	ToType        string
+	CatalogueCode string
+	FromType      string
+}
+
+// The catalogue weapon types data step after migration 041 (ADR 0030 step 23): the weapon pieces of
+// a catalogue code still typed from_type take to_type, the row's type.
+func (q *Queries) RetypeCatalogueWeapons(ctx context.Context, arg RetypeCatalogueWeaponsParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, retypeCatalogueWeapons, arg.ToType, arg.CatalogueCode, arg.FromType)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
 const seedCharacterID = `-- name: SeedCharacterID :one
 SELECT id FROM characters WHERE name = $1 ORDER BY id LIMIT 1
 `

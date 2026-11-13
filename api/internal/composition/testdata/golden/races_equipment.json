@@ -146,6 +146,10 @@
             "SpecializationSlots": 2
           },
           {
+            "Type": "staff_sling",
+            "SpecializationSlots": 2
+          },
+          {
             "Type": "short_sword",
             "SpecializationSlots": 2
           },
@@ -417,11 +421,11 @@
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Type": "staff_sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_missile",
+            "Type": "other_melee",
             "SpecializationSlots": 0
           }
         ],
@@ -729,6 +733,10 @@
           },
           {
             "Type": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Type": "staff_sling",
             "SpecializationSlots": 0
           },
           {

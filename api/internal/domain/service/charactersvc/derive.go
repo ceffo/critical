@@ -117,7 +117,7 @@ func Derive(c *Character, awards []Award, armour string, rules Rules) (Derived, 
 	if d.RaceSaveBonus, err = raceSaveBonus(c, rules); err != nil {
 		return Derived{}, err
 	}
-	if d.RaceToHitTypes, d.RaceToHitBonus, err = raceWeaponToHit(c, rules); err != nil {
+	if d.RaceToHitTypes, d.RaceToHitHurled, d.RaceToHitBonus, err = raceWeaponToHit(c, rules); err != nil {
 		return Derived{}, err
 	}
 	// ADR 0042 step 14: each spellcasting entry has its own slots and caster
@@ -526,23 +526,23 @@ func raceSaveBonus(c *Character, rules Rules) (Saves, error) {
 
 // raceWeaponToHit is ADR 0030 step 22.3, read through the race's
 // weapon_to_hit trait (ADR 0040 step 4): the weapon types the race's to-hit
-// bonus applies to, and the bonus. A race without the trait (or a race the
-// catalogue does not define) has none (nil, 0). The attack matches the
-// weapon's type (combatsvc).
-func raceWeaponToHit(c *Character, rules Rules) ([]string, int, error) {
+// bonus applies to, whether it applies to every hurled weapon too, and the
+// bonus. A race without the trait (or a race the catalogue does not define)
+// has none (nil, false, 0). The attack matches the weapon (combatsvc).
+func raceWeaponToHit(c *Character, rules Rules) (types []string, hurled bool, bonus int, err error) {
 	defs, err := rules.Definitions()
 	if err != nil {
-		return nil, 0, fmt.Errorf("derive %s to-hit bonus: %w", c.Race, err)
+		return nil, false, 0, fmt.Errorf("derive %s to-hit bonus: %w", c.Race, err)
 	}
 	race, ok := defs.Race(c.Race)
 	if !ok {
-		return nil, 0, nil
+		return nil, false, 0, nil
 	}
 	trait, ok := race.Trait(classes.TraitWeaponToHit)
 	if !ok {
-		return nil, 0, nil
+		return nil, false, 0, nil
 	}
-	return trait.WeaponTypes, trait.Bonus, nil
+	return trait.WeaponTypes, trait.Hurled, trait.Bonus, nil
 }
 
 // SetSkillFigures sets d's skill sets (percentages, armour, budget and points of each) from

@@ -12,6 +12,7 @@ import {
   parseStrengthRating,
   ratesStrength,
 } from "./itemForm";
+import { equipmentRules } from "@/test/equipmentRules";
 import { newAbilityDraft } from "./abilityEditor";
 
 /** A piece as GET /api/items serves it: every category's fields, zero for the others. */
@@ -166,6 +167,10 @@ describe("draftToBody", () => {
   });
 
   // ADR 0049 step 2: the quantity is shown where the category has one.
+  it("has none before the rules are read", () => {
+    expect(hasQuantity(null, { category: "gear", magicKind: "" })).toBe(false);
+  });
+
   it.each([
     ["ammunition", "", true],
     ["gear", "", true],
@@ -177,7 +182,7 @@ describe("draftToBody", () => {
     ["armour", "", false],
     ["shield", "", false],
   ] as const)("has a quantity: %s %s is %s", (category, magicKind, want) => {
-    expect(hasQuantity({ category, magicKind })).toBe(want);
+    expect(hasQuantity(equipmentRules, { category, magicKind })).toBe(want);
   });
 
   // The server bounds a quantity to 0-999 (ADR 0049 step 4).

@@ -559,8 +559,11 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    a chip with its limit (a dice effect puts its dice in the composer); the limit wording is shared with
    Act · Items. The editor's Abilities section (name, limit kind with `max`, `left` and `cost`, note, dice
    effects with their save) replaces "How it is used", "Daily number", "Dice rolled on use" and "Save against
-   the effect"; "Quantity" (0 to 999, the server's bound) shows where the category has one, by a web copy of
-   `Item.HasStock` (the draft is not stored yet, so `usable` is not there to read): change both together.
+   the effect"; "Quantity" (0 to 999, the server's bound) shows where the category has one. The editor asks
+   the server, for a piece that is not stored yet too: `GET /api/equipment/rules` (reference data, read once
+   like the catalogue) serves `{categories: [{category, hasQuantity, magicKinds: [{kind, hasQuantity}]}]}`,
+   built from `Item.HasStock` (`TestQuantityRules_Step2_EqualHasStockForEveryCategoryAndKind`); the web
+   holds no copy of the rule, and the `with_item` offer follows it.
    The wire still requires `behaviour` on an add, so the form sends `stock` there (read by no rule); slice 10
    drops it. The review band already read `review` (slice 2).
 7. **The `heal` effect.** Applied through the HP ledger in the use's transaction, with the editor

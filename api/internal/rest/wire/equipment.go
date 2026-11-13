@@ -2,6 +2,7 @@ package wire
 
 import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
@@ -95,6 +96,40 @@ func EquipmentCatalogueToDTO(e ruletablesvc.Equipment) EquipmentCatalogueDTO {
 		out.Shields = append(out.Shields, CatalogueShieldDTO{
 			Code: s.Code, Name: s.Name, ShieldKind: s.Kind, ACMelee: s.ACMelee, ACMissile: s.ACMissile,
 		})
+	}
+	return out
+}
+
+// EquipmentRulesDTO is GET /api/equipment/rules: which pieces have a quantity
+// the player sets (ADR 0049 step 2), for the editor to ask about a piece that
+// is not stored yet. Codes and booleans only; the same for every character.
+// A category with magicKinds (magic) is answered per kind.
+type EquipmentRulesDTO struct {
+	Categories []CategoryRuleDTO `json:"categories"`
+}
+
+// CategoryRuleDTO is one category's answer.
+type CategoryRuleDTO struct {
+	Category    string        `json:"category"`
+	HasQuantity bool          `json:"hasQuantity"`
+	MagicKinds  []KindRuleDTO `json:"magicKinds"`
+}
+
+// KindRuleDTO is one magic kind's answer.
+type KindRuleDTO struct {
+	Kind        string `json:"kind"`
+	HasQuantity bool   `json:"hasQuantity"`
+}
+
+// EquipmentRulesToDTO maps the quantity rules to their wire shape.
+func EquipmentRulesToDTO(rules []itemsvc.CategoryRule) EquipmentRulesDTO {
+	out := EquipmentRulesDTO{Categories: make([]CategoryRuleDTO, 0, len(rules))}
+	for _, r := range rules {
+		d := CategoryRuleDTO{Category: string(r.Category), HasQuantity: r.HasQuantity, MagicKinds: []KindRuleDTO{}}
+		for _, k := range r.Kinds {
+			d.MagicKinds = append(d.MagicKinds, KindRuleDTO{Kind: k.Kind, HasQuantity: k.HasQuantity})
+		}
+		out.Categories = append(out.Categories, d)
 	}
 	return out
 }

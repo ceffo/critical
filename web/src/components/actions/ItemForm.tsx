@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
 import { Minus, Plus } from "@phosphor-icons/react";
@@ -39,6 +39,7 @@ import { formatSigned } from "@/lib/format";
 import { PowersEditor } from "./PowersEditor";
 import { AbilitiesEditor } from "./AbilitiesEditor";
 import { useSpellNamesStore } from "@/stores/spellNames";
+import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 
 /** The shared fields folded under "More options" (every category has them). */
 const EXTRA_FIELDS: ItemField[] = ["component", "notes", "powers"];
@@ -78,6 +79,12 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
     setErrors((e) => ({ ...e, [k]: undefined }));
   };
   const shows = (f: ItemField) => details && hasField(draft.category, f);
+  const rules = useEquipmentRulesStore((s) => s.rules);
+  const loadRules = useEquipmentRulesStore((s) => s.load);
+  useEffect(() => {
+    loadRules().catch(() => undefined);
+  }, [loadRules]);
+  const quantity = hasQuantity(rules, draft);
   const spellNames = useSpellNamesStore((s) => s.names);
   // The catalogue's spells by name in the UI language, for a scroll's spell (ADR 0033 step 2).
   const spellOptions = Object.values(spellNames)
@@ -551,7 +558,7 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
 
         {/* The quantity (ADR 0049 step 2): only where the category has one. */}
         {details &&
-          hasQuantity(draft) &&
+          quantity &&
           field(
             "count",
             t("items.form.quantity"),
@@ -562,7 +569,7 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
           <AbilitiesEditor
             abilities={draft.abilities}
             onChange={(abilities) => set("abilities", abilities)}
-            hasQuantity={hasQuantity(draft)}
+            hasQuantity={quantity}
             error={errors.abilities}
           />
         )}

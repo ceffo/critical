@@ -53,6 +53,17 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
 	r.Post("/api/items/{id}/state", render.Handle(SetState(charID, svc)))
 	r.Delete("/api/items/{id}/review", render.Handle(DismissReview(charID, svc)))
 	r.Get("/api/equipment/catalogue", render.Handle(Catalogue(svc)))
+	r.Get("/api/equipment/rules", render.Handle(Rules()))
+}
+
+// Rules serves which categories and magic kinds have a quantity the player
+// sets (ADR 0049 step 2): reference data, the same for every character, so the
+// editor does not copy the rule.
+func Rules() render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		render.OK(r.Context(), w, wire.EquipmentRulesToDTO(itemsvc.QuantityRules()))
+		return nil
+	}
 }
 
 // Catalogue serves the equipment rows a piece is picked from (ADR 0033 steps

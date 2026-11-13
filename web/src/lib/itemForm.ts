@@ -5,6 +5,7 @@ import { editLang, localized } from "@/i18n/localized";
 import type {
   Category,
   Component,
+  EquipmentRules,
   Item,
   ItemBody,
   MagicKind,
@@ -110,21 +111,17 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
 export const MAX_QUANTITY = 999;
 
 /**
- * Whether the piece has a quantity the player sets: ammunition, gear, a potion or a scroll; every
- * other piece is one object. A copy of the server's rule (itemsvc.Item.HasStock, ADR 0049 step 2,
- * which serves it as `usable` on a stored piece): change both together. The draft is not stored yet,
- * so the form cannot read `usable`; only which field it offers depends on this, the server refuses
- * the rest.
+ * Whether the piece has a quantity the player sets, as the server's rules say (ADR 0049 step 2,
+ * GET /api/equipment/rules): the web holds no rule of its own. Before the rules are read it is false.
  */
 export function hasQuantity(
+  rules: EquipmentRules | null,
   d: Pick<ItemDraft, "category" | "magicKind">,
 ): boolean {
-  return (
-    d.category === "ammunition" ||
-    d.category === "gear" ||
-    (d.category === "magic" &&
-      (d.magicKind === "potion" || d.magicKind === "scroll"))
-  );
+  const c = rules?.categories.find((r) => r.category === d.category);
+  if (!c) return false;
+  if (c.magicKinds.length === 0) return c.hasQuantity;
+  return c.magicKinds.find((k) => k.kind === d.magicKind)?.hasQuantity ?? false;
 }
 
 /** Whether the piece may name the spell it holds: a magic scroll (ADR 0033 step 2). */

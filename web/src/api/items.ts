@@ -1,6 +1,7 @@
 import type {
   AbilityUseResult,
   EquipmentCatalogue,
+  EquipmentRules,
   Item,
   ItemBody,
   ItemChange,
@@ -71,4 +72,9 @@ export function dismissReview(id: string): Promise<Item[]> {
 /** The catalogue rows a piece is picked from (ADR 0033 steps 21 and 24), the same for every character. */
 export function fetchEquipmentCatalogue(): Promise<EquipmentCatalogue> {
   return request<EquipmentCatalogue>("/api/equipment/catalogue");
+}
+
+/** Which categories and magic kinds have a quantity (ADR 0049 step 2), the same for every character. */
+export function fetchEquipmentRules(): Promise<EquipmentRules> {
+  return request<EquipmentRules>("/api/equipment/rules");
 }

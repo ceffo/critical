@@ -27,6 +27,7 @@ import { useTableStore } from "@/stores/table";
 import { useLanguagesStore } from "@/stores/languages";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import { useEquipmentCatalogueStore } from "@/stores/equipmentCatalogue";
+import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 import type { Slice } from "@/lib/stateKeys";
 
 /**
@@ -96,6 +97,7 @@ function App() {
   const loadSpellNames = useSpellNamesStore((s) => s.load);
   const loadLanguages = useLanguagesStore((s) => s.load);
   const loadEquipment = useEquipmentCatalogueStore((s) => s.load);
+  const loadRules = useEquipmentRulesStore((s) => s.load);
   const lookupKey = lookupLabelKey(useActFeatures());
   const [activity, setActivity] = useState<Activity>("act");
   const [visited, setVisited] = useState<ReadonlySet<Activity>>(
@@ -116,13 +118,14 @@ function App() {
         loadSpellNames(),
         loadLanguages(),
         loadEquipment().catch(() => undefined),
+        loadRules().catch(() => undefined),
       ]);
     void load();
     // After a write the database may or may not have saved, the whole sheet is read again before
     // writes are allowed (ADR 0025 step 10.4).
     setReload(load);
     return () => setReload(null);
-  }, [refresh, loadSpellNames, loadLanguages, loadEquipment]);
+  }, [refresh, loadSpellNames, loadLanguages, loadEquipment, loadRules]);
 
   return (
     <div className="relative flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">

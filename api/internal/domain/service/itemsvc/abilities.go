@@ -377,3 +377,35 @@ func ParseAbilities(raw []byte) ([]Ability, error) {
 	}
 	return fromJSONAbilities(js), nil
 }
+
+// CategoryRule says whether a category has a quantity the player sets (ADR
+// 0049 step 2). For the magic category the answer depends on the kind, so
+// Kinds lists each kind's answer; for any other category Kinds is empty.
+type CategoryRule struct {
+	Category    Category
+	HasQuantity bool
+	Kinds       []KindRule
+}
+
+// KindRule is one magic kind's answer.
+type KindRule struct {
+	Kind        string
+	HasQuantity bool
+}
+
+// QuantityRules is the rule behind Item.HasStock for every category and magic
+// kind, in display order, so the editor can ask it for a piece that is not
+// stored yet. Built from HasStock itself: one source.
+func QuantityRules() []CategoryRule {
+	out := make([]CategoryRule, 0, len(Categories))
+	for _, c := range Categories {
+		r := CategoryRule{Category: c, HasQuantity: Item{Category: c}.HasStock()}
+		if c == CategoryMagic {
+			for _, k := range MagicKinds {
+				r.Kinds = append(r.Kinds, KindRule{Kind: k, HasQuantity: Item{Category: c, MagicKind: k}.HasStock()})
+			}
+		}
+		out = append(out, r)
+	}
+	return out
+}

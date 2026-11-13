@@ -2,12 +2,15 @@ import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderApp, type Language } from "@/test/render";
 import { emptyDraft } from "@/lib/itemForm";
+import { equipmentRules } from "@/test/equipmentRules";
+import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 import { ItemForm } from "./ItemForm";
 
 // The typed add form (ADR 0033 step 1): step 1 is what the piece is, step 2 only its category's
 // fields; Back keeps what was typed.
 
 async function form(lng: Language = "en") {
+  useEquipmentRulesStore.setState({ rules: equipmentRules });
   const onSave = vi.fn().mockResolvedValue(null);
   const view = await renderApp(
     <ItemForm

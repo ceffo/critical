@@ -524,8 +524,7 @@ function ItemRow({
 
 /**
  * One ability of a row as a chip (ADR 0049 step 16): its name (none when it has none: the row
- * names the item),
- * its limit as the player reads it, and, for a dice effect, a button that puts the dice in the
+ * names the item), its limit as the player reads it, and, for a dice effect, a button that puts the dice in the
  * composer. Whether it can be used is Act · Items' to say; the chip is muted when the server says
  * it cannot. Wraps, never cut (ADR 0022 step 1).
  */

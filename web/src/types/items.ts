@@ -469,6 +469,8 @@ export interface EquipmentCatalogue {
  * the player sets. `magicKinds` is filled for `magic` only, whose answer is per kind.
  */
 export interface EquipmentRules {
+  /** The most a quantity may be (itemsvc.MaxQuantity): the form's field and its check. */
+  maxQuantity: number;
   categories: {
     category: Category;
     hasQuantity: boolean;

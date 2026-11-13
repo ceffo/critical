@@ -5,7 +5,9 @@ import { fetchEquipmentRules } from "@/api/items";
 interface EquipmentRulesStore {
   /** null until read. */
   rules: EquipmentRules | null;
-  /** Reads the rules once: reference data, no write changes it (no state key). */
+  /** The last read failed: the form says so instead of silently hiding what the rules decide. */
+  failed: boolean;
+  /** Reads the rules once: reference data, no write changes it (no state key). A failure is kept in `failed` and retried by the next call. */
   load: () => Promise<void>;
 }
 
@@ -13,9 +15,14 @@ interface EquipmentRulesStore {
 export const useEquipmentRulesStore = create<EquipmentRulesStore>(
   (set, get) => ({
     rules: null,
+    failed: false,
     load: async () => {
       if (get().rules) return;
-      set({ rules: await fetchEquipmentRules() });
+      try {
+        set({ rules: await fetchEquipmentRules(), failed: false });
+      } catch {
+        set({ failed: true });
+      }
     },
   }),
 );

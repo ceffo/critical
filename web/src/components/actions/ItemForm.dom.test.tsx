@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { renderApp, type Language } from "@/test/render";
-import { emptyDraft } from "@/lib/itemForm";
+import { draftFromItem, emptyDraft } from "@/lib/itemForm";
+import { pieceFixture } from "@/test/pieceFixture";
 import { equipmentRules } from "@/test/equipmentRules";
 import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 import { ItemForm } from "./ItemForm";
@@ -220,5 +221,68 @@ describe("ItemForm, quantity and abilities", () => {
     expect(screen.getByLabelText("Limite")).toHaveValue("with_item");
     expect(screen.getByRole("option", { name: "Avec l'objet" })).toBeVisible();
     expect(screen.getByLabelText("Quantité")).toBeVisible();
+  });
+
+  // The refusal reads the rules' bound (one source), worded in both languages.
+  it.each([
+    ["en", "Quantity", "Enter a whole number from 0 to 999"],
+    ["fr", "Quantité", "Entrez un nombre entier de 0 à 999"],
+  ] as const)("refuses 1000 in %s", async (lng, label, message) => {
+    const v = await form(lng);
+    await v.user.type(
+      screen.getByLabelText(lng === "en" ? "Name" : "Nom"),
+      "Rope{Enter}",
+    );
+    const q = screen.getByLabelText(label);
+    await v.user.clear(q);
+    await v.user.type(q, "1000");
+    await v.user.click(
+      screen.getByRole("button", { name: lng === "en" ? "Add" : "Ajouter" }),
+    );
+    expect(screen.getByTestId("field-error")).toHaveTextContent(message);
+    expect(v.onSave).not.toHaveBeenCalled();
+  });
+
+  // The rules could not be read: the form says so, and a stored with_item ability keeps its option
+  // so a save does not drop it.
+  it("with the rules unread, shows an error and keeps a stored with_item ability", async () => {
+    useEquipmentRulesStore.setState({ rules: null, failed: false });
+    // The rules request fails (the network is down).
+    const down = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("down"));
+    const onSave = vi.fn().mockResolvedValue(null);
+    const flask = pieceFixture({
+      id: "flask",
+      name: { en: "Flask" },
+      category: "gear",
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [],
+          usable: true,
+        },
+      ],
+    });
+    const v = await renderApp(
+      <ItemForm
+        initial={draftFromItem(flask, "en")}
+        editing={flask}
+        busy={false}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+    expect(await screen.findByTestId("rules-error")).toBeVisible();
+    down.mockRestore();
+    expect(screen.getByLabelText("Limit")).toHaveValue("with_item");
+    await v.user.type(
+      screen.getByLabelText("Name", { selector: "[data-field='name'] input" }),
+      "s",
+    );
+    await v.user.click(screen.getByRole("button", { name: "Save" }));
+    // The ability is unchanged, so no abilities key is sent and nothing drops it.
+    expect(onSave.mock.calls[0][0]).not.toHaveProperty("abilities");
   });
 });

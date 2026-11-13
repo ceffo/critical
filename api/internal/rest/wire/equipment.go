@@ -105,7 +105,10 @@ func EquipmentCatalogueToDTO(e ruletablesvc.Equipment) EquipmentCatalogueDTO {
 // is not stored yet. Codes and booleans only; the same for every character.
 // A category with magicKinds (magic) is answered per kind.
 type EquipmentRulesDTO struct {
-	Categories []CategoryRuleDTO `json:"categories"`
+	// MaxQuantity is the most a quantity may be (itemsvc.MaxQuantity); the
+	// editor's field and its check read it.
+	MaxQuantity int               `json:"maxQuantity"`
+	Categories  []CategoryRuleDTO `json:"categories"`
 }
 
 // CategoryRuleDTO is one category's answer.
@@ -123,7 +126,7 @@ type KindRuleDTO struct {
 
 // EquipmentRulesToDTO maps the quantity rules to their wire shape.
 func EquipmentRulesToDTO(rules []itemsvc.CategoryRule) EquipmentRulesDTO {
-	out := EquipmentRulesDTO{Categories: make([]CategoryRuleDTO, 0, len(rules))}
+	out := EquipmentRulesDTO{MaxQuantity: itemsvc.MaxQuantity, Categories: make([]CategoryRuleDTO, 0, len(rules))}
 	for _, r := range rules {
 		d := CategoryRuleDTO{Category: string(r.Category), HasQuantity: r.HasQuantity, MagicKinds: []KindRuleDTO{}}
 		for _, k := range r.Kinds {

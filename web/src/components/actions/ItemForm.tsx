@@ -80,9 +80,10 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
   };
   const shows = (f: ItemField) => details && hasField(draft.category, f);
   const rules = useEquipmentRulesStore((s) => s.rules);
+  const rulesFailed = useEquipmentRulesStore((s) => s.failed);
   const loadRules = useEquipmentRulesStore((s) => s.load);
   useEffect(() => {
-    loadRules().catch(() => undefined);
+    void loadRules();
   }, [loadRules]);
   const quantity = hasQuantity(rules, draft);
   const spellNames = useSpellNamesStore((s) => s.names);
@@ -100,11 +101,15 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
       setStep(2);
       return;
     }
-    const { body, errors: parseErrors } = draftToBody(draft, i18n.language);
+    const { body, errors: parseErrors } = draftToBody(
+      draft,
+      i18n.language,
+      rules?.maxQuantity,
+    );
     const local = Object.fromEntries(
       Object.entries(parseErrors as DraftErrors).map(([k, v]) => [
         k,
-        t(`items.form.${v}`),
+        t(`items.form.${v}`, { max: rules?.maxQuantity }),
       ]),
     );
     if (Object.keys(local).length > 0) {
@@ -556,6 +561,15 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
           </div>
         )}
 
+        {details && rulesFailed && !rules && (
+          <p
+            role="alert"
+            className="col-span-2 text-label text-destructive sm:col-span-4"
+            data-testid="rules-error"
+          >
+            {t("items.form.rulesFailed")}
+          </p>
+        )}
         {/* The quantity (ADR 0049 step 2): only where the category has one. */}
         {details &&
           quantity &&

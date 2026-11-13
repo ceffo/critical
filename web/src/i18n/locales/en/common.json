@@ -692,7 +692,8 @@
       "notANumber": "Enter a whole number",
       "notAStrength": "Enter a Strength: 17, 18/50 or 18/00",
       "quantity": "Quantity",
-      "notAQuantity": "Enter a whole number from 0 to 999"
+      "notAQuantity": "Enter a whole number from 0 to {{max}}",
+      "rulesFailed": "The rules could not be read: the quantity and some limits are not offered. Reload to try again."
     },
     "heading": "Items",
     "columns": {

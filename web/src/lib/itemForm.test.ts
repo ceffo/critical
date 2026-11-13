@@ -188,11 +188,11 @@ describe("draftToBody", () => {
   // The server bounds a quantity to 0-999 (ADR 0049 step 4).
   it("flags a quantity above the server's 999", () => {
     expect(
-      draftToBody({ ...emptyDraft(), count: "1000" }, "en").errors,
+      draftToBody({ ...emptyDraft(), count: "1000" }, "en", 999).errors,
     ).toEqual({ count: "notAQuantity" });
-    expect(draftToBody({ ...emptyDraft(), count: "999" }, "en").errors).toEqual(
-      {},
-    );
+    expect(
+      draftToBody({ ...emptyDraft(), count: "999" }, "en", 999).errors,
+    ).toEqual({});
   });
 
   it("flags text that is not a number instead of sending NaN; a blank bonus is 0; another category's field is not read", () => {

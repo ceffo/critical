@@ -39,7 +39,7 @@ export interface ItemDraft {
   component: Component | "";
   /** The spell a magic scroll holds (ADR 0033 step 2), a catalogue id; empty for none. */
   spellId: string;
-  /** The quantity as typed (ADR 0049 step 2), 0 to MAX_QUANTITY. */
+  /** The quantity as typed (ADR 0049 step 2), 0 to the rules' `maxQuantity`. */
   count: string;
   notes: string;
   // Ammunition.
@@ -106,9 +106,6 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
   magic: ["magicKind"],
   gear: [],
 };
-
-/** The highest quantity the server accepts (itemsvc.MaxQuantity, ADR 0049 step 2). */
-export const MAX_QUANTITY = 999;
 
 /**
  * Whether the piece has a quantity the player sets, as the server's rules say (ADR 0049 step 2,
@@ -265,11 +262,13 @@ export type DraftErrors = Partial<
  * The request body for a draft, and the number fields that are not numbers. The name is sent in the
  * UI language `lang` only (ADR 0023 step 11: the server keeps the other languages). The category's
  * own fields only (a melee weapon fires nothing). The abilities are sent as a whole list, which
- * replaces the stored one (ADR 0049 step 4).
+ * replaces the stored one (ADR 0049 step 4). `maxQuantity` is the server's bound (the rules'), the
+ * one a quantity above it is refused by here; left out, the server alone refuses.
  */
 export function draftToBody(
   d: ItemDraft,
   lang: string,
+  maxQuantity?: number,
 ): {
   body: ItemBody;
   errors: DraftErrors;
@@ -320,7 +319,11 @@ export function draftToBody(
     count: num("count", d.count),
     notes: d.notes,
   };
-  if (body.count !== undefined && body.count > MAX_QUANTITY)
+  if (
+    maxQuantity !== undefined &&
+    body.count !== undefined &&
+    body.count > maxQuantity
+  )
     errors.count = "notAQuantity";
   const out = body as Record<string, unknown>;
   for (const f of CATEGORY_FIELDS[d.category])

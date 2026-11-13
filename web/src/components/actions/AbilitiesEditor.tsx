@@ -66,7 +66,12 @@ export function AbilitiesEditor({
       max,
       left: abilities[i].left === abilities[i].max ? max : abilities[i].left,
     });
-  const kinds = LIMIT_KINDS.filter((k) => k !== "with_item" || hasQuantity);
+  // A stored with_item ability keeps its option even when the rules say the piece has no quantity
+  // (or could not be read), so a save never drops it; the server judges it.
+  const kindsFor = (current: AbilityDraft["kind"]) =>
+    LIMIT_KINDS.filter(
+      (k) => k !== "with_item" || hasQuantity || current === "with_item",
+    );
 
   return (
     <section
@@ -126,7 +131,7 @@ export function AbilitiesEditor({
                     }
                     data-testid="ability-kind"
                   >
-                    {kinds.map((k) => (
+                    {kindsFor(a.kind).map((k) => (
                       <option key={k} value={k}>
                         {t(`equipment.abilities.kinds.${k}`)}
                       </option>

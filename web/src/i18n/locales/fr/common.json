@@ -692,7 +692,8 @@
       "notANumber": "Entrez un nombre entier",
       "notAStrength": "Entrez une Force : 17, 18/50 ou 18/00",
       "quantity": "Quantité",
-      "notAQuantity": "Entrez un nombre entier de 0 à 999"
+      "notAQuantity": "Entrez un nombre entier de 0 à {{max}}",
+      "rulesFailed": "Les règles n'ont pas pu être lues : la quantité et certaines limites ne sont pas proposées. Rechargez pour réessayer."
     },
     "heading": "Objets",
     "columns": {

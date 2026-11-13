@@ -7,6 +7,7 @@ import { CATEGORIES, MAGIC_KINDS } from "@/types/items";
  * production code.
  */
 export const equipmentRules: EquipmentRules = {
+  maxQuantity: 999,
   categories: CATEGORIES.map((category: Category) => ({
     category,
     hasQuantity: category === "ammunition" || category === "gear",

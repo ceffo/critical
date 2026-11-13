@@ -91,10 +91,16 @@ return a distinct value for each call and expect an exact number of calls.
    Tests: `TestResolveAttack_PowerGem` ("crit with the gem: gem on the dice, crit on dice and
    weapon"), `TestResolveAttack_DamageTermsListEveryModifier`.
 7. **StrengthBonus.** The PHB Table 1 damage adjustment for the effective STR (+2 at 18), for
-   melee and hurled weapons only; none for a bow (same rule as ADR 0002 step 4). Added after the
+   melee and hurled weapons. _(Amended 2026-11-13, the strength bow, replacing "none for a bow".)_
+   A bow follows [ADR 0002](0002-attack-resolution.md) step 4: a damage penalty of the effective
+   STR always, a damage bonus only with a strength bow, the lower of the effective STR's and the
+   rating's (PHB p.99 "Ability Modifiers in Missile Combat", p.90-91 "Strength Modifiers"); a
+   crossbow none. Added after the
    multipliers. Tests: `TestResolveAttack` ("long sword +2 vs AC 5 at effective STR 18 hits on 5":
    +2; "short bow +2 with a +3 arrow at DEX 17 hits on 4" at effective STR 18: none; "hurled darts
-   take STR and DEX": +2).
+   take STR and DEX": +2), `TestResolveAttack_Step4_StrengthWithBowsAndCrossbows` (the damage
+   term: +3 with a bow rated 18/50 at 18/50, +1 rated 17, -1 at STR 5 with an unrated bow, none
+   with a crossbow).
 8. **BuffDamage.** The sum of the buffs' `damage` effects, flat (may be negative), added after
    the multipliers. Tests: `TestResolveAttack` ("buff damage is a flat bonus after the
    multipliers"), `TestResolveAttack_DamageTermsListEveryModifier` (Rage +1 not doubled by the

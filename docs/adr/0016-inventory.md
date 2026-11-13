@@ -8,6 +8,8 @@ Consequences
 
 _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on implementation: steps 1 and 4 (one possessions list with categories instead of the type label), steps 7 and 8 (weapons are pieces of the same list and editor), step 9 (powers on only while the piece is worn or wielded) and step 15 (the editor writes powers), ADR 0033 steps 1 to 9, 17 and 24 to 27; step 8 (damage as printed, 2026-10-19)._
 
+_Amended by [ADR 0049](0049-item-abilities.md) (proposed 2026-11-13), on implementation: steps 1 to 3 and 5 (`behaviour`, the daily number and the item-level effect dice give way to a quantity and abilities with a usage limit) and step 9 (powers stay passive; abilities are used)._
+
 _Vocabulary: one possession of any category is an item, the list is the inventory ([ADR 0036](0036-vocabulary.md) step 5)._
 
 ## Context

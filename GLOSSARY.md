@@ -516,8 +516,14 @@ _Code_: Items, ItemInput, ItemPatch, ConsumedItem, ConsumeItem, Category
 **Inventory** (fr: inventaire):
 The character's list of items, and its screen. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0035](docs/adr/0035-equipment-screens.md) items 2 and 7.
 
+**Item ability** (fr: capacité) _(planned)_:
+A trait of any item that is used, with a usage limit and effects. [ADR 0049](docs/adr/0049-item-abilities.md) steps 4 to 7. _Avoid_: power (an item power is passive), ability alone (an ability score).
+
+**Usage limit** (fr: limite d'usage) _(planned)_:
+How often an item ability may be used: unlimited, N per day, N charges, or spent with the item. [ADR 0049](docs/adr/0049-item-abilities.md) step 5.
+
 **Behaviour** (fr: comportement; UI: the item form field "How it is used" / "Mode d'usage", its options "Quantity" / "Quantité" for `stock`, "Charges", "Daily"; the form's "Effect dice" and "Effect save" read "Dice rolled on use" / "Dés lancés à l'usage" and "Save against the effect" / "JS contre l'effet"):
-How an item's count moves: `stock`, `charges`, `daily`; **use** and **restock**. [ADR 0016](docs/adr/0016-inventory.md) steps 1 to 3.
+How an item's count moves: `stock`, `charges`, `daily`; **use** and **restock**. [ADR 0016](docs/adr/0016-inventory.md) steps 1 to 3. _(Planned: replaced by a quantity and item abilities, [ADR 0049](docs/adr/0049-item-abilities.md).)_
 
 **Ammunition** (fr: munition):
 An item a launcher fires, by **ammo kind**. [ADR 0016](docs/adr/0016-inventory.md) step 6.

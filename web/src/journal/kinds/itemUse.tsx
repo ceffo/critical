@@ -4,7 +4,7 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Flask } from "@phosphor-icons/react";
 import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
-import type { UseResult } from "@/types/items";
+import type { AbilityEffectResult, UseResult } from "@/types/items";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { dieFaces } from "../dice";
@@ -35,7 +35,28 @@ function usedName(p: UseResult, names: InventoryNamer): string {
   return ability ? `${item} · ${ability}` : item;
 }
 
+/** What the use's heals took from the HP ledger and what they rolled, summed; null when it healed nothing. */
+function healed(p: UseResult): { applied: number; rolled: number } | null {
+  const heals = (p.effects ?? []).filter((e) => e.kind === "heal" && e.applied);
+  if (heals.length === 0) return null;
+  return {
+    applied: heals.reduce((n, e) => n + (e.applied?.hpDelta ?? 0), 0),
+    rolled: heals.reduce((n, e) => n + e.total, 0),
+  };
+}
+
 function itemText(p: UseResult, t: TFunction, names: InventoryNamer): string {
+  const base = baseText(p, t, names);
+  const h = healed(p);
+  if (!h) return base;
+  const heal = t(
+    h.applied < h.rolled ? "log.item.healCapped" : "log.item.heal",
+    { applied: h.applied, total: h.rolled },
+  );
+  return `${base}, ${heal}`;
+}
+
+function baseText(p: UseResult, t: TFunction, names: InventoryNamer): string {
   const args = {
     name: usedName(p, names),
     dice: p.dice,
@@ -57,7 +78,11 @@ export const itemUseKind: KindView<UseResult, UseResult> = {
   decode: decodeItemUse,
   icon: Flask,
   text: (p, w) => itemText(p, w.t, w.names),
-  value: (p) => (p.dice ? { text: String(p.total), tone: "ink" } : null),
+  value: (p) => {
+    const h = healed(p);
+    if (h) return { text: `+${h.applied}`, tone: "heal" };
+    return p.dice ? { text: String(p.total), tone: "ink" } : null;
+  },
   rolled: () => true,
   subtitle: (p, w) => usedName(p, w.names),
   short: (p, w, _e, value) => ({
@@ -70,13 +95,10 @@ export const itemUseKind: KindView<UseResult, UseResult> = {
 };
 
 /** One rolled effect: what the card draws (an ability's effect, or the flat dice of an older entry). */
-interface Roll {
-  dice: string;
-  rolls: number[];
-  modifier?: number;
-  total: number;
-  save?: string;
-}
+type Roll = Pick<
+  AbilityEffectResult,
+  "kind" | "dice" | "rolls" | "modifier" | "total" | "save" | "full" | "applied"
+>;
 
 function ItemUseCard({ r }: { r: UseResult }) {
   const { t } = useTranslation();
@@ -88,6 +110,7 @@ function ItemUseCard({ r }: { r: UseResult }) {
     : r.dice
       ? [
           {
+            kind: "dice" as const,
             dice: r.dice,
             rolls: r.rolls,
             modifier: r.modifier,
@@ -102,37 +125,7 @@ function ItemUseCard({ r }: { r: UseResult }) {
         {t("result.itemHeading", { name })}
       </div>
       {rolled.length > 0 ? (
-        rolled.map((e, n) => (
-          <div key={n} className="flex flex-col gap-3">
-            <div className="flex items-end justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-2">
-                <span className={labelClass}>{e.dice}</span>
-                <ul className="flex flex-wrap gap-2" data-testid="item-rolls">
-                  {e.rolls.map((v, i) => (
-                    <DieChip key={i} value={v} faces={dieFaces(e.dice)} />
-                  ))}
-                </ul>
-              </div>
-              <Total
-                label={t("result.total")}
-                value={e.total}
-                testId="item-total"
-              />
-            </div>
-            <div className="text-label text-muted-foreground tabular-nums">
-              {itemRollText({ ...r, ...e })}
-            </div>
-            {e.save && (
-              <p className="text-body font-medium" data-testid="item-save">
-                {t("result.save", {
-                  name: t(`saves.categories.${e.save}`, {
-                    defaultValue: e.save,
-                  }),
-                })}
-              </p>
-            )}
-          </div>
-        ))
+        rolled.map((e, n) => <EffectBlock key={n} e={e} r={r} />)
       ) : (
         <p className="text-body text-muted-foreground">{t("result.noRoll")}</p>
       )}
@@ -142,6 +135,71 @@ function ItemUseCard({ r }: { r: UseResult }) {
           {r.removed
             ? t("result.leftRemoved", { name })
             : t("result.left", { name, count: r.remaining })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** One effect on the card: a dice effect's rolls, or a heal's rolls (none for a full heal) and the HP it moved. */
+function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
+  const { t } = useTranslation();
+  const heal = e.kind === "heal";
+  const dice = e.dice ?? "";
+  // A heal's headline is what the ledger took, the roll is the working under it.
+  const headline = heal && e.applied ? e.applied.hpDelta : e.total;
+  return (
+    <div
+      className="flex flex-col gap-3"
+      data-testid={heal ? "item-heal" : undefined}
+    >
+      <div className="flex items-end justify-between gap-3">
+        <div className="flex min-w-0 flex-col gap-2">
+          <span className={labelClass}>
+            {heal && e.full ? t("result.itemHealFull") : dice}
+          </span>
+          {e.rolls.length > 0 && (
+            <ul className="flex flex-wrap gap-2" data-testid="item-rolls">
+              {e.rolls.map((v, i) => (
+                <DieChip key={i} value={v} faces={dieFaces(dice)} />
+              ))}
+            </ul>
+          )}
+        </div>
+        <Total
+          label={heal ? t("result.itemHealed") : t("result.total")}
+          value={headline}
+          testId={heal ? "item-heal-total" : "item-total"}
+        />
+      </div>
+      {dice && (
+        <div className="text-label text-muted-foreground tabular-nums">
+          {itemRollText({ ...r, ...e, dice })}
+        </div>
+      )}
+      {heal && e.applied && (
+        <>
+          <p className="text-body text-muted-foreground tabular-nums">
+            {t("result.cast.cardHealRange", {
+              before: e.applied.hpBefore,
+              after: e.applied.hpAfter,
+            })}
+          </p>
+          {!e.full && e.applied.hpDelta < e.total && (
+            <p
+              className="text-body text-muted-foreground"
+              data-testid="item-heal-capped"
+            >
+              {t("result.cast.cardHealCapped", { total: e.total })}
+            </p>
+          )}
+        </>
+      )}
+      {e.save && (
+        <p className="text-body font-medium" data-testid="item-save">
+          {t("result.save", {
+            name: t(`saves.categories.${e.save}`, { defaultValue: e.save }),
+          })}
         </p>
       )}
     </div>

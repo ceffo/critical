@@ -48,6 +48,27 @@ type EffectResult struct {
 	Total    int        `json:"total"`
 	Save     string     `json:"save,omitempty"`
 	Label    string     `json:"label,omitempty"`
+	// Full is a heal that asked for the gap to max HP (no dice).
+	Full bool `json:"full,omitempty"`
+	// Applied is what the effect changed in the character (ADR 0049 step 7):
+	// nil for a dice effect, which applies nothing.
+	Applied *Applied `json:"applied,omitempty"`
+}
+
+// Applied is what one heal effect did to the HP ledger: the points it added
+// (capped at max HP, ADR 0007 step 5) and the current HP around it.
+type Applied struct {
+	HPDelta  int `json:"hpDelta"`
+	HPBefore int `json:"hpBefore"`
+	HPAfter  int `json:"hpAfter"`
+}
+
+// hpRun follows the HP ledger across the heals of one use, read at the first
+// heal: effects run in list order, so a second heal sees what the first filled.
+type hpRun struct {
+	read  bool
+	total int // the ledger's sum of deltas, with this use's heals so far
+	max   int // the character's max HP
 }
 
 // AbilityUseResult is what one use of an item's ability produced (ADR 0049
@@ -113,12 +134,17 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		case LimitWithItem:
 			r.Remaining = after.Count
 		}
+		hp := &hpRun{}
+		hpDelta := 0
 		for _, e := range ability.Effects {
-			er, err := s.runEffect(e)
+			er, err := s.runEffect(ctx, characterID, hp, e)
 			if err != nil {
 				return fmt.Errorf("item %s ability %s: %w", after.ID, ability.ID, err)
 			}
 			r.Effects = append(r.Effects, er)
+			if er.Applied != nil {
+				hpDelta += er.Applied.HPDelta
+			}
 		}
 		var snapAfter *Item
 		if !r.Removed {
@@ -132,10 +158,14 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		if err != nil {
 			return fmt.Errorf("encode item use payload: %w", err)
 		}
+		// ADR 0049 step 12: the heals are the entry's own HP delta, in the
+		// use's transaction (one undo pops the HP with the counter); the
+		// recording path caps it at max HP, as the effects did one by one.
 		id, err := s.log.Record(ctx, actionlog.NewEntry{
 			CharacterID: characterID,
 			Kind:        actionlog.KindItemUse,
 			Payload:     payload,
+			HPDelta:     hpDelta,
 			Snapshots:   []actionlog.Snapshot{snap},
 		})
 		if err != nil {
@@ -191,17 +221,48 @@ func (s *service) payLimit(ctx context.Context, characterID int64, before Item, 
 }
 
 // runEffect applies one effect of an ability (ADR 0049 step 12): a dice effect
-// rolls its dice through the dice port and applies them to nothing.
-func (s *service) runEffect(e Effect) (EffectResult, error) {
-	rolls, mod, err := rollDice(s.dice, e.Dice)
-	if err != nil {
-		return EffectResult{}, err
+// rolls its dice through the dice port and applies them to nothing; a heal
+// rolls its dice (or asks for the gap to max HP) and reports the points the HP
+// ledger takes, which the use's entry then records as its HP delta.
+func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e Effect) (EffectResult, error) {
+	res := EffectResult{Kind: e.Kind, Dice: e.Dice, Rolls: []int{}, Save: e.Save, Label: e.Label, Full: e.Full}
+	if e.Dice != "" {
+		rolls, mod, err := rollDice(s.dice, e.Dice)
+		if err != nil {
+			return EffectResult{}, err
+		}
+		res.Rolls, res.Modifier, res.Total = rolls, mod, mod
+		for _, v := range rolls {
+			res.Total += v
+		}
 	}
-	total := mod
-	for _, v := range rolls {
-		total += v
+	if e.Kind != EffectHeal {
+		return res, nil
 	}
-	return EffectResult{Kind: e.Kind, Dice: e.Dice, Rolls: rolls, Modifier: mod, Total: total, Save: e.Save, Label: e.Label}, nil
+	if !hp.read {
+		total, err := s.log.HPTotal(ctx, characterID)
+		if err != nil {
+			return EffectResult{}, fmt.Errorf("hp total: %w", err)
+		}
+		c, err := s.chars.View(ctx, characterID)
+		if err != nil {
+			return EffectResult{}, fmt.Errorf("character: %w", err)
+		}
+		hp.read, hp.total, hp.max = true, total, c.HPMax
+	}
+	// A heal never harms: a negative roll (1d4-5) heals 0. Full is the gap to
+	// max HP the ledger holds now (ADR 0008 step 17.4, as a spell's).
+	requested := max(0, res.Total)
+	if e.Full {
+		requested = max(0, -hp.total)
+		res.Total = requested
+	}
+	applied := actionlog.CapHeal(hp.total, requested)
+	before := actionlog.CurrentHP(hp.max, hp.total)
+	hp.total += applied
+	res.Total = requested
+	res.Applied = &Applied{HPDelta: applied, HPBefore: before, HPAfter: actionlog.CurrentHP(hp.max, hp.total)}
+	return res, nil
 }
 
 // abilityRecord is the use's log payload: the ability's fields, and the first

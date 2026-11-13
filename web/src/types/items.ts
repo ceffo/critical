@@ -224,12 +224,17 @@ export interface ItemAbilityLimit {
   cost?: number;
 }
 
-/** An effect of an ability (ADR 0049 step 10): dice rolled and shown, applied to nothing. */
+/**
+ * An effect of an ability (ADR 0049 step 10). `dice`: dice rolled and shown, applied to nothing.
+ * `heal`: hit points regained through the HP ledger, by `dice` or `full` (the gap to max HP), never both.
+ */
 export interface ItemAbilityEffect {
-  kind: "dice";
-  /** NdM or NdM+K. */
-  dice: string;
-  /** A save category (the item's `effectSave` values), absent for none. */
+  kind: "dice" | "heal";
+  /** NdM or NdM+K; absent for a full heal. */
+  dice?: string;
+  /** A heal that fills the gap to max HP (no dice). */
+  full?: boolean;
+  /** A save category (the item's `effectSave` values), absent for none; a dice effect only. */
   save?: string;
   label?: string;
 }
@@ -256,10 +261,23 @@ export interface ItemAbility {
 /** Why an ability cannot be used: its limit cannot pay (ADR 0049 step 5). */
 export type AbilityRefusal = "exhausted";
 
-/** One effect of an ability's use (itemsvc EffectResult): a dice effect's rolls, applied to nothing. */
+/** What a heal effect did to the HP ledger (itemsvc Applied): the points taken (capped at max HP) and the HP around them. */
+export interface EffectApplied {
+  hpDelta: number;
+  hpBefore: number;
+  hpAfter: number;
+}
+
+/**
+ * One effect of an ability's use (itemsvc EffectResult): a dice effect's rolls, applied to nothing;
+ * a heal's rolls (none for a full heal) with `applied`, what the HP ledger took.
+ */
 export interface AbilityEffectResult {
-  kind: "dice";
-  dice: string;
+  kind: "dice" | "heal";
+  /** Absent for a full heal. */
+  dice?: string;
+  full?: boolean;
+  applied?: EffectApplied;
   rolls: number[];
   /** The flat "+K" of the dice ("1d8+2"); absent for none. */
   modifier?: number;

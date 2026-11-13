@@ -62,19 +62,26 @@ type Limit struct {
 }
 
 // EffectKind is the kind of an ability's effect (ADR 0049 step 10's closed
-// list). Only dice exists so far; heal, buff and spell come with their own
+// list). dice and heal exist so far; buff and spell come with their own
 // slices.
 type EffectKind string
 
-// EffectDice is dice rolled, logged and shown, applied to nothing (ADR 0049
-// step 9: the app tracks no monster's hit points).
-const EffectDice EffectKind = "dice"
+const (
+	// EffectDice is dice rolled, logged and shown, applied to nothing (ADR
+	// 0049 step 9: the app tracks no monster's hit points).
+	EffectDice EffectKind = "dice"
+	// EffectHeal is hit points regained by the character through the HP ledger
+	// (ADR 0049 steps 9 and 12): Dice, or Full for the gap to max HP.
+	EffectHeal EffectKind = "heal"
+)
 
 // Effect is one effect of an ability. A dice effect holds Dice ("NdM" or
-// "NdM+K"), an optional save category (Save) and an optional Label.
+// "NdM+K"), an optional save category (Save) and an optional Label. A heal
+// holds Dice or Full (never both) and an optional Label, no save.
 type Effect struct {
 	Kind  EffectKind
 	Dice  string
+	Full  bool
 	Save  string
 	Label string
 }
@@ -219,11 +226,29 @@ func (l Limit) validCounter(ceiling int) error {
 
 // valid checks one effect (ADR 0049 step 10).
 func (e Effect) valid() error {
-	if e.Kind != EffectDice {
-		return fmt.Errorf("unknown effect %q (dice)", e.Kind)
-	}
-	if _, _, _, err := ParseDice(e.Dice); err != nil {
-		return fmt.Errorf("the dice must look like 2d6 or 1d8+2")
+	switch e.Kind {
+	case EffectDice:
+		if e.Full {
+			return fmt.Errorf("a dice effect has no full")
+		}
+		if _, _, _, err := ParseDice(e.Dice); err != nil {
+			return fmt.Errorf("the dice must look like 2d6 or 1d8+2")
+		}
+	case EffectHeal:
+		// ADR 0049 step 10: a heal is dice or full, not both, and no save.
+		if e.Save != "" {
+			return fmt.Errorf("a heal has no save")
+		}
+		if e.Full == (e.Dice != "") {
+			return fmt.Errorf("a heal is dice or full, not both and not neither")
+		}
+		if e.Dice != "" {
+			if _, _, _, err := ParseDice(e.Dice); err != nil {
+				return fmt.Errorf("the dice must look like 2d6 or 1d8+2")
+			}
+		}
+	default:
+		return fmt.Errorf("unknown effect %q (dice or heal)", e.Kind)
 	}
 	if utf8.RuneCountInString(e.Label) > MaxEffectLabel {
 		return fmt.Errorf("the label must be at most %d characters", MaxEffectLabel)
@@ -294,6 +319,7 @@ type jsonLimit struct {
 type jsonEffect struct {
 	Kind  EffectKind `json:"kind"`
 	Dice  string     `json:"dice,omitempty"`
+	Full  bool       `json:"full,omitempty"`
 	Save  string     `json:"save,omitempty"`
 	Label string     `json:"label,omitempty"`
 }

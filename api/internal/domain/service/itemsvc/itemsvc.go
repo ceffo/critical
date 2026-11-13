@@ -138,6 +138,9 @@ type Dice interface {
 // Log is the slice of the action log item uses are recorded into.
 type Log interface {
 	actionlog.Recorder
+	// HPTotal is the HP ledger's sum of deltas (actionlogsvc): a heal effect
+	// reads the gap to max HP it can fill (ADR 0049 step 12).
+	HPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
 // Deps are the service's collaborators besides the DAL. Equipment is the

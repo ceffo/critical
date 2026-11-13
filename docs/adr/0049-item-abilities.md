@@ -568,6 +568,28 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    drops it. The review band already read `review` (slice 2).
 7. **The `heal` effect.** Applied through the HP ledger in the use's transaction, with the editor
    field (step 9, 12). Needs 3 and 6.
+   *Built.* How it reads the steps:
+   - **A heal is `dice` or `full`** (step 10): validated as a `heal` effect with exactly one of the two, no
+     save, an optional label; stored and served as `{kind: "heal", dice | full: true}`. A negative roll
+     (`1d4-5`) heals 0.
+   - **Through the one ledger path, not a second one** (step 12): the heal is the use's `item_use` entry's
+     own HP delta, which the recording path caps at max HP (ADR 0007 steps 4 and 5) exactly as a cast's
+     heal; the effect's result carries `applied: {hpDelta, hpBefore, hpAfter}` and the roll as asked
+     (`total`). Several heals in one use run in list order against a running ledger total, so the second
+     sees what the first filled and the entry's delta is their sum (equal to what the recording path caps
+     it to). The ledger total and max HP are read inside the use's transaction, once, at the first heal.
+   - **Rollback and undo**: a failure in any effect returns an error out of the one transaction, so the
+     limit's payment, a spent dose and the entry go with it; one undo pops the entry, which removes both
+     the item snapshot's change and the HP delta (the ledger is the sum of entries, there is nothing else
+     to restore). The answer reports the key `hp`, so the web re-reads the hit points.
+   - **The conversion is unchanged, and potions were never on the review list**: `ConvertLegacy` gives a
+     stored potion with dice a `with_item` ability with a `dice` effect and no review reason, whatever it
+     did, since the old model carried no meaning for the dice. A database already converted by slice 2
+     keeps its rows as they are; the boot step writes nothing new. The player turns a potion of healing's
+     dice into a heal in the editor (remove the dice effect, add a heal).
+   - The journal and the result card word the heal in the web (what the ledger took, capped when the roll
+     was cut, the HP before and after); the Inventory chip's composer button reads the first `dice`
+     effect only.
 8. **The `buff` effect.** A timed buff through `buffsvc`, with the editor field and the buff's
    effects (steps 9, 10, 12). Needs 3 and 6.
 9. **The `spell` effect.** A port from itemsvc to castsvc's effect path at a fixed level, the asks at

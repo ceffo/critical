@@ -177,3 +177,32 @@ func TestItems_ADR0049Step7_UseAnAbility(t *testing.T) {
 		Return(nil, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound)).Once()
 	assert.Equal(t, http.StatusNotFound, do(h, "POST", "/api/items/nope/abilities/use/use", "{}").Code)
 }
+
+// ADR 0049 steps 7 and 10: a heal effect (dice, or full) is written and served as sent, and the
+// use's answer carries what it applied to the HP ledger.
+func TestItems_ADR0049Step10_HealEffectOnTheWireAndItsAppliedResult(t *testing.T) {
+	h, m := newRouter(t)
+	abilities := []itemsvc.Ability{{
+		ID: "drink", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectHeal, Dice: "2d4+2"}, {Kind: itemsvc.EffectHeal, Full: true}},
+	}}
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Abilities: &abilities}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil).Once()
+	noWarnings(m)
+	rec := do(h, "PATCH", "/api/items/w", `{"abilities":[{"id":"drink","limit":{"kind":"with_item"},
+		"effects":[{"kind":"heal","dice":"2d4+2"},{"kind":"heal","full":true}]}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink").Return(&itemsvc.AbilityUseResult{
+		ItemID: "potion", AbilityID: "drink", Name: "Potion of healing", Type: "potion", Limit: itemsvc.LimitWithItem, Remaining: 2, LogEntryID: 9,
+		Effects: []itemsvc.EffectResult{{
+			Kind: itemsvc.EffectHeal, Dice: "2d4+2", Rolls: []int{3, 4}, Modifier: 2, Total: 9,
+			Applied: &itemsvc.Applied{HPDelta: 6, HPBefore: 20, HPAfter: 26},
+		}},
+	}, nil).Once()
+	rec = do(h, "POST", "/api/items/potion/abilities/drink/use", "{}")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"itemId":"potion","abilityId":"drink","name":"Potion of healing","type":"potion","limit":"with_item",
+		"remaining":2,"removed":false,"logEntryId":9,
+		"effects":[{"kind":"heal","dice":"2d4+2","rolls":[3,4],"modifier":2,"total":9,"applied":{"hpDelta":6,"hpBefore":20,"hpAfter":26}}]}`, rec.Body.String())
+}

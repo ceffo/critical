@@ -1,8 +1,8 @@
 // The equipment editor's abilities (docs/adr/0049-item-abilities.md steps 4, 5 and 16): what the
 // form holds for an item's abilities and how it turns them into the `abilities` list of the request
 // body and back. The server validates every ability (limit kind and numbers, dice, the bounds) and
-// names the field; this only parses what was typed. The first editor builds the limit, the `dice`
-// effect and the note (Q4).
+// names the field; this only parses what was typed. The editor builds the limit, the `dice` and
+// `heal` effects and the note (Q4); `buff` and `spell` come with their slices.
 import { editLang } from "@/i18n/localized";
 import type { LocalizedText } from "@/types/localized";
 import type {
@@ -28,8 +28,11 @@ export const SAVE_CATEGORIES = [
   "spell",
 ] as const;
 
-/** One dice effect row of an ability as the form holds it. */
+/** One effect row of an ability as the form holds it: dice rolled, or a heal (dice or full). */
 export interface DiceDraft {
+  kind: "dice" | "heal";
+  /** A heal that fills the gap to max HP: no dice (heal rows only). */
+  full: boolean;
   dice: string;
   /** A save category; empty for none. */
   save: string;
@@ -66,11 +69,18 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
     left: left !== undefined ? String(left) : "1",
     cost: cost !== undefined && cost > 0 ? String(cost) : "1",
     effects: a.effects.map((e) => ({
-      dice: e.dice,
+      kind: e.kind,
+      full: e.full === true,
+      dice: e.dice ?? "",
       save: e.save ?? "",
       label: e.label ?? "",
     })),
   };
+}
+
+/** A new effect row: dice rolled, or a heal. */
+export function newEffectDraft(kind: DiceDraft["kind"]): DiceDraft {
+  return { kind, full: false, dice: "", save: "", label: "" };
 }
 
 /** The form's drafts for a piece's abilities (none: not converted yet, shown as empty). */
@@ -131,14 +141,23 @@ export function draftsToAbilities(
     const typed = d.name.trim();
     if (typed) names[editLang(lang)] = typed;
     else delete names[editLang(lang)];
+    // A row with no dice typed is not sent, except a full heal, which has none to type.
     const effects: ItemAbilityEffect[] = d.effects
-      .filter((e) => e.dice.trim() !== "")
-      .map((e) => ({
-        kind: "dice",
-        dice: e.dice.trim(),
-        ...(e.save ? { save: e.save } : {}),
-        ...(e.label ? { label: e.label } : {}),
-      }));
+      .filter((e) => (e.kind === "heal" && e.full) || e.dice.trim() !== "")
+      .map((e) =>
+        e.kind === "heal"
+          ? {
+              kind: "heal",
+              ...(e.full ? { full: true } : { dice: e.dice.trim() }),
+              ...(e.label ? { label: e.label } : {}),
+            }
+          : {
+              kind: "dice",
+              dice: e.dice.trim(),
+              ...(e.save ? { save: e.save } : {}),
+              ...(e.label ? { label: e.label } : {}),
+            },
+      );
     const a: ItemAbility = { id: d.id, limit, effects };
     if (Object.keys(names).length > 0) a.name = names;
     if (d.note.trim()) a.note = d.note.trim();
@@ -169,7 +188,9 @@ export function abilitiesKey(
         cost: a.limit.cost && a.limit.cost > 0 ? a.limit.cost : 0,
       },
       effects: a.effects.map((e) => ({
-        dice: e.dice,
+        kind: e.kind,
+        dice: e.dice ?? "",
+        full: e.full === true,
         save: e.save ?? "",
         label: e.label ?? "",
       })),

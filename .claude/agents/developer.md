@@ -88,6 +88,7 @@ workflow doc, outside the repo).
   commit the output.
 - Never kill processes by name or pattern (`pkill`, `killall`, `pkill -f`): the machine is shared with other sessions. Kill only PIDs your own command started (`cmd & pid=$!`).
 - Write `rm` paths literally: Claude Code blocks `rm` on a path built from a variable (`rm -f $R/x.png`, and `"${R:?}"` too) with a prompt nobody answers in an unattended session. Spell the path out or `cd` first.
+- Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get): the session transcript keeps it and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`), and say in your report what you could not check without the value.
 - Stay in scope.
 
 ## Checks

@@ -155,6 +155,7 @@ Every warning is structured data (a code and its numbers), worded by the web.
       Test: `TestCreate_MultiClass_Step2_1_TheCatalogueBarsTheBard` (charactersvc: a half-elf
       thief/bard and bard/fighter/mage refused with and without the lift, a bard alone accepted, a
       human fighter-to-bard and bard-to-fighter dual-class accepted).
+      _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) step 14.3, proposed, on implementation: seven specialist wizards carry `multiclass: false`; the illusionist's `school_specialization` lists `multiclass_races: [gnome]`, so a multi-class character holding it is refused (`multiclass_class_not_allowed`) unless a gnome, and the racial lift does not waive it (PHB p.31). The creation options carry each class's `multiclassRaces`.)_
    2. **Dual-class**: the book allows only humans, with 15 or more in every prime requisite of the
       first class and 17 or more in every prime requisite of the new class, the current class at
       level 2 or more, and never back to a class already left (PHB multi/dual, Dual-Class Benefits

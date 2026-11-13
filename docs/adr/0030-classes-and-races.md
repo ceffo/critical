@@ -862,6 +862,8 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `spellbook` feature's `max_spell_level` (mage 9, bard 6) and `free_spell_per_new_spell_level` (mage) replace `spellbookMaxLevels` and `freeSpellClasses`; the starting spellbook stays a seed keyed by class)_
 
+    _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 5 to 9 and 15, proposed, on implementation: the specialist wizards are covered (20.9's exclusion lifted). A spell of a specialist's opposition schools is refused by Learn, Ajouter, the free spell and the starting book (`spell_school_opposed`, 20.1, 20.6, 20.7); the chance to learn is Table 4's +15 for a spell of his school, -15 for any other (20.2); the free spell of 20.8 is of his school while the catalogue has one left (`free_spell_not_of_school`); an entry's class may be switched within its group by its owner (ADR 0050 step 15), opposed spells kept in the book, never prepared.)_
+
 ### Races
 
 21. **The six races.** Human, dwarf, elf, gnome, half-elf, halfling (PHB chapter 2). The race card

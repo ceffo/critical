@@ -502,9 +502,21 @@ _Code_: Heal, HealResult, CastHeal
 A cleric's turning roll against an undead type. [ADR 0030](docs/adr/0030-classes-and-races.md) step 16. _Avoid_: turn (alone).
 _Code_: TurningTarget, TurningCell
 
-**Sphere** (fr: sphère), **School** (fr: école):
-A priest spell's sphere of access; a wizard spell's school. [ADR 0030](docs/adr/0030-classes-and-races.md) step 15.
+**Sphere** (fr: sphère):
+A priest spell's sphere of access. [ADR 0030](docs/adr/0030-classes-and-races.md) step 15.
 _Code_: SphereAccess, Spheres
+
+**School** (fr: école):
+A wizard spell's school of magic; today the book's raw text, _(planned)_ also one or more of nine catalogue codes (the PHB's eight greater schools and lesser divination) that a specialist's rules read. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 1. _Avoid_: discipline (psionic), sphere (priest).
+
+**Specialist wizard** (fr: spécialiste) _(planned)_:
+A wizard-group class that specializes in a school through the `school_specialization` feature (abjurer, conjurer, diviner, enchanter, illusionist, invoker, necromancer, transmuter): a school slot per spell level, ±15% to learn, ±1 on saves, a free spell of his school. [ADR 0050](docs/adr/0050-specialist-wizards.md). _Avoid_: specialization (that is the fighter's **weapon specialization**), mage (the wizard who does not specialize).
+
+**Opposition school** (fr: école opposée _(to confirm)_) _(planned)_:
+A school a specialist may never learn or prepare a spell of (PHB Table 22); a spell of two schools is opposed when either is. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 5.
+
+**School slot** (fr: emplacement d'école _(to confirm)_) _(planned)_:
+A specialist's one extra spell of a spell level he has slots in, which only a spell of his school may fill; a preparation rule, not a marked slot. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 10. _Avoid_: extra slot (that is one a spell grants).
 
 ### Possessions
 

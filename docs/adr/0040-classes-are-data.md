@@ -229,6 +229,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
 
    _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) steps 2 and 3, on implementation: two new kinds, `psionics` (params `progression`, `psp`, `recovery`; the PSPs, picks and power checks of ADR 0043 steps 4 to 12) and `save_bonus` (params `against`, `bonus`; ADR 0043 step 3); the psionicist lists both. As built, 2026-10-22: both are in `classes.FeatureKinds` with no params read (the schema checks them) and are **not implemented**: `classes.Class.Implemented` is false for a class listing one, which step 8's creation gate reads.)_
 
+   _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) step 2, proposed, on implementation: a new kind, `school_specialization` (params `schools`, `opposition_schools`, `races`, optional `multiclass_races`; the specialist's spells, slots, saves, race warning and multi-class limit of ADR 0050 steps 5 to 14); the eight specialist wizards list it beside the mage's `spellbook`.)_
+
 4. **The closed list of race trait kinds:**
 
    | Kind | Params | Computed by | Races |

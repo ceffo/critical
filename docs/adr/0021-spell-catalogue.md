@@ -72,6 +72,7 @@ is only ever appended to by play.
 
    - _Amended by [ADR 0023](0023-localized-text.md): in the database and the API these language maps
      are `localized_texts` rows and language maps, never per-language fields._
+   - _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 1 and 4 (proposed, on implementation): a spell also carries `schools`, a list of the nine PHB school codes mapped by the builder from the raw `school` text (divination split into lesser and greater by spell level; a supplement school or "All Schools" maps to no code); the raw text stays for display. The next format adds it with the `school_specialization` feature kind and the eight specialist classes.)_
    - A language that is missing is **omitted**, never an empty string. A reader shows `fr` when
      present and falls back to `en`, per field, so a spell with no French source is complete.
    - `source` is the provenance of the English text: a book code (`PHB`, `TOM`, …), or `WEB` for a

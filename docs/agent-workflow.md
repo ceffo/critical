@@ -165,6 +165,10 @@ into this public repo.
 Current phase and what is out of scope: `docs/all.md` ("Phase 1 Scope"). Later-phase work is filed
 as backlog (P4) and never dispatched without the user's say-so.
 
+A sliced item (an ADR's "Implementation slices") is cut so each slice, merged alone, leaves the app usable: a
+slice that would hide or break something the user uses until a later slice lands is reshaped, or the two ship
+together.
+
 ## Hard rules for implementers
 
 From `docs/all.md`, `docs/backend.md` and `docs/adr/`; the ones reviewers check hardest:
@@ -245,7 +249,7 @@ Reviewer checklist, in priority order:
 6. **Migrations and DAL**: new files only; safe on existing data; generated code regenerated and
    committed; sqlc constraints respected.
 7. **Seeds**: `seeds/*.json` and the loader stay valid and idempotent.
-8. **Tests** prove the criteria and would fail on the old code; table-driven rules, mocks for ports;
+8. **Tests** prove the criteria and would fail on the old code (a test whose expected value is computed by the code under test proves nothing: compare against an explicit table); table-driven rules, mocks for ports;
    no test opens a database or asserts SQL text ([ADR 0025](adr/0025-postgresql-storage.md) step 6).
    **e2e budget**: a new or extended Playwright spec is one happy path per flow, justified in the
    report; rules, edge cases and API-only checks are in Go/unit tests, not e2e (suite < 5 min on CI).

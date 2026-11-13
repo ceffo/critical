@@ -253,20 +253,27 @@ func ReadWeapons(path string) ([]Weapon, error) {
 }
 
 // Item is one seeds/items.json entry: name is a language map (ADR 0023 step
-// 10), behaviour is stock, charges or daily, type a free-text label,
-// max_count defaults to count (a daily item's refill value).
+// 10), type a free-text label. The entry is in the new shape (ADR 0049 step
+// 23) when it has an "abilities" list (quantity defaults to 1): its old
+// columns are derived from them (itemsvc.MirrorLegacy) while the previous
+// release still reads them. Without "abilities" it is in the old shape, read
+// by the conversion only (itemsvc.ConvertLegacy): behaviour is stock, charges
+// or daily and max_count defaults to count (a daily item's refill value).
 type Item struct {
-	ID         string         `json:"id"`
-	Name       localized.Text `json:"name"`
-	Type       string         `json:"type"`
-	Behaviour  string         `json:"behaviour"`
-	MagicBonus int            `json:"magic_bonus"`
-	AmmoKind   string         `json:"ammo_kind"`
-	Count      int            `json:"count"`
-	MaxCount   *int           `json:"max_count"`
-	EffectDice string         `json:"effect_dice"`
-	EffectSave string         `json:"effect_save"`
-	Notes      string         `json:"notes"`
+	ID       string         `json:"id"`
+	Name     localized.Text `json:"name"`
+	Type     string         `json:"type"`
+	Quantity *int           `json:"quantity"`
+	// Abilities is the item's ability list (ADR 0049), absent: the old shape.
+	Abilities  json.RawMessage `json:"abilities"`
+	Behaviour  string          `json:"behaviour"`
+	MagicBonus int             `json:"magic_bonus"`
+	AmmoKind   string          `json:"ammo_kind"`
+	Count      int             `json:"count"`
+	MaxCount   *int            `json:"max_count"`
+	EffectDice string          `json:"effect_dice"`
+	EffectSave string          `json:"effect_save"`
+	Notes      string          `json:"notes"`
 	// Powers are the item's own powers (ADR 0016 steps 9 to 16), in
 	// itemsvc's power encoding; absent: none.
 	Powers json.RawMessage `json:"powers"`
@@ -285,6 +292,8 @@ func (it Item) Max() int {
 type SeededItem struct {
 	Item
 	PowerList []itemsvc.Power
+	// AbilityList is the new shape's abilities (nil: the old shape).
+	AbilityList []itemsvc.Ability
 	// PowersJSON is PowerList in itemsvc's stored encoding ("[]" for none).
 	PowersJSON string
 }
@@ -312,6 +321,27 @@ func ReadItems(path string) ([]SeededItem, error) {
 			return nil, fmt.Errorf("items.json entry %d: duplicate id %q", i, it.ID)
 		}
 		seen[it.ID] = true
+		var abilities []itemsvc.Ability
+		if len(it.Abilities) > 0 && string(it.Abilities) != "null" {
+			// The new shape (ADR 0049 step 23): quantity and abilities, the old columns derived.
+			var err error
+			if abilities, err = itemsvc.ParseAbilities(it.Abilities); err != nil {
+				return nil, fmt.Errorf("items.json entry %d (%q): %w", i, it.ID, err)
+			}
+			if it.Behaviour != "" || it.Count != 0 || it.MaxCount != nil || it.EffectDice != "" || it.EffectSave != "" {
+				return nil, fmt.Errorf("items.json entry %d (%q): the old keys (behaviour, count, max_count, effect_dice, effect_save) cannot go with abilities", i, it.ID)
+			}
+			quantity := 1
+			if it.Quantity != nil {
+				quantity = *it.Quantity
+			}
+			if quantity < 0 {
+				return nil, fmt.Errorf("items.json entry %d (%q): negative quantity", i, it.ID)
+			}
+			m := itemsvc.MirrorLegacy(quantity, abilities)
+			it.Behaviour, it.Count, it.EffectDice, it.EffectSave = string(m.Behaviour), m.Count, m.EffectDice, m.EffectSave
+			it.MaxCount = &m.MaxCount
+		}
 		switch it.Behaviour {
 		case "stock", "charges", "daily":
 		default:
@@ -327,7 +357,7 @@ func ReadItems(path string) ([]SeededItem, error) {
 		if err != nil {
 			return nil, fmt.Errorf("items.json entry %d (%q): %w", i, it.ID, err)
 		}
-		out[i] = SeededItem{Item: it, PowerList: powers, PowersJSON: encoded}
+		out[i] = SeededItem{Item: it, PowerList: powers, AbilityList: abilities, PowersJSON: encoded}
 	}
 	return out, nil
 }
@@ -417,6 +447,7 @@ func Equipment(items []SeededItem, weapons []Weapon, catalogue []ruletablesvc.We
 			ID: it.ID, Position: i, Name: it.Name.Trimmed(), Type: it.Type, Behaviour: itemsvc.Behaviour(it.Behaviour),
 			MagicBonus: it.MagicBonus, AmmoKind: it.AmmoKind, Count: it.Count, MaxCount: it.Max(),
 			EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: it.PowerList,
+			Abilities: it.AbilityList,
 		})
 	}
 	legacyWeapons := make([]itemsvc.LegacyWeapon, 0, len(weapons))
@@ -431,6 +462,17 @@ func Equipment(items []SeededItem, weapons []Weapon, catalogue []ruletablesvc.We
 		})
 	}
 	conv := itemsvc.Convert(legacyItems, legacyWeapons, catalogue)
+	// A piece in the old shape gets the abilities of its old fields and the review reasons of that
+	// conversion (ADR 0049 step 19), the one function the boot step uses.
+	for i := range conv.Pieces {
+		if conv.Pieces[i].Abilities == nil {
+			c := itemsvc.ConvertLegacy(conv.Pieces[i])
+			conv.Pieces[i].Abilities = c.Abilities
+			for _, r := range c.Reasons {
+				conv.Reviews = append(conv.Reviews, itemsvc.Review{ItemID: conv.Pieces[i].ID, Reason: r})
+			}
+		}
+	}
 	// The seed's pieces are what the editor would accept (a weapon of an unknown kind, an
 	// unknown ammunition kind are refused, as the weapons table's CHECK refused the first).
 	for _, p := range conv.Pieces {

@@ -8,6 +8,8 @@ import (
 
 	context "context"
 
+	itemsvc "github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+
 	mock "github.com/stretchr/testify/mock"
 
 	ruletablesvc "github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -67,6 +69,63 @@ func (_c *MockStore_Close_Call) Return(_a0 error) *MockStore_Close_Call {
 }
 
 func (_c *MockStore_Close_Call) RunAndReturn(run func() error) *MockStore_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ConvertItems provides a mock function with given fields: ctx, seedsDir
+func (_m *MockStore) ConvertItems(ctx context.Context, seedsDir string) (itemsvc.BootConversion, error) {
+	ret := _m.Called(ctx, seedsDir)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ConvertItems")
+	}
+
+	var r0 itemsvc.BootConversion
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.BootConversion, error)); ok {
+		return rf(ctx, seedsDir)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.BootConversion); ok {
+		r0 = rf(ctx, seedsDir)
+	} else {
+		r0 = ret.Get(0).(itemsvc.BootConversion)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
+		r1 = rf(ctx, seedsDir)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_ConvertItems_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ConvertItems'
+type MockStore_ConvertItems_Call struct {
+	*mock.Call
+}
+
+// ConvertItems is a helper method to define mock.On call
+//   - ctx context.Context
+//   - seedsDir string
+func (_e *MockStore_Expecter) ConvertItems(ctx interface{}, seedsDir interface{}) *MockStore_ConvertItems_Call {
+	return &MockStore_ConvertItems_Call{Call: _e.mock.On("ConvertItems", ctx, seedsDir)}
+}
+
+func (_c *MockStore_ConvertItems_Call) Run(run func(ctx context.Context, seedsDir string)) *MockStore_ConvertItems_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(string))
+	})
+	return _c
+}
+
+func (_c *MockStore_ConvertItems_Call) Return(_a0 itemsvc.BootConversion, _a1 error) *MockStore_ConvertItems_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_ConvertItems_Call) RunAndReturn(run func(context.Context, string) (itemsvc.BootConversion, error)) *MockStore_ConvertItems_Call {
 	_c.Call.Return(run)
 	return _c
 }

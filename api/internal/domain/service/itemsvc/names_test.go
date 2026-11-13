@@ -123,27 +123,28 @@ func TestRestorers_Step11_PlainNameSnapshotKeepsTheOtherLanguages(t *testing.T) 
 	const tail = `"type":"wand","behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":"","powers":[]}}`
 	t.Run("partial name", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil)
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand", "fr": "Baguette de foudre"}
-		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), converted(want)).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},"namePartial":true,`+tail))
 	})
 	t.Run("language map", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		// The name is the whole truth; the piece's own fields are read (the
 		// snapshot predates the model).
-		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wandBoth, nil)
 		want := wandBoth
 		want.Name = localized.Text{"en": "Old wand"}
-		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
+		dal.EXPECT().Update(mock.Anything, int64(1), converted(want)).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},`+tail))
 	})
 	t.Run("partial name, item gone", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
 		want := wand4
 		want.Name = localized.Text{"en": "Old wand"}
+		want = converted(want)
 		dal.EXPECT().Update(mock.Anything, int64(1), want).Return(itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Insert(mock.Anything, int64(1), want).Return(nil).Once()
 		require.NoError(t, restore(dal, `{"count":4,"replace":true,"item":{"position":4,"name":{"en":"Old wand"},"namePartial":true,`+tail))

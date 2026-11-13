@@ -126,6 +126,17 @@ VALUES (sqlc.arg(character_id)::bigint, @id, @position, @name, @type, @behaviour
 -- name: ItemNameKey :one
 SELECT name FROM items WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id;
 
+-- The boot conversion to abilities (ADR 0049 step 18): the rows whose abilities are NULL, in the old
+-- fields' meaning, and the write that converts one (guarded, so a rerun or a second instance converts
+-- nothing twice). Only the abilities column is written: count and the old columns keep their meaning.
+-- name: ListUnconvertedItems :many
+SELECT character_id, id, category, magic_kind, behaviour, count, max_count, effect_dice, effect_save
+FROM items WHERE abilities IS NULL ORDER BY character_id, position, id;
+
+-- name: SetItemAbilities :exec
+UPDATE items SET abilities = sqlc.arg(abilities)::text
+WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id AND abilities IS NULL;
+
 -- name: InsertReview :exec
 INSERT INTO equipment_review (character_id, item_id, reason) VALUES (sqlc.arg(character_id)::bigint, @item_id, @reason)
 ON CONFLICT DO NOTHING;

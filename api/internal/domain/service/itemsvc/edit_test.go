@@ -169,7 +169,8 @@ func TestUpdate_Step1_1_SetsTheComponent(t *testing.T) {
 
 	pop := mocks.NewMockDAL(t)
 	popSvc, _ := itemsvc.New(pop, deps(t).Deps)
-	pop.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
+	pop.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil).Maybe()
+	pop.EXPECT().Update(mock.Anything, int64(1), converted(wand4)).Return(nil).Once()
 	require.NoError(t, popSvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
@@ -272,14 +273,14 @@ func TestRestorers_UndoCreateEditDelete(t *testing.T) {
 		"behaviour":"charges","magicalBonus":0,"ammoKind":"","maxCount":4,"effectDice":"6d6","effectSave":"rod_staff_wand","notes":""}}`)
 	t.Run("edit", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil).Once()
-		dal.EXPECT().Update(mock.Anything, int64(1), wand4).Return(nil).Once()
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(wand4, nil)
+		dal.EXPECT().Update(mock.Anything, int64(1), converted(wand4)).Return(nil).Once()
 		require.NoError(t, restore(dal, before))
 	})
 	t.Run("delete", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
-		back := wand4
-		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Once()
+		back := converted(wand4)
+		dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
 		dal.EXPECT().Update(mock.Anything, int64(1), back).Return(itemsvc.ErrItemNotFound).Once()
 		dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
 		require.NoError(t, restore(dal, before))

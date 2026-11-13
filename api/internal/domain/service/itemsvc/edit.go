@@ -237,6 +237,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if err := item.Validate(); err != nil {
 		return nil, err
 	}
+	if err := item.validAbilityCounts(); err != nil {
+		return nil, err
+	}
 	if in.Equip && item.EquipState() == "" {
 		return nil, fieldErr("equip", CodeNotAllowed)
 	}
@@ -372,6 +375,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		}
 		if err := item.Validate(); err != nil {
 			return err
+		}
+		if p.Abilities != nil {
+			if err := item.validAbilityCounts(); err != nil {
+				return err
+			}
 		}
 		if item.SpellID != old.SpellID {
 			if err := s.knownSpell(ctx, item); err != nil {

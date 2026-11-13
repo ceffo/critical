@@ -2919,7 +2919,11 @@
         "weapon_unmatched": "Weapon not recognised: give its speed and damage type.",
         "uncategorised": "Unknown category (old type “{{type}}”): stored as gear.",
         "ammo_kind_unknown": "Unknown ammunition kind: pick one.",
-        "powers_off": "Its powers work only equipped, and this category cannot be equipped."
+        "powers_off": "Its powers work only equipped, and this category cannot be equipped.",
+        "weapon_with_use": "A weapon, armour or shield that had a use: check its ability, or remove it.",
+        "quantity_above_one": "More than one object stored for a single-object item: check the quantity.",
+        "charges_total": "Only the charges left were known: set the total in the editor.",
+        "ammo_not_stock": "Ammunition that was charged or daily: it is a plain stock now."
       }
     },
     "form": {

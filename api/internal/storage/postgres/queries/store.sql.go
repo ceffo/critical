@@ -1176,6 +1176,59 @@ func (q *Queries) ListLegacyWeapons(ctx context.Context, characterID int64) ([]L
 	return items, nil
 }
 
+const listUnconvertedItems = `-- name: ListUnconvertedItems :many
+SELECT character_id, id, category, magic_kind, behaviour, count, max_count, effect_dice, effect_save
+FROM items WHERE abilities IS NULL ORDER BY character_id, position, id
+`
+
+type ListUnconvertedItemsRow struct {
+	CharacterID int64
+	ID          string
+	Category    string
+	MagicKind   string
+	Behaviour   string
+	Count       int64
+	MaxCount    int64
+	EffectDice  string
+	EffectSave  string
+}
+
+// The boot conversion to abilities (ADR 0049 step 18): the rows whose abilities are NULL, in the old
+// fields' meaning, and the write that converts one (guarded, so a rerun or a second instance converts
+// nothing twice). Only the abilities column is written: count and the old columns keep their meaning.
+func (q *Queries) ListUnconvertedItems(ctx context.Context) ([]ListUnconvertedItemsRow, error) {
+	rows, err := q.db.QueryContext(ctx, listUnconvertedItems)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListUnconvertedItemsRow{}
+	for rows.Next() {
+		var i ListUnconvertedItemsRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.ID,
+			&i.Category,
+			&i.MagicKind,
+			&i.Behaviour,
+			&i.Count,
+			&i.MaxCount,
+			&i.EffectDice,
+			&i.EffectSave,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockWriters = `-- name: LockWriters :exec
 SELECT pg_advisory_xact_lock(7240531)
 `
@@ -1503,6 +1556,22 @@ type SetIdentityIfUnsetParams struct {
 // kept, so a rerun changes nothing.
 func (q *Queries) SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error {
 	_, err := q.db.ExecContext(ctx, setIdentityIfUnset, arg.Alignment, arg.Sex, arg.ID)
+	return err
+}
+
+const setItemAbilities = `-- name: SetItemAbilities :exec
+UPDATE items SET abilities = $1::text
+WHERE character_id = $2::bigint AND id = $3 AND abilities IS NULL
+`
+
+type SetItemAbilitiesParams struct {
+	Abilities   string
+	CharacterID int64
+	ID          string
+}
+
+func (q *Queries) SetItemAbilities(ctx context.Context, arg SetItemAbilitiesParams) error {
+	_, err := q.db.ExecContext(ctx, setItemAbilities, arg.Abilities, arg.CharacterID, arg.ID)
 	return err
 }
 

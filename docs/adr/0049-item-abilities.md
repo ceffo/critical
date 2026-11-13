@@ -439,6 +439,39 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    rows would need a lifecycle and garbage collection under undo. Revisit if catalogue abilities appear.
 2. **The conversion.** The pure function, the boot step, the review reasons, the snapshot restorer for
    old shapes, the seed in the new shape, the Power Gem's name (steps 18 to 20, 23). Needs 1.
+   *Built, with these rulings* (user, 2026-11-13, after the conversion was found unbuildable as step 19
+   reads it, since the only column is `count`):
+   - **What slice 2 converts: the abilities only.** The boot step writes `items.abilities` and the review
+     rows; `count`, `behaviour`, `max_count`, `effect_dice` and `effect_save` stay exactly as stored, so
+     steps 18 and 21.6 hold (the previous release still runs on the migrated database) and the Power
+     Gem's `left` is its stored count. The pure function `ConvertLegacy` still returns the **quantity**
+     step 19 gives (1 for a charged or daily item), tested per row, but nothing writes it to `count` yet.
+   - **What it leaves to slice 3: applying the quantity to `count`, and the Use cut-over.** Until Use acts
+     on abilities, the old Use moves `count` and an ability's `left` goes stale; slice 3 must, in one
+     change, make `left` the counter (reading it from the converted ability, equal to `count` at
+     conversion), set `count` to the quantity for the one-object items (a charged or daily item's count
+     becomes 1) and stop reading `behaviour`, `max_count` and `effect_*`. Slices 2 and 3 should merge
+     close together; a use between them is the only way the two counters diverge.
+   - **The validator follows:** the `per_day`/`charges` "quantity 1 at most" refusal applies only to the
+     abilities a request adds or changes, never to a stored item (a converted wand keeps its count of 4,
+     the record's "kept, not edited"), so a converted item stays editable.
+   - **Names are data, not a branch:** the Power Gem's "Dispel Magic" comes from the abilities of the
+     seed row of the same item id (the seed character's), lent to an unnamed ability of the same ability
+     id by `NamedFrom`, in the boot step and when a snapshot is popped. No item id is in the code.
+   - **A weapon, armour or shield that was stock with dice** gets an `unlimited` ability with the dice
+     effect (a `with_item` limit needs a stock, step 4); the same for a one-object magic item. It is on
+     the review list as `weapon_with_use`. The other reasons: `quantity_above_one`, `charges_total`,
+     `ammo_not_stock` (codes the Inventory's band words).
+   - **The seed** reads both shapes: an entry with `abilities` is the new shape (`quantity`, default 1;
+     the old columns derived by `MirrorLegacy`, for the previous release); one without is converted by
+     `ConvertLegacy`, as the boot step does. `seeds/items.json` is in the new shape.
+   - **The restorer:** a snapshot with no `abilities` key is converted by `ConvertLegacy` on its old
+     fields when its item is written back (step 20), going through `keepCurrent`, so an undo neither leaves
+     the item unconverted nor strips the abilities of the stored item (its names are kept by ability id).
+     One whose conversion gives no ability is written back as the snapshot had it (NULL when it had no
+     list), which the next boot converts to the same empty list.
+   - The log line at each start: `items converted to abilities converted=N review=M`; zero rows, zero lines
+     of change.
 3. **Use of an ability.** The endpoint, the limit payment, the `dice` effect, the logged entry and its
    undo, the long rest refill, spend-one for the inventory's minus, `usable` and `reason` on the wire,
    the initiative correction for an ability (steps 5 to 7, 15). Needs 2.

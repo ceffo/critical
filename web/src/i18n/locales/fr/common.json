@@ -2919,7 +2919,11 @@
         "weapon_unmatched": "Arme non reconnue : précisez sa vitesse et son type de dégâts.",
         "uncategorised": "Catégorie inconnue (ancien type « {{type}} ») : rangée en équipement.",
         "ammo_kind_unknown": "Type de munition inconnu : choisissez-en un.",
-        "powers_off": "Ses pouvoirs n’agissent qu’équipé, et cette catégorie ne s’équipe pas."
+        "powers_off": "Ses pouvoirs n’agissent qu’équipé, et cette catégorie ne s’équipe pas.",
+        "weapon_with_use": "Une arme, armure ou bouclier qui avait un usage : vérifiez sa capacité, ou retirez-la.",
+        "quantity_above_one": "Plusieurs objets enregistrés pour un objet unique : vérifiez la quantité.",
+        "charges_total": "Seules les charges restantes étaient connues : réglez le total dans l’éditeur.",
+        "ammo_not_stock": "Des munitions qui avaient des charges ou un usage quotidien : c’est un simple stock maintenant."
       }
     },
     "form": {

@@ -529,7 +529,7 @@ _Code_: Items, ItemInput, ItemPatch, ConsumedItem, ConsumeItem, Category
 The character's list of items, and its screen. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0035](docs/adr/0035-equipment-screens.md) items 2 and 7.
 
 **Item ability** (fr: capacité):
-A trait of any item that is used, with a usage limit and effects. An item holds a list of them (the `abilities` column: NULL is an item not yet converted from its behaviour, an empty list one converted with none); the list is stored, served and edited with the item and carried by `item_edit` entries and snapshots. Using one is a later slice. Its Go type is `Ability` (a name the **Ability score** alias already holds). [ADR 0049](docs/adr/0049-item-abilities.md) steps 4 to 7 and 18. _Avoid_: power (an item power is passive), ability alone (an ability score).
+A trait of any item that is used, with a usage limit and effects. An item holds a list of them (the `abilities` column: NULL is an item not yet converted from its behaviour, an empty list one converted with none); the list is stored, served and edited with the item and carried by `item_edit` entries and snapshots. The conversion of an item's old behaviour and count into abilities runs at every start for the rows still NULL, and when an old snapshot is popped ([ADR 0049](docs/adr/0049-item-abilities.md) steps 18 to 20); `count` keeps its old meaning until Use moves to abilities. Using one is a later slice. Its Go type is `Ability` (a name the **Ability score** alias already holds). [ADR 0049](docs/adr/0049-item-abilities.md) steps 4 to 7 and 18. _Avoid_: power (an item power is passive), ability alone (an ability score).
 _Code_: Effect, EffectKind
 
 **Usage limit** (fr: limite d'usage):

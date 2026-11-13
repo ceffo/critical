@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/storage/seedfile"
 )
 
@@ -106,4 +107,51 @@ func TestReadItems_Defaults(t *testing.T) {
 	require.Len(t, items, 1)
 	assert.Equal(t, 2, items[0].Max())
 	assert.Equal(t, "[]", items[0].PowersJSON)
+}
+
+// ADR 0049 step 23: an item in the new shape (quantity, abilities) is read with the old columns the
+// previous release still reads derived from them; the old keys cannot go with it; a bad ability is refused.
+func TestReadItems_ADR0049Step23_NewShape(t *testing.T) {
+	items, err := seedfile.ReadItems(write(t, `[
+	  {"id":"wand","name":{"en":"Wand"},"type":"wand","quantity":1,
+	   "abilities":[{"id":"use","limit":{"kind":"charges","max":4,"left":3,"cost":1},"effects":[{"kind":"dice","dice":"6d6","save":"rod_staff_wand"}]}]},
+	  {"id":"gem","name":{"en":"Gem"},"type":"gem","abilities":[{"id":"use","name":{"en":"Dispel Magic"},"limit":{"kind":"per_day","max":2,"left":1},"effects":[]}]},
+	  {"id":"arrows","name":{"en":"Arrows"},"type":"arrow","ammo_kind":"arrow","quantity":18,"abilities":[]}
+	]`))
+	require.NoError(t, err)
+	wand, gem, arrows := items[0], items[1], items[2]
+	assert.Equal(t, []any{"charges", 3, 3, "6d6", "rod_staff_wand"}, []any{wand.Behaviour, wand.Count, wand.Max(), wand.EffectDice, wand.EffectSave})
+	assert.Equal(t, []any{"daily", 1, 2}, []any{gem.Behaviour, gem.Count, gem.Max()}, "quantity defaults to 1; daily left and max")
+	assert.Equal(t, "Dispel Magic", gem.AbilityList[0].Name["en"])
+	assert.Equal(t, []any{"stock", 18, 18}, []any{arrows.Behaviour, arrows.Count, arrows.Max()})
+	assert.NotNil(t, arrows.AbilityList, "an empty list is converted with none")
+}
+
+func TestReadItems_ADR0049Step23_RefusesAMixedOrBadNewShape(t *testing.T) {
+	for name, body := range map[string]string{
+		"the old keys with abilities": `[{"id":"a","name":{"en":"A"},"behaviour":"stock","abilities":[]}]`,
+		"an unknown ability key":      `[{"id":"a","name":{"en":"A"},"abilities":[{"id":"use","limit":{"kind":"unlimited"},"effects":[],"cooldown":1}]}]`,
+		"a negative quantity":         `[{"id":"a","name":{"en":"A"},"quantity":-1,"abilities":[]}]`,
+	} {
+		_, err := seedfile.ReadItems(write(t, body))
+		assert.Error(t, err, name)
+	}
+}
+
+// ADR 0049 steps 19 and 23: an item still in the old shape is converted by the same function as the
+// boot step, so the seed and an upgraded database hold the same abilities and review reasons.
+func TestEquipment_ADR0049Step19_OldShapeSeedIsConverted(t *testing.T) {
+	items, err := seedfile.ReadItems(write(t, `[
+	  {"id":"wand","name":{"en":"Wand"},"type":"wand","behaviour":"charges","count":4,"effect_dice":"6d6"},
+	  {"id":"rope","name":{"en":"Rope"},"type":"rope","behaviour":"stock","count":2}
+	]`))
+	require.NoError(t, err)
+	conv, err := seedfile.Equipment(items, nil, nil)
+	require.NoError(t, err)
+	require.Len(t, conv.Pieces, 2)
+	require.Len(t, conv.Pieces[0].Abilities, 1)
+	assert.Equal(t, "charges", string(conv.Pieces[0].Abilities[0].Limit.Kind))
+	assert.Equal(t, 4, conv.Pieces[0].Abilities[0].Limit.Max)
+	assert.NotNil(t, conv.Pieces[1].Abilities)
+	assert.Contains(t, conv.Reviews, itemsvc.Review{ItemID: "wand", Reason: itemsvc.ReasonChargesTotal})
 }

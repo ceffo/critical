@@ -24,6 +24,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
@@ -52,6 +53,7 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 			book, seeded = b, w
 			return nil
 		}).Once()
+	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
 	var cat catalogue.Catalogue
 	var refs []catalogue.Ref
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).
@@ -107,9 +109,15 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "seed: boom"},
+		{"convert items", func(h *harness) {
+			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, boom).Once()
+		}, "convert items: boom"},
 		{"adopting the characters without an owner", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
 			h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once()
@@ -118,12 +126,14 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		{"spell catalogue read", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom).Once()
 		}, "load the spell catalogue: boom"},
 		{"catalogue import", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
 	}
@@ -539,6 +549,7 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	h := newHarness(t)
 	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}
 	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{fire}, nil).Once()

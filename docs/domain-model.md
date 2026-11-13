@@ -108,7 +108,7 @@ unrestricted one (the human) may have none, and is then any class with no limit.
 **class limits** (`Class.Equipment`: armour columns, shields, weapon types and codes, blunt only) give
 the class warnings of worn and wielded pieces and, with the weapon catalogue, the weapon types a
 proficiency may be picked in (derived once at import). A race's **traits** (`Race.Trait(kind)`:
-`con_save_bonus`, `no_exceptional_strength`) and its Tables 10 and 11 **identity** rows are read from
+`con_save_bonus`, `no_exceptional_strength`, `weapon_to_hit`) and its Tables 10 and 11 **identity** rows are read from
 its definition; the hit dice are still read from the rule tables (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).
 
@@ -167,7 +167,7 @@ stateDiagram-v2
 One of the six PHB races. A race has **traits**: ability adjustments, level limits per class,
 the languages, and the percentage adjustments of the thief skills
 ([ADR 0030](adr/0030-classes-and-races.md) steps 17, 21 and 22). Traits are data in the catalogue
-([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`),
+([ADR 0040](adr/0040-classes-are-data.md) steps 2 and 4): the computed ones are typed (`con_save_bonus`, `no_exceptional_strength`, `weapon_to_hit`: the elf's and halfling's to-hit bonus by weapon type, a `race` modifier on the attack),
 the others text; a human is a race with no traits. The level limits and the classes a race
 admits are book data; how they apply (they warn; the racial lift for multi-class and dual-class)
 is the ruleset's ([ADR 0041](adr/0041-ruleset.md) steps 2.2, 2.3 and 5).

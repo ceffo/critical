@@ -150,7 +150,13 @@ export function AttackPanel() {
                   ?.warnings.map((code) => (
                     <ClassWarningTag key={code} code={code} />
                   ))}
-                <NonproficientTag penalty={weapon.nonproficientPenalty} />
+                <NonproficientTag
+                  penalty={weapon.nonproficientPenalty}
+                  hasCode={
+                    (items.find((i) => i.id === weapon.id)?.catalogueCode ??
+                      "") !== ""
+                  }
+                />
                 {view.preview?.pointBlank && (
                   <label
                     className="flex w-fit items-center gap-2 text-body"

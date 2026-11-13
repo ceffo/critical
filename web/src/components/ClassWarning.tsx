@@ -46,14 +46,27 @@ export function ClassWarningTag({
  * penalty for the piece (`nonproficientPenalty`), so the penalty is no surprise at the roll.
  * Nothing for a penalty of 0.
  */
-export function NonproficientTag({ penalty }: { penalty: number }) {
+export function NonproficientTag({
+  penalty,
+  hasCode,
+}: {
+  penalty: number;
+  /** Whether the piece has a catalogue code: the weapon pick names a catalogue weapon, so a piece
+   * without one is fixed on the item, not in the Skills tab (ADR 0037 step 21.4). */
+  hasCode: boolean;
+}) {
   const { t } = useTranslation();
   if (penalty >= 0) return null;
   const value = formatSigned(penalty);
   return (
     <span
       className="flex items-center gap-1 text-label text-warning"
-      title={t("weaponProficiencies.nonproficientHint", { value })}
+      title={t(
+        hasCode
+          ? "weaponProficiencies.nonproficientHint"
+          : "weaponProficiencies.nonproficientHintNoCode",
+        { value },
+      )}
       data-testid="nonproficient"
     >
       <Warning aria-hidden className="size-3.5 shrink-0" />

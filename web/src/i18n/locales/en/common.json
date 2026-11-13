@@ -3511,7 +3511,7 @@
     "saveHint": "Save the weapon proficiencies (undo from the journal)",
     "pool": "Slots: {{initial}} to start + {{levels}} for the levels (one every {{perLevels}}) = {{available}}",
     "none": "No weapon proficiency.",
-    "list": "Your class’s weapon types",
+    "list": "Your class’s weapons",
     "unpicked": "Not proficient",
     "plain_one": "Proficient · {{count}} slot",
     "plain_other": "Proficient · {{count}} slots",
@@ -3529,7 +3529,8 @@
     "unspecializeHint": "Remove the specialization in {{name}} (back to 1 slot)",
     "remove": "Remove {{name}}",
     "nonproficient": "Not proficient: {{value}} to hit",
-    "nonproficientHint": "No proficiency with this weapon type: {{value}} to hit. Choose it in the Skills tab.",
+    "nonproficientHint": "No proficiency with this weapon: {{value}} to hit. Pick it by name in the Skills tab.",
+    "nonproficientHintNoCode": "No proficiency with this weapon: {{value}} to hit. It has no catalogue weapon: pick one in its item’s edit.",
     "errors": {
       "out_of_range": "This number of slots is neither a proficiency nor a specialization.",
       "duplicate": "This weapon type is already picked.",

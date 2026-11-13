@@ -3511,7 +3511,7 @@
     "saveHint": "Enregistrer les maîtrises d’armes (annulable dans le journal)",
     "pool": "Emplacements : {{initial}} de départ + {{levels}} pour les niveaux (un tous les {{perLevels}}) = {{available}}",
     "none": "Aucune arme maîtrisée.",
-    "list": "Types d’armes de votre classe",
+    "list": "Armes de votre classe",
     "unpicked": "Non maîtrisée",
     "plain_one": "Maîtrisée · {{count}} emplacement",
     "plain_other": "Maîtrisée · {{count}} emplacements",
@@ -3529,7 +3529,8 @@
     "unspecializeHint": "Retirer la spécialisation en {{name}} (revient à 1 emplacement)",
     "remove": "Retirer {{name}}",
     "nonproficient": "Non maîtrisée : {{value}} au toucher",
-    "nonproficientHint": "Aucune maîtrise de ce type d’arme : {{value}} pour toucher. Choisissez-la dans l’onglet Compétences.",
+    "nonproficientHint": "Aucune maîtrise de cette arme : {{value}} pour toucher. Choisissez-la par son nom dans l’onglet Compétences.",
+    "nonproficientHintNoCode": "Aucune maîtrise de cette arme : {{value}} pour toucher. Elle n’a pas d’arme du catalogue : choisissez-en une dans la modification de l’objet.",
     "errors": {
       "out_of_range": "Ce nombre d’emplacements n’est ni une maîtrise ni une spécialisation.",
       "duplicate": "Ce type d’arme est déjà maîtrisé.",

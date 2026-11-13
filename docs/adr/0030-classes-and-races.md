@@ -919,11 +919,19 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
        "when using thrown weapons", and a dagger held in melee is not thrown, so a halfling stabbing
        with the catalogue's (melee) dagger gets nothing, and a thrown dagger (a missile piece of the
        dagger type) gets +1. This is a rule on the weapon types, not on a race.
+       _(proposed, the gap of reading by type)_ The bonus follows the catalogue's weapon types, so
+       two kinds of weapon the book's words may cover get nothing: the staff sling (a sling to the
+       book, typed `other_missile` with the blowgun, so listing that type would also give the
+       blowgun), and the weapons the book lets one throw but the catalogue types as melee (spear,
+       knife, club: `other_melee`, a melee piece). Default built: no bonus with them. Closing the gap
+       is a data change (a staff sling of its own type, or a thrown piece of a weapon), not a rule
+       on a weapon's name; the user rules on it with the thrown reading above.
        Tests: `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt: the
-       traits as data), `TestDerive_Step22_3_RaceToHitFromTheTrait` (charactersvc),
+       traits as data), `TestAttack_Step22_3_TheCatalogueTraitReachesTheAttack` (composition:
+       the catalogue's weapons, the gap included), `TestDerive_Step22_3_RaceToHitFromTheTrait` (charactersvc),
        `TestResolveAttack_Step22_3_RaceToHitByWeaponType`,
        `TestResolveAttack_Step22_3_RaceBonusIsNoDamage`, `TestPreviewAttack_Step22_3_ShowsTheRaceBonus`
-       (combatsvc), `TestAttackPreview_Step22_3_TheCatalogueTraitReachesTheAttack` (composition).
+       (combatsvc).
 
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 2 and 4, on implementation: the Table 9 bonus is the race's `con_save_bonus` trait (categories and poison as params), not `conSaveRaces`; 22.3, once accepted, is the `weapon_to_hit` trait; a human is a race with no traits, not a `race == "human"` test)_
 

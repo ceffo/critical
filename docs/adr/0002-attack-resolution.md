@@ -9,6 +9,8 @@ _Amended by [ADR 0033](0033-equipment.md) (equipment, accepted 2026-10-18), on i
 
 _Amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), implemented 2026-10-20: steps 2 and 12 gain the to-hit modifier `nonproficient` (PHB Table 34's penalty for a weapon type without a pick, listed after the buffs and before the situational modifier, ADR 0037 step 8; detail the weapon type), and the Consequences' "proficiency penalties" leave the not covered. Tests: ADR 0037 step 8's._
 
+_Amended by [ADR 0030](0030-classes-and-races.md) step 22.3 (the racial to-hit bonus, accepted by the user 2026-11-13), implemented 2026-11-13: steps 2 and 12 gain the to-hit modifier `race` (the race's `weapon_to_hit` trait, [ADR 0040](0040-classes-are-data.md) step 4, when the weapon's type is one it lists; detail the race code; not magical, to hit only), listed after Dexterity and before the weapon's magic; the Consequences' order gains it. Tests: ADR 0030 step 22.3's._
+
 ## Context
 
 The app resolves the Bard's weapon attacks: it rolls the dice, adds every to-hit modifier and says
@@ -96,7 +98,8 @@ return a distinct value for each call and expect an exact number of calls.
 
 - Every to-hit modifier is listed in the roll's `Modifiers`, in the order of the steps above
   (Strength, Dexterity, weapon or buff "+N", ammunition, buffs, situational), the
-  non-proficiency penalty between the buffs and the situational one (ADR 0037 step 8).
+  non-proficiency penalty between the buffs and the situational one (ADR 0037 step 8), the
+  race's to-hit bonus between Dexterity and the weapon's magic (ADR 0030 step 22.3).
 - The Power Gem's "+5" (step 6) and its ×2 (ADR 0003 step 4) are its thunder hammer, an item
   power on while the effective STR is 18 or more (user, 2026-10-13: "not exactly 18 >= 18"), with
   a melee weapon only ([ADR 0016](0016-inventory.md) steps 10, 12 and 16). A hand-made buff with

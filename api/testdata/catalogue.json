@@ -1102,7 +1102,8 @@
       {"weapon_type": "heavy_crossbow", "attacks": 1, "rounds": 2},
       {"weapon_type": "dagger", "attacks": 2, "rounds": 1},
       {"weapon_type": "dart", "attacks": 3, "rounds": 1},
-      {"weapon_type": "sling", "attacks": 1, "rounds": 1}
+      {"weapon_type": "sling", "attacks": 1, "rounds": 1},
+      {"weapon_type": "staff_sling", "attacks": 2, "rounds": 1}
     ],
     "wizard_spells": [
       {"level": 1, "per_spell_level": [1, 0, 0, 0, 0, 0, 0, 0, 0]},

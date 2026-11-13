@@ -83,6 +83,7 @@ func TestAttackRateFor_Step11(t *testing.T) {
 		{"dart", "fighter", 20, "missile", "dart", false, rate(3, 1)},
 		{"specialized dart level 13", "fighter", 13, "missile", "dart", true, rate(6, 1)},
 		{"sling", "fighter", 7, "missile", "sling", false, rate(1, 1)},
+		{"staff sling fires twice a round (Table 45: 2/1)", "fighter", 7, "missile", "staff_sling", false, rate(2, 1)},
 		{"specialized sling reads other missile", "fighter", 7, "missile", "sling", true, rate(2, 1)},
 		{"specialized hand crossbow reads other missile", "fighter", 13, "missile", "hand_crossbow", true, rate(5, 2)},
 		{"specialized other thrown reads other missile", "fighter", 1, "missile", "other_thrown", true, rate(3, 2)},

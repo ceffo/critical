@@ -34,7 +34,7 @@ var SpecialistWeapons = []string{
 
 // MissileWeaponTypes are the weapon types with a rate of fire (PHB Table 45).
 var MissileWeaponTypes = []string{
-	"long_bow", "short_bow", "hand_crossbow", "light_crossbow", "heavy_crossbow", "dagger", "dart", "sling",
+	"long_bow", "short_bow", "hand_crossbow", "light_crossbow", "heavy_crossbow", "dagger", "dart", "sling", "staff_sling",
 }
 
 // Undead are the rows of PHB Table 61.

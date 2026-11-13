@@ -345,7 +345,7 @@ something needs their decision.
 
 ## 2. Dispatch a developer
 
-**Start a developer with one command**, after writing the brief file: `.claude/bin/fleet dispatch <id> <branch> <brief> --model M --review yes|no [--round N] [--base <parent-branch>] [--wt <path>] [--title T] [--also <id>]... --sup <you>`. When one change closes more than one item, pass each extra with `--also <id>`: it is claimed and recorded in the store like the first (same developer, worktree and brief), so ship records its change and land marks it merged. It claims the item (`In Progress`), creates the worktree (`<wt>/<id>-<slug>` from `origin/<db>`, or from `--base`'s tip for a stacked child, with `BASE <sha>` in its line and the store stage), runs `agent-start` and `agent-prompt` (name suffix `b` and the rest as they do), records `fleet store dispatch`, and prints one line. An existing worktree or branch is reused (a fresh developer on it) and the item is not claimed again. Without herdr it does everything but the agent and says so (use the Agent tool). On a failure it stops and the one line says what is done and what is not (nothing is undone): finish the missing steps by hand with the commands below, never re-run it blind (a prompt "NOT confirmed" means the agent exists: read its tab). The manual steps that follow are what it does, for a role or case it does not cover.
+**Start a developer with one command**, after writing the brief file: `.claude/bin/fleet dispatch <id> <branch> <brief> --model M --review yes|no [--round N] [--base <parent-branch>] [--wt <path>] [--title T] [--also <id>]... --sup <you>`. When one change closes more than one item, pass each extra with `--also <id>`: it is claimed and recorded in the store like the first (same developer, worktree and brief), so ship records its change and land marks it merged. It claims the item (`In Progress`), creates the worktree (`<wt>/<id>-<slug>` from `origin/<db>`, or from `--base`'s tip for a stacked child, with `BASE <sha>` in its line and the store stage), runs `agent-start` and `agent-prompt` (name suffix `b` and the rest as they do), records `fleet store dispatch`, and prints one line. An existing worktree or branch is reused (a fresh developer on it) and each item is claimed only if it is still `Todo` (a parked plan round sets it back); one already `In Progress` or later is not claimed again. Without herdr it does everything but the agent and says so (use the Agent tool). On a failure it stops and the one line says what is done and what is not (nothing is undone): finish the missing steps by hand with the commands below, never re-run it blind (a prompt "NOT confirmed" means the agent exists: read its tab). The manual steps that follow are what it does, for a role or case it does not cover.
 
 Manual: claim the item (`.claude/bin/fleet tracker state <id> "In Progress"`).
 
@@ -600,6 +600,10 @@ post-merge gate (`FLEET_POST_MERGE_CMD`, see "Post-merge gate watch") the fleet'
 unmerged goes back to Todo (`.claude/bin/fleet tracker state <id> Todo "change #n closed unmerged"`).
 Keep status honest when work is parked. There is no export or sync step. New work is created via the
 scoper. Use `.claude/bin/fleet tracker` (run it without arguments for the verbs) and what the workflow doc adds.
+
+## Secrets: never in the output
+
+Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get), and never try to hide it with a homemade filter (`sed`, `grep`, `awk` masking): the session transcript keeps what the command printed before any filter runs, and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`). To use a secret, read it and pass it on where it is needed (on the target host, in a variable of the command that consumes it), never to the output. Say in your report what you could not check without the value.
 
 ## Git policy
 

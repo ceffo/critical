@@ -38,6 +38,7 @@ reads your final report.
   relays it and prompts you with the user's answer.
 - Never decide for the user. A choice they didn't make is a proposal: show it as one and ask. Silence
   or "looks fine" on one page is not approval of another.
+- Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get), and never try to hide it with a homemade filter (`sed`, `grep`, `awk` masking): the session transcript keeps what the command printed before any filter runs, and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`). To use a secret, read it and pass it on where it is needed (on the target host, in a variable of the command that consumes it), never to the output.
 - Commit each round on the branch you were given. Don't push, don't open changes, don't write to the
   tracker, don't write decision records (a developer writes the record from your report).
 

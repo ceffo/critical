@@ -64,6 +64,8 @@ type tables struct {
 	// the equipment model (migration 016), which only the migration run reads.
 	Weapons map[string]weaponRow
 	Items   map[string]storeq.InsertItemParams
+	// Abilities is items.abilities by rowKey: a missing key is NULL (not converted).
+	Abilities map[string]string
 	// Reviews are equipment_review rows, "character|item|reason"; Renames item_id_renames, by rowKey
 	// of the old id.
 	Reviews map[string]bool
@@ -148,7 +150,7 @@ type correctionRow struct {
 func newFakeStore() *fakeStore {
 	return &fakeStore{t: tables{
 		Slots: map[int64]string{}, Buffs: map[int64]string{}, Rounds: map[int64]bool{},
-		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{},
+		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{}, Abilities: map[string]string{},
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
@@ -1200,4 +1202,32 @@ func (f *fakeStore) ProficiencyDescriptionTexts(context.Context) ([]storeq.Profi
 		return out[i].Lang < out[j].Lang
 	})
 	return out, nil
+}
+
+func (f *fakeStore) ListUnconvertedItems(context.Context) ([]storeq.ListUnconvertedItemsRow, error) {
+	var out []storeq.ListUnconvertedItemsRow
+	for key, it := range f.t.Items {
+		if _, converted := f.t.Abilities[key]; converted {
+			continue
+		}
+		out = append(out, storeq.ListUnconvertedItemsRow{
+			CharacterID: it.CharacterID, ID: it.ID, Category: it.Category, MagicKind: it.MagicKind, Behaviour: it.Behaviour,
+			Count: it.Count, MaxCount: it.MaxCount, EffectDice: it.EffectDice, EffectSave: it.EffectSave,
+		})
+	}
+	slices.SortFunc(out, func(a, b storeq.ListUnconvertedItemsRow) int {
+		return cmp.Or(cmp.Compare(a.CharacterID, b.CharacterID), cmp.Compare(a.ID, b.ID))
+	})
+	return out, nil
+}
+
+func (f *fakeStore) SetItemAbilities(_ context.Context, arg storeq.SetItemAbilitiesParams) error {
+	key := rowKey(arg.CharacterID, arg.ID)
+	if _, ok := f.t.Items[key]; !ok {
+		return nil
+	}
+	if _, converted := f.t.Abilities[key]; !converted {
+		f.t.Abilities[key] = arg.Abilities
+	}
+	return nil
 }

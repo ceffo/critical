@@ -74,7 +74,9 @@ func TestUpdate_ADR0033Step2_AScrollNamesItsSpell(t *testing.T) {
 			// Undo writes the "before" back: the spell the scroll had.
 			pop := mocks.NewMockDAL(t)
 			popSvc, _ := itemsvc.New(pop, deps(t).Deps)
-			pop.EXPECT().Update(mock.Anything, int64(1), tt.old).Return(nil).Once()
+			pop.EXPECT().Get(mock.Anything, int64(1), "scroll").Return(tt.want, nil).Maybe()
+			// A scroll held in doses is a with_item ability once converted (ADR 0049 step 20).
+			pop.EXPECT().Update(mock.Anything, int64(1), converted(tt.old)).Return(nil).Once()
 			require.NoError(t, popSvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 		})
 	}

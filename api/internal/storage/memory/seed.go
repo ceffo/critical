@@ -240,3 +240,10 @@ func (t *tables) carrySkillArmour(owner int64, armours []ruletablesvc.Armour, de
 	}
 	return nil
 }
+
+// ConvertItems converts nothing: the store starts empty and its seed is already in the new shape
+// (or converted by the same function as the database's), so no row is ever not converted (ADR 0049
+// step 18).
+func (s *Store) ConvertItems(context.Context, string) (itemsvc.BootConversion, error) {
+	return itemsvc.BootConversion{}, nil
+}

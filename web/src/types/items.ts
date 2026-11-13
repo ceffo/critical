@@ -114,7 +114,15 @@ export interface StrengthRating {
 
 /** Why a piece is on the review list (ADR 0033 step 27, itemsvc.Reason*). */
 export type ReviewReason =
-  "weapon_unmatched" | "uncategorised" | "ammo_kind_unknown" | "powers_off";
+  | "weapon_unmatched"
+  | "uncategorised"
+  | "ammo_kind_unknown"
+  | "powers_off"
+  | "weapon_with_use"
+  | "quantity_above_one"
+  | "charges_total"
+  | "ammo_not_stock"
+  | "limit_clamped";
 
 export interface Item {
   id: string;

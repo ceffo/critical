@@ -135,3 +135,6 @@ ContactPreview  # Technical: read model, the contact's cost and score before the
 CostTable  # Technical: read model, the rule table a power's cost names, for the web's controls
 Mods  # Technical: the strength owner's value, the hit and damage adjustments of a Strength score (see Strength, PHB Table 1)
 Table  # Technical: the strength owner's validated PHB Table 1 rows (see Strength, Rule table)
+LegacyFields  # Technical: the old columns (behaviour, count, max count, effect dice) a seed row in the new shape derives from its abilities, for the previous release (ADR 0049 step 18)
+BootConversion  # Technical: what one run of the boot conversion did (counts for the log line, ADR 0049 step 18)
+Converted  # Technical: the result of the pure conversion of an item's old fields (ADR 0049 step 19)

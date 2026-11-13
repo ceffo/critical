@@ -109,8 +109,9 @@ func TestItemPowers_Step15_SnapshotCarriesThePowers(t *testing.T) {
 	// Popping the remove inserts the gem back whole, hammer included.
 	restore := mocks.NewMockDAL(t)
 	rsvc, _ := itemsvc.New(restore, deps(t).Deps)
-	restore.EXPECT().Update(mock.Anything, int64(1), gem).Return(itemsvc.ErrItemNotFound).Once()
-	restore.EXPECT().Insert(mock.Anything, int64(1), gem).Return(nil).Once()
+	restore.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound)
+	restore.EXPECT().Update(mock.Anything, int64(1), converted(gem)).Return(itemsvc.ErrItemNotFound).Once()
+	restore.EXPECT().Insert(mock.Anything, int64(1), converted(gem)).Return(nil).Once()
 	require.NoError(t, rsvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, got.Snapshots[0].Before))
 }
 
@@ -151,10 +152,10 @@ func TestItemPowers_Step15_OldSnapshotKeepsTheStoredPowers(t *testing.T) {
 		"type":"gem","behaviour":"daily","magicalBonus":0,"ammoKind":"","maxCount":1,"effectDice":"","effectSave":"","notes":"old"}}`)
 	dal := mocks.NewMockDAL(t)
 	svc, _ := itemsvc.New(dal, deps(t).Deps)
-	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "power_gem_dispel").Return(gem, nil)
 	want := gem
 	want.Name, want.Notes = localized.Of("Power Gem: Dispel Magic"), "old"
-	dal.EXPECT().Update(mock.Anything, int64(1), want).Return(nil).Once()
+	dal.EXPECT().Update(mock.Anything, int64(1), converted(want)).Return(nil).Once()
 	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, old))
 }
 

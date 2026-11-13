@@ -746,7 +746,7 @@ func TestItems_ADR0049Step18_AbilitiesNilEmptyAndListSurviveTheStore(t *testing.
 	require.NotEmpty(t, items)
 	it := items[0]
 	for _, a := range items {
-		assert.Nil(t, a.Abilities, "a seeded item is not converted")
+		assert.NotNil(t, a.Abilities, "a seeded item is converted (ADR 0049 step 23)")
 	}
 
 	list := []itemsvc.Ability{{

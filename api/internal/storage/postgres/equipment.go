@@ -175,3 +175,20 @@ func insertReviews(ctx context.Context, q storeq.Querier, owner int64, reviews [
 	}
 	return nil
 }
+
+// insertAbilities writes the abilities of a piece the seed inserted (ADR 0049 step 23): the
+// migration 016 insert predates the column, so they are a second statement. nil (not converted)
+// writes nothing, and the boot conversion reads the row.
+func insertAbilities(ctx context.Context, q storeq.Querier, owner int64, p itemsvc.Item) error {
+	text, ok, err := itemsvc.EncodeAbilities(p.Abilities)
+	if err != nil {
+		return fmt.Errorf("piece %s: %w", p.ID, err)
+	}
+	if !ok {
+		return nil
+	}
+	if err := q.SetItemAbilities(ctx, storeq.SetItemAbilitiesParams{CharacterID: owner, ID: p.ID, Abilities: text}); err != nil {
+		return fmt.Errorf("piece %s abilities: %w", p.ID, err)
+	}
+	return nil
+}

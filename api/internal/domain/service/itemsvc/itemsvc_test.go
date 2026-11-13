@@ -127,6 +127,13 @@ func TestUse_RemoveErrorFails(t *testing.T) {
 	require.Error(t, err)
 }
 
+// converted is the item as the boot conversion leaves it (ADR 0049 step 19): the abilities of its
+// old fields. Popping a snapshot of before abilities gives the item back so (step 20).
+func converted(it itemsvc.Item) itemsvc.Item {
+	it.Abilities = itemsvc.ConvertLegacy(it).Abilities
+	return it
+}
+
 var wand = itemsvc.Item{
 	ID: "wand_lightning", Position: 4, Name: localized.Of("Wand of lightning"), Type: "wand", Behaviour: itemsvc.BehaviourCharges,
 	Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicWand, State: itemsvc.StateCarried,
@@ -177,7 +184,8 @@ func TestRestorers_PutBackARemovedItem(t *testing.T) {
 	dal.EXPECT().SetCount(mock.Anything, int64(1), "wand_lightning", 1).Return(fmt.Errorf("%w: wand_lightning", itemsvc.ErrItemNotFound)).Once()
 	back := wand
 	back.Count = 1
-	dal.EXPECT().Insert(mock.Anything, int64(1), back).Return(nil).Once()
+	dal.EXPECT().Get(mock.Anything, int64(1), "wand_lightning").Return(itemsvc.Item{}, itemsvc.ErrItemNotFound).Maybe()
+	dal.EXPECT().Insert(mock.Anything, int64(1), converted(back)).Return(nil).Once()
 	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snap.Before))
 }
 

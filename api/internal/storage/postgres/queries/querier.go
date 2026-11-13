@@ -87,6 +87,10 @@ type Querier interface {
 	// skill set its class grants. Only the characters that have points and no skill sets yet.
 	ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
+	// The boot conversion to abilities (ADR 0049 step 18): the rows whose abilities are NULL, in the old
+	// fields' meaning, and the write that converts one (guarded, so a rerun or a second instance converts
+	// nothing twice). Only the abilities column is written: count and the old columns keep their meaning.
+	ListUnconvertedItems(ctx context.Context) ([]ListUnconvertedItemsRow, error)
 	// Writer lock (ADR 0025 step 4): every write transaction takes it first; the commit or the
 	// rollback releases it. One fixed key for the whole database.
 	LockWriters(ctx context.Context) error
@@ -118,6 +122,7 @@ type Querier interface {
 	// The seed character's alignment and sex when it lacks them (migration 013): a value set since is
 	// kept, so a rerun changes nothing.
 	SetIdentityIfUnset(ctx context.Context, arg SetIdentityIfUnsetParams) error
+	SetItemAbilities(ctx context.Context, arg SetItemAbilitiesParams) error
 	// The race of a character stored before races had codes (migration 007): only while it has none,
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error

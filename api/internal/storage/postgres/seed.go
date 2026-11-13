@@ -356,6 +356,9 @@ func seedEquipment(ctx context.Context, q storeq.Querier, owner int64, itemsPath
 		if err := insertPiece(ctx, q, owner, p, key); err != nil {
 			return err
 		}
+		if err := insertAbilities(ctx, q, owner, p); err != nil {
+			return err
+		}
 	}
 	if err := insertReviews(ctx, q, owner, conv.Reviews); err != nil {
 		return err

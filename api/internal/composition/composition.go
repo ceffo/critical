@@ -6,6 +6,7 @@ package composition
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/ceffo/critical/api/internal/adapters/bridgeadpt"
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
@@ -257,6 +258,12 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := db.Seed(ctx, cfg.SeedsDir, spellbookSeed, catalogueEquipment, defs); err != nil {
 		return nil, fmt.Errorf("seed: %w", err)
 	}
+	// ADR 0049 step 18: the items not converted to abilities yet are, once, in one transaction.
+	conv, err := db.ConvertItems(ctx, cfg.SeedsDir)
+	if err != nil {
+		return nil, fmt.Errorf("convert items: %w", err)
+	}
+	slog.Info("items converted to abilities", "converted", conv.Converted, "review", conv.Review)
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
 		return nil, err
 	}

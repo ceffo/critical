@@ -148,9 +148,6 @@ func (i Item) validAbilities() error {
 		if err := a.Limit.valid(); err != nil {
 			return fail("%s", err.Error())
 		}
-		if a.Limit.PaysPerObject() && i.Count > 1 {
-			return fail("a %s ability needs a quantity of 1 at most (one counter per object)", a.Limit.Kind)
-		}
 		if a.Limit.Kind == LimitWithItem && !i.HasStock() {
 			return fail("a with_item ability needs an item that has a quantity (ammunition, gear, a potion or a scroll)")
 		}
@@ -158,6 +155,20 @@ func (i Item) validAbilities() error {
 			if err := ef.valid(); err != nil {
 				return fail("effect %d: %s", e+1, err.Error())
 			}
+		}
+	}
+	return nil
+}
+
+// validAbilityCounts checks the abilities a request adds or changes against
+// the piece's quantity (ADR 0049 step 4: per_day and charges are one counter
+// per object). It runs only when the request carries abilities: a stored,
+// already converted piece (the boot conversion keeps a wand's count as the
+// old release stored it, slice note) is kept as it is and stays editable.
+func (i Item) validAbilityCounts() error {
+	for n, a := range i.Abilities {
+		if a.Limit.PaysPerObject() && i.Count > 1 {
+			return domain.FieldErrorf("abilities", "Ability %d: a %s ability needs a quantity of 1 at most (one counter per object)", n+1, a.Limit.Kind)
 		}
 	}
 	return nil
@@ -344,4 +355,18 @@ func abilitiesText(abilities []Ability) string {
 		return ""
 	}
 	return text
+}
+
+// ParseAbilities reads an ability list written by hand (the item seed): the
+// stored encoding, strict (an unknown key is refused, a typo would otherwise
+// drop an effect silently). The abilities are checked with the item they
+// belong to (Item.Validate).
+func ParseAbilities(raw []byte) ([]Ability, error) {
+	dec := json.NewDecoder(strings.NewReader(string(raw)))
+	dec.DisallowUnknownFields()
+	var js []jsonAbility
+	if err := dec.Decode(&js); err != nil {
+		return nil, fmt.Errorf("abilities: %w", err)
+	}
+	return fromJSONAbilities(js), nil
 }

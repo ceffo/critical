@@ -64,10 +64,9 @@ type snapItem struct {
 	// leaves the stored powers as they are (see keepCurrent).
 	Powers *[]jsonPower `json:"powers,omitempty"`
 	// Abilities are the item's abilities (ADR 0049 step 4), written for a
-	// converted item ([] for none). Absent means not converted yet (NULL,
-	// step 18): a snapshot of before abilities existed reads the same, and a
-	// pop puts the NULL back (the conversion of an old snapshot's fields is
-	// step 20, a later slice).
+	// converted item ([] for none). Absent means a snapshot of before
+	// abilities existed (or of an item not converted yet): a pop converts its
+	// old fields (ADR 0049 step 20, withLegacyAbilities).
 	Abilities *[]jsonAbility `json:"abilities,omitempty"`
 	// Piece holds the fields of the one equipment model (ADR 0033 steps 1
 	// to 6); nil in a snapshot taken before it, whose item then keeps the
@@ -189,6 +188,44 @@ func withPiece(item Item, cur *Item) Item {
 // 0033 step 26.2). An item that is gone has nothing else to keep (ADR 0016
 // Consequences).
 func (s *service) keepCurrent(ctx context.Context, characterID int64, id string, c itemState) (Item, error) {
+	item, err := s.keepCurrentFields(ctx, characterID, id, c)
+	if err != nil {
+		return Item{}, err
+	}
+	return s.withLegacyAbilities(ctx, characterID, c, item)
+}
+
+// withLegacyAbilities is item with the abilities ConvertLegacy gives the old
+// fields of a snapshot that has no abilities key (ADR 0049 step 20), so
+// popping an entry of before abilities never leaves the item unconverted or
+// strips the abilities the boot conversion gave it. Abilities that the item
+// now stored has under the same id lend their names (the conversion cannot
+// know a name an edit or the seed gave). A snapshot with the key is as it was.
+func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c itemState, item Item) (Item, error) {
+	if c.Item.Abilities != nil {
+		return item, nil
+	}
+	conv := ConvertLegacy(item)
+	converted := conv.Abilities
+	if len(converted) == 0 || conv.Check(item) != nil {
+		// Nothing to give: the item stays as the snapshot had it (NULL when it
+		// had no list), which the next boot converts to the same empty list.
+		return item, nil
+	}
+	item.Abilities = converted
+	cur, err := s.dal.Get(ctx, characterID, item.ID)
+	switch {
+	case errors.Is(err, ErrItemNotFound):
+	case err != nil:
+		return Item{}, err
+	default:
+		NamedFrom(item.Abilities, cur.Abilities)
+	}
+	return item, nil
+}
+
+// keepCurrentFields is keepCurrent without the abilities.
+func (s *service) keepCurrentFields(ctx context.Context, characterID int64, id string, c itemState) (Item, error) {
 	item := c.item(id)
 	if c.Item.Powers != nil && !c.Item.NamePartial && c.Item.Piece != nil {
 		return item, nil
@@ -292,6 +329,9 @@ func (s *service) restoreItem(ctx context.Context, characterID int64, id string,
 		item := c.item(id)
 		if c.Item.Piece == nil {
 			item = withPiece(item, nil)
+		}
+		if item, err = s.withLegacyAbilities(ctx, characterID, c, item); err != nil {
+			return err
 		}
 		err = s.dal.Insert(ctx, characterID, item)
 	}

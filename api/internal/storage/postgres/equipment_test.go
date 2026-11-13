@@ -139,7 +139,8 @@ func TestConvertEquipment_Step26_ExistingDatabase(t *testing.T) {
 }
 
 // A fresh database seeds the converted equipment: the same pieces as an upgraded one, with their
-// review rows (the bastard sword and the mace are other_melee).
+// review rows (the bastard sword and the mace are other_melee; the fixture's wand is still in the
+// old shape, so the conversion of its charges puts its total on the list, ADR 0049 step 19).
 func TestSeed_Step26_SeedsTheConvertedEquipment(t *testing.T) {
 	f := newFakeStore()
 	require.NoError(t, seedOn(f, repoSeeds()))
@@ -151,6 +152,7 @@ func TestSeed_Step26_SeedsTheConvertedEquipment(t *testing.T) {
 	assert.Equal(t, map[string]bool{
 		rowKey(owner, "bastard_sword") + "|weapon_unmatched": true,
 		rowKey(owner, "mace") + "|weapon_unmatched":          true,
+		rowKey(owner, "wand_lightning") + "|charges_total":   true,
 	}, f.t.Reviews)
 }
 

@@ -237,6 +237,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if err := item.Validate(); err != nil {
 		return nil, err
 	}
+	if err := item.validAbilityCounts(); err != nil {
+		return nil, err
+	}
 	if in.Equip && item.EquipState() == "" {
 		return nil, fieldErr("equip", CodeNotAllowed)
 	}
@@ -372,6 +375,14 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		}
 		if err := item.Validate(); err != nil {
 			return err
+		}
+		// The per-object count check runs when the request adds or changes abilities,
+		// or changes the count (a stored converted wand keeps its old count and stays
+		// editable otherwise).
+		if p.Abilities != nil || (p.Count != nil && *p.Count != old.Count) {
+			if err := item.validAbilityCounts(); err != nil {
+				return err
+			}
 		}
 		if item.SpellID != old.SpellID {
 			if err := s.knownSpell(ctx, item); err != nil {

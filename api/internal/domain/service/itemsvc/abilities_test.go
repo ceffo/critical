@@ -91,8 +91,6 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"too many effects":                  withAbility(rope, manyEffects()),
 		"a name too long":                   withAbility(rope, itemsvc.Ability{ID: "a", Name: localized.Text{"en": strings.Repeat("x", itemsvc.MaxAbilityName+1)}, Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}),
 		"a label too long":                  withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d6", Label: strings.Repeat("x", itemsvc.MaxEffectLabel+1)})),
-		"per_day on a stack of 3":           withAbility(rope, perDay(1, 1)),
-		"charges on a stack of 3":           withAbility(rope, charges(5, 5, 1)),
 		"with_item on a wand (no quantity)": withAbility(wand, itemsvc.Ability{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}}),
 		// Step 5.
 		"an unknown limit":        withAbility(rope, itemsvc.Ability{ID: "a", Limit: itemsvc.Limit{Kind: "hourly"}}),
@@ -349,4 +347,38 @@ func TestUpdate_ADR0049Step18_NullToEmptyAndUndoBackToNull(t *testing.T) {
 	res, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Count: &cnt})
 	require.NoError(t, err)
 	assert.Nil(t, res.Item.Abilities)
+}
+
+// ADR 0049 step 4 (slice 2 ruling): a converted wand keeps its old count of 4 (the boot
+// conversion writes the abilities only), so an edit that carries no ability change is not
+// refused for it; one that adds or changes an ability on a stack is.
+func TestUpdate_ADR0049Step4_StoredCountAboveOneDoesNotBlockEditsButBlocksAbilityChanges(t *testing.T) {
+	converted := withAbility(rope, itemsvc.Ability{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 4, Left: 4, Cost: 1}})
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	svc, _ := itemsvc.New(dal, f.Deps)
+	dal.EXPECT().Get(mock.Anything, int64(1), "rope").Return(converted, nil)
+	dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil).Once()
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil).Once()
+	notes := "frayed"
+	_, err := svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Notes: &notes})
+	require.NoError(t, err)
+
+	// A count edit is a change of quantity: per-object abilities refuse more than one object.
+	more := converted.Count + 46
+	var fe *domain.FieldError
+	_, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Count: &more})
+	require.True(t, errors.As(err, &fe), "a count edit on a converted per-object item is refused: %v", err)
+	assert.Equal(t, "abilities", fe.Field)
+
+	changed := []itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitPerDay, Max: 1, Left: 1}}}
+	_, err = svc.Update(context.Background(), 1, "rope", itemsvc.ItemPatch{Abilities: &changed})
+	require.True(t, errors.As(err, &fe), "%v", err)
+	assert.Equal(t, "abilities", fe.Field)
+
+	_, err = svc.Create(context.Background(), 1, itemsvc.ItemInput{
+		Name: localized.Of("Coil"), Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 3,
+		Abilities: []itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}}},
+	})
+	require.True(t, errors.As(err, &fe), "%v", err)
 }

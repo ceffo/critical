@@ -937,17 +937,25 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
          ruling, 2026-11-13: out of scope); only the race's bonus reads the piece's being hurled.
        - Stored staff slings, picked before format 22 as `other_missile`, become `staff_sling` by
          migration 041's data step (`retypeCatalogueWeapons`); a piece the player typed otherwise is
-         kept. A weapon proficiency in `other_missile` no longer covers a staff sling: a stored
-         pick is kept as it is ([ADR 0037](0037-proficiencies.md) step 16), and a character who was
-         proficient with a staff sling through it is not until the player picks `staff_sling`.
+         kept. A weapon proficiency in `other_missile` no longer covers a staff sling, so the same
+         data step carries the owner's proficiency, as migration 026 did ([ADR 0037](0037-proficiencies.md)
+         step 16.2: no attack changes): an owner of a retyped piece with an `other_missile` pick
+         gets a `staff_sling` pick. The pick **moves** (its slots kept, so a specialization stays
+         one: both types cost the default slots) when none of the owner's pieces is still
+         `other_missile`, so a cleric (whose list names `staff_sling`, not `other_missile`) no
+         longer holds a pick shown as not allowed; it **stays** for those pieces (a blowgun, a
+         homebrew piece) beside a new 1-slot `staff_sling` pick otherwise (an overspend shows the
+         slots_over_budget warning, step 16.4; a specialization in `other_missile` then stays with
+         the other pieces and the staff sling gets a plain pick, logged). An owner without the
+         `other_missile` pick was not proficient and stays so; a second run changes nothing.
        Tests: `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt: the
        traits as data), `TestAttack_Step22_3_TheCatalogueTraitReachesTheAttack` (composition:
        the catalogue's weapons, the staff sling and the hurled spear, hand axe and club included), `TestDerive_Step22_3_RaceToHitFromTheTrait` (charactersvc),
        `TestResolveAttack_Step22_3_RaceToHitByWeaponType`,
        `TestResolveAttack_Step22_3_RaceBonusIsNoDamage`, `TestPreviewAttack_Step22_3_ShowsTheRaceBonus`
        (combatsvc: staff sling +1, blowgun none, a hurled spear, hand axe and club +1, each in melee
-       none, the elf unchanged), `TestMigrate_Step23_StoredCatalogueWeaponsTakeTheirRowsType`
-       (storage/postgres).
+       none, the elf unchanged), `TestMigrate_Step23_StoredCatalogueWeaponsTakeTheirRowsType`,
+       `TestMigrate_Step23_TheRetypedPiecesOwnerKeepsItsProficiency` (storage/postgres).
 
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) steps 2 and 4, on implementation: the Table 9 bonus is the race's `con_save_bonus` trait (categories and poison as params), not `conSaveRaces`; 22.3, once accepted, is the `weapon_to_hit` trait; a human is a race with no traits, not a `race == "human"` test)_
 

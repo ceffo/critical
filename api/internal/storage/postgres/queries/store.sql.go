@@ -1323,9 +1323,10 @@ func (q *Queries) RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (s
 	return new_id, err
 }
 
-const retypeCatalogueWeapons = `-- name: RetypeCatalogueWeapons :execrows
+const retypeCatalogueWeapons = `-- name: RetypeCatalogueWeapons :many
 UPDATE items SET weapon_type = $1::text
 WHERE category = 'weapon' AND catalogue_code = $2::text AND weapon_type = $3::text
+RETURNING character_id
 `
 
 type RetypeCatalogueWeaponsParams struct {
@@ -1335,13 +1336,29 @@ type RetypeCatalogueWeaponsParams struct {
 }
 
 // The catalogue weapon types data step after migration 041 (ADR 0030 step 23): the weapon pieces of
-// a catalogue code still typed from_type take to_type, the row's type.
-func (q *Queries) RetypeCatalogueWeapons(ctx context.Context, arg RetypeCatalogueWeaponsParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, retypeCatalogueWeapons, arg.ToType, arg.CatalogueCode, arg.FromType)
+// a catalogue code still typed from_type take to_type, the row's type; it returns the owner of
+// each piece it retyped, so the step can carry the owner's weapon pick.
+func (q *Queries) RetypeCatalogueWeapons(ctx context.Context, arg RetypeCatalogueWeaponsParams) ([]int64, error) {
+	rows, err := q.db.QueryContext(ctx, retypeCatalogueWeapons, arg.ToType, arg.CatalogueCode, arg.FromType)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
-	return result.RowsAffected()
+	defer rows.Close()
+	items := []int64{}
+	for rows.Next() {
+		var character_id int64
+		if err := rows.Scan(&character_id); err != nil {
+			return nil, err
+		}
+		items = append(items, character_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const seedCharacterID = `-- name: SeedCharacterID :one

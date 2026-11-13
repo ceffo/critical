@@ -415,7 +415,9 @@ VALUES (sqlc.arg(character_id), sqlc.arg(position), sqlc.arg(class), sqlc.arg(re
         sqlc.arg(starting_xp), sqlc.arg(state), sqlc.arg(left_at_level));
 
 -- The catalogue weapon types data step after migration 041 (ADR 0030 step 23): the weapon pieces of
--- a catalogue code still typed from_type take to_type, the row's type.
--- name: RetypeCatalogueWeapons :execrows
+-- a catalogue code still typed from_type take to_type, the row's type; it returns the owner of
+-- each piece it retyped, so the step can carry the owner's weapon pick.
+-- name: RetypeCatalogueWeapons :many
 UPDATE items SET weapon_type = sqlc.arg(to_type)::text
-WHERE category = 'weapon' AND catalogue_code = sqlc.arg(catalogue_code)::text AND weapon_type = sqlc.arg(from_type)::text;
+WHERE category = 'weapon' AND catalogue_code = sqlc.arg(catalogue_code)::text AND weapon_type = sqlc.arg(from_type)::text
+RETURNING character_id;

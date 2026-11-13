@@ -4,8 +4,11 @@
 --
 -- A data step run just after this file (retypeCatalogueWeapons) sets weapon_type to the row's type
 -- on every weapon piece of the row's catalogue code still typed other_missile; a piece the player
--- typed otherwise is left as it is, and a second run finds nothing to change. No schema change:
--- this file only documents the column the step writes.
+-- typed otherwise is left as it is, and a second run finds nothing to change. The owner of a
+-- retyped piece keeps its proficiency (no attack changes, as after migration 026): its
+-- other_missile weapon pick moves to staff_sling, or, when it still has an other_missile piece,
+-- stays beside a new 1-slot staff_sling pick. No schema change: this file only documents the
+-- column the step writes.
 --
 -- Additive (ADR 0024 step 5.2, ADR 0025 step 2.2): the column has no CHECK; the release before this
 -- one reads a staff_sling piece as a weapon of a type it does not list (no race bonus, no

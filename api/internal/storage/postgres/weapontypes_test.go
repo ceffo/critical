@@ -53,6 +53,82 @@ func TestMigrate_Step23_StoredCatalogueWeaponsTakeTheirRowsType(t *testing.T) {
 	}
 }
 
+// ADR 0030 step 23, as migration 026 did (ADR 0037 step 16.2): no attack changes with the retype.
+// The owner's other_missile pick that covered a staff sling covers it as a staff_sling pick: moved
+// (slots and all, so a specialization stays one) when no piece of the owner is still
+// other_missile, else kept for those pieces beside a new 1-slot staff_sling pick. An owner without
+// the other_missile pick stays nonproficient, an owner whose piece was not retyped keeps its picks,
+// and a second run changes nothing.
+func TestMigrate_Step23_TheRetypedPiecesOwnerKeepsItsProficiency(t *testing.T) {
+	ctx := context.Background()
+	for _, tc := range []struct {
+		name   string
+		class  string
+		pieces []storeq.InsertItemParams // of the character, id 1
+		picks  string
+		want   string
+	}{
+		{
+			"a cleric's staff sling: the pick moves", "cleric",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "other_missile")},
+			`{"nonweapon":[{"id":"singing","slots":1}],"weapon":[{"type":"mace","slots":1},{"type":"other_missile","slots":1}]}`,
+			`{"nonweapon":[{"id":"singing","slots":1}],"weapon":[{"type":"mace","slots":1},{"type":"staff_sling","slots":1}]}`,
+		},
+		{
+			"a fighter's staff sling and blowgun: the pick stays, staff_sling added", "fighter",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "other_missile"), weaponPiece(1, "blowgun", "blowgun", "other_missile")},
+			`{"weapon":[{"type":"other_missile","slots":1}]}`,
+			`{"weapon":[{"type":"other_missile","slots":1},{"type":"staff_sling","slots":1}]}`,
+		},
+		{
+			"a homebrew other missile piece keeps the pick too", "fighter",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "other_missile"), weaponPiece(1, "atlatl", "", "other_missile")},
+			`{"weapon":[{"type":"other_missile","slots":1}]}`,
+			`{"weapon":[{"type":"other_missile","slots":1},{"type":"staff_sling","slots":1}]}`,
+		},
+		{
+			"a fighter specialized in other_missile: the specialization moves", "fighter",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "other_missile")},
+			`{"weapon":[{"type":"other_missile","slots":2}]}`,
+			`{"weapon":[{"type":"staff_sling","slots":2}]}`,
+		},
+		{
+			"no other_missile pick: still nonproficient", "cleric",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "other_missile")},
+			`{"weapon":[{"type":"mace","slots":1}]}`,
+			`{"weapon":[{"type":"mace","slots":1}]}`,
+		},
+		{
+			"a staff sling the player typed a sling: nothing retyped, nothing carried", "fighter",
+			[]storeq.InsertItemParams{weaponPiece(1, "staff_sling", "staff_sling", "sling")},
+			`{"weapon":[{"type":"other_missile","slots":1},{"type":"sling","slots":1}]}`,
+			`{"weapon":[{"type":"other_missile","slots":1},{"type":"sling","slots":1}]}`,
+		},
+		{
+			"a staff sling of another character: this one's pick stays", "fighter",
+			[]storeq.InsertItemParams{weaponPiece(2, "staff_sling", "staff_sling", "other_missile")},
+			`{"weapon":[{"type":"other_missile","slots":1}]}`,
+			`{"weapon":[{"type":"other_missile","slots":1}]}`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newFakeStore()
+			id := picksCharacter(t, f, tc.class)
+			require.Equal(t, int64(1), id)
+			other := picksCharacter(t, f, "thief")
+			f.t.Picks[id] = tc.picks
+			for _, p := range tc.pieces {
+				f.t.Items[rowKey(p.CharacterID, p.ID)] = p
+			}
+			for range 2 {
+				require.NoError(t, retypeCatalogueWeapons(ctx, f, typedCatalogue.Weapons))
+				assert.JSONEq(t, tc.want, f.picks(id))
+				assert.Equal(t, "{}", f.picks(other), "a character without the other_missile pick gets none")
+			}
+		})
+	}
+}
+
 // No catalogue equipment changes nothing.
 func TestMigrate_Step23_NoCatalogueRetypesNothing(t *testing.T) {
 	f := newFakeStore()
@@ -66,7 +142,9 @@ func TestMigrate_Step23_NoCatalogueRetypesNothing(t *testing.T) {
 // would leave it silently never run.
 func TestMigrate_Step23_TheRetypeStepIsWiredToTheEmbeddedFile(t *testing.T) {
 	f := newFakeStore()
-	p := weaponPiece(1, "staff_sling", "staff_sling", "other_missile")
+	id := picksCharacter(t, f, "cleric")
+	f.t.Picks[id] = `{"weapon":[{"type":"other_missile","slots":1}]}`
+	p := weaponPiece(id, "staff_sling", "staff_sling", "other_missile")
 	f.t.Items[rowKey(1, p.ID)] = p
 	embedded, err := embeddedMigrations()
 	require.NoError(t, err)
@@ -80,4 +158,5 @@ func TestMigrate_Step23_TheRetypeStepIsWiredToTheEmbeddedFile(t *testing.T) {
 	require.NoError(t, runMigrations(context.Background(), run, embedded, before, after))
 	assert.Contains(t, run.steps, "apply "+catalogueWeaponTypesMigration)
 	assert.Equal(t, "staff_sling", f.t.Items[rowKey(1, p.ID)].WeaponType)
+	assert.JSONEq(t, `{"weapon":[{"type":"staff_sling","slots":1}]}`, f.picks(id), "the other_missile pick moved")
 }

@@ -13,7 +13,7 @@ import {
   ratesStrength,
 } from "./itemForm";
 import { equipmentRules } from "@/test/equipmentRules";
-import { newAbilityDraft } from "./abilityEditor";
+import { newAbilityDraft, newEffectDraft } from "./abilityEditor";
 
 /** A piece as GET /api/items serves it: every category's fields, zero for the others. */
 function piece(p: Partial<Item>): Item {
@@ -306,7 +306,9 @@ describe("changedFields", () => {
             max: "2",
             left: "2",
             note: "holy",
-            effects: [{ dice: "2d6", save: "spell", label: "" }],
+            effects: [
+              { ...newEffectDraft("dice"), dice: "2d6", save: "spell" },
+            ],
           },
         ],
       }));
@@ -319,6 +321,26 @@ describe("changedFields", () => {
           effects: [{ kind: "dice", dice: "2d6", save: "spell" }],
         },
       ]);
+    });
+
+    it("adds a potion's heal: dice, or full with no dice; a blank heal is not sent", () => {
+      const heal = (patch: Partial<ReturnType<typeof newEffectDraft>>) =>
+        sent(sword2, (d) => ({
+          ...d,
+          abilities: [
+            {
+              ...newAbilityDraft("with_item"),
+              effects: [{ ...newEffectDraft("heal"), ...patch }],
+            },
+          ],
+        })).abilities?.[0].effects;
+      expect(heal({ dice: "2d4+2" })).toEqual([
+        { kind: "heal", dice: "2d4+2" },
+      ]);
+      expect(heal({ full: true, dice: "left over" })).toEqual([
+        { kind: "heal", full: true },
+      ]);
+      expect(heal({})).toEqual([]);
     });
 
     it("an edit keeps the other languages of the name and never sends the served flags", () => {

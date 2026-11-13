@@ -1,11 +1,16 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
+import { expectNoClippedText } from "./noClip";
 import {
   ammoChips,
+  chooseLanguage,
   chooseWeapon,
+  combatLog,
+  currentHp,
   logEntry,
   openDashboard,
   openWeapons,
+  recordHp,
   openWorkspace,
   reloadSettled,
   undoEntry,
@@ -158,4 +163,82 @@ test("add a per-day ability to a sword: chip on the row, kept after a reload, us
   await line.getByRole("button", { name: /^Use / }).click();
   await expect(line.getByTestId("ability-limit")).toHaveText("1 / 2 per day");
   await snap(page, "sword-ability-used");
+});
+
+// ADR 0049 steps 9 and 12 (slice 7): a potion of healing is built in the editor with a heal effect
+// (full: the gap to max HP, so the outcome does not depend on a roll), used from Act · Items: the
+// wounded character's HP goes back to its max, the result card says what the ledger took and the
+// journal words it, and one undo gives the HP and the dose back. Only a browser proves the form to
+// the use to the dashboard's HP (the server names `hp` as changed) and the card and form at the big
+// viewports in both languages; the ledger, cap, rollback and undo rules are Go tests.
+test("a potion of healing with a full heal: built in the editor, used from Act · Items, HP back, undone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openInventory(page);
+  await openTypedAdd(page);
+  const f = form(page);
+  await f.getByLabel("Name").fill("Potion of healing");
+  await f.getByLabel("Category").selectOption("magic");
+  await f.getByRole("button", { name: "Next" }).click();
+  await f.getByLabel("Magic kind").selectOption("potion");
+  await f.getByRole("button", { name: "Add an ability to this item" }).click();
+  await f
+    .getByRole("button", {
+      name: "Regain hit points when this ability is used",
+    })
+    .click();
+  await f.getByLabel("Fill to max HP").check();
+  await expect(f.getByTestId("ability-dice")).toBeDisabled();
+  for (const lng of ["fr", "en"] as const) {
+    await chooseLanguage(page, lng);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        form(page),
+        `the heal in the editor (${lng} ${vp.width})`,
+      );
+      await snap(page, `potion-heal-form-${lng}-${vp.width}x${vp.height}`);
+    }
+  }
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  const potion = row(page, "potion_of_healing");
+  await expect(potion.getByTestId("ability-chip-ability_1")).toBeVisible();
+
+  await openWorkspace(page, "Act");
+  const max = await currentHp(page);
+  await recordHp(page, "damage", 9, "e2e wound");
+  await expect.poll(() => currentHp(page)).toBe(max - 9);
+  await page.getByRole("tab", { name: "Items" }).click();
+  const line = page.getByTestId("ability-potion_of_healing-ability_1");
+  await line.getByRole("button", { name: /^Use / }).click();
+  await expect.poll(() => currentHp(page)).toBe(max);
+  const card = page.getByTestId("item-result");
+  await expect(card.getByTestId("item-heal-total")).toHaveText("9");
+  await expect(card).toContainText(`HP ${max - 9} → ${max}`);
+  await expect(logEntry(page, "Used Potion of healing")).toContainText(
+    "heals 9 HP",
+  );
+  for (const lng of ["fr", "en"] as const) {
+    await chooseLanguage(page, lng);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(card, `the heal card (${lng} ${vp.width})`);
+      await expectNoClippedText(
+        combatLog(page),
+        `the heal in the journal (${lng} ${vp.width})`,
+      );
+      await snap(page, `potion-heal-used-${lng}-${vp.width}x${vp.height}`);
+    }
+  }
+
+  await undoEntry(page, "Used Potion of healing");
+  await expect.poll(() => currentHp(page)).toBe(max - 9);
 });

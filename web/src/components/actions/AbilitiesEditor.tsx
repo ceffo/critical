@@ -7,8 +7,10 @@ import { cn } from "@/lib/utils";
 import {
   LIMIT_KINDS,
   newAbilityDraft,
+  newEffectDraft,
   SAVE_CATEGORIES,
   type AbilityDraft,
+  type DiceDraft,
 } from "@/lib/abilityEditor";
 
 /** What a dice field takes, as an example (a format, not a text in a language). */
@@ -217,89 +219,139 @@ export function AbilitiesEditor({
                 />
               )}
             </Labelled>
-            {a.effects.map((e, k) => (
-              <div
-                key={k}
-                className="flex flex-wrap items-end gap-x-3 gap-y-2"
-                role="group"
-                aria-label={t("equipment.abilities.effect", { n: k + 1 })}
-                data-testid="ability-effect"
-              >
-                <Labelled label={t("equipment.abilities.dice")}>
-                  {(fid) => (
-                    <input
-                      id={fid}
-                      className={cn(fieldClass, "w-28")}
-                      placeholder={DICE_EXAMPLE}
-                      title={t("equipment.abilities.diceHint")}
-                      value={e.dice}
-                      onChange={(ev) =>
-                        set(i, {
-                          effects: a.effects.map((x, j) =>
-                            j === k ? { ...x, dice: ev.target.value } : x,
-                          ),
-                        })
-                      }
-                      data-testid="ability-dice"
-                    />
-                  )}
-                </Labelled>
-                <Labelled label={t("equipment.abilities.save")}>
-                  {(fid) => (
-                    <select
-                      id={fid}
-                      className={cn(fieldClass, "w-auto")}
-                      value={e.save}
-                      onChange={(ev) =>
-                        set(i, {
-                          effects: a.effects.map((x, j) =>
-                            j === k ? { ...x, save: ev.target.value } : x,
-                          ),
-                        })
-                      }
-                      data-testid="ability-save"
-                    >
-                      <option value="">{t("items.form.noSave")}</option>
-                      {SAVE_CATEGORIES.map((s) => (
-                        <option key={s} value={s}>
-                          {t(`saves.categories.${s}`)}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </Labelled>
-                <Button
-                  size="icon-xs"
-                  type="button"
-                  variant="ghost"
-                  aria-label={t("equipment.abilities.removeEffect", {
-                    n: k + 1,
-                  })}
-                  title={t("equipment.abilities.removeEffect", { n: k + 1 })}
-                  onClick={() =>
-                    set(i, { effects: a.effects.filter((_, j) => j !== k) })
-                  }
-                >
-                  <Trash />
-                </Button>
-              </div>
-            ))}
-            <Button
-              size="sm"
-              type="button"
-              variant="ghost"
-              className="self-start"
-              title={t("equipment.abilities.addDiceHint")}
-              aria-label={t("equipment.abilities.addDiceHint")}
-              onClick={() =>
+            {a.effects.map((e, k) => {
+              const heal = e.kind === "heal";
+              const setEffect = (patch: Partial<DiceDraft>) =>
                 set(i, {
-                  effects: [...a.effects, { dice: "", save: "", label: "" }],
-                })
-              }
-              data-testid="ability-add-dice"
-            >
-              <Plus /> {t("equipment.abilities.addDice")}
-            </Button>
+                  effects: a.effects.map((x, j) =>
+                    j === k ? { ...x, ...patch } : x,
+                  ),
+                });
+              return (
+                <div
+                  key={k}
+                  className="flex flex-wrap items-end gap-x-3 gap-y-2"
+                  role="group"
+                  aria-label={t(
+                    heal
+                      ? "equipment.abilities.healEffect"
+                      : "equipment.abilities.effect",
+                    { n: k + 1 },
+                  )}
+                  data-testid="ability-effect"
+                  data-kind={e.kind}
+                >
+                  <Labelled
+                    label={t(
+                      heal
+                        ? "equipment.abilities.healDice"
+                        : "equipment.abilities.dice",
+                    )}
+                  >
+                    {(fid) => (
+                      <input
+                        id={fid}
+                        className={cn(fieldClass, "w-28")}
+                        placeholder={DICE_EXAMPLE}
+                        title={t(
+                          heal
+                            ? "equipment.abilities.healDiceHint"
+                            : "equipment.abilities.diceHint",
+                        )}
+                        value={e.full ? "" : e.dice}
+                        disabled={heal && e.full}
+                        onChange={(ev) => setEffect({ dice: ev.target.value })}
+                        data-testid="ability-dice"
+                      />
+                    )}
+                  </Labelled>
+                  {heal ? (
+                    <Labelled label={t("equipment.abilities.healFull")}>
+                      {(fid) => (
+                        <input
+                          id={fid}
+                          type="checkbox"
+                          className="size-5 accent-primary"
+                          title={t("equipment.abilities.healFullHint")}
+                          checked={e.full}
+                          onChange={(ev) =>
+                            setEffect({ full: ev.target.checked })
+                          }
+                          data-testid="ability-heal-full"
+                        />
+                      )}
+                    </Labelled>
+                  ) : (
+                    <Labelled label={t("equipment.abilities.save")}>
+                      {(fid) => (
+                        <select
+                          id={fid}
+                          className={cn(fieldClass, "w-auto")}
+                          value={e.save}
+                          onChange={(ev) =>
+                            setEffect({ save: ev.target.value })
+                          }
+                          data-testid="ability-save"
+                        >
+                          <option value="">{t("items.form.noSave")}</option>
+                          {SAVE_CATEGORIES.map((s) => (
+                            <option key={s} value={s}>
+                              {t(`saves.categories.${s}`)}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </Labelled>
+                  )}
+                  <Button
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                    aria-label={t("equipment.abilities.removeEffect", {
+                      n: k + 1,
+                    })}
+                    title={t("equipment.abilities.removeEffect", { n: k + 1 })}
+                    onClick={() =>
+                      set(i, { effects: a.effects.filter((_, j) => j !== k) })
+                    }
+                  >
+                    <Trash />
+                  </Button>
+                </div>
+              );
+            })}
+            <div className="flex flex-wrap gap-2 self-start">
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                title={t("equipment.abilities.addDiceHint")}
+                aria-label={t("equipment.abilities.addDiceHint")}
+                onClick={() =>
+                  set(i, {
+                    effects: [...a.effects, newEffectDraft("dice")],
+                  })
+                }
+                data-testid="ability-add-dice"
+              >
+                <Plus /> {t("equipment.abilities.addDice")}
+              </Button>
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                title={t("equipment.abilities.addHealHint")}
+                aria-label={t("equipment.abilities.addHealHint")}
+                onClick={() =>
+                  set(i, {
+                    effects: [...a.effects, newEffectDraft("heal")],
+                  })
+                }
+                data-testid="ability-add-heal"
+              >
+                <Plus /> {t("equipment.abilities.addHeal")}
+              </Button>
+            </div>
           </div>
         );
       })}

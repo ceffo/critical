@@ -155,11 +155,13 @@ func (l LimitDTO) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o)
 }
 
-// EffectDTO is one effect of an ability (ADR 0049 step 10); only "dice" exists
-// so far: dice, an optional save category and an optional label.
+// EffectDTO is one effect of an ability (ADR 0049 step 10); "dice" and "heal"
+// exist so far: dice (a heal has dice or full), an optional save category (not
+// for a heal) and an optional label.
 type EffectDTO struct {
 	Kind  string `json:"kind"`
 	Dice  string `json:"dice,omitempty"`
+	Full  bool   `json:"full,omitempty"`
 	Save  string `json:"save,omitempty"`
 	Label string `json:"label,omitempty"`
 }
@@ -173,7 +175,7 @@ func AbilitiesFromDTO(dtos []AbilityDTO) []itemsvc.Ability {
 			Kind: itemsvc.LimitKind(d.Limit.Kind), Max: d.Limit.Max, Left: d.Limit.Left, Cost: d.Limit.Cost,
 		}}
 		for _, e := range d.Effects {
-			a.Effects = append(a.Effects, itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Save: e.Save, Label: e.Label})
+			a.Effects = append(a.Effects, itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label})
 		}
 		out = append(out, a)
 	}
@@ -191,7 +193,7 @@ func AbilitiesToDTO(item itemsvc.Item) *[]AbilityDTO {
 		reason := item.UseRefusal(a)
 		effects := make([]EffectDTO, 0, len(a.Effects))
 		for _, e := range a.Effects {
-			effects = append(effects, EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Save: e.Save, Label: e.Label})
+			effects = append(effects, EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label})
 		}
 		out = append(out, AbilityDTO{
 			ID: a.ID, Name: a.Name, Note: a.Note, Effects: effects, Usable: reason == "", Reason: reason,

@@ -539,7 +539,7 @@ function AbilityChip({
 }) {
   const { t, i18n } = useTranslation();
   const name = ability.name ? localized(i18n.language, ability.name) : "";
-  const dice = ability.effects[0]?.dice;
+  const dice = ability.effects.find((e) => e.kind === "dice")?.dice;
   return (
     <li
       className={cn(

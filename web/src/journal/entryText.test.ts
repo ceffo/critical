@@ -673,7 +673,7 @@ describe("inventory entries", () => {
     };
     const en = await makeT("en");
     expect(entryText(entry("item_use", potion), en)).toBe(
-      "Used Potion of heroism (2 left), buff Heroism (60 rd)",
+      "Used Potion of heroism (2 left), effect Heroism (60 rd)",
     );
     const untimed = {
       ...potion,
@@ -685,7 +685,7 @@ describe("inventory entries", () => {
       ],
     };
     expect(entryText(entry("item_use", untimed), en)).toBe(
-      "Used Potion of heroism (2 left), buff Heroism (until dismissed)",
+      "Used Potion of heroism (2 left), effect Heroism (until dismissed)",
     );
     expect(entryText(entry("item_use", potion), await makeT("fr"))).toContain(
       "effet Heroism (60",

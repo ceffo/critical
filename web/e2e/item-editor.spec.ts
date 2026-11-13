@@ -264,10 +264,10 @@ test("a potion of heroism with a buff: built in the editor, used from Act · Ite
   await f.getByRole("button", { name: "Add an ability to this item" }).click();
   await f
     .getByRole("button", {
-      name: "Put a timed buff on the list when this ability is used",
+      name: "Put a timed effect on the list when this ability is used",
     })
     .click();
-  await f.getByLabel("Buff name").fill("Heroism");
+  await f.getByLabel("Effect name").fill("Heroism");
   await f.getByLabel("Rounds", { exact: true }).fill("60");
   await f.getByTestId("ability-buff-mod-key").selectOption("to_hit");
   await f.getByTestId("ability-buff-add-mod").click();
@@ -299,7 +299,7 @@ test("a potion of heroism with a buff: built in the editor, used from Act · Ite
   await expect(card.getByTestId("item-buff-name")).toContainText("Heroism");
   await expect(buffBadge(page, "Heroism")).toBeVisible();
   await expect(logEntry(page, "Used Potion of heroism")).toContainText(
-    "buff Heroism (60 rd)",
+    "effect Heroism (60 rd)",
   );
   for (const lng of ["fr", "en"] as const) {
     await chooseLanguage(page, lng);

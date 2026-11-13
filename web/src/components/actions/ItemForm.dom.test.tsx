@@ -279,8 +279,8 @@ describe("ItemForm, quantity and abilities", () => {
     [
       "en",
       "Add an ability to this item",
-      "Put a timed buff on the list when this ability is used",
-      "Buff name",
+      "Put a timed effect on the list when this ability is used",
+      "Effect name",
       "Rounds",
       "Add",
     ],

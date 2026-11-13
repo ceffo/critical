@@ -610,7 +610,7 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      root hands a late-bound function (as it does for the Strength read). A nil port fails a use with a buff
      effect, never skips it.
    - **Result and journal:** an effect's result carries `buff {id, name, rounds, effects}`; the journal words
-     "buff Heroism (60 rd)" and the card shows the row and its modifiers.
+     "effect Heroism (60 rd)" and the card shows the row and its modifiers.
    - **The conversion is unchanged and needs no review for these items** (step 11 table): a stored potion or
      scroll without dice is a `with_item` ability with no effect and no review reason (heroism, speed, giant
      strength, invisibility, protection), tested. A database already converted keeps every row as it is; the boot

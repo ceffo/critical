@@ -411,21 +411,31 @@ bard 15 never).)_
     each with its points and its budget at its own entry's level, and a spend names the set, checked
     against the class listing it at that entry's level: `Derive_Step12_TwoSkillGrantsKeepTheirOwnSets`,
     `SetPoints_Step12_EachGrantSpendsItsOwnSet`.)_
-    _(As built, 2026-10-22, weapon specialization, supervisor decision on the book: only a
-    single-class fighter specializes. PHB p.52 (Proficiencies, Weapon Specialization): "a fighter
-    (only)", and next to it "multi-class characters cannot use weapon specialization; it is
-    available only to single-class fighters". So `Derived.Specializes` and the specialization pick
-    need one active entry: a fighter/thief, the fighter first, does not specialize and its
-    specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book is silent
-    on a dual-class character; its one active entry is read as single-class: `Derived.Specializes`
-    is that entry's own grant, never a frozen fighter's (the elf's mage does not specialize), and
-    a new specialization pick is the active class's. A specialization pick kept from an old class
-    that specializes survives a save and counts past the crossover only
-    (`skills.WeaponProficiencyOf` reads the stored entries, a frozen one at its left-at level).
+    _(Amended 2026-11-13, weapon specialization, the user's ruling; replaces the as-built note of
+    2026-10-22, which read a dual-class's one active entry as single-class and so never let the
+    elf's mage specialize.) Only a single-class fighter specializes (PHB p.52, Proficiencies,
+    Weapon Specialization: "a fighter (only)"; "multi-class characters cannot use weapon
+    specialization"): a multi-class character, whichever entry grants it, does not, and its
+    specialization pick is refused `not_allowed` (`skills.Classes.specialist`). The book says
+    nothing of a dual-class character, so its general rule applies (PHB p.44-45, Dual-Class
+    Benefits and Restrictions): he keeps "all the knowledge, abilities, and proficiencies of his
+    old class", restricted "until the character reaches a higher level in his new class than his
+    maximum level in any of his previous classes". So a dual-class specializes by its active
+    class's `weapon_specialization` grant, or by a frozen entry's once past the crossover (step
+    13), read from the grant, never a class id: `Derived.Specializes` (the wire's `specializes`),
+    the kept specialization pick's bonus (`skills.WeaponProficiencyOf`: the weapon's
+    `specialized`, +1 to hit and +2 damage as `specialization` modifiers with a melee weapon, the
+    bow and crossbow point-blank range) and the specialist attacks per round (Table 35, read with
+    the frozen entry's params at its `left_at_level`, through the non-dormant
+    `melee_attacks_per_round` grant). Before the crossover none of it applies (the frozen grant
+    is dormant), as the other old-class figures. A **new** specialization pick still needs an
+    active class with the kind; the kept one survives a save either way.
     Tests: `Derive_Step12_OnlyASingleClassFighterSpecializes`,
     `WeaponPick_Step15_OnlyASingleClassFighterSpecializes`,
-    `TestDerive_Step12_ADualClassSpecializesByItsActiveClass` (charactersvc),
-    `TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover` (skills).)_
+    `TestDerive_Step12_ADualClassKeepsTheOldSpecializationPastTheCrossover` (charactersvc),
+    `TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover` (skills),
+    `TestResolveAttack_Step12_ADualClassFighterKeepsItsSpecializationPastTheCrossover`
+    (composition: fighter 11 then mage 14, and mage 11).
 
 13. **The dual-class crossover and the old class's abilities.** The **crossover** is reached when
     the active entry's realized level is above every frozen entry's `left_at_level` (PHB

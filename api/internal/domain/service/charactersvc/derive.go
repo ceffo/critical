@@ -2,6 +2,7 @@ package charactersvc
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/saves"
@@ -213,17 +214,19 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 			return fmt.Errorf("derive %s backstab: %w", g.Class.ID, err)
 		}
 	}
-	// ADR 0042 as built (PHB p.52): specialization is a single-class
-	// fighter's; a multi-class character never specializes, whichever entry
-	// grants it. A dual-class's one active entry is read as single-class:
-	// its own grant, never its old class's (a kept specialization pick is
-	// skills.WeaponProficiencyOf's).
-	if act := classes.Active(es); len(act) == 1 {
-		gs, err := classes.Grants(act, def, classes.KindWeaponSpecialization)
+	// ADR 0042 step 12 (amended 2026-11-13, PHB p.52): specialization is a
+	// single-class fighter's; a multi-class character never specializes,
+	// whichever entry grants it. A dual-class (one active entry) specializes
+	// by its active class's grant, or by a frozen entry's once past the
+	// crossover (PHB p.45: the old class's abilities without restriction;
+	// before it the grant is dormant, step 13), as the kept pick's bonus
+	// (skills.WeaponProficiencyOf) reads it.
+	if len(classes.Active(es)) == 1 {
+		gs, err := classes.Grants(es, def, classes.KindWeaponSpecialization)
 		if err != nil {
 			return fmt.Errorf("derive %s: %w", classes.KindWeaponSpecialization, err)
 		}
-		d.Specializes = len(gs) > 0
+		d.Specializes = slices.ContainsFunc(gs, func(g classes.Grant) bool { return !dormant(es, g.Class.ID) })
 	}
 	if g, ok := grant(classes.KindSpellbook); ok {
 		if d.Spellbook, err = spellbookRules(c, g, rules); err != nil {

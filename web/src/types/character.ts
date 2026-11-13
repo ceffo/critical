@@ -122,7 +122,9 @@ export interface Derived {
   /** ADR 0042 steps 5 and 7: each class entry's own figures, in the order of the character's
    * `classes`. Absent for a single-class character, whose figures are the ones above. */
   classes?: DerivedClass[];
-  /** Step 12: the class may specialize in a weapon (the weapon editor offers the flag). */
+  /** Step 12 (ADR 0042 step 12): the character specializes in a weapon: a single active class
+   * that grants it, or a dual-class's old class past the crossover. A new specialization is
+   * offered by the weapon types' `specializationSlots`, not by this. */
   specializes: boolean;
   /** Steps 9 and 10: the class enters an 18/xx and reads the warrior's scale above 18 (its
    * `exceptional_strength` feature). */

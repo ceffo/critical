@@ -2,7 +2,6 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useCreationOptions } from "@/lib/useCreationOptions";
-import { useCharacterStore } from "@/stores/character";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { ProficienciesInput, ProficiencySlots } from "@/types/character";
@@ -91,10 +90,6 @@ export function PickEditor({
   const cfg = POOLS[pool];
   const save = useSkillsStore((s) => s.saveProficiencies);
   const saving = useTableStore((s) => s.busy);
-  // ADR 0030 step 12: the server says whether the class specializes.
-  const specializes = useCharacterStore(
-    (s) => s.character?.derived.specializes ?? false,
-  );
   const { options, failed: loadError } = useCreationOptions();
   const [draft, setDraft] = useState<ProficienciesInput>(() =>
     startingPicks(pool, slots, stored),
@@ -143,6 +138,9 @@ export function PickEditor({
     shown && shown.field === field ? wording(shown) : null;
   // The server says which types the character may pick (all its classes judged together).
   const types = figures.weaponTypes ?? slots.weaponTypes ?? [];
+  // ADR 0037 step 9, ADR 0042 step 12: a new specialization is offered when an active class gives
+  // a type its cost (`specializationSlots`); a dual-class's kept one gives none, so no lead.
+  const offersSpecialization = types.some((o) => o.specializationSlots > 0);
 
   // A refusal of a field the picker does not show (a pick no longer listed).
   const hidden =
@@ -173,7 +171,7 @@ export function PickEditor({
           <p className="text-label break-words text-muted-foreground">
             {t(`${cfg.section}.lead`)}
             {pool === "weapon" &&
-              specializes &&
+              offersSpecialization &&
               ` ${t("weaponProficiencies.leadSpecializes")}`}
           </p>
         </div>

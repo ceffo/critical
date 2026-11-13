@@ -162,7 +162,7 @@ func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (Item, error) 
 }
 
 const incrementItem = `-- name: IncrementItem :one
-UPDATE items SET count = count + $1 WHERE character_id = $2::bigint AND id = $3
+UPDATE items SET count = count + $1 WHERE character_id = $2::bigint AND id = $3 AND count + $1 <= $4::int
 RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities
 `
 
@@ -170,10 +170,16 @@ type IncrementItemParams struct {
 	N           int64
 	CharacterID int64
 	ID          string
+	MaxCount    int32
 }
 
 func (q *Queries) IncrementItem(ctx context.Context, arg IncrementItemParams) (Item, error) {
-	row := q.db.QueryRowContext(ctx, incrementItem, arg.N, arg.CharacterID, arg.ID)
+	row := q.db.QueryRowContext(ctx, incrementItem,
+		arg.N,
+		arg.CharacterID,
+		arg.ID,
+		arg.MaxCount,
+	)
 	var i Item
 	err := row.Scan(
 		&i.ID,

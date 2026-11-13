@@ -17,7 +17,7 @@ UPDATE items SET count = count - 1 WHERE character_id = sqlc.arg(character_id)::
 RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities;
 
 -- name: IncrementItem :one
-UPDATE items SET count = count + sqlc.arg(n) WHERE character_id = sqlc.arg(character_id)::bigint AND id = sqlc.arg(id)
+UPDATE items SET count = count + sqlc.arg(n) WHERE character_id = sqlc.arg(character_id)::bigint AND id = sqlc.arg(id) AND count + sqlc.arg(n) <= sqlc.arg(max_count)::int
 RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities;
 
 -- name: SetItemCount :execrows

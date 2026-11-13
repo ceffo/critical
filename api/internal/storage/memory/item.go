@@ -133,9 +133,13 @@ func (p Items) Decrement(ctx context.Context, characterID int64, itemID string) 
 	})
 }
 
-// Increment adds n to the count and returns the item.
+// Increment adds n to the count and returns the item; ErrQuantityBound when
+// the count would pass itemsvc.MaxQuantity.
 func (p Items) Increment(ctx context.Context, characterID int64, itemID string, n int) (itemsvc.Item, error) {
 	return p.change(ctx, characterID, itemID, func(r *storedItem) error {
+		if r.Count+n > itemsvc.MaxQuantity {
+			return fmt.Errorf("%w: %s", itemsvc.ErrQuantityBound, itemID)
+		}
 		r.Count += n
 		return nil
 	})

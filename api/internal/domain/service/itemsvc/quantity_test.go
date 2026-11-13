@@ -155,3 +155,44 @@ func TestValidate_ADR0049Step2_QuantityIs0To999(t *testing.T) {
 		}
 	}
 }
+
+// ADR 0049 step 4: a per_day or charges ability is one counter per object, so a quantity of 2 is
+// refused by Create (an item made with both) and by Update (an ability added to a stack of 2, a
+// count edit to 2 on an item holding one), on the field "abilities", before anything is written.
+func TestItem_ADR0049Step4_PerObjectLimitNeedsAQuantityOfOne(t *testing.T) {
+	limits := map[string]itemsvc.Limit{
+		"per_day": {Kind: itemsvc.LimitPerDay, Max: 1, Left: 1},
+		"charges": {Kind: itemsvc.LimitCharges, Max: 3, Left: 3, Cost: 1},
+	}
+	for name, lim := range limits {
+		ab := []itemsvc.Ability{{ID: "a", Limit: lim}}
+		stack := itemsvc.Item{ID: "x", Name: localized.Of("Rope"), Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, State: itemsvc.StateCarried, Count: 2}
+		single := stack
+		single.Count, single.Abilities = 1, ab
+		two := 2
+		for op, run := range map[string]func(svc itemsvc.SVC, dal *mocks.MockDAL) error{
+			"create": func(svc itemsvc.SVC, _ *mocks.MockDAL) error {
+				_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{Name: localized.Of("Rope"), Category: itemsvc.CategoryGear, Behaviour: itemsvc.BehaviourStock, Count: 2, Abilities: ab})
+				return err
+			},
+			"update adds the ability to a stack of 2": func(svc itemsvc.SVC, dal *mocks.MockDAL) error {
+				dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(stack, nil)
+				_, err := svc.Update(context.Background(), 1, "x", itemsvc.ItemPatch{Abilities: &ab})
+				return err
+			},
+			"update raises the count of one to 2": func(svc itemsvc.SVC, dal *mocks.MockDAL) error {
+				dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(single, nil)
+				_, err := svc.Update(context.Background(), 1, "x", itemsvc.ItemPatch{Count: &two})
+				return err
+			},
+		} {
+			t.Run(name+"/"+op, func(t *testing.T) {
+				svc, dal, _ := quantitySvc(t) // no Insert, Update or log call is expected
+				err := run(svc, dal)
+				var fe *domain.FieldError
+				require.ErrorAs(t, err, &fe)
+				assert.Equal(t, "abilities", fe.Field)
+			})
+		}
+	}
+}

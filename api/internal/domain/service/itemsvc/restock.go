@@ -33,7 +33,7 @@ type restockRecord struct {
 }
 
 // Restock adds n to a stock item (the inventory's +, buying arrows). The
-// increment is one atomic statement, after the refusals are read. One item_restock entry with the item's snapshot: popping it takes
+// increment is one atomic conditional statement (the DAL refuses past MaxQuantity), after the refusals are read. One item_restock entry with the item's snapshot: popping it takes
 // the count back down.
 func (s *service) Restock(ctx context.Context, characterID int64, itemID string, n int) (*RestockResult, error) {
 	if n < 1 || n > MaxRestock {

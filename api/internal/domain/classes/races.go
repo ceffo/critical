@@ -15,8 +15,9 @@ const (
 	// TraitNoExceptionalStrength: the race never rolls an exceptional
 	// Strength (ADR 0030 step 9). No params.
 	TraitNoExceptionalStrength = "no_exceptional_strength"
-	// TraitWeaponToHit: a to-hit bonus with weapon types (ADR 0030 step 22.3;
-	// the attack reads it, combatsvc). Params WeaponTypes and Bonus.
+	// TraitWeaponToHit: a to-hit bonus with weapon types and, when Hurled, with
+	// every hurled weapon (ADR 0030 step 22.3; the attack reads it, combatsvc).
+	// Params WeaponTypes, Hurled and Bonus.
 	TraitWeaponToHit = "weapon_to_hit"
 )
 
@@ -34,8 +35,11 @@ type Trait struct {
 	// not read yet (ADR 0030 step 22.1).
 	Categories []string
 	Poison     bool
-	// WeaponTypes and Bonus are weapon_to_hit's params.
+	// WeaponTypes, Hurled and Bonus are weapon_to_hit's params: the bonus
+	// counts with a weapon of a listed type, and with every hurled weapon when
+	// Hurled is set (ADR 0030 step 22.3).
 	WeaponTypes []string
+	Hurled      bool
 	Bonus       int
 }
 
@@ -93,7 +97,7 @@ func checkTraits(ts []Trait) ([]Trait, error) {
 }
 
 func checkTrait(t Trait) error {
-	con, weapon := len(t.Categories) > 0 || t.Poison, len(t.WeaponTypes) > 0 || t.Bonus != 0
+	con, weapon := len(t.Categories) > 0 || t.Poison, len(t.WeaponTypes) > 0 || t.Hurled || t.Bonus != 0
 	switch t.Kind {
 	case TraitNoExceptionalStrength:
 		if con || weapon {

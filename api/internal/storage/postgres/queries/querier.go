@@ -99,6 +99,10 @@ type Querier interface {
 	RenameAttackFormAmmo(ctx context.Context, arg RenameAttackFormAmmoParams) error
 	// The id the conversion gave an item that shared its id with a weapon; no row when it kept its id.
 	RenamedItemID(ctx context.Context, arg RenamedItemIDParams) (string, error)
+	// The catalogue weapon types data step after migration 041 (ADR 0030 step 23): the weapon pieces of
+	// a catalogue code still typed from_type take to_type, the row's type; it returns the owner of
+	// each piece it retyped, so the step can carry the owner's weapon pick.
+	RetypeCatalogueWeapons(ctx context.Context, arg RetypeCatalogueWeaponsParams) ([]int64, error)
 	// The character the seed files belong to: the one named in character.json (the lowest id when
 	// two share the name).
 	SeedCharacterID(ctx context.Context, name string) (int64, error)

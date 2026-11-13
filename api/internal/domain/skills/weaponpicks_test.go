@@ -32,7 +32,7 @@ func TestWeaponPick_Step7_ClassLimitsRefuseThePick(t *testing.T) {
 	}{
 		{"a mage: dagger, dart, sling, other_melee", "mage", weapons("dagger", "dart", "sling", "other_melee"), weapons(), nil},
 		{"a mage refused a long sword", "mage", weapons("dagger", "long_sword"), weapons(), refused("weapon.long_sword", "weapon_not_allowed")},
-		{"a cleric: sling, other_melee, other_missile", "cleric", weapons("sling", "other_melee", "other_missile"), weapons(), nil},
+		{"a cleric: sling, staff_sling, other_melee", "cleric", weapons("sling", "staff_sling", "other_melee"), weapons(), nil},
 		{"a cleric refused an edged weapon", "cleric", weapons("short_sword"), weapons(), refused("weapon.short_sword", "weapon_not_allowed")},
 		{"a cleric refused a bow", "cleric", weapons("long_bow"), weapons(), refused("weapon.long_bow", "weapon_not_allowed")},
 		{"a thief: its list", "thief", weapons("short_bow", "hand_crossbow", "long_sword", "other_melee"), weapons(), nil},
@@ -96,7 +96,7 @@ func TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost(t *testing.T) {
 	}
 	twoSlots := []string{
 		"dagger", "short_sword", "long_sword", "other_melee", "light_crossbow", "heavy_crossbow", "hand_crossbow",
-		"dart", "sling", "other_thrown", "other_missile",
+		"dart", "sling", "staff_sling", "other_thrown", "other_missile",
 	}
 	for _, typ := range twoSlots {
 		tests = append(tests, struct {

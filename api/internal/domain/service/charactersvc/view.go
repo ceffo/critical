@@ -48,11 +48,12 @@ type View struct {
 	THAC0         int
 	Saves         Saves
 	RaceSaveBonus Saves
-	// RaceToHitTypes and RaceToHitBonus are the race's weapon_to_hit trait
-	// (Derived.RaceToHitTypes, ADR 0030 step 22.3).
-	RaceToHitTypes []string
-	RaceToHitBonus int
-	MagicDefence   int
+	// RaceToHitTypes, RaceToHitHurled and RaceToHitBonus are the race's
+	// weapon_to_hit trait (Derived.RaceToHitTypes, ADR 0030 step 22.3).
+	RaceToHitTypes  []string
+	RaceToHitHurled bool
+	RaceToHitBonus  int
+	MagicDefence    int
 	// DexMissile and DexDefence are PHB Table 2's columns at Dex (ADR 0046
 	// step 2.1): the missile attack adjustment and the armour class one.
 	DexMissile       int
@@ -164,7 +165,7 @@ func buildView(c Character, d Derived) View {
 		Str: c.Str, StrExceptional: c.StrExceptional, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha,
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,
-		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, RaceToHitTypes: d.RaceToHitTypes, RaceToHitBonus: d.RaceToHitBonus, MagicDefence: d.MagicDefence, DexMissile: d.DexMissile, DexDefence: d.DexDefence,
+		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, RaceToHitTypes: d.RaceToHitTypes, RaceToHitHurled: d.RaceToHitHurled, RaceToHitBonus: d.RaceToHitBonus, MagicDefence: d.MagicDefence, DexMissile: d.DexMissile, DexDefence: d.DexDefence,
 		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
 		SkillSets: d.SkillSets, Backstab: d.Backstab, LevelUp: d.LevelUp, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,

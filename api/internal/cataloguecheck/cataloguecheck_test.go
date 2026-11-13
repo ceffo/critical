@@ -198,13 +198,13 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 }
 
 // TestSchema_Step14_OnlyTheNextFormatIsValid (ADR 0040 step 14, ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2,
-// 22.2, 23.2, 24.2, 25.5 and 27.5): the schema accepts format 21 only; every earlier format, retired, is refused
-// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 21
+// 22.2, 23.2, 24.2, 25.5, 27.5 and 30.3): the schema accepts format 22 only; every earlier format, retired, is refused
+// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 22
 // requires, or with a table or a shape of an earlier format.
 func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 21")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 22")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -212,20 +212,20 @@ func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	for _, part := range []string{"skill_sets", "equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 21 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 22 requires %s", part)
 	}
 	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 21 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 22 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 21 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 22 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 21 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 22 requires the spell immunities")
 	// ADR 0040 steps 12 to 14: the skill sets, Table 28 by skill and the specialization params.
 	refuseEach(t, map[string]func(a map[string]any){
 		"the thief skill base table back":   func(a map[string]any) { tables(a)["thief_skill_base"] = tables(a)["skill_race"] },
@@ -622,4 +622,48 @@ func TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId(t *testing.
 	}
 	assert.Positive(t, lists, "one description with a bullet list")
 	assert.Positive(t, tables, "one description with a table")
+}
+
+// weaponToHit is the params of the first race's weapon_to_hit trait in a, for a test to edit.
+func weaponToHit(t *testing.T, a map[string]any) map[string]any {
+	t.Helper()
+	for _, r := range a["races"].([]any) {
+		for _, tr := range r.(map[string]any)["traits"].([]any) {
+			if m := tr.(map[string]any); m["kind"] == "weapon_to_hit" {
+				return m["params"].(map[string]any)
+			}
+		}
+	}
+	require.Fail(t, "no weapon_to_hit trait in the fixture")
+	return nil
+}
+
+// weaponRow is the equipment weapon row of code in a, for a test to edit.
+func weaponRow(t *testing.T, a map[string]any, code string) map[string]any {
+	t.Helper()
+	for _, w := range a["equipment"].(map[string]any)["weapons"].([]any) {
+		if m := w.(map[string]any); m["code"] == code {
+			return m
+		}
+	}
+	require.Fail(t, "no weapon "+code+" in the fixture")
+	return nil
+}
+
+// ADR 0021 step 30 (ADR 0030 steps 22.3 and 23): format 22 knows the staff_sling weapon type, on a
+// weapon row and on a rate of fire row, and the optional boolean hurled of a weapon_to_hit trait;
+// a type outside the list and a hurled that is no boolean are refused.
+func TestSchema_Step30_TheStaffSlingTypeAndTheHurledFlag(t *testing.T) {
+	sch := compile(t)
+	a := fixtureDoc(t)
+	assert.Equal(t, "staff_sling", weaponRow(t, a, "staff_sling")["weapon_type"])
+	tables(a)["rate_of_fire"] = append(tables(a)["rate_of_fire"].([]any),
+		map[string]any{"weapon_type": "staff_sling", "attacks": json.Number("2"), "rounds": json.Number("1")})
+	delete(weaponToHit(t, a), "hurled")
+	assert.NoError(t, sch.Validate(a), "a staff sling rate of fire and a trait without hurled")
+	refuseEach(t, map[string]func(a map[string]any){
+		"a weapon type outside the list": func(a map[string]any) { weaponRow(t, a, "staff_sling")["weapon_type"] = "staff" },
+		"a hurled that is a word":        func(a map[string]any) { weaponToHit(t, a)["hurled"] = "yes" },
+		"an unknown trait param":         func(a map[string]any) { weaponToHit(t, a)["thrown"] = true },
+	})
 }

@@ -23,7 +23,8 @@ func NonweaponCost(p Proficiency, classGroups []string) int {
 // it. itemsvc names each code as a constant.
 var WeaponTypes = []string{
 	"long_bow", "short_bow", "light_crossbow", "heavy_crossbow", "hand_crossbow", "dagger",
-	"dart", "sling", "short_sword", "long_sword", "other_melee", "other_thrown", "other_missile",
+	"dart", "sling", "staff_sling", "short_sword", "long_sword", "other_melee", "other_thrown",
+	"other_missile",
 }
 
 // WeaponPickTypes is ADR 0037 step 7, derived from the class equipment lists

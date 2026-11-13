@@ -29,17 +29,18 @@ type Item struct {
 	CatalogueCode string
 	Component     string
 	State         string
-	WeaponType    string
-	WeaponKind    string
-	Size          string
-	DamageTypes   []string
-	Speed         int64
-	DamageSm      string
-	DamageL       string
-	MagicToHit    int64
-	MagicDamage   int64
-	TwoHanded     int64
-	Fires         string
+	// weapon type code (ADR 0030 step 23), copied from the catalogue row on a pick; empty: none
+	WeaponType  string
+	WeaponKind  string
+	Size        string
+	DamageTypes []string
+	Speed       int64
+	DamageSm    string
+	DamageL     string
+	MagicToHit  int64
+	MagicDamage int64
+	TwoHanded   int64
+	Fires       string
 	// unused since the specialization is a weapon pick (ADR 0037 step 9); kept until a later migration drops it
 	Specialized               int64
 	BaseAc                    int64

@@ -672,16 +672,17 @@ func TestDerive_Step22_3_RaceToHitFromTheTrait(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, tc := range []struct {
-		defs  *classes.Registry
-		race  string
-		types []string
-		bonus int
+		defs   *classes.Registry
+		race   string
+		types  []string
+		hurled bool
+		bonus  int
 	}{
-		{defs, "test_giant", []string{"other_melee"}, 2},
-		{defs, "elf", nil, 0},
-		{book, "elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}, 1},
-		{book, "halfling", []string{"sling", "dagger", "dart", "other_thrown"}, 1},
-		{book, "human", nil, 0},
+		{defs, "test_giant", []string{"other_melee"}, false, 2},
+		{defs, "elf", nil, false, 0},
+		{book, "elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}, false, 1},
+		{book, "halfling", []string{"sling", "staff_sling"}, true, 1},
+		{book, "human", nil, false, 0},
 	} {
 		t.Run(tc.race, func(t *testing.T) {
 			c := kelsen()
@@ -694,6 +695,7 @@ func TestDerive_Step22_3_RaceToHitFromTheTrait(t *testing.T) {
 			got, err := charactersvc.Derive(c, nil, "", r)
 			require.NoError(t, err)
 			assert.Equal(t, tc.types, got.RaceToHitTypes)
+			assert.Equal(t, tc.hurled, got.RaceToHitHurled)
 			assert.Equal(t, tc.bonus, got.RaceToHitBonus)
 		})
 	}

@@ -346,6 +346,11 @@ func isAmmo(it itemsvc.Item, w Weapon) bool {
 // ammunition. A missile weapon without AmmoKind is hurled (darts).
 func (w Weapon) FiresAmmo() bool { return w.Kind == WeaponMissile && w.AmmoKind != "" }
 
+// Hurled reports whether the weapon is thrown at the target: a missile weapon
+// that fires no ammunition (ADR 0016 step 8, ADR 0033 step 3), whatever its
+// type.
+func (w Weapon) Hurled() bool { return w.Kind == WeaponMissile && w.AmmoKind == "" }
+
 // SaveCategory enumerates AD&D saving-throw categories.
 type SaveCategory string
 

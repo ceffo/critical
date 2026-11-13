@@ -235,7 +235,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    |---|---|---|---|
    | `con_save_bonus` | `categories` (save category codes), `poison` (bool) | ADR 0030 step 22.1 (Table 9) | dwarf and halfling (rod/staff/wand, spells, poison), gnome (rod/staff/wand, spells; no poison) |
    | `no_exceptional_strength` | none | ADR 0030 step 9 | halfling |
-   | `weapon_to_hit` | `weapon_types`, `bonus` | ADR 0030 step 22.3 (accepted 2026-11-13, built: a `race` to-hit modifier when the weapon's type is listed) | elf (long and short bows, short and long swords), halfling (sling, dagger, dart, other thrown) |
+   | `weapon_to_hit` | `weapon_types`, `hurled` (bool, optional, format 22), `bonus` | ADR 0030 step 22.3 (accepted 2026-11-13, built: a `race` to-hit modifier when the weapon's type is listed, or with `hurled` when the weapon is hurled) | elf (long and short bows, short and long swords), halfling (sling, staff sling, every hurled weapon) |
 
    Sources: PHB chapter 2 (`01-chapter-2-player-character-races.md`, Dwarves, and Class
    Restrictions and Level Limits for the halfling fighter's exceptional Strength;
@@ -245,6 +245,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    still waits for the user's OK (ADR 0030 step 22.1), so `poison` is carried but not read yet.
    _(As built in format 11: the `weapon_to_hit` kind is accepted by the schema, but no race carries it; it lands with ADR 0030 step 22.3's code.)_
    _(As built 2026-11-13, with ADR 0030 step 22.3: the elf and the halfling carry `weapon_to_hit` in the catalogue's race definitions, with no format bump (the schema already had the kind); the derived block reads the trait by its kind, the attack matches the weapon's type. ADR 0030 step 22.3 has the lists and the thrown-type reading.)_
+   _(As built 2026-11-13, format 22 ([ADR 0021](0021-spell-catalogue.md) step 30): the trait's optional `hurled` flag counts every hurled weapon, whatever its type; the halfling lists `sling` and `staff_sling` with `hurled`. ADR 0030 step 22.3 has the rule.)_
    _(As built in format 11, the armour entries of `rogue_skills`: one per `skill_column` value of the equipment's armour rows (`leather`, `padded_studded`, `elven_chain`, `metal`, `none_allowed`) plus `none`; `code` is that value, `column` the `thief_skill_armor` row it reads (absent for leather, the baseline), `extra` the bard's penalty from `bard_armor_penalty` (bard set only; a hand-set value that differs is refused). `none_allowed` (an armour the class may not wear) and a thief's `metal` are entered with the worst column, `padded_studded_leather`, which is what `SkillArmorFor` does today, so the reader needs no fallback rule: the start-up check (step 8) refuses a `rogue_skills` without an entry for each of these columns, and `SkillArmorFor` reads a column outside the list (one no item can store) as `none_allowed`. `min_to_use` is not in the data: the book gives no such figure (Go's floor `MinSkillPercent` is 0 for both sets and stays a constant until a reader needs a per-class value).)_
    Tests: `RaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc: a race listing the trait
    gets Table 9's bonus on its categories, a race without it none, whatever its id),

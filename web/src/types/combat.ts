@@ -306,6 +306,7 @@ export const WEAPON_TYPES = [
   "dagger",
   "dart",
   "sling",
+  "staff_sling",
   "short_sword",
   "long_sword",
   "other_melee",

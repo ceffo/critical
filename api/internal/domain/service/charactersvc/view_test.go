@@ -14,7 +14,8 @@ import (
 
 // ADR 0045: the character view is a projection of one derivation. The party's
 // fixtures: a single-class character built from the mirror alone, a
-// multi-class one and the dual-class elf on both sides of the crossover.
+// multi-class one (and a halfling one, for the race's hurled flag) and the
+// dual-class elf on both sides of the crossover.
 func viewFixtures() map[string]*charactersvc.Character {
 	mirror := &charactersvc.Character{
 		ID: 5, Name: "Solo", Race: "human", Class: "fighter", RealizedLevel: 5, XPTotal: 16_000,
@@ -23,6 +24,7 @@ func viewFixtures() map[string]*charactersvc.Character {
 	return map[string]*charactersvc.Character{
 		"single mirror":        mirror,
 		"multi":                multi("half_elf", entry("fighter", 5, 16_000), entry("mage", 4, 5_000)),
+		"halfling multi":       multi("halfling", entry("fighter", 5, 16_000), entry("thief", 6, 16_000)),
 		"dual before crossing": elf(7, 60_000),
 		"dual after crossing":  elf(10, 300_000),
 	}
@@ -48,9 +50,13 @@ func TestView_Step6_ProjectsTheDerivedBlock(t *testing.T) {
 			assert.Equal(t, d.Saves, v.Saves)
 			assert.Equal(t, d.RaceSaveBonus, v.RaceSaveBonus)
 			assert.Equal(t, d.RaceToHitTypes, v.RaceToHitTypes)
+			assert.Equal(t, d.RaceToHitHurled, v.RaceToHitHurled)
 			assert.Equal(t, d.RaceToHitBonus, v.RaceToHitBonus)
 			if c.Race == "elf" {
 				require.NotZero(t, v.RaceToHitBonus, "the elf's weapon_to_hit trait is projected")
+			}
+			if c.Race == "halfling" {
+				require.True(t, v.RaceToHitHurled, "the halfling's hurled flag is projected")
 			}
 			assert.Equal(t, d.MagicDefence, v.MagicDefence)
 			assert.Equal(t, d.ClassSaveBonuses, v.ClassSaveBonuses)

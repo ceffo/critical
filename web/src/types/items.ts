@@ -92,14 +92,25 @@ export type ItemState = "carried" | "worn" | "wielded";
  * A class warning (ADR 0033 step 20, itemsvc.Warn*): the code the web words; nothing is refused.
  * weapon_type_missing: a wielded weapon with no weapon type, so no proficiency is judged (ADR 0037
  * step 8). dual_class_old_ability: a piece only a dual-class's old class allows, before the new class
- * passes it (ADR 0042 step 13).
+ * passes it (ADR 0042 step 13). bow_too_strong: a wielded bow built for more exceptional Strength
+ * than the character has (ADR 0002 step 4.1, a bend bars roll the app does not make).
  */
 export type ClassWarningCode =
   | "armour_not_allowed"
   | "weapon_not_allowed"
   | "hands"
   | "weapon_type_missing"
-  | "dual_class_old_ability";
+  | "dual_class_old_ability"
+  | "bow_too_strong";
+
+/**
+ * A bow's Strength rating (ADR 0033 step 3): the Strength a strength bow is built for, a score and
+ * at 18 its exceptional percentile (1 to 100, 100 for 18/00; 0 for none).
+ */
+export interface StrengthRating {
+  score: number;
+  exceptional: number;
+}
 
 /** Why a piece is on the review list (ADR 0033 step 27, itemsvc.Reason*). */
 export type ReviewReason =
@@ -154,6 +165,8 @@ export interface Item {
   twoHanded: boolean;
   /** The ammo kind a launcher fires; empty for melee and hurled weapons. */
   fires: string;
+  /** A bow's Strength rating (ADR 0033 step 3); null for an ordinary bow and every other piece. */
+  strengthRating: StrengthRating | null;
   /**
    * The fighter's weapon specialization (ADR 0030 step 12), read-only: derived from the
    * character's specialization pick of the weapon type (ADR 0037 step 9), never sent.
@@ -245,6 +258,8 @@ export interface ItemBody {
   magicDamage?: number;
   twoHanded?: boolean;
   fires?: string;
+  /** A bow's Strength rating: an object sets it, null clears it, absent keeps it. */
+  strengthRating?: StrengthRating | null;
   baseAc?: number;
   skillColumn?: string;
   armorRow?: string;

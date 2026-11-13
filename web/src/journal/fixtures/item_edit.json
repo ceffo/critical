@@ -92,5 +92,51 @@
         }
       ]
     }
+  },
+  "ratedBow": {
+    "payload": {
+      "itemId": "long_bow",
+      "name": "Long bow",
+      "category": "weapon",
+      "type": "",
+      "behaviour": "stock",
+      "count": 1,
+      "maxCount": 1,
+      "magicalBonus": 0,
+      "ammoKind": "",
+      "effectDice": "",
+      "effectSave": "",
+      "notes": "",
+      "changes": [
+        {
+          "field": "strengthRating",
+          "before": "",
+          "after": "18/100"
+        }
+      ]
+    }
+  },
+  "clearedRating": {
+    "payload": {
+      "itemId": "long_bow",
+      "name": "Long bow",
+      "category": "weapon",
+      "type": "",
+      "behaviour": "stock",
+      "count": 1,
+      "maxCount": 1,
+      "magicalBonus": 0,
+      "ammoKind": "",
+      "effectDice": "",
+      "effectSave": "",
+      "notes": "",
+      "changes": [
+        {
+          "field": "strengthRating",
+          "before": "17",
+          "after": ""
+        }
+      ]
+    }
   }
 }

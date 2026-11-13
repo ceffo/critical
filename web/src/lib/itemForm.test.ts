@@ -7,6 +7,8 @@ import {
   emptyDraft,
   hasField,
   parseInteger,
+  parseStrengthRating,
+  ratesStrength,
 } from "./itemForm";
 
 /** A piece as GET /api/items serves it: every category's fields, zero for the others. */
@@ -42,6 +44,7 @@ function piece(p: Partial<Item>): Item {
     magicDamage: 0,
     twoHanded: false,
     fires: "",
+    strengthRating: null,
     specialized: false,
     nonproficientPenalty: 0,
     baseAc: 0,
@@ -266,6 +269,66 @@ describe("changedFields", () => {
     expect(draftFromItem({ ...wand, component: "gem" }, "en").component).toBe(
       "gem",
     );
+  });
+
+  // ADR 0033 step 3: a bow's Strength rating is typed as 17, 18/50 or 18/00, set and cleared.
+  it("sends a bow's Strength rating when it is set or cleared, and none for another weapon", () => {
+    const bow = piece({
+      id: "b",
+      category: "weapon",
+      weaponType: "long_bow",
+      weaponKind: "missile",
+      fires: "arrow",
+    });
+    const set = (b: Item, text: string) =>
+      changedFields(
+        b,
+        draftToBody({ ...draftFromItem(b, "en"), strengthRating: text }, "en")
+          .body,
+        "en",
+      );
+    expect(set(bow, "18/50")).toEqual({
+      strengthRating: { score: 18, exceptional: 50 },
+    });
+    expect(set(bow, " 17 ")).toEqual({
+      strengthRating: { score: 17, exceptional: 0 },
+    });
+    const rated = { ...bow, strengthRating: { score: 18, exceptional: 100 } };
+    expect(draftFromItem(rated, "en").strengthRating).toBe("18/00");
+    expect(set(rated, "18/00")).toEqual({});
+    expect(set(rated, "")).toEqual({ strengthRating: null });
+    // A bow retyped as a crossbow sends no rating any more: the server drops it.
+    const crossbow = draftToBody(
+      {
+        ...draftFromItem(rated, "en"),
+        weaponType: "light_crossbow",
+      },
+      "en",
+    ).body;
+    expect(crossbow.strengthRating).toBeNull();
+    expect(ratesStrength({ category: "weapon", weaponType: "short_bow" })).toBe(
+      true,
+    );
+    expect(
+      ratesStrength({ category: "weapon", weaponType: "light_crossbow" }),
+    ).toBe(false);
+    expect(ratesStrength({ category: "weapon", weaponType: "" })).toBe(false);
+  });
+
+  it("flags a rating that is not a Strength instead of sending it", () => {
+    const bow = piece({
+      category: "weapon",
+      weaponType: "short_bow",
+      weaponKind: "missile",
+    });
+    const { errors } = draftToBody(
+      { ...draftFromItem(bow, "en"), strengthRating: "eighteen" },
+      "en",
+    );
+    expect(errors).toEqual({ strengthRating: "notAStrength" });
+    expect(parseStrengthRating("18/05")).toEqual({ score: 18, exceptional: 5 });
+    expect(parseStrengthRating("18/5")).toBeUndefined();
+    expect(parseStrengthRating("")).toBeNull();
   });
 
   it("is empty when nothing changed", () => {

@@ -54,6 +54,33 @@ describe("ItemForm, adding in two steps", () => {
     expect(field("name")).toBeNull();
   });
 
+  // ADR 0033 step 3: only a bow offers its Strength rating; typed 18/50, it is sent.
+  it("a bow offers its Strength rating, another weapon none", async () => {
+    const v = await form();
+    await startStep2(v, "Yew bow", "weapon");
+    expect(field("strengthRating")).toBeNull();
+    await v.user.selectOptions(
+      screen.getByLabelText("Weapon type"),
+      "long_bow",
+    );
+    expect(field("strengthRating")).not.toBeNull();
+    await v.user.selectOptions(
+      screen.getByLabelText("Melee or missile"),
+      "missile",
+    );
+    await v.user.type(screen.getByLabelText("Bow's Strength"), "18/50");
+    await v.user.click(screen.getByRole("button", { name: "Add" }));
+    expect(v.onSave.mock.calls[0][0]).toMatchObject({
+      weaponType: "long_bow",
+      strengthRating: { score: 18, exceptional: 50 },
+    });
+    await v.user.selectOptions(
+      screen.getByLabelText("Weapon type"),
+      "light_crossbow",
+    );
+    expect(field("strengthRating")).toBeNull();
+  });
+
   it("an armour shows armour fields and its +N, no weapon field", async () => {
     const v = await form();
     await startStep2(v, "Plate", "armour");

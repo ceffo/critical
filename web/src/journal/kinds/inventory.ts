@@ -14,6 +14,7 @@ import type { WeaponChangeRecord } from "@/types/combat";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { powersChangeText } from "@/lib/itemPowers";
+import { formatStrength } from "@/lib/format";
 
 /** Payload of item_restock entries (itemsvc restockRecord, same shape as RestockResult). */
 function decodeRestock(e: LogEntry): RestockResult | null {
@@ -54,6 +55,12 @@ function itemEditText(
 ): string {
   // The spell a scroll holds (ADR 0033 step 2) is logged by its catalogue id.
   const spell = (id: string) => (id ? spellName(id) : t("log.item.noSpell"));
+  // A bow's Strength rating (ADR 0033 step 3) is logged as 17 or 18/50, 18/100 for 18/00.
+  const rating = (text: string) => {
+    if (!text) return t("log.item.noRating");
+    const [score, exceptional] = text.split("/").map(Number);
+    return formatStrength(score, exceptional ?? 0);
+  };
   const changes = (p.changes ?? [])
     .map((c) =>
       t("log.item.change", {
@@ -67,6 +74,9 @@ function itemEditText(
           : {}),
         ...(c.field === "spellId"
           ? { before: spell(c.before), after: spell(c.after) }
+          : {}),
+        ...(c.field === "strengthRating"
+          ? { before: rating(c.before), after: rating(c.after) }
           : {}),
         field: t(`log.item.fields.${c.field}`, { defaultValue: c.field }),
       }),

@@ -1,6 +1,11 @@
 package itemsvc
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+
+	"github.com/ceffo/critical/api/internal/domain"
+)
 
 // ErrItemNotFound is returned when an item id is unknown.
 var ErrItemNotFound = errors.New("item not found")
@@ -23,3 +28,7 @@ var ErrAbilityNotFound = errors.New("ability not found")
 // ErrAbilityExhausted is returned by UseAbility when the ability's limit
 // cannot pay a use: nothing left (ADR 0049 step 5, code `exhausted`).
 var ErrAbilityExhausted = errors.New("ability exhausted")
+
+// ErrQuantityBound is returned by DAL.Increment when the add would take the
+// quantity above MaxQuantity (ADR 0049 step 2); it is an invalid input (400).
+var ErrQuantityBound = fmt.Errorf("%w: a quantity is at most %d", domain.ErrInvalidInput, MaxQuantity)

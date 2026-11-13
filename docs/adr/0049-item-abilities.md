@@ -539,6 +539,11 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
 4. **Quantity by category.** Restock and spend rules by category, removal at 0 for a potion or scroll,
    `per_day` and `charges` needing a quantity of 1, a spell spends a component (steps 2 and 3). Needs
    2. (The server part of CRI-361 is done by then.)
+   *Built.* Slice 3 already carried the category rules, the removal at 0 and the per_day/charges
+   refusals; this slice adds what was left and one test per row of step 2's table
+   (`quantity_test.go`): a quantity is 0 to 999 (`MaxQuantity`; the editor's count was 9999), and a
+   restock that would build more than 999 is refused (400 `invalid_input`): the service reads first for the message, and the DAL's increment is itself conditional (`count + n <= 999`, zero rows read as `ErrQuantityBound`), so two concurrent restocks cannot pass the bound together. The daily
+   number (`maxCount`, legacy) keeps its own bound until slice 10.
 5. **Act · Items lists abilities.** The rows, the limit text, the empty state, the Use call and the
    result card (steps 14 and 17). Needs 3. Closes CRI-310.
    *Built.* The web lists `abilities` of every non-ammunition item and reads `usable` and `reason` from the

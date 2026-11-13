@@ -149,17 +149,27 @@ func (d *DAL) Decrement(ctx context.Context, characterID int64, itemID string) (
 	return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemEmpty, itemID)
 }
 
-// Increment adds n with a single UPDATE and returns the updated item;
-// ErrItemNotFound when the id is unknown.
+// Increment adds n with a single conditional UPDATE: the row only changes while
+// count + n stays within itemsvc.MaxQuantity, so two concurrent restocks cannot
+// both pass a bound one of them would break. When no row was updated, a
+// follow-up read tells an unknown id (ErrItemNotFound) from a full stock
+// (ErrQuantityBound).
 func (d *DAL) Increment(ctx context.Context, characterID int64, itemID string, n int) (itemsvc.Item, error) {
-	r, err := d.q.IncrementItem(ctx, queries.IncrementItemParams{N: int64(n), CharacterID: characterID, ID: itemID})
+	r, err := d.q.IncrementItem(ctx, queries.IncrementItemParams{N: int64(n), CharacterID: characterID, ID: itemID, MaxCount: itemsvc.MaxQuantity})
+	if err == nil {
+		return d.named(ctx, r)
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return itemsvc.Item{}, fmt.Errorf("increment item %s: %w", itemID, err)
+	}
+	_, err = d.q.GetItem(ctx, queries.GetItemParams{CharacterID: characterID, ID: itemID})
 	if errors.Is(err, sql.ErrNoRows) {
 		return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrItemNotFound, itemID)
 	}
 	if err != nil {
-		return itemsvc.Item{}, fmt.Errorf("increment item %s: %w", itemID, err)
+		return itemsvc.Item{}, fmt.Errorf("get item %s: %w", itemID, err)
 	}
-	return d.named(ctx, r)
+	return itemsvc.Item{}, fmt.Errorf("%w: %s", itemsvc.ErrQuantityBound, itemID)
 }
 
 // named is the item of r with its name read.

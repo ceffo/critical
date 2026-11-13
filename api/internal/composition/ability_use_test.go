@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/composition"
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -366,5 +367,87 @@ func TestUseLastDose_ADR0049Step2_BothEndpointsRemoveUndoBringsBackRedoRemoves(t
 			require.NoError(t, err)
 			assert.False(t, has(), "redo removes it again")
 		})
+	}
+}
+
+// ADR 0049 step 2: the inventory's minus on a potion or a scroll with no ability (the plain stock the
+// old use spent) takes the last one out in the same entry; undo restores the whole item (name,
+// category, kind, count 1), redo removes it again.
+func TestUseItem_ADR0049Step2_PlainLastOneIsRemovedUndoRestoresWholeRedoRemoves(t *testing.T) {
+	for _, kind := range []string{itemsvc.MagicPotion, itemsvc.MagicScroll} {
+		t.Run(kind, func(t *testing.T) {
+			bs, ctx, id := abilityTable(t, &attackDice{t: t, dies: []int{1}, calls: map[string]int{}})
+			created, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+				Name: localized.Of("Plain " + kind), Category: itemsvc.CategoryMagic, MagicKind: kind,
+				Behaviour: itemsvc.BehaviourStock, Count: 1, Notes: "kept", Abilities: []itemsvc.Ability{},
+			})
+			require.NoError(t, err)
+			itemID := created.Item.ID
+			before := itemOf(t, bs, ctx, id, itemID)
+			exists := func() bool {
+				items, err := bs.Items.List(ctx, id)
+				require.NoError(t, err)
+				for _, it := range items {
+					if it.ID == itemID {
+						return true
+					}
+				}
+				return false
+			}
+
+			res, err := bs.Items.UseItem(ctx, id, itemID)
+			require.NoError(t, err)
+			assert.True(t, res.Removed)
+			assert.False(t, exists())
+			entries, err := bs.Log.List(ctx, id, 1)
+			require.NoError(t, err)
+			_, err = bs.Log.Undo(ctx, id, entries[0].ID)
+			require.NoError(t, err)
+			require.True(t, exists(), "undo brings it back")
+			assert.Equal(t, before, itemOf(t, bs, ctx, id, itemID), "the whole item")
+
+			redo, err := bs.Log.RedoTarget(ctx, id)
+			require.NoError(t, err)
+			require.NotNil(t, redo)
+			_, err = bs.Log.Redo(ctx, id, redo.ID)
+			require.NoError(t, err)
+			assert.False(t, exists(), "redo removes it again")
+		})
+	}
+}
+
+// ADR 0049 step 2 and ADR 0025 step 4: two restocks of +9 on a stock of 990, at the same instant,
+// leave the stock at 999 at most: one is paid, the other refused as above the bound; one log entry.
+func TestRestock_ADR0049Step2_TwoConcurrentRestocksNeverPassTheBound(t *testing.T) {
+	for range 25 {
+		bs, ctx, id := abilityTable(t, &attackDice{t: t, dies: []int{1}, calls: map[string]int{}})
+		created, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
+			Name: localized.Of("Bolts"), Category: itemsvc.CategoryAmmunition, AmmoKind: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 990,
+		})
+		require.NoError(t, err)
+		errs := make([]error, 2)
+		var wg sync.WaitGroup
+		start := make(chan struct{})
+		for n := range errs {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				<-start
+				_, errs[n] = bs.Items.Restock(ctx, id, created.Item.ID, 9)
+			}()
+		}
+		close(start)
+		wg.Wait()
+
+		paid := 0
+		for _, err := range errs {
+			if err == nil {
+				paid++
+			} else {
+				require.ErrorIs(t, err, domain.ErrInvalidInput)
+			}
+		}
+		assert.Equal(t, 1, paid)
+		assert.Equal(t, 999, itemOf(t, bs, ctx, id, created.Item.ID).Count)
 	}
 }

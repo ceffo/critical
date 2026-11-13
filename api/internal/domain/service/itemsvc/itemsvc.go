@@ -95,7 +95,7 @@ type SVC interface {
 // or writes the items of characterID only, and an item id is looked up among
 // that character's (another character's item of the same id is unknown).
 // Decrement and Increment must be single atomic statements; Decrement never
-// takes the count below 0. Every method joins the transaction carried by ctx.
+// takes the count below 0 and Increment never above MaxQuantity (ErrQuantityBound). Every method joins the transaction carried by ctx.
 type DAL interface {
 	List(ctx context.Context, characterID int64) ([]Item, error)
 	// Get returns one item, or ErrItemNotFound.
@@ -105,7 +105,8 @@ type DAL interface {
 	Update(ctx context.Context, characterID int64, item Item) error
 	// Decrement returns the updated item, ErrItemNotFound or ErrItemEmpty.
 	Decrement(ctx context.Context, characterID int64, itemID string) (Item, error)
-	// Increment adds n and returns the updated item, or ErrItemNotFound.
+	// Increment adds n and returns the updated item, ErrItemNotFound or
+	// ErrQuantityBound (count + n above MaxQuantity, nothing written).
 	Increment(ctx context.Context, characterID int64, itemID string, n int) (Item, error)
 	// SetCount writes a count back; ErrItemNotFound for an unknown id.
 	SetCount(ctx context.Context, characterID int64, itemID string, count int) error

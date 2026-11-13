@@ -420,6 +420,15 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
 1. **The ability on the item.** `abilities` column, the Ability and Limit types, validation (steps 4,
    5, 10 for the first three effect kinds: none, `dice`), the wire read and write, the snapshot and the
    editor's `item_edit`. No behaviour change. Needs nothing.
+   *Built.* How it reads the steps: an item's `abilities` is `nil` (NULL, not converted) or a list, and
+   a body or patch that sends none leaves the column as it is; the wire omits the key for NULL and
+   serves `[]` for converted-with-none, so a client written before this slice sees no change. The
+   ability's name is a language map stored inside the JSON list (as the snapshots already hold names),
+   its note and a dice effect's label are plain typed text. "A `with_item` ability needs a quantity" is
+   read as: refused on a piece whose quantity is no stock (a weapon, armour, shield, ring, rod, staff,
+   wand or misc item); `per_day` and `charges` are refused unless the count is 1. A snapshot with no
+   `abilities` key (every one written before this slice, and one of an unconverted item) restores the
+   item as not converted; step 20's conversion of old snapshots is slice 2.
 2. **The conversion.** The pure function, the boot step, the review reasons, the snapshot restorer for
    old shapes, the seed in the new shape, the Power Gem's name (steps 18 to 20, 23). Needs 1.
 3. **Use of an ability.** The endpoint, the limit payment, the `dice` effect, the logged entry and its

@@ -35,8 +35,13 @@ func toItem(r queries.Item, name localized.Text) (itemsvc.Item, error) {
 	if err != nil {
 		return itemsvc.Item{}, fmt.Errorf("item %s: %w", r.ID, err)
 	}
+	abilities, err := itemsvc.DecodeAbilities(r.Abilities.String, r.Abilities.Valid)
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("item %s: %w", r.ID, err)
+	}
 	return itemsvc.Item{
-		ID: r.ID, Position: int(r.Position), Name: name, Type: r.Type,
+		Abilities: abilities,
+		ID:        r.ID, Position: int(r.Position), Name: name, Type: r.Type,
 		Category: itemsvc.Category(r.Category), MagicKind: r.MagicKind, CatalogueCode: r.CatalogueCode,
 		Component: r.Component, SpellID: r.SpellID,
 		State:      itemsvc.State(r.State),
@@ -77,6 +82,13 @@ func flag(b bool) int64 {
 		return 1
 	}
 	return 0
+}
+
+// abilityColumn is an ability list as stored: NULL for nil (not converted,
+// ADR 0049 step 18).
+func abilityColumn(abilities []itemsvc.Ability) (sql.NullString, error) {
+	text, ok, err := itemsvc.EncodeAbilities(abilities)
+	return sql.NullString{String: text, Valid: ok}, err
 }
 
 // types is never nil: the column is NOT NULL.
@@ -187,6 +199,10 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 	if err != nil {
 		return err
 	}
+	abilities, err := abilityColumn(it.Abilities)
+	if err != nil {
+		return err
+	}
 	key, err := d.texts.Add(ctx, it.Name)
 	if err != nil {
 		return fmt.Errorf("insert item %s: %w", it.ID, err)
@@ -196,7 +212,7 @@ func (d *DAL) Insert(ctx context.Context, characterID int64, it itemsvc.Item) er
 		CharacterID: characterID, ID: it.ID, Position: int64(it.Position), Name: key, Type: it.Type,
 		Behaviour: string(it.Behaviour), MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind,
 		Count: int64(it.Count), MaxCount: int64(it.MaxCount),
-		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers,
+		EffectDice: it.EffectDice, EffectSave: it.EffectSave, Notes: it.Notes, Powers: powers, Abilities: abilities,
 		Category: string(it.Category), MagicKind: it.MagicKind, CatalogueCode: it.CatalogueCode, Component: it.Component, SpellID: it.SpellID,
 		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
 		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,
@@ -244,12 +260,16 @@ func (d *DAL) Update(ctx context.Context, characterID int64, it itemsvc.Item) er
 	if err != nil {
 		return err
 	}
+	abilities, err := abilityColumn(it.Abilities)
+	if err != nil {
+		return err
+	}
 	rating, ratingExc := ratingColumns(it.StrengthRating)
 	key, err := d.q.UpdateItem(ctx, queries.UpdateItemParams{
 		Position: int64(it.Position), Type: it.Type, Behaviour: string(it.Behaviour),
 		MagicBonus: int64(it.MagicBonus), AmmoKind: it.AmmoKind, Count: int64(it.Count),
 		MaxCount: int64(it.MaxCount), EffectDice: it.EffectDice, EffectSave: it.EffectSave,
-		Notes: it.Notes, Powers: powers, CharacterID: characterID, ID: it.ID,
+		Notes: it.Notes, Powers: powers, Abilities: abilities, CharacterID: characterID, ID: it.ID,
 		Category: string(it.Category), MagicKind: it.MagicKind, CatalogueCode: it.CatalogueCode, Component: it.Component, SpellID: it.SpellID,
 		State: string(it.State), WeaponType: it.WeaponType, WeaponKind: it.WeaponKind, Size: it.Size,
 		DamageTypes: types(it.DamageTypes), Speed: int64(it.Speed), DamageSm: it.DamageSM, DamageL: it.DamageL,

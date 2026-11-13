@@ -26,6 +26,10 @@ func (r storedItem) item() (itemsvc.Item, error) {
 		return itemsvc.Item{}, fmt.Errorf("item %s: %w", it.ID, err)
 	}
 	it.Powers = powers
+	it.Abilities, err = itemsvc.DecodeAbilities(r.abilities, r.abilitiesSet)
+	if err != nil {
+		return itemsvc.Item{}, fmt.Errorf("item %s: %w", it.ID, err)
+	}
 	return it, nil
 }
 
@@ -35,10 +39,14 @@ func toStored(it itemsvc.Item, row int64) (storedItem, error) {
 	if err != nil {
 		return storedItem{}, err
 	}
+	abilities, set, err := itemsvc.EncodeAbilities(it.Abilities)
+	if err != nil {
+		return storedItem{}, err
+	}
 	it = clone(it)
 	it.Name = stored(it.Name)
-	it.Powers = nil
-	return storedItem{Item: it, powers: powers, row: row}, nil
+	it.Powers, it.Abilities = nil, nil
+	return storedItem{Item: it, powers: powers, abilities: abilities, abilitiesSet: set, row: row}, nil
 }
 
 // List returns the character's items in sheet order.

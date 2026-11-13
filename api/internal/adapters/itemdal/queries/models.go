@@ -52,6 +52,8 @@ type Item struct {
 	SpellID                   string
 	StrengthRating            sql.NullInt64
 	StrengthRatingExceptional int64
+	// the ability list (ADR 0049): [{"id", "name"?, "note"?, "limit": {"kind", "max"?, "left"?, "cost"?}, "effects": [{"kind": "dice", "dice", "save"?, "label"?}]}]; NULL: not converted yet, []: none
+	Abilities sql.NullString
 }
 
 // one row per language of a text (ADR 0023): text_id is the key a name or description column holds

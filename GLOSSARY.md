@@ -528,11 +528,13 @@ _Code_: Items, ItemInput, ItemPatch, ConsumedItem, ConsumeItem, Category
 **Inventory** (fr: inventaire):
 The character's list of items, and its screen. [ADR 0016](docs/adr/0016-inventory.md), [ADR 0035](docs/adr/0035-equipment-screens.md) items 2 and 7.
 
-**Item ability** (fr: capacité) _(planned)_:
-A trait of any item that is used, with a usage limit and effects. [ADR 0049](docs/adr/0049-item-abilities.md) steps 4 to 7. _Avoid_: power (an item power is passive), ability alone (an ability score).
+**Item ability** (fr: capacité):
+A trait of any item that is used, with a usage limit and effects. An item holds a list of them (the `abilities` column: NULL is an item not yet converted from its behaviour, an empty list one converted with none); the list is stored, served and edited with the item and carried by `item_edit` entries and snapshots. Using one is a later slice. Its Go type is `Ability` (a name the **Ability score** alias already holds). [ADR 0049](docs/adr/0049-item-abilities.md) steps 4 to 7 and 18. _Avoid_: power (an item power is passive), ability alone (an ability score).
+_Code_: Effect, EffectKind
 
-**Usage limit** (fr: limite d'usage) _(planned)_:
-How often an item ability may be used: unlimited, N per day, N charges, or spent with the item. [ADR 0049](docs/adr/0049-item-abilities.md) step 5.
+**Usage limit** (fr: limite d'usage):
+How often an item ability may be used: unlimited, N per day, N charges (each use costing some), or spent with the item. [ADR 0049](docs/adr/0049-item-abilities.md) step 5.
+_Code_: Limit, LimitKind
 
 **Behaviour** (fr: comportement; UI: the item form field "How it is used" / "Mode d'usage", its options "Quantity" / "Quantité" for `stock`, "Charges", "Daily"; the form's "Effect dice" and "Effect save" read "Dice rolled on use" / "Dés lancés à l'usage" and "Save against the effect" / "JS contre l'effet"):
 How an item's count moves: `stock`, `charges`, `daily`; **use** and **restock**. [ADR 0016](docs/adr/0016-inventory.md) steps 1 to 3. _(Planned: replaced by a quantity and item abilities, [ADR 0049](docs/adr/0049-item-abilities.md).)_

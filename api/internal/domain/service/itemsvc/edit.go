@@ -44,6 +44,9 @@ type ItemInput struct {
 	// Powers are the piece's powers as the editor sets them (ADR 0033 step
 	// 17), picked or typed; one without an id gets power_<n>.
 	Powers []Power
+	// Abilities are the piece's abilities (ADR 0049 step 4); one without an
+	// id gets ability_<n>. nil: not converted yet (stored as NULL).
+	Abilities []Ability
 	// Ammunition.
 	AmmoKind   string
 	MagicBonus int
@@ -94,7 +97,10 @@ type ItemPatch struct {
 	Notes      *string
 	// Powers replaces the whole power list (ADR 0033 step 17); nil:
 	// unchanged. One without an id gets power_<n>.
-	Powers      *[]Power
+	Powers *[]Power
+	// Abilities replaces the whole ability list (ADR 0049 step 4); nil:
+	// unchanged. One without an id gets ability_<n>.
+	Abilities   *[]Ability
 	AmmoKind    *string
 	MagicBonus  *int
 	DamageTypes *[]string
@@ -156,11 +162,20 @@ type changeRecord struct {
 	EffectSave    string        `json:"effectSave"`
 	Notes         string        `json:"notes"`
 	Changes       []FieldChange `json:"changes,omitempty"`
+	// Abilities are the piece's abilities as stored (ADR 0049 step 4), in
+	// the same keys as the wire; absent for a piece not converted yet.
+	Abilities *[]jsonAbility `json:"abilities,omitempty"`
 }
 
 func record(i Item, changes []FieldChange) changeRecord {
+	var abilities *[]jsonAbility
+	if i.Abilities != nil {
+		js := toJSONAbilities(i.Abilities)
+		abilities = &js
+	}
 	return changeRecord{
-		ItemID: i.ID, Name: i.Name.Any(), Category: string(i.Category), MagicKind: i.MagicKind, CatalogueCode: i.CatalogueCode,
+		Abilities: abilities,
+		ItemID:    i.ID, Name: i.Name.Any(), Category: string(i.Category), MagicKind: i.MagicKind, CatalogueCode: i.CatalogueCode,
 		Component: i.Component, Type: i.Type, Behaviour: string(i.Behaviour), Count: i.Count,
 		MaxCount: i.MaxCount, MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Changes: changes,
@@ -288,7 +303,8 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, SpellID: in.SpellID, State: StateCarried,
 		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
 		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes, Powers: withPowerIDs(in.Powers),
-		AmmoKind: in.AmmoKind, MagicBonus: in.MagicBonus,
+		Abilities: withAbilityIDs(in.Abilities),
+		AmmoKind:  in.AmmoKind, MagicBonus: in.MagicBonus,
 		DamageTypes: in.DamageTypes, DamageSM: in.DamageSM, DamageL: in.DamageL,
 		WeaponType: in.WeaponType, WeaponKind: in.WeaponKind, Size: in.Size, Speed: in.Speed,
 		MagicToHit: in.MagicToHit, MagicDamage: in.MagicDamage, TwoHanded: in.TwoHanded, Fires: in.Fires,
@@ -436,6 +452,12 @@ func patched(old Item, p ItemPatch) Item {
 			item.Powers = nil
 		}
 	}
+	if p.Abilities != nil {
+		item.Abilities = withAbilityIDs(*p.Abilities)
+		if item.Abilities == nil {
+			item.Abilities = []Ability{}
+		}
+	}
 	set(&item.MagicKind, p.MagicKind)
 	set(&item.Component, p.Component)
 	set(&item.SpellID, p.SpellID)
@@ -571,6 +593,7 @@ func diff(a, b Item) []FieldChange {
 	add("effectSave", a.EffectSave, b.EffectSave)
 	add("notes", a.Notes, b.Notes)
 	add("powers", powersText(a.Powers), powersText(b.Powers))
+	add("abilities", abilitiesText(a.Abilities), abilitiesText(b.Abilities))
 	add("damageTypes", strings.Join(a.DamageTypes, "/"), strings.Join(b.DamageTypes, "/"))
 	add("damageSm", a.DamageSM, b.DamageSM)
 	add("damageL", a.DamageL, b.DamageL)

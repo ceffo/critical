@@ -226,6 +226,10 @@ type ItemBody struct {
 	// it. A power sent without an id gets power_<n>. An armour's or a
 	// shield's "+N" is the power of id "magic", one effect ac -N.
 	Powers *[]wire.PowerDTO `json:"powers"`
+	// Abilities is the whole ability list, as served (ADR 0049 step 4): on a
+	// PATCH it replaces the stored one, absent keeps it. An ability sent
+	// without an id gets ability_<n>. absent on a POST: not converted yet.
+	Abilities *[]wire.AbilityDTO `json:"abilities"`
 	// Accepted and ignored, so a piece served back as is still decodes: the
 	// type label is no longer edited (ADR 0033 step 1), the state moves
 	// through POST /api/items/{id}/state, the review is not the editor's.
@@ -309,6 +313,14 @@ func powers(dtos *[]wire.PowerDTO) []itemsvc.Power {
 	return wire.PowersFromDTO(*dtos)
 }
 
+// abilities is the domain list of a body's abilities (absent or null: nil).
+func abilities(dtos *[]wire.AbilityDTO) []itemsvc.Ability {
+	if dtos == nil {
+		return nil
+	}
+	return wire.AbilitiesFromDTO(*dtos)
+}
+
 // Create adds an item and logs it.
 func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
@@ -329,7 +341,7 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 			StrengthRating: b.StrengthRating.rating(),
 			BaseAC:         deref(b.BaseAC), SkillColumn: deref(b.SkillColumn),
 			ArmorRow: deref(b.ArmorRow), ShieldKind: deref(b.ShieldKind), ACMelee: deref(b.ACMelee),
-			ACMissile: deref(b.ACMissile), Powers: powers(b.Powers),
+			ACMissile: deref(b.ACMissile), Powers: powers(b.Powers), Abilities: abilities(b.Abilities),
 		})
 		if err != nil {
 			return err
@@ -358,6 +370,10 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if b.Powers != nil {
 			ps := powers(b.Powers)
 			p.Powers = &ps
+		}
+		if b.Abilities != nil {
+			as := abilities(b.Abilities)
+			p.Abilities = &as
 		}
 		if b.Behaviour != nil {
 			bh := itemsvc.Behaviour(*b.Behaviour)

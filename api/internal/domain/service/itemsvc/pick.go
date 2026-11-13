@@ -22,7 +22,7 @@ func (s *service) Catalogue() ruletablesvc.Equipment {
 // picked is the piece a pick makes (ADR 0033 steps 23 and 24): the row's
 // category, numbers and codes copied, its code kept; from the player only the
 // name (the row's when none is typed), the count (at least 1, 1 when not
-// given), the note, the powers (an armour's or a shield's "+N", ADR 0033 step
+// given), the note, the powers and abilities (an armour's or a shield's "+N", ADR 0033 step
 // 17), the spell (kept so Validate refuses it: no row is a scroll), the magic of a weapon (to hit, damage) or ammunition and a bow's Strength rating.
 // Everything else of in is ignored: the piece is edited afterwards like any other. A code no row
 // has is refused (field catalogueCode, CodeUnknown).
@@ -35,6 +35,7 @@ func (s *service) picked(in ItemInput) (Item, error) {
 	item := Item{
 		CatalogueCode: in.CatalogueCode, Name: in.Name.Trimmed(), State: StateCarried,
 		Behaviour: BehaviourStock, Count: max(in.Count, 1), Notes: in.Notes, Powers: withPowerIDs(in.Powers),
+		Abilities: withAbilityIDs(in.Abilities),
 		// No catalogue row is a scroll, so a spell here is refused by Validate
 		// (spellId not_allowed), not silently dropped.
 		SpellID: in.SpellID,

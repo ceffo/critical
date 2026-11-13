@@ -158,8 +158,11 @@ type review struct {
 // back through itemsvc.DecodePowers, as the database adapter does) and the
 // insertion order that breaks a position tie.
 type storedItem struct {
-	itemsvc.Item // Powers is nil: they are in powers
+	itemsvc.Item // Powers and Abilities are nil: they are in powers and abilities
 	powers       string
+	// abilities is the stored list; abilitiesSet false is NULL (not converted).
+	abilities    string
+	abilitiesSet bool
 	row          int64
 }
 

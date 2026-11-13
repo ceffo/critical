@@ -3108,7 +3108,7 @@
       "buffNamePlaceholder": "The ability's name",
       "buffRounds": "Rounds",
       "buffRoundsHint": "How many rounds the effect lasts, counted down by Next round (0: until dismissed)",
-      "addBuff": "Timed effect",
+      "addBuff": "Effect",
       "addBuffHint": "Put a timed effect on the list when this ability is used",
       "add": "Ability",
       "addHint": "Add an ability to this item"

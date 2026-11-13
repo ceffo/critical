@@ -15,7 +15,7 @@ Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (u
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 Steps 3, 7 and 8 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 15 and 16 (multi-class and dual-class), on implementation.
-Step 21 (a weapon pick names a weapon, not a weapon type; amends steps 7, 8, 9 and 16, ADR 0042 step 16.1 and ADR 0040 steps 1.6 and 13) decided 2026-11-13 (user triage), its _(proposed)_ readings awaiting the user's OK; not implemented.
+Step 21 (a weapon pick names a weapon, not a weapon type; amends steps 7, 8, 9 and 16, ADR 0042 step 16.1 and ADR 0040 steps 1.6 and 13) decided 2026-11-13 (user triage), its _(proposed)_ readings awaiting the user's OK; built 2026-11-13 but 21.1's `proficiency_code` (see "As built" at the end of step 21).
 
 ## Context
 
@@ -195,14 +195,14 @@ writes `Test<name>` and adds the prefix here in the same PR.
    - thief (p.39): `dagger`, `dart`, `hand_crossbow`, `short_bow`, `sling`, `short_sword`,
      `long_sword`, `other_melee` (club, knife, broad sword, quarterstaff), `other_thrown` (lasso).
    Wielding stays allowed: ADR 0033 step 20 still only warns.
-   Tests: `TestWeaponPick_Step7_ClassLimitsRefuseThePick` (charactersvc: each class's allowed and
+   Tests: `TestWeaponPick_Step21_2_TheClassEquipmentDecides` (was `WeaponPick_Step7_ClassLimitsRefuseThePick`, rewritten on codes by ADR 0037 step 21.9) (charactersvc: each class's allowed and
    one refused type, a duplicate type, an unknown code),
-   `TestClassWeaponTypes_Step7_AgreesWithTheStep20Warnings` (itemsvc: the lists above from
+   `TestWeaponPickCodes_Step21_2_AgreeWithTheWieldingWarnings` (was `ClassWeaponTypes_Step7_AgreesWithTheStep20Warnings`, rewritten on codes by ADR 0037 step 21.9) (itemsvc: the lists above from
    the class equipment and the catalogue).
    _(As built 2026-10-20, moved onto the class data 2026-10-22 ([ADR 0040](0040-classes-are-data.md) step 11): the lists are
    no longer committed Go data. `ruletablesvc.WeaponPickTypes` derives them at import from the class
    equipment lists and the weapon catalogue and `classes.Equipment.PickTypes` holds them (absent: any
-   type), checked against the PHB pages by `TestClassWeaponTypes_Step7_DerivedFromTheEquipmentList`
+   type), checked against the PHB pages by `TestClassWeaponCodes_Step21_2_DerivedFromTheEquipmentList` (was `ClassWeaponTypes_Step7_DerivedFromTheEquipmentList`, rewritten on codes by ADR 0037 step 21.9)
    (ruletablesvc) and re-derived from the class warnings by the itemsvc test. The thief's
    `other_thrown`, which came from the lasso, is lost until the catalogue holds a lasso weapon (the
    class data names catalogue weapons only, ADR 0040 step 1.6).
@@ -216,8 +216,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
    /api/characters/options` gives each class `weaponTypes` `[{type, specializationSlots}]`, the
    types the class may pick in display order (`charactersvc.ClassWeaponTypeOptions`), so the web
    offers only those and holds no class list
-   (`TestClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost`, charactersvc;
-   `TestProficiencies_Step7_OptionsWeaponTypes`, composition). A kept pick outside the list shows
+   (`TestClassWeaponOptions_Step21_6_AllowedWeaponsAndTheSpecializationCost` (was `ClassWeaponTypeOptions_Step7_AllowedTypesAndTheSpecializationCost`, rewritten on codes by ADR 0037 step 21.9), charactersvc;
+   `TestProficiencies_Step21_6_OptionsWeapons` (was `Proficiencies_Step7_OptionsWeaponTypes`, rewritten on codes by ADR 0037 step 21.9), composition). A kept pick outside the list shows
    with its `allowed: false` as such, removable, never re-added.)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 16.1, on implementation: with several class entries, a type is allowed when any active entry's class allows it, except that an entry whose class is `blunt_only` restricts the picks to its own list (a multi-class priest keeps his weapon limits))_
    _(Amended 2026-11-13 by step 21.1 and 21.2 (user triage), on implementation: a weapon pick names a catalogue weapon code, not a weapon type; a class may pick a weapon its equipment allows by ADR 0033 step 20's rule on that weapon, the lists above become per weapon)_
@@ -232,7 +232,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    Tests: `TestResolveAttack_Step8_NonproficientPenaltyByGroup` (combatsvc: each group; with a pick,
    none), `TestResolveAttack_Step8_LauncherByItsTypeAndOrder` (a launcher by its own type; after
    the buffs, before the situational), `TestPreviewAttack_Step8_ShowsThePenalty`,
-   `TestResolveAttack_Step8_NoTypeNoPenalty`, `TestRollSpellToHit_Step8_NoPenalty` (combatsvc).
+   `TestResolveAttack_Step21_4_NoCodeIsNonproficient` (was `ResolveAttack_Step8_NoTypeNoPenalty`, rewritten on codes by ADR 0037 step 21.9), `TestRollSpellToHit_Step8_NoPenalty` (combatsvc).
    _(As built 2026-10-20: Table 34's penalty is served on the character's derived proficiency
    figures (`charactersvc.ProficiencySlots.NonproficientPenalty`, read from the seed's `slots`
    rows) and judged by `Character.NonproficientPenalty(weaponType)`; combatsvc adds the modifier
@@ -244,15 +244,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
    A character without Table 34 figures (no catalogue, an unknown class) takes none. The warning
    `weapon_type_missing` is a piece warning (ADR 0033 step 20's list, every class, on a wielded
    weapon with no type), served on the piece and the attack card like the class warnings:
-   `TestClassWarnings_Step8_WeaponTypeMissing` (itemsvc). Kelsen's six weapons take none
+   `TestClassWarnings_Step21_4_WeaponCodeMissing` (was `ClassWarnings_Step8_WeaponTypeMissing`, rewritten on codes by ADR 0037 step 21.9) (itemsvc). Kelsen's six weapons take none
    (`TestKelsen_Step8_OwnWeaponsTakeNoPenalty`, composition, which also checks the preview
    equals the roll once a pick is removed). Before a roll, 2026-10-20: every weapon piece of
    `GET /api/items` and every weapon of `GET /api/weapons` carries `nonproficientPenalty` (0:
    none), the same rule read from the character row (`charactersvc.WeaponProficiency`, in the
    one read itemsvc already made for step 9's `specialized`), so the weapon card and the attack
    form mark a weapon without proficiency
-   (`TestWeaponProficiency_Step8_PenaltyFromThePicks`, charactersvc;
-   `TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece`, itemsvc;
+   (`TestWeaponProficiency_Step21_3_PenaltyByTheWeaponsCode` (was `WeaponProficiency_Step8_PenaltyFromThePicks`, rewritten on codes by ADR 0037 step 21.9), charactersvc;
+   `TestNonproficientPenalty_Step21_3_OnThePieceByCode` (was `NonproficientPenalty_Step8_DerivedOnTheWeaponPiece`, rewritten on codes by ADR 0037 step 21.9), itemsvc;
    `TestNonproficientPenalty_Step8_OnTheWeaponsAndTheItems`, composition).)_
    _(Amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) step 15, on implementation: with several class entries, the penalty is the smallest among the active entries' groups (ADR 0042's question Q12))_
    _(Amended 2026-11-13 by steps 21.3 and 21.4, on implementation: the penalty applies when no pick names the weapon's catalogue code; a weapon with no code is non-proficient with the warning `weapon_code_missing`, which replaces `weapon_type_missing` (proposed))_
@@ -267,10 +267,10 @@ writes `Test<name>` and adds the prefix here in the same PR.
    the specialization pick, derived on read; the per-weapon flag is no longer written or read
    (the item editor drops it), and every effect of step 12 (the bonuses, point-blank, Table 35's
    attacks of step 11) follows the derived value.
-   Tests: `TestSpecialization_Step9_FighterOnlyOneTypeAtThePhbCost` (charactersvc: 2 and 3 slots,
+   Tests: `TestSpecialization_Step21_5_OneWeaponAtItsTypesCost` (was `Specialization_Step9_FighterOnlyOneTypeAtThePhbCost`, rewritten on codes by ADR 0037 step 21.9) (charactersvc: 2 and 3 slots,
    a bow at 2, a sword at 3 and 4 refused (1 is a plain pick), a mage refused, a second type
    refused),
-   `TestSpecialized_Step9_DerivedFromThePick` (itemsvc: two weapons of the type both specialized,
+   `TestSpecialized_Step21_5_OnlyThePiecesOfThatCode` (was `Specialized_Step9_DerivedFromThePick`, rewritten on codes by ADR 0037 step 21.9) (itemsvc: two weapons of the type both specialized,
    the stored flag ignored), `TestResolveAttack_Step9_SpecializationFromThePick` (composition).
    _(As built 2026-10-20: the specialization is the type's weapon pick with the type's
    specialization cost in slots (`ruletablesvc.SpecializationSlots`), so it is also the type's
@@ -347,7 +347,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     9), `not_allowed` (steps 6 and 9), `weapon_not_allowed` (step 7), then step 10's
     `over_budget`. The same editor serves creation, a level-up, catching up and a correction.
     Tests: `TestSetPicks_Step12_RefusalsWriteNothing`, `PreviewPicks_Step12_SameAnswerAsTheSave`
-    (proficiencysvc), `TestProficiencies_Step12_WireShape` (router).
+    (proficiencysvc), `TestProficiencies_Step21_6_WeaponPicksByCode` (was `Proficiencies_Step12_WireShape`, rewritten on codes by ADR 0037 step 21.9) (router).
     _(As built, non-weapon picks, 2026-10-20, following the skill points' split (ADR 0030 step 17):
     the rules (`ValidPicks`, `PicksWithinBudget`, the figures) are in charactersvc, the save and
     its codec in skillsvc (`SetProficiencies`, `PreviewProficiencies`), so there is no
@@ -393,8 +393,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `TestPicksEqual_Step13_OrderDoesNotCount`). The journal words the
     entry per pick whose slots changed. Weapon picks, 2026-10-20: the snapshot and the payload
     add `weapon: [{type, slots}]`; an entry logged before has no `weapon` key and its undo or redo
-    leaves the stored weapon picks (`TestSetPicks_Step13_WeaponSaveLogsOneMove`,
-    `TestSetPicks_Step13_RestorerAndTheWeaponPool` in skillsvc,
+    leaves the stored weapon picks (`TestSetPicks_Step21_7_WeaponSaveLogsCodes` (was `SetPicks_Step13_WeaponSaveLogsOneMove`, rewritten on codes by ADR 0037 step 21.9),
+    `TestSetPicks_Step21_7_AnEntryOfTypesLeavesTheWeaponPicks` (was `SetPicks_Step13_RestorerAndTheWeaponPool`, rewritten on codes by ADR 0037 step 21.9) in skillsvc,
     `TestProficiencies_Step13_WeaponPickUndoRedo` in the composition). The journal's wording of a
     weapon change comes with the weapon editor.)_
 14. **Creation takes picks.** The creation form uses the editor of step 12; its picks and
@@ -489,7 +489,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     checked. The seed character's weapon picks are `seeds/character.json`'s
     `weapon_proficiencies`, his weapons' five types. Also
     `TestMigrate_Step16_WeaponPicksRunOnceWithTheMigration`,
-    `TestKelsen_Step16_WeaponPicksAreHisWeaponTypes` (seedcheck: 5 of 5 slots, no weapon
+    `TestKelsen_Step21_8_WeaponPicksAreHisWeapons` (was `Kelsen_Step16_WeaponPicksAreHisWeaponTypes`, rewritten on codes by ADR 0037 step 21.9) (seedcheck: 5 of 5 slots, no weapon
     warning).
     As built for 16.3, 2026-10-20: migration 027 (a column comment on `items.specialized`, no
     schema change) and its data step `specializeFlaggedWeapons`: for a fighter, the type of its
@@ -735,7 +735,7 @@ descriptions and the effects of other proficiencies are separate, deferred items
     success, a renewal, undo twice, redo), `TumblingRule_Step20_OneRowInTheRulesData` (ruletablesvc),
     `SkillCheck_Step20_EntryCarriesBuffSnapshots` (router wire shape).
 
-## Amendment 2026-11-13: a weapon pick names a weapon, not a weapon type (decided, not implemented)
+## Amendment 2026-11-13: a weapon pick names a weapon, not a weapon type (decided; as built 2026-11-13 but 21.1's catalogue field)
 
 User, triage of 2026-11-13: weapon proficiencies go **per weapon, as the book**. Existing type picks
 are migrated to the weapons the character owns of that type; a type pick with no owned weapon of the
@@ -774,7 +774,7 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          stored as that code, and a piece of either row matches it. A catalogue format bump, in
          `critical-rulebooks` first ([ADR 0021](0021-spell-catalogue.md)'s format steps); until it
          ships, each row is its own pick. The four lances are four Table 44 weapons, four picks.)_
-         Tests: `WeaponPick_Step21_1_OnePickPerCatalogueCode` (skills: an unknown code, a duplicate,
+         Tests: `TestWeaponPick_Step21_1_OnePickPerCatalogueCode` (skills: an unknown code, a duplicate,
          the quarterstaff and the heavy horse lance as two picks spending 2 slots),
          `WeaponPick_Step21_1_TheBastardSwordsTwoRowsAreOnePick` (skills, with the catalogue field;
          `Import_Step21_1_ProficiencyCodeNamesAWeaponRow` in ruletablesadpt refuses a
@@ -797,9 +797,9 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          refused, as its wielding is already warned. A stored code the class may not pick is kept,
          served `allowed: false`, never added (step 7's rule for a kept type).
          Wielding stays allowed (ADR 0033 step 20 only warns).
-         Tests: `WeaponPick_Step21_2_TheClassEquipmentDecides` (skills: for each fixture class an
+         Tests: `TestWeaponPick_Step21_2_TheClassEquipmentDecides` (skills: for each fixture class an
          allowed and a refused code; the cleric's lucern hammer allowed, the halberd refused),
-         `WeaponPickCodes_Step21_2_AgreeWithTheWieldingWarnings` (itemsvc: for every catalogue row
+         `TestWeaponPickCodes_Step21_2_AgreeWithTheWieldingWarnings` (itemsvc: for every catalogue row
          and every fixture class, the pick is allowed exactly when `ClassWarnings` warns nothing).
     21.3 **The penalty: no pick for the weapon's code** (amends step 8). An attack with a weapon
          piece takes Table 34's `nonproficient` modifier when no pick names the piece's catalogue
@@ -809,10 +809,10 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          class may not make included (the supervisor ruling of 2026-10-20 in step 8's note). The
          modifier's detail is the code (the web names it from the catalogue). `nonproficientPenalty`
          on the weapon pieces of `GET /api/items` and `GET /api/weapons` follows the same rule.
-         Tests: `ResolveAttack_Step21_3_PenaltyByTheWeaponsCode` (combatsvc: a fighter with a
+         Tests: `TestResolveAttack_Step21_3_PenaltyByTheWeaponsCode` (combatsvc: a fighter with a
          quarterstaff pick attacking with a heavy horse lance takes -2; with a lance pick, none; a
-         bow by its own code), `NonproficientPenalty_Step21_3_OnThePieceByCode` (itemsvc),
-         `PreviewAttack_Step21_3_ShowsThePenaltyByCode` (combatsvc).
+         bow by its own code), `TestNonproficientPenalty_Step21_3_OnThePieceByCode` (itemsvc),
+         `TestPreviewAttack_Step21_3_ShowsThePenaltyByCode` (combatsvc).
     21.4 **A weapon that is no catalogue weapon.** A piece matches a pick by its catalogue code
          only, never by its name or type. _(proposed, the triage's default: a weapon piece with no
          catalogue code (a homebrew weapon, or a converted one the review list still asks about,
@@ -824,8 +824,8 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          covers a piece without a code.)_ The alternative not chosen: no penalty for a piece without
          a code, as step 8 read a weapon without a type; it would keep every attack unchanged but
          let a homebrew weapon escape the rule.
-         Tests: `ResolveAttack_Step21_4_NoCodeIsNonproficient` (combatsvc),
-         `ClassWarnings_Step21_4_WeaponCodeMissing` (itemsvc: a wielded piece without a code warned,
+         Tests: `TestResolveAttack_Step21_4_NoCodeIsNonproficient` (combatsvc),
+         `TestClassWarnings_Step21_4_WeaponCodeMissing` (itemsvc: a wielded piece without a code warned,
          a coded one not, `weapon_type_missing` no longer served).
     21.5 **Specialization is one weapon** (amends step 9). The specialization pick names one code
          (PHB "Weapon Specialization": a single weapon). It spends the cost the class's
@@ -838,10 +838,10 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          (`not_allowed` for a class that does not specialize and for a second specialization,
          `out_of_range` for any other count). A dual-class's kept specialization (ADR 0042 step 13)
          is kept by code.
-         Tests: `Specialization_Step21_5_OneWeaponAtItsTypesCost` (skills: a composite long bow at
+         Tests: `TestSpecialization_Step21_5_OneWeaponAtItsTypesCost` (skills: a composite long bow at
          3, a long sword at 2, a long bow at 2 refused, a second weapon refused, a mage refused),
-         `Specialized_Step21_5_OnlyThePiecesOfThatCode` (itemsvc: two long swords specialized, a
-         broad sword not), `ResolveAttack_Step21_5_SpecializationByCode` (composition).
+         `TestSpecialized_Step21_5_OnlyThePiecesOfThatCode` (itemsvc: two long swords specialized, a
+         broad sword not), `TestResolveAttack_Step21_5_SpecializationByCode` (composition).
     21.6 **The API shape.** One switch, no field kept for an older client _(proposed: the web
          changes in the same item)_:
          - `PUT /api/proficiencies`, its preview, `POST /api/characters` and the draft endpoint take
@@ -856,8 +856,8 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          - The column `characters.proficiency_picks` holds `weapon: [{"code", "slots"}]`.
          - A weapon is named from the equipment catalogue (`GET /api/equipment/catalogue`, its
            language map), the code as the fallback: no i18n key per weapon.
-         Tests: `Proficiencies_Step21_6_WeaponPicksByCode` (router: the wire shape, a `type` pick
-         refused), `Proficiencies_Step21_6_OptionsWeapons` (composition: the mage's five codes and
+         Tests: `TestProficiencies_Step21_6_WeaponPicksByCode` (router: the wire shape, a `type` pick
+         refused), `TestProficiencies_Step21_6_OptionsWeapons` (composition: the mage's five codes and
          the cleric's list from the fixture).
     21.7 **The action log and the editor** (amends steps 12 and 13). A save's snapshot and payload
          carry `weapons: [{code, slots}]`, a new key. An entry logged before the change carries
@@ -867,8 +867,8 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          the weapons the character may pick under their type's name, in the order of 21.6, the
          character's own weapons first, with a search on the name as the non-weapon picker has
          (a fighter has 63 rows); the specialization toggle stays per row.)_
-         Tests: `SetPicks_Step21_7_WeaponSaveLogsCodes`,
-         `SetPicks_Step21_7_AnEntryOfTypesLeavesTheWeaponPicks` (skillsvc),
+         Tests: `TestSetPicks_Step21_7_WeaponSaveLogsCodes`,
+         `TestSetPicks_Step21_7_AnEntryOfTypesLeavesTheWeaponPicks` (skillsvc),
          `WeaponPicker_Step21_7_TheClassWeaponsByTypeOwnedFirst` (web).
     21.8 **The migration** (amends step 16). A data step after a migration that only comments the
          column (as 026 and 027), run once and idempotent: a character whose weapon picks are
@@ -904,14 +904,14 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
             ships): 5 picks
             of 5 slots, the mace non-proficient (-3, `weapon_code_missing`) until he sets its row
             and picks it, 6 of 5 then, which the budget warns.
-         Tests: `Migrate_Step21_8_1_ATypePickBecomesItsOwnedWeapons` (storage/postgres: an
+         Tests: `TestMigrate_Step21_8_1_ATypePickBecomesItsOwnedWeapons` (storage/postgres: an
          `other_melee` pick with a quarterstaff and a heavy horse lance gives two picks, a `dagger`
-         pick with two daggers one), `Migrate_Step21_8_2_ASpecializationGoesToTheFirstOwnedWeapon`,
-         `Migrate_Step21_8_3_ATypeWithNoOwnedWeaponIsListedToRedo` (and one with only a piece
-         without a code), `Migrate_Step21_8_4_AnUnknownTypeIsListedToRedo`,
-         `Migrate_Step21_8_5_OverBudgetIsKeptAndWarned`, `Migrate_Step21_8_RunsOnceWithTheMigration`
-         (storage/postgres), `Warnings_Step21_8_3_RedoListedUntilTheNextWeaponSave` (skills: the
-         warning, cleared by a weapon save, back on its undo), `Kelsen_Step21_8_WeaponPicksAreHisWeapons`
+         pick with two daggers one), `TestMigrate_Step21_8_2_ASpecializationGoesToTheFirstOwnedWeapon`,
+         `TestMigrate_Step21_8_3_ATypeWithNoOwnedWeaponIsListedToRedo` (and one with only a piece
+         without a code), `TestMigrate_Step21_8_4_AnUnknownTypeIsListedToRedo`,
+         `TestMigrate_Step21_8_5_OverBudgetIsKeptAndWarned`, `TestMigrate_Step21_8_RunsOnceWithTheMigration`
+         (storage/postgres), `TestWarnings_Step21_8_3_RedoListedUntilTheNextWeaponSave` (skills: the
+         warning, cleared by a weapon save, back on its undo), `TestKelsen_Step21_8_WeaponPicksAreHisWeapons`
          (seedcheck: the five codes, 5 of 5, the mace's warning).
     21.9 **What changes for tests already written.** `TestKelsen_Step8_OwnWeaponsTakeNoPenalty`
          (composition) no longer holds for the mace (21.8.7): the implementing item narrows it to
@@ -921,3 +921,45 @@ follow the rule of "Decision" (no `Test` prefix until the test exists).
          the user's triage (a weapon of a type no longer counts as proficient with its neighbours).
          The `GLOSSARY.md` entry "Weapon proficiency" (a pick of a weapon type) becomes a pick of a
          weapon, in the implementing item.
+
+_As built 2026-11-13 (the implementing item), each proposed reading the code needed taken as
+proposed:_
+
+- _21.1: the bastard sword's `proficiency_code` is not built: it needs a catalogue format bump in
+  `critical-rulebooks` first, so each of its two rows is its own pick, as the step says until it
+  ships; `WeaponPick_Step21_1_TheBastardSwordsTwoRowsAreOnePick` and
+  `Import_Step21_1_ProficiencyCodeNamesAWeaponRow` wait for it. The catalogue weapons a pick may
+  name reach the rules through the proficiency book (`Proficiencies.WithWeapons`, `Weapons`,
+  `Weapon`), in the order of 21.6 (`Equipment.PickWeapons`)._
+- _21.2: `Equipment.PickCodes` (catalogue order) replaces `PickTypes`, derived by
+  `ruletablesvc.WeaponPickCodes` with `Equipment.AllowsWeapon` on each row; without a weapon
+  catalogue a limited class picks the codes its list names._
+- _21.3: the `nonproficient` modifier's detail is the code; the web names it from the equipment
+  catalogue, which it now reads with the sheet._
+- _21.4: the proposed reading: a weapon piece with no catalogue code is non-proficient and warned
+  `weapon_code_missing` (wielded pieces, as the class warnings); `weapon_type_missing` and its
+  en/fr keys are gone. Its modifier's detail is empty._
+- _21.5: `SpecializedCode` replaces `SpecializedType`; `WeaponPick.IsSpecializationOf` reads the
+  type from the book's row._
+- _21.6: the proposed reading, one switch: the options' `weapons` and the derived `weapons` replace
+  `weaponTypes`, `derived.proficiencySlots` adds `weaponRedo [{type, slots}]`, and the warning
+  `weapon_pick_to_redo` carries `type` and `slots` (two new optional warning fields). The input
+  reads a pick's `type` only so that an older client's body decodes and is refused `empty` on
+  `weapon` (`TestProficiencies_Step21_6_WeaponPicksByCode`). The web switched in the same item,
+  minimally: the editor lists one row per weapon the class may pick, named from the catalogue, in
+  the order of 21.6, and words the redo list; 21.7's grouped picker with its search and the
+  character's own weapons first is the UI item's._
+- _21.7: a save's snapshot and payload carry `weapons` and `weaponRedo`; an entry with `weapon`
+  (types) is restored without its weapon picks, and the journal still words it by type._
+- _21.8: the proposed reading for the redo list (in the column as `weapon_redo`, cleared by any save
+  of the weapon pool, part of the snapshot). A specialization type pick is read as a type pick
+  spending more than a plain one; its slots go to the first owned weapon. The steps of migrations
+  026, 027 and 041 read and write the column's older form through their own codec (`typePicks`),
+  since they run on a database still in it. The migration is not additive for a rolling deploy (as
+  026 was not for the weapon pool): a type pick the release before writes after it is read by the
+  new release as a type to redo (`TestDecodePicks_Step21_8_3_ATypePickReadsAsOneToRedo`)._
+- _21.8.7: on the real artifact Kelsen's bastard sword converts to `bastard_sword_two_handed`
+  (`TestKelsen_Step21_8_WeaponPicksAreHisWeapons`, its real-artifact subtest); the test fixture's
+  placeholder names match no bastard sword row by name, so on the fixture (Go tests on it, e2e)
+  his bastard sword has no code and is non-proficient, as his mace is
+  (`TestKelsen_Step8_OwnWeaponsTakeNoPenalty`)._

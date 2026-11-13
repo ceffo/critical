@@ -57,7 +57,10 @@ holds the inputs, and every figure is derived from them, never entered
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
 - **Ledgers**: HP ([ADR 0007](adr/0007-hp-ledger.md)) and XP ([ADR 0015](adr/0015-experience.md)).
   Current HP is a sum over the action log; the XP total is the starting XP plus its entries.
-- **Possessions and knowledge**: items, the spellbook, the proficiency picks, the skill points (per
+- **Possessions and knowledge**: items, the spellbook, the proficiency picks (a weapon pick names a
+  catalogue weapon by code, a weapon piece is proficient when a pick names its catalogue code, and the
+  type picks left to redo after migration 042 are kept with them, [ADR 0037](adr/0037-proficiencies.md)
+  step 21), the skill points (per
   skill set: one set for each `rogue_skills` feature the classes grant, each with its own budget,
   [ADR 0040](adr/0040-classes-are-data.md) step 3.5).
 
@@ -106,8 +109,9 @@ A race's **racial ability requirements** (its ability ranges) make it **restrict
 race has rows in every per-race table (level limits, requirements, thief skill adjustments); an
 unrestricted one (the human) may have none, and is then any class with no limit. A class's
 **class limits** (`Class.Equipment`: armour columns, shields, weapon types and codes, blunt only) give
-the class warnings of worn and wielded pieces and, with the weapon catalogue, the weapon types a
-proficiency may be picked in (derived once at import). A race's **traits** (`Race.Trait(kind)`:
+the class warnings of worn and wielded pieces and, with the weapon catalogue, the catalogue weapons a
+proficiency may be picked in (`Equipment.PickCodes`, derived once at import by the same rule as the
+warnings: a weapon the class wields without a warning is one it may pick, ADR 0037 step 21.2). A race's **traits** (`Race.Trait(kind)`:
 `con_save_bonus`, `no_exceptional_strength`, `weapon_to_hit`) and its Tables 10 and 11 **identity** rows are read from
 its definition; the hit dice are still read from the rule tables (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).

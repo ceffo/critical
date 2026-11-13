@@ -394,7 +394,7 @@ _Code_: ProficiencySlots, NonweaponPool, Spending
 
 **Pick** (fr: choix):
 One proficiency the character has, with the slots spent on it. [ADR 0037](docs/adr/0037-proficiencies.md) steps 2, 6, 7 and 12.
-_Code_: Picks, PickFigures, WeaponPick, WeaponPickFigures, WeaponTypeFigure
+_Code_: Picks, PickFigures, WeaponPick, WeaponPickFigures, WeaponFigure
 
 **Language** (fr: langue):
 A language a character speaks: its race's native one, then picked ones, each past the race's list costing a non-weapon slot; the catalogue (format 8) lists them. [ADR 0032](docs/adr/0032-character-identity-and-creation-rolls.md) step 4, [ADR 0037](docs/adr/0037-proficiencies.md) step 6. Not the invite's mail language (`authsvc.Language`: `en` or `fr`, [ADR 0029](docs/adr/0029-users-login-and-access.md) step 2.5).
@@ -405,8 +405,13 @@ One row of PHB Table 38: the proficiency groups a class learns at the table's co
 _Code_: Crossover
 
 **Weapon proficiency** (fr: compétence martiale):
-A pick of a weapon type, with the **non-proficiency penalty** (fr: malus de non-maîtrise) otherwise;
-**specialization** (fr: spécialisation) is more slots. [ADR 0037](docs/adr/0037-proficiencies.md) steps 7 to 9.
+A pick of a weapon: one catalogue weapon by its code (a quarterstaff and a heavy horse lance are two
+picks), with the **non-proficiency penalty** (fr: malus de non-maîtrise) otherwise, a weapon with no
+catalogue code included; **specialization** (fr: spécialisation) is more slots on one weapon, at its
+weapon type's cost. A **type pick to redo** (fr: maîtrise à refaire) is a weapon-type pick of before
+that owned no weapon of the type: listed for the player, its slots back to spend.
+[ADR 0037](docs/adr/0037-proficiencies.md) steps 7 to 9 and 21.
+_Code_: WeaponRedo
 
 **Adjustment** (fr: ajustement):
 The DM's correction of a save or check after the roll. [ADR 0006](docs/adr/0006-saving-throws.md) steps 5 to 8, [ADR 0014](docs/adr/0014-skill-checks.md) steps 5 to 8.
@@ -521,7 +526,7 @@ _Code_: AmmoChoice, AmmoUse
 **Weapon** (fr: arme):
 A possession that attacks, by **weapon kind** (melee or missile; fr: mêlée / tir) and **weapon
 type**. [ADR 0030](docs/adr/0030-classes-and-races.md) step 23, [ADR 0037](docs/adr/0037-proficiencies.md) step 9.
-_Code_: Weapons, WeaponKind, WeaponPool, WeaponTypeOption
+_Code_: Weapons, WeaponKind, WeaponPool, WeaponOption
 
 **Strength bow** (fr: arc de force), **Strength rating** (fr: force de l'arc):
 A bow (long or short, composite included) built for a given Strength, its **Strength rating** (a score, 18/xx allowed); the archer adds Strength's bonus up to the rating. A bow without a rating is an ordinary bow; a Strength penalty applies to every bow, and a crossbow never takes Strength. [ADR 0002](docs/adr/0002-attack-resolution.md) step 4, [ADR 0033](docs/adr/0033-equipment.md) step 3.

@@ -428,8 +428,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
     catalogue change, not a code one). `weapon_to_hit` is parsed and checked, and no race carries it (until ADR 0030 step 22.3, built 2026-11-13). Tests:
     `TestEquipment_Step1_6_TheListsAnswerTheLimits` (domain/classes),
     `TestClassWarnings_Step20_ALimitComesFromTheDataOfAnyClass` (itemsvc),
-    `TestWeaponPick_Step7_ClassLimitsRefuseThePick` and
-    `TestWeaponPickTypes_Step7_AnyClassFromItsEquipment` (skills, ruletablesvc),
+    `TestWeaponPick_Step21_2_TheClassEquipmentDecides` (was `WeaponPick_Step7_ClassLimitsRefuseThePick`, rewritten on codes by ADR 0037 step 21.9) and
+    `TestWeaponPickCodes_Step21_2_AnyClassFromItsEquipment` (was `WeaponPickTypes_Step7_AnyClassFromItsEquipment`, rewritten on codes by ADR 0037 step 21.9) (skills, ruletablesvc),
     `TestRaceTraits_Step4_ConSaveBonusFromTheTrait` (charactersvc),
     `TestRaceTraits_Step4_NoExceptionalStrengthFromTheTrait` (ruletablesvc),
     `TestRaceCatalogue_Step2_SixRacesWithTheirTraitsAndIdentityRows` (ruletablesadpt),

@@ -17,6 +17,7 @@ import {
   isSpecialization,
   removeWeapon,
   specialize,
+  groupWeaponRows,
   weaponRows,
   type WeaponRow,
 } from "./weapons";
@@ -50,15 +51,21 @@ export function WeaponPicker({
   /** A refusal's words for a field (`weapon.<code>`, or `weapon` for the budget), or null. */
   errorFor: (field: string) => string | null;
 }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   // The rows are named from the equipment catalogue (ADR 0037 step 21.6), read once.
   const catalogue = useEquipmentCatalogueStore((s) => s.catalogue);
   const load = useEquipmentCatalogueStore((s) => s.load);
   useEffect(() => {
     void load().catch(() => undefined); // the codes name the rows meanwhile
   }, [load]);
-  const nameOf = (code: string) => weaponName(t, code, catalogue);
-  const rows = weaponRows(weapons, picks, figures?.weaponPicks);
+  const nameOf = (code: string) =>
+    weaponName(t, code, catalogue, i18n.language);
+  const groups = groupWeaponRows(
+    weaponRows(weapons, picks, figures?.weaponPicks),
+    catalogue,
+    i18n.language,
+    t,
+  );
   const budgetError = errorFor("weapon");
   const redo = figures?.weaponRedo ?? [];
   return (
@@ -91,31 +98,47 @@ export function WeaponPicker({
           })}
         </Note>
       )}
-      <ul
-        className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-x-4 gap-y-1"
+      <div
+        className="flex flex-col gap-2"
+        role="group"
         aria-label={t("weaponProficiencies.list")}
         data-testid="weapon-rows"
       >
-        {rows.map((r) => (
-          <WeaponRowItem
-            key={r.code}
-            row={r}
-            name={nameOf(r.code)}
-            error={errorFor(`weapon.${r.code}`)}
-            onAdd={() => onChange(addWeapon(picks, r.code))}
-            onRemove={() => onChange(removeWeapon(picks, r.code))}
-            onSpecialize={(on) =>
-              onChange(
-                specialize(
-                  picks,
-                  r.code,
-                  on ? (r.option?.specializationSlots ?? null) : null,
-                ),
-              )
-            }
-          />
+        {groups.map((g) => (
+          <section
+            key={g.key}
+            className="flex min-w-0 flex-col gap-1"
+            data-testid={g.key ? `weapon-group-${g.key}` : undefined}
+          >
+            {g.key && (
+              <h4 className="px-2.5 text-label font-semibold text-tint">
+                {g.label}
+              </h4>
+            )}
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-x-4 gap-y-1">
+              {g.rows.map((r) => (
+                <WeaponRowItem
+                  key={r.code}
+                  row={r}
+                  name={nameOf(r.code)}
+                  error={errorFor(`weapon.${r.code}`)}
+                  onAdd={() => onChange(addWeapon(picks, r.code))}
+                  onRemove={() => onChange(removeWeapon(picks, r.code))}
+                  onSpecialize={(on) =>
+                    onChange(
+                      specialize(
+                        picks,
+                        r.code,
+                        on ? (r.option?.specializationSlots ?? null) : null,
+                      ),
+                    )
+                  }
+                />
+              ))}
+            </ul>
+          </section>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

@@ -1,3 +1,6 @@
+import type { TFunction } from "i18next";
+import { catalogueRows, groupRows } from "@/lib/catalogue";
+import type { EquipmentCatalogue } from "@/types/items";
 import type {
   WeaponOption,
   WeaponPickFigures,
@@ -86,4 +89,42 @@ export function specialize(
  * its weapon's specialization cost, never another count (ADR 0037 step 21.5). */
 export function isSpecialization(pick: WeaponPickInput | undefined): boolean {
   return pick !== undefined && pick.slots > PLAIN_WEAPON_SLOTS;
+}
+
+/** A family heading (the inventory catalogue picker's, ADR 0033 step 24) and its weapon rows;
+ * `key` "" is the rows the equipment catalogue does not name (no heading). */
+export interface WeaponGroup {
+  key: string;
+  label: string;
+  rows: WeaponRow[];
+}
+
+/**
+ * The editor's rows under their weapon family, sorted by name in `lang`, exactly as the inventory's
+ * catalogue picker lists them (`catalogueRows` and `groupRows`, one reading of the one catalogue).
+ * A row whose code the catalogue does not hold, and every row until the catalogue is read, falls
+ * under one heading-less group, in the options' order. The family is the catalogue's field, never
+ * a list in the web.
+ */
+export function groupWeaponRows(
+  rows: WeaponRow[],
+  catalogue: EquipmentCatalogue | null,
+  lang: string,
+  t: TFunction,
+): WeaponGroup[] {
+  const byCode = new Map(rows.map((r) => [r.code, r]));
+  const named = catalogue
+    ? catalogueRows(catalogue, "weapon", "", lang, t).filter((c) =>
+        byCode.has(c.code),
+      )
+    : [];
+  const groups: WeaponGroup[] = groupRows(named, lang).map((g) => ({
+    key: g.key,
+    label: g.label,
+    rows: g.rows.map((c) => byCode.get(c.code)!),
+  }));
+  const grouped = new Set(named.map((c) => c.code));
+  const rest = rows.filter((r) => !grouped.has(r.code));
+  if (rest.length > 0) groups.push({ key: "", label: "", rows: rest });
+  return groups;
 }

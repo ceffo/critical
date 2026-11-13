@@ -383,7 +383,10 @@ function ItemRow({
             <ClassWarningTag key={code} code={code} />
           ))}
           {i.category === "weapon" && (
-            <NonproficientTag penalty={i.nonproficientPenalty} />
+            <NonproficientTag
+              penalty={i.nonproficientPenalty}
+              hasCode={i.catalogueCode !== ""}
+            />
           )}
           {i.review.length > 0 && (
             <span

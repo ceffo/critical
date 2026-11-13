@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { testI18n } from "@/test/render";
+import type { EquipmentCatalogue } from "@/types/items";
 import {
+  groupWeaponRows,
   addWeapon,
   isSpecialization,
   removeWeapon,
@@ -62,5 +65,56 @@ describe("the pick edits", () => {
     ]);
     expect(isSpecialization(picked[0])).toBe(false);
     expect(isSpecialization(undefined)).toBe(false);
+  });
+});
+
+describe("groupWeaponRows", () => {
+  const w = (code: string, fr: string, weaponKind: string) => ({
+    code,
+    name: { fr, en: fr },
+    weaponKind,
+  });
+  const catalogue = {
+    weapons: [
+      w("long_bow", "Arc long", "missile"),
+      w("quarterstaff", "Bâton", "melee"),
+      w("heavy_horse_lance", "Lance d’arçon lourde", "melee"),
+      w("dart", "Fléchette", "missile"),
+    ],
+    ammunition: [],
+    armour: [],
+    shields: [],
+  } as unknown as EquipmentCatalogue;
+  const rows = weaponRows(
+    ["long_bow", "quarterstaff", "heavy_horse_lance", "dart"].map((code) => ({
+      code,
+      specializationSlots: 0,
+    })),
+    [{ code: "homebrew_thing", slots: 1 }],
+    undefined,
+  );
+
+  it("groups by the catalogue's family, sorted by name in the language, a code it lacks last and heading-less", async () => {
+    const { t } = await testI18n("fr");
+    const groups = groupWeaponRows(rows, catalogue, "fr", t);
+    expect(groups.map((g) => [g.key, g.rows.map((r) => r.code)])).toEqual([
+      ["melee", ["quarterstaff", "heavy_horse_lance"]],
+      ["missile", ["long_bow", "dart"]],
+      ["", ["homebrew_thing"]],
+    ]);
+  });
+
+  it("is one heading-less group, in the options' order, until the catalogue is read", async () => {
+    const { t } = await testI18n("fr");
+    const groups = groupWeaponRows(rows, null, "fr", t);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].key).toBe("");
+    expect(groups[0].rows.map((r) => r.code)).toEqual([
+      "long_bow",
+      "quarterstaff",
+      "heavy_horse_lance",
+      "dart",
+      "homebrew_thing",
+    ]);
   });
 });

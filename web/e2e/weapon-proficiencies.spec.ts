@@ -66,8 +66,14 @@ test("fighter: pick and specialize in the editor, Undo from the journal, tags fo
   const row = editor.getByTestId("weapon-row-long_sword");
   await row.getByTestId("weapon-add").click();
   await row.getByTestId("weapon-specialize").click();
+  // Two picks, one specialized: a second weapon of the same family is its own plain pick.
+  await editor
+    .getByTestId("weapon-row-short_sword")
+    .getByTestId("weapon-add")
+    .click();
+  await expect(editor.getByTestId("weapon-group-melee")).toBeVisible();
   await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
-    "Spent 2, left 2",
+    "Spent 3, left 1",
   );
   await snap(page, "weapon-editor-dark");
   await editor.getByTestId("weapon-save").click();

@@ -49,10 +49,14 @@ function itemText(p: UseResult, t: TFunction, names: InventoryNamer): string {
   const base = baseText(p, t, names);
   const h = healed(p);
   if (!h) return base;
-  const heal = t(
-    h.applied < h.rolled ? "log.item.healCapped" : "log.item.heal",
-    { applied: h.applied, total: h.rolled },
-  );
+  // Nothing regained (already at max HP) is worded plainly, never as a cap.
+  const key =
+    h.applied === 0
+      ? "log.item.healNone"
+      : h.applied < h.rolled
+        ? "log.item.healCapped"
+        : "log.item.heal";
+  const heal = t(key, { applied: h.applied, total: h.rolled });
   return `${base}, ${heal}`;
 }
 
@@ -185,7 +189,7 @@ function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
               after: e.applied.hpAfter,
             })}
           </p>
-          {!e.full && e.applied.hpDelta < e.total && (
+          {!e.full && e.applied.hpDelta > 0 && e.applied.hpDelta < e.total && (
             <p
               className="text-body text-muted-foreground"
               data-testid="item-heal-capped"

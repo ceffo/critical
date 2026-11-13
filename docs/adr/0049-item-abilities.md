@@ -577,7 +577,9 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      heal; the effect's result carries `applied: {hpDelta, hpBefore, hpAfter}` and the roll as asked
      (`total`). Several heals in one use run in list order against a running ledger total, so the second
      sees what the first filled and the entry's delta is their sum (equal to what the recording path caps
-     it to). The ledger total and max HP are read inside the use's transaction, once, at the first heal.
+     it to). The ledger total and max HP are read inside the use's transaction, once, at the first heal; the entry's
+     own cap reads the total again, which agrees as long as no other HP write lands between the two reads
+     (a single-user app; the writer lock serialises item writes, not HP entries).
    - **Rollback and undo**: a failure in any effect returns an error out of the one transaction, so the
      limit's payment, a spent dose and the entry go with it; one undo pops the entry, which removes both
      the item snapshot's change and the HP delta (the ledger is the sum of entries, there is nothing else

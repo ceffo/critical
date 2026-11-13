@@ -1758,6 +1758,7 @@
       "usedRemoved": "Used {{name}} (last charge, removed)",
       "heal": "heals {{applied}} HP",
       "healCapped": "heals {{applied}} HP ({{total}} rolled, capped at max HP)",
+      "healNone": "no HP regained",
       "restocked": "Restocked {{name}}: +{{added}} ({{count}} now)",
       "added": "Added {{name}} ({{count}})",
       "removedItem": "Removed {{name}} ({{count}})",

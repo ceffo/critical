@@ -111,21 +111,30 @@ func TestUseAbility_ADR0049Step12_HealIsCappedAtMaxAndFullFillsTheGap(t *testing
 	})
 }
 
-// ADR 0049 step 12: effects run in list order and the second heal sees what the first filled: with 5
-// points missing, a heal of 4 then a heal of 4 applies 4 then 1, and the entry's HP delta is 5.
+// ADR 0049 step 12: effects run in list order and the second heal sees what the first filled: with 4
+// points missing, a heal of 4 then a heal of 4 applies 4 then 0, and the summed result is what the
+// stored entry's ledger breakdown says it applied (hpRequested 4, hpApplied 4) and its HP delta.
 func TestUseAbility_ADR0049Step12_TwoHealsShareTheGapInListOrder(t *testing.T) {
 	dice := &attackDice{t: t, dies: []int{4, 4}, calls: map[string]int{}}
-	bs, ctx, id, hpMax := healTable(t, dice, 5, []itemsvc.Effect{
+	bs, ctx, id, hpMax := healTable(t, dice, 4, []itemsvc.Effect{
 		{Kind: itemsvc.EffectHeal, Dice: "1d4"}, {Kind: itemsvc.EffectHeal, Dice: "1d4"},
 	})
 	res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
 	require.NoError(t, err)
 	assert.Equal(t, 4, res.Effects[0].Applied.HPDelta)
-	assert.Equal(t, 1, res.Effects[1].Applied.HPDelta)
+	assert.Zero(t, res.Effects[1].Applied.HPDelta, "the gap was filled by the first")
 	assert.Equal(t, hpMax, currentHP(t, bs, ctx, id, hpMax))
 	entries, err := bs.Log.List(ctx, id, 1)
 	require.NoError(t, err)
-	assert.Equal(t, 5, entries[0].HPDelta)
+	summed := res.Effects[0].Applied.HPDelta + res.Effects[1].Applied.HPDelta
+	assert.Equal(t, summed, entries[0].HPDelta)
+	var stored struct {
+		Requested int `json:"hpRequested"`
+		Applied   int `json:"hpApplied"`
+	}
+	require.NoError(t, json.Unmarshal(entries[0].Payload, &stored))
+	assert.Equal(t, summed, stored.Applied, "the entry's own cap agrees with the effects' running total")
+	assert.Equal(t, 4, stored.Requested)
 }
 
 // ADR 0049 step 12: a failure in any effect rolls the whole use back, the limit included. The

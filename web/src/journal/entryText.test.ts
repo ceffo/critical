@@ -684,6 +684,24 @@ describe("inventory entries", () => {
     expect(entryText(entry("item_use", capped), en)).toBe(
       "Used Potion of healing (2 left), heals 4 HP (9 rolled, capped at max HP)",
     );
+    // At full HP nothing is regained: no cap is claimed. An older entry with no `applied` words no heal.
+    const full = {
+      ...potion,
+      effects: [
+        {
+          ...potion.effects[0],
+          applied: { hpDelta: 0, hpBefore: 19, hpAfter: 19 },
+        },
+      ],
+    };
+    expect(entryText(entry("item_use", full), en)).toBe(
+      "Used Potion of healing (2 left), no HP regained",
+    );
+    const { applied: _unused, ...older } = potion.effects[0];
+    void _unused;
+    expect(
+      entryText(entry("item_use", { ...potion, effects: [older] }), en),
+    ).toBe("Used Potion of healing (2 left)");
     const fr = await makeT("fr");
     expect(entryText(entry("item_use", capped), fr)).toContain(
       "soigne 4 PV (9 obtenus, plafonnés aux PV max)",

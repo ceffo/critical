@@ -10,7 +10,8 @@ import {
   clearAttackAc,
   rollSavingThrow,
 } from "@/api/roll";
-import { postUseItem } from "@/api/items";
+import { postUseAbility, postUseItem } from "@/api/items";
+import { loggedAbilityUse } from "@/lib/itemAbilities";
 import type { Ability } from "@/types/skills";
 import {
   adjustAbility,
@@ -54,6 +55,8 @@ interface RollStore {
   clearLastAttackAc: (entryId: number) => Promise<boolean>;
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
+  /** Uses one ability of an item (ADR 0049 step 7: pays its limit, rolls its effects, logs it). */
+  activateAbility: (itemId: string, abilityId: string) => Promise<boolean>;
   /** Rolls a proficiency or bard skill check (the server rolls and logs it); a non-zero adjustment moves its target. */
   rollSkill: (
     id: string,
@@ -98,6 +101,11 @@ export const useRollStore = create<RollStore>((set) => {
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) })),
     spendItem: (id) =>
       roll(async () => ({ kind: "item_use", result: await postUseItem(id) })),
+    activateAbility: (itemId, abilityId) =>
+      roll(async () => ({
+        kind: "item_use",
+        result: loggedAbilityUse(await postUseAbility(itemId, abilityId)),
+      })),
     rollSkill: (id, adjustment, set) =>
       roll(async () => ({
         kind: "skill_check",

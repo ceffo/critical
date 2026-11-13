@@ -20,7 +20,7 @@ import { SkillsTab } from "./SkillsTab";
 import { TurnUndeadPanel } from "./TurnUndeadPanel";
 import { PowersTab } from "@/components/powers/tab/PowersTab";
 import { useCharacterStore } from "@/stores/character";
-import { combatItems } from "@/lib/combatItems";
+import { abilityRows } from "@/lib/itemAbilities";
 import { useActFeatures } from "@/lib/actFeatures";
 
 /**
@@ -71,7 +71,7 @@ export function ActionArea({
   const spellsLeft = useSpellStore(
     (s) => s.slots.filter((slot) => !slot.used).length,
   );
-  const itemCount = useItemsStore((s) => combatItems(s.items).length);
+  const itemCount = useItemsStore((s) => abilityRows(s.items).length);
   // The Spells tab shows the spells left before it is opened: the slots are read with the sheet,
   // and again by the action module when a write names them.
   const counts: Partial<Record<TabId, number>> = {

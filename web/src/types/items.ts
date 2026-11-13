@@ -324,6 +324,17 @@ export interface UseResult {
   save: string;
   notes: string;
   logEntryId?: number;
+  /**
+   * Set by the use of an ability (ADR 0049 step 7; the entry carries them too): the ability, its
+   * limit kind, the counter after the use and every effect's roll. Absent on a spend-one and on
+   * entries logged before abilities.
+   */
+  abilityId?: string;
+  abilityName?: LocalizedText;
+  limit?: AbilityLimitKind;
+  left?: number;
+  max?: number;
+  effects?: AbilityEffectResult[];
 }
 
 /** POST /api/items/{id}/restock (itemhdl RestockResultDTO); the item_restock log payload has the same shape. */

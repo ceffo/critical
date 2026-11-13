@@ -4,7 +4,6 @@ import { renderApp } from "@/test/render";
 import { pieceFixture } from "@/test/pieceFixture";
 import { useItemsStore } from "@/stores/items";
 import { InventoryPanel } from "./InventoryPanel";
-import { ItemsTab } from "./ItemsTab";
 
 afterEach(() => useItemsStore.setState({ items: [] }));
 
@@ -55,25 +54,5 @@ describe("InventoryPanel rows (a weapon, an armour and a shield are never used)"
     expect(
       within(row).getAllByRole("button", { name: /potion/i }).length,
     ).toBeGreaterThan(0);
-  });
-});
-
-describe("ItemsTab empty state", () => {
-  it.each([
-    ["en", /never used.*Inventory/],
-    ["fr", /ne s'utilisent pas.*Inventaire/],
-  ] as const)("says why and points to the Inventory in %s", async (lng, re) => {
-    useItemsStore.setState({ items: [plate, sword] });
-    await renderApp(<ItemsTab onManage={() => {}} />, { lng });
-    expect(screen.getByText(re)).toBeInTheDocument();
-    expect(screen.queryByTestId("item-count")).toBeNull();
-  });
-
-  it("lists only the potion", async () => {
-    useItemsStore.setState({ items: [plate, sword, potion] });
-    await renderApp(<ItemsTab onManage={() => {}} />);
-    expect(screen.getAllByTestId("item-count")).toHaveLength(1);
-    expect(screen.getByText("Potion of healing")).toBeInTheDocument();
-    expect(screen.queryByText("Plate mail")).toBeNull();
   });
 });

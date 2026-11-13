@@ -541,6 +541,11 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    2. (The server part of CRI-361 is done by then.)
 5. **Act · Items lists abilities.** The rows, the limit text, the empty state, the Use call and the
    result card (steps 14 and 17). Needs 3. Closes CRI-310.
+   *Built.* The web lists `abilities` of every non-ammunition item and reads `usable` and `reason` from the
+   server; the reason is worded by the limit kind (per day, charges, with the item). The use call is the
+   ability endpoint; its answer becomes the result card in the shape of a logged `item_use` entry, which
+   draws every dice effect. An unlimited ability words no "(N left)" in the journal and shows no left
+   line on the card.
 6. **Inventory and editor.** Quantity by category, no Use and no `isCounted` guess, abilities as chips,
    the Abilities section for the limit, the `dice` effect and the note, the behaviour field removed
    (steps 13 and 16). Needs 1 and 4; its Use-free rows can ship before 5.

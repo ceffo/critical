@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/saves"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 // Limits on what the item editor accepts.
@@ -121,6 +122,11 @@ func (i Item) Validate() error {
 	if err := i.validPiecePowers(); err != nil {
 		return err
 	}
+	if i.Category != CategoryWeapon {
+		if err := i.validStrengthRating(); err != nil {
+			return err
+		}
+	}
 	switch i.Category {
 	case CategoryWeapon:
 		return i.validateWeapon()
@@ -182,7 +188,31 @@ func (i Item) validateWeaponRest() error {
 	if i.Speed < 0 || i.Speed > MaxSpeed {
 		return domain.FieldErrorf("speed", "Speed factor must be between 0 and %d", MaxSpeed)
 	}
+	if err := i.validStrengthRating(); err != nil {
+		return err
+	}
 	return validDamageTypes(i.DamageTypes)
+}
+
+// validStrengthRating is ADR 0033 step 3's Strength rating: a bow's only
+// (field strengthRating, CodeNotAllowed on any other piece), a score of 1 to
+// strength.MaxScore, an exceptional percentile only at 18 and within 1 to
+// strength.ExceptionalMax.
+func (i Item) validStrengthRating() error {
+	r := i.StrengthRating
+	switch {
+	case r == StrengthRating{}:
+		return nil
+	case i.Category != CategoryWeapon || !IsBowType(i.WeaponType):
+		return fieldErr("strengthRating", CodeNotAllowed)
+	case r.Score < 1 || r.Score > strength.MaxScore:
+		return domain.FieldErrorf("strengthRating", "Strength rating must be between 1 and %d", strength.MaxScore)
+	case r.Exceptional != 0 && r.Score != 18:
+		return fieldErr("strengthRating", "Only a Strength of 18 has an exceptional part")
+	case r.Exceptional < 0 || r.Exceptional > strength.ExceptionalMax:
+		return domain.FieldErrorf("strengthRating", "Exceptional Strength must be between 1 and %d", strength.ExceptionalMax)
+	}
+	return nil
 }
 
 // validateAmmunition is ADR 0033 step 4: a known ammo kind, its magic, and

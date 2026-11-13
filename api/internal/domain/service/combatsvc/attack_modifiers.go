@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
 // attackMods are the to-hit modifiers of an attack (ADR 0002 steps 4 to 9)
@@ -77,6 +78,61 @@ func raceToHit(char charactersvc.View, weapon Weapon) int {
 	return char.RaceToHitBonus
 }
 
+// strengthMods are the Strength adjustments an attack takes and the score
+// whose Table 1 row gave them (the modifier's detail).
+type strengthMods struct {
+	strength.Mods
+	score, exceptional int
+}
+
+// strengthOf is ADR 0002 step 4 and ADR 0003 step 7 (PHB p.90-91 "Strength
+// Modifiers", p.99 "Ability Modifiers in Missile Combat"): the Table 1
+// adjustments of the effective Strength score/exceptional, and whether the
+// weapon takes Strength at all.
+//   - A melee or hurled weapon: always, bonus or penalty.
+//   - A bow (itemsvc.IsBowType): each adjustment that is a penalty for the
+//     effective Strength, always; a bonus only with a strength bow, the
+//     adjustment of the lower of the effective Strength and the bow's rating
+//     (PHB p.73 "Bows"). An ordinary bow with no penalty takes none.
+//   - Any other launcher (a crossbow, a sling, one with no type): none.
+func (s *service) strengthOf(score, exceptional int, weapon Weapon) (strengthMods, bool, error) {
+	bow := itemsvc.IsBowType(weapon.Type)
+	if weapon.FiresAmmo() && !bow {
+		return strengthMods{}, false, nil
+	}
+	own, err := s.strength.Of(score, exceptional)
+	if err != nil {
+		return strengthMods{}, false, fmt.Errorf("strength table: %w", err)
+	}
+	if !bow {
+		return strengthMods{Mods: own, score: score, exceptional: exceptional}, true, nil
+	}
+	out := strengthMods{score: score, exceptional: exceptional}
+	if r := weapon.StrengthRating; r.Rated() && own.Hit >= 0 && own.Dmg >= 0 && !r.Exceeds(score, exceptional) {
+		out.score, out.exceptional = r.Score, r.Exceptional
+	}
+	used, err := s.strength.Of(out.score, out.exceptional)
+	if err != nil {
+		return strengthMods{}, false, fmt.Errorf("strength table: %w", err)
+	}
+	out.Hit = bowAdjustment(own.Hit, used.Hit, weapon.StrengthRating.Rated())
+	out.Dmg = bowAdjustment(own.Dmg, used.Dmg, weapon.StrengthRating.Rated())
+	return out, out.Hit != 0 || out.Dmg != 0 || weapon.StrengthRating.Rated(), nil
+}
+
+// bowAdjustment is one Strength adjustment with a bow: own, the effective
+// Strength's, when it is a penalty; else rated's positive part (the lower of
+// the Strength and the bow's rating) for a strength bow; else 0.
+func bowAdjustment(own, rated int, isRated bool) int {
+	switch {
+	case own < 0:
+		return own
+	case isRated:
+		return max(rated, 0)
+	}
+	return 0
+}
+
 // PointBlankAllowed reports whether an attack with weapon may take the
 // point-blank option (ADR 0030 step 12): a specialized bow or crossbow, by
 // its weapon type.
@@ -114,19 +170,16 @@ func (s *service) attackModifiers(char charactersvc.View, weapon Weapon, ammo *i
 	add := func(m Modifier) { out.modifiers = append(out.modifiers, m) }
 
 	// ADR 0002 step 4 and ADR 0003 step 7: Strength (PHB Table 1, from the
-	// effective STR with buffs). PHB "Ability Modifiers in Missile Combat":
-	// always for melee and hurled weapons; for bows only with a strength
-	// bow, which the Bard's are not.
-	if !weapon.FiresAmmo() {
-		str, err := s.strength.Of(mods.EffectiveStr, mods.EffectiveStrExceptional)
-		if err != nil {
-			return attackMods{}, fmt.Errorf("strength table: %w", err)
-		}
-		detail := strconv.Itoa(mods.EffectiveStr)
-		exc := mods.EffectiveStrExceptional
-		add(Modifier{Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: str.Hit})
+	// effective STR with buffs), to hit and to damage (strengthOf).
+	str, apply, err := s.strengthOf(mods.EffectiveStr, mods.EffectiveStrExceptional, weapon)
+	if err != nil {
+		return attackMods{}, err
+	}
+	if apply {
+		detail := strconv.Itoa(str.score)
+		add(Modifier{Kind: ModStrength, Detail: detail, StrExceptional: str.exceptional, Value: str.Hit})
 		out.strDmg = str.Dmg
-		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, StrExceptional: exc, Value: float64(str.Dmg)})
+		out.strTerms = append(out.strTerms, DamageTerm{Term: TermStrength, Kind: ModStrength, Detail: detail, StrExceptional: str.exceptional, Value: float64(str.Dmg)})
 	}
 	// ADR 0002 step 5: Dexterity missile adjustment (Table 2, from the view) for every
 	// missile attack, bow or hurled.

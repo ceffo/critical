@@ -310,6 +310,9 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string // ammo kind a missile weapon fires, e.g. "arrow" (the piece's Fires)
 	Type        string // weapon type code (itemsvc.WeaponTypes); empty: none
+	// StrengthRating is a bow's Strength rating (ADR 0033 step 3, ADR 0002
+	// step 4); the zero value an ordinary bow.
+	StrengthRating itemsvc.StrengthRating
 	// Specialized is the fighter's weapon specialization (ADR 0030 step 12).
 	Specialized bool
 	// NonproficientPenalty is the piece's derived step 8 penalty (ADR 0037),
@@ -327,7 +330,8 @@ func weaponOf(it itemsvc.Item) Weapon {
 	return Weapon{
 		ID: it.ID, Name: it.Name, BaseDamage: it.DamageSM, DamageLarge: it.DamageL,
 		MagicToHit: it.MagicToHit, MagicDamage: it.MagicDamage, Kind: WeaponKind(it.WeaponKind),
-		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, Specialized: it.Specialized,
+		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, StrengthRating: it.StrengthRating,
+		Specialized:          it.Specialized,
 		NonproficientPenalty: it.NonproficientPenalty,
 		Speed:                it.Speed, Wielded: it.State == itemsvc.StateWielded,
 	}

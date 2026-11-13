@@ -523,6 +523,10 @@ A possession that attacks, by **weapon kind** (melee or missile; fr: mêlée / t
 type**. [ADR 0030](docs/adr/0030-classes-and-races.md) step 23, [ADR 0037](docs/adr/0037-proficiencies.md) step 9.
 _Code_: Weapons, WeaponKind, WeaponPool, WeaponTypeOption
 
+**Strength bow** (fr: arc de force), **Strength rating** (fr: force de l'arc):
+A bow (long or short, composite included) built for a given Strength, its **Strength rating** (a score, 18/xx allowed); the archer adds Strength's bonus up to the rating. A bow without a rating is an ordinary bow; a Strength penalty applies to every bow, and a crossbow never takes Strength. [ADR 0002](docs/adr/0002-attack-resolution.md) step 4, [ADR 0033](docs/adr/0033-equipment.md) step 3.
+_Code_: StrengthRating
+
 **Equipment** (fr: équipement):
 The topic of [ADR 0033](docs/adr/0033-equipment.md) and the catalogue's reference data for gear. Not a synonym of inventory or item.
 

@@ -89,13 +89,17 @@ type snapPiece struct {
 	MagicDamage   int      `json:"magicDamage,omitempty"`
 	TwoHanded     bool     `json:"twoHanded,omitempty"`
 	Fires         string   `json:"fires,omitempty"`
-	Specialized   bool     `json:"specialized,omitempty"`
-	BaseAC        int      `json:"baseAc,omitempty"`
-	SkillColumn   string   `json:"skillColumn,omitempty"`
-	ArmorRow      string   `json:"armorRow,omitempty"`
-	ShieldKind    string   `json:"shieldKind,omitempty"`
-	ACMelee       int      `json:"acMelee,omitempty"`
-	ACMissile     int      `json:"acMissile,omitempty"`
+	// StrengthRating and StrengthRatingExceptional are a bow's rating (ADR
+	// 0033 step 3); absent in a snapshot taken before it: none.
+	StrengthRating            int    `json:"strengthRating,omitempty"`
+	StrengthRatingExceptional int    `json:"strengthRatingExceptional,omitempty"`
+	Specialized               bool   `json:"specialized,omitempty"`
+	BaseAC                    int    `json:"baseAc,omitempty"`
+	SkillColumn               string `json:"skillColumn,omitempty"`
+	ArmorRow                  string `json:"armorRow,omitempty"`
+	ShieldKind                string `json:"shieldKind,omitempty"`
+	ACMelee                   int    `json:"acMelee,omitempty"`
+	ACMissile                 int    `json:"acMissile,omitempty"`
 }
 
 func toSnapItem(i Item) *snapItem {
@@ -111,6 +115,7 @@ func toSnapItem(i Item) *snapItem {
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,
 			Specialized: i.Specialized, BaseAC: i.BaseAC, SkillColumn: i.SkillColumn, ArmorRow: i.ArmorRow,
 			ShieldKind: i.ShieldKind, ACMelee: i.ACMelee, ACMissile: i.ACMissile,
+			StrengthRating: i.StrengthRating.Score, StrengthRatingExceptional: i.StrengthRating.Exceptional,
 		},
 	}
 }
@@ -133,6 +138,7 @@ func (c itemState) item(id string) Item {
 		out.MagicToHit, out.MagicDamage, out.TwoHanded, out.Fires = p.MagicToHit, p.MagicDamage, p.TwoHanded, p.Fires
 		out.Specialized, out.BaseAC, out.SkillColumn, out.ArmorRow = p.Specialized, p.BaseAC, p.SkillColumn, p.ArmorRow
 		out.ShieldKind, out.ACMelee, out.ACMissile = p.ShieldKind, p.ACMelee, p.ACMissile
+		out.StrengthRating = StrengthRating{Score: p.StrengthRating, Exceptional: p.StrengthRatingExceptional}
 	}
 	return out
 }

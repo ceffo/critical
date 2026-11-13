@@ -23,7 +23,7 @@ func (s *service) Catalogue() ruletablesvc.Equipment {
 // category, numbers and codes copied, its code kept; from the player only the
 // name (the row's when none is typed), the count (at least 1, 1 when not
 // given), the note, the powers (an armour's or a shield's "+N", ADR 0033 step
-// 17), the spell (kept so Validate refuses it: no row is a scroll) and the magic of a weapon (to hit, damage) or ammunition.
+// 17), the spell (kept so Validate refuses it: no row is a scroll), the magic of a weapon (to hit, damage) or ammunition and a bow's Strength rating.
 // Everything else of in is ignored: the piece is edited afterwards like any other. A code no row
 // has is refused (field catalogueCode, CodeUnknown).
 func (s *service) picked(in ItemInput) (Item, error) {
@@ -45,6 +45,9 @@ func (s *service) picked(in ItemInput) (Item, error) {
 		item.Category, item.WeaponType, item.WeaponKind, item.Size = CategoryWeapon, r.WeaponType, r.Kind, r.Size
 		item.DamageTypes, item.Speed, item.DamageSM, item.DamageL = slices.Clone(r.Types), r.Speed, r.DamageSM, r.DamageL
 		item.TwoHanded, item.MagicToHit, item.MagicDamage = r.TwoHanded, in.MagicToHit, in.MagicDamage
+		// A bow's Strength rating is the player's, like its magic (Validate
+		// refuses one on any other weapon).
+		item.StrengthRating = in.StrengthRating
 		// The piece fires one kind (step 3); a launcher of several (the
 		// blowgun) gets its first, changed by an edit.
 		if len(r.Fires) > 0 {

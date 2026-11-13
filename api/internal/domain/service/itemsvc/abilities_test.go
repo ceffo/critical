@@ -15,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -108,7 +109,17 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"charges cost 0":          withAbility(wand, charges(5, 5, 0)),
 		"charges cost above max":  withAbility(wand, charges(5, 5, 6)),
 		// Step 10.
-		"an unknown effect kind":          withAbility(rope, dice(itemsvc.Effect{Kind: "buff", Dice: "1d4"})),
+		"an unknown effect kind":          withAbility(rope, dice(itemsvc.Effect{Kind: "spell", Dice: "1d4"})),
+		"a buff with dice":                withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Dice: "1d4"})),
+		"a buff that is full":             withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Full: true})),
+		"a buff with a save":              withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Save: "rod_staff_wand"})),
+		"a buff with a label":             withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Label: "x"})),
+		"a buff with a name too long":     withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Name: strings.Repeat("x", itemsvc.MaxBuffName+1)})),
+		"a buff with negative rounds":     withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: -1})),
+		"a buff with too many rounds":     withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: itemsvc.MaxBuffRounds + 1})),
+		"a buff with a str_bonus of 0":    withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: 3, Buff: buffsvc.BuffEffects{StrBonus: ptrTo(0)}})),
+		"a buff with a base_ac too low":   withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: 3, Buff: buffsvc.BuffEffects{BaseAC: ptrTo(-11)}})),
+		"a buff with a bad weapon kind":   withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: 3, Buff: buffsvc.BuffEffects{WeaponKind: "thrown"}})),
 		"a dice effect that is full":      withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d4", Full: true})),
 		"a heal with dice and full":       withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "1d4", Full: true})),
 		"a heal with neither":             withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal})),
@@ -150,6 +161,12 @@ func TestItem_ADR0049Step4_5_10_AbilityValidation(t *testing.T) {
 		"dice with a modifier":      withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d8+2"})),
 		"a heal of dice":            withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "2d4+2", Label: "drink"})),
 		"a full heal":               withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectHeal, Full: true})),
+		// ADR 0049 step 10: a buff holds a name, rounds and the buffs' effects, a Strength one included.
+		"a buff of ac and saves":  withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Name: "Protection", Rounds: 60, Buff: buffsvc.BuffEffects{AC: ptrTo(-2), SaveBonus: ptrTo(1)}})),
+		"a Strength buff":         withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: 60, Buff: buffsvc.BuffEffects{StrBonus: ptrTo(3), StrMax: ptrTo(21)}})),
+		"an untimed buff":         withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Buff: buffsvc.BuffEffects{ToHit: ptrTo(1)}})),
+		"a buff with no modifier": withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Name: "Invisible", Rounds: 120})),
+		"the most rounds":         withAbility(rope, dice(itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: itemsvc.MaxBuffRounds})),
 	}
 	for name, in := range accepted {
 		t.Run("accepts "+name, func(t *testing.T) {
@@ -307,6 +324,10 @@ func TestAbilities_ADR0049Step18_StoredEncodingRoundTrips(t *testing.T) {
 			{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"},
 			{Kind: itemsvc.EffectHeal, Dice: "2d4+2"},
 			{Kind: itemsvc.EffectHeal, Full: true},
+			{Kind: itemsvc.EffectBuff, Name: "Heroism", Rounds: 10, Buff: buffsvc.BuffEffects{
+				ToHit: ptrTo(1), SaveBonus: ptrTo(-1), AC: ptrTo(-2), StrBonus: ptrTo(3), WeaponKind: buffsvc.WeaponMelee, WithoutMagicArmour: true,
+			}},
+			{Kind: itemsvc.EffectBuff, Rounds: 0},
 		},
 	}}
 	text, _, err = itemsvc.EncodeAbilities(full)
@@ -392,4 +413,21 @@ func TestUpdate_ADR0049Step4_StoredCountAboveOneDoesNotBlockEditsButBlocksAbilit
 		Abilities: []itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}}},
 	})
 	require.True(t, errors.As(err, &fe), "%v", err)
+}
+
+func ptrTo[T any](v T) *T { return &v }
+
+// ADR 0049 step 10: the buff's modifiers are stored under the buffs' keys beside the name and
+// rounds, and a stored row with no buff block (a later slice's key, or none) reads as no modifier.
+func TestAbilities_ADR0049Step10_BuffEffectStoredKeys(t *testing.T) {
+	text, _, err := itemsvc.EncodeAbilities([]itemsvc.Ability{{
+		ID: "drink", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectBuff, Name: "Speed", Rounds: 5, Buff: buffsvc.BuffEffects{Initiative: ptrTo(-2)}}},
+	}})
+	require.NoError(t, err)
+	assert.JSONEq(t, `[{"id":"drink","limit":{"kind":"unlimited"},"effects":[
+		{"kind":"buff","name":"Speed","rounds":5,"buff":{"initiative":-2}}]}]`, text)
+	got, err := itemsvc.DecodeAbilities(`[{"id":"a","limit":{"kind":"unlimited"},"effects":[{"kind":"buff","rounds":3}]}]`, true)
+	require.NoError(t, err)
+	assert.Equal(t, []itemsvc.Effect{{Kind: itemsvc.EffectBuff, Rounds: 3}}, got[0].Effects)
 }

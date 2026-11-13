@@ -3,6 +3,7 @@ import { test, expect, snap } from "./fixtures";
 import { expectNoClippedText } from "./noClip";
 import {
   ammoChips,
+  buffBadge,
   chooseLanguage,
   chooseWeapon,
   combatLog,
@@ -241,4 +242,81 @@ test("a potion of healing with a full heal: built in the editor, used from Act �
 
   await undoEntry(page, "Used Potion of healing");
   await expect.poll(() => currentHp(page)).toBe(max - 9);
+});
+
+// ADR 0049 steps 9, 10 and 12 (slice 8): a potion of heroism is built in the editor with a buff
+// effect (a name, rounds, a to-hit and a saves modifier), used from Act · Items: the buff is on the
+// list the dashboard shows (the server names `buffs` as changed), the result card and the journal
+// word it, and one undo takes the buff off. Only a browser proves the form to the use to the
+// dashboard's buff list and the form and card at the big viewports in both languages; applying,
+// renewing, rollback and undo are Go tests.
+test("a potion of heroism with a buff: built in the editor, used from Act · Items, buff on the list, undone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openInventory(page);
+  await openTypedAdd(page);
+  const f = form(page);
+  await f.getByLabel("Name").fill("Potion of heroism");
+  await f.getByLabel("Category").selectOption("magic");
+  await f.getByRole("button", { name: "Next" }).click();
+  await f.getByLabel("Magic kind").selectOption("potion");
+  await f.getByRole("button", { name: "Add an ability to this item" }).click();
+  await f
+    .getByRole("button", {
+      name: "Put a timed buff on the list when this ability is used",
+    })
+    .click();
+  await f.getByLabel("Buff name").fill("Heroism");
+  await f.getByLabel("Rounds", { exact: true }).fill("60");
+  await f.getByTestId("ability-buff-mod-key").selectOption("to_hit");
+  await f.getByTestId("ability-buff-add-mod").click();
+  for (const lng of ["fr", "en"] as const) {
+    await chooseLanguage(page, lng);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(
+        form(page),
+        `the buff in the editor (${lng} ${vp.width})`,
+      );
+      await snap(page, `potion-buff-form-${lng}-${vp.width}x${vp.height}`);
+    }
+  }
+  await f.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(form(page)).toHaveCount(0);
+  await expect(
+    row(page, "potion_of_heroism").getByTestId("ability-chip-ability_1"),
+  ).toBeVisible();
+
+  await openWorkspace(page, "Act");
+  await page.getByRole("tab", { name: "Items" }).click();
+  const line = page.getByTestId("ability-potion_of_heroism-ability_1");
+  await line.getByRole("button", { name: /^Use / }).click();
+  const card = page.getByTestId("item-result");
+  await expect(card.getByTestId("item-buff-name")).toContainText("Heroism");
+  await expect(buffBadge(page, "Heroism")).toBeVisible();
+  await expect(logEntry(page, "Used Potion of heroism")).toContainText(
+    "buff Heroism (60 rd)",
+  );
+  for (const lng of ["fr", "en"] as const) {
+    await chooseLanguage(page, lng);
+    for (const vp of [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ]) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(card, `the buff card (${lng} ${vp.width})`);
+      await expectNoClippedText(
+        combatLog(page),
+        `the buff in the journal (${lng} ${vp.width})`,
+      );
+      await snap(page, `potion-buff-used-${lng}-${vp.width}x${vp.height}`);
+    }
+  }
+
+  await undoEntry(page, "Used Potion of heroism");
+  await expect(buffBadge(page, "Heroism")).toHaveCount(0);
 });

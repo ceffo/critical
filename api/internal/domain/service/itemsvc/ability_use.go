@@ -9,6 +9,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // ReasonExhausted is why an ability cannot be used: its limit cannot pay a use
@@ -53,6 +54,28 @@ type EffectResult struct {
 	// Applied is what the effect changed in the character (ADR 0049 step 7):
 	// nil for a dice effect, which applies nothing.
 	Applied *Applied `json:"applied,omitempty"`
+	// Buff is the buff a buff effect put on the list (ADR 0049 step 12).
+	Buff *AppliedBuff `json:"buff,omitempty"`
+}
+
+// AppliedBuff is the row a buff effect put on the buff list: its id and name,
+// its rounds (0: untimed) and the modifiers it carries, in the buffs' effects.
+type AppliedBuff struct {
+	ID      string
+	Name    string
+	Rounds  int
+	Effects buffsvc.BuffEffects
+}
+
+// MarshalJSON writes the modifiers under the buffs' wire keys (min_str,
+// save_bonus, ac...), as an item's powers and effects store them.
+func (a AppliedBuff) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		ID      string      `json:"id"`
+		Name    string      `json:"name"`
+		Rounds  int         `json:"rounds"`
+		Effects jsonEffects `json:"effects"`
+	}{a.ID, a.Name, a.Rounds, jsonEffects(a.Effects)})
 }
 
 // Applied is what one heal effect did to the HP ledger: the points it added
@@ -136,8 +159,12 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		}
 		hp := &hpRun{}
 		hpDelta := 0
+		var buffSnap *actionlog.Snapshot
 		for _, e := range ability.Effects {
-			er, err := s.runEffect(ctx, characterID, hp, e)
+			er, snap, err := s.runEffect(ctx, characterID, hp, e, buffName(e, ability, after))
+			if snap != nil {
+				buffSnap = mergeSnapshots(buffSnap, *snap)
+			}
 			if err != nil {
 				return fmt.Errorf("item %s ability %s: %w", after.ID, ability.ID, err)
 			}
@@ -154,6 +181,12 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		if err != nil {
 			return err
 		}
+		snaps := []actionlog.Snapshot{snap}
+		if buffSnap != nil {
+			// ADR 0049 step 12: the buffs' snapshot rides the use's entry, so
+			// one undo pops the buff with the use.
+			snaps = append(snaps, *buffSnap)
+		}
 		payload, err := json.Marshal(abilityRecord(r))
 		if err != nil {
 			return fmt.Errorf("encode item use payload: %w", err)
@@ -166,7 +199,7 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 			Kind:        actionlog.KindItemUse,
 			Payload:     payload,
 			HPDelta:     hpDelta,
-			Snapshots:   []actionlog.Snapshot{snap},
+			Snapshots:   snaps,
 		})
 		if err != nil {
 			return fmt.Errorf("record item use: %w", err)
@@ -224,12 +257,15 @@ func (s *service) payLimit(ctx context.Context, characterID int64, before Item, 
 // rolls its dice through the dice port and applies them to nothing; a heal
 // rolls its dice (or asks for the gap to max HP) and reports the points the HP
 // ledger takes, which the use's entry then records as its HP delta.
-func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e Effect) (EffectResult, error) {
+func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e Effect, buffName string) (EffectResult, *actionlog.Snapshot, error) {
 	res := EffectResult{Kind: e.Kind, Dice: e.Dice, Rolls: []int{}, Save: e.Save, Label: e.Label, Full: e.Full}
+	if e.Kind == EffectBuff {
+		return s.runBuff(ctx, characterID, e, buffName)
+	}
 	if e.Dice != "" {
 		rolls, mod, err := rollDice(s.dice, e.Dice)
 		if err != nil {
-			return EffectResult{}, err
+			return EffectResult{}, nil, err
 		}
 		res.Rolls, res.Modifier, res.Total = rolls, mod, mod
 		for _, v := range rolls {
@@ -237,16 +273,16 @@ func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e
 		}
 	}
 	if e.Kind != EffectHeal {
-		return res, nil
+		return res, nil, nil
 	}
 	if !hp.read {
 		total, err := s.log.HPTotal(ctx, characterID)
 		if err != nil {
-			return EffectResult{}, fmt.Errorf("hp total: %w", err)
+			return EffectResult{}, nil, fmt.Errorf("hp total: %w", err)
 		}
 		c, err := s.chars.View(ctx, characterID)
 		if err != nil {
-			return EffectResult{}, fmt.Errorf("character: %w", err)
+			return EffectResult{}, nil, fmt.Errorf("character: %w", err)
 		}
 		hp.read, hp.total, hp.max = true, total, c.HPMax
 	}
@@ -262,7 +298,46 @@ func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e
 	hp.total += applied
 	res.Total = requested
 	res.Applied = &Applied{HPDelta: applied, HPBefore: before, HPAfter: actionlog.CurrentHP(hp.max, hp.total)}
-	return res, nil
+	return res, nil, nil
+}
+
+// buffName is the name a buff effect's row takes: its own, else its ability's,
+// else the item's (ADR 0049 step 10).
+func buffName(e Effect, a Ability, it Item) string {
+	if e.Name != "" {
+		return e.Name
+	}
+	if n := a.Name.Any(); n != "" {
+		return n
+	}
+	return it.Name.Any()
+}
+
+// runBuff puts the effect's buff on the list through buffsvc.Add, the path a
+// cast and a hand-made buff use, in the use's transaction (ADR 0049 step 12):
+// a buff of the same name renews, a Strength one stacks, as ADR 0004 steps 6
+// and 7 say. The snapshot it returns is the use's entry's.
+func (s *service) runBuff(ctx context.Context, characterID int64, e Effect, name string) (EffectResult, *actionlog.Snapshot, error) {
+	res := EffectResult{Kind: e.Kind, Rolls: []int{}}
+	if s.buffs == nil {
+		return EffectResult{}, nil, fmt.Errorf("a buff effect needs the buff service")
+	}
+	added, snap, err := s.buffs.Add(ctx, characterID, buffsvc.BuffEffect{Name: name, Duration: e.Rounds, Effects: e.Buff})
+	if err != nil {
+		return EffectResult{}, nil, fmt.Errorf("add buff: %w", err)
+	}
+	res.Buff = &AppliedBuff{ID: added.ID, Name: added.Name, Rounds: added.Duration, Effects: added.Effects}
+	return res, &snap, nil
+}
+
+// mergeSnapshots joins two snapshots of one state key recorded by two buff
+// effects of one use: the state before the first and after the last (an entry
+// holds one snapshot per key).
+func mergeSnapshots(first *actionlog.Snapshot, next actionlog.Snapshot) *actionlog.Snapshot {
+	if first == nil {
+		return &next
+	}
+	return &actionlog.Snapshot{Key: first.Key, Before: first.Before, After: next.After}
 }
 
 // abilityRecord is the use's log payload: the ability's fields, and the first

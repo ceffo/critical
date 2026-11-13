@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 )
@@ -251,4 +252,28 @@ func TestRestore_ADR0049Step20_SnapshotWithAbilitiesIsNotConvertedAgain(t *testi
 	dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Run(func(_ context.Context, _ int64, it itemsvc.Item) { got = it }).Return(nil).Once()
 	require.NoError(t, svc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, snaptest.EnvID("gem", state)))
 	assert.Equal(t, []itemsvc.Ability{}, got.Abilities)
+}
+
+// ADR 0049 step 11: the potions of heroism, speed, giant strength and invisibility, and the potion
+// and scrolls of protection, are stored as stock with no dice (their effect is in the note): the
+// conversion gives each a with_item ability with no effect and puts none on the review list, so
+// the player adds the buff in the editor without a review band first. A database already
+// converted keeps these rows: the conversion writes nothing for a converted row.
+func TestConvertLegacy_ADR0049Step11_BuffPotionsAndProtectionNeedNoReview(t *testing.T) {
+	for name, it := range map[string]itemsvc.Item{
+		"potion of heroism, speed, giant strength, invisibility": legacy(itemsvc.CategoryMagic, itemsvc.MagicPotion, itemsvc.BehaviourStock, 2, 2, ""),
+		"one dose of a potion of protection (charges)":           legacy(itemsvc.CategoryMagic, itemsvc.MagicPotion, itemsvc.BehaviourCharges, 1, 1, ""),
+		"a protection scroll":                                    legacy(itemsvc.CategoryMagic, itemsvc.MagicScroll, itemsvc.BehaviourStock, 1, 1, ""),
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := itemsvc.ConvertLegacy(it)
+			assert.Empty(t, got.Reasons, "no review reason")
+			require.Len(t, got.Abilities, 1)
+			assert.Equal(t, itemsvc.Limit{Kind: itemsvc.LimitWithItem}, got.Abilities[0].Limit)
+			assert.Empty(t, got.Abilities[0].Effects)
+			require.NoError(t, got.Check(it), "the editor accepts it, and adding a buff to it")
+			got.Abilities[0].Effects = []itemsvc.Effect{{Kind: itemsvc.EffectBuff, Rounds: 10, Buff: buffsvc.BuffEffects{SaveBonus: ptrTo(1)}}}
+			require.NoError(t, got.Check(it))
+		})
+	}
 }

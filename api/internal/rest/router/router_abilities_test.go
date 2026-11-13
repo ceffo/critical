@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 )
 
@@ -205,4 +206,34 @@ func TestItems_ADR0049Step10_HealEffectOnTheWireAndItsAppliedResult(t *testing.T
 	assert.JSONEq(t, `{"itemId":"potion","abilityId":"drink","name":"Potion of healing","type":"potion","limit":"with_item",
 		"remaining":2,"removed":false,"logEntryId":9,
 		"effects":[{"kind":"heal","dice":"2d4+2","rolls":[3,4],"modifier":2,"total":9,"applied":{"hpDelta":6,"hpBefore":20,"hpAfter":26}}]}`, rec.Body.String())
+}
+
+// ADR 0049 steps 10 and 12: a buff effect (name, rounds, the buffs' effect keys) is written and
+// served as sent, and the use's answer names the row it put on the list with its modifiers.
+func TestItems_ADR0049Step10_BuffEffectOnTheWireAndItsAppliedResult(t *testing.T) {
+	h, m := newRouter(t)
+	two := 2
+	abilities := []itemsvc.Ability{{
+		ID: "drink", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectBuff, Name: "Protection", Rounds: 60, Buff: buffsvc.BuffEffects{AC: &two, SaveBonus: &two}}},
+	}}
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Abilities: &abilities}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 14}, nil).Once()
+	noWarnings(m)
+	rec := do(h, "PATCH", "/api/items/w", `{"abilities":[{"id":"drink","limit":{"kind":"with_item"},
+		"effects":[{"kind":"buff","name":"Protection","rounds":60,"buff":{"ac":2,"save_bonus":2}}]}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink").Return(&itemsvc.AbilityUseResult{
+		ItemID: "potion", AbilityID: "drink", Name: "Potion of protection", Type: "potion", Limit: itemsvc.LimitWithItem, Remaining: 2, LogEntryID: 9,
+		Effects: []itemsvc.EffectResult{{
+			Kind: itemsvc.EffectBuff, Rolls: []int{},
+			Buff: &itemsvc.AppliedBuff{ID: "b1", Name: "Protection", Rounds: 60, Effects: buffsvc.BuffEffects{AC: &two, SaveBonus: &two}},
+		}},
+	}, nil).Once()
+	rec = do(h, "POST", "/api/items/potion/abilities/drink/use", "{}")
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.JSONEq(t, `{"itemId":"potion","abilityId":"drink","name":"Potion of protection","type":"potion","limit":"with_item",
+		"remaining":2,"removed":false,"logEntryId":9,
+		"effects":[{"kind":"buff","rolls":[],"total":0,"buff":{"id":"b1","name":"Protection","rounds":60,"effects":{"ac":2,"save_bonus":2}}}]}`, rec.Body.String())
 }

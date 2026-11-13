@@ -273,6 +273,88 @@ describe("ItemForm, quantity and abilities", () => {
     },
   );
 
+  // ADR 0049 steps 9, 10 and 12: a potion's buff is a name, rounds and modifiers in the buffs'
+  // effect keys; the rounds are typed, the modifiers rows of key and value (a Strength one too).
+  it.each([
+    [
+      "en",
+      "Add an ability to this item",
+      "Put a timed buff on the list when this ability is used",
+      "Buff name",
+      "Rounds",
+      "Add",
+    ],
+    [
+      "fr",
+      "Ajouter une capacité à cet objet",
+      "Poser un effet temporaire sur la liste quand cette capacité est utilisée",
+      "Nom de l'effet",
+      "Tours",
+      "Ajouter",
+    ],
+  ] as const)(
+    "adds a buff to a potion in %s: name, rounds and its modifiers",
+    async (lng, addAbility, addBuff, nameLabel, roundsLabel, save) => {
+      const v = await form(lng);
+      await v.user.type(
+        screen.getByLabelText(lng === "en" ? "Name" : "Nom"),
+        "Potion of heroism",
+      );
+      await v.user.selectOptions(
+        screen.getByLabelText(lng === "en" ? "Category" : "Catégorie"),
+        "magic",
+      );
+      await v.user.click(
+        screen.getByRole("button", { name: lng === "en" ? "Next" : "Suivant" }),
+      );
+      await v.user.selectOptions(
+        screen.getByLabelText(
+          lng === "en" ? "Magic kind" : "Type d’objet magique",
+        ),
+        "potion",
+      );
+      await v.user.click(screen.getByRole("button", { name: addAbility }));
+      await v.user.click(screen.getByRole("button", { name: addBuff }));
+      await v.user.type(screen.getByLabelText(nameLabel), "Heroism");
+      await v.user.clear(screen.getByLabelText(roundsLabel));
+      await v.user.type(screen.getByLabelText(roundsLabel), "60");
+      await v.user.type(
+        screen.getByTestId("ability-buff-mod-value"),
+        "{Backspace}2",
+      );
+      await v.user.selectOptions(
+        screen.getByTestId("ability-buff-mod-key"),
+        "to_hit",
+      );
+      await v.user.click(screen.getByTestId("ability-buff-add-mod"));
+      await v.user.selectOptions(
+        screen.getAllByTestId("ability-buff-mod-key")[1],
+        "str_bonus",
+      );
+      await v.user.click(screen.getByRole("button", { name: save }));
+      expect(v.onSave.mock.calls[0][0].abilities).toEqual([
+        {
+          id: "",
+          limit: { kind: "with_item" },
+          effects: [
+            {
+              kind: "buff",
+              name: "Heroism",
+              rounds: 60,
+              buff: { to_hit: 2, str_bonus: 1 },
+            },
+          ],
+        },
+      ]);
+      // A rounds that is no whole number is not sent.
+      v.onSave.mockClear();
+      await v.user.clear(screen.getByLabelText(roundsLabel));
+      await v.user.type(screen.getByLabelText(roundsLabel), "a lot");
+      await v.user.click(screen.getByRole("button", { name: save }));
+      expect(v.onSave).not.toHaveBeenCalled();
+    },
+  );
+
   it("offers an ability spent with the item on a stock, and speaks French", async () => {
     const v = await form("fr");
     await v.user.type(screen.getByLabelText("Nom"), "Fiole");

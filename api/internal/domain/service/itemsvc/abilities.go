@@ -2,6 +2,7 @@ package itemsvc
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"slices"
@@ -12,6 +13,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/saves"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 )
 
 // LimitKind is how often an ability may be used (ADR 0049 step 5).
@@ -62,8 +64,7 @@ type Limit struct {
 }
 
 // EffectKind is the kind of an ability's effect (ADR 0049 step 10's closed
-// list). dice and heal exist so far; buff and spell come with their own
-// slices.
+// list). dice, heal and buff exist so far; spell comes with its own slice.
 type EffectKind string
 
 const (
@@ -73,17 +74,35 @@ const (
 	// EffectHeal is hit points regained by the character through the HP ledger
 	// (ADR 0049 steps 9 and 12): Dice, or Full for the gap to max HP.
 	EffectHeal EffectKind = "heal"
+	// EffectBuff is a timed buff put on the character's list through the buff
+	// service, as a hand-made one (ADR 0049 steps 9 and 12): Name, Rounds and
+	// the modifiers in Buff.
+	EffectBuff EffectKind = "buff"
 )
+
+// MaxBuffRounds is the most rounds a buff effect lasts (ADR 0049 step 10: a
+// number of rounds, 0 untimed as ADR 0004 step 2): a potion of a day is 144
+// rounds an hour, so a day is well under this.
+const MaxBuffRounds = 10000
+
+// MaxBuffName bounds a buff effect's name, as an ability's.
+const MaxBuffName = 100
 
 // Effect is one effect of an ability. A dice effect holds Dice ("NdM" or
 // "NdM+K"), an optional save category (Save) and an optional Label. A heal
-// holds Dice or Full (never both) and an optional Label, no save.
+// holds Dice or Full (never both) and an optional Label, no save. A buff
+// holds Name (empty: the ability's, else the item's), Rounds (0: untimed) and
+// the modifiers in Buff (the buffs' effects of ADR 0004 step 11, a Strength
+// one allowed); no dice, save or label.
 type Effect struct {
-	Kind  EffectKind
-	Dice  string
-	Full  bool
-	Save  string
-	Label string
+	Kind   EffectKind
+	Dice   string
+	Full   bool
+	Save   string
+	Label  string
+	Name   string
+	Rounds int
+	Buff   buffsvc.BuffEffects
 }
 
 // Ability is one of an item's abilities (ADR 0049 step 4): something the
@@ -247,8 +266,24 @@ func (e Effect) valid() error {
 				return fmt.Errorf("the dice must look like 2d6 or 1d8+2")
 			}
 		}
+	case EffectBuff:
+		// ADR 0049 step 10: a buff carries a name, rounds and the buffs'
+		// effects (ADR 0004's rules), and nothing a dice effect holds.
+		if e.Dice != "" || e.Full || e.Save != "" || e.Label != "" {
+			return fmt.Errorf("a buff has a name, rounds and effects only")
+		}
+		if utf8.RuneCountInString(e.Name) > MaxBuffName {
+			return fmt.Errorf("the buff name must be at most %d characters", MaxBuffName)
+		}
+		if e.Rounds < 0 || e.Rounds > MaxBuffRounds {
+			return fmt.Errorf("the rounds must be between 0 and %d", MaxBuffRounds)
+		}
+		if err := buffsvc.ValidateEffects(e.Buff); err != nil {
+			return errors.New(strings.TrimPrefix(err.Error(), domain.ErrInvalidInput.Error()+": "))
+		}
+		return nil
 	default:
-		return fmt.Errorf("unknown effect %q (dice or heal)", e.Kind)
+		return fmt.Errorf("unknown effect %q (dice, heal or buff)", e.Kind)
 	}
 	if utf8.RuneCountInString(e.Label) > MaxEffectLabel {
 		return fmt.Errorf("the label must be at most %d characters", MaxEffectLabel)
@@ -294,6 +329,7 @@ func withAbilityIDs(abilities []Ability) []Ability {
 			a.Effects[e].Dice = strings.ToLower(strings.TrimSpace(a.Effects[e].Dice))
 			a.Effects[e].Save = strings.ToLower(strings.TrimSpace(a.Effects[e].Save))
 			a.Effects[e].Label = strings.TrimSpace(a.Effects[e].Label)
+			a.Effects[e].Name = strings.TrimSpace(a.Effects[e].Name)
 		}
 	}
 	return out
@@ -322,6 +358,10 @@ type jsonEffect struct {
 	Full  bool       `json:"full,omitempty"`
 	Save  string     `json:"save,omitempty"`
 	Label string     `json:"label,omitempty"`
+	// A buff's name, rounds and modifiers (the buffs' wire keys, as a power's).
+	Name   string       `json:"name,omitempty"`
+	Rounds int          `json:"rounds,omitempty"`
+	Buff   *jsonEffects `json:"buff,omitempty"`
 }
 
 func toJSONAbilities(abilities []Ability) []jsonAbility {
@@ -329,7 +369,12 @@ func toJSONAbilities(abilities []Ability) []jsonAbility {
 	for _, a := range abilities {
 		effects := make([]jsonEffect, 0, len(a.Effects))
 		for _, e := range a.Effects {
-			effects = append(effects, jsonEffect(e))
+			j := jsonEffect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+			if e.Kind == EffectBuff {
+				b := jsonEffects(e.Buff)
+				j.Buff = &b
+			}
+			effects = append(effects, j)
 		}
 		out = append(out, jsonAbility{
 			ID: a.ID, Name: a.Name, Note: a.Note, Limit: jsonLimit(a.Limit), Effects: effects,
@@ -345,7 +390,11 @@ func fromJSONAbilities(js []jsonAbility) []Ability {
 	for _, j := range js {
 		a := Ability{ID: j.ID, Name: j.Name, Note: j.Note, Limit: Limit(j.Limit)}
 		for _, e := range j.Effects {
-			a.Effects = append(a.Effects, Effect(e))
+			ef := Effect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+			if e.Buff != nil {
+				ef.Buff = buffsvc.BuffEffects(*e.Buff)
+			}
+			a.Effects = append(a.Effects, ef)
 		}
 		out = append(out, a)
 	}

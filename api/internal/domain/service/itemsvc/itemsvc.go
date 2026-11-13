@@ -161,7 +161,11 @@ type Deps struct {
 	// (ADR 0035 item 6.2); InitiativeItems is PHB Table 56, the modifier of
 	// each magic kind (nil before catalogue format 7: a use corrects
 	// nothing).
-	Initiative      Initiative
+	Initiative Initiative
+	// Buffs applies a buff effect (ADR 0049 step 12). The buff service is
+	// built after the items, so the composition root hands a late-bound one;
+	// nil makes a use with a buff effect fail, never skip it.
+	Buffs           Buffs
 	InitiativeItems *ruletablesvc.InitiativeItems
 	// Spells is the spell catalogue: a scroll names one of its spells (ADR
 	// 0033 step 2) and its use reads that spell's casting time (ADR 0035
@@ -194,6 +198,14 @@ type Spells interface {
 	Describe(ctx context.Context, spellID string) (spellsvc.Spell, bool, error)
 }
 
+// Buffs puts a buff on the character's list without recording (buffsvc.Add):
+// a buff effect of an ability's use goes through the one path a cast and a
+// hand-made buff use, and the use's entry records the returned snapshot (ADR
+// 0049 step 12).
+type Buffs interface {
+	Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
+}
+
 // Initiative corrects the round's initiative by an item used (buffsvc),
 // inside the use's transaction, as its last entry; it does nothing out of
 // combat.
@@ -202,6 +214,7 @@ type Initiative interface {
 }
 
 type service struct {
+	buffs     Buffs
 	dal       DAL
 	dice      Dice
 	log       Log
@@ -226,7 +239,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 	s := &service{
 		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
 		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells, rulesets: d.Rulesets,
-		strength: d.Strength,
+		strength: d.Strength, buffs: d.Buffs,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

@@ -1530,6 +1530,7 @@
     "noRoll": "Rien à lancer : l'effet se résout à la table.",
     "itemHealed": "Soigné",
     "itemHealFull": "Soigne tous les PV perdus",
+    "itemBuffed": "Effet appliqué",
     "adjust": {
       "title": "Ajuster après le jet",
       "label": "Ajuster cette sauvegarde",
@@ -1759,6 +1760,7 @@
       "heal": "soigne {{applied}} PV",
       "healCapped": "soigne {{applied}} PV ({{total}} obtenus, plafonnés aux PV max)",
       "healNone": "ne rend aucun PV",
+      "buff": "effet {{name}} ({{counters}})",
       "restocked": "Objet réapprovisionné : {{name}}, +{{added}} ({{count}} maintenant)",
       "added": "Objet ajouté : {{name}} ({{count}})",
       "removedItem": "Objet retiré : {{name}} ({{count}})",
@@ -3101,6 +3103,13 @@
       "healFullHint": "Regagner tous les points de vie perdus, sans dés",
       "addHeal": "Soin",
       "addHealHint": "Regagner des points de vie quand cette capacité est utilisée",
+      "buffEffect": "Effet {{n}}",
+      "buffName": "Nom de l'effet",
+      "buffNamePlaceholder": "Le nom de la capacité",
+      "buffRounds": "Tours",
+      "buffRoundsHint": "Durée de l'effet en tours, décomptée au tour suivant (0 : jusqu'à ce qu'on l'arrête)",
+      "addBuff": "Effet",
+      "addBuffHint": "Poser un effet temporaire sur la liste quand cette capacité est utilisée",
       "add": "Capacité",
       "addHint": "Ajouter une capacité à cet objet"
     }

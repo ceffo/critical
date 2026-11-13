@@ -72,10 +72,8 @@
       "removed": false,
       "remaining": 0,
       "maxCount": 0,
-      "dice": "",
       "rolls": [],
-      "total": 0,
-      "effects": []
+      "total": 0
     },
     "roll": true
   },

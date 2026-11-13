@@ -33,7 +33,7 @@ func TestCreate_ValidationNamesTheField(t *testing.T) {
 		"empty name":          {func(i *itemsvc.ItemInput) { i.Name = localized.Of("  ") }, "name"},
 		"unknown behaviour":   {func(i *itemsvc.ItemInput) { i.Behaviour = "x" }, "behaviour"},
 		"negative count":      {func(i *itemsvc.ItemInput) { i.Count = -1 }, "count"},
-		"huge count":          {func(i *itemsvc.ItemInput) { i.Count = itemsvc.MaxItemCount + 1 }, "count"},
+		"huge count":          {func(i *itemsvc.ItemInput) { i.Count = itemsvc.MaxQuantity + 1 }, "count"},
 		"bad dice 2x6":        {func(i *itemsvc.ItemInput) { i.EffectDice = "2x6" }, "effectDice"},
 		"bad dice 0d6":        {func(i *itemsvc.ItemInput) { i.EffectDice = "0d6" }, "effectDice"},
 		"bad dice 1d1":        {func(i *itemsvc.ItemInput) { i.EffectDice = "1d1" }, "effectDice"},

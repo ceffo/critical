@@ -9,7 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 )
 
-// MaxRestock is the most one restock may add.
+// MaxRestock is the most one restock may add; the stock itself stops at MaxQuantity.
 const MaxRestock = 999
 
 // RestockResult is one restock of a stock item.
@@ -50,6 +50,9 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 		}
 		if !before.Usable() || before.holdsPerObjectLimit() {
 			return fmt.Errorf("%w: %s (%s) has no stock to restock", ErrNotRestockable, before.Name.Any(), before.Category)
+		}
+		if before.Count+n > MaxQuantity {
+			return fmt.Errorf("%w: a quantity is at most %d (%d held, %d added)", domain.ErrInvalidInput, MaxQuantity, before.Count, n)
 		}
 		item, err := s.dal.Increment(ctx, characterID, itemID, n)
 		if err != nil {

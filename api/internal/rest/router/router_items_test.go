@@ -89,6 +89,16 @@ func TestItems_DismissReview(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, do(h, "DELETE", "/api/items/x/review", "").Code)
 }
 
+// ADR 0049 step 2: a one-object piece's restock is refused with a field-less 409 item_not_restockable.
+func TestItems_RestockNotRestockable(t *testing.T) {
+	h, m := newRouter(t)
+	m.items.EXPECT().Restock(mock.Anything, int64(1), "ring", 1).Return(nil, fmt.Errorf("%w: Ring (magic)", itemsvc.ErrNotRestockable))
+	rec := do(h, "POST", "/api/items/ring/restock", `{"count":1}`)
+	assert.Equal(t, http.StatusConflict, rec.Code)
+	assert.Contains(t, rec.Body.String(), `"code":"item_not_restockable"`)
+	assert.NotContains(t, rec.Body.String(), `"field"`)
+}
+
 // ADR 0049 step 2: a weapon, an armour or a shield is refused with a field-less 409.
 func TestItems_UseNotUsable(t *testing.T) {
 	h, m := newRouter(t)

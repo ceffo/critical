@@ -16,7 +16,9 @@ import (
 // Limits on what the item editor accepts.
 const (
 	MaxItemCount = 9999
-	MaxBonus     = 10
+	// MaxQuantity bounds an item's quantity (ADR 0049 step 2, ADR 0016 step 5), and so a stock a restock builds.
+	MaxQuantity = 999
+	MaxBonus    = 10
 	// MaxSpeed is the highest speed factor (ADR 0033 step 25).
 	MaxSpeed = 20
 	// MaxAC bounds a base AC (ADR 0033 step 25).
@@ -93,8 +95,8 @@ func (i Item) Validate() error {
 	if i.Count < 0 {
 		return fieldErr("count", "Count must be 0 or more")
 	}
-	if i.Count > MaxItemCount {
-		return domain.FieldErrorf("count", "Count must be at most %d", MaxItemCount)
+	if i.Count > MaxQuantity {
+		return domain.FieldErrorf("count", "Count must be at most %d", MaxQuantity)
 	}
 	// A charges item at 0 is gone (Removed, Use): removing it is what remove is for.
 	if i.Behaviour.RemovedAtZero() && i.Count == 0 {

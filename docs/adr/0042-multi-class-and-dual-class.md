@@ -640,6 +640,7 @@ bard 15 never).)_
     `Skills_Step16_3_ArmourBlocksAllButTwo` (charactersvc, the derivation),
     `Skills_Step16_3_ABlockedSkillIsNotRolled` (skillsvc). The web has no wording for the code
     yet.)_
+    _(Amended 2026-11-13 by [ADR 0037](0037-proficiencies.md) steps 21.2 and 21.5 (user triage), on implementation: a weapon pick names a catalogue weapon code, so 16.1 judges a **weapon**, not a weapon type: a code is allowed when any active entry's class allows that weapon (`classes.AllowedTogether` over `Equipment.AllowsWeapon` on the catalogue row, the rule of the wielding warnings), a `blunt_only` entry restricting the picks to its own weapons unless the ruleset's `multiclass_any_weapon` lifts it, a dual-class's old classes adding theirs as today. The offered list is `derived.proficiencySlots.weapons` `[{code, specializationSlots}]` in place of `weaponTypes`. The specialization stays the first entry's, now one weapon. Test: `WeaponPick_Step16_1_ABluntOnlyEntryRestrictsTheWeapons` (skills: a cleric/fighter refused the long sword, allowed the footman's mace, allowed both under the lift).)_
 
     _(Amended 2026-10-21 by [ADR 0043](0043-psionics.md) step 18, on implementation: an entry with the `psionics` kind warns `power_in_armour` on every power check while body armour outside its class's `armour` list is worn, as step 16.2 does for spells)_
 

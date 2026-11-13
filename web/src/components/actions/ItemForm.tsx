@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   changedFields,
   draftToBody,
+  hasBehaviour,
   hasField,
   holdsSpell,
   ratesStrength,
@@ -581,23 +582,25 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
               {t("items.form.more")}
             </summary>
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {field("behaviour", t("items.form.behaviour"), (props) => (
-                <select
-                  {...props}
-                  className={fieldClass}
-                  value={draft.behaviour}
-                  onChange={(e) =>
-                    set("behaviour", e.target.value as ItemBehaviour)
-                  }
-                >
-                  {BEHAVIOURS.map((b) => (
-                    <option key={b} value={b}>
-                      {t(`items.behaviour.${b}`)}
-                    </option>
-                  ))}
-                </select>
-              ))}
-              {draft.behaviour === "daily" &&
+              {hasBehaviour(draft.category) &&
+                field("behaviour", t("items.form.behaviour"), (props) => (
+                  <select
+                    {...props}
+                    className={fieldClass}
+                    value={draft.behaviour}
+                    onChange={(e) =>
+                      set("behaviour", e.target.value as ItemBehaviour)
+                    }
+                  >
+                    {BEHAVIOURS.map((b) => (
+                      <option key={b} value={b}>
+                        {t(`items.behaviour.${b}`)}
+                      </option>
+                    ))}
+                  </select>
+                ))}
+              {hasBehaviour(draft.category) &&
+                draft.behaviour === "daily" &&
                 field(
                   "maxCount",
                   t("items.form.maxCount"),

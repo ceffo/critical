@@ -132,6 +132,11 @@ export interface Item {
   state: ItemState;
   /** The state Equip moves the piece to (server rule, ADR 0033 step 6); empty: carried only. */
   equipState: ItemState | "";
+  /**
+   * Whether the piece can be used or restocked (server rule: a weapon, an armour and a shield never
+   * can, ADR 0049 step 2). The web filters and hides controls by it, never by the category.
+   */
+  usable: boolean;
   /** The free-text label of before the equipment model, read only (not shown, read by nothing). */
   type: string;
   behaviour: ItemBehaviour;

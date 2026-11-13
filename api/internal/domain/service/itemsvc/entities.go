@@ -148,7 +148,7 @@ func (r StrengthRating) Exceeds(score, exceptional int) bool {
 // daily item (it recharges and is never spent by a spell), some left. The one
 // rule behind both the cast and the list of items offered for a spell.
 func (i Item) Spendable(component string) bool {
-	return i.Component != "" && i.Component == component && i.Behaviour != BehaviourDaily && i.Count > 0
+	return i.Component != "" && i.Component == component && i.Behaviour != BehaviourDaily && i.Count > 0 && i.Usable()
 }
 
 // HoldsSpell reports whether the piece may name a spell: a magic scroll.
@@ -157,6 +157,11 @@ func (i Item) HoldsSpell() bool { return i.Category == CategoryMagic && i.MagicK
 // Removed reports whether this item, as returned by a use, is gone: a
 // charges item at 0.
 func (i Item) Removed() bool { return i.Behaviour.RemovedAtZero() && i.Count == 0 }
+
+// Usable reports whether the piece can be used or restocked at the table: a
+// weapon, an armour or a shield never can, whatever its behaviour (ADR 0049
+// step 2). The wire serves it so the web does not derive the rule.
+func (i Item) Usable() bool { return !i.Category.OneObject() }
 
 // Equipped reports whether the piece is worn or wielded: its powers are on
 // (step 9).

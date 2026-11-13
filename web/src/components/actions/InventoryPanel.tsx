@@ -68,30 +68,13 @@ function CategoryIcon({ item }: { item: Item }) {
   return <Icon aria-hidden className={cls} />;
 }
 
-/** The categories whose pieces always count at the table (stock, charges, daily). */
-const COUNTED: readonly Category[] = ["ammunition", "magic", "gear"];
-
-/**
- * Whether the row shows its count and use controls: always for a counted category; for a weapon,
- * armour or shield only when the piece counts (a charges or daily behaviour, more than one, or
- * effect dice), so a plain one-off weapon stays free of them.
- */
-function isCounted(i: Item): boolean {
-  return (
-    COUNTED.includes(i.category) ||
-    i.behaviour !== "stock" ||
-    i.count > 1 ||
-    i.effectDice !== ""
-  );
-}
-
 /**
  * Inventaire workspace (ADR 0033 step 1, ADR 0035 items 2, 3 and 7): one flat possessions list in
  * the player's order, the category chips the only filter; each piece with its "Equipped" tag and
  * Equip / Unequip (one logged move, ADR 0033 step 7). The pieces the conversion could not settle
  * show in an amber band; Check opens them above the list, each with Edit and Dismiss (ADR 0033
  * step 27). − uses one (the API rolls the effect, logs it, and removes a charges item at 0); + adds
- * one, and exists only on stock items. The dice chip puts the piece's effect dice in the dice
+ * one, and exists only on stock items; a weapon, an armour and a shield have neither. The dice chip puts the piece's effect dice in the dice
  * composer. ✎ edits any field in a dialog over the list (no row moves), 🗑 removes the piece, "Add" opens a form. Every change is a
  * log entry the journal can pop. The card is as tall as its rows and scrolls inside when the stage
  * is shorter (ADR 0027 step 14.3).
@@ -363,7 +346,8 @@ function ItemRow({
   const { t, i18n } = useTranslation();
   const name = localized(i18n.language, i.name);
   const spellName = useSpellName();
-  const counted = isCounted(i);
+  // The server decides: a weapon, an armour or a shield has no count controls (ADR 0049 step 2).
+  const counted = i.usable;
   return (
     <li
       className={cn(

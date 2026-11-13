@@ -43,6 +43,14 @@ func (s *service) Restock(ctx context.Context, characterID int64, itemID string,
 	}
 	var res *RestockResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		// Read first and refuse a one-object piece before any write.
+		before, err := s.dal.Get(ctx, characterID, itemID)
+		if err != nil {
+			return err
+		}
+		if !before.Usable() {
+			return fmt.Errorf("%w: %s (%s) is one object, never restocked", ErrNotRestockable, before.Name.Any(), before.Category)
+		}
 		item, err := s.dal.Increment(ctx, characterID, itemID, n)
 		if err != nil {
 			return err

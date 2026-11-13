@@ -19,7 +19,9 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
   return (
     <div className="flex flex-col gap-3">
       {items.length === 0 ? (
-        <p className="text-body text-muted-foreground">{t("items.none")}</p>
+        <p className="text-body text-muted-foreground">
+          {t("actions.items.empty")}
+        </p>
       ) : (
         <ul
           aria-label={t("actions.items.list")}

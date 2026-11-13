@@ -29,6 +29,13 @@ var Categories = []Category{
 // Valid reports whether c is a known category.
 func (c Category) Valid() bool { return slices.Contains(Categories, c) }
 
+// OneObject reports whether the category is a single object that is never
+// spent or restocked at the table: a weapon, an armour or a shield (ADR 0049
+// step 2). Its count is kept as stored but never moved by Use or Restock.
+func (c Category) OneObject() bool {
+	return c == CategoryWeapon || c == CategoryArmour || c == CategoryShield
+}
+
 // The magic kinds (step 2), the catalogue's own list (Table 56's rows).
 const (
 	MagicPotion = "potion"

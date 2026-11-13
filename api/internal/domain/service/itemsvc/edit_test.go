@@ -297,6 +297,7 @@ func TestUseItem_DiceWithModifier(t *testing.T) {
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Decrement(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil)
+	dal.EXPECT().Get(mock.Anything, int64(1), "x").Return(itemsvc.Item{ID: "x", Name: localized.Of("X"), Behaviour: itemsvc.BehaviourStock, Count: 1, EffectDice: "1d8+2"}, nil).Maybe()
 	f.dice.EXPECT().RollDie(8).Return(5).Once()
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(1), nil)
 	res, err := svc.UseItem(context.Background(), 1, "x")

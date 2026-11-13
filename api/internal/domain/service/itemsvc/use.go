@@ -65,6 +65,15 @@ type useRecord struct {
 func (s *service) UseItem(ctx context.Context, characterID int64, itemID string) (*UseResult, error) {
 	var res *UseResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
+		// Read first and refuse before any write: a weapon, an armour or a shield
+		// is never spent, so its count never moves (ADR 0049 step 2).
+		before, err := s.dal.Get(ctx, characterID, itemID)
+		if err != nil {
+			return err
+		}
+		if !before.Usable() {
+			return fmt.Errorf("%w: %s (%s) is one object, never spent", ErrNotUsable, before.Name.Any(), before.Category)
+		}
 		item, err := s.Use(ctx, characterID, itemID)
 		if err != nil {
 			return err

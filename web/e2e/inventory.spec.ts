@@ -1,6 +1,14 @@
 import type { Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { logEntry, openDashboard, openWorkspace, undoEntry } from "./helpers";
+import {
+  apiCall,
+  chooseLanguage,
+  logEntry,
+  openDashboard,
+  openWorkspace,
+  reloadSettled,
+  undoEntry,
+} from "./helpers";
 
 // Inventory tab: one happy path (use, restock, undo). The behaviour rules (charges, stock, daily,
 // long-rest refill, empty refusal) are Go tests in itemsvc and restsvc.
@@ -66,4 +74,69 @@ test("− uses one and + adds one, each logged and popped from the log", async (
   await undoEntry(page, "Used Fire flasks");
   await inventory(page);
   await expect(count(page, "fire_flask")).toHaveText("5");
+});
+
+// A weapon, an armour and a shield are never used (ADR 0049 step 2): the server says so
+// (`usable`), the Inventory rows carry no Use, count or +, and Act · Items lists only what is used.
+for (const size of [
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+]) {
+  test(`weapons, armour and shields have no use controls at ${size.width}x${size.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(size);
+    await openInventory(page);
+    const rows = page.locator("[data-testid^='item-'][data-category]");
+    const categories = await rows.evaluateAll((els) =>
+      els.map((e) => e.getAttribute("data-category")),
+    );
+    expect(categories).toContain("weapon");
+    for (const category of ["weapon", "armour", "shield"]) {
+      const ones = page.locator(`[data-category='${category}']`);
+      for (const [n] of (await ones.all()).entries()) {
+        const one = ones.nth(n);
+        await expect(one.getByTestId("item-count")).toHaveCount(0);
+        await expect(one.getByTestId("item-behaviour")).toHaveCount(0);
+        await expect(
+          one.getByRole("button", { name: /^(Use|Add) one / }),
+        ).toHaveCount(0);
+      }
+    }
+    await expect(minus(page, "Fire flasks")).toBeVisible();
+    await snap(page, `inventory-${size.width}x${size.height}`);
+
+    await act(page);
+    await page.getByRole("tab", { name: "Items" }).click();
+    const list = page.getByRole("list", { name: "Combat items" });
+    await expect(list).toBeVisible();
+    await expect(list.getByTestId("item-count")).not.toHaveCount(0);
+    await expect(list).toContainText("Fire flasks");
+    await snap(page, `act-items-${size.width}x${size.height}`);
+  });
+}
+
+// With nothing to use left (the weapons, armour and shield stay), Act · Items says why and points to
+// the Inventory, in English and in French.
+test("Act · Items empty state points to the Inventory (en, fr)", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await openDashboard(page);
+  for (const id of ["fire_flask", "wand_lightning", "power_gem_dispel"])
+    expect(await apiCall(page, "DELETE", `/api/items/${id}`, undefined)).toBe(
+      true,
+    );
+  await reloadSettled(page);
+  await act(page);
+  await page.getByRole("tab", { name: "Items" }).click();
+  await expect(
+    page.getByText(/Weapons, armour and shields are never used/),
+  ).toBeVisible();
+  await snap(page, "act-items-empty-en");
+
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Objets" }).click();
+  await expect(page.getByText(/ne s'utilisent pas/)).toBeVisible();
+  await snap(page, "act-items-empty-fr");
 });

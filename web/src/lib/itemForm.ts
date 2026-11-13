@@ -102,6 +102,18 @@ const CATEGORY_FIELDS: Record<Category, ItemField[]> = {
   gear: [],
 };
 
+/**
+ * Whether the form offers a count behaviour (and a daily refill): not for a weapon, an armour or a
+ * shield, which are never used or restocked. A copy of the server's rule (itemsvc.Category.OneObject,
+ * ADR 0049 step 2): change both together. Only which field the form offers depends on it; the server
+ * refuses the use, and a piece's stored behaviour is kept and sent back unchanged.
+ */
+export function hasBehaviour(category: Category): boolean {
+  return (
+    category !== "weapon" && category !== "armour" && category !== "shield"
+  );
+}
+
 /** Whether the piece may name the spell it holds: a magic scroll (ADR 0033 step 2). */
 export function holdsSpell(
   d: Pick<ItemDraft, "category" | "magicKind">,

@@ -19,6 +19,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
@@ -732,4 +733,35 @@ func TestSeed_Step4_ThePSPMaxOfTheSeedFileIsStored(t *testing.T) {
 	none, err := plain.Characters().GetMaxPSP(ctx, id)
 	require.NoError(t, err)
 	assert.Zero(t, none)
+}
+
+// ADR 0049 step 18: the store keeps "not converted" (nil) apart from "converted with none" (an
+// empty list), as the abilities column does (NULL and "[]"), and hands back the abilities it was
+// given, not an alias of them.
+func TestItems_ADR0049Step18_AbilitiesNilEmptyAndListSurviveTheStore(t *testing.T) {
+	s, characterID := seeded(t)
+	ctx := context.Background()
+	items, err := s.Items().List(ctx, characterID)
+	require.NoError(t, err)
+	require.NotEmpty(t, items)
+	it := items[0]
+	for _, a := range items {
+		assert.Nil(t, a.Abilities, "a seeded item is not converted")
+	}
+
+	list := []itemsvc.Ability{{
+		ID: "dispel", Name: localized.Text{"en": "Dispel", "fr": "Dissipation"}, Note: "n",
+		Limit:   itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 10, Left: 0, Cost: 1},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectDice, Dice: "6d6", Save: "rod_staff_wand", Label: "fire"}},
+	}}
+	for name, want := range map[string][]itemsvc.Ability{"a list": list, "none": {}, "not converted": nil} {
+		it.Abilities = want
+		require.NoError(t, s.Items().Update(ctx, characterID, it), name)
+		got, err := s.Items().Get(ctx, characterID, it.ID)
+		require.NoError(t, err, name)
+		assert.Equal(t, want, got.Abilities, name)
+		if want != nil {
+			assert.NotNil(t, got.Abilities, name)
+		}
+	}
 }

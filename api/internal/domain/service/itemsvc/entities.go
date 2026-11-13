@@ -72,6 +72,10 @@ type Item struct {
 	// the seed, data migrations and the editor (ADR 0033 step 17); on only
 	// while the piece is worn or wielded (step 9).
 	Powers []Power
+	// Abilities are what the piece does when used, each under a usage limit
+	// (ADR 0049 step 4). nil is a piece not converted to abilities yet (the
+	// column is NULL, step 18); an empty list is converted with none.
+	Abilities []Ability
 
 	// Ammunition (step 4): its ammo kind and its magic, to hit and damage.
 	AmmoKind   string

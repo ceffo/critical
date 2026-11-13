@@ -63,6 +63,12 @@ type snapItem struct {
 	// ([] for none); nil in a snapshot taken before they existed, which then
 	// leaves the stored powers as they are (see keepCurrent).
 	Powers *[]jsonPower `json:"powers,omitempty"`
+	// Abilities are the item's abilities (ADR 0049 step 4), written for a
+	// converted item ([] for none). Absent means not converted yet (NULL,
+	// step 18): a snapshot of before abilities existed reads the same, and a
+	// pop puts the NULL back (the conversion of an old snapshot's fields is
+	// step 20, a later slice).
+	Abilities *[]jsonAbility `json:"abilities,omitempty"`
 	// Piece holds the fields of the one equipment model (ADR 0033 steps 1
 	// to 6); nil in a snapshot taken before it, whose item then keeps the
 	// piece's own (or is converted, when it is gone: step 26.2).
@@ -104,8 +110,14 @@ type snapPiece struct {
 
 func toSnapItem(i Item) *snapItem {
 	powers := toJSONPowers(i.Powers)
+	var abilities *[]jsonAbility
+	if i.Abilities != nil {
+		js := toJSONAbilities(i.Abilities)
+		abilities = &js
+	}
 	return &snapItem{
-		Position: i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
+		Abilities: abilities,
+		Position:  i.Position, Name: i.Name, Type: i.Type, Behaviour: string(i.Behaviour),
 		MagicBonus: i.MagicBonus, AmmoKind: i.AmmoKind, MaxCount: i.MaxCount,
 		EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: &powers,
 		Piece: &snapPiece{
@@ -129,6 +141,9 @@ func (c itemState) item(id string) Item {
 	}
 	if it.Powers != nil {
 		out.Powers = fromJSONPowers(*it.Powers)
+	}
+	if it.Abilities != nil {
+		out.Abilities = fromJSONAbilities(*it.Abilities)
 	}
 	if p := it.Piece; p != nil {
 		out.Category, out.MagicKind, out.CatalogueCode = Category(p.Category), p.MagicKind, p.CatalogueCode

@@ -156,6 +156,12 @@ export interface Item {
    * effects list (GET /api/buffs); only while the piece is equipped.
    */
   powers: ItemPowerDef[];
+  /**
+   * What the item does when used, each under a usage limit (ADR 0049 step 4). Absent: the piece is
+   * not converted to abilities yet (ADR 0049 step 18); an empty list: converted with none. Nothing
+   * reads them yet: Use comes with a later slice.
+   */
+  abilities?: ItemAbility[];
   /** Weapon and ammunition: one or two of b, p, s, and the damage S-M / L (NdM). */
   damageTypes: string[];
   damageSm: string;
@@ -192,6 +198,44 @@ export interface Item {
   review: ReviewReason[];
   /** The class warnings of the piece (ADR 0033 step 20); empty for none. Served by the list. */
   warnings: ClassWarningCode[];
+}
+
+/** How often an item ability may be used (ADR 0049 step 5). */
+export type AbilityLimitKind =
+  "unlimited" | "per_day" | "charges" | "with_item";
+
+/**
+ * An ability's usage limit: `max` and `left` for per_day (max 1 to 99) and charges (max 1 to 100),
+ * `cost` for charges (1 to max, default 1 when sent as 0); none of them for unlimited and with_item.
+ */
+export interface ItemAbilityLimit {
+  kind: AbilityLimitKind;
+  max?: number;
+  left?: number;
+  cost?: number;
+}
+
+/** An effect of an ability (ADR 0049 step 10): dice rolled and shown, applied to nothing. */
+export interface ItemAbilityEffect {
+  kind: "dice";
+  /** NdM or NdM+K. */
+  dice: string;
+  /** A save category (the item's `effectSave` values), absent for none. */
+  save?: string;
+  label?: string;
+}
+
+/**
+ * One of an item's abilities (ADR 0049 step 4): an id (a slug, unique within the item; sent empty it
+ * gets ability_<n>), an optional name (a language map; none means the item's own) and note, one usage
+ * limit and its effects (empty is allowed).
+ */
+export interface ItemAbility {
+  id: string;
+  name?: LocalizedText;
+  note?: string;
+  limit: ItemAbilityLimit;
+  effects: ItemAbilityEffect[];
 }
 
 /** One of an item's powers: its trigger (minStr; absent: always on) and its effects. */
@@ -276,6 +320,11 @@ export interface ItemBody {
    * power sent with an empty id gets one. Refused on field `powers` (validated as the seed's).
    */
   powers?: ItemPowerDef[];
+  /**
+   * The whole ability list (ADR 0049 step 4): a PATCH's replaces the stored one (an empty list too),
+   * absent keeps it; on a POST absent leaves the piece not converted. Refused on field `abilities`.
+   */
+  abilities?: ItemAbility[];
   /**
    * POST only: pick the piece from this catalogue row (ADR 0033 step 24). The server copies the row
    * and reads only name, count, notes and the magic (magicToHit and magicDamage, magicalBonus) with

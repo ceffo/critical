@@ -122,6 +122,9 @@ func (i Item) Validate() error {
 	if err := i.validPiecePowers(); err != nil {
 		return err
 	}
+	if err := i.validAbilities(); err != nil {
+		return err
+	}
 	if i.Category != CategoryWeapon {
 		if err := i.validStrengthRating(); err != nil {
 			return err

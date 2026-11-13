@@ -240,6 +240,12 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   makes it a **strength bow**: its attacks take Strength's bonus up to the rating (the lower of
   the archer's effective Strength and the rating); a Strength penalty applies to every bow, rated
   or not, and never to a crossbow.
+- **Item ability** and **usage limit**: an item holds a list of item abilities, each with an id, an
+  optional name and note, one usage limit (unlimited, per day, charges, with the item) and a list of
+  effects (only the dice effect so far: rolled and shown, applied to nothing). An item not yet
+  converted from its behaviour has no list (NULL); one converted with none has an empty list. An item
+  power is a different thing: passive, on while the item is worn, with no limit.
+  [ADR 0049](adr/0049-item-abilities.md) steps 4, 5, 10 and 18.
 
 ## Ruleset and house rules
 

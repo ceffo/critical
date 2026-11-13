@@ -326,3 +326,48 @@ func TestReviews(t *testing.T) {
 	q.EXPECT().DeleteReviews(ctx, queries.DeleteReviewsParams{CharacterID: owner, ItemID: "mace"}).Return(nil).Once()
 	require.NoError(t, dal.DeleteReviews(ctx, owner, "mace"))
 }
+
+// ADR 0049 step 18: the abilities column is NULL for an item not converted and "[]" for one
+// converted with none; a row maps to nil or an empty list, and Insert and Update write the
+// column back the same way (NULL for nil).
+func TestAbilities_ADR0049Step18_NullIsNotConvertedAndEmptyIsNone(t *testing.T) {
+	ctx := context.Background()
+	dal, q, _ := mocked(t)
+	q.EXPECT().ListItems(ctx, owner).Return([]queries.Item{
+		{ID: "a"},
+		{ID: "b", Abilities: sql.NullString{String: "[]", Valid: true}},
+		{ID: "c", Abilities: sql.NullString{String: `[{"id":"climb","limit":{"kind":"unlimited"},"effects":[]}]`, Valid: true}},
+	}, nil).Once()
+	q.EXPECT().ItemNames(ctx, owner).Return([]queries.LocalizedText{}, nil).Once()
+	items, err := dal.List(ctx, owner)
+	require.NoError(t, err)
+	require.Len(t, items, 3)
+	assert.Nil(t, items[0].Abilities)
+	assert.NotNil(t, items[1].Abilities)
+	assert.Empty(t, items[1].Abilities)
+	assert.Equal(t, []itemsvc.Ability{{ID: "climb", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}}, items[2].Abilities)
+}
+
+// ADR 0049 step 18: Update writes NULL for an item with no list and the encoded list for one
+// converted, "[]" included.
+func TestAbilities_ADR0049Step18_UpdateWritesNullOrTheList(t *testing.T) {
+	ctx := context.Background()
+	for name, tc := range map[string]struct {
+		abilities []itemsvc.Ability
+		column    sql.NullString
+	}{
+		"nil is NULL":    {nil, sql.NullString{}},
+		"empty is []":    {[]itemsvc.Ability{}, sql.NullString{String: "[]", Valid: true}},
+		"a list is JSON": {[]itemsvc.Ability{{ID: "a", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}}}, sql.NullString{String: `[{"id":"a","limit":{"kind":"unlimited"},"effects":[]}]`, Valid: true}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dal, q, tq := mocked(t)
+			q.EXPECT().UpdateItem(ctx, mock.MatchedBy(func(p queries.UpdateItemParams) bool {
+				return assert.Equal(t, tc.column, p.Abilities)
+			})).Return(100, nil).Once()
+			tq.EXPECT().DeleteText(ctx, int64(100)).Return(nil).Once()
+			tq.EXPECT().InsertText(ctx, textq.InsertTextParams{TextID: 100, Lang: "en", Body: "A"}).Return(nil).Once()
+			require.NoError(t, dal.Update(ctx, owner, itemsvc.Item{ID: "a", Name: localized.Of("A"), Abilities: tc.abilities}))
+		})
+	}
+}

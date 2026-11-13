@@ -14,7 +14,7 @@ import (
 
 const decrementItem = `-- name: DecrementItem :one
 UPDATE items SET count = count - 1 WHERE character_id = $1::bigint AND id = $2 AND count > 0
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities
 `
 
 type DecrementItemParams struct {
@@ -66,6 +66,7 @@ func (q *Queries) DecrementItem(ctx context.Context, arg DecrementItemParams) (I
 		&i.SpellID,
 		&i.StrengthRating,
 		&i.StrengthRatingExceptional,
+		&i.Abilities,
 	)
 	return i, err
 }
@@ -102,7 +103,7 @@ func (q *Queries) DeleteReviews(ctx context.Context, arg DeleteReviewsParams) er
 }
 
 const getItem = `-- name: GetItem :one
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities
 FROM items WHERE character_id = $1::bigint AND id = $2
 `
 
@@ -155,13 +156,14 @@ func (q *Queries) GetItem(ctx context.Context, arg GetItemParams) (Item, error) 
 		&i.SpellID,
 		&i.StrengthRating,
 		&i.StrengthRatingExceptional,
+		&i.Abilities,
 	)
 	return i, err
 }
 
 const incrementItem = `-- name: IncrementItem :one
 UPDATE items SET count = count + $1 WHERE character_id = $2::bigint AND id = $3
-RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional
+RETURNING id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities
 `
 
 type IncrementItemParams struct {
@@ -214,21 +216,22 @@ func (q *Queries) IncrementItem(ctx context.Context, arg IncrementItemParams) (I
 		&i.SpellID,
 		&i.StrengthRating,
 		&i.StrengthRatingExceptional,
+		&i.Abilities,
 	)
 	return i, err
 }
 
 const insertItem = `-- name: InsertItem :exec
 INSERT INTO items (character_id, id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count,
-                   effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component, spell_id, state,
+                   effect_dice, effect_save, notes, powers, abilities, category, magic_kind, catalogue_code, component, spell_id, state,
                    weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit,
                    magic_damage, two_handed, fires, base_ac, skill_column, armor_row, shield_kind,
                    ac_melee, ac_missile, strength_rating, strength_rating_exceptional)
 VALUES ($1::bigint, $2, $3, $4, $5, $6, $7, $8, $9,
-        $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20,
-        $21, $22, $23, $24, $25, $26, $27, $28,
-        $29, $30, $31, $32, $33, $34, $35,
-        $36, $37, $38, $39)
+        $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21,
+        $22, $23, $24, $25, $26, $27, $28, $29,
+        $30, $31, $32, $33, $34, $35, $36,
+        $37, $38, $39, $40)
 `
 
 type InsertItemParams struct {
@@ -246,6 +249,7 @@ type InsertItemParams struct {
 	EffectSave                string
 	Notes                     string
 	Powers                    string
+	Abilities                 sql.NullString
 	Category                  string
 	MagicKind                 string
 	CatalogueCode             string
@@ -289,6 +293,7 @@ func (q *Queries) InsertItem(ctx context.Context, arg InsertItemParams) error {
 		arg.EffectSave,
 		arg.Notes,
 		arg.Powers,
+		arg.Abilities,
 		arg.Category,
 		arg.MagicKind,
 		arg.CatalogueCode,
@@ -348,7 +353,7 @@ func (q *Queries) ItemNames(ctx context.Context, characterID int64) ([]Localized
 
 const listItems = `-- name: ListItems :many
 
-SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional
+SELECT id, position, name, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, character_id, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities
 FROM items WHERE character_id = $1::bigint ORDER BY position
 `
 
@@ -407,6 +412,7 @@ func (q *Queries) ListItems(ctx context.Context, characterID int64) ([]Item, err
 			&i.SpellID,
 			&i.StrengthRating,
 			&i.StrengthRatingExceptional,
+			&i.Abilities,
 		); err != nil {
 			return nil, err
 		}
@@ -485,15 +491,15 @@ func (q *Queries) SetItemCount(ctx context.Context, arg SetItemCountParams) (int
 const updateItem = `-- name: UpdateItem :one
 UPDATE items SET position = $1, type = $2, behaviour = $3, magic_bonus = $4,
                  ammo_kind = $5, count = $6, max_count = $7, effect_dice = $8,
-                 effect_save = $9, notes = $10, powers = $11, category = $12,
-                 magic_kind = $13, catalogue_code = $14, component = $15, spell_id = $16, state = $17,
-                 weapon_type = $18, weapon_kind = $19, size = $20,
-                 damage_types = $21, speed = $22, damage_sm = $23, damage_l = $24,
-                 magic_to_hit = $25, magic_damage = $26, two_handed = $27,
-                 fires = $28, base_ac = $29, skill_column = $30,
-                 armor_row = $31, shield_kind = $32, ac_melee = $33, ac_missile = $34,
-                 strength_rating = $35, strength_rating_exceptional = $36
-WHERE character_id = $37::bigint AND id = $38
+                 effect_save = $9, notes = $10, powers = $11, abilities = $12, category = $13,
+                 magic_kind = $14, catalogue_code = $15, component = $16, spell_id = $17, state = $18,
+                 weapon_type = $19, weapon_kind = $20, size = $21,
+                 damage_types = $22, speed = $23, damage_sm = $24, damage_l = $25,
+                 magic_to_hit = $26, magic_damage = $27, two_handed = $28,
+                 fires = $29, base_ac = $30, skill_column = $31,
+                 armor_row = $32, shield_kind = $33, ac_melee = $34, ac_missile = $35,
+                 strength_rating = $36, strength_rating_exceptional = $37
+WHERE character_id = $38::bigint AND id = $39
 RETURNING name
 `
 
@@ -509,6 +515,7 @@ type UpdateItemParams struct {
 	EffectSave                string
 	Notes                     string
 	Powers                    string
+	Abilities                 sql.NullString
 	Category                  string
 	MagicKind                 string
 	CatalogueCode             string
@@ -551,6 +558,7 @@ func (q *Queries) UpdateItem(ctx context.Context, arg UpdateItemParams) (int64, 
 		arg.EffectSave,
 		arg.Notes,
 		arg.Powers,
+		arg.Abilities,
 		arg.Category,
 		arg.MagicKind,
 		arg.CatalogueCode,

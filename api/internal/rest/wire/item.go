@@ -1,6 +1,8 @@
 package wire
 
 import (
+	"encoding/json"
+
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -43,6 +45,9 @@ type ItemDTO struct {
 	// editor (ADR 0033 step 17): whether one is on is served with the effects
 	// list (GET /api/buffs).
 	Powers []PowerDTO `json:"powers"`
+	// Abilities are what the item does when used, each under a usage limit
+	// (ADR 0049 step 4); absent for a piece not converted yet (step 18).
+	Abilities *[]AbilityDTO `json:"abilities,omitempty"`
 	// Weapon and ammunition.
 	DamageTypes []string `json:"damageTypes"`
 	DamageSM    string   `json:"damageSm"`
@@ -103,6 +108,91 @@ type PowerDTO struct {
 	Effects BuffEffectsDTO `json:"effects"`
 }
 
+// AbilityDTO is one item ability (ADR 0049 step 4): its id, its optional name
+// (a language map; none means the item's) and note, its limit and its effects.
+type AbilityDTO struct {
+	ID      string         `json:"id"`
+	Name    localized.Text `json:"name,omitempty"`
+	Note    string         `json:"note,omitempty"`
+	Limit   LimitDTO       `json:"limit"`
+	Effects []EffectDTO    `json:"effects"`
+}
+
+// LimitDTO is an ability's usage limit (ADR 0049 step 5): kind is unlimited,
+// per_day, charges or with_item; max, left and cost are sent only for the
+// kinds that have them, and always for those (an exhausted left is 0, not
+// absent).
+type LimitDTO struct {
+	Kind string `json:"kind"`
+	Max  int    `json:"max,omitempty"`
+	Left int    `json:"left,omitempty"`
+	Cost int    `json:"cost,omitempty"`
+}
+
+// MarshalJSON writes max and left for per_day and charges, cost for charges,
+// zeros included.
+func (l LimitDTO) MarshalJSON() ([]byte, error) {
+	type out struct {
+		Kind string `json:"kind"`
+		Max  *int   `json:"max,omitempty"`
+		Left *int   `json:"left,omitempty"`
+		Cost *int   `json:"cost,omitempty"`
+	}
+	o := out{Kind: l.Kind}
+	switch l.Kind {
+	case string(itemsvc.LimitPerDay):
+		o.Max, o.Left = &l.Max, &l.Left
+	case string(itemsvc.LimitCharges):
+		o.Max, o.Left, o.Cost = &l.Max, &l.Left, &l.Cost
+	}
+	return json.Marshal(o)
+}
+
+// EffectDTO is one effect of an ability (ADR 0049 step 10); only "dice" exists
+// so far: dice, an optional save category and an optional label.
+type EffectDTO struct {
+	Kind  string `json:"kind"`
+	Dice  string `json:"dice,omitempty"`
+	Save  string `json:"save,omitempty"`
+	Label string `json:"label,omitempty"`
+}
+
+// AbilitiesFromDTO is the domain list sent by the editor, in the order sent;
+// an empty list is empty, not nil.
+func AbilitiesFromDTO(dtos []AbilityDTO) []itemsvc.Ability {
+	out := make([]itemsvc.Ability, 0, len(dtos))
+	for _, d := range dtos {
+		a := itemsvc.Ability{ID: d.ID, Name: d.Name, Note: d.Note, Limit: itemsvc.Limit{
+			Kind: itemsvc.LimitKind(d.Limit.Kind), Max: d.Limit.Max, Left: d.Limit.Left, Cost: d.Limit.Cost,
+		}}
+		for _, e := range d.Effects {
+			a.Effects = append(a.Effects, itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Save: e.Save, Label: e.Label})
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+// AbilitiesToDTO is the wire list of an item's abilities: nil (omitted) for a
+// piece not converted yet.
+func AbilitiesToDTO(abilities []itemsvc.Ability) *[]AbilityDTO {
+	if abilities == nil {
+		return nil
+	}
+	out := make([]AbilityDTO, 0, len(abilities))
+	for _, a := range abilities {
+		effects := make([]EffectDTO, 0, len(a.Effects))
+		for _, e := range a.Effects {
+			effects = append(effects, EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Save: e.Save, Label: e.Label})
+		}
+		out = append(out, AbilityDTO{
+			ID: a.ID, Name: a.Name, Note: a.Note, Effects: effects,
+			Limit: LimitDTO{Kind: string(a.Limit.Kind), Max: a.Limit.Max, Left: a.Limit.Left, Cost: a.Limit.Cost},
+		})
+	}
+	return &out
+}
+
 // PowersFromDTO is the domain list of powers sent by the editor (ADR 0033
 // step 17), in the order sent; none is nil.
 func PowersFromDTO(dtos []PowerDTO) []itemsvc.Power {
@@ -140,7 +230,7 @@ func ItemsToDTO(items []itemsvc.Item, warnings []itemsvc.Warning) []ItemDTO {
 			CatalogueCode: i.CatalogueCode, Component: i.Component, SpellID: i.SpellID, State: string(i.State), EquipState: string(i.EquipState()), Usable: i.Usable(),
 			Type: i.Type, Behaviour: string(i.Behaviour),
 			MagicalBonus: i.MagicBonus, AmmoKind: i.AmmoKind, Count: i.Count, MaxCount: i.MaxCount,
-			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers,
+			EffectDice: i.EffectDice, EffectSave: i.EffectSave, Notes: i.Notes, Powers: powers, Abilities: AbilitiesToDTO(i.Abilities),
 			DamageTypes: damageTypes, DamageSM: i.DamageSM, DamageL: i.DamageL,
 			WeaponType: i.WeaponType, WeaponKind: i.WeaponKind, Size: i.Size, Speed: i.Speed,
 			MagicToHit: i.MagicToHit, MagicDamage: i.MagicDamage, TwoHanded: i.TwoHanded, Fires: i.Fires,

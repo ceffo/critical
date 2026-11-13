@@ -36,7 +36,7 @@ func TestCharacter_Golden_DerivedBlockUnchanged(t *testing.T) {
 		Details:     charactersvc.Details{Alignment: "neutral", Sex: "female", Languages: []string{"elvish", "common", "dwarvish", "gnomish", "orcish"}},
 		Proficiencies: skills.Picks{
 			Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "appraising", Slots: 1}},
-			Weapon:    []skills.WeaponPick{{Type: "dagger", Slots: 1}, {Type: "short_bow", Slots: 1}},
+			Weapon:    []skills.WeaponPick{{Code: "dagger", Slots: 1}, {Code: "short_bow", Slots: 1}},
 		},
 	})
 	require.NoError(t, err)

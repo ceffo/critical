@@ -466,7 +466,7 @@ func LevelLimitWarnings(race string, entries []EntryDerived, limit func(race, cl
 func fromSkills(ws []skills.Warning) []Warning {
 	out := make([]Warning, 0, len(ws))
 	for _, w := range ws {
-		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left})
+		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots})
 	}
 	return out
 }

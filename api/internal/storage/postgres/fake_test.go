@@ -1083,6 +1083,29 @@ func (f *fakeStore) SpecializedWeaponTypes(context.Context) ([]storeq.Specialize
 	return rows, nil
 }
 
+func (f *fakeStore) CharacterWeaponCodes(context.Context) ([]storeq.CharacterWeaponCodesRow, error) {
+	items := []storeq.InsertItemParams{}
+	for _, it := range f.t.Items {
+		if it.Category == "weapon" && it.CatalogueCode != "" {
+			items = append(items, it)
+		}
+	}
+	slices.SortFunc(items, func(a, b storeq.InsertItemParams) int {
+		if a.CharacterID != b.CharacterID {
+			return int(a.CharacterID - b.CharacterID)
+		}
+		if a.Position != b.Position {
+			return int(a.Position - b.Position)
+		}
+		return strings.Compare(a.ID, b.ID)
+	})
+	rows := make([]storeq.CharacterWeaponCodesRow, 0, len(items))
+	for _, it := range items {
+		rows = append(rows, storeq.CharacterWeaponCodesRow{CharacterID: it.CharacterID, CatalogueCode: it.CatalogueCode})
+	}
+	return rows, nil
+}
+
 func (f *fakeStore) CharacterPicks(context.Context) ([]storeq.CharacterPicksRow, error) {
 	rows := []storeq.CharacterPicksRow{}
 	for _, id := range f.t.Characters {

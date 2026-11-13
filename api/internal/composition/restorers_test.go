@@ -102,9 +102,9 @@ func undoCases() []undoCase {
 			h.Character.EXPECT().SetSkillPoints(mock.Anything, characterID, skills.SetPoints{"bard": {"climb_walls": 80}}).Return(nil).Once()
 		}},
 		// Recorded with the codec's envelope from the start: no older encoding to re-encode.
-		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[{"type":"dagger","slots":1}]}}`, func(h *harness) {
+		{"the proficiency picks (ADR 0037 step 13)", "proficiencies", `{"state":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1}]}}`, func(h *harness) {
 			h.Character.EXPECT().SetProficiencyPicks(mock.Anything, characterID, skills.Picks{
-				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 1}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
+				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 1}}, Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 1}},
 			}).Return(nil).Once()
 		}},
 		{"a psionicist's known powers (ADR 0043 step 9)", "known_powers", `{"state":{"picks":[{"kind":"discipline","id":"telepathy"}]}}`, func(h *harness) {

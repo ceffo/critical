@@ -33,11 +33,12 @@ type ClassOption struct {
 	// order; empty for none. Shown on the class card, not enforced (ADR 0030
 	// step 21's stance on requirements).
 	Minimums []ruletablesvc.AbilityMinimum
-	// WeaponTypes are the weapon types the class may pick a proficiency in
-	// (ADR 0037 step 7), in ruletablesvc.WeaponTypes order, each with what
-	// its specialization spends in all (step 9), 0 for a class that does not
-	// specialize: the weapon editor shows and sends the server's cost.
-	WeaponTypes []WeaponTypeOption
+	// Weapons are the catalogue weapons the class may pick a proficiency in
+	// (ADR 0037 steps 21.2 and 21.6), in offer order, each with what its
+	// specialization spends in all (step 21.5: its type's cost), 0 for a
+	// class that does not specialize: the weapon editor shows and sends the
+	// server's cost.
+	Weapons []WeaponOption
 	// Spellbook is the class's starting spellbook (ADR 0030 step 20.7), nil
 	// for a class without a spellbook.
 	Spellbook *SpellbookOption
@@ -51,26 +52,27 @@ type SpellbookOption struct {
 	StartingSpells []string
 }
 
-// WeaponTypeOption is one weapon type a class may pick (ADR 0037 step 7) and
-// the slots its specialization spends (step 9), 0 when the class does not
-// specialize.
-type WeaponTypeOption struct {
-	Type                string
+// WeaponOption is one catalogue weapon a class may pick (ADR 0037 step
+// 21.2) and the slots its specialization spends (step 21.5), 0 when the class
+// does not specialize.
+type WeaponOption struct {
+	Code                string
 	SpecializationSlots int
 }
 
-// ClassWeaponTypeOptions is ADR 0037 steps 7 and 9 for the editor: every weapon
-// type class def may pick, in display order, with its specialization's cost when the
-// class specializes (ruletablesvc.Specializes), else 0.
-func ClassWeaponTypeOptions(def classes.Class) []WeaponTypeOption {
-	out := make([]WeaponTypeOption, 0, len(ruletablesvc.WeaponTypes))
-	for _, t := range ruletablesvc.WeaponTypes {
-		if !def.Equipment.WeaponTypeAllowed(t) {
+// ClassWeaponOptions is ADR 0037 steps 21.2, 21.5 and 21.6 for the editor:
+// every catalogue weapon of weapons (in offer order) class def may pick, with
+// its specialization's cost (its type's) when the class specializes
+// (ruletablesvc.Specializes), else 0.
+func ClassWeaponOptions(weapons []classes.WeaponRef, def classes.Class) []WeaponOption {
+	out := make([]WeaponOption, 0, len(weapons))
+	for _, w := range weapons {
+		if !def.Equipment.WeaponPickAllowed(w.Code) {
 			continue
 		}
-		o := WeaponTypeOption{Type: t}
+		o := WeaponOption{Code: w.Code}
 		if ruletablesvc.Specializes(def) {
-			o.SpecializationSlots = ruletablesvc.SpecializationSlots(def, t)
+			o.SpecializationSlots = ruletablesvc.SpecializationSlots(def, w.WeaponType)
 		}
 		out = append(out, o)
 	}
@@ -250,7 +252,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 		opt := ClassOption{
 			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, classes.MaxLevel),
-			Minimums: slices.Clone(def.AbilityMinimums), WeaponTypes: ClassWeaponTypeOptions(def),
+			Minimums: slices.Clone(def.AbilityMinimums), Weapons: ClassWeaponOptions(s.profs.Weapons(), def),
 		}
 		for level := 1; level <= classes.MaxLevel; level++ {
 			// ADR 0046 step 5.1: the threshold is the class definition's.

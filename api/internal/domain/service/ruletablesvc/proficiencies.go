@@ -50,6 +50,50 @@ type Proficiencies struct {
 	// defs are the class definitions (ADR 0040 step 5), read for a class's
 	// features.
 	defs *classes.Registry
+	// weapons are the catalogue weapons a weapon pick may name (ADR 0037 step
+	// 21.1, Equipment.PickWeapons), in offer order; weaponIndex by code.
+	weapons     []classes.WeaponRef
+	weaponIndex map[string]int
+}
+
+// WithWeapons returns a copy of p whose weapon picks name the catalogue
+// weapons ws (ADR 0037 step 21.1, Equipment.PickWeapons), in the order given.
+// A code twice is refused.
+func (p *Proficiencies) WithWeapons(ws []classes.WeaponRef) (*Proficiencies, error) {
+	out := &Proficiencies{}
+	if p != nil {
+		*out = *p
+	}
+	out.weapons, out.weaponIndex = slices.Clone(ws), make(map[string]int, len(ws))
+	for i, w := range ws {
+		if _, dup := out.weaponIndex[w.Code]; dup || w.Code == "" {
+			return nil, fmt.Errorf("proficiencies: weapon %q twice or empty", w.Code)
+		}
+		out.weaponIndex[w.Code] = i
+	}
+	return out, nil
+}
+
+// Weapons are the catalogue weapons a weapon pick may name (ADR 0037 step
+// 21.1), in offer order (step 21.6); none without a catalogue (p nil).
+func (p *Proficiencies) Weapons() []classes.WeaponRef {
+	if p == nil {
+		return nil
+	}
+	return p.weapons
+}
+
+// Weapon is the catalogue weapon of code (ADR 0037 step 21.1) with its type,
+// false for a code the catalogue does not hold.
+func (p *Proficiencies) Weapon(code string) (classes.WeaponRef, bool) {
+	if p == nil {
+		return classes.WeaponRef{}, false
+	}
+	i, ok := p.weaponIndex[code]
+	if !ok {
+		return classes.WeaponRef{}, false
+	}
+	return p.weapons[i], true
 }
 
 // ClassDef is class's definition (ADR 0040 step 5), false for a class the

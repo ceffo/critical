@@ -60,10 +60,12 @@ type ClassOptionDTO struct {
 	// Minimums are the class's ability minimums (PHB Table 13), shown on
 	// its card and not enforced; empty for none. Additive.
 	Minimums []AbilityMinimumDTO `json:"minimums"`
-	// WeaponTypes are the weapon types the class may pick (ADR 0037 step 7)
-	// in display order, each with its specialization's slots in all (step 9),
-	// 0 for a class that does not specialize. Additive; never null.
-	WeaponTypes []WeaponTypeOptionDTO `json:"weaponTypes"`
+	// Weapons are the catalogue weapons the class may pick (ADR 0037 steps
+	// 21.2 and 21.6) in offer order (the weapon types' order, then the
+	// catalogue's), each with its specialization's slots in all (step 21.5),
+	// 0 for a class that does not specialize. It replaces weaponTypes; never
+	// null.
+	Weapons []WeaponOptionDTO `json:"weapons"`
 	// Spellbook is the class's starting spellbook (ADR 0030 step 20.7):
 	// `startingSpells`, the spells it is offered pre-ticked (removable);
 	// null for a class without a spellbook.
@@ -81,10 +83,10 @@ type SpellOptionDTO struct {
 	Level int    `json:"level"`
 }
 
-// WeaponTypeOptionDTO is one weapon type a class may pick and the slots its
+// WeaponOptionDTO is one catalogue weapon a class may pick and the slots its
 // specialization spends (0: the class does not specialize).
-type WeaponTypeOptionDTO struct {
-	Type                string `json:"type"`
+type WeaponOptionDTO struct {
+	Code                string `json:"code"`
 	SpecializationSlots int    `json:"specializationSlots"`
 }
 
@@ -313,7 +315,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 				Class: c.Class, Races: c.Races,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
-				WeaponTypes: weaponTypeDTOs(c.WeaponTypes), Spellbook: spellbookOptionDTO(c.Spellbook),
+				Weapons: weaponOptionDTOs(c.Weapons), Spellbook: spellbookOptionDTO(c.Spellbook),
 			})
 		}
 		render.OK(r.Context(), w, out)
@@ -604,10 +606,10 @@ func spellbookOptionDTO(o *charactersvc.SpellbookOption) *SpellbookOptionDTO {
 }
 
 // weaponTypeDTOs maps a class's weapon type options; never nil.
-func weaponTypeDTOs(ts []charactersvc.WeaponTypeOption) []WeaponTypeOptionDTO {
-	out := make([]WeaponTypeOptionDTO, 0, len(ts))
-	for _, t := range ts {
-		out = append(out, WeaponTypeOptionDTO(t))
+func weaponOptionDTOs(ws []charactersvc.WeaponOption) []WeaponOptionDTO {
+	out := make([]WeaponOptionDTO, 0, len(ws))
+	for _, w := range ws {
+		out = append(out, WeaponOptionDTO(w))
 	}
 	return out
 }

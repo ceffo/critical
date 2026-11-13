@@ -1,13 +1,16 @@
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, X } from "@phosphor-icons/react";
 import { Note } from "@/components/creation/kit";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { weaponName } from "@/lib/weaponNames";
+import { useEquipmentCatalogueStore } from "@/stores/equipmentCatalogue";
 import type {
   ProficiencySlots,
+  WeaponOption,
   WeaponPickInput,
   WeaponPool,
-  WeaponTypeOption,
 } from "@/types/character";
 import {
   addWeapon,
@@ -19,36 +22,45 @@ import {
 } from "./weapons";
 
 /**
- * The weapon proficiency picker (ADR 0037 steps 3, 7, 9 and 12), shared by the Skills tab's editor
- * and the creation's step: the weapon pool with its terms, then one row per weapon type the class
- * may pick (the derived `weaponTypes`) and per kept pick it may not (shown as such, removable).
- * A row adds or removes the type; for a class that specializes, a picked type's toggle makes it
- * the specialization at the cost the options give. Every number is the server's: the pool comes from
+ * The weapon proficiency picker (ADR 0037 steps 3, 12 and 21), shared by the Skills tab's editor
+ * and the creation's step: the weapon pool with its terms, the type picks left to redo (step
+ * 21.8.3), then one row per catalogue weapon the class may pick (the derived `weapons`, named from
+ * the equipment catalogue) and per kept pick it may not (shown as such, removable). A row adds or
+ * removes the weapon; for a class that specializes, a picked weapon's toggle makes it the
+ * specialization at the cost the options give. Every number is the server's: the pool comes from
  * its preview or checks (`figures`), a specialization's cost from the options; a refusal (a
  * second specialization, an overspend) is the server's, shown on the row or above the list.
  */
 export function WeaponPicker({
-  types,
+  weapons,
   picks,
   onChange,
   figures,
   stale = false,
   errorFor,
 }: {
-  /** The class's weapon types and their specialization cost (the derived `weaponTypes`). */
-  types: WeaponTypeOption[];
+  /** The class's weapons and their specialization cost (the derived `weapons`). */
+  weapons: WeaponOption[];
   picks: WeaponPickInput[];
   onChange: (picks: WeaponPickInput[]) => void;
   /** The server's figures for the picks shown; null before its first answer. */
   figures: ProficiencySlots | null;
   /** True while the figures shown are not those of the picks (a refusal, a failed preview). */
   stale?: boolean;
-  /** A refusal's words for a field (`weapon.<type>`, or `weapon` for the budget), or null. */
+  /** A refusal's words for a field (`weapon.<code>`, or `weapon` for the budget), or null. */
   errorFor: (field: string) => string | null;
 }) {
   const { t } = useTranslation();
-  const rows = weaponRows(types, picks, figures?.weaponPicks);
+  // The rows are named from the equipment catalogue (ADR 0037 step 21.6), read once.
+  const catalogue = useEquipmentCatalogueStore((s) => s.catalogue);
+  const load = useEquipmentCatalogueStore((s) => s.load);
+  useEffect(() => {
+    void load().catch(() => undefined); // the codes name the rows meanwhile
+  }, [load]);
+  const nameOf = (code: string) => weaponName(t, code, catalogue);
+  const rows = weaponRows(weapons, picks, figures?.weaponPicks);
   const budgetError = errorFor("weapon");
+  const redo = figures?.weaponRedo ?? [];
   return (
     <div className="flex min-w-0 flex-col gap-3" data-testid="weapon-picker">
       {figures?.weapon && (
@@ -65,6 +77,20 @@ export function WeaponPicker({
         </div>
       )}
       {budgetError && <Note kind="refusal">{budgetError}</Note>}
+      {redo.length > 0 && (
+        <Note kind="warning" testId="weapon-redo">
+          {t("weaponProficiencies.redo", {
+            types: redo
+              .map((r) =>
+                t("weaponProficiencies.redoType", {
+                  type: t(`weapons.types.${r.type}`, { defaultValue: r.type }),
+                  count: r.slots,
+                }),
+              )
+              .join(", "),
+          })}
+        </Note>
+      )}
       <ul
         className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-x-4 gap-y-1"
         aria-label={t("weaponProficiencies.list")}
@@ -72,16 +98,17 @@ export function WeaponPicker({
       >
         {rows.map((r) => (
           <WeaponRowItem
-            key={r.type}
+            key={r.code}
             row={r}
-            error={errorFor(`weapon.${r.type}`)}
-            onAdd={() => onChange(addWeapon(picks, r.type))}
-            onRemove={() => onChange(removeWeapon(picks, r.type))}
+            name={nameOf(r.code)}
+            error={errorFor(`weapon.${r.code}`)}
+            onAdd={() => onChange(addWeapon(picks, r.code))}
+            onRemove={() => onChange(removeWeapon(picks, r.code))}
             onSpecialize={(on) =>
               onChange(
                 specialize(
                   picks,
-                  r.type,
+                  r.code,
                   on ? (r.option?.specializationSlots ?? null) : null,
                 ),
               )
@@ -133,22 +160,23 @@ export function WeaponPoolSummary({ pool }: { pool: WeaponPool }) {
   );
 }
 
-/** One weapon type: its name, what the pick spends, and its controls. */
+/** One catalogue weapon: its name, what the pick spends, and its controls. */
 function WeaponRowItem({
   row,
+  name,
   error,
   onAdd,
   onRemove,
   onSpecialize,
 }: {
   row: WeaponRow;
+  name: string;
   error: string | null;
   onAdd: () => void;
   onRemove: () => void;
   onSpecialize: (on: boolean) => void;
 }) {
   const { t } = useTranslation();
-  const name = t(`weapons.types.${row.type}`, { defaultValue: row.type });
   const { pick, option } = row;
   const specialized = isSpecialization(pick);
   const cost = option?.specializationSlots ?? 0;
@@ -163,7 +191,7 @@ function WeaponRowItem({
         "flex min-w-0 flex-col gap-1 rounded-md px-2.5 py-1",
         pick ? "bg-selected" : "bg-raised",
       )}
-      data-testid={`weapon-row-${row.type}`}
+      data-testid={`weapon-row-${row.code}`}
       data-picked={pick ? "true" : undefined}
       data-specialized={specialized ? "true" : undefined}
     >
@@ -178,7 +206,7 @@ function WeaponRowItem({
             data-testid="weapon-row-status"
           >
             {status}
-            {/* ADR 0037 step 9: the specialization's cost, the options' figure, beside a pick. */}
+            {/* ADR 0037 step 21.5: the specialization's cost, the options' figure, beside a pick. */}
             {pick &&
               !specialized &&
               cost > 0 &&
@@ -194,7 +222,7 @@ function WeaponRowItem({
           )}
         </span>
         <span className="flex flex-wrap items-center justify-end gap-1">
-          {/* Specialize a picked type: its cost shows beside the pick (ADR 0037 step 9). */}
+          {/* Specialize a picked weapon: its cost shows beside the pick (ADR 0037 step 21.5). */}
           {pick && cost > 0 && (
             <Button
               type="button"

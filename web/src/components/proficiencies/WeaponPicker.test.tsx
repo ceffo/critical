@@ -6,7 +6,7 @@ import { resources } from "@/i18n";
 import type {
   ProficiencySlots,
   WeaponPickInput,
-  WeaponTypeOption,
+  WeaponOption,
 } from "@/types/character";
 import { WeaponPicker } from "./WeaponPicker";
 
@@ -33,16 +33,16 @@ const figures = (left: number, spent: number): ProficiencySlots => ({
     left,
   },
   weaponPicks: [
-    { type: "long_sword", slots: 6, allowed: true },
-    { type: "heavy_crossbow", slots: 1, allowed: false },
+    { code: "long_sword", slots: 6, allowed: true },
+    { code: "heavy_crossbow", slots: 1, allowed: false },
   ],
 });
 
 // The specialization costs come from the options; these are no book figure.
-const types: WeaponTypeOption[] = [
-  { type: "long_bow", specializationSlots: 11 },
-  { type: "long_sword", specializationSlots: 6 },
-  { type: "dagger", specializationSlots: 4 },
+const types: WeaponOption[] = [
+  { code: "long_bow", specializationSlots: 11 },
+  { code: "long_sword", specializationSlots: 6 },
+  { code: "dagger", specializationSlots: 4 },
 ];
 
 async function render(
@@ -63,7 +63,7 @@ async function render(
   return renderToStaticMarkup(
     <I18nextProvider i18n={inst}>
       <WeaponPicker
-        types={list}
+        weapons={list}
         picks={picks}
         onChange={() => {}}
         figures={f}
@@ -74,9 +74,9 @@ async function render(
 }
 
 const picks = [
-  { type: "long_sword", slots: 6 },
-  { type: "heavy_crossbow", slots: 1 },
-  { type: "dagger", slots: 1 },
+  { code: "long_sword", slots: 6 },
+  { code: "heavy_crossbow", slots: 1 },
+  { code: "dagger", slots: 1 },
 ];
 
 describe("WeaponPicker", () => {
@@ -124,11 +124,11 @@ describe("WeaponPicker", () => {
   it("offers no specialization to a class whose options give none", async () => {
     const html = await render(
       figures(0, 1),
-      [{ type: "dagger", slots: 1 }],
+      [{ code: "dagger", slots: 1 }],
       "en",
       [
-        { type: "dagger", specializationSlots: 0 },
-        { type: "dart", specializationSlots: 0 },
+        { code: "dagger", specializationSlots: 0 },
+        { code: "dart", specializationSlots: 0 },
       ],
     );
     expect(html).not.toContain("weapon-specialize");

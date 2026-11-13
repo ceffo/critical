@@ -105,6 +105,10 @@ type ProficiencyBook interface {
 	// features the picks and grants read.
 	ClassDef(class string) (classes.Class, bool)
 	SpecializationCostedAt(weaponType string, slots int) bool
+	// Weapons and Weapon are the catalogue weapons a weapon pick names (ADR
+	// 0037 step 21.1), in offer order.
+	Weapons() []classes.WeaponRef
+	Weapon(code string) (classes.WeaponRef, bool)
 }
 
 // Kind is the class and race code of the character whose details are checked:
@@ -184,6 +188,10 @@ type Warning struct {
 	// Class is the class entry a level_limit warning is about (its level in
 	// Value, the race's limit in Max); "" for the other warnings.
 	Class string
+	// Type and Slots are a weapon_pick_to_redo warning's weapon type and the
+	// slots it spent (ADR 0037 step 21.8.3); "" and nil for the others.
+	Type  string
+	Slots *int
 }
 
 // WithNative is d with the race's native language among its languages, first

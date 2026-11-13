@@ -22,11 +22,11 @@ const (
 	// WarnHands: a two-handed weapon wielded with a worn shield (every
 	// class), on both pieces.
 	WarnHands = "hands"
-	// WarnWeaponTypeMissing: a wielded weapon with no weapon type (every
-	// class, ADR 0037 step 8): its attacks take no non-proficiency penalty,
-	// since no pick can be judged, until the player sets its type; the app
-	// never guesses one.
-	WarnWeaponTypeMissing = "weapon_type_missing"
+	// WarnWeaponCodeMissing: a wielded weapon with no catalogue code (every
+	// class, ADR 0037 step 21.4, replacing weapon_type_missing): no pick can
+	// name it, so its attacks take the non-proficiency penalty until the
+	// player sets its catalogue row and picks it; the app never guesses one.
+	WarnWeaponCodeMissing = "weapon_code_missing"
 	// WarnSpellInArmour: a spell of a class that allows no body armour cast
 	// while body armour is worn (ADR 0042 step 16.2, Q15), served on the
 	// cast, never refusing it.
@@ -51,8 +51,8 @@ type Warning struct {
 }
 
 // ClassWarnings is the class warnings of the pieces worn or wielded, in list
-// order (ADR 0033 step 20), and a wielded weapon's missing type (ADR 0037
-// step 8): computed on every read, never stored. limits are the equipment of
+// order (ADR 0033 step 20), and a wielded weapon's missing catalogue code
+// (ADR 0037 step 21.4): computed on every read, never stored. limits are the equipment of
 // the character's active class entries (ADR 0040 step 1.6), one for a
 // single-class character; none (no entry, or one whose class the catalogue does
 // not define, which has no limit) warns no class limit. Several are judged
@@ -87,8 +87,8 @@ func ClassWarnings(limits []classes.Equipment, lift ruleset.WeaponLift, old OldC
 			if code, ok := old.weapon(limits, lift, weapon); !ok {
 				out = append(out, Warning{p.ID, code})
 			}
-			if p.WeaponType == "" {
-				out = append(out, Warning{p.ID, WarnWeaponTypeMissing})
+			if p.CatalogueCode == "" {
+				out = append(out, Warning{p.ID, WarnWeaponCodeMissing})
 			}
 			if p.TwoHanded {
 				twoHanded = append(twoHanded, p)

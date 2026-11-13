@@ -51,7 +51,7 @@ func TestNonproficientPenalty_Step8_OnTheWeaponsAndTheItems(t *testing.T) {
 	assert.Equal(t, map[string]int{"long_sword": -2, "dagger": -2}, weapons, "a warrior without picks: -2 on each")
 	assert.Equal(t, -2, items["long_sword"])
 
-	require.Equal(t, http.StatusOK, tb.call(bob, "PUT", "/api/proficiencies", `{"weapon":[{"type":"long_sword","slots":1}]}`, nil))
+	require.Equal(t, http.StatusOK, tb.call(bob, "PUT", "/api/proficiencies", `{"weapon":[{"code":"long_sword","slots":1}]}`, nil))
 	weapons, items = penalties()
 	assert.Equal(t, map[string]int{"long_sword": 0, "dagger": -2}, weapons)
 	assert.Equal(t, 0, items["long_sword"])

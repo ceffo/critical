@@ -54,7 +54,7 @@ func TestResolveAttack_Step12_ADualClassFighterKeepsItsSpecializationPastTheCros
 					{Class: "fighter", RealizedLevel: 11, StartingXP: 750_000, State: classes.EntryFrozen, LeftAtLevel: 11},
 					classes.SingleEntry("mage", tc.mage, tc.mageXP),
 				},
-				Proficiencies: skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: 2}}},
+				Proficiencies: skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Code: "long_sword", Slots: 2}}},
 			})
 			require.NoError(t, err)
 			sword, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{CatalogueCode: "long_sword", Equip: true})
@@ -96,8 +96,8 @@ func TestResolveAttack_Step12_ADualClassFighterKeepsItsSpecializationPastTheCros
 // the kept one too. Per case: the derived specializes, the long sword's cost on the sheet, and the
 // save of a long sword specialization (kept or new): refused not_allowed to a class that may not.
 func TestSetProficiencies_Step12_TheSpecializationOfferFollowsTheActiveClass(t *testing.T) {
-	spec := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: 2}}}
-	plain := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: 1}}}
+	spec := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Code: "long_sword", Slots: 2}}}
+	plain := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{{Code: "long_sword", Slots: 1}}}
 	for _, tc := range []struct {
 		name        string
 		c           charactersvc.Character
@@ -163,8 +163,8 @@ func TestSetProficiencies_Step12_TheSpecializationOfferFollowsTheActiveClass(t *
 			assert.Equal(t, tc.specializes, got.Derived.Specializes, "specializes")
 			require.NotNil(t, got.Derived.Proficiencies)
 			cost := -1
-			for _, o := range got.Derived.Proficiencies.WeaponTypes {
-				if o.Type == "long_sword" {
+			for _, o := range got.Derived.Proficiencies.Weapons {
+				if o.Code == "long_sword" {
 					cost = o.SpecializationSlots
 				}
 			}

@@ -132,6 +132,9 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		catalogueWeaponTypesMigration: func(ctx context.Context, q storeq.Querier) error {
 			return retypeCatalogueWeapons(ctx, q, equipment.Weapons)
 		},
+		weaponCodesMigration: func(ctx context.Context, q storeq.Querier) error {
+			return pickOwnedWeapons(ctx, q, equipment.Weapons)
+		},
 	}
 	return before, after
 }

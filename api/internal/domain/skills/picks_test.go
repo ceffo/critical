@@ -40,6 +40,10 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{Group: "psionicist", WeaponInitial: 2, WeaponLevels: 5, Penalty: -4, NonweaponInitial: 3, NonweaponLevels: 3},
 	}, cataloguetest.Definitions(t))
 	require.NoError(t, err)
+	eq, ok := cataloguetest.Tables(t).Equipment()
+	require.True(t, ok)
+	b, err = b.WithWeapons(eq.PickWeapons())
+	require.NoError(t, err)
 	return b
 }
 
@@ -47,11 +51,11 @@ func picks(ps ...skills.Pick) skills.Picks {
 	return skills.Picks{Nonweapon: append([]skills.Pick{}, ps...), Weapon: []skills.WeaponPick{}}
 }
 
-// weapons are weapon picks of types, 1 slot each, and no non-weapon pick.
-func weapons(types ...string) skills.Picks {
+// weapons are weapon picks of catalogue codes, 1 slot each, and no non-weapon pick.
+func weapons(codes ...string) skills.Picks {
 	out := skills.Picks{Nonweapon: []skills.Pick{}, Weapon: []skills.WeaponPick{}}
-	for _, t := range types {
-		out.Weapon = append(out.Weapon, skills.WeaponPick{Type: t, Slots: 1})
+	for _, c := range codes {
+		out.Weapon = append(out.Weapon, skills.WeaponPick{Code: c, Slots: 1})
 	}
 	return out
 }

@@ -426,16 +426,18 @@ func TestSetACOverride_WritesOrClears(t *testing.T) {
 	require.ErrorIs(t, dal.SetACOverride(ctx, 9, nil), domain.ErrCharacterNotFound)
 }
 
-// ADR 0037 step 12: the picks are stored as a JSON object by pool, in the player's order (none:
-// '{}'), written by the editor's save and read back as the same picks.
+// ADR 0037 steps 12 and 21.6: the picks are stored as a JSON object by pool, in the player's order
+// (none: '{}'), the weapon picks by catalogue code and the type picks left to redo under
+// weapon_redo (step 21.8.3), written by the editor's save and read back as the same picks.
 func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
 	ctx := context.Background()
 	q := mocks.NewMockQuerier(t)
 	picks := skills.Picks{
-		Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}},
-		Weapon:    []skills.WeaponPick{{Type: "long_sword", Slots: 1}, {Type: "dagger", Slots: 1}},
+		Nonweapon:  []skills.Pick{{ID: "tumbling", Slots: 2}, {ID: "cooking", Slots: 1}},
+		Weapon:     []skills.WeaponPick{{Code: "long_sword", Slots: 1}, {Code: "dagger", Slots: 1}},
+		WeaponRedo: []skills.WeaponRedo{{Type: "other_melee", Slots: 1}},
 	}
-	stored := `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}],"weapon":[{"type":"long_sword","slots":1},{"type":"dagger","slots":1}]}`
+	stored := `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"cooking","slots":1}],"weapon":[{"code":"long_sword","slots":1},{"code":"dagger","slots":1}],"weapon_redo":[{"type":"other_melee","slots":1}]}`
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: stored, ID: 4}).Return(1, nil).Once()
 	require.NoError(t, characterdal.New(q).SetProficiencyPicks(ctx, 4, picks))
 	q.EXPECT().SetProficiencyPicks(ctx, queries.SetProficiencyPicksParams{ProficiencyPicks: `{}`, ID: 4}).Return(1, nil).Once()
@@ -453,6 +455,15 @@ func TestProficiencyPicks_StoredAsJSONAndReadBack(t *testing.T) {
 	old, err := characterdal.DecodePicks(`{"nonweapon":[{"id":"tumbling","slots":2}]}`)
 	require.NoError(t, err)
 	assert.Empty(t, old.Weapon)
+}
+
+// ADR 0037 step 21.8.3: a type pick of the older form read after migration 042 (one the release
+// before wrote during a rolling deploy) is a type to redo, never a weapon pick.
+func TestDecodePicks_Step21_8_3_ATypePickReadsAsOneToRedo(t *testing.T) {
+	got, err := characterdal.DecodePicks(`{"weapon":[{"code":"dagger","slots":1},{"type":"other_melee","slots":2}]}`)
+	require.NoError(t, err)
+	assert.Equal(t, []skills.WeaponPick{{Code: "dagger", Slots: 1}}, got.Weapon)
+	assert.Equal(t, []skills.WeaponRedo{{Type: "other_melee", Slots: 2}}, got.WeaponRedo)
 }
 
 // The undo of a spend reads the class and the points of every skill set without deriving the

@@ -310,6 +310,9 @@ type Weapon struct {
 	TwoHanded   bool
 	AmmoKind    string // ammo kind a missile weapon fires, e.g. "arrow" (the piece's Fires)
 	Type        string // weapon type code (itemsvc.WeaponTypes); empty: none
+	// Code is the catalogue weapon the piece is of (ADR 0033 step 24), ""
+	// for a homebrew one: what a weapon pick names (ADR 0037 step 21.3).
+	Code string
 	// StrengthRating is a bow's Strength rating (ADR 0033 step 3, ADR 0002
 	// step 4); the zero value an ordinary bow.
 	StrengthRating itemsvc.StrengthRating
@@ -330,7 +333,7 @@ func weaponOf(it itemsvc.Item) Weapon {
 	return Weapon{
 		ID: it.ID, Name: it.Name, BaseDamage: it.DamageSM, DamageLarge: it.DamageL,
 		MagicToHit: it.MagicToHit, MagicDamage: it.MagicDamage, Kind: WeaponKind(it.WeaponKind),
-		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, StrengthRating: it.StrengthRating,
+		TwoHanded: it.TwoHanded, AmmoKind: it.Fires, Type: it.WeaponType, Code: it.CatalogueCode, StrengthRating: it.StrengthRating,
 		Specialized:          it.Specialized,
 		NonproficientPenalty: it.NonproficientPenalty,
 		Speed:                it.Speed, Wielded: it.State == itemsvc.StateWielded,

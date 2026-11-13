@@ -15,9 +15,9 @@ const ArmourNone = "none"
 type WeaponRef struct{ Code, WeaponType string }
 
 // Equipment is what a class may wear and wield (ADR 0040 step 1.6): the one
-// source of the class warnings (ADR 0033 step 20) and of the weapon types a
-// proficiency may be picked in (ADR 0037 step 7). A warning never refuses
-// anything.
+// source of the class warnings (ADR 0033 step 20) and of the catalogue
+// weapons a proficiency may be picked in (ADR 0037 step 21.2). A warning
+// never refuses anything.
 type Equipment struct {
 	// Armour are the Table 29 columns of the body armour the class may wear;
 	// ArmourNone means no armour worn. Empty: any armour.
@@ -30,10 +30,11 @@ type Equipment struct {
 	Weapons     []WeaponRef
 	// BluntOnly: only a weapon with a bludgeoning damage type.
 	BluntOnly bool
-	// PickTypes are the weapon types a proficiency may be picked in (ADR 0037
-	// step 7), derived once at import from this list and the weapon
-	// catalogue (Registry.WithPickTypes); nil: any type.
-	PickTypes []string
+	// PickCodes are the catalogue weapons a proficiency may be picked in (ADR
+	// 0037 step 21.2), derived once at import by AllowsWeapon on each
+	// catalogue row (Registry.WithPickCodes), in catalogue order; nil: any
+	// weapon.
+	PickCodes []string
 }
 
 // AllowsArmour reports whether a worn body armour of Table 29 column column
@@ -60,7 +61,7 @@ func (e Equipment) Limited() bool {
 }
 
 func (e Equipment) clone() Equipment {
-	e.PickTypes = slices.Clone(e.PickTypes)
+	e.PickCodes = slices.Clone(e.PickCodes)
 	e.Armour = slices.Clone(e.Armour)
 	e.WeaponTypes = slices.Clone(e.WeaponTypes)
 	e.Weapons = slices.Clone(e.Weapons)
@@ -129,10 +130,11 @@ func (e Equipment) AllowsWeapon(w Weapon) bool {
 	return w.WeaponType == "" || slices.ContainsFunc(e.Weapons, func(l WeaponRef) bool { return l.WeaponType == w.WeaponType })
 }
 
-// WeaponTypeAllowed is ADR 0037 step 7: whether a weapon proficiency may be
-// picked in weaponType. Wielding is never refused (ADR 0033 step 20).
-func (e Equipment) WeaponTypeAllowed(weaponType string) bool {
-	return e.PickTypes == nil || slices.Contains(e.PickTypes, weaponType)
+// WeaponPickAllowed is ADR 0037 step 21.2: whether a weapon proficiency may be
+// picked in the catalogue weapon code, by the rule of the wielding warnings
+// (PickCodes). Wielding is never refused (ADR 0033 step 20).
+func (e Equipment) WeaponPickAllowed(code string) bool {
+	return e.PickCodes == nil || slices.Contains(e.PickCodes, code)
 }
 
 // AllowedTogether is ADR 0042 step 16.1 on the equipment of several class

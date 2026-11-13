@@ -19,11 +19,13 @@ import (
 // test on the code before the move (itemsvc's classRules, ruletablesvc's classWeaponTypes,
 // charactersvc's conSaveRaces, the identity literal) and is compared as is, with one change:
 // the thief's weapon types no longer hold other_thrown, which only the lasso of its PHB list
-// (p.39) gave it, and the lasso is in no catalogue weapon (ADR 0040 step 1.6). It holds, for
+// (p.39) gave it, and the lasso is in no catalogue weapon (ADR 0040 step 1.6); and a second: the
+// options' weapon types became the catalogue weapons each class may pick (ADR 0037 step 21.2, each
+// row judged by the wielding warnings' rule, which these warnings pin). It holds, for
 // every class: the class warnings of three sets of pieces worn and wielded together (armour,
 // shield and weapons of the book's lists, in and out of them); for every class and race: the
 // saves and the race's save bonus at Constitution 16 (Table 9); and the creation options
-// (every class's weapon types, every race's Tables 10 and 11 figures).
+// (every class's weapons, every race's Tables 10 and 11 figures).
 func TestRacesAndEquipment_Golden_DeriveWhatTheGoTablesDid(t *testing.T) {
 	ctx := context.Background()
 	m := memory.New()

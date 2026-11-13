@@ -230,7 +230,8 @@ func TestMigrate_Step16_SpecializedFlagBecomesAPick(t *testing.T) {
 	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	run := &fakeMigrations{store: f}
 	for _, m := range embedded {
-		if m.name < weaponPicksMigration {
+		// Migration 042 turns the type picks into codes; its own tests cover it (weaponcodes_test).
+		if m.name < weaponPicksMigration || m.name == weaponCodesMigration {
 			run.recorded = append(run.recorded, m.name)
 		}
 	}

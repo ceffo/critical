@@ -74,7 +74,7 @@ func TestResolveAttack_Step9_SpecializationFromThePick(t *testing.T) {
 
 	before, _, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
-	_, err = bs.Skills.SetProficiencies(ctx, id, skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Type: "long_sword", Slots: 2}}}})
+	_, err = bs.Skills.SetProficiencies(ctx, id, skillsvc.Edit{Picks: skills.Picks{Weapon: []skills.WeaponPick{{Code: "long_sword", Slots: 2}}}})
 	require.NoError(t, err)
 	top, _, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
@@ -93,4 +93,52 @@ func TestResolveAttack_Step9_SpecializationFromThePick(t *testing.T) {
 	after, _, err := bs.Log.TopID(ctx, id)
 	require.NoError(t, err)
 	assert.Equal(t, before, after, "one entry popped")
+}
+
+// ADR 0037 step 21.5 through the real services: a level 1 fighter specialized in the long sword
+// (2 slots) with a plain broad sword pick, both wielded from their catalogue rows: the long sword's
+// attack takes the specialization's +1 to hit (modifier specialization), the broad sword's none
+// (a long_sword or other_melee type pick covered both before), and neither takes the
+// non-proficiency penalty, each being picked by its code.
+func TestResolveAttack_Step21_5_SpecializationByCode(t *testing.T) {
+	ctx := context.Background()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(memory.New()), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	s, err := bs.Auth.DevLogin(ctx, "")
+	require.NoError(t, err)
+	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
+		Details: identity(),
+		Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 16, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
+		Proficiencies: skills.Picks{Weapon: []skills.WeaponPick{{Code: "long_sword", Slots: 2}, {Code: "broad_sword", Slots: 1}}},
+	})
+	require.NoError(t, err)
+	long, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{CatalogueCode: "long_sword", Equip: true})
+	require.NoError(t, err)
+	broad, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{CatalogueCode: "broad_sword"})
+	require.NoError(t, err)
+	_, err = bs.Items.SetState(ctx, id, broad.Item.ID, itemsvc.StateWielded, false)
+	require.NoError(t, err)
+
+	kinds := func(weaponID string) []combatsvc.ModifierKind {
+		res, err := bs.Combat.ResolveAttack(ctx, id, combatsvc.AttackRequest{
+			WeaponID: weaponID, TargetAC: new(5), TargetSize: combatsvc.SizeSmallMedium,
+		})
+		require.NoError(t, err)
+		var out []combatsvc.ModifierKind
+		for _, m := range res.Modifiers {
+			out = append(out, m.Kind)
+		}
+		return out
+	}
+	items, err := bs.Items.List(ctx, id)
+	require.NoError(t, err)
+	specialized := map[string]bool{}
+	for _, it := range items {
+		specialized[it.ID] = it.Specialized
+	}
+	assert.Equal(t, map[string]bool{long.Item.ID: true, broad.Item.ID: false}, specialized)
+	assert.Contains(t, kinds(long.Item.ID), combatsvc.ModSpecialization)
+	assert.NotContains(t, kinds(broad.Item.ID), combatsvc.ModSpecialization, "the broad sword is another weapon")
+	assert.NotContains(t, kinds(broad.Item.ID), combatsvc.ModNonproficient, "picked by its code")
 }

@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 	storeq "github.com/ceffo/critical/api/internal/storage/postgres/queries"
@@ -84,14 +83,14 @@ func carryRetypedPicks(ctx context.Context, q storeq.Querier, retyped map[int64]
 		if len(types) == 0 {
 			continue
 		}
-		picks, err := characterdal.DecodePicks(c.ProficiencyPicks)
+		picks, err := decodeTypePicks(c.ProficiencyPicks)
 		if err != nil {
 			return fmt.Errorf("character %d: %w", c.ID, err)
 		}
 		if !carryPick(&picks, types, keepsFrom[c.ID], c.ID) {
 			continue
 		}
-		raw, err := characterdal.EncodePicks(picks)
+		raw, err := picks.encode()
 		if err != nil {
 			return err
 		}
@@ -104,15 +103,15 @@ func carryRetypedPicks(ctx context.Context, q storeq.Querier, retyped map[int64]
 
 // carryPick gives picks a pick of each of types, carried from its other_missile pick (moved to
 // the first type when keepFrom is false), and reports whether it changed picks.
-func carryPick(picks *skills.Picks, types []string, keepFrom bool, characterID int64) bool {
-	from := slices.IndexFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == retypedFrom })
+func carryPick(picks *typePicks, types []string, keepFrom bool, characterID int64) bool {
+	from := slices.IndexFunc(picks.Weapon, func(p typePick) bool { return p.Type == retypedFrom })
 	if from < 0 {
 		return false
 	}
 	specialized := picks.Weapon[from].Slots > skills.WeaponPickSlots
 	changed := false
 	for _, t := range types {
-		if slices.ContainsFunc(picks.Weapon, func(p skills.WeaponPick) bool { return p.Type == t }) {
+		if picks.hasType(t) {
 			continue
 		}
 		changed = true
@@ -125,7 +124,7 @@ func carryPick(picks *skills.Picks, types []string, keepFrom bool, characterID i
 			slog.Warn("migration 041: the other_missile specialization stays with the other missile pieces; the retyped piece gets a plain pick",
 				"character", characterID, "type", t)
 		}
-		picks.Weapon = append(picks.Weapon, skills.WeaponPick{Type: t, Slots: skills.WeaponPickSlots})
+		picks.Weapon = append(picks.Weapon, typePick{Type: t, Slots: skills.WeaponPickSlots})
 	}
 	return changed
 }

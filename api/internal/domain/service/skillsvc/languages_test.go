@@ -170,10 +170,10 @@ func TestSetPicks_Step13_LanguagesInTheOneMove(t *testing.T) {
 	assert.Equal(t, 1, f.tx.calls, "one transaction")
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["elvish","common"]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[],"languages":["elvish","common","gnomish"]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"]},
+		"after":{"nonweapon":[{"id":"tumbling","slots":2}],"weapons":[],"weaponRedo":[],"languages":["elvish","common","gnomish"]}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["elvish","common"]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"]}`, snaptest.State(t, e.Snapshots[0].Before))
 
 	r := f.svc.Module().Restorer(skillsvc.PicksStateKey)
 	require.NotNil(t, r)

@@ -21,6 +21,9 @@ type Querier interface {
 	CharacterClasses(ctx context.Context) ([]CharacterClassesRow, error)
 	CharacterPicks(ctx context.Context) ([]CharacterPicksRow, error)
 	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)
+	// The weapon picks data step after migration 042 (ADR 0037 step 21.8): the catalogue codes of each
+	// character's weapons, in any state, in list order.
+	CharacterWeaponCodes(ctx context.Context) ([]CharacterWeaponCodesRow, error)
 	// The weapon picks data step after migration 026 (ADR 0037 step 16.2): the distinct weapon types
 	// each character's weapons have, in any state, and every character's stored picks.
 	CharacterWeaponTypes(ctx context.Context) ([]CharacterWeaponTypesRow, error)

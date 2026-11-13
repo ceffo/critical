@@ -142,5 +142,50 @@
         "languages": ["common"]
       }
     }
+  },
+  "weaponCodes": {
+    "payload": {
+      "before": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ],
+        "weapons": [
+          {
+            "code": "long_sword",
+            "slots": 1
+          }
+        ],
+        "weaponRedo": [
+          {
+            "type": "other_melee",
+            "slots": 1
+          }
+        ],
+        "languages": []
+      },
+      "after": {
+        "nonweapon": [
+          {
+            "id": "tumbling",
+            "slots": 1
+          }
+        ],
+        "weapons": [
+          {
+            "code": "long_sword",
+            "slots": 2
+          },
+          {
+            "code": "heavy_horse_lance",
+            "slots": 1
+          }
+        ],
+        "weaponRedo": [],
+        "languages": []
+      }
+    }
   }
 }

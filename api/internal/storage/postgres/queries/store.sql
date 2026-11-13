@@ -340,6 +340,12 @@ WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_ty
 -- name: CharacterPicks :many
 SELECT id, proficiency_picks FROM characters ORDER BY id;
 
+-- The weapon picks data step after migration 042 (ADR 0037 step 21.8): the catalogue codes of each
+-- character's weapons, in any state, in list order.
+-- name: CharacterWeaponCodes :many
+SELECT character_id, catalogue_code FROM items
+WHERE category = 'weapon' AND catalogue_code <> '' ORDER BY character_id, position, id;
+
 -- The specialization data step after migration 027 (ADR 0037 step 16.3): every weapon flagged
 -- specialized that has a weapon type, per character in list order.
 -- name: SpecializedWeaponTypes :many

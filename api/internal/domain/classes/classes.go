@@ -434,23 +434,23 @@ func (c Class) AlignmentAllowed(alignment string) bool {
 	return slices.Contains(c.Alignments, alignment)
 }
 
-// WithPickTypes returns a copy of the registry whose classes carry the
-// weapon types a proficiency may be picked in (Equipment.PickTypes), keyed by
-// class id; a class absent from the map may pick any type. A key naming no
-// class is refused.
-func (r *Registry) WithPickTypes(types map[string][]string) (*Registry, error) {
+// WithPickCodes returns a copy of the registry whose classes carry the
+// catalogue weapons a proficiency may be picked in (Equipment.PickCodes, ADR
+// 0037 step 21.2), keyed by class id; a class absent from the map may pick
+// any weapon. A key naming no class is refused.
+func (r *Registry) WithPickCodes(codes map[string][]string) (*Registry, error) {
 	out := &Registry{classes: make([]Class, len(r.classes)), groups: r.groups, races: r.races}
 	seen := 0
 	for i, c := range r.classes {
 		c = c.clone()
-		if t, ok := types[c.ID]; ok {
-			c.Equipment.PickTypes = slices.Clone(t)
+		if t, ok := codes[c.ID]; ok {
+			c.Equipment.PickCodes = slices.Clone(t)
 			seen++
 		}
 		out.classes[i] = c
 	}
-	if seen != len(types) {
-		return nil, errors.New("pick types: a key naming no class")
+	if seen != len(codes) {
+		return nil, errors.New("pick codes: a key naming no class")
 	}
 	return out, nil
 }

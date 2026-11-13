@@ -112,61 +112,257 @@
             "Min": 9
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "long_bow",
+            "Code": "composite_long_bow",
             "SpecializationSlots": 3
           },
           {
-            "Type": "short_bow",
+            "Code": "long_bow",
             "SpecializationSlots": 3
           },
           {
-            "Type": "light_crossbow",
+            "Code": "composite_short_bow",
+            "SpecializationSlots": 3
+          },
+          {
+            "Code": "short_bow",
+            "SpecializationSlots": 3
+          },
+          {
+            "Code": "light_crossbow",
             "SpecializationSlots": 2
           },
           {
-            "Type": "heavy_crossbow",
+            "Code": "heavy_crossbow",
             "SpecializationSlots": 2
           },
           {
-            "Type": "hand_crossbow",
+            "Code": "hand_crossbow",
             "SpecializationSlots": 2
           },
           {
-            "Type": "dagger",
+            "Code": "dagger",
             "SpecializationSlots": 2
           },
           {
-            "Type": "dart",
+            "Code": "dart",
             "SpecializationSlots": 2
           },
           {
-            "Type": "sling",
+            "Code": "sling",
             "SpecializationSlots": 2
           },
           {
-            "Type": "staff_sling",
+            "Code": "staff_sling",
             "SpecializationSlots": 2
           },
           {
-            "Type": "short_sword",
+            "Code": "short_sword",
             "SpecializationSlots": 2
           },
           {
-            "Type": "long_sword",
+            "Code": "long_sword",
             "SpecializationSlots": 2
           },
           {
-            "Type": "other_melee",
+            "Code": "battle_axe",
             "SpecializationSlots": 2
           },
           {
-            "Type": "other_thrown",
+            "Code": "club",
             "SpecializationSlots": 2
           },
           {
-            "Type": "other_missile",
+            "Code": "footmans_flail",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "footmans_mace",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "footmans_pick",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "horsemans_flail",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "horsemans_mace",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "horsemans_pick",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "heavy_horse_lance",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "light_horse_lance",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "jousting_lance",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "medium_horse_lance",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "mancatcher",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "morning_star",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "awl_pike",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "bardiche",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "bec_de_corbin",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "bill_guisarme",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "fauchard",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "fauchard_fork",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "glaive",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "glaive_guisarme",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "guisarme",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "guisarme_voulge",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "halberd",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "hook_fauchard",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "lucern_hammer",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "military_fork",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "partisan",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "ranseur",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "spetum",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "voulge",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "scourge",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "sickle",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "spear",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "bastard_sword_one_handed",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "bastard_sword_two_handed",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "broad_sword",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "khopesh",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "scimitar",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "two_handed_sword",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "trident",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "warhammer",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "whip",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "hand_axe",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "harpoon",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "javelin",
+            "SpecializationSlots": 2
+          },
+          {
+            "Code": "blowgun",
             "SpecializationSlots": 2
           }
         ],
@@ -280,21 +476,25 @@
             "Min": 9
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "dagger",
+            "Code": "dagger",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dart",
+            "Code": "dart",
             "SpecializationSlots": 0
           },
           {
-            "Type": "sling",
+            "Code": "sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
             "SpecializationSlots": 0
           }
         ],
@@ -415,17 +615,53 @@
             "Min": 9
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "sling",
+            "Code": "sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "staff_sling",
+            "Code": "staff_sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Code": "club",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "footmans_flail",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "footmans_mace",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_flail",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_mace",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "morning_star",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bec_de_corbin",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "lucern_hammer",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "warhammer",
             "SpecializationSlots": 0
           }
         ],
@@ -550,37 +786,53 @@
             "Min": 9
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "short_bow",
+            "Code": "composite_short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "hand_crossbow",
+            "Code": "short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dagger",
+            "Code": "hand_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dart",
+            "Code": "dagger",
             "SpecializationSlots": 0
           },
           {
-            "Type": "sling",
+            "Code": "dart",
             "SpecializationSlots": 0
           },
           {
-            "Type": "short_sword",
+            "Code": "sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "long_sword",
+            "Code": "short_sword",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Code": "long_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "club",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "broad_sword",
             "SpecializationSlots": 0
           }
         ],
@@ -702,61 +954,257 @@
             "Min": 15
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "long_bow",
+            "Code": "composite_long_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "short_bow",
+            "Code": "long_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "light_crossbow",
+            "Code": "composite_short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "heavy_crossbow",
+            "Code": "short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "hand_crossbow",
+            "Code": "light_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dagger",
+            "Code": "heavy_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dart",
+            "Code": "hand_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "sling",
+            "Code": "dagger",
             "SpecializationSlots": 0
           },
           {
-            "Type": "staff_sling",
+            "Code": "dart",
             "SpecializationSlots": 0
           },
           {
-            "Type": "short_sword",
+            "Code": "sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "long_sword",
+            "Code": "staff_sling",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Code": "short_sword",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_thrown",
+            "Code": "long_sword",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_missile",
+            "Code": "battle_axe",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "club",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "footmans_flail",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "footmans_mace",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "footmans_pick",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_flail",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_mace",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_pick",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "heavy_horse_lance",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "light_horse_lance",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "jousting_lance",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "medium_horse_lance",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "mancatcher",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "morning_star",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "awl_pike",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bardiche",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bec_de_corbin",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bill_guisarme",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "fauchard",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "fauchard_fork",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "glaive",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "glaive_guisarme",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "guisarme",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "guisarme_voulge",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "halberd",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "hook_fauchard",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "lucern_hammer",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "military_fork",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "partisan",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "ranseur",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "spetum",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "voulge",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "scourge",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sickle",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "spear",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bastard_sword_one_handed",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "bastard_sword_two_handed",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "broad_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "khopesh",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "scimitar",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "two_handed_sword",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "trident",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "warhammer",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "whip",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "hand_axe",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "harpoon",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "javelin",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "blowgun",
             "SpecializationSlots": 0
           }
         ],
@@ -880,33 +1328,61 @@
             "Min": 15
           }
         ],
-        "WeaponTypes": [
+        "Weapons": [
           {
-            "Type": "short_bow",
+            "Code": "composite_short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "light_crossbow",
+            "Code": "short_bow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "hand_crossbow",
+            "Code": "light_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "dagger",
+            "Code": "hand_crossbow",
             "SpecializationSlots": 0
           },
           {
-            "Type": "short_sword",
+            "Code": "dagger",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_melee",
+            "Code": "short_sword",
             "SpecializationSlots": 0
           },
           {
-            "Type": "other_thrown",
+            "Code": "club",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_mace",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "horsemans_pick",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "spear",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "scimitar",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "warhammer",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "hand_axe",
             "SpecializationSlots": 0
           }
         ],

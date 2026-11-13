@@ -50,7 +50,7 @@ function startingPicks(
   return pool === "weapon"
     ? {
         weapon: (slots.weaponPicks ?? []).map((p) => ({
-          type: p.type,
+          code: p.code,
           slots: p.slots,
         })),
       }
@@ -136,19 +136,19 @@ export function PickEditor({
   const shown = error ?? previewError;
   const errorFor = (field: string) =>
     shown && shown.field === field ? wording(shown) : null;
-  // The server says which types the character may pick (all its classes judged together).
-  const types = figures.weaponTypes ?? slots.weaponTypes ?? [];
-  // ADR 0037 step 9, ADR 0042 step 12: a new specialization is offered when an active class gives
-  // a type its cost (`specializationSlots`); a dual-class's kept one gives none, so no lead.
-  const offersSpecialization = types.some((o) => o.specializationSlots > 0);
+  // The server says which weapons the character may pick (all its classes judged together).
+  const weapons = figures.weapons ?? slots.weapons ?? [];
+  // ADR 0037 step 21.5, ADR 0042 step 12: a new specialization is offered when an active class
+  // gives a weapon its cost (`specializationSlots`); a dual-class's kept one gives none, so no lead.
+  const offersSpecialization = weapons.some((o) => o.specializationSlots > 0);
 
   // A refusal of a field the picker does not show (a pick no longer listed).
   const hidden =
     shown &&
     (pool === "weapon"
       ? shown.field !== "weapon" &&
-        !(draft.weapon ?? []).some((p) => `weapon.${p.type}` === shown.field) &&
-        !types.some((o) => `weapon.${o.type}` === shown.field)
+        !(draft.weapon ?? []).some((p) => `weapon.${p.code}` === shown.field) &&
+        !weapons.some((o) => `weapon.${o.code}` === shown.field)
       : shown.field !== "nonweapon" &&
         shown.field !== "languages" &&
         !(draft.nonweapon ?? []).some(
@@ -228,7 +228,7 @@ export function PickEditor({
       )}
       {options && pool === "weapon" && (
         <WeaponPicker
-          types={types}
+          weapons={weapons}
           picks={draft.weapon ?? []}
           onChange={(weapon) => change({ weapon })}
           figures={figures}

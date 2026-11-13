@@ -345,7 +345,7 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	m.char.EXPECT().Draft(mock.Anything, mock.MatchedBy(func(n charactersvc.NewCharacter) bool {
 		return n.Class == "thief" && n.Race == "elf" && n.Dex == 25 && n.XP == 1250 && n.SkillPoints["open_locks"] == 40 &&
 			n.Proficiencies.Equal(skills.Picks{
-				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Type: "dagger", Slots: 1}},
+				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 1}},
 			}) && slices.Equal(n.Languages, []string{"elvish", "orcish"})
 	}), []string{"hpMax"}).Return(&charactersvc.Draft{
 		Character: &charactersvc.Character{Derived: charactersvc.Derived{
@@ -368,7 +368,7 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{"class":"thief","raceCode":"elf","str":9,"dex":25,"con":12,"int":11,"wis":10,"cha":12,
 		"xp":1250,"skillPoints":{"open_locks":40},
-		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"type":"dagger","slots":1}]},
+		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"code":"dagger","slots":1}]},
 		"details":{"languages":["elvish","orcish"]}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	var got map[string]json.RawMessage

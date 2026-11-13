@@ -18,6 +18,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
@@ -369,7 +370,7 @@ func character(specializes bool) *charactersvc.Character {
 	return &charactersvc.Character{ID: 1, Derived: charactersvc.Derived{Specializes: specializes}}
 }
 
-// fighter is a fighter whose weapon picks are picks (ADR 0037 steps 7 and 9).
+// fighter is a fighter whose weapon picks are picks (ADR 0037 steps 21.1 and 21.5).
 func fighter(picks ...skills.WeaponPick) *charactersvc.Character {
 	c := character(true)
 	c.Class = "fighter"
@@ -377,43 +378,61 @@ func fighter(picks ...skills.WeaponPick) *charactersvc.Character {
 	return c
 }
 
-// ADR 0037 step 9 (amending ADR 0030 step 12): a weapon is specialized when its type has the
-// fighter's specialization pick, derived on every read: two weapons of the type are both
-// specialized, a weapon of a plain pick's type is not, whatever the stored flag said (the DAL
-// no longer reads it); a class that does not specialize gets none from a stored pick; a
-// creation and an edit answer the derived value (an edit moving the weapon to another type
-// follows it), and the edit logs no "specialized" change.
-func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
-	// The character row's specialization, as charactersvc reads it.
-	// The fixture's book: whether a class specializes is its feature list (ADR 0040 step 3).
+// fixtureBook is the fixture's proficiency book with its catalogue weapons (ADR 0037 step 21.1):
+// whether a class specializes is its feature list (ADR 0040 step 3), a pick's type its row's.
+func fixtureBook(t *testing.T) *ruletablesvc.Proficiencies {
+	t.Helper()
 	book, err := ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "..", "testdata", "seeds"), cataloguetest.Definitions(t))
 	require.NoError(t, err)
+	eq, ok := cataloguetest.Tables(t).Equipment()
+	require.True(t, ok)
+	book, err = book.WithWeapons(eq.PickWeapons())
+	require.NoError(t, err)
+	return book
+}
+
+// ADR 0037 step 21.5 (amending step 9 and ADR 0030 step 12): a weapon piece is specialized when
+// its catalogue code is the fighter's specialization pick, derived on every read: two long swords
+// are both specialized, a broad sword (a long_sword or other_melee type pick covered both before)
+// is not, nor is a homebrew long sword with no code, whatever the stored flag said (the DAL no
+// longer reads it); a class that does not specialize gets none from a stored pick; a creation
+// from the catalogue row answers the derived value.
+func TestSpecialized_Step21_5_OnlyThePiecesOfThatCode(t *testing.T) {
+	book := fixtureBook(t)
 	specializedIn := func(c *charactersvc.Character) skills.WeaponProficiency {
 		return skills.WeaponProficiencyOf(book, c.ActiveClasses(), c.Proficiencies)
 	}
-	spec := skills.WeaponPick{Type: "long_sword", Slots: 2}
-	plain := skills.WeaponPick{Type: "dagger", Slots: 1}
-	second := sword
+	spec := skills.WeaponPick{Code: "long_sword", Slots: 2}
+	plain := skills.WeaponPick{Code: "dagger", Slots: 1}
+	long := sword
+	long.CatalogueCode = "long_sword"
+	second := long
 	second.ID, second.Position = "longsword_2", 3
-	dagger := sword
-	dagger.ID, dagger.Position, dagger.WeaponType = "dagger", 4, "dagger"
-	dagger.Specialized = true // a stale value never wins
+	broad := long
+	broad.ID, broad.Position, broad.CatalogueCode, broad.WeaponType = "broad", 4, "broad_sword", "other_melee"
+	broad.Specialized = true // a stale value never wins
+	homebrew := sword
+	homebrew.ID, homebrew.Position = "homebrew", 5
 
 	t.Run("list", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
-		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather, sword, second, dagger}, nil)
+		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{leather, long, second, broad, homebrew}, nil)
 		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(fighter(spec, plain)), nil).Once()
 		got, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
-		assert.Equal(t, []bool{false, true, true, false}, []bool{got[0].Specialized, got[1].Specialized, got[2].Specialized, got[3].Specialized})
+		var specialized []bool
+		for _, it := range got {
+			specialized = append(specialized, it.Specialized)
+		}
+		assert.Equal(t, []bool{false, true, true, false, false}, specialized)
 	})
 	t.Run("a class that does not specialize", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
-		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{sword}, nil)
+		dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{long}, nil)
 		bard := fighter(spec)
 		bard.Class, bard.Derived.Specializes = "bard", false
 		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(bard), nil).Once()
@@ -428,7 +447,7 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 		_, err := svc.List(context.Background(), 1)
 		require.NoError(t, err)
 	})
-	t.Run("create answers the derived value", func(t *testing.T) {
+	t.Run("a homebrew creation is not specialized", func(t *testing.T) {
 		dal := mocks.NewMockDAL(t)
 		f := deps(t)
 		svc, _ := itemsvc.New(dal, f.Deps)
@@ -442,23 +461,8 @@ func TestSpecialized_Step9_DerivedFromThePick(t *testing.T) {
 			DamageSM: "1d8", DamageL: "1d12", WeaponKind: "melee", WeaponType: "long_sword",
 		})
 		require.NoError(t, err)
-		assert.True(t, res.Item.Specialized)
-	})
-	t.Run("an edit to another type follows it", func(t *testing.T) {
-		dal := mocks.NewMockDAL(t)
-		f := deps(t)
-		svc, _ := itemsvc.New(dal, f.Deps)
-		dal.EXPECT().Get(mock.Anything, int64(1), "longsword").Return(sword, nil)
-		f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).Return(specializedIn(fighter(spec)), nil)
-		dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil)
-		dal.EXPECT().DeleteReviews(mock.Anything, int64(1), "longsword").Return(nil)
-		var got actionlog.NewEntry
-		f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(4), nil)
-		otherType := "short_sword"
-		res, err := svc.Update(context.Background(), 1, "longsword", itemsvc.ItemPatch{WeaponType: &otherType})
-		require.NoError(t, err)
-		assert.False(t, res.Item.Specialized)
-		assert.NotContains(t, string(got.Payload), `"specialized"`)
+		assert.False(t, res.Item.Specialized, "no catalogue code, no specialization")
+		assert.Equal(t, -2, res.Item.NonproficientPenalty, "and non-proficient (step 21.4)")
 	})
 }
 
@@ -482,26 +486,29 @@ func TestDelete_RemovesAndLogsWholeWeapon(t *testing.T) {
 	assert.Contains(t, string(got.Snapshots[0].After), `"absent":true`)
 }
 
-// ADR 0037 step 8 on the piece: every weapon read carries the penalty an attack with it takes
-// (Table 34's for the class group when its type has no pick, from the same character read as
-// the specialization), so the card and the attack form show it before a roll; a picked type,
-// an untyped weapon and a non-weapon piece carry none, whatever the value read.
-func TestNonproficientPenalty_Step8_DerivedOnTheWeaponPiece(t *testing.T) {
+// ADR 0037 step 21.3 on the piece: every weapon read carries the penalty an attack with it takes
+// (Table 34's for the class group when no pick names its catalogue code, from the same character
+// read as the specialization), so the card and the attack form show it before a roll: a picked
+// code and a non-weapon piece carry none, whatever the value read; a weapon of a picked code's
+// type but another code, and a weapon with no code (step 21.4), carry it.
+func TestNonproficientPenalty_Step21_3_OnThePieceByCode(t *testing.T) {
 	dal := mocks.NewMockDAL(t)
 	f := deps(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
-	dagger := sword
-	dagger.ID, dagger.Position, dagger.WeaponType = "dagger", 3, "dagger"
-	untyped := sword
-	untyped.ID, untyped.Position, untyped.WeaponType = "club", 4, ""
+	quarterstaff := sword
+	quarterstaff.ID, quarterstaff.Position, quarterstaff.CatalogueCode, quarterstaff.WeaponType = "staff", 2, "quarterstaff", "other_melee"
+	lance := quarterstaff
+	lance.ID, lance.Position, lance.CatalogueCode = "lance", 3, "heavy_horse_lance"
+	homebrew := sword
+	homebrew.ID, homebrew.Position, homebrew.CatalogueCode = "club", 4, ""
 	stale := leather
 	stale.NonproficientPenalty = -9
-	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{stale, sword, dagger, untyped}, nil)
+	dal.EXPECT().List(mock.Anything, int64(1)).Return([]itemsvc.Item{stale, quarterstaff, lance, homebrew}, nil)
 	f.chars.EXPECT().WeaponProficiency(mock.Anything, int64(1)).
-		Return(skills.WeaponProficiency{Picked: []string{"dagger"}, Penalty: -2}, nil).Once()
+		Return(skills.WeaponProficiency{Picked: []string{"quarterstaff"}, Penalty: -2}, nil).Once()
 	got, err := svc.List(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, []int{0, -2, 0, 0}, []int{
+	assert.Equal(t, []int{0, 0, -2, -2}, []int{
 		got[0].NonproficientPenalty, got[1].NonproficientPenalty, got[2].NonproficientPenalty, got[3].NonproficientPenalty,
 	})
 }

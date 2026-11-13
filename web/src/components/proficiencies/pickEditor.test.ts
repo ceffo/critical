@@ -27,20 +27,20 @@ describe("the pick editor's preview (ADR 0037 steps 12 and 13)", () => {
     const on = { figures, refused: vi.fn() };
     // The editor cancels the wait of the previous picks when they change.
     const cancel = schedulePreview(
-      { weapon: [{ type: "a", slots: 1 }] },
+      { weapon: [{ code: "a", slots: 1 }] },
       "weapon",
       on,
       ask,
     );
     vi.advanceTimersByTime(PREVIEW_DELAY - 1);
     cancel();
-    schedulePreview({ weapon: [{ type: "b", slots: 1 }] }, "weapon", on, ask);
+    schedulePreview({ weapon: [{ code: "b", slots: 1 }] }, "weapon", on, ask);
     vi.advanceTimersByTime(PREVIEW_DELAY - 1);
     expect(ask).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);
     await vi.runAllTimersAsync();
     expect(ask).toHaveBeenCalledTimes(1);
-    expect(ask).toHaveBeenCalledWith({ weapon: [{ type: "b", slots: 1 }] });
+    expect(ask).toHaveBeenCalledWith({ weapon: [{ code: "b", slots: 1 }] });
     expect(figures).toHaveBeenCalledTimes(1);
   });
 

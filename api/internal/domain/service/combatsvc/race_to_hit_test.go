@@ -22,63 +22,63 @@ import (
 var (
 	raceLongSword = combatsvc.Weapon{
 		Wielded: true, ID: "long_sword", Name: localized.Of("Long Sword"), BaseDamage: "1d8", DamageLarge: "1d12",
-		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeLongSword,
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeLongSword, Code: "long_sword",
 	}
 	raceShortSword = combatsvc.Weapon{
 		Wielded: true, ID: "short_sword", Name: localized.Of("Short Sword"), BaseDamage: "1d6", DamageLarge: "1d8",
-		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeShortSword,
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeShortSword, Code: "short_sword",
 	}
 	// A composite long bow is of the long_bow type (ADR 0030 step 23).
 	raceCompositeLongBow = combatsvc.Weapon{
 		Wielded: true, ID: "composite_long_bow", Name: localized.Of("Composite Long Bow"), BaseDamage: "1d6", DamageLarge: "1d6",
-		Kind: combatsvc.WeaponMissile, AmmoKind: "arrow", TwoHanded: true, Type: itemsvc.TypeLongBow,
+		Kind: combatsvc.WeaponMissile, AmmoKind: "arrow", TwoHanded: true, Type: itemsvc.TypeLongBow, Code: "composite_long_bow",
 	}
 	raceLightCrossbow = combatsvc.Weapon{
 		Wielded: true, ID: "light_crossbow", Name: localized.Of("Light Crossbow"), BaseDamage: "1d4", DamageLarge: "1d4",
-		Kind: combatsvc.WeaponMissile, AmmoKind: "quarrel", TwoHanded: true, Type: itemsvc.TypeLightCrossbow,
+		Kind: combatsvc.WeaponMissile, AmmoKind: "quarrel", TwoHanded: true, Type: itemsvc.TypeLightCrossbow, Code: "light_crossbow",
 	}
 	raceSling = combatsvc.Weapon{
 		Wielded: true, ID: "sling", Name: localized.Of("Sling"), BaseDamage: "1d4", DamageLarge: "1d4",
-		Kind: combatsvc.WeaponMissile, AmmoKind: "bullet", Type: itemsvc.TypeSling,
+		Kind: combatsvc.WeaponMissile, AmmoKind: "bullet", Type: itemsvc.TypeSling, Code: "sling",
 	}
 	// A hurled dagger is a missile piece of the dagger type (ADR 0016 step 8).
 	raceThrownDagger = combatsvc.Weapon{
 		Wielded: true, ID: "throwing_dagger", Name: localized.Of("Throwing Dagger"), BaseDamage: "1d4", DamageLarge: "1d3",
-		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeDagger,
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeDagger, Code: "dagger",
 	}
 	// The staff sling is its own type (ADR 0030 step 23); the blowgun is an other missile weapon.
 	raceStaffSling = combatsvc.Weapon{
 		Wielded: true, ID: "staff_sling", Name: localized.Of("Staff Sling"), BaseDamage: "1d4", DamageLarge: "1d4",
-		Kind: combatsvc.WeaponMissile, AmmoKind: "bullet", Type: itemsvc.TypeStaffSling,
+		Kind: combatsvc.WeaponMissile, AmmoKind: "bullet", Type: itemsvc.TypeStaffSling, Code: "staff_sling",
 	}
 	raceBlowgun = combatsvc.Weapon{
 		Wielded: true, ID: "blowgun", Name: localized.Of("Blowgun"), BaseDamage: "1d3", DamageLarge: "1d2",
-		Kind: combatsvc.WeaponMissile, AmmoKind: "needle", TwoHanded: true, Type: itemsvc.TypeOtherMissile,
+		Kind: combatsvc.WeaponMissile, AmmoKind: "needle", TwoHanded: true, Type: itemsvc.TypeOtherMissile, Code: "blowgun",
 	}
 	// A spear, a hand axe and a club, each hurled (a missile piece without ammunition) and in melee.
 	raceThrownSpear = combatsvc.Weapon{
 		Wielded: true, ID: "thrown_spear", Name: localized.Of("Spear"), BaseDamage: "1d6", DamageLarge: "1d8",
-		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee,
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee, Code: "spear",
 	}
 	raceSpear = combatsvc.Weapon{
 		Wielded: true, ID: "spear", Name: localized.Of("Spear"), BaseDamage: "1d6", DamageLarge: "1d8",
-		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee,
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee, Code: "spear",
 	}
 	raceThrownHandAxe = combatsvc.Weapon{
 		Wielded: true, ID: "thrown_hand_axe", Name: localized.Of("Hand Axe"), BaseDamage: "1d6", DamageLarge: "1d4",
-		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherThrown,
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherThrown, Code: "hand_axe",
 	}
 	raceHandAxe = combatsvc.Weapon{
 		Wielded: true, ID: "hand_axe", Name: localized.Of("Hand Axe"), BaseDamage: "1d6", DamageLarge: "1d4",
-		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherThrown,
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherThrown, Code: "hand_axe",
 	}
 	raceThrownClub = combatsvc.Weapon{
 		Wielded: true, ID: "thrown_club", Name: localized.Of("Club"), BaseDamage: "1d6", DamageLarge: "1d3",
-		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee,
+		Kind: combatsvc.WeaponMissile, Type: itemsvc.TypeOtherMelee, Code: "club",
 	}
 	raceClub = combatsvc.Weapon{
 		Wielded: true, ID: "club", Name: localized.Of("Club"), BaseDamage: "1d6", DamageLarge: "1d3",
-		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee,
+		Kind: combatsvc.WeaponMelee, Type: itemsvc.TypeOtherMelee, Code: "club",
 	}
 	raceNeedles  = itemsvc.Item{ID: "needles", Name: localized.Of("Needles"), Category: itemsvc.CategoryAmmunition, AmmoKind: "needle", Count: 10}
 	raceQuarrels = itemsvc.Item{ID: "quarrels", Name: localized.Of("Quarrels"), Category: itemsvc.CategoryAmmunition, AmmoKind: "quarrel", Count: 10}
@@ -101,11 +101,11 @@ func ammoFor(w combatsvc.Weapon) *itemsvc.Item {
 }
 
 // raceChar is a level 5 fighter of race (STR 12, DEX 17: +2 missile) proficient with the weapon
-// type, so no penalty mixes in, with the race's weapon_to_hit trait as the fixture catalogue
+// (its catalogue code), so no penalty mixes in, with the race's weapon_to_hit trait as the fixture catalogue
 // defines it (none for a race without the trait).
-func raceChar(t *testing.T, race, weaponType string) charactersvc.View {
+func raceChar(t *testing.T, race, code string) charactersvc.View {
 	t.Helper()
-	v := profChar(t, "fighter", weaponType)
+	v := profChar(t, "fighter", code)
 	v.Race = race
 	r, ok := cataloguetest.Definitions(t).Race(race)
 	require.True(t, ok, "no race %s in the fixture", race)
@@ -199,7 +199,7 @@ func noRaceTrait(char charactersvc.View) charactersvc.View {
 func TestResolveAttack_Step22_3_RaceToHitByWeaponType(t *testing.T) {
 	for _, tc := range raceToHitCases {
 		t.Run(tc.name, func(t *testing.T) {
-			char := raceChar(t, tc.race, tc.weapon.Type)
+			char := raceChar(t, tc.race, tc.weapon.Code)
 			res := rollWith(t, char, tc.weapon)
 			base := rollWith(t, noRaceTrait(char), tc.weapon)
 
@@ -217,7 +217,7 @@ func TestResolveAttack_Step22_3_RaceBonusIsNoDamage(t *testing.T) {
 			continue
 		}
 		t.Run(tc.name, func(t *testing.T) {
-			char := raceChar(t, tc.race, tc.weapon.Type)
+			char := raceChar(t, tc.race, tc.weapon.Code)
 			res := rollWith(t, char, tc.weapon)
 			base := rollWith(t, noRaceTrait(char), tc.weapon)
 
@@ -238,7 +238,7 @@ func TestResolveAttack_Step22_3_RaceBonusIsNoDamage(t *testing.T) {
 func TestPreviewAttack_Step22_3_ShowsTheRaceBonus(t *testing.T) {
 	for _, tc := range raceToHitCases {
 		t.Run(tc.name, func(t *testing.T) {
-			char := raceChar(t, tc.race, tc.weapon.Type)
+			char := raceChar(t, tc.race, tc.weapon.Code)
 			res := rollWith(t, char, tc.weapon)
 
 			preview := func(c charactersvc.View) *combatsvc.AttackPreview {

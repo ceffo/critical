@@ -1,88 +1,89 @@
 import type {
+  WeaponOption,
   WeaponPickFigures,
   WeaponPickInput,
-  WeaponTypeOption,
 } from "@/types/character";
 
-/** What a plain weapon pick spends (ADR 0037 step 7: one slot per weapon type). A specialization
- * spends its type's `specializationSlots` from the options (step 9); the web never computes it. */
+/** What a plain weapon pick spends (ADR 0037 step 21.1: one slot per catalogue weapon). A
+ * specialization spends its weapon's `specializationSlots` from the options (step 21.5); the web
+ * never computes it. */
 export const PLAIN_WEAPON_SLOTS = 1;
 
-/** One row of the weapon editor: a weapon type, the class's option for it (absent for a kept
- * type the class may not pick), its pick if any, and whether the class may pick it. */
+/** One row of the weapon editor: a catalogue weapon code, the class's option for it (absent for a
+ * kept weapon the class may not pick), its pick if any, and whether the class may pick it. */
 export interface WeaponRow {
-  type: string;
-  option?: WeaponTypeOption;
+  code: string;
+  option?: WeaponOption;
   pick?: WeaponPickInput;
   allowed: boolean;
 }
 
 /**
- * The editor's rows: every type the class may pick, in the options' order, then each kept pick
- * outside that list (ADR 0037 step 7: kept, never added), so it can be seen and removed. A row is
- * allowed as the server's figures say (`allowed`), else when the class's list has it.
+ * The editor's rows: every weapon the class may pick, in the options' order, then each kept pick
+ * outside that list (ADR 0037 step 21.2: kept, never added), so it can be seen and removed. A row
+ * is allowed as the server's figures say (`allowed`), else when the class's list has it.
  */
 export function weaponRows(
-  types: WeaponTypeOption[],
+  weapons: WeaponOption[],
   picks: WeaponPickInput[],
   figures: WeaponPickFigures[] | undefined,
 ): WeaponRow[] {
-  const pickOf = (type: string) => picks.find((p) => p.type === type);
-  const allowedOf = (type: string, listed: boolean) =>
-    figures?.find((f) => f.type === type)?.allowed ?? listed;
-  const listed = new Set(types.map((o) => o.type));
+  const pickOf = (code: string) => picks.find((p) => p.code === code);
+  const allowedOf = (code: string, listed: boolean) =>
+    figures?.find((f) => f.code === code)?.allowed ?? listed;
+  const listed = new Set(weapons.map((o) => o.code));
   return [
-    ...types.map((o) => ({
-      type: o.type,
+    ...weapons.map((o) => ({
+      code: o.code,
       option: o,
-      pick: pickOf(o.type),
-      allowed: allowedOf(o.type, true),
+      pick: pickOf(o.code),
+      allowed: allowedOf(o.code, true),
     })),
     ...picks
-      .filter((p) => !listed.has(p.type))
+      .filter((p) => !listed.has(p.code))
       .map((p) => ({
-        type: p.type,
+        code: p.code,
         pick: p,
-        allowed: allowedOf(p.type, false),
+        allowed: allowedOf(p.code, false),
       })),
   ];
 }
 
-/** The picks with type added as a plain pick, at the end (the player's order). */
+/** The picks with code added as a plain pick, at the end (the player's order). */
 export function addWeapon(
   picks: WeaponPickInput[],
-  type: string,
+  code: string,
 ): WeaponPickInput[] {
-  if (picks.some((p) => p.type === type)) return picks;
-  return [...picks, { type, slots: PLAIN_WEAPON_SLOTS }];
+  if (picks.some((p) => p.code === code)) return picks;
+  return [...picks, { code, slots: PLAIN_WEAPON_SLOTS }];
 }
 
-/** The picks without type. */
+/** The picks without code. */
 export function removeWeapon(
   picks: WeaponPickInput[],
-  type: string,
+  code: string,
 ): WeaponPickInput[] {
-  return picks.filter((p) => p.type !== type);
+  return picks.filter((p) => p.code !== code);
 }
 
 /**
- * The picks with type specialized (`slots`, the options' specialization cost) or back to a plain
- * pick (a type not yet picked is added). A second specialization is the server's to refuse (step
- * 9): the editor shows its refusal on the row.
+ * The picks with code specialized (`slots`, the options' specialization cost) or back to a plain
+ * pick (a weapon not yet picked is added). A second specialization is the server's to refuse (step
+ * 21.5): the editor shows its refusal on the row.
  */
 export function specialize(
   picks: WeaponPickInput[],
-  type: string,
+  code: string,
   slots: number | null,
 ): WeaponPickInput[] {
   const next = slots ?? PLAIN_WEAPON_SLOTS;
-  if (!picks.some((p) => p.type === type))
-    return [...picks, { type, slots: next }];
-  return picks.map((p) => (p.type === type ? { ...p, slots: next } : p));
+  if (!picks.some((p) => p.code === code))
+    return [...picks, { code, slots: next }];
+  return picks.map((p) => (p.code === code ? { ...p, slots: next } : p));
 }
 
 /** Whether a pick is the specialization: the server takes a weapon pick of one slot (plain) or of
- * its type's specialization cost, never another count (ADR 0037 step 9). */
+ * its weapon's specialization cost, never another count (ADR 0037 step 21.5). */
 export function isSpecialization(pick: WeaponPickInput | undefined): boolean {
   return pick !== undefined && pick.slots > PLAIN_WEAPON_SLOTS;
 }

@@ -253,89 +253,286 @@
       ],
       "weaponPicks": [
         {
-          "type": "short_bow",
+          "code": "short_bow",
           "slots": 1,
           "allowed": true
         },
         {
-          "type": "dagger",
+          "code": "dagger",
           "slots": 1,
           "allowed": true
         },
         {
-          "type": "dart",
+          "code": "dart",
           "slots": 1,
           "allowed": true
         },
         {
-          "type": "long_sword",
+          "code": "long_sword",
           "slots": 1,
           "allowed": true
         },
         {
-          "type": "other_melee",
+          "code": "bastard_sword_two_handed",
           "slots": 1,
           "allowed": true
         }
       ],
-      "weaponTypes": [
+      "weapons": [
         {
-          "type": "long_bow",
+          "code": "composite_long_bow",
           "specializationSlots": 0
         },
         {
-          "type": "short_bow",
+          "code": "long_bow",
           "specializationSlots": 0
         },
         {
-          "type": "light_crossbow",
+          "code": "composite_short_bow",
           "specializationSlots": 0
         },
         {
-          "type": "heavy_crossbow",
+          "code": "short_bow",
           "specializationSlots": 0
         },
         {
-          "type": "hand_crossbow",
+          "code": "light_crossbow",
           "specializationSlots": 0
         },
         {
-          "type": "dagger",
+          "code": "heavy_crossbow",
           "specializationSlots": 0
         },
         {
-          "type": "dart",
+          "code": "hand_crossbow",
           "specializationSlots": 0
         },
         {
-          "type": "sling",
+          "code": "dagger",
           "specializationSlots": 0
         },
         {
-          "type": "staff_sling",
+          "code": "dart",
           "specializationSlots": 0
         },
         {
-          "type": "short_sword",
+          "code": "sling",
           "specializationSlots": 0
         },
         {
-          "type": "long_sword",
+          "code": "staff_sling",
           "specializationSlots": 0
         },
         {
-          "type": "other_melee",
+          "code": "short_sword",
           "specializationSlots": 0
         },
         {
-          "type": "other_thrown",
+          "code": "long_sword",
           "specializationSlots": 0
         },
         {
-          "type": "other_missile",
+          "code": "battle_axe",
+          "specializationSlots": 0
+        },
+        {
+          "code": "club",
+          "specializationSlots": 0
+        },
+        {
+          "code": "footmans_flail",
+          "specializationSlots": 0
+        },
+        {
+          "code": "footmans_mace",
+          "specializationSlots": 0
+        },
+        {
+          "code": "footmans_pick",
+          "specializationSlots": 0
+        },
+        {
+          "code": "horsemans_flail",
+          "specializationSlots": 0
+        },
+        {
+          "code": "horsemans_mace",
+          "specializationSlots": 0
+        },
+        {
+          "code": "horsemans_pick",
+          "specializationSlots": 0
+        },
+        {
+          "code": "knife",
+          "specializationSlots": 0
+        },
+        {
+          "code": "heavy_horse_lance",
+          "specializationSlots": 0
+        },
+        {
+          "code": "light_horse_lance",
+          "specializationSlots": 0
+        },
+        {
+          "code": "jousting_lance",
+          "specializationSlots": 0
+        },
+        {
+          "code": "medium_horse_lance",
+          "specializationSlots": 0
+        },
+        {
+          "code": "mancatcher",
+          "specializationSlots": 0
+        },
+        {
+          "code": "morning_star",
+          "specializationSlots": 0
+        },
+        {
+          "code": "awl_pike",
+          "specializationSlots": 0
+        },
+        {
+          "code": "bardiche",
+          "specializationSlots": 0
+        },
+        {
+          "code": "bec_de_corbin",
+          "specializationSlots": 0
+        },
+        {
+          "code": "bill_guisarme",
+          "specializationSlots": 0
+        },
+        {
+          "code": "fauchard",
+          "specializationSlots": 0
+        },
+        {
+          "code": "fauchard_fork",
+          "specializationSlots": 0
+        },
+        {
+          "code": "glaive",
+          "specializationSlots": 0
+        },
+        {
+          "code": "glaive_guisarme",
+          "specializationSlots": 0
+        },
+        {
+          "code": "guisarme",
+          "specializationSlots": 0
+        },
+        {
+          "code": "guisarme_voulge",
+          "specializationSlots": 0
+        },
+        {
+          "code": "halberd",
+          "specializationSlots": 0
+        },
+        {
+          "code": "hook_fauchard",
+          "specializationSlots": 0
+        },
+        {
+          "code": "lucern_hammer",
+          "specializationSlots": 0
+        },
+        {
+          "code": "military_fork",
+          "specializationSlots": 0
+        },
+        {
+          "code": "partisan",
+          "specializationSlots": 0
+        },
+        {
+          "code": "ranseur",
+          "specializationSlots": 0
+        },
+        {
+          "code": "spetum",
+          "specializationSlots": 0
+        },
+        {
+          "code": "voulge",
+          "specializationSlots": 0
+        },
+        {
+          "code": "quarterstaff",
+          "specializationSlots": 0
+        },
+        {
+          "code": "scourge",
+          "specializationSlots": 0
+        },
+        {
+          "code": "sickle",
+          "specializationSlots": 0
+        },
+        {
+          "code": "spear",
+          "specializationSlots": 0
+        },
+        {
+          "code": "bastard_sword_one_handed",
+          "specializationSlots": 0
+        },
+        {
+          "code": "bastard_sword_two_handed",
+          "specializationSlots": 0
+        },
+        {
+          "code": "broad_sword",
+          "specializationSlots": 0
+        },
+        {
+          "code": "khopesh",
+          "specializationSlots": 0
+        },
+        {
+          "code": "scimitar",
+          "specializationSlots": 0
+        },
+        {
+          "code": "two_handed_sword",
+          "specializationSlots": 0
+        },
+        {
+          "code": "trident",
+          "specializationSlots": 0
+        },
+        {
+          "code": "warhammer",
+          "specializationSlots": 0
+        },
+        {
+          "code": "whip",
+          "specializationSlots": 0
+        },
+        {
+          "code": "hand_axe",
+          "specializationSlots": 0
+        },
+        {
+          "code": "harpoon",
+          "specializationSlots": 0
+        },
+        {
+          "code": "javelin",
+          "specializationSlots": 0
+        },
+        {
+          "code": "blowgun",
           "specializationSlots": 0
         }
-      ]
+      ],
+      "weaponRedo": []
     }
   },
   "missing": [],

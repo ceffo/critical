@@ -90,8 +90,8 @@ export type ItemState = "carried" | "worn" | "wielded";
 
 /**
  * A class warning (ADR 0033 step 20, itemsvc.Warn*): the code the web words; nothing is refused.
- * weapon_type_missing: a wielded weapon with no weapon type, so no proficiency is judged (ADR 0037
- * step 8). dual_class_old_ability: a piece only a dual-class's old class allows, before the new class
+ * weapon_code_missing: a wielded weapon with no catalogue code, so no pick can name it and its
+ * attacks take the non-proficiency penalty (ADR 0037 step 21.4). dual_class_old_ability: a piece only a dual-class's old class allows, before the new class
  * passes it (ADR 0042 step 13). bow_too_strong: a wielded bow built for exceptional Strength (18/01
  * or more) for a character without it (ADR 0002 step 4.1, a bend bars roll the app does not make).
  */
@@ -99,7 +99,7 @@ export type ClassWarningCode =
   | "armour_not_allowed"
   | "weapon_not_allowed"
   | "hands"
-  | "weapon_type_missing"
+  | "weapon_code_missing"
   | "dual_class_old_ability"
   | "bow_too_strong";
 

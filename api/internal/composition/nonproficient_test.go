@@ -23,11 +23,15 @@ func hasNonproficient(mods []modView) bool {
 	return false
 }
 
-// ADR 0037 step 8 through the API on the fixture's seed character: Kelsen's weapon picks are his
-// weapons' five types (step 16.2, the seed's weapon_proficiencies), so none of his six weapons
-// takes the non-proficiency penalty, in the preview or in the roll. Once the long sword's pick is
-// swapped for a sling's, the long sword's preview and roll both carry the rogue's -3 as the named
-// modifier nonproficient, with the weapon type as its detail, and the same effective THAC0.
+// ADR 0037 step 8 through the API on the fixture's seed character, narrowed by step 21.9: Kelsen's
+// weapon picks are his weapons' codes (step 21.8.7, the seed's weapon_proficiencies), so none of
+// his coded weapons takes the non-proficiency penalty, in the preview or in the roll; his Mace +1
+// matches no catalogue row, so it has no code and takes the rogue's -3 (step 21.4, its detail
+// empty), and so does his bastard sword on the fixture catalogue, whose placeholder names match no
+// bastard sword row (the real artifact's do: seedcheck's TestKelsen_Step21_8_WeaponPicksAreHisWeapons).
+// Once the long sword's pick is swapped for a sling's, the long sword's preview and roll both carry
+// the -3 as the named modifier nonproficient, with the weapon's code as its detail, and the same
+// effective THAC0.
 func TestKelsen_Step8_OwnWeaponsTakeNoPenalty(t *testing.T) {
 	tb, _ := newTable(t)
 	root, _ := tb.login("")
@@ -59,9 +63,13 @@ func TestKelsen_Step8_OwnWeaponsTakeNoPenalty(t *testing.T) {
 		return r
 	}
 
-	for _, w := range []string{"bastard_sword", "longsword", "shortbow", "dagger", "mace", "darts"} {
+	for _, w := range []string{"longsword", "shortbow", "dagger", "darts"} {
 		v := hold(w)
 		assert.False(t, hasNonproficient(v.Preview.Modifiers), "%s: proficient through his picks", w)
+	}
+	for _, w := range []string{"mace", "bastard_sword"} {
+		v := hold(w)
+		assert.Contains(t, v.Preview.Modifiers, modView{Kind: "nonproficient", Value: -3}, "%s has no catalogue code", w)
 	}
 	for _, body := range []string{
 		`{"weapon_id":"longsword","target_ac":5,"target_size":"sm"}`,
@@ -70,8 +78,8 @@ func TestKelsen_Step8_OwnWeaponsTakeNoPenalty(t *testing.T) {
 		assert.False(t, hasNonproficient(roll(body).Modifiers), body)
 	}
 
-	swap := `{"weapon":[{"type":"short_bow","slots":1},{"type":"dagger","slots":1},{"type":"dart","slots":1},` +
-		`{"type":"sling","slots":1},{"type":"other_melee","slots":1}]}`
+	swap := `{"weapon":[{"code":"short_bow","slots":1},{"code":"dagger","slots":1},{"code":"dart","slots":1},` +
+		`{"code":"sling","slots":1},{"code":"bastard_sword_two_handed","slots":1}]}`
 	require.Equal(t, http.StatusOK, tb.showing(root, kelsen, "PUT", "/api/proficiencies", swap, nil))
 
 	v := hold("longsword")

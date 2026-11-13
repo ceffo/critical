@@ -15,8 +15,8 @@ const (
 	// TraitNoExceptionalStrength: the race never rolls an exceptional
 	// Strength (ADR 0030 step 9). No params.
 	TraitNoExceptionalStrength = "no_exceptional_strength"
-	// TraitWeaponToHit: a to-hit bonus with weapon types (ADR 0030 step 22.3,
-	// not computed yet). Params WeaponTypes and Bonus.
+	// TraitWeaponToHit: a to-hit bonus with weapon types (ADR 0030 step 22.3;
+	// the attack reads it, combatsvc). Params WeaponTypes and Bonus.
 	TraitWeaponToHit = "weapon_to_hit"
 )
 

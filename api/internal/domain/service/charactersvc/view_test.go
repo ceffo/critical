@@ -47,6 +47,11 @@ func TestView_Step6_ProjectsTheDerivedBlock(t *testing.T) {
 			assert.Equal(t, d.THAC0, v.THAC0)
 			assert.Equal(t, d.Saves, v.Saves)
 			assert.Equal(t, d.RaceSaveBonus, v.RaceSaveBonus)
+			assert.Equal(t, d.RaceToHitTypes, v.RaceToHitTypes)
+			assert.Equal(t, d.RaceToHitBonus, v.RaceToHitBonus)
+			if c.Race == "elf" {
+				require.NotZero(t, v.RaceToHitBonus, "the elf's weapon_to_hit trait is projected")
+			}
 			assert.Equal(t, d.MagicDefence, v.MagicDefence)
 			assert.Equal(t, d.ClassSaveBonuses, v.ClassSaveBonuses)
 			assert.Equal(t, d.SpellImmunities, v.SpellImmunities)

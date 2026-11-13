@@ -654,6 +654,51 @@ func TestRaceTraits_Step4_ConSaveBonusFromTheTrait(t *testing.T) {
 	}
 }
 
+// ADR 0030 step 22.3 through ADR 0040 step 4: a race listing the weapon_to_hit trait gets its
+// weapon types and bonus in the derived block, whatever its id; a race without it (the human, an
+// elf whose trait is removed) none. The elf and halfling rows are the fixture catalogue's.
+func TestDerive_Step22_3_RaceToHitFromTheTrait(t *testing.T) {
+	book := cataloguetest.Definitions(t)
+	var races []classes.Race
+	for _, r := range book.Races() {
+		if r.ID == "elf" {
+			r.Traits = nil
+		}
+		races = append(races, r)
+	}
+	giant := book.Races()[0]
+	giant.ID, giant.Traits = "test_giant", []classes.Trait{{Kind: classes.TraitWeaponToHit, WeaponTypes: []string{"other_melee"}, Bonus: 2}}
+	defs, err := classes.New(book.Classes(), book.GroupDefs(), append(races, giant))
+	require.NoError(t, err)
+
+	for _, tc := range []struct {
+		defs  *classes.Registry
+		race  string
+		types []string
+		bonus int
+	}{
+		{defs, "test_giant", []string{"other_melee"}, 2},
+		{defs, "elf", nil, 0},
+		{book, "elf", []string{"long_bow", "short_bow", "short_sword", "long_sword"}, 1},
+		{book, "halfling", []string{"sling", "dagger", "dart", "other_thrown"}, 1},
+		{book, "human", nil, 0},
+	} {
+		t.Run(tc.race, func(t *testing.T) {
+			c := kelsen()
+			c.Race = tc.race
+			r := newRules(t)
+			r.EXPECT().Definitions().Unset()
+			r.EXPECT().Definitions().Return(tc.defs, nil).Maybe()
+			expectKelsenRules(r, 1_293_418, 15)
+			r.EXPECT().ConSaveBonusFor(mock.Anything).Return(4, nil).Maybe()
+			got, err := charactersvc.Derive(c, nil, "", r)
+			require.NoError(t, err)
+			assert.Equal(t, tc.types, got.RaceToHitTypes)
+			assert.Equal(t, tc.bonus, got.RaceToHitBonus)
+		})
+	}
+}
+
 // ADR 0046 step 2.1: PHB Table 2 is read once per derivation, whatever is
 // asked of the view afterwards (the AC and the attack take the two columns
 // from it).

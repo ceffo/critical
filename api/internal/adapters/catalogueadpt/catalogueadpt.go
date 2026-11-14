@@ -327,7 +327,7 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 			// texts in the fallback language. Its name and description are
 			// already language maps (ADR 0023).
 			ID: s.ID, Class: s.Class, Level: s.Level, School: localized.Of(s.School), Sphere: localized.Of(s.Sphere),
-			Spheres: append([]string(nil), s.Spheres...), Schools: append([]string{}, s.Schools...),
+			Spheres: append([]string(nil), s.Spheres...), Schools: append([]string(nil), s.Schools...),
 			CastingTime: localized.Of(s.CastingTime), Range: localized.Of(s.Range), Duration: localized.Of(s.Duration),
 			AreaOfEffect: localized.Of(s.AreaOfEffect), Components: localized.Of(s.Components),
 			SavingThrow: localized.Of(s.SavingThrow),

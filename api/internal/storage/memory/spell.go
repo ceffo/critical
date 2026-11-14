@@ -62,7 +62,7 @@ func (p Spells) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell
 			}
 			out = append(out, clone(spellsvc.Spell{
 				ID: sp.ID, Class: sp.Class, Level: sp.Level, Source: sp.Source,
-				Name: sp.Name, School: sp.School, Sphere: sp.Sphere, Stats: sp.Stats,
+				Name: sp.Name, School: sp.School, Sphere: sp.Sphere, Stats: sp.Stats, Schools: sp.Schools,
 			}))
 		}
 		return nil

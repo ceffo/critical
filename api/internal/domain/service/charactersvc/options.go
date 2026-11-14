@@ -223,9 +223,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 		ScoreMethods: slices.Clone(ruletablesvc.ScoreMethods), RaceAdjustments: make([]RaceAdjustmentOption, 0, len(races)),
 	}
 	for _, def := range defs.Classes() {
-		// Only the classes offered: a class not yet creatable (ADR 0050, the specialist wizards before
-		// their engine) is in no character, multi-class or not.
-		if def.NoMultiClass && def.Implemented() {
+		if def.NoMultiClass {
 			out.NoMultiClass = append(out.NoMultiClass, def.ID)
 		}
 	}

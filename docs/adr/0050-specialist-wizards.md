@@ -137,7 +137,11 @@ code (ADR 0040 step 10).
       (no school is silently dropped).
    3. Priest spells carry `schools` too (the same mapping); no rule reads them (PHB p.87: a priest
       spell's school is for reference).
-   4. The API serves the codes with the spell (lookup, spellbook, preparation); the web words them.
+   4. The API serves the codes with the spell (lookup, spellbook, preparation); the web words them. Built:
+      the import stores them (`spells.schools`, a JSON list, migration 044) and the spell payload carries
+      `schools` (`[]` for none), `TestImportCatalogue_Step31_SchoolsAreStoredWithTheSpell`,
+      `TestSpells_ReadTheStoredSchoolCodes`, `TestSpellToDTO_ServesTheSchoolCodes`; the web wording is the
+      UI item (step 17.5).
    Tests (rulebooks repo): the builder's case for each mapping rule and the unknown-token failure;
    (API) `TestParse_Step1_ASpellReadsItsSchools` (catalogueadpt).
 2. **The feature kind `school_specialization`** (amends [ADR 0040](0040-classes-are-data.md) step

@@ -32,4 +32,6 @@ type Spell struct {
 	Description  sql.NullInt64
 	Source       sql.NullString
 	Stats        sql.NullString
+	// the spell's school codes (ADR 0050): ["abjuration", "illusion", ...], [] for no PHB school, NULL: not imported from format 23 yet
+	Schools sql.NullString
 }

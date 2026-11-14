@@ -227,6 +227,11 @@ export interface Spell {
   class: string;
   level: number;
   school: LocalizedText;
+  /**
+   * The spell's school codes (ADR 0050 step 1.4): the PHB's nine schools, language-neutral; [] for a
+   * spell of no PHB school. The server always sends it; no screen words it yet (the UI item of ADR 0050).
+   */
+  schools?: string[];
   sphere: LocalizedText;
   casting_time: LocalizedText;
   range: LocalizedText;

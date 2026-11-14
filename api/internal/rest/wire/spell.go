@@ -58,6 +58,10 @@ type SpellDTO struct {
 	// Source is the book code of the English text (PHB, TOM, ...; WEB when
 	// no book was matched).
 	Source string `json:"source"`
+	// Schools are the spell's school codes (ADR 0050 step 1.4): the PHB's nine schools,
+	// language-neutral, the web words them; [] (never null) for a spell of no PHB school. School
+	// stays the book's raw text.
+	Schools []string `json:"schools"`
 
 	// Marked are the gameplay values of the description and of the six stat texts
 	// (ADR 0021 step 15): by field name, then language code, the text as spans that
@@ -100,7 +104,7 @@ func SpellToDTO(s spellsvc.Spell, casterLevel int) SpellDTO {
 		CastingTime: Text(s.CastingTime), Range: Text(s.Range), Duration: Text(s.Duration),
 		AreaOfEffect: Text(s.AreaOfEffect), Components: Text(s.Components),
 		SavingThrow: Text(s.SavingThrow), Description: Text(s.Description), Source: s.Source,
-		Stats: s.Stats, CasterLevel: casterLevel,
+		Stats: s.Stats, CasterLevel: casterLevel, Schools: append([]string{}, s.Schools...),
 		Marked: markValues(s),
 	}
 	if casterLevel > 0 {

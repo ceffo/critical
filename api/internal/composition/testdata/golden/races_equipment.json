@@ -3792,7 +3792,14 @@
       "halfling"
     ],
     "NoMultiClass": [
-      "bard"
+      "bard",
+      "abjurer",
+      "conjurer",
+      "diviner",
+      "enchanter",
+      "invoker",
+      "necromancer",
+      "transmuter"
     ],
     "DualClassOldPrime": 15,
     "DualClassNewPrime": 17

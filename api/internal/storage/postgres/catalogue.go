@@ -272,6 +272,10 @@ func upsertSpells(ctx context.Context, q storeq.Querier, cat catalogue.Catalogue
 		if err != nil {
 			return fmt.Errorf("spell %q: %w", s.ID, err)
 		}
+		schools, err := json.Marshal(append([]string{}, s.Schools...))
+		if err != nil {
+			return fmt.Errorf("spell %q: schools: %w", s.ID, err)
+		}
 		old := keys[s.ID]
 		ids := make([]sql.NullInt64, 0, 10)
 		for i, t := range spellTexts(s) {
@@ -290,6 +294,7 @@ func upsertSpells(ctx context.Context, q storeq.Querier, cat catalogue.Catalogue
 			Source: sql.NullString{String: s.Source, Valid: true}, Stats: sql.NullString{String: stats, Valid: true},
 			Name: ids[0], Description: ids[1], School: ids[2], Sphere: ids[3], CastingTime: ids[4], Range: ids[5],
 			Duration: ids[6], AreaOfEffect: ids[7], Components: ids[8], SavingThrow: ids[9],
+			Schools: sql.NullString{String: string(schools), Valid: true},
 		}); err != nil {
 			return fmt.Errorf("upsert spell %q: %w", s.ID, err)
 		}

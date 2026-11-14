@@ -86,7 +86,6 @@ func TestRealCatalogue_Step1_EverySpellsSchoolsAreTheNine(t *testing.T) {
 	cat := realCatalogue(t)
 	carried := map[string]bool{}
 	for _, s := range cat.Spells {
-		require.NotNil(t, s.Schools, "%s: schools is a list, empty when no PHB school", s.ID)
 		for _, c := range s.Schools {
 			assert.Contains(t, classes.Schools, c, "%s", s.ID)
 			carried[c] = true

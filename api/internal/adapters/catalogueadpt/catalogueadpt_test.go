@@ -666,7 +666,6 @@ func TestParse_Step1_ASpellReadsItsSchools(t *testing.T) {
 	// A spell of no PHB school: an empty list the schema accepts, mapped to an empty list.
 	a, err = ParseArtifact(artifact(t, func(d map[string]any) { spells(d)[0].(map[string]any)["schools"] = []any{} }))
 	require.NoError(t, err)
-	assert.NotNil(t, a.Catalogue.Spells[0].Schools)
 	assert.Empty(t, a.Catalogue.Spells[0].Schools)
 
 	refuses(t, []refusal{

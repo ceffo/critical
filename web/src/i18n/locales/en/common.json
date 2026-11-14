@@ -36,7 +36,8 @@
         "nonWeaponSlots_other": "{{count}} proficiency slots",
         "skillPoints_one": "{{count}} skill point",
         "skillPoints_other": "{{count}} skill points",
-        "freeSpell": "1 free level {{spellLevel}} spell"
+        "freeSpell": "1 free level {{spellLevel}} spell",
+        "freeSpellSchool": "1 free level {{spellLevel}} spell of his school"
       },
       "settled": {
         "weaponSlots": "Weapon proficiencies",
@@ -49,7 +50,8 @@
         "weapon": "Choose the weapon proficiencies",
         "nonWeapon": "Choose the proficiencies",
         "skillPoints": "Spend the skill points",
-        "freeSpell": "Pick the free level {{spellLevel}} spell in the spell lookup"
+        "freeSpell": "Pick the free level {{spellLevel}} spell in the spell lookup",
+        "freeSpellSchool": "Pick the free level {{spellLevel}} spell of his school in the spell lookup"
       },
       "dismissTitle": "Close what the level grants",
       "dieErrors": {
@@ -72,7 +74,8 @@
       "frozen": "Frozen",
       "frozenTitle": "{{class}} left at level {{level}}: no XP and no new level while it is frozen",
       "open": "{{class}}, level {{level}}: open the experience",
-      "limit": "Above the race’s level limit ({{max}})"
+      "limit": "Above the race’s level limit ({{max}})",
+      "specialistRace": "Not one of the races the book lists for this specialist ({{race}}): allowed, the DM decides"
     }
   },
   "language": {
@@ -749,6 +752,11 @@
     "prepareShort": "Prepare",
     "prepareTitle": "Prepare today's spells",
     "preparedCount": "{{count}} / {{max}} prepared",
+    "preparedCountSchool": "{{count}} / {{max}} + {{school}} prepared",
+    "schoolSlot": "{{max}} + {{school}}",
+    "schoolSlotHint": "{{max}} slots, plus {{school}} for a spell of his school",
+    "opposed": "Opposed school",
+    "opposedHint": "Spell of an opposed school: kept in the spellbook, never prepared",
     "save": "Save preparation",
     "saveShort": "Save",
     "cancel": "Cancel",
@@ -861,6 +869,8 @@
       "conjuration": "Conjuration",
       "summoning": "Summoning",
       "conjuration_summoning": "Conjuration/Summoning",
+      "lesser_divination": "Lesser divination",
+      "greater_divination": "Greater divination",
       "divination": "Divination",
       "enchantment": "Enchantment",
       "charm": "Charm",
@@ -1321,6 +1331,10 @@
       "add": "Add to spellbook",
       "addTitle": "Write this spell in the spellbook with no roll (a DM gift, a training, a fix)",
       "free": "Level {{level}}'s free spell",
+      "freeSchool": "Level {{level}}'s free spell, of his school",
+      "chance": "Chance to learn: {{chance}}%, {{school}} for a spell of his school, {{other}} for any other",
+      "adjusted": "Table {{base}}%, school {{adjustment}}",
+      "knownOpposed": "In the spellbook, opposed school",
       "addFreeTitle": "Write this spell in the spellbook as level {{level}}'s free spell, with no roll",
       "refused": {
         "spell_level_above_class": "The class cannot learn spells above level {{classMax}}.",
@@ -2285,7 +2299,8 @@
       "alignment_not_allowed": "This alignment is not allowed for a {{className}}; kept as recorded.",
       "height_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
       "weight_outside_range": "Outside the usual range for this race ({{min}} to {{max}}): the DM decides.",
-      "age_outside_range": "Outside the usual range for this race ({{min}} to {{max}} years): the DM decides."
+      "age_outside_range": "Outside the usual range for this race ({{min}} to {{max}} years): the DM decides.",
+      "specialist_race": "The race ({{race}}) is not one the book lists for this specialist: allowed, the DM decides."
     },
     "unitHint": {
       "height": {
@@ -3119,6 +3134,7 @@
         "illusionist": "an illusionist",
         "invoker": "an invoker",
         "necromancer": "a necromancer",
+        "psionicist": "a psionicist",
         "transmuter": "a transmuter"
       }
     },
@@ -3229,6 +3245,7 @@
       "allBut": "Any but {{list}}",
       "races": "Races",
       "allRaces": "All",
+      "specialistRaces": "Specialty races",
       "minimums": "Minimums",
       "minimumUnmet": "Score under the minimum"
     },

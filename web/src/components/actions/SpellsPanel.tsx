@@ -23,6 +23,7 @@ import { slotDots } from "@/lib/slotDots";
 import { Dots } from "./Dots";
 import type { CastOptions } from "@/api/spells";
 import { LongRestButton } from "./LongRestButton";
+import { SchoolSlot } from "./SchoolMarks";
 import { PrepareEditor } from "./PrepareEditor";
 import { SpellDetailsDialog } from "./SpellDetailsDialog";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
@@ -226,8 +227,13 @@ export function SpellsPanel() {
       { ...slot, index },
     ]);
   });
-  const maxOf = (level: number) =>
-    info.limits.find((l) => l.level === level)?.max;
+  // The level's preparation limit: the allotment and a specialist's school slot beside it (ADR
+  // 0050 step 10), both the server's.
+  const limitOf = (level: number) => info.limits.find((l) => l.level === level);
+  const maxOf = (level: number) => {
+    const l = limitOf(level);
+    return l && l.max + (l.school ?? 0);
+  };
   const levels = [...byLevel.keys()].sort((a, b) => a - b);
   // ADR 0042 step 14: the slots carry their class entry when the character has two spellcasting
   // classes; the editor then prepares one entry at a time.
@@ -299,6 +305,13 @@ export function SpellsPanel() {
                   <h3 className="section-label">
                     {t("spellSlots.level", { level })}
                   </h3>
+                  {(limitOf(level)?.school ?? 0) > 0 && (
+                    <SchoolSlot
+                      max={limitOf(level)?.max ?? 0}
+                      school={limitOf(level)?.school ?? 0}
+                      testId={`school-slot-${level}`}
+                    />
+                  )}
                   <span className="ml-auto">
                     <SlotDots level={level} slots={list} max={maxOf(level)} />
                   </span>

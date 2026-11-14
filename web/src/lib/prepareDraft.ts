@@ -50,13 +50,18 @@ export function removeOne(draft: string[], id: string): string[] {
 export interface LevelBudget {
   level: number;
   count: number;
+  /** The allotment. */
   max: number;
+  /** A specialist's school slot of the level (ADR 0050 step 10), 0 for anyone else: the level holds
+   * `max + school` spells, the server decides which ones. */
+  school: number;
 }
 
 /**
  * The draft's levels (ADR 0027 step 11.3 and 11.5): every level the server gives the character a
  * preparation limit above 0, plus any level the draft holds a spell at, ascending. `max` is the
- * server's count; nothing is computed here but the number of copies per level.
+ * server's count (`max`, with the school slot beside it); nothing is computed here but the number of
+ * copies per level.
  */
 export function levelBudgets(
   draft: string[],
@@ -75,14 +80,15 @@ export function levelBudgets(
       level,
       count,
       max: limits.find((l) => l.level === level)?.max ?? 0,
+      school: limits.find((l) => l.level === level)?.school ?? 0,
     }))
     .sort((a, b) => a.level - b.level);
 }
 
 /**
  * The levels over budget (ADR 0027 step 11.5): "Enregistrer" stays disabled while this is not empty.
- * The browser only compares the two numbers the server gave; the server still refuses the save.
+ * The browser only compares the numbers the server gave (the allotment and the school slot beside it); the server still refuses the save.
  */
 export function overBudget(budgets: LevelBudget[]): number[] {
-  return budgets.filter((b) => b.count > b.max).map((b) => b.level);
+  return budgets.filter((b) => b.count > b.max + b.school).map((b) => b.level);
 }

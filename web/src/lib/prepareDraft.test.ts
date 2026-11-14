@@ -64,22 +64,36 @@ const limits: LevelLimit[] = [
 describe("levelBudgets", () => {
   it("lists the levels with a limit above 0 and those the draft holds, with the server's max", () => {
     expect(levelBudgets(["alarm", "haste"], levelled, limits)).toEqual([
-      { level: 1, count: 1, max: 1 },
-      { level: 2, count: 0, max: 2 },
-      { level: 3, count: 1, max: 0 },
+      { level: 1, count: 1, max: 1, school: 0 },
+      { level: 2, count: 0, max: 2, school: 0 },
+      { level: 3, count: 1, max: 0, school: 0 },
     ]);
   });
   it("counts copies and ignores ids outside the spellbook", () => {
     expect(
       levelBudgets(["alarm", "alarm", "shield"], levelled, limits),
     ).toEqual([
-      { level: 1, count: 2, max: 1 },
-      { level: 2, count: 0, max: 2 },
+      { level: 1, count: 2, max: 1, school: 0 },
+      { level: 2, count: 0, max: 2, school: 0 },
     ]);
+  });
+  it("carries a specialist's school slot beside the allotment (ADR 0050 step 10)", () => {
+    expect(
+      levelBudgets(["alarm"], levelled, [{ level: 1, max: 1, school: 1 }]),
+    ).toEqual([{ level: 1, count: 1, max: 1, school: 1 }]);
   });
 });
 
 describe("overBudget", () => {
+  it("allows the allotment plus the school slot, and no more", () => {
+    const l = [{ level: 1, max: 1, school: 1 }];
+    expect(
+      overBudget(levelBudgets(["alarm", "identify"], levelled, l)),
+    ).toEqual([]);
+    expect(
+      overBudget(levelBudgets(["alarm", "identify", "alarm"], levelled, l)),
+    ).toEqual([1]);
+  });
   it("is empty at or under every limit: Enregistrer is enabled", () => {
     expect(
       overBudget(

@@ -13,6 +13,7 @@ import {
   blockedReason,
   buildBody,
   classesFor,
+  classOptions,
   draftSpellbook,
   emptyPlacement,
   exceptionalOffered,
@@ -986,5 +987,30 @@ describe("classesFor", () => {
   it("offers every class when the server names none (an older server)", () => {
     const old = { classes: options.classes } as unknown as CreationOptions;
     expect(classesFor(old, "multi")).toHaveLength(3);
+  });
+});
+
+describe("classOptions", () => {
+  const options = {
+    classes: [{ class: "fighter" }, { class: "illusionist" }],
+    noMultiClass: [],
+    multiclassRaces: { illusionist: ["gnome"] },
+  } as unknown as CreationOptions;
+
+  it("keeps the held class, flagged, when a race change drops it from the list (ADR 0050 step 14.3)", () => {
+    expect(classOptions(options, "multi", "elf", "illusionist")).toEqual([
+      { class: "fighter", held: false },
+      { class: "illusionist", held: true },
+    ]);
+  });
+
+  it("adds nothing when the held class is still offered or the row is empty", () => {
+    expect(classOptions(options, "multi", "gnome", "illusionist")).toEqual([
+      { class: "fighter", held: false },
+      { class: "illusionist", held: false },
+    ]);
+    expect(classOptions(options, "multi", "elf", "")).toEqual([
+      { class: "fighter", held: false },
+    ]);
   });
 });

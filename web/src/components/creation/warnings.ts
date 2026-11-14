@@ -47,6 +47,13 @@ export function useWarningText() {
           max: show(f, w.max),
         });
       }
+      case "specialist_race":
+        // ADR 0050 step 14.1: the race is not one PHB Table 22 lists for the specialist; kept.
+        return w.race
+          ? t("details.warnings.specialist_race", {
+              race: t(`details.races.${w.race}`, { defaultValue: w.race }),
+            })
+          : null;
       default:
         return null;
     }

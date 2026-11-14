@@ -110,4 +110,35 @@ describe("PrepareEditor", () => {
     await user.click(save());
     expect(onSave).toHaveBeenCalledWith(["alarm"]);
   });
+
+  it("shows a specialist's school slot as '3 + 1', holds one more spell, and marks an opposed spell that cannot be added (ADR 0050)", async () => {
+    const onSave = vi.fn();
+    const book: SpellbookEntry[] = [
+      ...spellbook,
+      { id: "sleep", name: "Sleep", level: 1, opposed: true },
+    ];
+    const { user } = await renderApp(
+      <PrepareEditor
+        spellbook={book}
+        limits={[{ level: 1, max: 3, school: 1 }]}
+        initial={["alarm", "alarm", "alarm"]}
+        busy={false}
+        onSave={onSave}
+        onCancel={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("school-slot-1")).toHaveTextContent("3 + 1");
+    expect(screen.getByTestId("prepared-dots-1")).toHaveAttribute(
+      "data-state",
+      "aaae",
+    );
+    await user.click(screen.getByRole("button", { name: "Add Burning Hands" }));
+    expect(save()).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Add Chromatic Orb" }));
+    expect(save()).toBeDisabled();
+    expect(screen.getByTestId("opposed-sleep")).toHaveTextContent(
+      "Opposed school",
+    );
+    expect(screen.getByRole("button", { name: "Add Sleep" })).toBeDisabled();
+  });
 });

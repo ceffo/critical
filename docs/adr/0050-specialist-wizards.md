@@ -257,26 +257,30 @@ code (ADR 0040 step 10).
     entry's realized level) is 1 or more, a specialist entry has **one more slot** of that level that
     holds only a spell of his school (PHB p.32). A preparation of that level is accepted when its
     spells number at most the allotment + 1 **and** its spells that are not of his school number at
-    most the allotment; otherwise it is refused with nothing written, `school_slot_needs_school_spell`
-    (400; a row in `internal/render`, `apiError` en and fr). No slot is marked: the stored slot list
-    and the cast are unchanged (ADR 0008 steps 1 and 6), so a cast uses any slot of the level. The
+    most the allotment; otherwise it is refused with nothing written. More spells than the allotment
+    + 1 keep the existing `prep_over_limit` (409, a mage's code, the limit counted with the school
+    slot); a count that fits but holds too few spells of his school is
+    `school_slot_needs_school_spell` (400; a row in `internal/render`, `apiError` en and fr). No
+    slot is marked: the stored slot list and the cast are unchanged (ADR 0008 steps 1 and 6), so a cast uses any slot of the level. The
     extra slots a spell grants (ADR 0008 step 9) are not counted here and hold any spell. The
     derived slots per level (the view's, ADR 0046 step 4.4) carry the school slot separately
-    (`school: 1`), so the web shows "2 + 1" and never adds it itself. For a multi-class gnome
-    fighter/illusionist the illusionist entry's progression gets it (ADR 0042 step 14).
+    (`school: 1`), so the web shows "2 + 1" and never adds it itself; so do the preparation
+    editor's limits (`GET /api/spells/preparation`, each `limits` row's `school` beside the
+    allotment `max`). For a multi-class gnome fighter/illusionist the illusionist entry's progression gets it (ADR 0042 step 14).
     Built: `spellbook.SchoolSlots` (one per spell level with an allotment, `SchoolSlotsPerLevel`),
     derived per entry from the class's `school_specialization` (`EntryDerived.SchoolSlots`; the
     character's `SchoolSlots` follow the same entry as `SpellSlots`) and served as each
-    `spellSlots` row's `school` (absent for anyone else). A preparation over the allotment + 1 is
-    refused with the existing `prep_over_limit` (the limit counted with the school slot, so a level
-    with no allotment still refuses any spell); `school_slot_needs_school_spell` is the one that
-    fits the count but holds too few spells of his school. prepsvc reads the spell's school codes
+    `spellSlots` row's `school` (absent for anyone else), and as prepsvc `LevelLimit.School`, each
+    preparation `limits` row's `school` (absent likewise). A level with no allotment has no school
+    slot, so it still refuses any spell with `prep_over_limit`. prepsvc reads the spell's school codes
     from the spellbook entry and the specialization from the character's spellbook block.
     Tests: `TestPrepare_Step10_TheSchoolSlotTakesOnlyASchoolSpell` (prepsvc: allotment + 1 with one
     school spell accepted; allotment + 1 with none refused; allotment + 2 refused; a level with no
     allotment has no school slot), `TestDerive_Step10_TheSchoolSlotPerOpenLevel` (charactersvc),
     `TestSchoolSlots_Step10_OnePerSpellLevelWithAnAllotment` (spellbook),
-    `TestCharacter_Step10_TheSlotsCarryTheSchoolSlot` (the route's `school`).
+    `TestCharacter_Step10_TheSlotsCarryTheSchoolSlot` (the route's `school`),
+    `TestInfo_Step10_TheLimitsCarryTheSchoolSlot` (prepsvc: transmuter and mage limits),
+    `TestGetInfo_Step10_ServesTheSchoolSlot` (spellprephdl: `school`, omitted at 0).
 11. **Opposed spells are not prepared.** A preparation holding an opposed spell is refused,
     `spell_school_opposed` (step 6's code), nothing written; so is picking one for a blank extra
     slot (ADR 0008 step 9). An opposed spell can only be in the book after a switch (step 15).

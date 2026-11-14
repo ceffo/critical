@@ -311,9 +311,13 @@ export interface SpendableItem {
   count: number;
 }
 
+/** Mirrors spellprephdl.LevelLimitDTO. `max` is the allotment; `school` a specialist's school
+ * slot of that level (ADR 0050 step 10), which holds only a spell of his school: a preparation
+ * holds at most `max + school` spells of the level. Absent for anyone else. */
 export interface LevelLimit {
   level: number;
   max: number;
+  school?: number;
 }
 
 /** Mirrors api/internal/rest/handler/spellprephdl (InfoDTO). */

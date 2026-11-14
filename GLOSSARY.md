@@ -517,7 +517,7 @@ _Code_: SchoolSpecialization, Specialization
 **Opposition school** (fr: école opposée _(to confirm)_) _(planned)_:
 A school a specialist may never learn or prepare a spell of (PHB Table 22); a spell of two schools is opposed when either is. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 5.
 
-**School slot** (fr: emplacement d'école _(to confirm)_) _(planned)_:
+**School slot** (fr: emplacement d'école _(to confirm)_):
 A specialist's one extra spell of a spell level he has slots in, which only a spell of his school may fill; a preparation rule, not a marked slot. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 10. _Avoid_: extra slot (that is one a spell grants).
 
 ### Possessions

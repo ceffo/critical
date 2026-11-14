@@ -84,10 +84,14 @@ type CastInputs struct {
 	Target          *spelleffectsvc.TargetChoice
 }
 
-// LevelLimit is the number of spells of one level that may be prepared.
+// LevelLimit is the number of spells of one level that may be prepared: Max
+// is the allotment (PHB Table 21), School a specialist's school slot of the
+// level (ADR 0050 step 10: one more spell, of his school), 0 for anyone else.
+// PrepareFor accepts Max + School spells of the level.
 type LevelLimit struct {
-	Level int
-	Max   int
+	Level  int
+	Max    int
+	School int
 }
 
 // Info is what the preparation editor needs: the spellbook and the limits.
@@ -280,7 +284,7 @@ func (s *service) InfoFor(ctx context.Context, characterID int64, class string) 
 		}
 	}
 	for level, max := range limits {
-		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max})
+		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max, School: who.school[level]})
 	}
 	sort.Slice(out.Limits, func(i, j int) bool { return out.Limits[i].Level < out.Limits[j].Level })
 	return out, nil

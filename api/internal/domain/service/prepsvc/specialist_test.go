@@ -152,3 +152,26 @@ func TestPrepare_Step11_AnOpposedSpellIsRefused(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+// ADR 0050 step 10: the preparation editor's limits carry the school slot
+// separately ("the web shows 2 + 1 and never adds it itself"): the allotment
+// as Max, the school slot as School, so Max + School is what PrepareFor
+// accepts. A mage's limits have no school slot.
+func TestInfo_Step10_TheLimitsCarryTheSchoolSlot(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		c    charactersvc.View
+		want []prepsvc.LevelLimit
+	}{
+		{"transmuter", transmuter(), []prepsvc.LevelLimit{{Level: 1, Max: 2, School: 1}, {Level: 2, Max: 1, School: 1}}},
+		{"mage", mage(), []prepsvc.LevelLimit{{Level: 1, Max: 2}, {Level: 2, Max: 1}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newWizardFixture(t, tc.c)
+			f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+			info, err := f.svc.Info(context.Background(), 1)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, info.Limits)
+		})
+	}
+}

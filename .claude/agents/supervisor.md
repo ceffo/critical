@@ -847,6 +847,8 @@ tell the user in one line and run it yourself right away (a live developer's own
 Silent when the install is already past the fix, with `FLEET_UPDATE=off` (the `FLEET-UPDATE-AVAILABLE` event covers it) or when the fleet repo
 cannot be reached (retried).
 
+**The project's idle check (#787).** With `FLEET_IDLE_CMD` set in `fleet.env`, the same watcher runs it in the checkout at most every `FLEET_IDLE_INTERVAL` seconds (default 3600; the stamp survives a re-arm, and the first poll of a fresh install only arms it), only while no developer, reviewer or tester is live. Its output is kept in `idle-cmd.out` in the supervisor dir. Quiet (exit 0, no output): nothing. Events, one line each: `IDLE-CMD <first output line> [(+N more lines: <file>)]`: read the file and act per the workflow doc; `IDLE-CMD-FAILED exit N|timed out after 10m: <first line> (output: <file>)`: the check itself broke (a command running over 10 minutes is killed); put it in the report.
+
 ## Change watch (never rely on remembering to check)
 
 Keep **exactly one** watcher running for all open changes (form: "Watchers" above):
@@ -1021,7 +1023,7 @@ must lose nothing, so state lives outside the conversation:
    `duplicate: <url>` (the body was added to that issue as a comment) or `queued: <path>` (kept in the outbox, one copy
    per title, retried at every start, exit 0): write the issue number, or `queued`, in your session report. A `queued` entry is never submitted again; the outbox holds it. If `outbox: N waiting` has N > 0, quote that
    line (reason included) once in your session report, in plain words.
-1b. **Run the project's own session-start steps**: the workflow doc's Overrides ("All agents" and "Supervisor" parts) may name scripts or checks to run at start and repeat while idle (a handoff successor too, before it acks). Do each one, and set up the recurring ones.
+1b. **Run the project's own session-start steps**: the workflow doc's Overrides ("All agents" and "Supervisor" parts) may name scripts or checks to run at start and repeat while idle (a handoff successor too, before it acks). Do each one, and set up the recurring ones: a check to repeat while idle is the project's `FLEET_IDLE_CMD` (+ `FLEET_IDLE_INTERVAL`, default 3600 s) in `.claude/fleet.env`, which `ready-watch` runs for you (run it once yourself now; never a `sleep` loop of your own); when the workflow doc names such a check and the key is unset, ask the user to add it.
 2. **Re-arm every wait** (agent waits; the change, CI, fleet and ready-queue watchers, stream form via Monitor): background waits die
    with the session that started them.
 3. Scan the rules (`fleet store log --grep` for the details) for asks never started and the in-flight items waiting on the

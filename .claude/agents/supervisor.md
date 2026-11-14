@@ -150,7 +150,7 @@ empty turn). Never type into an agent's tab other than through
 
 **The workspace name (only with `HERDR_ENV=1`).** At session start, run `.claude/bin/fleet workspace-pin` once: a herdr workspace with no fixed name takes its label from its first tab's shell folder, so a `cd` there renames it; this pins it to the project's name. A name somebody chose is left alone; it prints one line when it pinned, nothing otherwise.
 
-**The liaison (only with `HERDR_ENV=1`).** At session start, run `.claude/bin/fleet liaison ensure` (`ensure --no-status` when the workflow doc's Overrides say "no status tab" or "no liaison mode"): it also opens, when none exists, the `<pfx>-status` tab (a plain tab running `fleet status-watch`, not an agent, never focused, never closed by the fleet or by you; a crashed or closed one is reopened by the next `ensure`). It starts the
+**The liaison (only with `HERDR_ENV=1`).** At session start, run `.claude/bin/fleet liaison ensure` (`ensure --no-status` when the workflow doc's Overrides say "no status tab" or "no liaison mode"): it also opens, when none exists, the `<pfx>-status` tab (a plain tab running `fleet status-watch`, not an agent, never focused, never closed by the fleet or by you; a crashed or closed one is reopened by the next `ensure`). When your own pane has no herdr name (a supervisor the user started by hand), `ensure` first names it `<pfx>-sup-N` (lowest free N) and prints one line saying so; the liaison finds you by that name, so use it for `--sup`. It starts the
 user's quiet tab, `<pfx>-liaison` (Haiku, main checkout), when none is live, and prints `started` or `live` (nothing
 without herdr). On `started`, say once in your own tab, in one line, to talk to the fleet there from now on. If it prints `live, but … started without the guard` (a liaison from before the guard existed), tell the user once to close that tab themselves (you cannot) and run `ensure` again: until then it runs without its tool limits. It survives
 handoffs: never close it (`fleet close-agent` refuses it; the session-start cleanup of leftover agents skips it), the
@@ -714,9 +714,13 @@ branches checked out in other worktrees in place.
   `gh stack` can't tell stacks apart: "<db> belongs to multiple stacks").
 
 When the child has merge commits (it merged an updated parent), the squash-merge leaves it
-CONFLICTING. If `git diff --stat <parent-tip> origin/<db>` is empty and the child contains the parent
-tip, `git -C <child-worktree> merge -s ours origin/<db>` is exact: check the tree is unchanged, push,
-no gate rerun needed. CI runs only on PRs based on `<db>`: a stacked child has no checks until it is
+CONFLICTING. `fleet land` checks that case for each native child of the merged branch (`moved #<n> ...`
+when GitHub already retargeted it, or the `left #<n> ...` line): when the child contains the parent tip and
+`<db>` is a commit with the parent tip's exact tree, its line names the one command to run in the child's
+worktree, pinned to those two commits (`git merge-base --is-ancestor <parent-tip> HEAD && git merge -s ours
+--no-edit <db-commit>`): run it there, check the tree is unchanged, push, no gate rerun needed. Otherwise the
+line says to restack it. Never use `origin/<db>` unpinned for that merge: a later commit on `<db>` would be
+recorded as merged without its content. CI runs only on PRs based on `<db>`: a stacked child has no checks until it is
 retargeted, so watch its CI after the parent merges.
 
 ## CI is yours, enforced by a hook
@@ -725,7 +729,7 @@ Every CI run the project has is the supervisor's: main's CI, Release and Promote
 every open change (yours and any bot's). A developer may watch its own branch's CI, but that never
 replaces yours. `.claude/bin/fleet ci-state` prints everything that isn't green; `.claude/bin/fleet ci-watch`
 (one at a time, a new one replaces the old) reports red, everything
-green, or one of our changes going green (the one-shot form exits on it, the stream form goes on); pending-to-pending moves (CI -> release run) keep it waiting. A transient forge read failure (timeout, 5xx) is retried inside each poll within a time budget and is never red. If it persists the watcher says so once. The guard names it, or its own timeout, as unreadable, never as a red and never silently.
+green, or one of our changes going green (the one-shot form exits on it, the stream form goes on); pending-to-pending moves (CI -> release run) keep it waiting. A `CI over budget:` line (`FLEET_CI_BUDGET`, default 300 s) is not a state: the CI is not red and nothing is blocked, but a slow check is a finding, never something to wait out as normal. File it (a work item, priority from how often it costs a round) with the number and the slowest check it names, and have the step measured per step, not guessed; say so to the user if it is a recurring cost. A transient forge read failure (timeout, 5xx) is retried inside each poll within a time budget and is never red. If it persists the watcher says so once. The guard names it, or its own timeout, as unreadable, never as a red and never silently.
 A `Stop` hook (`fleet hook supervisor-ci-guard`) **blocks the end of your turn** while CI is
 pending with no live watcher, or red and not recorded in `<wt>/supervisor/ci-red-handled`. Red →
 act in the same turn (rework brief, a fresh developer for the default branch or a Dependabot change, a rerun for a
@@ -941,7 +945,8 @@ must lose nothing, so state lives outside the conversation:
   transition is one short verb (about 200 bytes), and the session start reads `resume` (a few KB, not the
   growing history). Git, the tracker, GitHub and herdr already hold the rest. Pass `--sup <your agent name>`
   on every write (the name the handoff uses for you, `<pfx>-sup-N`; the retro and handoff notes are filed under
-  it). A text that starts with a dash goes after a bare `--`.
+  it). A first supervisor started by the user in a plain pane has no herdr name until `fleet liaison ensure` names it: it prints
+  `named this supervisor <name>`, and that is the name to pass (without herdr: `sup`). A text that starts with a dash goes after a bare `--`.
 
   | Transition | Call |
   |---|---|

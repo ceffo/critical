@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -283,7 +284,10 @@ func serveAsks(item *wire.ItemDTO, inventory []itemsvc.Item, asker SpellAsker) e
 			}
 			asks, err := asker.AsksFor(effects[e].SpellID, effects[e].Level, inventory)
 			if err != nil {
-				return err
+				// One spell effect whose data cannot be read at its level must not blank the inventory: it
+				// is served without asks (its use then takes the cast's defaults, or the server refuses it).
+				slog.Warn("item spell effect asks not served", "item", item.ID, "spell", effects[e].SpellID, "level", effects[e].Level, "error", err)
+				continue
 			}
 			effects[e].Asks = wire.SpellAsksToDTO(asks)
 		}

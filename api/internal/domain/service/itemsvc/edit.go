@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // ItemInput is a new piece (ADR 0033 step 24), typed or picked. MaxCount is
@@ -234,6 +235,13 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if item.Behaviour != BehaviourDaily {
 		item.MaxCount = item.Count
 	}
+	if in.Abilities == nil && item.HoldsSpell() {
+		// The column names the spell: an unknown one is the column's refusal, before it reaches the effect.
+		if err := s.knownSpell(ctx, item); err != nil {
+			return nil, err
+		}
+		item = withSpellFromColumn(item)
+	}
 	item = s.withScrollLevels(item)
 	if err := item.Validate(); err != nil {
 		return nil, err
@@ -324,9 +332,9 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 // withScrollLevels gives a scroll's spell effect sent with no level the level DMG p.145 writes that
 // spell at (ADR 0049 step 9, the level of the boot conversion): the editor leaves it empty and the
 // server, which holds the class data, fills it. The level stays editable (a level sent is kept), and
-// any other piece with no level is refused as before (a wand states its own).
+// a spell no table reaches takes the 6th-level floor; any other piece with no level is refused as before (a wand states its own).
 func (s *service) withScrollLevels(i Item) Item {
-	if !i.HoldsSpell() || s.scrollLevels == nil {
+	if !i.HoldsSpell() {
 		return i
 	}
 	abilities := slices.Clone(i.Abilities)
@@ -337,8 +345,12 @@ func (s *service) withScrollLevels(i Item) Item {
 			if eff.Kind != EffectSpell || eff.Level != 0 {
 				continue
 			}
-			if level, ok := s.scrollLevels(strings.ToLower(strings.TrimSpace(eff.SpellID))); ok {
-				eff.Level = level
+			// No table for the spell's list (or no tables): the floor DMG p.145 gives every scroll.
+			eff.Level = ruletablesvc.MinScrollLevel
+			if s.scrollLevels != nil {
+				if level, ok := s.scrollLevels(strings.ToLower(strings.TrimSpace(eff.SpellID))); ok {
+					eff.Level = level
+				}
 			}
 		}
 	}
@@ -412,6 +424,12 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 			if !Allows(item.Category, item.MagicKind, item.State) || !free {
 				item.State = StateCarried
 			}
+		}
+		if p.SpellID != nil && p.Abilities == nil && item.HoldsSpell() {
+			if err := s.knownSpell(ctx, item); err != nil {
+				return err
+			}
+			item = withSpellFromColumn(item)
 		}
 		item = s.withScrollLevels(item)
 		if err := item.Validate(); err != nil {

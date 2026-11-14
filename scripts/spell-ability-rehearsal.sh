@@ -190,4 +190,15 @@ code="$(status_of POST /api/items "$(jq -nc '{name:{en:"Wand of nothing"},catego
     abilities:[{id:"zap",limit:{kind:"unlimited"},effects:[{kind:"spell",spellId:"no_such_spell",level:5}]}]}')")"
 expect "editor: an unknown spell is a 400" 400 "$code"
 expect "editor: nothing stored" 0 "$(rows wand_of_nothing)"
+# --- 6. the old spellId field carries into the spell effect (9b, one mirror path) ---
+call POST /api/items '{"name":{"en":"Old scroll"},"category":"magic","magicKind":"scroll","behaviour":"stock","count":1,"spellId":"fireball"}' >/dev/null
+effect_of() { sql "SELECT coalesce(abilities::jsonb #>> '{0,effects,0,spellId}', '') || ':' || coalesce(abilities::jsonb #>> '{0,effects,0,level}', '') || ':' || spell_id FROM items WHERE id = 'old_scroll'"; }
+expect "spellId: a create with it and no abilities gets the effect at the book's level (3rd wizard: floor 6)" "fireball:6:fireball" "$(effect_of)"
+call PATCH /api/items/old_scroll '{"spellId":"magic_missile"}' >/dev/null
+expect "spellId: another spell replaces the effect's" "magic_missile:6:magic_missile" "$(effect_of)"
+expect "spellId: the same spell is refused (nothing changed)" 400 "$(status_of PATCH /api/items/old_scroll '{"spellId":"magic_missile"}')"
+call PATCH /api/items/old_scroll '{"spellId":""}' >/dev/null
+expect "spellId: cleared removes the effect" ":: " "$(effect_of | sed 's/:$/: /')"
+expect "spellId: undo gives the column and the effect back" item_edit "$(undo)"
+expect "spellId: ...both" "magic_missile:6:magic_missile" "$(effect_of)"
 echo "spell-rehearsal: all checks passed"

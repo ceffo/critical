@@ -46,6 +46,10 @@ func spellsKnowing(t *testing.T, castingTimes map[string]string) *mocks.MockSpel
 func TestUpdate_ADR0033Step2_AScrollNamesItsSpell(t *testing.T) {
 	named := scroll
 	named.SpellID = "magic_missile"
+	// Naming the spell through the old field carries it into the scroll's ability (ADR 0049 step 9), at
+	// the 6th-level floor when no level table is wired.
+	namedWithEffect := converted(named)
+	namedWithEffect.Abilities[0].Effects = []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: "magic_missile", Level: 6}}
 	tests := []struct {
 		name          string
 		old           itemsvc.Item
@@ -53,7 +57,7 @@ func TestUpdate_ADR0033Step2_AScrollNamesItsSpell(t *testing.T) {
 		want          itemsvc.Item
 		before, after string
 	}{
-		{"set", scroll, " Magic_Missile ", named, "", "magic_missile"},
+		{"set", scroll, " Magic_Missile ", namedWithEffect, "", "magic_missile"},
 		{"cleared", named, "", scroll, "magic_missile", ""},
 	}
 	for _, tt := range tests {
@@ -70,7 +74,7 @@ func TestUpdate_ADR0033Step2_AScrollNamesItsSpell(t *testing.T) {
 			res, err := svc.Update(context.Background(), 1, "scroll", itemsvc.ItemPatch{SpellID: ptr(tt.set)})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want.SpellID, res.Item.SpellID)
-			assert.Contains(t, string(got.Payload), `"changes":[{"field":"spellId","before":"`+tt.before+`","after":"`+tt.after+`"}]`)
+			assert.Contains(t, string(got.Payload), `{"field":"spellId","before":"`+tt.before+`","after":"`+tt.after+`"}`)
 
 			// Undo writes the "before" back: the spell the scroll had.
 			pop := mocks.NewMockDAL(t)

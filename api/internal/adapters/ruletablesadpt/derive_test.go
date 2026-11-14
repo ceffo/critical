@@ -320,6 +320,7 @@ func TestScrollCasterLevel_DMGp145(t *testing.T) {
 		{"4th-level wizard spell: 7+1", "wizard", 4, 8, true},
 		{"9th-level wizard spell: first slot at 18, +1", "wizard", 9, 19, true},
 		{"priest list reads its own table", "Priest", 1, 6, true},
+		{"7th-level priest spell: first slot at 14 (Table 24), +1", "Priest", 7, 15, true},
 		{"a list with no slot table", "bard", 2, 0, false},
 		{"spell level 0", "wizard", 0, 0, false},
 		{"spell level no table reaches", "wizard", 10, 0, false},

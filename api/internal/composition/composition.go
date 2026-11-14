@@ -376,6 +376,15 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
 		// An old scroll snapshot gets its spell effect at the level the boot step gives (ADR 0049 step 9).
 		ScrollLevels: scrollLevels(cat, ruleTables),
+		// A spell effect's level must be one the spell's data can be read at: what the item list's asks read,
+		// through the preparation service built below.
+		LevelCheck: func(spellID string, level int) error {
+			if bs.Prep == nil {
+				return nil
+			}
+			_, err := bs.Prep.AsksFor(spellID, level, nil)
+			return err
+		},
 		// A buff effect of an ability goes through the buff service's Add (ADR
 		// 0049 step 12), built below from the items.
 		Buffs: bridgeadpt.BuffAddFunc(func(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {

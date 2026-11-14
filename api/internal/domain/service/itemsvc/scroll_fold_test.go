@@ -8,6 +8,8 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -185,4 +187,112 @@ func TestCreate_ADR0049Step9_AScrollsSpellEffectWithNoLevelTakesTheBooksLevel(t 
 	assert.Equal(t, 20, got.Abilities[0].Effects[0].Level, "a level the player sets is kept")
 	_, err = create(t, itemsvc.MagicWand, []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitUnlimited}, Effects: cast(0)[0].Effects}})
 	require.Error(t, err, "a wand states its own level")
+}
+
+// scrollWith is a stored scroll whose ability casts spell at level (none: no spell effect), the column
+// as given.
+func scrollWith(column, spell string, level int) itemsvc.Item {
+	it := withUse(scroll, itemsvc.Limit{Kind: itemsvc.LimitWithItem})
+	it.SpellID = column
+	if spell != "" {
+		it.Abilities[0].Effects = []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: spell, Level: level}}
+	}
+	return it
+}
+
+// ADR 0049 step 9: the old spellId field still works for an older client and carries into the spell
+// effect, one mirror path both ways: another spell replaces the effect's spell at the book's level, the
+// same spell changes nothing, "" removes the effect; the snapshot holds both, so undo gives back the
+// column and the effect.
+func TestUpdate_ADR0049Step9_SpellIdAloneCarriesIntoTheEffect(t *testing.T) {
+	known := map[string]string{"wall_of_force": "1", "magic_missile": "1"}
+	for _, tt := range []struct {
+		name    string
+		set     string
+		want    string // the spell the effect casts after
+		level   int
+		changes bool
+	}{
+		{"another spell", "wall_of_force", "wall_of_force", 13, true},
+		{"the same spell", "magic_missile", "magic_missile", 9, false},
+		{"cleared", "", "", 0, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dal := mocks.NewMockDAL(t)
+			f := deps(t)
+			f.Spells = spellsKnowing(t, known)
+			f.ScrollLevels = scrollLevelTable
+			svc, _ := itemsvc.New(dal, f.Deps)
+			old := scrollWith("magic_missile", "magic_missile", 9)
+			dal.EXPECT().Get(mock.Anything, int64(1), "scroll").Return(old, nil)
+			var got itemsvc.Item
+			dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Run(func(_ context.Context, _ int64, it itemsvc.Item) { got = it }).Return(nil).Maybe()
+			var entry actionlog.NewEntry
+			f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { entry = e }).Return(int64(9), nil).Maybe()
+
+			_, err := svc.Update(context.Background(), 1, "scroll", itemsvc.ItemPatch{SpellID: ptr(tt.set)})
+			if !tt.changes {
+				require.Error(t, err, "nothing changed")
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.set, got.SpellID)
+			assert.Equal(t, tt.want, itemsvc.FirstSpell(got.Abilities))
+			if tt.want != "" {
+				assert.Equal(t, tt.level, got.Abilities[0].Effects[0].Level)
+			} else {
+				assert.Empty(t, got.Abilities[0].Effects)
+			}
+			// Undo: the snapshot's before writes the old column and the old effect back.
+			pop := mocks.NewMockDAL(t)
+			popSvc, _ := itemsvc.New(pop, deps(t).Deps)
+			var back itemsvc.Item
+			pop.EXPECT().Get(mock.Anything, int64(1), "scroll").Return(got, nil).Maybe()
+			pop.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Run(func(_ context.Context, _ int64, it itemsvc.Item) { back = it }).Return(nil).Once()
+			require.NoError(t, popSvc.Module().Restorer(itemsvc.StateKeyItems).Restore(context.Background(), 1, entry.Snapshots[0].Before))
+			assert.Equal(t, "magic_missile", back.SpellID)
+			assert.Equal(t, old.Abilities[0].Effects, back.Abilities[0].Effects)
+		})
+	}
+}
+
+// ADR 0049 step 9: a scroll created with the old spellId field and no abilities gets its with_item
+// ability with the spell effect at the book's level.
+func TestCreate_ADR0049Step9_SpellIdAndNoAbilitiesGetsItsEffect(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	f.Spells = spellsKnowing(t, map[string]string{"wall_of_force": "1"})
+	f.ScrollLevels = scrollLevelTable
+	svc, _ := itemsvc.New(dal, f.Deps)
+	var got itemsvc.Item
+	dal.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+	dal.EXPECT().DeleteReviews(mock.Anything, int64(1), mock.Anything).Return(nil).Maybe()
+	dal.EXPECT().Insert(mock.Anything, int64(1), mock.Anything).Run(func(_ context.Context, _ int64, it itemsvc.Item) { got = it }).Return(nil)
+	f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil)
+	_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
+		Name: localized.Of("Scroll"), Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicScroll,
+		Behaviour: itemsvc.BehaviourStock, Count: 1, SpellID: "wall_of_force",
+	})
+	require.NoError(t, err)
+	require.Len(t, got.Abilities, 1)
+	assert.Equal(t, itemsvc.LimitWithItem, got.Abilities[0].Limit.Kind)
+	assert.Equal(t, []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: "wall_of_force", Level: 13}}, got.Abilities[0].Effects)
+}
+
+// ADR 0049 step 10: a spell effect whose spell data cannot be read at its level is refused when saved
+// (field abilities), so the item list never has to leave its asks out.
+func TestCreate_ADR0049Step10_ALevelTheSpellDataCannotBeReadAtIsRefused(t *testing.T) {
+	dal := mocks.NewMockDAL(t)
+	f := deps(t)
+	f.Spells = spellsKnowing(t, map[string]string{"wall_of_force": "1"})
+	f.LevelCheck = func(string, int) error { return assert.AnError }
+	svc, _ := itemsvc.New(dal, f.Deps)
+	_, err := svc.Create(context.Background(), 1, itemsvc.ItemInput{
+		Name: localized.Of("Scroll"), Category: itemsvc.CategoryMagic, MagicKind: itemsvc.MagicScroll,
+		Behaviour: itemsvc.BehaviourStock, Count: 1,
+		Abilities: []itemsvc.Ability{{ID: "use", Limit: itemsvc.Limit{Kind: itemsvc.LimitWithItem}, Effects: []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: "wall_of_force", Level: 29}}}},
+	})
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "abilities", fe.Field)
 }

@@ -677,6 +677,13 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      scroll with no `with_item` ability (the player removed it; the conversion gives none back). The log line adds
      `scrolls=N scrollsSkipped=M`. The user's existing local database holds no scroll, so the first start folds
      nothing there; `just scroll-spell-rehearsal` proves the step on a copy of it and on a scratch database.
+   - **The old field, both ways:** a request that sets `spellId` alone (an older client) carries into the
+     effect through the same functions: another spell replaces the effect's spell at the book's level, `""`
+     removes the effect, a scroll with no abilities is converted first; the one mirror path both ways. A
+     level the books' tables cannot give (a list no slot table serves) is the 6th-level floor in the editor
+     (the boot step skips it and counts it). A spell effect whose spell data cannot be read at its level is
+     refused when saved (field `abilities`); the item list serves an effect it cannot read without asks, logged,
+     never failing the list.
    - **The snapshot restorer:** a scroll popped from a snapshot that names a spell and casts none (recorded
      before abilities, or before the effect) gets the same effect at the same level (`WithScrollSpell`, the one
      function of the boot step); a level the player set is kept.

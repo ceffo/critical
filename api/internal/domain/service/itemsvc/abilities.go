@@ -78,6 +78,10 @@ const (
 	// service, as a hand-made one (ADR 0049 steps 9 and 12): Name, Rounds and
 	// the modifiers in Buff.
 	EffectBuff EffectKind = "buff"
+	// EffectSpell is a spell cast at a fixed level through the cast service
+	// (ADR 0049 steps 9, 10 and 12): SpellID and Level; no slot, no
+	// preparation.
+	EffectSpell EffectKind = "spell"
 )
 
 // MaxBuffRounds is the most rounds a buff effect lasts (ADR 0049 step 10: a
@@ -103,6 +107,10 @@ type Effect struct {
 	Name   string
 	Rounds int
 	Buff   buffsvc.BuffEffects
+	// SpellID and Level are a spell effect's spell (a catalogue id) and the
+	// caster level it is cast at, 1 to MaxSpellEffectLevel.
+	SpellID string
+	Level   int
 }
 
 // Ability is one of an item's abilities (ADR 0049 step 4): something the
@@ -282,8 +290,22 @@ func (e Effect) valid() error {
 			return errors.New(strings.TrimPrefix(err.Error(), domain.ErrInvalidInput.Error()+": "))
 		}
 		return nil
+	case EffectSpell:
+		// ADR 0049 step 10: a spell effect names a spell and a level, and
+		// nothing else (whether the catalogue knows the spell is the
+		// service's check).
+		if e.Dice != "" || e.Full || e.Save != "" || e.Label != "" || e.Name != "" || e.Rounds != 0 || e.Buff != (buffsvc.BuffEffects{}) {
+			return fmt.Errorf("a spell has a spell and a level only")
+		}
+		if !abilityIDRE.MatchString(e.SpellID) {
+			return fmt.Errorf("the spell must be a catalogue id")
+		}
+		if e.Level < 1 || e.Level > MaxSpellEffectLevel {
+			return fmt.Errorf("the level must be between 1 and %d", MaxSpellEffectLevel)
+		}
+		return nil
 	default:
-		return fmt.Errorf("unknown effect %q (dice, heal or buff)", e.Kind)
+		return fmt.Errorf("unknown effect %q (dice, heal, buff or spell)", e.Kind)
 	}
 	if utf8.RuneCountInString(e.Label) > MaxEffectLabel {
 		return fmt.Errorf("the label must be at most %d characters", MaxEffectLabel)
@@ -330,6 +352,7 @@ func withAbilityIDs(abilities []Ability) []Ability {
 			a.Effects[e].Save = strings.ToLower(strings.TrimSpace(a.Effects[e].Save))
 			a.Effects[e].Label = strings.TrimSpace(a.Effects[e].Label)
 			a.Effects[e].Name = strings.TrimSpace(a.Effects[e].Name)
+			a.Effects[e].SpellID = strings.ToLower(strings.TrimSpace(a.Effects[e].SpellID))
 		}
 	}
 	return out
@@ -362,6 +385,9 @@ type jsonEffect struct {
 	Name   string       `json:"name,omitempty"`
 	Rounds int          `json:"rounds,omitempty"`
 	Buff   *jsonEffects `json:"buff,omitempty"`
+	// A spell effect's spell and caster level.
+	SpellID string `json:"spellId,omitempty"`
+	Level   int    `json:"level,omitempty"`
 }
 
 func toJSONAbilities(abilities []Ability) []jsonAbility {
@@ -369,7 +395,7 @@ func toJSONAbilities(abilities []Ability) []jsonAbility {
 	for _, a := range abilities {
 		effects := make([]jsonEffect, 0, len(a.Effects))
 		for _, e := range a.Effects {
-			j := jsonEffect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+			j := jsonEffect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds, SpellID: e.SpellID, Level: e.Level}
 			if e.Kind == EffectBuff {
 				b := jsonEffects(e.Buff)
 				j.Buff = &b
@@ -390,7 +416,7 @@ func fromJSONAbilities(js []jsonAbility) []Ability {
 	for _, j := range js {
 		a := Ability{ID: j.ID, Name: j.Name, Note: j.Note, Limit: Limit(j.Limit)}
 		for _, e := range j.Effects {
-			ef := Effect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+			ef := Effect{Kind: e.Kind, Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds, SpellID: e.SpellID, Level: e.Level}
 			if e.Buff != nil {
 				ef.Buff = buffsvc.BuffEffects(*e.Buff)
 			}

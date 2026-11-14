@@ -244,7 +244,11 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   optional name and note, one usage limit (unlimited, per day, charges, with the item) and a list of
   effects (the dice effect: rolled and shown, applied to nothing; the heal effect: dice or the gap to max
   HP, applied to the character through the HP ledger as the use entry's own HP delta, capped at max HP; the buff effect: a name, rounds and the buffs' effects, put on the
-  buff list through the buff service as a hand-made buff, in the use's entry, so one undo pops it).
+  buff list through the buff service as a hand-made buff, in the use's entry, so one undo pops it; the
+  spell effect: a spell and a caster level 1 to 30, applied through the cast service's one effect path
+  (the cast's mechanics, no slot, no failure roll, no casting-time initiative) in the use's transaction,
+  its asks answered by effect index in the use's body, its snapshots and HP in the use's entry, so one
+  undo pops them and a failure rolls the whole use back).
   An item not yet
   converted from its behaviour has no list (NULL); one converted with none has an empty list. An item
   power is a different thing: passive, on while the item is worn, with no limit. **Use acts on an
@@ -255,7 +259,7 @@ A roll answers with a **breakdown**; the terms below are its parts and the data 
   other category by the miscellaneous row). The long rest refills per-day abilities. An item whose
   counter is an ability's is one object (its count is 1); the inventory's minus on a stock is a
   separate spend-one, with no ability and no initiative.
-  [ADR 0049](adr/0049-item-abilities.md) steps 2, 4 to 7, 10, 15 and 18.
+  [ADR 0049](adr/0049-item-abilities.md) steps 2, 4 to 7, 9, 10, 12, 15 and 18.
 
 ## Ruleset and house rules
 

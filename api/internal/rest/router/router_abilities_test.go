@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
@@ -151,7 +152,7 @@ func TestItems_ADR0049Step14_UsableAndReasonPerAbility(t *testing.T) {
 func TestItems_ADR0049Step7_UseAnAbility(t *testing.T) {
 	h, m := newRouter(t)
 	three, four := 3, 4
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "wand", "use").Return(&itemsvc.AbilityUseResult{
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "wand", "use", mock.Anything).Return(&itemsvc.AbilityUseResult{
 		ItemID: "wand", AbilityID: "use", Name: "Wand of lightning", Type: "wand", Limit: itemsvc.LimitCharges,
 		Left: &three, Max: &four, Remaining: 3, LogEntryID: 9,
 		Effects: []itemsvc.EffectResult{{Kind: itemsvc.EffectDice, Dice: "6d6", Rolls: []int{1, 2, 3, 4, 5, 6}, Total: 21, Save: "rod_staff_wand"}},
@@ -162,19 +163,19 @@ func TestItems_ADR0049Step7_UseAnAbility(t *testing.T) {
 		"remaining":3,"removed":false,"logEntryId":9,
 		"effects":[{"kind":"dice","dice":"6d6","rolls":[1,2,3,4,5,6],"total":21,"save":"rod_staff_wand"}]}`, rec.Body.String())
 
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "turn").
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "turn", mock.Anything).
 		Return(nil, fmt.Errorf("%w: Sword (turn)", itemsvc.ErrAbilityExhausted)).Once()
 	rec = do(h, "POST", "/api/items/sword/abilities/turn/use", "{}")
 	assert.Equal(t, http.StatusConflict, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"code":"exhausted"`)
 
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "fly").
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "sword", "fly", mock.Anything).
 		Return(nil, fmt.Errorf("%w: Sword", itemsvc.ErrAbilityNotFound)).Once()
 	rec = do(h, "POST", "/api/items/sword/abilities/fly/use", "{}")
 	assert.Equal(t, http.StatusNotFound, rec.Code)
 	assert.Contains(t, rec.Body.String(), `"code":"ability_not_found"`)
 
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "nope", "use").
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "nope", "use", mock.Anything).
 		Return(nil, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound)).Once()
 	assert.Equal(t, http.StatusNotFound, do(h, "POST", "/api/items/nope/abilities/use/use", "{}").Code)
 }
@@ -194,7 +195,7 @@ func TestItems_ADR0049Step10_HealEffectOnTheWireAndItsAppliedResult(t *testing.T
 		"effects":[{"kind":"heal","dice":"2d4+2"},{"kind":"heal","full":true}]}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink").Return(&itemsvc.AbilityUseResult{
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink", mock.Anything).Return(&itemsvc.AbilityUseResult{
 		ItemID: "potion", AbilityID: "drink", Name: "Potion of healing", Type: "potion", Limit: itemsvc.LimitWithItem, Remaining: 2, LogEntryID: 9,
 		Effects: []itemsvc.EffectResult{{
 			Kind: itemsvc.EffectHeal, Dice: "2d4+2", Rolls: []int{3, 4}, Modifier: 2, Total: 9,
@@ -224,7 +225,7 @@ func TestItems_ADR0049Step10_BuffEffectOnTheWireAndItsAppliedResult(t *testing.T
 		"effects":[{"kind":"buff","name":"Protection","rounds":60,"buff":{"ac":2,"save_bonus":2}}]}]}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 
-	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink").Return(&itemsvc.AbilityUseResult{
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "potion", "drink", mock.Anything).Return(&itemsvc.AbilityUseResult{
 		ItemID: "potion", AbilityID: "drink", Name: "Potion of protection", Type: "potion", Limit: itemsvc.LimitWithItem, Remaining: 2, LogEntryID: 9,
 		Effects: []itemsvc.EffectResult{{
 			Kind: itemsvc.EffectBuff, Rolls: []int{},
@@ -236,4 +237,38 @@ func TestItems_ADR0049Step10_BuffEffectOnTheWireAndItsAppliedResult(t *testing.T
 	assert.JSONEq(t, `{"itemId":"potion","abilityId":"drink","name":"Potion of protection","type":"potion","limit":"with_item",
 		"remaining":2,"removed":false,"logEntryId":9,
 		"effects":[{"kind":"buff","rolls":[],"total":0,"buff":{"id":"b1","name":"Protection","rounds":60,"effects":{"ac":2,"save_bonus":2}}}]}`, rec.Body.String())
+}
+
+// ADR 0049 steps 9, 10 and 12: a spell effect is written and served as sent ({spellId, level}), the
+// use's body carries the answers by effect index with the cast's own field names (an absent body
+// asks nothing), and the answer carries the cast breakdown of the spell.
+func TestItems_ADR0049Step10_SpellEffectOnTheWireAndItsAsks(t *testing.T) {
+	h, m := newRouter(t)
+	abilities := []itemsvc.Ability{{
+		ID: "zap", Limit: itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1},
+		Effects: []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: "chromatic_orb", Level: 3}},
+	}}
+	m.items.EXPECT().Update(mock.Anything, int64(1), "w", itemsvc.ItemPatch{Abilities: &abilities}).
+		Return(&itemsvc.ChangeResult{Item: wandItem, LogEntryID: 13}, nil).Once()
+	noWarnings(m)
+	rec := do(h, "PATCH", "/api/items/w", `{"abilities":[{"id":"zap","limit":{"kind":"charges","max":5,"left":5,"cost":1},
+		"effects":[{"kind":"spell","spellId":"chromatic_orb","level":3}]}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	ac := 12
+	onSelf := false
+	asks := itemsvc.UseAsks{Spells: []itemsvc.SpellAsks{{Effect: 0, OnSelf: &onSelf, TargetAC: &ac, ItemID: "opal", ExtraSlots: []int{1, 2}, Mode: "cone"}}}
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "w", "zap", asks).Return(&itemsvc.AbilityUseResult{
+		ItemID: "w", AbilityID: "zap", Name: "Wand", Type: "wand", Limit: itemsvc.LimitCharges, LogEntryID: 9,
+		Effects: []itemsvc.EffectResult{{Kind: itemsvc.EffectSpell, SpellID: "chromatic_orb", Rolls: []int{}, Cast: json.RawMessage(`{"action":"item","spellId":"chromatic_orb"}`)}},
+	}, nil).Once()
+	rec = do(h, "POST", "/api/items/w/abilities/zap/use", `{"spells":[{"effect":0,"onSelf":false,"targetAc":12,"itemId":"opal","extraSlots":[1,2],"mode":"cone"}]}`)
+	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+	assert.Contains(t, rec.Body.String(), `"cast":{"action":"item","spellId":"chromatic_orb"}`)
+
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "w", "zap", itemsvc.UseAsks{}).
+		Return(nil, fmt.Errorf("%w: Chromatic Orb needs the target's AC", domain.ErrInvalidInput)).Once()
+	rec = do(h, "POST", "/api/items/w/abilities/zap/use", "")
+	assert.Equal(t, http.StatusBadRequest, rec.Code, "no body: the cast's defaults; its refusal is a 400")
+	assert.Equal(t, http.StatusBadRequest, do(h, "POST", "/api/items/w/abilities/zap/use", "{nope").Code)
 }

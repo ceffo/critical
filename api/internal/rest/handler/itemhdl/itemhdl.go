@@ -4,6 +4,8 @@ package itemhdl
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -29,7 +31,7 @@ type CharacterIDFunc func(r *http.Request) int64
 type itemSvc interface {
 	List(ctx context.Context, characterID int64) ([]itemsvc.Item, error)
 	UseItem(ctx context.Context, characterID int64, itemID string) (*itemsvc.UseResult, error)
-	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*itemsvc.AbilityUseResult, error)
+	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string, asks itemsvc.UseAsks) (*itemsvc.AbilityUseResult, error)
 	Restock(ctx context.Context, characterID int64, itemID string, n int) (*itemsvc.RestockResult, error)
 	Create(ctx context.Context, characterID int64, in itemsvc.ItemInput) (*itemsvc.ChangeResult, error)
 	Update(ctx context.Context, characterID int64, itemID string, p itemsvc.ItemPatch) (*itemsvc.ChangeResult, error)
@@ -134,11 +136,46 @@ type AbilityUseResultDTO struct {
 	LogEntryID int64                  `json:"logEntryId"`
 }
 
+// UseAbilityRequest is the optional body of POST
+// /api/items/{id}/abilities/{abilityId}/use (ADR 0049 steps 9 and 10): the
+// player's answers for the ability's spell effects, one entry per spell effect
+// that needs one, by the effect's index in the ability's list. The fields are
+// the cast's own (casthdl's request: onSelf, targetAc, itemId, extraSlots,
+// mode); an effect with no entry, or no body at all, takes the cast's defaults.
+type UseAbilityRequest struct {
+	Spells []SpellAskDTO `json:"spells,omitempty"`
+}
+
+// SpellAskDTO is the answers for one spell effect.
+type SpellAskDTO struct {
+	Effect     int    `json:"effect"`
+	OnSelf     *bool  `json:"onSelf,omitempty"`
+	TargetAC   *int   `json:"targetAc,omitempty"`
+	ItemID     string `json:"itemId,omitempty"`
+	ExtraSlots []int  `json:"extraSlots,omitempty"`
+	Mode       string `json:"mode,omitempty"`
+}
+
+// asks is the domain's answers of a request.
+func (b UseAbilityRequest) asks() itemsvc.UseAsks {
+	var out itemsvc.UseAsks
+	for _, a := range b.Spells {
+		out.Spells = append(out.Spells, itemsvc.SpellAsks{
+			Effect: a.Effect, OnSelf: a.OnSelf, TargetAC: a.TargetAC, ItemID: a.ItemID, ExtraSlots: a.ExtraSlots, Mode: a.Mode,
+		})
+	}
+	return out
+}
+
 // UseAbility uses one ability of an item: pays its limit, runs its effects,
-// logs the use (ADR 0049 step 7).
+// logs the use (ADR 0049 step 7). The body is optional.
 func UseAbility(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
-		res, err := svc.UseAbility(r.Context(), charID(r), chi.URLParam(r, "id"), chi.URLParam(r, "abilityId"))
+		var req UseAbilityRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+			return render.BadRequestError("invalid JSON body")
+		}
+		res, err := svc.UseAbility(r.Context(), charID(r), chi.URLParam(r, "id"), chi.URLParam(r, "abilityId"), req.asks())
 		if err != nil {
 			return err
 		}

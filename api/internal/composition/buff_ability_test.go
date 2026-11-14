@@ -56,7 +56,7 @@ var heroism = itemsvc.Effect{
 func TestUseAbility_ADR0049Step12_BuffIsTheSameRowAsAHandMadeOne(t *testing.T) {
 	bs, ctx, id := buffTable(t, nil, []itemsvc.Effect{heroism})
 	cctx, changes := actionlog.WithChanges(ctx)
-	res, err := bs.Items.UseAbility(cctx, id, "potion_hero", "use")
+	res, err := bs.Items.UseAbility(cctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Contains(t, changes.Keys(), "buffs", "the answer tells the web the buff list moved")
 	require.Len(t, res.Effects, 1)
@@ -101,7 +101,7 @@ func TestUseAbility_ADR0049Step12_BuffIsTheSameRowAsAHandMadeOne(t *testing.T) {
 // potion in a later round starts the buff again with its full rounds.
 func TestUseAbility_ADR0049Step12_ABuffOfTheSameNameIsRenewed(t *testing.T) {
 	bs, ctx, id := buffTable(t, nil, []itemsvc.Effect{heroism}, 4, 5) // the two Next Rounds roll the initiative die
-	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	_, _, _, _, _, err = bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestUseAbility_ADR0049Step12_ABuffOfTheSameNameIsRenewed(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 8, activeBuffs(t, bs, ctx, id)[0].Duration, "two rounds elapsed")
 
-	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	active := activeBuffs(t, bs, ctx, id)
 	require.Len(t, active, 1, "renewed, not a second row")
@@ -121,12 +121,12 @@ func TestUseAbility_ADR0049Step12_ABuffOfTheSameNameIsRenewed(t *testing.T) {
 func TestUseAbility_ADR0049Step10_BuffNameDefaultsToTheAbilitiesThenTheItems(t *testing.T) {
 	unnamed := itemsvc.Effect{Kind: itemsvc.EffectBuff, Rounds: 5, Buff: buffsvc.BuffEffects{AC: ptr(-2)}}
 	bs, ctx, id := buffTable(t, localized.Of("Drink the potion"), []itemsvc.Effect{unnamed})
-	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Equal(t, "Drink the potion", activeBuffs(t, bs, ctx, id)[0].Name)
 
 	bs, ctx, id = buffTable(t, nil, []itemsvc.Effect{unnamed})
-	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Equal(t, "Potion of heroism", activeBuffs(t, bs, ctx, id)[0].Name)
 }
@@ -138,7 +138,7 @@ func TestUseAbility_ADR0049Step12_OneUndoPopsTheBuffsWithTheUse(t *testing.T) {
 	bs, ctx, id := buffTable(t, nil, []itemsvc.Effect{
 		heroism, {Kind: itemsvc.EffectBuff, Name: "Speed", Rounds: 5, Buff: buffsvc.BuffEffects{Initiative: ptr(-2)}},
 	})
-	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err := bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	require.Len(t, activeBuffs(t, bs, ctx, id), 2)
 	entries, err := bs.Log.List(ctx, id, 1)
@@ -168,7 +168,7 @@ func TestUseAbility_ADR0049Step12_AFailingEffectRollsBackTheBuffAndTheLimit(t *t
 	before, err := bs.Log.List(ctx, id, 100)
 	require.NoError(t, err)
 
-	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "potion_hero", "use", itemsvc.UseAsks{})
 	require.Error(t, err)
 	assert.Empty(t, activeBuffs(t, bs, ctx, id), "the first buff is rolled back")
 	assert.Equal(t, 3, itemOf(t, bs, ctx, id, "potion_hero").Count, "the dose is back")

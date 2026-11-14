@@ -53,6 +53,9 @@ type SVC interface {
 	// ExposureAt is the exposure damage of spellID at casterLevel (ADR 0008
 	// step 16); nil when it has none.
 	ExposureAt(ctx context.Context, spellID string, casterLevel int) (*spelleffectsvc.ExposureAt, error)
+	// CastFromItem applies a spell effect of an item ability at a fixed level
+	// (ADR 0049 step 12): itemsvc's Caster port.
+	CastFromItem(ctx context.Context, characterID int64, req itemsvc.SpellCast) (itemsvc.SpellCastResult, error)
 	// Expose rolls one round of exposure to a spell's area and logs it; on
 	// the Bard, the damage comes off his HP in the same entry.
 	Expose(ctx context.Context, characterID int64, req ExposureRequest) (ExposureResult, error)

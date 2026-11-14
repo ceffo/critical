@@ -426,6 +426,14 @@ equipment-rehearsal ref="":
 buff-ability-rehearsal:
     scripts/buff-ability-rehearsal.sh
 
+# Local only: the spell item ability (ADR 0049 slice 9a) on a throwaway compose PostgreSQL (own project and port,
+# never `just dev`'s): a scroll and wands of spells used, undone and redone, the asks refused and answered, a
+# failing effect rolled back, an unknown spell refused, checked through the API and SQL. Removes the compose
+# project. Needs docker, psql, jq, go.
+# Rehearse the spell item ability
+spell-ability-rehearsal:
+    scripts/spell-ability-rehearsal.sh
+
 # Local only: the skill armour carry-over (020, ADR 0033 step 14) on a database written by the release before
 # (old ref, default the merge base with origin/main), in a throwaway compose PostgreSQL (own project and port,
 # never `just dev`'s): every thief's and bard's skill percentages compared, restarts, the old entries popped.

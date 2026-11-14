@@ -55,7 +55,7 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	}, rolled.Modifiers)
 	assert.Equal(t, 11, rolled.Total())
 
-	_, err = bs.Items.UseAbility(ctx, id, wand.Item.ID, "use")
+	_, err = bs.Items.UseAbility(ctx, id, wand.Item.ID, "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	corrected, err := bs.Buffs.GetInitiative(ctx, id)
 	require.NoError(t, err)
@@ -164,7 +164,7 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	require.Equal(t, 1, round)
 	assert.Equal(t, 7, rolled.Total())
 
-	_, err = bs.Items.UseAbility(ctx, id, scroll.Item.ID, "use")
+	_, err = bs.Items.UseAbility(ctx, id, scroll.Item.ID, "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	corrected, err := bs.Buffs.GetInitiative(ctx, id)
 	require.NoError(t, err)

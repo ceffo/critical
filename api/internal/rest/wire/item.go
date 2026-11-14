@@ -155,8 +155,8 @@ func (l LimitDTO) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o)
 }
 
-// EffectDTO is one effect of an ability (ADR 0049 step 10); "dice", "heal" and
-// "buff" exist so far: dice (a heal has dice or full), an optional save category
+// EffectDTO is one effect of an ability (ADR 0049 step 10); "dice", "heal", "buff"
+// and "spell" exist so far: dice (a heal has dice or full), an optional save category
 // (not for a heal) and an optional label; a buff has an optional name, its
 // rounds (0: untimed) and its modifiers in the buffs' effect keys.
 type EffectDTO struct {
@@ -168,11 +168,15 @@ type EffectDTO struct {
 	Name   string          `json:"name,omitempty"`
 	Rounds int             `json:"rounds,omitempty"`
 	Buff   *BuffEffectsDTO `json:"buff,omitempty"`
+	// SpellID and Level are a spell effect's spell (a catalogue id) and the
+	// caster level it is cast at (1 to 30).
+	SpellID string `json:"spellId,omitempty"`
+	Level   int    `json:"level,omitempty"`
 }
 
 // effectFromDTO is the domain effect the editor sent.
 func effectFromDTO(e EffectDTO) itemsvc.Effect {
-	out := itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+	out := itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds, SpellID: e.SpellID, Level: e.Level}
 	if e.Buff != nil {
 		out.Buff = buffsvc.BuffEffects(*e.Buff)
 	}
@@ -182,7 +186,7 @@ func effectFromDTO(e EffectDTO) itemsvc.Effect {
 // effectToDTO is the wire shape of a stored effect; a buff always sends its
 // modifiers, even none (a potion of invisibility holds a name and rounds).
 func effectToDTO(e itemsvc.Effect) EffectDTO {
-	out := EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+	out := EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds, SpellID: e.SpellID, Level: e.Level}
 	if e.Kind == itemsvc.EffectBuff {
 		b := BuffEffectsDTO(e.Buff)
 		out.Buff = &b

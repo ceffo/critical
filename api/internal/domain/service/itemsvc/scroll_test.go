@@ -187,7 +187,7 @@ func TestUseAbility_ADR0049Step15_ANamedScrollAddsItsSpellsCastingTime(t *testin
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil).Once()
 			f.initiative.EXPECT().CorrectInitiative(mock.Anything, int64(1), tt.want).Return(nil, nil).Once()
 
-			_, err = svc.UseAbility(context.Background(), 1, "scroll", "use")
+			_, err = svc.UseAbility(context.Background(), 1, "scroll", "use", itemsvc.UseAsks{})
 			require.NoError(t, err)
 		})
 	}

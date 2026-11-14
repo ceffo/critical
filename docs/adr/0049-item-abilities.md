@@ -618,7 +618,50 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
 9. **The `spell` effect.** A port from itemsvc to castsvc's effect path at a fixed level, the asks at
    Use, the scroll's `spellId` folded into it, the editor's spell picker (steps 9, 10, 12). Needs 3, 6
    and the inversion of the dependency between `itemsvc` and `castsvc` (a port in the composition
-   root); the largest slice.
+   root); the largest slice, **built in two changes** (supervisor ruling, 2026-11-13: one change was too
+   big to review): **9a** the effect, the port and the asks, no visible change; **9b** the conversion of
+   the scrolls, the Use dialog and the picker.
+   *Built, 9a.* How it reads the steps:
+   - **The port** (step 12): `itemsvc.Caster` (`CastFromItem(ctx, characterID, SpellCast)`), defined in
+     itemsvc because castsvc imports itemsvc; `castsvc` implements it and the composition root hands itemsvc a
+     late-bound function (`bridgeadpt.SpellCastFunc`), as for the buff service. A nil port fails a use with a
+     spell effect, never skips it. castsvc's method is the cast's own `resolve` path with a new `Source`,
+     `item`: the cast's mechanics (target AC and to-hit, the item a spell spends, the slots it grants, the
+     mode, the buff's target) apply as for a cast from a slot (`Source.casts()`), and the slot, the spell
+     failure d100, the class warnings and the casting-time initiative do not. It records nothing: it returns
+     the cast's breakdown (the payload a cast logs, action `item`), the snapshots it wrote (slots, a spent
+     item, the buff list) and the HP a heal spell asks for. The use's one `item_use` entry carries them (one
+     snapshot per key, the state before the first and after the last), so one undo pops everything and a
+     failure in any effect rolls the whole use back, the limit included.
+   - **The effect** (steps 9 and 10): `{kind: "spell", spellId, level}`, level 1 to 30; nothing else is
+     allowed on it. The editor's list is refused (400, field `abilities`, code `unknown`) when the
+     catalogue does not know the spell. The stored and wire JSON add `spellId` and `level` to an effect
+     (add, never rename); a result carries `spellId` and `cast`, the cast breakdown.
+   - **The asks, transport.** `POST /api/items/{id}/abilities/{abilityId}/use` takes an optional body
+     `{spells: [{effect, onSelf, targetAc, itemId, extraSlots, mode}]}`: one entry per spell effect that
+     needs an answer, by the effect's index in the ability's list. The field names and meanings are the cast's
+     own (`POST /api/spells/{slot}/cast`, `CastRequest`), so the web's cast inputs (`planCast`) serve both; an
+     effect with no entry, or no body at all, takes the cast's defaults (the spell's own target, the only item
+     of its type left, the first split, the first mode). An entry naming an effect that is not a spell
+     effect, or naming one twice, is a 400 `invalid_input`; the cast's own refusals (an attack roll with no
+     `targetAc`, no item to spend, a split that does not add up) are the same 400s, raised before anything is
+     written or rolled. Serving what each spell effect asks (the spellbook's cast fields per effect) and the
+     dialog that answers it are 9b.
+   - **Heals in order** (step 12): a heal effect and a spell's heal in one use see one ledger: castsvc reads
+     the sum plus what the use's earlier effects already took (`hpPending`), and the entry's HP delta is the
+     sum of what each applied.
+   - **Initiative** (step 15): unchanged and now tested: a wand (any non-scroll) with a spell effect corrects
+     the round once, by the item's Table 56 row (+3 for a wand), never by the spell's casting time. A scroll's
+     term still reads the item's `spellId` until 9b folds it into the effect.
+   - **Not in 9a, so the app stays as it is:** the scroll's `spellId` field and its conversion, the Use
+     dialog, the editor's spell picker (the editor keeps a stored spell effect through a save and shows it
+     read-only), and the card's drawing of the cast (it names the spell). A spell effect can only be written
+     through the API until 9b. `just spell-ability-rehearsal` proves use, undo, redo, the asks and the rollback
+     on PostgreSQL.
+   - **The scroll's caster level (for 9b):** DMG p.145, "Spell Level of Scroll Spells"
+     (`dmg/app3-magical-item-descriptions/04-level-of.md`): a scroll spell is written at a level one higher
+     than the one required to cast it, never below 6th level of experience ("a 6th-level wizard spell is written
+     at 13th level of ability, a 7th-level spell at 15th"), and the DM may write it higher.
 10. **The contract.** Drop `behaviour`, `max_count`, `effect_dice`, `effect_save` and the old reads,
     retire the old use endpoint and the `behaviour` wire field, delete the legacy half of the
     snapshot restorer once no environment holds an old entry that needs it, amend ADR 0016, 0033, 0008

@@ -19,7 +19,7 @@ import (
 // and changes no HP (17.6).
 func (s *service) heal(ctx context.Context, characterID int64, r effectReq, entry spelleffectsvc.Entry) (*HealResult, error) {
 	onSelf := true
-	if r.source == SourceCast {
+	if r.source.casts() {
 		var err error
 		if onSelf, err = appliesToSelf(entry, r.onSelf, r.casterLevel); err != nil {
 			return nil, err
@@ -40,6 +40,9 @@ func (s *service) heal(ctx context.Context, characterID int64, r effectReq, entr
 	if err != nil {
 		return nil, fmt.Errorf("hp total: %w", err)
 	}
+	// ADR 0049 step 12: an item ability's earlier heals are not in the ledger
+	// until the use's entry is recorded.
+	total += r.hpPending
 	if h.Full {
 		h.Total = max(0, -total)
 	}

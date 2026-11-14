@@ -1529,6 +1529,7 @@
     "leftRemoved": "{{name}} : dernière charge utilisée, objet retiré de l'inventaire",
     "noRoll": "Rien à lancer : l'effet se résout à la table.",
     "itemHealed": "Soigné",
+    "itemSpell": "{{spell}} lancé",
     "itemHealFull": "Soigne tous les PV perdus",
     "itemBuffed": "Effet appliqué",
     "adjust": {
@@ -3096,6 +3097,8 @@
       "removeEffect": "Retirer l'effet {{n}}",
       "addDice": "Dés",
       "addDiceHint": "Lancer des dés quand cette capacité est utilisée",
+      "spellEffect": "Sort {{n}}",
+      "spellEffectValue": "{{spell}} au niveau de lanceur {{level}}",
       "healEffect": "Soin {{n}}",
       "healDice": "Points de vie regagnés",
       "healDiceHint": "Lancés et ajoutés aux PV du personnage, jusqu'aux PV max",

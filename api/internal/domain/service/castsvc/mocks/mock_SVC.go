@@ -9,6 +9,8 @@ import (
 
 	domain "github.com/ceffo/critical/api/internal/domain"
 
+	itemsvc "github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+
 	mock "github.com/stretchr/testify/mock"
 
 	spelleffectsvc "github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
@@ -189,6 +191,64 @@ func (_c *MockSVC_Cast_Call) Return(_a0 castsvc.CastResult, _a1 error) *MockSVC_
 }
 
 func (_c *MockSVC_Cast_Call) RunAndReturn(run func(context.Context, int64, int, castsvc.CastRequest) (castsvc.CastResult, error)) *MockSVC_Cast_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CastFromItem provides a mock function with given fields: ctx, characterID, req
+func (_m *MockSVC) CastFromItem(ctx context.Context, characterID int64, req itemsvc.SpellCast) (itemsvc.SpellCastResult, error) {
+	ret := _m.Called(ctx, characterID, req)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CastFromItem")
+	}
+
+	var r0 itemsvc.SpellCastResult
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.SpellCast) (itemsvc.SpellCastResult, error)); ok {
+		return rf(ctx, characterID, req)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, itemsvc.SpellCast) itemsvc.SpellCastResult); ok {
+		r0 = rf(ctx, characterID, req)
+	} else {
+		r0 = ret.Get(0).(itemsvc.SpellCastResult)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, itemsvc.SpellCast) error); ok {
+		r1 = rf(ctx, characterID, req)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_CastFromItem_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CastFromItem'
+type MockSVC_CastFromItem_Call struct {
+	*mock.Call
+}
+
+// CastFromItem is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - req itemsvc.SpellCast
+func (_e *MockSVC_Expecter) CastFromItem(ctx interface{}, characterID interface{}, req interface{}) *MockSVC_CastFromItem_Call {
+	return &MockSVC_CastFromItem_Call{Call: _e.mock.On("CastFromItem", ctx, characterID, req)}
+}
+
+func (_c *MockSVC_CastFromItem_Call) Run(run func(ctx context.Context, characterID int64, req itemsvc.SpellCast)) *MockSVC_CastFromItem_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(itemsvc.SpellCast))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CastFromItem_Call) Return(_a0 itemsvc.SpellCastResult, _a1 error) *MockSVC_CastFromItem_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_CastFromItem_Call) RunAndReturn(run func(context.Context, int64, itemsvc.SpellCast) (itemsvc.SpellCastResult, error)) *MockSVC_CastFromItem_Call {
 	_c.Call.Return(run)
 	return _c
 }

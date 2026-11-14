@@ -58,7 +58,17 @@ const (
 	// SourceEffect is a spell added as an effect from the lookup: no slot,
 	// no cast mechanics, no damage (ADR 0004 step 19).
 	SourceEffect Source = "effect"
+	// SourceItem is a spell an item ability casts at a fixed level (ADR 0049
+	// step 12): the cast's mechanics (spend an item, roll to hit, grant slots)
+	// and its effect, with no slot spent, no spell failure and no casting-time
+	// initiative.
+	SourceItem Source = "item"
 )
+
+// casts reports whether the source is the character casting the spell (from a
+// slot or from an item): the caster's own mechanics and his choice of target
+// apply, which a spell received or added as an effect has none of.
+func (s Source) casts() bool { return s == SourceCast || s == SourceItem }
 
 // TextOnly says why a result carries no tracked effect (empty when it does).
 type TextOnly string

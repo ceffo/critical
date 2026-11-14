@@ -374,6 +374,10 @@ type effectReq struct {
 	// hpMax is the max HP of the character the effect is about, for the
 	// current HP around a heal on him (ADR 0008 step 17.7).
 	hpMax int
+	// hpPending is the HP an item ability's earlier effects already took off the
+	// ledger's sum in this use, before the entry that records them (ADR 0049
+	// step 12): a heal reads the ledger plus it.
+	hpPending int
 }
 
 // modeFor resolves the cast-time mode a cast of spell id names (ADR 0008
@@ -442,7 +446,7 @@ func (s *service) trackRow(ctx context.Context, characterID int64, r effectReq, 
 		return nil, nil
 	}
 	onSelf := true
-	if r.source == SourceCast {
+	if r.source.casts() {
 		// A buff that was not applied was cast on someone else.
 		castOnOther := res.Buff != nil && row.Effects
 		onSelf = !castOnOther && spelleffectsvc.RowOnSelf(entry, r.onSelf)
@@ -506,7 +510,7 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 	// a cast, not to a spell received from someone else nor to one added as
 	// an effect.
 	var snaps []actionlog.Snapshot
-	if r.source == SourceCast {
+	if r.source.casts() {
 		if snaps, err = s.castMechanics(ctx, characterID, entry, r.req, &res); err != nil {
 			return CastResult{}, nil, err
 		}
@@ -546,7 +550,7 @@ func (s *service) applyEffect(ctx context.Context, characterID int64, r effectRe
 		// A spell someone casts on the Bard, or one added as an effect, is on
 		// him by definition.
 		onSelf := true
-		if r.source == SourceCast && entry.AddsBuff() {
+		if r.source.casts() && entry.AddsBuff() {
 			if onSelf, err = appliesToSelf(entry, r.onSelf, r.casterLevel); err != nil {
 				return CastResult{}, nil, err
 			}

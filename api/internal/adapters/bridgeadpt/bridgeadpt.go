@@ -44,6 +44,18 @@ func (f BuffAddFunc) Add(ctx context.Context, characterID int64, buff buffsvc.Bu
 
 var _ itemsvc.Buffs = BuffAddFunc(nil)
 
+// SpellCastFunc satisfies itemsvc.Caster with a function: the composition root
+// hands it the cast service's CastFromItem, read at call time, since the cast
+// service is built after the items (and imports them): ADR 0049 step 12.
+type SpellCastFunc func(ctx context.Context, characterID int64, req itemsvc.SpellCast) (itemsvc.SpellCastResult, error)
+
+// CastFromItem applies the spell effect.
+func (f SpellCastFunc) CastFromItem(ctx context.Context, characterID int64, req itemsvc.SpellCast) (itemsvc.SpellCastResult, error) {
+	return f(ctx, characterID, req)
+}
+
+var _ itemsvc.Caster = SpellCastFunc(nil)
+
 // RoundStore is the buff store's round read.
 type RoundStore interface {
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)

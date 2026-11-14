@@ -129,6 +129,8 @@ type Roll = Pick<
   | "full"
   | "applied"
   | "buff"
+  | "spellId"
+  | "cast"
 >;
 
 function ItemUseCard({ r }: { r: UseResult }) {
@@ -176,6 +178,16 @@ function ItemUseCard({ r }: { r: UseResult }) {
 function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
   const { t } = useTranslation();
   if (e.kind === "buff" && e.buff) return <BuffBlock b={e.buff} />;
+  // The spell effect's own breakdown (damage, heal, buff of the cast) is drawn with its slice; here
+  // the card names the spell cast, so a use never shows an empty dice block.
+  if (e.kind === "spell") {
+    const spell = typeof e.cast?.spell === "string" ? e.cast.spell : e.spellId;
+    return (
+      <p className="text-body" data-testid="item-spell">
+        {t("result.itemSpell", { spell })}
+      </p>
+    );
+  }
   const heal = e.kind === "heal";
   const dice = e.dice ?? "";
   // A heal's headline is what the ledger took, the roll is the working under it.

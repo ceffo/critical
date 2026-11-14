@@ -44,7 +44,7 @@ type SVC interface {
 	// UseAbility uses one ability of an item (ADR 0049 step 7): pays its limit,
 	// runs its effects, logs the use and corrects the round's initiative, in
 	// one transaction. ErrItemNotFound, ErrAbilityNotFound, ErrAbilityExhausted.
-	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*AbilityUseResult, error)
+	UseAbility(ctx context.Context, characterID int64, itemID, abilityID string, asks UseAsks) (*AbilityUseResult, error)
 	// Restock adds n (1..MaxRestock) to a stock item and logs it with the
 	// item's snapshot, in one transaction. ErrNotRestockable for an item with
 	// no stock or with a per_day or charges ability, ErrInvalidInput for n out of range.
@@ -165,7 +165,11 @@ type Deps struct {
 	// Buffs applies a buff effect (ADR 0049 step 12). The buff service is
 	// built after the items, so the composition root hands a late-bound one;
 	// nil makes a use with a buff effect fail, never skip it.
-	Buffs           Buffs
+	Buffs Buffs
+	// Casts applies a spell effect (ADR 0049 step 12). castsvc imports this
+	// package, so the composition root hands a late-bound one; nil makes a use
+	// with a spell effect fail, never skip it.
+	Casts           Caster
 	InitiativeItems *ruletablesvc.InitiativeItems
 	// Spells is the spell catalogue: a scroll names one of its spells (ADR
 	// 0033 step 2) and its use reads that spell's casting time (ADR 0035
@@ -215,6 +219,7 @@ type Initiative interface {
 
 type service struct {
 	buffs     Buffs
+	casts     Caster
 	dal       DAL
 	dice      Dice
 	log       Log
@@ -239,7 +244,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 	s := &service{
 		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
 		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells, rulesets: d.Rulesets,
-		strength: d.Strength, buffs: d.Buffs,
+		strength: d.Strength, buffs: d.Buffs, casts: d.Casts,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

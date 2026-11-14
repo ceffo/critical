@@ -56,6 +56,11 @@ type EffectResult struct {
 	Applied *Applied `json:"applied,omitempty"`
 	// Buff is the buff a buff effect put on the list (ADR 0049 step 12).
 	Buff *AppliedBuff `json:"buff,omitempty"`
+	// SpellID and Cast are a spell effect's spell and the cast breakdown
+	// castsvc logs for a cast from a slot (action "item"), which the journal
+	// and the result card word as a cast.
+	SpellID string          `json:"spellId,omitempty"`
+	Cast    json.RawMessage `json:"cast,omitempty"`
 }
 
 // AppliedBuff is the row a buff effect put on the buff list: its id and name,
@@ -92,6 +97,8 @@ type hpRun struct {
 	read  bool
 	total int // the ledger's sum of deltas, with this use's heals so far
 	max   int // the character's max HP
+	// applied is the HP this use's effects took so far (what the entry records).
+	applied int
 }
 
 // AbilityUseResult is what one use of an item's ability produced (ADR 0049
@@ -127,7 +134,7 @@ type AbilityUseResult struct {
 // whatever the item's state. The read-then-write of a counter is atomic: InTx
 // takes the one writer lock first (ADR 0025 step 4), so a concurrent use or
 // edit of the item waits and then reads this one's result.
-func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abilityID string) (*AbilityUseResult, error) {
+func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abilityID string, asks UseAsks) (*AbilityUseResult, error) {
 	var res *AbilityUseResult
 	err := s.tx.InTx(ctx, func(ctx context.Context) error {
 		before, err := s.dal.Get(ctx, characterID, itemID)
@@ -139,6 +146,9 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 			return fmt.Errorf("%w: %s has no ability %q", ErrAbilityNotFound, before.Name.Any(), abilityID)
 		}
 		ability := before.Abilities[at]
+		if err := asks.check(ability); err != nil {
+			return err
+		}
 		if reason := before.UseRefusal(ability); reason != "" {
 			return fmt.Errorf("%w: %s (%s)", ErrAbilityExhausted, before.Name.Any(), abilityID)
 		}
@@ -158,21 +168,25 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 			r.Remaining = after.Count
 		}
 		hp := &hpRun{}
-		hpDelta := 0
-		var buffSnap *actionlog.Snapshot
-		for _, e := range ability.Effects {
-			er, snap, err := s.runEffect(ctx, characterID, hp, e, buffName(e, ability, after))
-			if snap != nil {
-				buffSnap = mergeSnapshots(buffSnap, *snap)
+		var effectSnaps []actionlog.Snapshot
+		for n, e := range ability.Effects {
+			var er EffectResult
+			var snaps []actionlog.Snapshot
+			var err error
+			if e.Kind == EffectSpell {
+				er, snaps, err = s.runSpell(ctx, characterID, hp, e, asks.forEffect(n))
+			} else {
+				er, snaps, err = s.runEffect(ctx, characterID, hp, e, buffName(e, ability, after))
+			}
+			for _, sn := range snaps {
+				effectSnaps = addSnapshot(effectSnaps, sn)
 			}
 			if err != nil {
 				return fmt.Errorf("item %s ability %s: %w", after.ID, ability.ID, err)
 			}
 			r.Effects = append(r.Effects, er)
-			if er.Applied != nil {
-				hpDelta += er.Applied.HPDelta
-			}
 		}
+		hpDelta := hp.applied
 		var snapAfter *Item
 		if !r.Removed {
 			snapAfter = &after
@@ -181,12 +195,10 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		if err != nil {
 			return err
 		}
-		snaps := []actionlog.Snapshot{snap}
-		if buffSnap != nil {
-			// ADR 0049 step 12: the buffs' snapshot rides the use's entry, so
-			// one undo pops the buff with the use.
-			snaps = append(snaps, *buffSnap)
-		}
+		// ADR 0049 step 12: what the effects wrote (the buff list, a spell's
+		// slots or spent item) rides the use's entry, so one undo pops it with
+		// the use.
+		snaps := append([]actionlog.Snapshot{snap}, effectSnaps...)
 		payload, err := json.Marshal(abilityRecord(r))
 		if err != nil {
 			return fmt.Errorf("encode item use payload: %w", err)
@@ -257,7 +269,7 @@ func (s *service) payLimit(ctx context.Context, characterID int64, before Item, 
 // rolls its dice through the dice port and applies them to nothing; a heal
 // rolls its dice (or asks for the gap to max HP) and reports the points the HP
 // ledger takes, which the use's entry then records as its HP delta.
-func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e Effect, buffName string) (EffectResult, *actionlog.Snapshot, error) {
+func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e Effect, buffName string) (EffectResult, []actionlog.Snapshot, error) {
 	res := EffectResult{Kind: e.Kind, Dice: e.Dice, Rolls: []int{}, Save: e.Save, Label: e.Label, Full: e.Full}
 	if e.Kind == EffectBuff {
 		return s.runBuff(ctx, characterID, e, buffName)
@@ -275,16 +287,8 @@ func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e
 	if e.Kind != EffectHeal {
 		return res, nil, nil
 	}
-	if !hp.read {
-		total, err := s.log.HPTotal(ctx, characterID)
-		if err != nil {
-			return EffectResult{}, nil, fmt.Errorf("hp total: %w", err)
-		}
-		c, err := s.chars.View(ctx, characterID)
-		if err != nil {
-			return EffectResult{}, nil, fmt.Errorf("character: %w", err)
-		}
-		hp.read, hp.total, hp.max = true, total, c.HPMax
+	if err := s.readHP(ctx, characterID, hp); err != nil {
+		return EffectResult{}, nil, err
 	}
 	// A heal never harms: a negative roll (1d4-5) heals 0. Full is the gap to
 	// max HP the ledger holds now (ADR 0008 step 17.4, as a spell's).
@@ -296,6 +300,7 @@ func (s *service) runEffect(ctx context.Context, characterID int64, hp *hpRun, e
 	applied := actionlog.CapHeal(hp.total, requested)
 	before := actionlog.CurrentHP(hp.max, hp.total)
 	hp.total += applied
+	hp.applied += applied
 	res.Total = requested
 	res.Applied = &Applied{HPDelta: applied, HPBefore: before, HPAfter: actionlog.CurrentHP(hp.max, hp.total)}
 	return res, nil, nil
@@ -317,7 +322,7 @@ func buffName(e Effect, a Ability, it Item) string {
 // cast and a hand-made buff use, in the use's transaction (ADR 0049 step 12):
 // a buff of the same name renews, a Strength one stacks, as ADR 0004 steps 6
 // and 7 say. The snapshot it returns is the use's entry's.
-func (s *service) runBuff(ctx context.Context, characterID int64, e Effect, name string) (EffectResult, *actionlog.Snapshot, error) {
+func (s *service) runBuff(ctx context.Context, characterID int64, e Effect, name string) (EffectResult, []actionlog.Snapshot, error) {
 	res := EffectResult{Kind: e.Kind, Rolls: []int{}}
 	if s.buffs == nil {
 		return EffectResult{}, nil, fmt.Errorf("a buff effect needs the buff service")
@@ -327,7 +332,7 @@ func (s *service) runBuff(ctx context.Context, characterID int64, e Effect, name
 		return EffectResult{}, nil, fmt.Errorf("add buff: %w", err)
 	}
 	res.Buff = &AppliedBuff{ID: added.ID, Name: added.Name, Rounds: added.Duration, Effects: added.Effects}
-	return res, &snap, nil
+	return res, []actionlog.Snapshot{snap}, nil
 }
 
 // mergeSnapshots joins two snapshots of one state key recorded by two buff
@@ -356,4 +361,22 @@ func abilityRecord(r *AbilityUseResult) useRecord {
 		rec.Dice, rec.Rolls, rec.Modifier, rec.Total, rec.Save = e.Dice, e.Rolls, e.Modifier, e.Total, e.Save
 	}
 	return rec
+}
+
+// readHP reads the ledger's sum and max HP once per use, at the first effect
+// that needs them (a heal, a spell that may heal).
+func (s *service) readHP(ctx context.Context, characterID int64, hp *hpRun) error {
+	if hp.read {
+		return nil
+	}
+	total, err := s.log.HPTotal(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("hp total: %w", err)
+	}
+	c, err := s.chars.View(ctx, characterID)
+	if err != nil {
+		return fmt.Errorf("character: %w", err)
+	}
+	hp.read, hp.total, hp.max = true, total, c.HPMax
+	return nil
 }

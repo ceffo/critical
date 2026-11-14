@@ -42,7 +42,11 @@ which removes smoke containers and networks older than an hour (never a running 
 `docker network prune -f` on the VM by hand, and consider `"default-address-pools": [{"base":"10.200.0.0/16","size":24}]`
 in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; the Go module cache (`~/go/pkg/mod`) and
 npm's under `$HOME` are safe to share as the runner's own persistent caches; the self-hosted jobs set setup-go
-`cache: false`, because its restore untars over that shared directory and fails with 'File exists' errors. If e2e slows down with several jobs at once, give the VM more cores and memory.
+`cache: false`, because its restore untars over that shared directory and fails with 'File exists' errors. The e2e suite is CPU-bound (3 Playwright workers on 4 vCPU), so `scripts/ci-e2e.sh` runs one suite per machine at a
+time (`flock` on `~/.cache/critical-e2e.lock`, shared by the runner services) and the 6-minute tripwire counts from
+getting the slot; a second run queues instead of slowing both. It logs the host's cpus, load and memory before and after,
+and the wait, in the job log. Measured on 2026-11-14 (CRI-391): alone the suite took 4.1 minutes, beside other jobs 5.6
+to 6+. If e2e still queues too long, give the VM more cores and memory (an issue for the homelab).
 
 ## Fork pull requests never run here
 

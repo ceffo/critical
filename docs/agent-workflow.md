@@ -34,6 +34,9 @@ Docs index: every doc is reachable from `AGENTS.md` → this file. Decisions and
   `just e2e` green (separate from `just validate`, which only lints/typechecks the e2e TS files).
   List the screenshot paths (`web/e2e-results/screens/<spec>/<name>.png`) in the report. First run
   on a machine: `just e2e-install` (Playwright Chromium).
+- A catalogue format bump also reaches the e2e fixtures (`catalogueWith`/`catalogueSpell` in
+  `web/e2e/fixtures.ts` build extra spells on the fixture catalogue): run the full `just e2e`, not only
+  `just validate`, before reporting it done (a format bump once passed locally and failed every spec using extra spells on CI).
 - **Visual QA before committing (hard rule):** a UI change is proven by the developer, never by the
   user. Look at the screenshots you produced (open the png with your file-reading tool), at 1920x1080
   and 2560x1440 as well as the spec's sizes, with real scrollbars shown (headless Chromium with

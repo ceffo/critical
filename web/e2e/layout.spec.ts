@@ -3123,9 +3123,10 @@ async function runWalk(
 }
 
 // Two halves per size, each on a stack of its own: one session would run past the 90 s test timeout on
-// the CI runner.
-// The first ten steps take about as long as the rest.
-const HALF = 10;
+// the CI runner. The split is where the steps' time halves (measured at 2560x1440, locally: the first 18
+// of the 37 steps take as long as the other 19); move it when steps are added, or a half runs into the
+// timeout (CI runs the walks about 1.7 times slower than a local machine).
+const HALF = 18;
 for (const size of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3], VIEWPORTS[4]]) {
   for (const [part, steps] of [
     ["first half", DASHBOARD_STEPS.slice(0, HALF)],
@@ -3593,6 +3594,9 @@ async function loginStep(
   _stack: Stack,
   context: BrowserContext,
 ) {
+  // Leave the app first: with the cookies gone its next poll answers 401 and the app navigates to
+  // /login by itself, which aborts a `goto` in flight (net::ERR_ABORTED on CI).
+  await page.goto("about:blank");
   await context.clearCookies();
   await page.route("**/api/auth/options", (r) =>
     r.fulfill({ json: { google: true, devLogin: true } }),

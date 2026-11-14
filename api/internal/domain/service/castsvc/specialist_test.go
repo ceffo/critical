@@ -98,7 +98,8 @@ func TestCast_Step13_ASchoolSpellTellsTheTargetsPenalty(t *testing.T) {
 		},
 		{
 			"an invoker's Magic Missile, no save: none", wizardOf("invoker", invoker), slot("magic_missile", "Magic Missile", 1),
-			[]int{1, 2, 3, 4, 1}, nil,
+			[]int{1, 2, 3, 4, 1},
+			nil,
 			0, nil,
 		},
 		{

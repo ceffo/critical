@@ -563,13 +563,17 @@ design-serve round port="8641":
     python3 -m http.server {{port}} --bind 127.0.0.1 --directory docs/design/{{round}}/shots
 
 # Clone (or fast-forward) the private rulebooks repo used as a rules reference. Not part of validate/dev.
-# Override the target dir with RULEBOOKS_DIR and the remote with RULEBOOKS_REMOTE.
+# Override the target dir with RULEBOOKS_DIR (a clone, or a git worktree of it, which is used as it is) and the
+# remote with RULEBOOKS_REMOTE.
 rulebooks:
     #!/usr/bin/env bash
     set -euo pipefail
     dir="${RULEBOOKS_DIR:-$HOME/code/critical-rulebooks}"
     remote="${RULEBOOKS_REMOTE:-git@github.com:ceffo/critical-rulebooks.git}"
-    if [ -d "$dir/.git" ]; then
+    if [ -f "$dir/.git" ]; then
+        # A git worktree (its .git is a file): someone's own branch, used as it is, never pulled.
+        echo "rulebooks: $dir is a git worktree, used as it is (no update)"
+    elif [ -d "$dir/.git" ]; then
         git -C "$dir" pull --ff-only || { echo "rulebooks: could not update $dir (no access, or local changes diverge)" >&2; exit 1; }
     else
         mkdir -p "$(dirname "$dir")"

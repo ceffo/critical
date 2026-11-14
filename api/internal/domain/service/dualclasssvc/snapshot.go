@@ -51,6 +51,13 @@ func (st entriesState) entries() []classes.Entry {
 	return out
 }
 
+// EntriesSnapshot is the StateKey snapshot of a change of the class entries, in the encoding this
+// package's codec reads. Another service that changes the entries (the entry switch, ADR 0050
+// step 15) records it, so voiding its entry writes them back.
+func EntriesSnapshot(before, after []classes.Entry) (actionlog.Snapshot, error) {
+	return entrySnaps.Snapshot("", toState(before), toState(after))
+}
+
 // record is the payload of a class_switch entry. The UI words it. Add
 // fields, never rename.
 type record struct {

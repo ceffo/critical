@@ -49,6 +49,25 @@ export interface DualClassResult {
   xp: number;
 }
 
+/** What an entry switch did (ADR 0050 step 15): the entry's index and the classes it went from and to. */
+export interface ClassEntrySwitchResult {
+  entry: number;
+  from: string;
+  to: string;
+}
+
+/** The class of the character's entry `entry` (its index in `classes`) becomes `cls`, another class
+ * of its group (ADR 0050 step 15). A refusal is an ApiError whose message is the code's wording. */
+export function switchEntryClass(
+  entry: number,
+  cls: string,
+): Promise<ClassEntrySwitchResult> {
+  return post<ClassEntrySwitchResult>("/api/character/class-entry/class", {
+    entry,
+    class: cls,
+  });
+}
+
 /** The character takes `cls` as a new class and its old one is frozen (ADR 0042 step 3). A refusal
  * is an ApiError whose message is the code's wording. */
 export function takeNewClass(cls: string): Promise<DualClassResult> {

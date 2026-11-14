@@ -3,6 +3,7 @@
     "Classes": [
       {
         "Class": "fighter",
+        "Group": "warrior",
         "Races": [
           "dwarf",
           "elf",
@@ -370,6 +371,7 @@
       },
       {
         "Class": "mage",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -506,6 +508,7 @@
       },
       {
         "Class": "cleric",
+        "Group": "priest",
         "Races": [
           "dwarf",
           "elf",
@@ -669,6 +672,7 @@
       },
       {
         "Class": "thief",
+        "Group": "rogue",
         "Races": [
           "dwarf",
           "elf",
@@ -840,6 +844,7 @@
       },
       {
         "Class": "bard",
+        "Group": "rogue",
         "Races": [
           "half_elf",
           "human"
@@ -1214,6 +1219,7 @@
       },
       {
         "Class": "psionicist",
+        "Group": "psionicist",
         "Races": [
           "dwarf",
           "elf",
@@ -1390,6 +1396,7 @@
       },
       {
         "Class": "abjurer",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -1530,6 +1537,7 @@
       },
       {
         "Class": "conjurer",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -1670,6 +1678,7 @@
       },
       {
         "Class": "diviner",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -1810,6 +1819,7 @@
       },
       {
         "Class": "enchanter",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -1950,6 +1960,7 @@
       },
       {
         "Class": "illusionist",
+        "Group": "wizard",
         "Races": [
           "gnome",
           "human"
@@ -2089,6 +2100,7 @@
       },
       {
         "Class": "invoker",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -2229,6 +2241,7 @@
       },
       {
         "Class": "necromancer",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -2369,6 +2382,7 @@
       },
       {
         "Class": "transmuter",
+        "Group": "wizard",
         "Races": [
           "elf",
           "half_elf",
@@ -4923,6 +4937,39 @@
     "MulticlassRaces": {
       "illusionist": [
         "gnome"
+      ]
+    },
+    "SpecialistRaces": {
+      "abjurer": [
+        "human"
+      ],
+      "conjurer": [
+        "human",
+        "half_elf"
+      ],
+      "diviner": [
+        "human",
+        "half_elf",
+        "elf"
+      ],
+      "enchanter": [
+        "human",
+        "half_elf",
+        "elf"
+      ],
+      "illusionist": [
+        "human",
+        "gnome"
+      ],
+      "invoker": [
+        "human"
+      ],
+      "necromancer": [
+        "human"
+      ],
+      "transmuter": [
+        "human",
+        "half_elf"
       ]
     },
     "DualClassOldPrime": 15,

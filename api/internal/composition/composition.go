@@ -26,6 +26,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/castsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/classentrysvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/creationrollsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/detailssvc"
@@ -75,7 +76,9 @@ type BackingServices struct {
 	LevelUp  levelupsvc.SVC
 	// DualClass takes a new class for a character in play (ADR 0042 step 3).
 	DualClass dualclasssvc.SVC
-	Rolls     creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
+	// ClassEntry switches an entry between a mage and a specialist (ADR 0050 step 15).
+	ClassEntry classentrysvc.SVC
+	Rolls      creationrollsvc.SVC // the creation's score and max HP rolls (ADR 0032 steps 6 and 7)
 	// Powers serves the psionic powers catalogue from memory (ADR 0043 step 8).
 	Powers powersvc.SVC
 	// Psionics recovers PSPs over hours of an activity (ADR 0043 step 6) and
@@ -484,6 +487,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		Rulesets: bs.Rulesets, Log: logSvc, Tx: tx,
 	})
 	if err := bs.add(bs.DualClass, err); err != nil {
+		return nil, err
+	}
+	// Switching an entry between a mage and a specialist (ADR 0050 step 15) writes the entries
+	// and the slot list; its undo is the class entries' and the slots' codecs.
+	bs.ClassEntry, err = classentrysvc.New(classentrysvc.Deps{
+		DAL: characterDAL, Characters: charSvc, Slots: spellDAL, Book: prepSource, Catalogue: defs, Log: logSvc, Tx: tx,
+	})
+	if err := bs.add(bs.ClassEntry, err); err != nil {
 		return nil, err
 	}
 	// The creation's rolls (ADR 0032 steps 6 and 7) read the rule tables and

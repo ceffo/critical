@@ -46,6 +46,9 @@ func minimumDTOs(ms []ruletablesvc.AbilityMinimum) []AbilityMinimumDTO {
 type ClassOptionDTO struct {
 	Class string   `json:"class"`
 	Races []string `json:"races"`
+	// Group is the class's group code (ADR 0040 step 1.2); the entry switch (ADR 0050 step 15.1)
+	// stays within it. Additive.
+	Group string `json:"group"`
 	// Skills are the thieving skills the class enters points in (ADR 0030
 	// steps 1 and 17); empty for a class without them.
 	Skills []string `json:"skills"`
@@ -130,6 +133,9 @@ type OptionsDTO struct {
 	RestrictedRaces   []string            `json:"restrictedRaces"`
 	NoMultiClass      []string            `json:"noMultiClass"`
 	MulticlassRaces   map[string][]string `json:"multiclassRaces"`
+	// SpecialistRaces are, by class, the races PHB Table 22 lists for a specialist (ADR 0050 step
+	// 14.1); a character of another race is warned. Additive.
+	SpecialistRaces   map[string][]string `json:"specialistRaces"`
 	DualClassOldPrime int                 `json:"dualClassOldPrime"`
 	DualClassNewPrime int                 `json:"dualClassNewPrime"`
 	// Sexes are the sex codes (ADR 0032 step 3).
@@ -269,7 +275,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			MaxNameLen:     o.MaxNameLen,
 			MaxClasses:     o.MaxClasses, MinLeftAtLevel: o.MinLeftAtLevel, MulticlassAnyRace: o.MulticlassAnyRace,
 			DualclassAnyRace: o.DualclassAnyRace, RestrictedRaces: o.RestrictedRaces, NoMultiClass: o.NoMultiClass,
-			MulticlassRaces:   o.MulticlassRaces,
+			MulticlassRaces: o.MulticlassRaces, SpecialistRaces: o.SpecialistRaces,
 			DualClassOldPrime: o.DualClassOldPrime, DualClassNewPrime: o.DualClassNewPrime,
 			Sexes:             o.Sexes,
 			Languages:         make([]LanguageDTO, 0, len(o.Languages)),
@@ -316,7 +322,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
-				Class: c.Class, Races: c.Races,
+				Class: c.Class, Races: c.Races, Group: c.Group,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 				Weapons: weaponOptionDTOs(c.Weapons), Spellbook: spellbookOptionDTO(c.Spellbook),

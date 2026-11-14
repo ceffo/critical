@@ -54,6 +54,9 @@ type SpellbookEntry struct {
 	// 11). A priest's sphere spell is no wizard spell.
 	Wizard  bool
 	Schools []string
+	// Opposed is set by Info: the entry's spell is one the character's specialist school opposes
+	// (ADR 0050 steps 5 and 15.3: kept in the book after a switch, never prepared).
+	Opposed bool
 	// Cast is what casting the spell asks of the player, from the spell
 	// effects catalog (Info fills it).
 	Cast CastInputs
@@ -260,6 +263,7 @@ func (s *service) InfoFor(ctx context.Context, characterID int64, class string) 
 		return Info{}, fmt.Errorf("list items: %w", err)
 	}
 	for i, e := range out.Spellbook {
+		out.Spellbook[i].Opposed = spellbook.School(who.spec, e.spell()) == spellbook.StandingOpposed
 		out.Spellbook[i].Cast = s.castInputs(e.ID)
 		if t := out.Spellbook[i].Cast.ConsumeItemType; t != "" {
 			for _, it := range inventory {

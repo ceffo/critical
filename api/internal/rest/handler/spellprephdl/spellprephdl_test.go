@@ -147,3 +147,22 @@ func TestGetInfo_Step10_ServesTheSchoolSlot(t *testing.T) {
 	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
 	assert.JSONEq(t, `[{"level": 1, "max": 2, "school": 1}, {"level": 2, "max": 1}]`, string(got.Limits))
 }
+
+// ADR 0050 step 15.3: an opposed spell is served `opposed: true`; any other carries no flag.
+func TestGetInfo_Step15_ServesOpposed(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Spellbook: []prepsvc.SpellbookEntry{
+		{ID: "alarm", Name: "Alarm", Level: 1, Opposed: true}, {ID: "enlarge", Name: "Enlarge", Level: 1},
+	}}, nil)
+
+	h := spellprephdl.GetInfo(func(*http.Request) int64 { return 1 }, svc)
+	rec := httptest.NewRecorder()
+	require.NoError(t, h(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/spells/preparation", nil)))
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got struct {
+		Spellbook json.RawMessage `json:"spellbook"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.JSONEq(t, `[{"id":"alarm","name":"Alarm","level":1,"opposed":true},{"id":"enlarge","name":"Enlarge","level":1}]`, string(got.Spellbook))
+}

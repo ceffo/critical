@@ -23,6 +23,8 @@ import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
 import { primaryEntry } from "@/lib/classEntries";
 import { TakeClassDialog } from "@/components/dashboard/TakeClassDialog";
+import { SwitchClassDialog } from "@/components/dashboard/SwitchClassDialog";
+import { switchableEntries } from "@/lib/classSwitch";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -39,6 +41,7 @@ export function CharacterDetails({
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [taking, setTaking] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const name = character?.name || t("app.loading");
 
   return (
@@ -82,6 +85,10 @@ export function CharacterDetails({
                   setOpen(false);
                   setTaking(true);
                 }}
+                onSwitchClass={() => {
+                  setOpen(false);
+                  setSwitching(true);
+                }}
               />
             )}
           </PopoverContent>
@@ -94,6 +101,13 @@ export function CharacterDetails({
           onOpenChange={setTaking}
         />
       )}
+      {character && (
+        <SwitchClassDialog
+          character={character}
+          open={switching}
+          onOpenChange={setSwitching}
+        />
+      )}
     </>
   );
 }
@@ -102,12 +116,16 @@ function DetailsView({
   character: c,
   onEdit,
   onTakeClass,
+  onSwitchClass,
 }: {
   character: Character;
   onEdit: () => void;
   onTakeClass: () => void;
+  onSwitchClass: () => void;
 }) {
   const { t } = useTranslation();
+  const { options } = useCreationOptions();
+  const canSwitch = switchableEntries(c, options).length > 0;
   // Only what is set shows; one link to the form stands for every field left out.
   const hasUnset = unsetDetails(c).length > 0;
   return (
@@ -122,6 +140,18 @@ function DetailsView({
         >
           {t("takeClass.open")}
         </Button>
+        {canSwitch && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onSwitchClass}
+            title={t("switchClass.openTitle")}
+            aria-label={t("switchClass.openTitle")}
+            data-testid="switch-class-open"
+          >
+            {t("switchClass.open")}
+          </Button>
+        )}
         {hasUnset && (
           <Button
             type="button"

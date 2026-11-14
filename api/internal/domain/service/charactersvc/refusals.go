@@ -115,12 +115,19 @@ func multiClassClassRefusals(n NewCharacter, defs *classes.Registry) []error {
 		if !ok {
 			continue
 		}
-		races := multiclassRaces(def)
-		if def.NoMultiClass || (len(races) > 0 && n.Race != "" && !slices.Contains(races, n.Race)) {
+		if NotForMultiClass(def, n.Race) {
 			out = append(out, &domain.FieldError{Field: n.field(i, "class"), Message: CodeMultiClassClassNotAllowed})
 		}
 	}
 	return out
+}
+
+// NotForMultiClass reports whether def may not be one of the classes of a multi-class character of
+// race (ADR 0042 step 2.1, ADR 0050 step 14.3): the catalogue marks it never multi-class, or names
+// the races of a multi-class one and race is not among them. A race not chosen yet is not judged.
+func NotForMultiClass(def classes.Class, race string) bool {
+	races := multiclassRaces(def)
+	return def.NoMultiClass || (len(races) > 0 && race != "" && !slices.Contains(races, race))
 }
 
 // multiclassRaces are the races of a multi-class character def may be part of (ADR 0050 step

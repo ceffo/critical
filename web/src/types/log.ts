@@ -37,6 +37,8 @@ export type LogKind =
   | "level_up"
   /** A new class taken (ADR 0042 step 3); popping it gives the previous class entries back. */
   | "class_switch"
+  /** One class entry switched between a mage and a specialist (ADR 0050 step 15); popping it gives the class and the opposed spells' slots back. */
+  | "class_entry_switch"
   /** A chance-to-learn roll (ADR 0030 step 20.2); popping it takes the spell out or lifts the block. */
   | "spell_learn"
   /** A spell written in the spellbook with no roll (ADR 0030 step 20.6); popping it takes it out. */

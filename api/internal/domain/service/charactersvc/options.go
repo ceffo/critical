@@ -14,6 +14,9 @@ import (
 // (DMG Table 7), in Races order.
 type ClassOption struct {
 	Class string
+	// Group is the class's group code (ADR 0040 step 1.2): what the entry switch (ADR 0050 step
+	// 15.1) keeps equal, so the web offers a class's own group only.
+	Group string
 	Races []string
 	// Skills are the skills the class enters points in (steps 17 and 18, in
 	// ruletablesvc.SkillsOf order); empty for a class without skill
@@ -157,6 +160,10 @@ type CreationOptions struct {
 	// illusionist); a class it does not name is not limited this way. The form offers such a class
 	// in a multi-class row only for those races.
 	MulticlassRaces map[string][]string
+	// SpecialistRaces are, by class, the races PHB Table 22 lists for a specialist (ADR 0050 step
+	// 14.1, a school_specialization's `races`); a character of another race gets the
+	// specialist_race warning. The entry switch's confirmation shows it before the switch.
+	SpecialistRaces map[string][]string
 	// DualClassOldPrime and DualClassNewPrime are the prime requisite scores of a dual-class
 	// character in the class it left and in its new class (step 2.2).
 	DualClassOldPrime, DualClassNewPrime int
@@ -220,7 +227,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 	out := CreationOptions{
 		MaxClasses: classes.MaxMultiClasses, MinLeftAtLevel: classes.MinLeftAtLevel,
 		MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace,
-		RestrictedRaces: []string{}, NoMultiClass: []string{}, MulticlassRaces: map[string][]string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
+		RestrictedRaces: []string{}, NoMultiClass: []string{}, MulticlassRaces: map[string][]string{}, SpecialistRaces: map[string][]string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
@@ -233,6 +240,9 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 		}
 		if races := multiclassRaces(def); len(races) > 0 {
 			out.MulticlassRaces[def.ID] = slices.Clone(races)
+		}
+		if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
+			out.SpecialistRaces[def.ID] = slices.Clone(f.SchoolSpecialization.Races)
 		}
 	}
 	for _, race := range races {
@@ -258,7 +268,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
+			Class: class, Group: def.Group, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, classes.MaxLevel),
 			Minimums: slices.Clone(def.AbilityMinimums), Weapons: ClassWeaponOptions(s.profs.Weapons(), def),
 		}

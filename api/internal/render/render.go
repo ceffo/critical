@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
+	"github.com/ceffo/critical/api/internal/domain/service/classentrysvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dicesvc"
 	"github.com/ceffo/critical/api/internal/domain/service/dualclasssvc"
@@ -214,6 +215,11 @@ var mappings = []mapping{
 	{target: dualclasssvc.ErrSameClass, status: http.StatusConflict, code: "dualclass_same_class"},
 	{target: dualclasssvc.ErrMinimumsNotMet, status: http.StatusConflict, code: "dualclass_minimums_not_met"},
 	{target: dualclasssvc.ErrAlignmentNotAllowed, status: http.StatusConflict, code: "dualclass_alignment_not_allowed"},
+	// Switching an entry to another class of its group (ADR 0050 step 15.1).
+	{target: classentrysvc.ErrNotAllowed, status: http.StatusConflict, code: "class_switch_not_allowed"},
+	{target: classentrysvc.ErrMinimumsNotMet, status: http.StatusConflict, code: "class_switch_minimums_not_met"},
+	{target: classentrysvc.ErrAlignmentNotAllowed, status: http.StatusConflict, code: "class_switch_alignment_not_allowed"},
+	{target: classentrysvc.ErrMultiClassNotAllowed, status: http.StatusConflict, code: "multiclass_class_not_allowed"},
 	{target: dicesvc.ErrTooManyFavourites, status: http.StatusConflict, code: "too_many_favourites"},
 	{target: spelleffectsvc.ErrUnknownMode, status: http.StatusBadRequest, code: "unknown_spell_mode"},
 	{target: spelleffectsvc.ErrNoExposure, status: http.StatusBadRequest, code: "no_exposure"},

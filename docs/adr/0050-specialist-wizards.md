@@ -5,8 +5,8 @@ quoted in Context and binds; the points it left open are decided below against t
 the code, and the readings the books leave open are in "Questions for the user", each with a
 recommended default that the record takes as written unless the user says otherwise. Steps 1 to 4,
 the catalogue, are built (CRI-344, format 23 of [ADR 0021](0021-spell-catalogue.md) step 31); steps 5
-to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The saves (steps
-12 and 13) and the entry switch (step 15) are not implemented. It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
+to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The entry switch (step 15) is built (CRI-383); the saves (steps
+12 and 13) are not implemented. It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
 feature kind), [ADR 0021](0021-spell-catalogue.md) (school codes on a spell, a format bump),
 [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3 (the school slot, opposed spells),
 [ADR 0006](0006-saving-throws.md) step 10.2 (the school modifiers of a save that names its spell),
@@ -107,7 +107,7 @@ Files are in `critical-rulebooks`. The PHB's mage and specialist section is
   character view ([ADR 0046](0046-derived-figures.md) step 4.4); the save's terms are
   `saves.Terms` (ADR 0046 step 3.3) and the save already names its spell (ADR 0006 step 10.2).
 - The dual-class switch, `POST /api/character/dual-class {class}` (dualclasssvc), is the pattern for
-  a change of an entry's class: checks as 409 codes, one `class_switch` entry whose `class_entries`
+  a change of an entry's class: checks as 409 codes, one `class_entry_switch` entry whose `class_entries`
   snapshot the undo writes back.
 
 ## Decision
@@ -374,6 +374,9 @@ code (ADR 0040 step 10).
        scores), `class_switch_alignment_not_allowed`, and step 14.3's
        `multiclass_class_not_allowed` for a multi-class character. A race outside Table 22 warns
        (step 14.1); DMG Table 7's dash does not refuse a switch (the character exists; Q8).
+       A frozen entry (the first class of a dual-class character) may be switched like an active
+       one: only its class changes, and the new class's opposed spells leave the slot list (15.4);
+       an undo gives class and slots back (15.5). `TestSwitch_Step15_AFrozenEntryMayBeSwitched`.
     2. **What changes**: the entry's class only. XP, realized level, `left_at_level`, hit points,
        proficiency picks and skill points are unchanged (the group, so Table 20, Table 21, THAC0 and
        saves, is the same).
@@ -386,6 +389,18 @@ code (ADR 0040 step 10).
     5. **One transaction, one journal entry** `class_entry_switch` (payload `{entry, from, to}`)
        with the `class_entries` and slot-list snapshots; undo writes both back, redo the "after"
        ([ADR 0018](0018-transactions-and-undo.md)).
+    Built: `classentrysvc` (one transaction: the checks in the order above, `ReplaceClassEntries`,
+    the slot list without the prepared opposed spells, one `class_entry_switch` entry with the
+    `class_entries` snapshot written by `dualclasssvc.EntriesSnapshot` and the `spell_slots` one by
+    `prepsvc.SlotsSnapshot`, so the existing codecs undo and redo it); an entry that does not exist
+    or a class the catalogue does not know is a 400 field error (`entry`, `class`); a class another
+    entry holds already is `class_switch_not_allowed`. An extra slot a spell granted is kept (it
+    holds a spell only once cast). The preparation's spellbook entries carry `opposed: true`
+    (`GET /api/spells/preparation`). The creation options gain, additively, each class's `group` and
+    `specialistRaces` (Table 22's races by class), so the web offers a class's own group and words the
+    race warning before the switch. Web: a one-word "Switch" action in the details popover and a
+    dialog (picker, then a confirmation that names what is kept, the opposed spells and the race
+    warning).
     Tests: `Switch_Step15_AMageEntryBecomesATransmuter` (XP, level, HP unchanged; one entry),
     `Switch_Step15_Refusals` (one row per code), `Switch_Step15_OpposedSpellsKeptAndUnprepared`
     (the book keeps them flagged, the slot list loses them), `Switch_Step15_UndoRestoresClassAndSlots`

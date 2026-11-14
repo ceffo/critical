@@ -175,3 +175,31 @@ func TestInfo_Step10_TheLimitsCarryTheSchoolSlot(t *testing.T) {
 		})
 	}
 }
+
+// ADR 0050 step 15.3: the transmuter's book serves the abjuration spell (Alarm) as opposed; the
+// mage's book, the same spells, flags none.
+func TestInfo_Step15_AnOpposedSpellIsFlagged(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		c    charactersvc.View
+		want []string
+	}{
+		{"transmuter", transmuter(), []string{"alarm"}},
+		{"mage", mage(), nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newWizardFixture(t, tc.c)
+			f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
+			info, err := f.svc.Info(context.Background(), 1)
+			require.NoError(t, err)
+			assert.Len(t, info.Spellbook, len(transmuterBook), "the book keeps every spell")
+			var opposed []string
+			for _, e := range info.Spellbook {
+				if e.Opposed {
+					opposed = append(opposed, e.ID)
+				}
+			}
+			assert.Equal(t, tc.want, opposed)
+		})
+	}
+}

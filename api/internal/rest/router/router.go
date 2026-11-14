@@ -26,6 +26,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/casthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/changeloghdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/characterhdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/classentryhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/creationrollhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/detailshdl"
@@ -191,6 +192,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 		xphdl.RegisterRoutes(r, charID, bs.XP)
 		leveluphdl.RegisterRoutes(r, charID, bs.LevelUp)
 		dualclasshdl.RegisterRoutes(r, charID, bs.DualClass)
+		classentryhdl.RegisterRoutes(r, charID, bs.ClassEntry)
 		learnhdl.RegisterRoutes(r, charID, bs.Learn)
 		turnhdl.RegisterRoutes(r, charID, bs.Turn)
 		detailshdl.RegisterRoutes(r, charID, bs.Details)

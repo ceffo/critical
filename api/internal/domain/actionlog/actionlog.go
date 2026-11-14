@@ -257,6 +257,12 @@ const KindLevelUp Kind = "level_up"
 // class again. Not one of RollKinds.
 const KindClassSwitch Kind = "class_switch"
 
+// KindClassEntrySwitch is one class entry changed to another class of its group (classentrysvc,
+// ADR 0050 step 15): the entry's index and the classes it went from and to. Its "class_entries"
+// and "spell_slots" snapshots carry the entries and the slot list, so popping it gives the old
+// class and the opposed spells' slots back and a redo switches again. Not one of RollKinds.
+const KindClassEntrySwitch Kind = "class_entry_switch"
+
 // KindSpellLearn is a chance-to-learn roll (learnsvc, ADR 0030 step 20.2):
 // the spell, the d100, Table 4's chance and whether it was learned. Its
 // "spellbook:<spell key>" snapshot carries the spell's place in the

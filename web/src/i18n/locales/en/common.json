@@ -1665,6 +1665,7 @@
       "xp_remove": "XP",
       "level_up": "Level",
       "class_switch": "Class",
+      "class_entry_switch": "Class",
       "spell_learn": "Learn",
       "turn_undead": "Turning",
       "skill_points": "Skills",
@@ -1944,6 +1945,9 @@
     },
     "classSwitch": {
       "text": "Took a new class: {{to}} (left {{from}} at level {{level}} with {{xp, number}} XP)"
+    },
+    "classEntrySwitch": {
+      "text": "Class changed: {{from}} to {{to}}"
     },
     "acOverride": {
       "set": "AC overridden: {{value}}",
@@ -2321,6 +2325,21 @@
     "take": "Take {{class}}",
     "confirm": "{{from}} is frozen at level {{level}} and keeps what it has: no more XP and no new level. From now on all XP goes to {{to}}, which starts at level 1. You can undo this from the journal."
   },
+  "switchClass": {
+    "open": "Switch",
+    "openTitle": "Switch the class of an entry",
+    "title": "Switch class",
+    "entry": "Class to change",
+    "pick": "New class",
+    "placeholder": "Pick a class",
+    "next": "Next",
+    "back": "Back",
+    "switch": "Switch",
+    "confirm": "{{from}} becomes {{to}}. Kept as they are: level, XP, hit points, proficiencies and the whole spellbook. Only the class changes.",
+    "opposed": "The spells of {{to}}'s opposition schools stay in the book but can no longer be prepared, and they leave today's prepared spells.",
+    "race": "A {{race}} is not among the races the Player's Handbook lists for a {{to}} (Table 22). That is allowed: the sheet only notes it.",
+    "undo": "You can undo this from the journal."
+  },
   "xp": {
     "heading": "Experience · level {{level}}",
     "unit": "XP",
@@ -2622,6 +2641,10 @@
     "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
     "no_free_spell_owed": "That level owes no free spell.",
     "free_spell_wrong_level": "That level's free spell is of another spell level.",
+    "class_switch_not_allowed": "That class cannot replace this one: only a mage and a specialist wizard can be switched, within the wizards.",
+    "class_switch_minimums_not_met": "The character does not meet the ability minimums of that class.",
+    "class_switch_alignment_not_allowed": "That class does not admit the character's alignment.",
+    "multiclass_class_not_allowed": "This class is never part of a multi-class character (only a gnome illusionist is).",
     "spell_school_opposed": "A spell of an opposition school: a specialist can never learn, prepare or cast it.",
     "school_slot_needs_school_spell": "Too few spells of the specialist's school: his extra slot of each level holds only a spell of his school.",
     "free_spell_not_of_school": "A specialist's free spell must be of his school while one is left at that spell level.",

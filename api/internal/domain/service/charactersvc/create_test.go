@@ -526,10 +526,19 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 	got, err := e.svc.CreationOptions(context.Background())
 	require.NoError(t, err)
 	// The tables' figures are checked by the tests below; this one checks the classes and ranges.
+	groups := map[string]string{}
 	for i := range got.Classes {
+		groups[got.Classes[i].Class] = got.Classes[i].Group
+		got.Classes[i].Group = "" // asserted just below
 		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums, got.Classes[i].Weapons = 0, nil, nil, nil
 		got.Classes[i].Spellbook = nil // TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage
 	}
+	// ADR 0050 step 15.1: the groups the entry switch keeps equal (ADR 0040 step 1.2's codes).
+	assert.Equal(t, map[string]string{
+		"fighter": "warrior", "mage": "wizard", "cleric": "priest", "thief": "rogue", "bard": "rogue", "psionicist": "psionicist",
+		"abjurer": "wizard", "conjurer": "wizard", "diviner": "wizard", "enchanter": "wizard", "illusionist": "wizard",
+		"invoker": "wizard", "necromancer": "wizard", "transmuter": "wizard",
+	}, groups, "each class carries its group (step 15.1)")
 	got.ScoreMethods, got.RaceAdjustments, got.RaceIdentity, got.WizardSpells = nil, nil, nil, nil
 	assert.Equal(t, charactersvc.CreationOptions{
 		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
@@ -570,7 +579,13 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		// the classes the catalogue bars from a multi-class character, creatable or not (the seven specialists, ADR 0050 step 3.3)
 		NoMultiClass: []string{"bard", "abjurer", "conjurer", "diviner", "enchanter", "invoker", "necromancer", "transmuter"},
 		// ADR 0050 step 14.3: the illusionist is part of a multi-class character only for a gnome.
-		MulticlassRaces:   map[string][]string{"illusionist": {"gnome"}},
+		MulticlassRaces: map[string][]string{"illusionist": {"gnome"}},
+		// ADR 0050 Table 22's races, as the ADR lists them (step 14.1).
+		SpecialistRaces: map[string][]string{
+			"abjurer": {"human"}, "conjurer": {"human", "half_elf"}, "diviner": {"human", "half_elf", "elf"},
+			"enchanter": {"human", "half_elf", "elf"}, "illusionist": {"human", "gnome"}, "invoker": {"human"},
+			"necromancer": {"human"}, "transmuter": {"human", "half_elf"},
+		},
 		DualClassOldPrime: 15, DualClassNewPrime: 17, Sexes: []string{"male", "female"},
 	}, got)
 }

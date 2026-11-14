@@ -88,6 +88,16 @@ packages:
       SVC:
       Rules:
       Dice:
+  github.com/ceffo/critical/api/internal/domain/service/classentrysvc:
+    config:
+      dir: "internal/domain/service/classentrysvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
+      DAL:
+      Characters:
+      Slots:
+      Catalogue:
   github.com/ceffo/critical/api/internal/domain/service/dualclasssvc:
     config:
       dir: "internal/domain/service/dualclasssvc/mocks"

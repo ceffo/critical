@@ -137,7 +137,7 @@ async function wiseFighter(page: Page) {
   await reloadSettled(page);
 }
 
-// ADR 0006 step 10.2 in the browser: the saves' Spell picker (shown once "Against the mind" is
+// ADR 0006 step 10.2 in the browser: the saves' Spell picker (shown once "Mind" is
 // ticked) reaches the save request, the card and the last-roll column word the server's immunity
 // (en and fr), and unticking the box or rolling clears the tag for the next save (vitest here has no
 // DOM to click the box). The rule (which scores, which spells, the refused adjustment) is Go tests (ruletablesadpt,
@@ -147,7 +147,7 @@ test("a save against a spell the Wisdom makes the character immune to rolls noth
 }) => {
   await openDashboard(page);
   await wiseFighter(page);
-  // Unticking "Against the mind" clears a chosen spell: the next save names none.
+  // Unticking "Mind" clears a chosen spell: the next save names none.
   await page.getByTestId("save-mind-affecting").check();
   await page.getByTestId("save-spell").click();
   await page.getByTestId("save-spell-search").fill("comma");
@@ -209,4 +209,164 @@ test("a save against a spell the Wisdom makes the character immune to rolls noth
       .getByTestId("save-immunity"),
   ).toHaveText(/^Sagesse 19 : immunité contre .+, aucun jet$/);
   await snap(page, "save-immune-fr");
+});
+
+/** Picks the spell the save is against from the wand's spell line. */
+async function againstSpell(page: Page, search: string, name: string) {
+  await page.getByTestId("save-spell").click();
+  await page.getByTestId("save-spell-search").fill(search);
+  await page.getByRole("button", { name: `Save against ${name}` }).click();
+  await expect(page.getByTestId("save-spell-tag")).toHaveText(`vs ${name}`);
+}
+
+/** Creates a human level 5 wizard of the class (its four level-ups rolled) with Fireball prepared, the
+ * current character. */
+async function wizardWithFireball(page: Page, cls: string) {
+  for (const [method, url, body] of [
+    [
+      "POST",
+      "/api/characters",
+      {
+        name: cls,
+        class: cls,
+        raceCode: "human",
+        details: { alignment: "neutral_good", sex: "male" },
+        str: 9,
+        dex: 16,
+        con: 16,
+        int: 18,
+        wis: 12,
+        cha: 10,
+        hpMax: 4,
+        xp: 0,
+      },
+    ],
+    ["POST", "/api/xp", { base: 20000, bonus: false }],
+    ...[2, 3, 4, 5].map(
+      (level) => ["POST", "/api/character/levelup/roll", { level }] as const,
+    ),
+    ["POST", "/api/character/spellbook/add", { spellId: "fireball" }],
+    ["PUT", "/api/spells/prepared", { spells: ["fireball"] }],
+  ] as const)
+    expect(await apiCall(page, method, url, body)).toBe(true);
+  await reloadSettled(page);
+}
+
+// ADR 0050 steps 12 and 13 in the browser: the wand opens the spell line without the mind box, the
+// named spell and the "Specialist caster" box reach the save request, the card lists the server's
+// terms, the line clears after the roll, a refusal words its code; a cast's targets' -1 shows on the
+// card and in the journal. The rule (the school, opposed wins, priest spells, the cancellation) is Go
+// tests (saves, combatsvc, castsvc); the wording and hidden states are component tests.
+test("a specialist's +1 against his school, a specialist caster's -1 on the save and the cast", async ({
+  page,
+}) => {
+  await openDashboard(page);
+  // A transmuter (alteration) saves vs Petrify/Polymorph against Slow, an alteration wizard spell.
+  expect(
+    await apiCall(page, "POST", "/api/characters", {
+      name: "Morphée",
+      class: "transmuter",
+      raceCode: "human",
+      details: { alignment: "neutral_good", sex: "male" },
+      str: 9,
+      dex: 16,
+      con: 12,
+      int: 17,
+      wis: 10,
+      cha: 10,
+      hpMax: 4,
+      xp: 0,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  const card = saveCard(page);
+  const terms = card.getByTestId("save-modifiers").getByRole("listitem");
+  const roll = async () => {
+    const rolled = page.waitForResponse(
+      (r) =>
+        r.url().endsWith("/api/roll/save") && r.request().method() === "POST",
+    );
+    await page
+      .getByRole("button", { name: "Roll save vs Petrify/Polymorph" })
+      .click();
+    return rolled;
+  };
+
+  const wand = page.getByTestId("save-spell-toggle");
+  await wand.click();
+  await expect(page.getByTestId("save-mind-affecting")).not.toBeChecked();
+  await againstSpell(page, "slow", "Slow");
+  const own = await roll();
+  expect(own.request().postDataJSON()).toEqual({
+    category: "petri_poly",
+    mindAffecting: false,
+    spellId: "slow",
+  });
+  await expect(terms).toHaveCount(1);
+  await expect(terms).toHaveText(["Specialist, his school+1"]);
+  await snap(page, "specialist-save");
+
+  // The same with "Specialist caster": both terms, net 0; then the line, the wand and the box clear.
+  await wand.click();
+  await againstSpell(page, "slow", "Slow");
+  await page.getByTestId("save-caster-specialist").check();
+  const both = await roll();
+  expect(both.request().postDataJSON()).toEqual({
+    category: "petri_poly",
+    mindAffecting: false,
+    spellId: "slow",
+    casterSpecialist: true,
+  });
+  const res = await both.json();
+  expect(res.rollTotal).toBe(res.d20Roll);
+  await expect(terms).toHaveText([
+    "Specialist, his school+1",
+    "Specialist caster−1",
+  ]);
+  await expect(page.getByTestId("save-spell-line")).toHaveCount(0);
+  await expect(wand).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("save-caster-specialist")).toHaveCount(0);
+  await snap(page, "specialist-caster-save");
+
+  // "Specialist caster" against a priest spell is refused, worded from its code.
+  await wand.click();
+  await againstSpell(page, "comma", "Command");
+  await page.getByTestId("save-caster-specialist").check();
+  const refused = await roll();
+  expect(refused.status()).toBe(400);
+  await expect(
+    page.getByText(
+      "Name the wizard spell the save is against: the specialist caster’s −1 needs it.",
+    ),
+  ).toBeVisible();
+
+  // An invoker's Fireball tells its targets' -1 on the card and in the journal; a mage's tells nothing.
+  for (const [cls, modifier] of [
+    ["invoker", 1],
+    ["mage", 0],
+  ] as const) {
+    await wizardWithFireball(page, cls);
+    await page.getByRole("tab", { name: "Spells" }).click();
+    await page
+      .getByRole("region", { name: "Level 3" })
+      .getByRole("button", { name: "Cast Fireball" })
+      .click();
+    const cast = page
+      .getByRole("region", { name: "Detail", exact: true })
+      .getByTestId("cast-result");
+    await expect(cast).toContainText("Fireball");
+    const said = modifier ? ["(targets −1: specialist caster)"] : [];
+    await expect(cast.getByTestId("cast-save-modifier")).toHaveText(said);
+    if (modifier) await snap(page, "invoker-fireball");
+    // The journal's card for the entry, after a reload: drawn from the logged payload.
+    await reloadSettled(page);
+    await logEntry(page, "Cast Fireball").first().click();
+    const entry = page
+      .getByRole("region", { name: "Detail", exact: true })
+      .getByTestId("cast-entry");
+    await expect(entry).toBeVisible();
+    await expect(entry.getByTestId("cast-entry-save-modifier")).toHaveText(
+      said,
+    );
+  }
 });

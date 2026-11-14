@@ -10,7 +10,7 @@ ever queues or fails for billing, check Settings → Billing first. [agent-workf
 
 | Where | Jobs | Why |
 |---|---|---|
-| GitHub-hosted `ubuntu-latest` | `changes`, `validate`, `generated`, `pr-title`, Dependabot auto-merge | Small, parallel-friendly, no queue (about 2 s start, against minutes behind the runners); a fork's code never runs on the VM anyway |
+| GitHub-hosted `ubuntu-latest` | `changes`, `validate` (and its `validate-scripts`, `validate-api`, `validate-web` groups), `generated`, `pr-title`, Dependabot auto-merge | Small, parallel-friendly, no queue (about 2 s start, against minutes behind the runners); a fork's code never runs on the VM anyway |
 | Self-hosted runners (`critical`) | `e2e`, `dev-smoke`, `image`, release, promote, major, main catch-up | Chromium's system packages are preinstalled (no per-run apt), docker is there, and release/promote hold the environment secrets and deploy key |
 
 Queueing was the whole PR-latency regression when every job shared one runner (median wait 4 min, p90 15-20 min,
@@ -40,8 +40,9 @@ network; about 30 leaks exhaust the daemon's address pools and every `docker net
 address pools have been fully subnetted". `dev-smoke` and `image` therefore start with `scripts/ci-docker-sweep.sh`,
 which removes smoke containers and networks older than an hour (never a running job's). If it ever recurs, run
 `docker network prune -f` on the VM by hand, and consider `"default-address-pools": [{"base":"10.200.0.0/16","size":24}]`
-in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; Go and npm caches under `$HOME` are
-safe to share. If e2e slows down with several jobs at once, give the VM more cores and memory.
+in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; the Go module cache (`~/go/pkg/mod`) and
+npm's under `$HOME` are safe to share as the runner's own persistent caches; the self-hosted jobs set setup-go
+`cache: false`, because its restore untars over that shared directory and fails with 'File exists' errors. If e2e slows down with several jobs at once, give the VM more cores and memory.
 
 ## Fork pull requests never run here
 

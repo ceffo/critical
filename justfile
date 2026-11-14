@@ -6,9 +6,15 @@ _default:
 # --- Global Commands ---
 
 # Run full project validation (tracker ids, backend, frontend)
-validate: check-no-tracker-ids check-no-class-ids check-linear check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture check-api check-web
+validate: check-scripts check-api check-web
     @echo "--- Project Validation Successful ---"
     @scripts/gate-stamp.sh write
+
+# The repo-wide checks and the shell-script tests: the part of `validate` that is neither the backend nor the
+# frontend. CI runs it, check-api and check-web as three parallel jobs (validate-scripts, validate-api,
+# validate-web) and a `validate` job that needs all three; `just validate` is the same three groups in a row.
+check-scripts: check-no-tracker-ids check-no-class-ids check-linear check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture
+    @echo "--- Scripts Validation Successful ---"
 
 # The gate stamp that ties a green `just validate` to the tree it ran on (ship.sh refuses a HEAD without it).
 test-gate-stamp:

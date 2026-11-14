@@ -59,7 +59,7 @@ func TestCreation_Step20_7_ReadsTheCatalogueAndTheSeed(t *testing.T) {
 
 	sp, ok := c.Spell("fireball")
 	assert.True(t, ok)
-	assert.Equal(t, spellbook.Spell{Level: 3, Wizard: true}, sp)
+	assert.Equal(t, spellbook.Spell{Level: 3, Wizard: true, Schools: []string{"invocation_evocation"}}, sp)
 	sp, ok = c.Spell("cure_light_wounds")
 	assert.True(t, ok)
 	assert.False(t, sp.Wizard)

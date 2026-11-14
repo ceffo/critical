@@ -252,10 +252,13 @@ type SavesDTO struct {
 	Spell        int `json:"spell"`
 }
 
-// SlotCountDTO is the slots per day of one spell level.
+// SlotCountDTO is the slots per day of one spell level. School is a
+// specialist's school slot of that level (ADR 0050 step 10), not counted in
+// count: the web shows "count + school"; absent for anyone else.
 type SlotCountDTO struct {
-	Level int `json:"level"`
-	Count int `json:"count"`
+	Level  int `json:"level"`
+	Count  int `json:"count"`
+	School int `json:"school,omitempty"`
 }
 
 // DerivedDTO is the values the rules derive (ADR 0030 steps 3 to 8, and 22.1).
@@ -536,7 +539,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {
 		if n := d.SpellSlots[level]; n > 0 {
-			out.SpellSlots = append(out.SpellSlots, SlotCountDTO{Level: level, Count: n})
+			out.SpellSlots = append(out.SpellSlots, SlotCountDTO{Level: level, Count: n, School: d.SchoolSlots[level]})
 		}
 	}
 	return out

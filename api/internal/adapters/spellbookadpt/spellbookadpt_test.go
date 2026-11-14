@@ -17,8 +17,8 @@ import (
 )
 
 var cat = catalogue.Catalogue{Spells: []catalogue.Spell{
-	{ID: "mirror_image", Name: localized.Of("Mirror Image"), Class: "Wizard", Level: 2},
-	{ID: "fireball", Name: localized.Of("Fireball"), Class: "Wizard", Level: 3},
+	{ID: "mirror_image", Name: localized.Of("Mirror Image"), Class: "Wizard", Level: 2, Schools: []string{"illusion"}},
+	{ID: "fireball", Name: localized.Of("Fireball"), Class: "Wizard", Level: 3, Schools: []string{"invocation_evocation"}},
 	{ID: "cure_light_wounds", Name: localized.Of("Cure Light Wounds"), Class: "Priest", Level: 1},
 }}
 
@@ -82,7 +82,8 @@ func given(key string) spellbook.Entry {
 
 // Each character reads its own spellbook, named and levelled from the
 // catalogue, in its stored order, each entry with its origin (ADR 0030 step
-// 20.5); a character without one has none.
+// 20.5) and its school codes (what a specialist's preparation reads, ADR 0050
+// steps 10 and 11); a character without one has none.
 func TestBook_EachCharacterReadsItsOwnSpellbook(t *testing.T) {
 	ctx := context.Background()
 	book := spellbookadpt.New(books{
@@ -93,12 +94,12 @@ func TestBook_EachCharacterReadsItsOwnSpellbook(t *testing.T) {
 	one, err := book.All(ctx, 1)
 	require.NoError(t, err)
 	assert.Equal(t, []prepsvc.SpellbookEntry{
-		{ID: "fireball", Name: "Fireball", Level: 3, Origin: spellbook.OriginLevelGrant, GrantLevel: 5},
-		{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginStarting},
+		{ID: "fireball", Name: "Fireball", Level: 3, Origin: spellbook.OriginLevelGrant, GrantLevel: 5, Wizard: true, Schools: []string{"invocation_evocation"}},
+		{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginStarting, Wizard: true, Schools: []string{"illusion"}},
 	}, one)
 	two, err := book.All(ctx, 2)
 	require.NoError(t, err)
-	assert.Equal(t, []prepsvc.SpellbookEntry{{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginGiven}}, two)
+	assert.Equal(t, []prepsvc.SpellbookEntry{{ID: "mirror_image", Name: "Mirror Image", Level: 2, Origin: spellbook.OriginGiven, Wizard: true, Schools: []string{"illusion"}}}, two)
 	none, err := book.All(ctx, 3)
 	require.NoError(t, err)
 	assert.Empty(t, none)

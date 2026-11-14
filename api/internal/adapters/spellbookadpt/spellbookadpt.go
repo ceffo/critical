@@ -80,8 +80,10 @@ func (b *Book) All(ctx context.Context, characterID int64) ([]prepsvc.SpellbookE
 		if !ok {
 			return nil, fmt.Errorf("spellbook of character %d: %q is not in the spell catalogue", characterID, e.Key)
 		}
+		sp := spellbook.FromCatalogue(s)
 		out = append(out, prepsvc.SpellbookEntry{
 			ID: e.Key, Name: s.Name.Default(), Level: s.Level, Origin: e.Origin, GrantLevel: e.GrantLevel,
+			Wizard: sp.Wizard, Schools: sp.Schools,
 		})
 	}
 	return out, nil

@@ -127,3 +127,23 @@ func TestGetInfo_ServesTheOrigin(t *testing.T) {
 	assert.JSONEq(t, `{"id":"fireball","name":"Fireball","level":3,"origin":"level_grant","grant_level":5}`, string(got.Spellbook[1]))
 	assert.JSONEq(t, `{"id":"bless","name":"Bless","level":1}`, string(got.Spellbook[2]))
 }
+
+// ADR 0050 step 10: each limit serves a specialist's school slot as `school`
+// beside the allotment `max`; a limit with no school slot has no `school`.
+func TestGetInfo_Step10_ServesTheSchoolSlot(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().InfoFor(mock.Anything, int64(1), "").Return(prepsvc.Info{Limits: []prepsvc.LevelLimit{
+		{Level: 1, Max: 2, School: 1}, {Level: 2, Max: 1},
+	}}, nil)
+
+	h := spellprephdl.GetInfo(func(*http.Request) int64 { return 1 }, svc)
+	rec := httptest.NewRecorder()
+	require.NoError(t, h(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/spells/preparation", nil)))
+	require.Equal(t, http.StatusOK, rec.Code)
+
+	var got struct {
+		Limits json.RawMessage `json:"limits"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &got))
+	assert.JSONEq(t, `[{"level": 1, "max": 2, "school": 1}, {"level": 2, "max": 1}]`, string(got.Limits))
+}

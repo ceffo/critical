@@ -8,6 +8,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // grantedLevels validates the split the player chose for a spell that grants
@@ -28,8 +29,9 @@ func grantedLevels(entry spelleffectsvc.Entry, levels []int) ([]int, error) {
 }
 
 // pickForExtra checks the spell the player casts from a blank extra slot of
-// the given level and returns its id and name.
-func (s *service) pickForExtra(ctx context.Context, level int, spellID string) (string, string, error) {
+// the given level and returns its id and name. A specialist (spec) may not
+// pick a spell of his opposition (ADR 0050 step 11).
+func (s *service) pickForExtra(ctx context.Context, level int, spellID string, spec spellbook.Specialization) (string, string, error) {
 	id := spelleffectsvc.Slug(spellID)
 	if id == "" {
 		return "", "", fmt.Errorf("%w: choose the spell to cast from this extra slot", domain.ErrInvalidInput)
@@ -41,6 +43,9 @@ func (s *service) pickForExtra(ctx context.Context, level int, spellID string) (
 	entry, hasEffect := s.Effects.Get(id)
 	if !found && !hasEffect {
 		return "", "", fmt.Errorf("%w: spell %q", domain.ErrNotFound, id)
+	}
+	if found && spellbook.School(spec, spellbook.SpellOfClass(spell.Class, spell.Level, spell.Schools)) == spellbook.StandingOpposed {
+		return "", "", fmt.Errorf("%w: %q", spellbook.ErrSchoolOpposed, id)
 	}
 	if got := max(entry.Level, spell.Level); got != level {
 		return "", "", fmt.Errorf("%w: %s is level %d, this slot is level %d", domain.ErrInvalidInput, firstNonEmpty(entry.Name, spell.Name.Default(), id), got, level)

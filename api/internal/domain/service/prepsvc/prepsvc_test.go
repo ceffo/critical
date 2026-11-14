@@ -102,7 +102,7 @@ func TestInfo(t *testing.T) {
 	f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 	info, err := f.svc.Info(context.Background(), 1)
 	require.NoError(t, err)
-	assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 3}, {3, 3}, {4, 3}, {5, 2}}, info.Limits)
+	assert.Equal(t, []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 3}, {Level: 5, Max: 2}}, info.Limits)
 	require.Len(t, info.Spellbook, 11)
 	assert.Equal(t, prepsvc.CastInputs{}, info.Spellbook[0].Cast, "alarm asks nothing")
 }
@@ -436,7 +436,7 @@ func TestPrepare_Step14_EachEntryPreparesInItsOwnSlots(t *testing.T) {
 		f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 		mage, err := f.svc.InfoFor(ctx, 1, "mage")
 		require.NoError(t, err)
-		assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, mage.Limits)
+		assert.Equal(t, []prepsvc.LevelLimit{{Level: 1, Max: 4}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 2}, {Level: 5, Max: 1}}, mage.Limits)
 	})
 
 	t.Run("the entry's slots only", func(t *testing.T) {
@@ -510,12 +510,12 @@ func TestPrepare_Step14_NoClassIsTheFirstCastingEntrysBookAndSlots(t *testing.T)
 			info, err := svc.InfoFor(ctx, 1, class)
 			require.NoError(t, err)
 			assert.Equal(t, []string{"alarm", "fireball"}, ids(info), "class %q", class)
-			assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, info.Limits, "class %q", class)
+			assert.Equal(t, []prepsvc.LevelLimit{{Level: 1, Max: 4}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 2}, {Level: 5, Max: 1}}, info.Limits, "class %q", class)
 		}
 		info, err := svc.InfoFor(ctx, 1, "cleric")
 		require.NoError(t, err)
 		assert.Equal(t, []string{"enlarge"}, ids(info))
-		assert.Equal(t, []prepsvc.LevelLimit{{1, 3}, {2, 2}, {3, 1}}, info.Limits)
+		assert.Equal(t, []prepsvc.LevelLimit{{Level: 1, Max: 3}, {Level: 2, Max: 2}, {Level: 3, Max: 1}}, info.Limits)
 	})
 
 	t.Run("prepare", func(t *testing.T) {
@@ -552,7 +552,7 @@ func TestPrepare_Step13_TheOldClassPreparesInItsOwnSlots(t *testing.T) {
 		f.items.EXPECT().List(mock.Anything, int64(1)).Return(nil, nil)
 		mage, err := f.svc.InfoFor(ctx, 1, "mage")
 		require.NoError(t, err)
-		assert.Equal(t, []prepsvc.LevelLimit{{1, 4}, {2, 3}, {3, 3}, {4, 2}, {5, 1}}, mage.Limits)
+		assert.Equal(t, []prepsvc.LevelLimit{{Level: 1, Max: 4}, {Level: 2, Max: 3}, {Level: 3, Max: 3}, {Level: 4, Max: 2}, {Level: 5, Max: 1}}, mage.Limits)
 	})
 
 	t.Run("the old class's slots", func(t *testing.T) {

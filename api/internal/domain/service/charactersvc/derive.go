@@ -125,9 +125,9 @@ func Derive(c *Character, awards []Award, armour string, rules Rules) (Derived, 
 	// level (EntryDerived); the character's slots are the first active
 	// spellcasting entry's (Derived.CasterLevel() is its level), else a
 	// dual-class's frozen one's, the first active entry's when none casts.
-	d.SpellSlots = primary.out.SpellSlots
+	d.SpellSlots, d.SchoolSlots = primary.out.SpellSlots, primary.out.SchoolSlots
 	if e, ok := d.CasterEntry(""); ok {
-		d.SpellSlots = e.SpellSlots
+		d.SpellSlots, d.SchoolSlots = e.SpellSlots, e.SchoolSlots
 	}
 	// ADR 0006 step 9: Table 5's magical defence adjustment at the sheet's
 	// Wisdom, an ability rule every class and race gets (step 9.2).
@@ -305,6 +305,11 @@ func deriveEntries(c *Character, awards []Award, rules Rules) ([]entryCalc, erro
 		if ed.SpellSlots, err = rules.SpellsPerDay(def, ed.RealizedLevel, c.Wis); err != nil {
 			return nil, fmt.Errorf("derive %s spell slots: %w", e.Class, err)
 		}
+		// ADR 0050 step 10: a specialist's school slot per spell level he
+		// has slots of, read from the class's school_specialization.
+		if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
+			ed.SchoolSlots = spellbook.SchoolSlots(specializationOf(f), ed.SpellSlots)
+		}
 		out = append(out, entryCalc{entry: e, def: def, out: ed})
 	}
 	return out, nil
@@ -438,12 +443,18 @@ func spellbookRules(c *Character, g classes.Grant, rules Rules) (*SpellbookRules
 	}
 	// ADR 0050 steps 5 to 7: the specialist school of the same entry's class.
 	if f, ok := g.Class.Lists(classes.KindSchoolSpecialization); ok {
-		out.Specialization = spellbook.Specialization{
-			Schools: f.SchoolSpecialization.Schools, OppositionSchools: f.SchoolSpecialization.OppositionSchools,
-		}
+		out.Specialization = specializationOf(f)
 		out.SchoolAdjustment, out.OtherAdjustment = spellbook.SchoolLearnBonus, spellbook.OtherLearnPenalty
 	}
 	return out, nil
+}
+
+// specializationOf is what the spellbook's rules read of a
+// school_specialization feature (ADR 0050 step 2).
+func specializationOf(f classes.Feature) spellbook.Specialization {
+	return spellbook.Specialization{
+		Schools: f.SchoolSpecialization.Schools, OppositionSchools: f.SchoolSpecialization.OppositionSchools,
+	}
 }
 
 // levelUp is step 7 for one entry of class (ADR 0042 step 7): a level-up is

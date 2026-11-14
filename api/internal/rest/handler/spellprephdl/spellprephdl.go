@@ -75,10 +75,13 @@ func castTargetToDTO(c *spelleffectsvc.TargetChoice) *CastTargetDTO { return wir
 // SpendableItemDTO is an inventory item a spell can spend.
 type SpendableItemDTO = wire.SpendableItemDTO
 
-// LevelLimitDTO is the preparation limit of one spell level.
+// LevelLimitDTO is the preparation limit of one spell level: max the
+// allotment, school a specialist's school slot (ADR 0050 step 10), absent for
+// anyone else. A preparation holds at most max + school spells of the level.
 type LevelLimitDTO struct {
-	Level int `json:"level"`
-	Max   int `json:"max"`
+	Level  int `json:"level"`
+	Max    int `json:"max"`
+	School int `json:"school,omitempty"`
 }
 
 // InfoDTO is the wire shape of GET /api/spells/preparation.
@@ -118,7 +121,7 @@ func GetInfo(charID CharacterIDFunc, svc prepsvc.SVC) render.HandlerFunc {
 			out.Spellbook = append(out.Spellbook, dto)
 		}
 		for _, l := range info.Limits {
-			out.Limits = append(out.Limits, LevelLimitDTO{Level: l.Level, Max: l.Max})
+			out.Limits = append(out.Limits, LevelLimitDTO{Level: l.Level, Max: l.Max, School: l.School})
 		}
 		render.OK(r.Context(), w, out)
 		return nil

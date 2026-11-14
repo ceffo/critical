@@ -119,8 +119,10 @@ export interface Derived {
   saves: SaveNumbers;
   /** The race's bonus on the save roll, per category (0: none). */
   raceSaveBonus: SaveNumbers;
-  /** Slots per day by ascending spell level (levels without a slot left out). */
-  spellSlots: { level: number; count: number }[];
+  /** Slots per day by ascending spell level (levels without a slot left out). `school` is a
+   * specialist's school slot of that level (ADR 0050 step 10), not counted in `count`: shown as
+   * "count + school"; absent for anyone else. */
+  spellSlots: { level: number; count: number; school?: number }[];
   levelUp: LevelUp;
   /** ADR 0042 steps 5 and 7: each class entry's own figures, in the order of the character's
    * `classes`. Absent for a single-class character, whose figures are the ones above. */

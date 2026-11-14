@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // View is the character read model the services depend on (ADR 0045): plain
@@ -61,6 +62,7 @@ type View struct {
 	ClassSaveBonuses []ClassSaveBonus
 	SpellImmunities  []string
 	SpellSlots       map[int]int
+	SchoolSlots      map[int]int
 	Specializes      bool
 	Spellbook        *SpellbookRules
 	Turning          []ruletablesvc.TurningTarget
@@ -124,11 +126,23 @@ type EntryView struct {
 	// and for a frozen entry.
 	NextLevelXP  *int
 	SpellSlots   map[int]int
+	SchoolSlots  map[int]int
 	Casts        bool
 	NoArmour     bool
 	SpellFailure int
 	LevelUp      LevelUp
 	Dormant      bool
+}
+
+// Specialization is the character's specialist school (ADR 0050 step 5): its
+// spellbook's, the zero value without one. Only the entry with the spellbook
+// casts wizard spells; any other's are priest spells, which no specialist
+// rule reads (prepsvc, castsvc: ADR 0050 steps 10 and 11).
+func (v View) Specialization() spellbook.Specialization {
+	if v.Spellbook == nil {
+		return spellbook.Specialization{}
+	}
+	return v.Spellbook.Specialization
 }
 
 // Level is the level the entry's features and figures are read at (ADR 0042
@@ -152,7 +166,7 @@ func buildView(c Character, d Derived) View {
 	for i, ed := range d.Classes {
 		e := EntryView{
 			Class: ed.Class, State: ed.State, Group: ed.Group, XP: ed.XP, TargetLevel: ed.TargetLevel,
-			RealizedLevel: ed.RealizedLevel, NextLevelXP: ed.NextLevelXP, SpellSlots: ed.SpellSlots, Casts: ed.Casts,
+			RealizedLevel: ed.RealizedLevel, NextLevelXP: ed.NextLevelXP, SpellSlots: ed.SpellSlots, SchoolSlots: ed.SchoolSlots, Casts: ed.Casts,
 			NoArmour: ed.NoArmour, SpellFailure: ed.SpellFailure, LevelUp: ed.LevelUp, Dormant: ed.Dormant,
 		}
 		if i < len(stored) {
@@ -166,7 +180,7 @@ func buildView(c Character, d Derived) View {
 		HPMax: c.HPMax, PSPMax: c.PSPMax,
 		Entries: entries,
 		THAC0:   d.THAC0, Saves: d.Saves, RaceSaveBonus: d.RaceSaveBonus, RaceToHitTypes: d.RaceToHitTypes, RaceToHitHurled: d.RaceToHitHurled, RaceToHitBonus: d.RaceToHitBonus, MagicDefence: d.MagicDefence, DexMissile: d.DexMissile, DexDefence: d.DexDefence,
-		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots,
+		ClassSaveBonuses: d.ClassSaveBonuses, SpellImmunities: d.SpellImmunities, SpellSlots: d.SpellSlots, SchoolSlots: d.SchoolSlots,
 		Specializes: d.Specializes, Spellbook: d.Spellbook, Turning: d.Turning, SkillColumn: d.SkillColumn,
 		SkillSets: d.SkillSets, Backstab: d.Backstab, LevelUp: d.LevelUp, ExceptionalStrength: d.ExceptionalStrength, SpellFailure: d.SpellFailure, Proficiencies: d.Proficiencies, PSP: d.PSP, Powers: d.Powers,
 		Features:    d.Features,

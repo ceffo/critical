@@ -82,11 +82,11 @@ git -C "$repo" checkout -q -B stale-docs "$base"
 echo doc >> "$repo/README.md"; git -C "$repo" add -A; git -C "$repo" commit -q -m docs
 prhead="$(git -C "$repo" rev-parse HEAD)"
 git -C "$repo" merge -q --no-edit main-moved
-out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$prhead" "$script" | head -1)"
+out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$prhead" "$script")"; out="${out%%$'\n'*}"
 [ "$out" = "skip_slow=true (only documentation changed)" ] || fail "docs PR on a moved base: $out"
 git -C "$repo" checkout -q -B stale-code "$base"
 echo code > "$repo/own.go"; git -C "$repo" add -A; git -C "$repo" commit -q -m code
-out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$(git rev-parse HEAD)" "$script" | head -1)"
+out="$(cd "$repo" && EVENT=pull_request BASE="$moved" HEAD="$(git rev-parse HEAD)" "$script")"; out="${out%%$'\n'*}"
 [ "$out" = "skip_slow=false (own.go is not documentation)" ] || fail "code PR on a moved base: $out"
 
 check "no change" false pull_request "" "$base"
@@ -97,7 +97,7 @@ check "a zero base (new branch)" false push "" 000000000000000000000000000000000
 check "an unknown base" false push "" 1111111111111111111111111111111111111111
 
 # The output file is optional: stdout carries the decision.
-out="$(cd "$repo" && git checkout -q readme && EVENT=pull_request BASE="$base" "$script" | head -1)"
+out="$(cd "$repo" && git checkout -q readme && EVENT=pull_request BASE="$base" "$script")"; out="${out%%$'\n'*}"
 [ "$out" = "skip_slow=true (only documentation changed)" ] || fail "stdout without GITHUB_OUTPUT: $out"
 
 # --- skip_e2e ---

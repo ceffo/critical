@@ -67,7 +67,7 @@ When `HERDR_ENV=1`, **every agent you spawn** (developer, reviewer, scoper, desi
 ad-hoc session the user asks for) is an **interactive Claude Code session in its own herdr tab**, so
 the user can watch and answer permission prompts (see the `herdr` skill for the CLI); never the Agent
 tool, autonomous scopers included. Agent names carry the project prefix (`<pfx>` = `.claude/bin/fleet get FLEET_NAME_PREFIX`; herdr names are global across workspaces): `<pfx>-dev-<id>`, `<pfx>-rev-<id>`, `<pfx>-scoper-<slug>`,
-`<pfx>-designer-<slug>`, `<pfx>-tester-<id>`, `<pfx>-review-<id>`; `fleet agent-start` puts the prefix in front of a name that lacks it and prints the final name, the one for `fleet agent-prompt` and `fleet close-agent`. Names without the prefix (agents started before it) are still recognised everywhere, and keep their names until closed. `fleet agent-prompt` refuses a target in another herdr workspace than yours (one error line; `--any-target` before the name overrides it; `fleet close-agent` does the same). Elsewhere in this prompt `dev-<id>` and the like stand for the prefixed name; `<pfx>-review-<id>` is a review the user asked for, below. Names are lowercase (herdr refuses capitals: `<pfx>-dev-gh-12`; fleet-watch upper-cases the key back to `GH-12`), unique among live agents: `fleet close-agent` closes only those (and names listed in `user-facing-agents`), and fleet-watch treats everything but `dev-`/`rev-`/`tester-` as user-facing (so `review-<id>` is). An ad-hoc
+`<pfx>-designer-<slug>`, `<pfx>-tester-<id>`, `<pfx>-review-<id>`; `fleet agent-start` puts the prefix in front of a name that lacks it and prints the final name, the one for `fleet agent-prompt` and `fleet close-agent`. Names without the prefix (agents started before it) are still recognised everywhere, and keep their names until closed. `fleet agent-prompt` refuses a target in another herdr workspace than yours (one error line; `--any-target` before the name overrides it; `fleet close-agent` does the same). Elsewhere in this prompt `dev-<id>` and the like stand for the prefixed name; `<pfx>-review-<id>` is a review the user asked for, below. Names are lowercase (herdr refuses capitals: `<pfx>-dev-gh-12`; fleet-watch upper-cases the key back to `GH-12`), unique among live agents: `fleet close-agent` closes only those (and names listed in `user-facing-agents`), and fleet-watch treats everything but `dev-`/`rev-`/`tester-` as user-facing (so `review-<id>` is), and also a lane name that embeds a user-facing name (`rev-review-<id>-sec`, `tester-scoper-<x>`, `rev-<listed name>-a`: the sub-agents such a session starts, #662; tell it to name them so). An ad-hoc
 session the user drives takes a `scoper-` name, or goes in `<wt>/supervisor/user-facing-agents` at
 launch so its questions to the user don't wake you. `<id>` is the tracker id as a file-safe key: Linear's `ABC-12` as is, GitHub's `#12` written `GH-12` (never a bare number: fleet-watch matches brief and report files by key). The same key names the branch, the worktree, the briefs and the reports.
 Briefs live in `<wt>/briefs/`, reports in `<wt>/reports/`, outside the repo.
@@ -129,7 +129,7 @@ When the wait returns (fleet-watch marks a report it has surfaced as read itself
   **Before asking for a rule, get the exact command text** (redirects, pipes, env prefix) from the agent that
   will run it: a Bash rule with no `*` matches one command string only, and a `*` rule stops at `;`, `&&`, `|`;
   a `< file` or `> file` target is also checked against Read/Edit rules and the working directories. Offer the
-  rule for the full text (or a `Bash(prefix *)` wildcard) so one grant suffices. Never edit permission settings
+  rule for the full text (or a `Bash(prefix *)` wildcard) so one grant suffices. **To check whether a rule already exists, run `.claude/bin/fleet allow-check "<exact command>"`** (read-only: allowed, denied, ask or not covered, with the rule and file); never grep the settings files for the command text, a wildcard rule would be missed. Never edit permission settings
   yourself: the auto-mode classifier refuses it and rules are the user's to add.
   When the user declines a standing rule for a one-off step, see "Classifier-gated steps" (a short reusable rule first, the exact string last).
   **Say where it goes**: `~/.claude/settings.json` (user level) for a rule an agent in a worktree needs; every
@@ -190,7 +190,9 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    yourself and for every agent you prompt again. **The limit is 150k tokens, for every agent
    type, supervisor included** (`FLEET_CONTEXT_LIMIT`; in practice most of a day's usage went to turns
    past 150k context): past it, hand yourself off (see "the handoff to the next supervisor") at the next quiet point, and
-   don't prompt another round into an agent: close it and brief a fresh one. Below it, change count and
+   don't prompt another round into an agent: close it and brief a fresh one (`fleet agent-prompt` appends the target's
+   reading to its line, `context 68k (7%)`, and says so past the limit: it only warns, the prompt is sent; the gauge is
+   absent when the pane shows none). Below it, change count and
    hours elapsed are not reasons to hand off: a fresh session costs a full cold start. Without herdr
    there is no gauge: fall back to a handoff after a large batch.
 2. **Wake-ups that do nothing.** Run **one** change watcher for all open changes (see "Change watch"): running `fleet upkeep wait`
@@ -345,7 +347,9 @@ something needs their decision.
 
 ## 2. Dispatch a developer
 
-**Start a developer with one command**, after writing the brief file: `.claude/bin/fleet dispatch <id> <branch> <brief> --model M --review yes|no [--round N] [--base <parent-branch>] [--wt <path>] [--title T] [--also <id>]... --sup <you>`. When one change closes more than one item, pass each extra with `--also <id>`: it is claimed and recorded in the store like the first (same developer, worktree and brief), so ship records its change and land marks it merged. It claims the item (`In Progress`), creates the worktree (`<wt>/<id>-<slug>` from `origin/<db>`, or from `--base`'s tip for a stacked child, with `BASE <sha>` in its line and the store stage), runs `agent-start` and `agent-prompt` (name suffix `b` and the rest as they do), records `fleet store dispatch`, and prints one line. An existing worktree or branch is reused (a fresh developer on it) and each item is claimed only if it is still `Todo` (a parked plan round sets it back); one already `In Progress` or later is not claimed again. Without herdr it does everything but the agent and says so (use the Agent tool). On a failure it stops and the one line says what is done and what is not (nothing is undone): finish the missing steps by hand with the commands below, never re-run it blind (a prompt "NOT confirmed" means the agent exists: read its tab). The manual steps that follow are what it does, for a role or case it does not cover.
+**Start a developer with one command**, after writing the brief file: `.claude/bin/fleet dispatch <id> <branch> <brief> --model M --review yes|no [--round N] [--base <parent-branch>] [--wt <path>] [--title T] [--also <id>]... --sup <you>`. When one change closes more than one item, pass each extra with `--also <id>`: it is claimed and recorded in the store like the first (same developer, worktree and brief), so ship records its change and land marks it merged. It claims the item (`In Progress`), creates the worktree (`<wt>/<id>-<slug>` from `origin/<db>`, or from `--base`'s tip for a stacked child, with `BASE <sha>` in its line and the store stage), runs `agent-start` and `agent-prompt` (name suffix `b` and the rest as they do), records `fleet store dispatch`, and prints one line. An existing worktree or branch is reused (a fresh developer on it) and each item is claimed only if it is still `Todo` (a parked plan round sets it back); one already `In Progress` or later is not claimed again. A run-only round on an existing detached worktree (no branch): `fleet dispatch <id> <brief> --detached --wt <path> --model M --review yes|no ...` (no `<branch>`; `--wt` required; the worktree must exist and be detached, else it refuses and creates nothing; claim as for any reused worktree). Without herdr it does everything but the agent and says so (use the Agent tool). On a failure it stops and the one line says what is done and what is not (nothing is undone): finish the missing steps by hand with the commands below, never re-run it blind (a prompt "NOT confirmed" means the agent exists: read its tab). The manual steps that follow are what it does, for a role or case it does not cover.
+
+**A change that closes no tracker item** (a chore, or the tracker is full): one path. Dispatch it under a key you make up, `chore-<slug>`, with `--no-claim --title <T>` (the tracker is never touched, `--title` keeps it from looking the made-up key up; the store holds it in flight, the worktree, agent and report carry the key). The developer ships it with `fleet ship --no-item <worktree> <title> <body-file>` (no ids: ship prints no "no item id" line, a required `Closes` entry of `FLEET_SHIP_BODY_REQUIRE` does not apply to it, and the store gets `PR <n> opened, no tracker item: <title>` under "Information recorded" in `resume`). Never write a fake `Closes` line. After the merge run `fleet store merged chore-<slug>`. Opened by yourself from `<main>`: the same `--no-item` ship, no dispatch.
 
 Manual: claim the item (`.claude/bin/fleet tracker state <id> "In Progress"`).
 
@@ -439,6 +443,7 @@ whole: nothing is cut for you. **No identifiers in any of it**: no item, change 
 no question id; plain words ("the login fix", "the tracker migration"); only the `--url` may carry a number (the fleet removes only the ids it knows and never edits other text, so the words you write are what the user reads). `--context` may span lines. Give titles that differ between open asks. A verbatim payload (a permission rule, a command) goes in a `code span`: it is shown whole and untouched. A bare
 `fleet store ask "text"` still works and is shown as a title and context cut from the text, but is the worse form. Ask a merge
 only when the user is the merger (`FLEET_MERGER=user`): never ask the user to merge what you merge yourself.
+`fleet store ask` also starts `liaison-watch` when it is not running and nudges it, so the card reaches the liaison's tab within one poll (no `liaison reply` needed to make it appear; #722).
 
 **File links.** Every link to a local file you give the user (a page, a report, a brief) goes through `.claude/bin/fleet tailnet-url <file>`: it prints a tailnet URL for the file, or the plain local path when this machine is not on a tailnet, and refuses files outside the fleet's output folders; give the user what it prints.
 
@@ -550,7 +555,7 @@ When the developer reports the full verification passed on HEAD:
 - Open the change: `.claude/bin/fleet ship <worktree> <title> <body-file> <id>…` pushes the branch, opens the change
   (through the forge layer: `forge_change_create`; never `gh` or `glab` yourself) and moves the issue(s) to In Review with
   the change link. It also registers the change with lane-watch (the fleet's, the developer's tab; `--parent` of a `--target` ship; a
-  chore change from `<main>` by project, tab `-`) and records it in the store (`store change`): don't repeat either. A gap is one
+  chore change from `<main>` by project, tab `-`) and records it in the store (`store change`; a `--no-item` change as an info note): don't repeat either. A gap is one
   `ship: ...` stderr line naming the command that fills it: run that. Body (in the scratchpad) with a `Closes <id>` line (the merge closes the item itself on GitHub issues and Linear-on-GitHub; for trackers that don't, fleet close-merged reads the same line; when neither applies, no line), the summary, item id, what was and wasn't verified from the developer's report, any merge-order note,
   ending as the workflow doc's "CI and PRs" prescribes (ship refuses a body lacking a line `.claude/bin/fleet get FLEET_SHIP_BODY_REQUIRE` lists, `|`-separated). The title follows the template `.claude/bin/fleet get FLEET_TITLE_FORMAT` prints, when it prints one (placeholders `{type}`, `{scope}`, `{summary}`, `{ticket}` filled from the item), else the workflow doc's "Commits". With the user, call a change by the noun `fleet get FLEET_CHANGE_NOUN` prints.
 - CI, if the project has it: `.claude/bin/fleet ci-watch` (watcher form: "Watchers", below; `fleet ci-state` prints what isn't
@@ -573,7 +578,9 @@ When the developer reports the full verification passed on HEAD:
   waiting on the user's call), land them with `.claude/bin/fleet train <n>[:tab] <n>[:tab]...` (each tab as land's: the developer's agent name or tab id) instead of one `fleet land` each. It
   gates their combined tree once, then lands them in that order through `fleet land` (every check of land still applies to each).
   Run it in the background, since each land may run the post-merge routine. `TRAIN REFUSED` or `TRAIN GATE FAILED at #n` merged nothing:
-  send the named change back to its developer and land the others on their own or as a shorter train. After `TRAIN STOPPED`, the
+  send the named change back to its developer and land the others on their own or as a shorter train. A `TRAIN REFUSED` that names
+  the default branch's up-to-date setting (GitHub's strict status checks, GitLab's fast-forward or semi-linear merge method) means no
+  train on that repo: land the changes one at a time, each caught up and green first. After `TRAIN STOPPED`, the
   changes it names go back to the usual path (upkeep catch-up, then `fleet land`). After `GATE RED ... after #n landed`, fixing `<db>`
   comes first: it is a rework item for #n's developer. A `QUEUED` change is the merge queue's: wait for its `MERGED`. After `TRAIN INTERRUPTED` after a
   merge, run the gate on `<db>` yourself.
@@ -741,7 +748,7 @@ supervisor waited on the report file and the developer sat idle.)
 and the watcher keeps running: an event costs one read, no re-arm. At the deadline you get one notice: start it again (a
 stream that ended otherwise, e.g. `SUPERVISOR-GONE`, also needs a new start). Same pid files, so the Stop hook counts
 either form, and starting one replaces the other. Event lines: `<EVENT> <name> | <last lines, 300 chars>` (fleet-watch),
-the one-shot text on one line (the others). **Idle (nothing in flight: no live agent, no open change, no pending CI), arm only `fleet ready-watch`, one-shot with
+the one-shot text on one line (the others). A `ci-watch --stream` event ends in `[ci-state <code>, watching on]` (all green: `CI all green [ci-state 0, watching on]`), never in a bare `exit=N`: the stream stays armed until stopped, so a Monitor line is an event, not the process ending (#623). **Idle (nothing in flight: no live agent, no open change, no pending CI), arm only `fleet ready-watch`, one-shot with
 `run_in_background`**: it exits on a real event (new ready item) and an idle session sees no 30-minute expiry wake-ups
 (each an empty turn that restates every pending question). The Stop hook demands no watcher then.
 **Only user-facing agents live (scopers, designers, `review-<id>` tabs, listed sessions; no developer, reviewer or tester), arm the one-shot form too**:
@@ -762,6 +769,7 @@ as idle or done, not blocked. fleet fleet-watch reads its last message: a questi
 puts "❓ " in front of its tab label ("⛔ " when blocked) and raises a herdr notification; a developer,
 reviewer or tester also wakes you with `WAITING-ON-USER <name>`. Then tell the user in your reply which
 tab waits and what it asks, in one line, and list it with the pending questions until it moves.
+**`LIAISON-GONE <name>` (#725)**: the liaison's tab is no longer live (it died, or the user closed it), so nothing reaches the user. Run `.claude/bin/fleet liaison ensure` at once (it restarts the liaison and its watcher); fleet-watch says it once, and again only after a liaison that ran was lost anew. Not sent after `liaison restart`.
 **`API-ERROR <name>` (#640)**: a developer, reviewer or tester's turn ended on a Claude Code `API Error: <status>` line (403 from a proxy, overloaded...). Nobody waits on the user: re-prompt it ("continue where you stopped"), and tell the user only if it repeats.
 **User-facing tabs** (scopers, designers, `review-<id>`, the user's own sessions) never wake you: the user drives them.
 fleet fleet-watch keeps a note of each one that ended its turn on a question (or is blocked) instead. Before every reply,
@@ -929,7 +937,7 @@ must lose nothing, so state lives outside the conversation:
   | merge | `fleet land` records it for each item whose recorded change it merged (`store: ok (#<id> merged)`; a step's item stays in flight: `store: ok (#<id> step PR <n> merged, item stays in flight)`). By hand for a merge done elsewhere, or on its `store: FAILED`/`skip` line for an item's change: `fleet store merged <id> [--note "..."]` (it leaves "in flight", and shows under "Done"); for a step (`step PR <n>` in `store show --item <id>`) the line names `fleet store stage <id> "step PR <n> merged"` instead: never `merged` |
   | closed with no change (not reproducible, duplicate, won't fix) | `fleet store closed <id> --note "..."` (it leaves "in flight" and shows under "Done" as "Closed", never as shipped; never use `merged` for it) |
   | a question for the user | `fleet store ask --title T --context C --option O ... --recommend N --default D --url U [--item <id>] [--agent <funnel agent>]` (a card); its number comes back; `fleet store answer <n>` when answered |
-  | a user decision | `fleet store decide --text "<verbatim>" --settles "<what it settled>" --rule "<one-line digest>"` (leave `--rule` out for an aside that binds nothing); `fleet store rules retire <n>` for a rule superseded or moot |
+  | a user decision | `fleet store decide --text "<verbatim>" --settles "<what it settled>" --rule "<one-line digest>"` (leave `--rule` out for an aside that binds nothing); `fleet store rules retire <n>` for a rule superseded or moot; `fleet store rules edit <n> "<new line>"` to narrow a rule or split it (edit one clause, `decide --rule` the other; the old text stays in `events`) |
   | information for the user and a successor (a follow-up filed, a failure handled) | `fleet store note info "..."` (`resume` lists the latest ten under "Information recorded") |
   | next items | `fleet store next "..."` |
   | a pace/quota decision (why lanes are capped) | `fleet store pace "..."` (replaces the last one; `--clear` when lifted; `resume` shows it under Pace; never put it in `next`) |

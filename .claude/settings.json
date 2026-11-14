@@ -9,6 +9,15 @@
             "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-cd-into-worktree"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-pattern-kill"
+          }
+        ]
       }
     ],
     "PostToolUse": [

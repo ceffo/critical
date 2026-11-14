@@ -380,6 +380,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 			}
 			return bs.Buffs.Add(ctx, characterID, buff)
 		}),
+		// A spell effect of an ability goes through the cast service (ADR 0049
+		// step 12), built below from the items.
+		Casts: bridgeadpt.SpellCastFunc(func(ctx context.Context, characterID int64, req itemsvc.SpellCast) (itemsvc.SpellCastResult, error) {
+			if bs.Cast == nil {
+				return itemsvc.SpellCastResult{}, fmt.Errorf("item spell effect: no cast service")
+			}
+			return bs.Cast.CastFromItem(ctx, characterID, req)
+		}),
 		// The bow warning's Strength in effect (ADR 0002 step 4.1): the buff
 		// service, built below from the items, read when a warning is computed.
 		Strength: bridgeadpt.EffectiveStrFunc(func(ctx context.Context, characterID int64) (buffsvc.Strength, error) {

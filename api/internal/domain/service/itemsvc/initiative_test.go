@@ -138,7 +138,7 @@ func TestUseAbility_ADR0049Step15_InitiativeByKindScrollAndMisc(t *testing.T) {
 					return nil, nil
 				}).Maybe()
 
-			_, err = svc.UseAbility(context.Background(), 1, tt.item.ID, "use")
+			_, err = svc.UseAbility(context.Background(), 1, tt.item.ID, "use", itemsvc.UseAsks{})
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
@@ -174,7 +174,7 @@ func TestUseAbility_ADR0049Step15_CorrectsThroughTheCorrectorWithoutTheBuffs(t *
 	cause := buffsvc.ItemInitiative("w", "Wand of frost", "wand", 3, true)
 	store.EXPECT().SaveInitiative(mock.Anything, int64(1), &buffsvc.Initiative{D10: 5, LogEntryID: 12, Modifiers: []buffsvc.InitiativeModifier{cause}}).Return(nil).Once()
 
-	_, err = svc.UseAbility(ctx, 1, "w", "use")
+	_, err = svc.UseAbility(ctx, 1, "w", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	require.Len(t, kinds, 2)
 	assert.Equal(t, actionlog.KindInitiativeCorrect, kinds[1], "the correction is the use's last entry")

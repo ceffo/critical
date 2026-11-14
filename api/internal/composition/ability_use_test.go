@@ -57,7 +57,7 @@ func TestUseAbility_ADR0049Step6_PaysRollsLogsAndUndoRedoRestoreTheLimit(t *test
 	require.Equal(t, itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 4, Left: 4, Cost: 1}, wand.Abilities[0].Limit)
 
 	cctx, changes := actionlog.WithChanges(ctx)
-	res, err := bs.Items.UseAbility(cctx, id, "wand_lightning", "use")
+	res, err := bs.Items.UseAbility(cctx, id, "wand_lightning", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Equal(t, []string{"items:wand_lightning", "log"}, changes.Keys())
 	require.Len(t, res.Effects, 1)
@@ -97,14 +97,14 @@ func TestUseAbility_ADR0049Step6_PaysRollsLogsAndUndoRedoRestoreTheLimit(t *test
 func TestUseAbility_ADR0049Step6_LongRestRefillsPerDayOnly(t *testing.T) {
 	dice := &attackDice{t: t, dies: []int{1, 2, 3, 4, 5, 6}, calls: map[string]int{}}
 	bs, ctx, id := abilityTable(t, dice)
-	_, err := bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+	_, err := bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
-	_, err = bs.Items.UseAbility(ctx, id, "wand_lightning", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "wand_lightning", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	before, err := bs.Log.List(ctx, id, 100)
 	require.NoError(t, err)
 
-	_, err = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use", itemsvc.UseAsks{})
 	assert.ErrorIs(t, err, itemsvc.ErrAbilityExhausted)
 	after, err := bs.Log.List(ctx, id, 100)
 	require.NoError(t, err)
@@ -162,7 +162,7 @@ func TestUseAbility_ADR0049Step15_NothingOutOfCombat(t *testing.T) {
 		Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitCharges, Max: 5, Left: 5, Cost: 1}),
 	})
 	require.NoError(t, err)
-	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.Item.ID, "use")
+	_, err = tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.Item.ID, "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Equal(t, 0, tb.countKind(t, actionlog.KindInitiativeCorrect), "round 0: nothing")
 	assert.Nil(t, tb.initiative(t))
@@ -215,7 +215,7 @@ func TestUseAbility_ADR0049Step7_TwoConcurrentUsesOfTheLastDoseOnePays(t *testin
 			go func() {
 				defer wg.Done()
 				<-start
-				_, errs[n] = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+				_, errs[n] = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use", itemsvc.UseAsks{})
 			}()
 		}
 		close(start)
@@ -254,7 +254,7 @@ func TestUseAbility_ADR0049Step7_AUseAndAnEditorSaveLoseNeitherWrite(t *testing.
 		go func() {
 			defer wg.Done()
 			<-start
-			_, useErr = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use")
+			_, useErr = bs.Items.UseAbility(ctx, id, "power_gem_dispel", "use", itemsvc.UseAsks{})
 		}()
 		go func() {
 			defer wg.Done()
@@ -319,7 +319,7 @@ func TestUndo_ADR0049Step20_OldUseAndRestockEntriesOnAWandAndAFlask(t *testing.T
 func TestUseLastDose_ADR0049Step2_BothEndpointsRemoveUndoBringsBackRedoRemoves(t *testing.T) {
 	uses := map[string]func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error{
 		"ability endpoint": func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error {
-			_, err := bs.Items.UseAbility(ctx, id, itemID, "use")
+			_, err := bs.Items.UseAbility(ctx, id, itemID, "use", itemsvc.UseAsks{})
 			return err
 		},
 		"spend-one endpoint": func(bs *composition.BackingServices, ctx context.Context, id int64, itemID string) error {

@@ -1529,6 +1529,7 @@
     "leftRemoved": "{{name}}: last charge used, removed from the inventory",
     "noRoll": "Nothing to roll — the effect is resolved at the table.",
     "itemHealed": "Healed",
+    "itemSpell": "{{spell}} cast",
     "itemHealFull": "Heals every lost HP",
     "itemBuffed": "Effect applied",
     "adjust": {
@@ -3096,6 +3097,8 @@
       "removeEffect": "Remove effect {{n}}",
       "addDice": "Dice",
       "addDiceHint": "Roll dice when this ability is used",
+      "spellEffect": "Spell {{n}}",
+      "spellEffectValue": "{{spell}} at caster level {{level}}",
       "healEffect": "Heal {{n}}",
       "healDice": "Hit points regained",
       "healDiceHint": "Rolled and added to the character's HP, up to max HP",

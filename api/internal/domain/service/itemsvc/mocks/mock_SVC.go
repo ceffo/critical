@@ -857,9 +857,9 @@ func (_c *MockSVC_Use_Call) RunAndReturn(run func(context.Context, int64, string
 	return _c
 }
 
-// UseAbility provides a mock function with given fields: ctx, characterID, itemID, abilityID
-func (_m *MockSVC) UseAbility(ctx context.Context, characterID int64, itemID string, abilityID string) (*itemsvc.AbilityUseResult, error) {
-	ret := _m.Called(ctx, characterID, itemID, abilityID)
+// UseAbility provides a mock function with given fields: ctx, characterID, itemID, abilityID, asks
+func (_m *MockSVC) UseAbility(ctx context.Context, characterID int64, itemID string, abilityID string, asks itemsvc.UseAsks) (*itemsvc.AbilityUseResult, error) {
+	ret := _m.Called(ctx, characterID, itemID, abilityID, asks)
 
 	if len(ret) == 0 {
 		panic("no return value specified for UseAbility")
@@ -867,19 +867,19 @@ func (_m *MockSVC) UseAbility(ctx context.Context, characterID int64, itemID str
 
 	var r0 *itemsvc.AbilityUseResult
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string) (*itemsvc.AbilityUseResult, error)); ok {
-		return rf(ctx, characterID, itemID, abilityID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string, itemsvc.UseAsks) (*itemsvc.AbilityUseResult, error)); ok {
+		return rf(ctx, characterID, itemID, abilityID, asks)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string) *itemsvc.AbilityUseResult); ok {
-		r0 = rf(ctx, characterID, itemID, abilityID)
+	if rf, ok := ret.Get(0).(func(context.Context, int64, string, string, itemsvc.UseAsks) *itemsvc.AbilityUseResult); ok {
+		r0 = rf(ctx, characterID, itemID, abilityID, asks)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*itemsvc.AbilityUseResult)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, int64, string, string) error); ok {
-		r1 = rf(ctx, characterID, itemID, abilityID)
+	if rf, ok := ret.Get(1).(func(context.Context, int64, string, string, itemsvc.UseAsks) error); ok {
+		r1 = rf(ctx, characterID, itemID, abilityID, asks)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -897,13 +897,14 @@ type MockSVC_UseAbility_Call struct {
 //   - characterID int64
 //   - itemID string
 //   - abilityID string
-func (_e *MockSVC_Expecter) UseAbility(ctx interface{}, characterID interface{}, itemID interface{}, abilityID interface{}) *MockSVC_UseAbility_Call {
-	return &MockSVC_UseAbility_Call{Call: _e.mock.On("UseAbility", ctx, characterID, itemID, abilityID)}
+//   - asks itemsvc.UseAsks
+func (_e *MockSVC_Expecter) UseAbility(ctx interface{}, characterID interface{}, itemID interface{}, abilityID interface{}, asks interface{}) *MockSVC_UseAbility_Call {
+	return &MockSVC_UseAbility_Call{Call: _e.mock.On("UseAbility", ctx, characterID, itemID, abilityID, asks)}
 }
 
-func (_c *MockSVC_UseAbility_Call) Run(run func(ctx context.Context, characterID int64, itemID string, abilityID string)) *MockSVC_UseAbility_Call {
+func (_c *MockSVC_UseAbility_Call) Run(run func(ctx context.Context, characterID int64, itemID string, abilityID string, asks itemsvc.UseAsks)) *MockSVC_UseAbility_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(string))
+		run(args[0].(context.Context), args[1].(int64), args[2].(string), args[3].(string), args[4].(itemsvc.UseAsks))
 	})
 	return _c
 }
@@ -913,7 +914,7 @@ func (_c *MockSVC_UseAbility_Call) Return(_a0 *itemsvc.AbilityUseResult, _a1 err
 	return _c
 }
 
-func (_c *MockSVC_UseAbility_Call) RunAndReturn(run func(context.Context, int64, string, string) (*itemsvc.AbilityUseResult, error)) *MockSVC_UseAbility_Call {
+func (_c *MockSVC_UseAbility_Call) RunAndReturn(run func(context.Context, int64, string, string, itemsvc.UseAsks) (*itemsvc.AbilityUseResult, error)) *MockSVC_UseAbility_Call {
 	_c.Call.Return(run)
 	return _c
 }

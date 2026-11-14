@@ -60,7 +60,7 @@ func TestUseAbility_ADR0049Step12_HealIsAppliedThroughTheHPLedger(t *testing.T) 
 	require.Equal(t, hpMax-12, currentHP(t, bs, ctx, id, hpMax))
 
 	cctx, changes := actionlog.WithChanges(ctx)
-	res, err := bs.Items.UseAbility(cctx, id, "potion_heal", "use")
+	res, err := bs.Items.UseAbility(cctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Contains(t, changes.Keys(), "hp", "the answer tells the web the hit points moved")
 	require.Len(t, res.Effects, 1)
@@ -84,7 +84,7 @@ func TestUseAbility_ADR0049Step12_HealIsCappedAtMaxAndFullFillsTheGap(t *testing
 	t.Run("capped", func(t *testing.T) {
 		dice := &attackDice{t: t, dies: []int{4, 4}, calls: map[string]int{}}
 		bs, ctx, id, hpMax := healTable(t, dice, 3, []itemsvc.Effect{{Kind: itemsvc.EffectHeal, Dice: "2d4"}})
-		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 		require.NoError(t, err)
 		assert.Equal(t, 8, res.Effects[0].Total, "the roll")
 		assert.Equal(t, 3, res.Effects[0].Applied.HPDelta, "capped to the gap")
@@ -93,7 +93,7 @@ func TestUseAbility_ADR0049Step12_HealIsCappedAtMaxAndFullFillsTheGap(t *testing
 	t.Run("at full HP", func(t *testing.T) {
 		dice := &attackDice{t: t, dies: []int{4, 4}, calls: map[string]int{}}
 		bs, ctx, id, hpMax := healTable(t, dice, 0, []itemsvc.Effect{{Kind: itemsvc.EffectHeal, Dice: "2d4"}})
-		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 		require.NoError(t, err)
 		assert.Zero(t, res.Effects[0].Applied.HPDelta)
 		assert.Equal(t, 2, itemOf(t, bs, ctx, id, "potion_heal").Count, "the dose is still spent")
@@ -102,7 +102,7 @@ func TestUseAbility_ADR0049Step12_HealIsCappedAtMaxAndFullFillsTheGap(t *testing
 	t.Run("full", func(t *testing.T) {
 		dice := &attackDice{t: t, calls: map[string]int{}} // a roll fails the test
 		bs, ctx, id, hpMax := healTable(t, dice, 17, []itemsvc.Effect{{Kind: itemsvc.EffectHeal, Full: true}})
-		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+		res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 		require.NoError(t, err)
 		assert.True(t, res.Effects[0].Full)
 		assert.Equal(t, 17, res.Effects[0].Applied.HPDelta)
@@ -119,7 +119,7 @@ func TestUseAbility_ADR0049Step12_TwoHealsShareTheGapInListOrder(t *testing.T) {
 	bs, ctx, id, hpMax := healTable(t, dice, 4, []itemsvc.Effect{
 		{Kind: itemsvc.EffectHeal, Dice: "1d4"}, {Kind: itemsvc.EffectHeal, Dice: "1d4"},
 	})
-	res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+	res, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	assert.Equal(t, 4, res.Effects[0].Applied.HPDelta)
 	assert.Zero(t, res.Effects[1].Applied.HPDelta, "the gap was filled by the first")
@@ -149,7 +149,7 @@ func TestUseAbility_ADR0049Step12_AFailingEffectRollsBackTheLimitAndTheHeal(t *t
 	before, err := bs.Log.List(ctx, id, 100)
 	require.NoError(t, err)
 
-	_, err = bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+	_, err = bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 	require.Error(t, err)
 	assert.Equal(t, map[string]int{"die": 1}, dice.calls, "the first heal did roll")
 	assert.Equal(t, 3, itemOf(t, bs, ctx, id, "potion_heal").Count, "the limit's payment is rolled back")
@@ -164,7 +164,7 @@ func TestUseAbility_ADR0049Step12_AFailingEffectRollsBackTheLimitAndTheHeal(t *t
 func TestUseAbility_ADR0049Step12_OneUndoPopsTheHealWithTheUse(t *testing.T) {
 	dice := &attackDice{t: t, dies: []int{3, 4}, calls: map[string]int{}}
 	bs, ctx, id, hpMax := healTable(t, dice, 12, []itemsvc.Effect{{Kind: itemsvc.EffectHeal, Dice: "2d4"}})
-	_, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use")
+	_, err := bs.Items.UseAbility(ctx, id, "potion_heal", "use", itemsvc.UseAsks{})
 	require.NoError(t, err)
 	require.Equal(t, hpMax-5, currentHP(t, bs, ctx, id, hpMax))
 	entries, err := bs.Log.List(ctx, id, 1)

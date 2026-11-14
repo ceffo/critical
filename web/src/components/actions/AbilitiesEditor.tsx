@@ -228,6 +228,39 @@ export function AbilitiesEditor({
                     j === k ? { ...x, ...patch } : x,
                   ),
                 });
+              if (e.kind === "spell")
+                return (
+                  <div
+                    key={k}
+                    className="flex flex-wrap items-center gap-x-3 gap-y-2"
+                    role="group"
+                    aria-label={t("equipment.abilities.spellEffect", {
+                      n: k + 1,
+                    })}
+                    data-testid="ability-effect"
+                    data-kind="spell"
+                  >
+                    <span className="text-sm">
+                      {t("equipment.abilities.spellEffectValue", {
+                        spell: e.spellId,
+                        level: e.level,
+                      })}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      title={t("equipment.abilities.removeEffect", {
+                        n: k + 1,
+                      })}
+                      onClick={() =>
+                        set(i, { effects: a.effects.filter((_, j) => j !== k) })
+                      }
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                );
               if (e.kind === "buff")
                 return (
                   <BuffEffectFields

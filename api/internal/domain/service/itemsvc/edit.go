@@ -246,6 +246,9 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if err := s.knownSpell(ctx, item); err != nil {
 		return nil, err
 	}
+	if err := s.knownSpellEffects(ctx, item.Abilities); err != nil {
+		return nil, err
+	}
 	var res *ChangeResult
 	err = s.tx.InTx(ctx, func(ctx context.Context) error {
 		all, err := s.dal.List(ctx, characterID)
@@ -386,6 +389,11 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 		}
 		if item.SpellID != old.SpellID {
 			if err := s.knownSpell(ctx, item); err != nil {
+				return err
+			}
+		}
+		if p.Abilities != nil {
+			if err := s.knownSpellEffects(ctx, item.Abilities); err != nil {
 				return err
 			}
 		}

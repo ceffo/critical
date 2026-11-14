@@ -229,9 +229,10 @@ export interface ItemAbilityLimit {
  * `heal`: hit points regained through the HP ledger, by `dice` or `full` (the gap to max HP), never both.
  * `buff`: a timed buff put on the buff list when used: `name` (absent: the ability's, else the item's),
  * `rounds` (0: until dismissed) and `buff`, its modifiers in the buffs' effect keys.
+ * `spell`: a spell cast at a fixed caster level through the cast service (`spellId`, `level` 1 to 30).
  */
 export interface ItemAbilityEffect {
-  kind: "dice" | "heal" | "buff";
+  kind: "dice" | "heal" | "buff" | "spell";
   /** NdM or NdM+K; absent for a full heal. */
   dice?: string;
   /** A heal that fills the gap to max HP (no dice). */
@@ -245,6 +246,9 @@ export interface ItemAbilityEffect {
   rounds?: number;
   /** A buff effect's modifiers. */
   buff?: BuffEffects;
+  /** A spell effect's spell (a catalogue id) and the caster level it is cast at. */
+  spellId?: string;
+  level?: number;
 }
 
 /**
@@ -287,11 +291,14 @@ export interface AppliedBuff {
 /**
  * One effect of an ability's use (itemsvc EffectResult): a dice effect's rolls, applied to nothing;
  * a heal's rolls (none for a full heal) with `applied`, what the HP ledger took; a buff's `buff`,
- * the row put on the list.
+ * the row put on the list; a spell's `cast`, its breakdown.
  */
 export interface AbilityEffectResult {
-  kind: "dice" | "heal" | "buff";
+  kind: "dice" | "heal" | "buff" | "spell";
   buff?: AppliedBuff;
+  /** A spell effect's spell and the breakdown of its cast, as a cast from a slot logs it (action "item"). */
+  spellId?: string;
+  cast?: Record<string, unknown>;
   /** Absent for a full heal. */
   dice?: string;
   full?: boolean;

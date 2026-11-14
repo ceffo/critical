@@ -65,7 +65,10 @@ function keptConditions(b: BuffEffects | undefined): BuffEffects {
 
 /** One effect row of an ability as the form holds it: dice rolled, a heal (dice or full) or a buff. */
 export interface DiceDraft {
-  kind: "dice" | "heal" | "buff";
+  kind: "dice" | "heal" | "buff" | "spell";
+  /** A spell effect's spell and caster level, kept as stored (the picker comes with its slice). */
+  spellId: string;
+  level: number;
   /** A buff's name; empty: the ability's, else the item's. */
   name: string;
   /** A buff's rounds as typed; 0: until dismissed. */
@@ -113,6 +116,8 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
     cost: cost !== undefined && cost > 0 ? String(cost) : "1",
     effects: a.effects.map((e) => ({
       kind: e.kind,
+      spellId: e.spellId ?? "",
+      level: e.level ?? 0,
       name: e.name ?? "",
       rounds: String(e.rounds ?? 0),
       mods: BUFF_EFFECT_KEYS.flatMap((key) =>
@@ -133,6 +138,8 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
 export function newEffectDraft(kind: DiceDraft["kind"]): DiceDraft {
   return {
     kind,
+    spellId: "",
+    level: 0,
     name: "",
     rounds: kind === "buff" ? "10" : "0",
     mods: kind === "buff" ? [{ key: "save_bonus", value: "1" }] : [],
@@ -223,7 +230,9 @@ export function draftsToAbilities(
     // which holds none: its numbers must be numbers.
     const effects: ItemAbilityEffect[] = [];
     for (const e of d.effects) {
-      if (e.kind === "buff") {
+      if (e.kind === "spell") {
+        effects.push({ kind: "spell", spellId: e.spellId, level: e.level });
+      } else if (e.kind === "buff") {
         const buff = buffOf(e);
         const rounds = parseInteger(e.rounds);
         if (!buff || Number.isNaN(rounds)) return null;
@@ -287,6 +296,8 @@ export function abilitiesKey(
         label: e.label ?? "",
         name: e.name ?? "",
         rounds: e.rounds ?? 0,
+        spellId: e.spellId ?? "",
+        level: e.level ?? 0,
         buff: Object.fromEntries(
           Object.entries(e.buff ?? {})
             .filter(([, v]) => v !== undefined && v !== false)

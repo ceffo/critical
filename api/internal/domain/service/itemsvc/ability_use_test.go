@@ -49,7 +49,7 @@ func useOnce(t *testing.T, f fixture, dal *mocks.MockDAL, before itemsvc.Item, a
 	require.NoError(t, err)
 	var got actionlog.NewEntry
 	f.log.EXPECT().Record(mock.Anything, mock.Anything).Run(func(_ context.Context, e actionlog.NewEntry) { got = e }).Return(int64(9), nil).Maybe()
-	res, err := svc.UseAbility(context.Background(), 1, before.ID, abilityID)
+	res, err := svc.UseAbility(context.Background(), 1, before.ID, abilityID, itemsvc.UseAsks{})
 	return res, got, err
 }
 
@@ -146,7 +146,7 @@ func TestUseAbility_ADR0049Step5_ExhaustedIsRefusedAndChangesNothing(t *testing.
 			dal.EXPECT().Get(mock.Anything, int64(1), it.ID).Return(it, nil)
 			svc, err := itemsvc.New(dal, f.Deps)
 			require.NoError(t, err)
-			_, err = svc.UseAbility(context.Background(), 1, it.ID, it.Abilities[0].ID)
+			_, err = svc.UseAbility(context.Background(), 1, it.ID, it.Abilities[0].ID, itemsvc.UseAsks{})
 			assert.ErrorIs(t, err, itemsvc.ErrAbilityExhausted)
 			assert.Equal(t, itemsvc.ReasonExhausted, it.UseRefusal(it.Abilities[0]), "the wire serves the reason")
 		})
@@ -173,14 +173,14 @@ func TestUseAbility_ADR0049Step7_UnknownItemOrAbility(t *testing.T) {
 	f := readsCharacter(t)
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, int64(1), "nope").Return(itemsvc.Item{}, fmt.Errorf("%w: nope", itemsvc.ErrItemNotFound))
-	_, err := svc.UseAbility(context.Background(), 1, "nope", "use")
+	_, err := svc.UseAbility(context.Background(), 1, "nope", "use", itemsvc.UseAsks{})
 	assert.ErrorIs(t, err, itemsvc.ErrItemNotFound)
 
 	sword := zombieSword(2)
 	dal.EXPECT().Get(mock.Anything, int64(1), "sword").Return(sword, nil)
-	_, err = svc.UseAbility(context.Background(), 1, "sword", "fly")
+	_, err = svc.UseAbility(context.Background(), 1, "sword", "fly", itemsvc.UseAsks{})
 	assert.ErrorIs(t, err, itemsvc.ErrAbilityNotFound)
-	_, err = svc.UseAbility(context.Background(), 1, "sword", "use")
+	_, err = svc.UseAbility(context.Background(), 1, "sword", "use", itemsvc.UseAsks{})
 	assert.ErrorIs(t, err, itemsvc.ErrAbilityNotFound, "an id of another item's ability")
 }
 
@@ -330,7 +330,7 @@ func TestUseAbility_ADR0049Step12_AFailingEffectWritesNoEntry(t *testing.T) {
 	svc, _ := itemsvc.New(dal, f.Deps)
 	dal.EXPECT().Get(mock.Anything, int64(1), "wand").Return(item, nil)
 	dal.EXPECT().Update(mock.Anything, int64(1), mock.Anything).Return(nil).Once()
-	_, err := svc.UseAbility(context.Background(), 1, "wand", "use")
+	_, err := svc.UseAbility(context.Background(), 1, "wand", "use", itemsvc.UseAsks{})
 	require.Error(t, err)
 }
 

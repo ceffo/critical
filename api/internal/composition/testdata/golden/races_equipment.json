@@ -12,6 +12,7 @@
           "halfling",
           "human"
         ],
+        "Schools": [],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -377,6 +378,7 @@
           "half_elf",
           "human"
         ],
+        "Schools": [],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -517,6 +519,7 @@
           "halfling",
           "human"
         ],
+        "Schools": [],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -681,6 +684,7 @@
           "halfling",
           "human"
         ],
+        "Schools": [],
         "Skills": [
           "pick_pockets",
           "open_locks",
@@ -849,6 +853,7 @@
           "half_elf",
           "human"
         ],
+        "Schools": [],
         "Skills": [
           "climb_walls",
           "detect_noise",
@@ -1228,6 +1233,7 @@
           "halfling",
           "human"
         ],
+        "Schools": [],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -1402,6 +1408,9 @@
           "half_elf",
           "human"
         ],
+        "Schools": [
+          "abjuration"
+        ],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -1542,6 +1551,9 @@
           "elf",
           "half_elf",
           "human"
+        ],
+        "Schools": [
+          "conjuration_summoning"
         ],
         "Skills": [],
         "Alignments": [
@@ -1684,6 +1696,10 @@
           "half_elf",
           "human"
         ],
+        "Schools": [
+          "greater_divination",
+          "lesser_divination"
+        ],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -1825,6 +1841,9 @@
           "half_elf",
           "human"
         ],
+        "Schools": [
+          "enchantment_charm"
+        ],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -1964,6 +1983,9 @@
         "Races": [
           "gnome",
           "human"
+        ],
+        "Schools": [
+          "illusion"
         ],
         "Skills": [],
         "Alignments": [
@@ -2106,6 +2128,9 @@
           "half_elf",
           "human"
         ],
+        "Schools": [
+          "invocation_evocation"
+        ],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -2247,6 +2272,9 @@
           "half_elf",
           "human"
         ],
+        "Schools": [
+          "necromancy"
+        ],
         "Skills": [],
         "Alignments": [
           "lawful_good",
@@ -2387,6 +2415,9 @@
           "elf",
           "half_elf",
           "human"
+        ],
+        "Schools": [
+          "alteration"
         ],
         "Skills": [],
         "Alignments": [

@@ -54,6 +54,25 @@ describe("CastResultView", () => {
     );
   });
 
+  // ADR 0050 step 13: a specialist's own cast of a spell of his school tells the DM the targets'
+  // −1 beside the save, worded from the server's figure; none without it.
+  it("words the targets' save modifier of a specialist's school spell", async () => {
+    const fireball = (save: {
+      type: string;
+      effect: string;
+      targetSaveModifier?: number;
+    }) => <CastResultView result={{ ...base, save }} />;
+    const first = await renderApp(
+      fireball({ type: "spell", effect: "half", targetSaveModifier: -1 }),
+    );
+    expect(screen.getByTestId("cast-save")).toHaveTextContent(
+      "spell, half damage (targets -1: specialist caster)",
+    );
+    first.unmount();
+    await renderApp(fireball({ type: "spell", effect: "half" }));
+    expect(screen.queryByTestId("cast-save-modifier")).toBeNull();
+  });
+
   it("names the cast-time option; a cast with no damage shows neither a damage block nor the text-only banner", async () => {
     await renderApp(
       <CastResultView

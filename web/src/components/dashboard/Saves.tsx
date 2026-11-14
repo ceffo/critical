@@ -1,8 +1,9 @@
 import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Check, X } from "@phosphor-icons/react";
+import { Check, MagicWand, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { groupHeadClass } from "./fieldStyles";
 import { SaveSpell } from "./SaveSpell";
 import { useCharacterStore } from "@/stores/character";
@@ -22,7 +23,10 @@ import { SAVE_FIELD as TARGET_FIELD } from "@/lib/saveFields";
  * the request fails). Ticked, it shows a line to name the spell the save is against (ADR 0006 step
  * 10.2; every PHB Table 5 immunity is a spell that attacks the mind), cleared with it: against one
  * the character's Wisdom makes them immune to, the server rolls nothing and the last-roll column
- * shows the check with no die.
+ * shows the check with no die. The wand beside it opens the same line without the flag: a
+ * specialist names the spell for his +1 against his school (ADR 0050 step 12), and the line's
+ * "Specialist caster" box, once a spell is named, says a specialist of its school cast it: −1
+ * (step 13). The server decides both; everything clears once the save is rolled.
  */
 export function Saves() {
   const { t } = useTranslation();
@@ -30,15 +34,32 @@ export function Saves() {
   const { rollSave, rolling } = useRollStore();
   const last = lastSaves(useLogStore((s) => s.entries));
   const [mindAffecting, setMindAffecting] = useState(false);
+  const [spellOpen, setSpellOpen] = useState(false);
   const [spellId, setSpellId] = useState<string | undefined>();
+  const [casterSpecialist, setCasterSpecialist] = useState(false);
+  const spellLine = mindAffecting || spellOpen;
+  const setSpell = (id: string | undefined) => {
+    setSpellId(id);
+    if (!id) setCasterSpecialist(false);
+  };
   const setMind = (on: boolean) => {
     setMindAffecting(on);
-    if (!on) setSpellId(undefined);
+    if (!on && !spellOpen) setSpell(undefined);
+  };
+  const toggleSpell = () => {
+    if (spellOpen && !mindAffecting) setSpell(undefined);
+    setSpellOpen(!spellOpen);
   };
   const rollOne = async (cat: SaveCategory) => {
     // Kept on a refused request, so the player doesn't have to set them again.
-    if (await rollSave(cat, mindAffecting, mindAffecting ? spellId : undefined))
-      setMind(false);
+    const spell = spellLine ? spellId : undefined;
+    if (
+      await rollSave(cat, mindAffecting, spell, !!spell && casterSpecialist)
+    ) {
+      setMindAffecting(false);
+      setSpellOpen(false);
+      setSpell(undefined);
+    }
   };
 
   return (
@@ -70,14 +91,38 @@ export function Saves() {
           />
           {t("saves.mindAffecting")}
         </label>
+        <Button
+          size="icon-xs"
+          aria-pressed={spellLine}
+          aria-label={t("saves.spellLine")}
+          title={t("saves.spellLineHint")}
+          disabled={rolling || mindAffecting}
+          onClick={toggleSpell}
+          data-testid="save-spell-toggle"
+        >
+          <MagicWand aria-hidden />
+        </Button>
       </div>
-      {mindAffecting && (
-        <div className="flex min-w-0 justify-end" data-testid="save-spell-line">
-          <SaveSpell
-            spellId={spellId}
-            onChange={setSpellId}
-            disabled={rolling}
-          />
+      {spellLine && (
+        <div
+          className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1"
+          data-testid="save-spell-line"
+        >
+          <label
+            className="hit-24 flex items-center gap-1.5 text-label"
+            title={t("saves.casterSpecialistHint")}
+          >
+            <input
+              type="checkbox"
+              className="relative z-10 size-3.5"
+              checked={casterSpecialist}
+              disabled={rolling || !spellId}
+              onChange={(e) => setCasterSpecialist(e.target.checked)}
+              data-testid="save-caster-specialist"
+            />
+            {t("saves.casterSpecialist")}
+          </label>
+          <SaveSpell spellId={spellId} onChange={setSpell} disabled={rolling} />
         </div>
       )}
       <ul className="flex flex-col gap-1">

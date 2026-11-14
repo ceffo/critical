@@ -16,6 +16,10 @@ export type ModifierKind =
   | "race"
   /** A class's save_bonus (ADR 0043 step 3) on a mind-affecting save; detail is the class code. */
   | "class"
+  /** A specialist's +1 on his save against a wizard spell of his school (ADR 0050 step 12). */
+  | "specialist"
+  /** The -1 on a save against a specialist caster's spell of his school (ADR 0050 step 13). */
+  | "caster_specialist"
   | "crit"
   | "specialization"
   | "point_blank"

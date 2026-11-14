@@ -407,6 +407,15 @@ export function CastEntry({
               defaultValue: c.save.effect,
             }),
           })}
+          {/* ADR 0050 step 13: a specialist's own spell of his school; the server's figure. */}
+          {c.save.targetSaveModifier ? (
+            <span data-testid="cast-entry-save-modifier">
+              {" "}
+              {t("result.cast.saveTargetModifier", {
+                value: c.save.targetSaveModifier,
+              })}
+            </span>
+          ) : null}
         </p>
       )}
       {c.item && (

@@ -672,7 +672,11 @@
     "spellSearchLabel": "Spell the save is against",
     "spellPick": "Save against {{name}}",
     "spellTag": "vs {{name}}",
-    "spellClear": "Clear {{name}}"
+    "spellClear": "Clear {{name}}",
+    "spellLine": "Spell",
+    "spellLineHint": "Name the spell the next save is against: a specialist gets +1 against his school, and one cast by a specialist of its school can be marked",
+    "casterSpecialist": "Specialist caster",
+    "casterSpecialistHint": "The spell was cast by a specialist wizard of its school: the save takes −1 (it cancels a specialist’s own +1)"
   },
   "items": {
     "title": "Inventory",
@@ -1430,7 +1434,9 @@
       "point_blank": "Point blank",
       "backstab": "Backstab",
       "nonproficient": "Non-proficiency ({{weapon}})",
-      "dice_modifier": "{{detail}}: fixed part"
+      "dice_modifier": "{{detail}}: fixed part",
+      "specialist": "Specialist, his school",
+      "caster_specialist": "Specialist caster"
     },
     "cast": {
       "castHeading": "{{name}} (level {{level}}), cast at caster level {{casterLevel}}",
@@ -1522,7 +1528,8 @@
       },
       "spellFailed": "Spell failed: the slot is spent, nothing happens.",
       "spellHeld": "No spell failure",
-      "failureRoll": "d100 {{roll}} against {{chance}}% (Wisdom)"
+      "failureRoll": "d100 {{roll}} against {{chance}}% (Wisdom)",
+      "saveTargetModifier": "(targets {{value}}: specialist caster)"
     },
     "itemHeading": "Used {{name}}",
     "effect": "Effect",
@@ -2656,7 +2663,8 @@
     "mind_closed": "Contact does not work on a closed mind.",
     "level_out_of_table": "The contact table has no row for that level: give the cost the DM sets.",
     "use_contact_route": "This power is used through Contact, not Use.",
-    "no_contact": "No contact with that target from an earlier round: use Contact on it first."
+    "no_contact": "No contact with that target from an earlier round: use Contact on it first.",
+    "caster_specialist_needs_spell": "Name the wizard spell the save is against: the specialist caster’s −1 needs it."
   },
   "lastShort": {
     "attack": "Attack",

@@ -476,6 +476,15 @@ export function CastResultView({ result: r }: { result: CastResult }) {
               defaultValue: r.save.effect,
             }),
           })}
+          {/* ADR 0050 step 13: a specialist's own spell of his school; the server's figure. */}
+          {r.save.targetSaveModifier ? (
+            <span data-testid="cast-save-modifier">
+              {" "}
+              {t("result.cast.saveTargetModifier", {
+                value: r.save.targetSaveModifier,
+              })}
+            </span>
+          ) : null}
         </p>
       )}
 

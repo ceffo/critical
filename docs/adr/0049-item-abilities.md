@@ -653,6 +653,11 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
    - **Initiative** (step 15): unchanged and now tested: a wand (any non-scroll) with a spell effect corrects
      the round once, by the item's Table 56 row (+3 for a wand), never by the spell's casting time. A scroll's
      term still reads the item's `spellId` until 9b folds it into the effect.
+   - **Slots an item spell grants** are saved blank with no class, where a cast copies the class of the slot
+     it spends: an item has no slot, so on a character of several spellcasting entries they land on the
+     default (first active) entry. A choice for an item, revisited if it matters. The breakdown's action
+     `item` is read by no journal or web code as a use's action: the journal words the `item_use` entry, and
+     a cast breakdown nested in it is drawn by its own fields (9b draws it).
    - **Not in 9a, so the app stays as it is:** the scroll's `spellId` field and its conversion, the Use
      dialog, the editor's spell picker (the editor keeps a stored spell effect through a save and shows it
      read-only), and the card's drawing of the cast (it names the spell). A spell effect can only be written
@@ -662,6 +667,8 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      (`dmg/app3-magical-item-descriptions/04-level-of.md`): a scroll spell is written at a level one higher
      than the one required to cast it, never below 6th level of experience ("a 6th-level wizard spell is written
      at 13th level of ability, a 7th-level spell at 15th"), and the DM may write it higher.
+   - **To do in 9b:** a scroll's initiative term must read its spell effect (today it reads the item's
+     `spellId`, so a scroll holding only a spell effect gets the kind row), with a test.
 10. **The contract.** Drop `behaviour`, `max_count`, `effect_dice`, `effect_save` and the old reads,
     retire the old use endpoint and the `behaviour` wire field, delete the legacy half of the
     snapshot restorer once no environment holds an old entry that needs it, amend ADR 0016, 0033, 0008

@@ -259,3 +259,78 @@ func TestAbilities_ADR0049Step10_ASpellEffectIsValidated(t *testing.T) {
 	}
 	assert.Equal(t, 5, itemOf(t, tb.bs, tb.ctx, tb.id, wand.ID).Abilities[0].Limit.Left, "nothing was spent")
 }
+
+// ADR 0049 step 12: a wand whose first spell grants slots and whose second puts a buff on the list:
+// both snapshots ride the one entry, so one undo takes the slots and the buff off and gives the
+// charge back; nothing is left.
+func TestUseAbility_ADR0049Step12_GrantedSlotsAndABuffAreBothUndoneByOneUndo(t *testing.T) {
+	tb := spellTable(t, &attackDice{t: t, calls: map[string]int{}})
+	wand := tb.item(t, wandOf(spellEffect("rarys_mnemonic_enhancer", 7), spellEffect("armor", 5)))
+	slots := func() int {
+		got, err := tb.bs.Spells.GetSlots(tb.ctx, tb.id)
+		require.NoError(t, err)
+		return len(got)
+	}
+	start, entries := slots(), tb.logLen(t)
+	onSelf := true
+
+	_, err := tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.ID, "use", itemsvc.UseAsks{Spells: []itemsvc.SpellAsks{
+		{Effect: 0, ExtraSlots: []int{1, 2}}, {Effect: 1, OnSelf: &onSelf},
+	}})
+	require.NoError(t, err)
+	assert.Equal(t, start+2, slots())
+	rows := activeBuffs(t, tb.bs, tb.ctx, tb.id)
+	require.Len(t, rows, 2, "Rary's 1440-round row and Armor's buff, both written by the two spells")
+	assert.ElementsMatch(t, []string{"rarys_mnemonic_enhancer", "armor"}, []string{rows[0].SpellID, rows[1].SpellID})
+	assert.Equal(t, entries+1, tb.logLen(t), "one entry holds the slots, the buff and the charge")
+
+	tb.undo(t)
+	assert.Equal(t, start, slots(), "the slots are gone")
+	assert.Empty(t, activeBuffs(t, tb.bs, tb.ctx, tb.id), "the buff is gone")
+	assert.Equal(t, 5, itemOf(t, tb.bs, tb.ctx, tb.id, wand.ID).Abilities[0].Limit.Left, "the charge is back")
+}
+
+// ADR 0049 step 12: two spell effects of one use that both spend a gem: the item's snapshot is merged
+// (before the first, after the last), and one undo gives back the original count, not the middle one.
+func TestUseAbility_ADR0049Step12_TwoSpellsSpendingGemsAreUndoneToTheOriginalCount(t *testing.T) {
+	dice := &attackDice{t: t, d20s: []int{15, 9}, calls: map[string]int{}}
+	tb := spellTable(t, dice)
+	gem := tb.item(t, itemsvc.ItemInput{Name: localized.Of("Opal"), Category: itemsvc.CategoryGear, Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 3})
+	wand := tb.item(t, wandOf(spellEffect("chromatic_orb", 3), spellEffect("chromatic_orb", 3)))
+	ac := 12
+
+	_, err := tb.bs.Items.UseAbility(tb.ctx, tb.id, wand.ID, "use", itemsvc.UseAsks{Spells: []itemsvc.SpellAsks{
+		{Effect: 0, TargetAC: &ac}, {Effect: 1, TargetAC: &ac},
+	}})
+	require.NoError(t, err)
+	assert.Equal(t, 1, itemOf(t, tb.bs, tb.ctx, tb.id, gem.ID).Count, "two gems spent")
+	assert.Equal(t, map[string]int{"d20": 2}, dice.calls)
+
+	tb.undo(t)
+	assert.Equal(t, 3, itemOf(t, tb.bs, tb.ctx, tb.id, gem.ID).Count, "undo: the original count, not 2")
+	assert.Equal(t, 5, itemOf(t, tb.bs, tb.ctx, tb.id, wand.ID).Abilities[0].Limit.Left)
+}
+
+// ADR 0049 step 12 and ADR 0007 step 5: a heal effect (5), a spell heal (6) and a dice effect in one
+// use against 20 max HP, wounded by 8: the first fills 5, the spell's 6 is capped at the 3 left, the dice
+// change nothing. The entry's HP delta is the 8 the ledger moved, and HP is at max.
+func TestUseAbility_ADR0049Step12_HealSpellHealThenDiceMoveTheLedgerOnceAndCap(t *testing.T) {
+	dice := &attackDice{t: t, dies: []int{5, 6, 2}, calls: map[string]int{}}
+	tb := spellTable(t, dice)
+	tb.wound(t, 8)
+	scroll := tb.item(t, scrollOf(
+		itemsvc.Effect{Kind: itemsvc.EffectHeal, Dice: "1d6"}, spellEffect("cure_light_wounds", 1), itemsvc.Effect{Kind: itemsvc.EffectDice, Dice: "1d4"},
+	))
+	require.Equal(t, 12, tb.hp(t))
+
+	res, err := tb.bs.Items.UseAbility(tb.ctx, tb.id, scroll.ID, "use", itemsvc.UseAsks{})
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.Applied{HPDelta: 5, HPBefore: 12, HPAfter: 17}, *res.Effects[0].Applied)
+	assert.Equal(t, itemsvc.Applied{HPDelta: 3, HPBefore: 17, HPAfter: 20}, *res.Effects[1].Applied, "6 rolled, 3 fit")
+	assert.Nil(t, res.Effects[2].Applied, "dice apply nothing")
+	assert.Equal(t, 2, res.Effects[2].Total)
+	assert.Equal(t, 20, tb.hp(t))
+	entry := tb.top(t)
+	assert.Equal(t, 8, entry.HPDelta, "the entry's delta is what the ledger moved")
+	assert.Equal(t, map[string]int{"die": 3}, dice.calls)
+}

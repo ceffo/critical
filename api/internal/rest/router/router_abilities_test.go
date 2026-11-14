@@ -270,5 +270,9 @@ func TestItems_ADR0049Step10_SpellEffectOnTheWireAndItsAsks(t *testing.T) {
 		Return(nil, fmt.Errorf("%w: Chromatic Orb needs the target's AC", domain.ErrInvalidInput)).Once()
 	rec = do(h, "POST", "/api/items/w/abilities/zap/use", "")
 	assert.Equal(t, http.StatusBadRequest, rec.Code, "no body: the cast's defaults; its refusal is a 400")
-	assert.Equal(t, http.StatusBadRequest, do(h, "POST", "/api/items/w/abilities/zap/use", "{nope").Code)
+	m.items.EXPECT().UseAbility(mock.Anything, int64(1), "w", "zap", itemsvc.UseAsks{}).
+		Return(&itemsvc.AbilityUseResult{ItemID: "w", AbilityID: "zap", Limit: itemsvc.LimitCharges, Effects: []itemsvc.EffectResult{}}, nil).Twice()
+	assert.Equal(t, http.StatusOK, do(h, "POST", "/api/items/w/abilities/zap/use", "").Code, "no body")
+	assert.Equal(t, http.StatusOK, do(h, "POST", "/api/items/w/abilities/zap/use", "{}").Code, "an empty body")
+	assert.Equal(t, http.StatusBadRequest, do(h, "POST", "/api/items/w/abilities/zap/use", "{nope").Code, "malformed JSON, the service is not called")
 }

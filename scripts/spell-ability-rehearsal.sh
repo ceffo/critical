@@ -167,6 +167,11 @@ expect "asks: undo pops the use" item_use "$(undo)"
 expect "asks: undo gives the charge back" 5 "$(left wand_of_orbs)"
 expect "asks: undo gives the gem back" 2 "$(count opal)"
 
+# --- the body: none, empty and malformed ---
+expect "body: malformed JSON is a 400" 400 "$(status_of POST /api/items/wand_of_orbs/abilities/zap/use '{nope')"
+expect "body: malformed JSON spent nothing" 5 "$(left wand_of_orbs)"
+expect "body: an empty object is the defaults (a 400 here: the AC is asked)" 400 "$(status_of POST /api/items/wand_of_orbs/abilities/zap/use '{}')"
+
 # --- 4. a failing second spell effect rolls the whole use back ---
 wand "Wand of ruin" "[$cure,$orb]"
 hp_before="$(hp)" entries_before="$(entries)"

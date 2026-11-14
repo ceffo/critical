@@ -75,8 +75,8 @@ test("add Arrows +3: it shows in the Inventory and in the Short Bow ammo picker;
   await expect(added).toHaveCount(0);
 });
 
-// ADR 0033 step 2: a magic scroll names the spell it holds, picked from the catalogue in the
-// editor; the edit is logged with the spell's name and popping it gives the scroll back its spell
+// ADR 0033 step 2 and ADR 0049 step 9: a magic scroll names the spell it holds (a spell effect of its
+// ability), picked from the catalogue in the editor; the edit is logged with the spell's name and popping it gives the scroll back its spell
 // as it was (none). Only a browser shows the picker filled from the catalogue's names and the
 // round trip through the form; the rules (the casting time it adds) are Go tests.
 test("a scroll names its spell in the editor: logged; pop clears it", async ({
@@ -95,8 +95,12 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   await expect(scroll).toBeVisible();
 
   await scroll.getByRole("button", { name: "Edit Scroll of flames" }).click();
+  // The spell is the spell effect of the scroll's ability (ADR 0049 step 9): add the ability and its
+  // Spell effect, pick the spell; the level is left to the server (the book's).
+  await form(page).getByTestId("ability-add").click();
+  await form(page).getByTestId("ability-add-spell").click();
   await form(page)
-    .getByLabel("Spell", { exact: true })
+    .getByTestId("ability-spell")
     .selectOption({ label: "Burning Hands" });
   await snap(page, "scroll-spell-form");
   await form(page).getByRole("button", { name: "Save" }).click();
@@ -111,7 +115,7 @@ test("a scroll names its spell in the editor: logged; pop clears it", async ({
   await undoEntry(page, "Edited Scroll of flames");
   await openWorkspace(page, "Inventory");
   await scroll.getByRole("button", { name: "Edit Scroll of flames" }).click();
-  await expect(form(page).getByLabel("Spell", { exact: true })).toHaveValue("");
+  await expect(form(page).getByTestId("ability-spell")).toHaveCount(0);
   await form(page).getByRole("button", { name: "Cancel" }).click();
   await expect(scroll.getByTestId("item-stats")).not.toContainText(
     "Burning Hands",

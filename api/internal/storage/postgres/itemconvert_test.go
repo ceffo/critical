@@ -55,7 +55,7 @@ func TestConvertItems_ADR0049Step18_ConvertsOnceAndKeepsTheOldColumns(t *testing
 	}
 	n := len(f.t.Items)
 
-	got, err := convertItems(context.Background(), f, f, campaignSeeds())
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, n, got.Converted)
 	assert.Positive(t, got.Review, "the wand's charges total is on the review list")
@@ -83,7 +83,7 @@ func TestConvertItems_ADR0049Step18_ConvertsOnceAndKeepsTheOldColumns(t *testing
 	assert.Equal(t, itemsvc.LimitWithItem, flask[0].Limit.Kind)
 	assert.Empty(t, abilitiesOf(t, f, owner, "arrows_plus1"))
 
-	again, err := convertItems(context.Background(), f, f, campaignSeeds())
+	again, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{}, again, "a second boot converts nothing")
 }
@@ -92,12 +92,12 @@ func TestConvertItems_ADR0049Step18_ConvertsOnceAndKeepsTheOldColumns(t *testing
 // next start, and the rows already converted are not touched.
 func TestConvertItems_ADR0049Step18_ConvertsOnlyTheRowsStillNull(t *testing.T) {
 	f, owner := pendingConversion(t)
-	_, err := convertItems(context.Background(), f, f, campaignSeeds())
+	_, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	delete(f.t.Abilities, rowKey(owner, "fire_flask"))
 	f.t.Abilities[rowKey(owner, "arrows_plus1")] = `[{"id":"edited","limit":{"kind":"unlimited"},"effects":[]}]`
 
-	got, err := convertItems(context.Background(), f, f, campaignSeeds())
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, 1, got.Converted)
 	assert.Equal(t, `[{"id":"edited","limit":{"kind":"unlimited"},"effects":[]}]`, f.t.Abilities[rowKey(owner, "arrows_plus1")])
@@ -111,7 +111,7 @@ func TestConvertItems_ADR0049Step18_ConvertsOnlyTheRowsStillNull(t *testing.T) {
 func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testing.T) {
 	f, owner := pendingConversion(t)
 	// What slice 2 left: abilities written, the counts as the old release moved them.
-	_, err := convertItems(context.Background(), f, f, campaignSeeds())
+	_, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	for _, id := range []string{"power_gem_dispel", "wand_lightning"} {
 		it := f.t.Items[rowKey(owner, id)]
@@ -127,7 +127,7 @@ func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testi
 	flask.Count = 3
 	f.t.Items[rowKey(owner, "fire_flask")] = flask
 
-	got, err := convertItems(context.Background(), f, f, campaignSeeds())
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{Quantities: 2}, got)
 	assert.Equal(t, int64(1), f.t.Items[rowKey(owner, "power_gem_dispel")].Count)
@@ -135,7 +135,7 @@ func TestConvertItems_ADR0049Step2_AlreadyConvertedRowsGetTheirQuantity(t *testi
 	assert.Equal(t, int64(3), f.t.Items[rowKey(owner, "fire_flask")].Count, "a stock keeps its quantity")
 	assert.Equal(t, 4, abilitiesOf(t, f, owner, "wand_lightning")[0].Limit.Left, "left is the ability's, untouched")
 	assert.Equal(t, gemLeft, abilitiesOf(t, f, owner, "power_gem_dispel")[0].Limit.Left, "a spent gem's left is untouched too")
-	again, err := convertItems(context.Background(), f, f, campaignSeeds())
+	again, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{}, again)
 }
@@ -148,10 +148,10 @@ func TestSeed_ADR0049Step23_FreshDatabaseIsSeededConverted(t *testing.T) {
 	owner := f.t.Characters[0]
 	// Only the worn armour the skill armour carry-over adds (written by the migration-time insert,
 	// which predates the column) is left to the boot step; every seeded item is converted already.
-	got, err := convertItems(context.Background(), f, f, campaignSeeds())
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{Converted: 1}, got)
-	again, err := convertItems(context.Background(), f, f, campaignSeeds())
+	again, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	assert.Equal(t, itemsvc.BootConversion{}, again)
 	gem := abilitiesOf(t, f, owner, "power_gem_dispel")
@@ -184,7 +184,7 @@ func TestConvertItems_ADR0049Step19_OutOfRangeRowsConvertToValidLists(t *testing
 	add("rod_over_max", itemsvc.MagicRod, "daily", 5, 2)
 	add("potion_charges", itemsvc.MagicPotion, "charges", 150, 150)
 
-	_, err := convertItems(context.Background(), f, f, campaignSeeds())
+	_, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.NoError(t, err)
 	for id, kind := range map[string]string{
 		"wand_150": itemsvc.MagicWand, "wand_0": itemsvc.MagicWand, "rod_daily_150": itemsvc.MagicRod,
@@ -218,7 +218,90 @@ func TestConvertItems_ADR0049Step18_UnexpressibleRowFailsLoudly(t *testing.T) {
 		CharacterID: owner, ID: "bad_dice", Category: string(itemsvc.CategoryMagic), MagicKind: itemsvc.MagicWand,
 		Behaviour: "charges", Count: 3, MaxCount: 3, EffectDice: "lots",
 	}
-	_, err := convertItems(context.Background(), f, f, campaignSeeds())
+	_, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "bad_dice")
+}
+
+// scrollLevelsOf is a table of caster levels by spell, the values DMG p.145 gives (a 6th-level wizard
+// spell at 13th level): an explicit table, so the conversion is not checked against its own formula.
+func scrollLevelsOf(table map[string]int) itemsvc.ScrollLevels {
+	return func(id string) (int, bool) {
+		level, ok := table[id]
+		return level, ok
+	}
+}
+
+// addScroll puts a stored scroll naming spell on the campaign's database, its abilities as given
+// (none: NULL, not converted yet).
+func addScroll(f *fakeStore, owner int64, id, spell, abilities string) {
+	f.t.Items[rowKey(owner, id)] = storeq.InsertItemParams{
+		CharacterID: owner, ID: id, Category: string(itemsvc.CategoryMagic), MagicKind: itemsvc.MagicScroll,
+		Behaviour: "stock", Count: 2, MaxCount: 2,
+	}
+	f.t.ScrollSpells[rowKey(owner, id)] = spell
+	if abilities != "" {
+		f.t.Abilities[rowKey(owner, id)] = abilities
+	}
+}
+
+// ADR 0049 step 9: the boot step folds a scroll's spell into a spell effect on its with_item ability,
+// at the caster level the levels give (DMG p.145), keeps spell_id as stored for the previous release,
+// converts a scroll still NULL and folds it in the same run, and a second start changes nothing.
+func TestConvertItems_ADR0049Step9_FoldsAScrollsSpellIntoItsAbility(t *testing.T) {
+	f, owner := pendingConversion(t)
+	addScroll(f, owner, "scroll_old", "wall_of_force", `[{"id":"use","limit":{"kind":"with_item"},"effects":[]}]`)
+	addScroll(f, owner, "scroll_null", "teleport", "")
+	levels := scrollLevelsOf(map[string]int{"wall_of_force": 13, "teleport": 15})
+
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), levels)
+	require.NoError(t, err)
+	assert.Equal(t, 2, got.Scrolls)
+	assert.Zero(t, got.ScrollsSkipped)
+
+	for id, want := range map[string]itemsvc.Effect{
+		"scroll_old":  {Kind: itemsvc.EffectSpell, SpellID: "wall_of_force", Level: 13},
+		"scroll_null": {Kind: itemsvc.EffectSpell, SpellID: "teleport", Level: 15},
+	} {
+		got := abilitiesOf(t, f, owner, id)
+		require.Len(t, got, 1, id)
+		assert.Equal(t, itemsvc.LimitWithItem, got[0].Limit.Kind)
+		assert.Equal(t, []itemsvc.Effect{want}, got[0].Effects, id)
+	}
+	assert.Equal(t, "wall_of_force", f.t.ScrollSpells[rowKey(owner, "scroll_old")], "spell_id stays, mirrored")
+	assert.Equal(t, int64(2), f.t.Items[rowKey(owner, "scroll_old")].Count, "the quantity is untouched")
+
+	stored := f.t.Abilities[rowKey(owner, "scroll_old")]
+	again, err := convertItems(context.Background(), f, f, campaignSeeds(), levels)
+	require.NoError(t, err)
+	assert.Equal(t, itemsvc.BootConversion{}, again, "a second start folds nothing")
+	assert.Equal(t, stored, f.t.Abilities[rowKey(owner, "scroll_old")])
+}
+
+// ADR 0049 step 9: a scroll already holding a spell effect (the player's edit, a level he set) is
+// never rewritten; one whose spell the levels do not know, or that has lost its with_item ability, is
+// left as stored and counted, so the boot never stores a level it could not give.
+func TestConvertItems_ADR0049Step9_LeavesWhatItCannotOrNeedNotFold(t *testing.T) {
+	f, owner := pendingConversion(t)
+	edited := `[{"id":"use","limit":{"kind":"with_item"},"effects":[{"kind":"spell","spellId":"wall_of_force","level":20}]}]`
+	noUse := `[{"id":"use","limit":{"kind":"unlimited"},"effects":[]}]`
+	addScroll(f, owner, "scroll_edited", "wall_of_force", edited)
+	addScroll(f, owner, "scroll_unknown", "gone_from_the_catalogue", `[{"id":"use","limit":{"kind":"with_item"},"effects":[]}]`)
+	addScroll(f, owner, "scroll_no_use", "wall_of_force", noUse)
+	addScroll(f, owner, "scroll_removed", "wall_of_force", `[]`)
+	levels := scrollLevelsOf(map[string]int{"wall_of_force": 13})
+
+	got, err := convertItems(context.Background(), f, f, campaignSeeds(), levels)
+	require.NoError(t, err)
+	assert.Zero(t, got.Scrolls)
+	assert.Equal(t, 3, got.ScrollsSkipped)
+	assert.Equal(t, edited, f.t.Abilities[rowKey(owner, "scroll_edited")])
+	assert.Equal(t, noUse, f.t.Abilities[rowKey(owner, "scroll_no_use")])
+	assert.Equal(t, `[]`, f.t.Abilities[rowKey(owner, "scroll_removed")])
+	assert.Empty(t, itemsvc.FirstSpell(abilitiesOf(t, f, owner, "scroll_unknown")))
+
+	// With no levels at all (a catalogue-less start) nothing is folded and the boot goes on.
+	none, err := convertItems(context.Background(), f, f, campaignSeeds(), nil)
+	require.NoError(t, err)
+	assert.Zero(t, none.Scrolls)
 }

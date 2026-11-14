@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
 import { BuffEffectFields } from "./BuffEffectFields";
+import { localized } from "@/i18n/localized";
+import { useSpellNamesStore } from "@/stores/spellNames";
 import {
   LIMIT_KINDS,
   newAbilityDraft,
@@ -59,8 +61,13 @@ export function AbilitiesEditor({
   hasQuantity,
   error,
 }: Props) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const id = useId();
+  // The catalogue's spells by name in the UI language: what a spell effect casts.
+  const spellNames = useSpellNamesStore((s) => s.names);
+  const spellOptions = Object.values(spellNames)
+    .map((s) => ({ id: s.id, name: localized(i18n.language, s.name) || s.id }))
+    .sort((a, b) => a.name.localeCompare(b.name, i18n.language));
   const set = (i: number, patch: Partial<AbilityDraft>) =>
     onChange(abilities.map((a, j) => (j === i ? { ...a, ...patch } : a)));
   // A new ability is full: while left still equals the max it follows the max typed.
@@ -228,11 +235,16 @@ export function AbilitiesEditor({
                     j === k ? { ...x, ...patch } : x,
                   ),
                 });
-              if (e.kind === "spell")
+              if (e.kind === "spell") {
+                // A stored spell the names do not list (a later catalogue dropped it) stays selectable.
+                const options =
+                  e.spellId && !spellNames[e.spellId]
+                    ? [{ id: e.spellId, name: e.spellId }, ...spellOptions]
+                    : spellOptions;
                 return (
                   <div
                     key={k}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-2"
+                    className="flex flex-wrap items-end gap-x-3 gap-y-2"
                     role="group"
                     aria-label={t("equipment.abilities.spellEffect", {
                       n: k + 1,
@@ -240,16 +252,54 @@ export function AbilitiesEditor({
                     data-testid="ability-effect"
                     data-kind="spell"
                   >
-                    <span className="text-sm">
-                      {t("equipment.abilities.spellEffectValue", {
-                        spell: e.spellId,
-                        level: e.level,
-                      })}
-                    </span>
+                    <Labelled
+                      label={t("equipment.abilities.spell")}
+                      className="min-w-56 flex-1"
+                    >
+                      {(fid) => (
+                        <select
+                          id={fid}
+                          className={fieldClass}
+                          value={e.spellId}
+                          onChange={(ev) =>
+                            setEffect({ spellId: ev.target.value })
+                          }
+                          data-testid="ability-spell"
+                        >
+                          <option value="">
+                            {t("equipment.abilities.spellNone")}
+                          </option>
+                          {options.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </Labelled>
+                    <Labelled label={t("equipment.abilities.spellLevel")}>
+                      {(fid) => (
+                        <input
+                          id={fid}
+                          className={cn(fieldClass, "w-16")}
+                          inputMode="numeric"
+                          placeholder={t("equipment.abilities.spellLevelAuto")}
+                          title={t("equipment.abilities.spellLevelHint")}
+                          value={e.level}
+                          onChange={(ev) =>
+                            setEffect({ level: ev.target.value })
+                          }
+                          data-testid="ability-spell-level"
+                        />
+                      )}
+                    </Labelled>
                     <Button
+                      size="icon-xs"
                       type="button"
                       variant="ghost"
-                      size="icon"
+                      aria-label={t("equipment.abilities.removeEffect", {
+                        n: k + 1,
+                      })}
                       title={t("equipment.abilities.removeEffect", {
                         n: k + 1,
                       })}
@@ -257,10 +307,11 @@ export function AbilitiesEditor({
                         set(i, { effects: a.effects.filter((_, j) => j !== k) })
                       }
                     >
-                      <X />
+                      <Trash />
                     </Button>
                   </div>
                 );
+              }
               if (e.kind === "buff")
                 return (
                   <BuffEffectFields
@@ -411,6 +462,21 @@ export function AbilitiesEditor({
                 data-testid="ability-add-buff"
               >
                 <Plus /> {t("equipment.abilities.addBuff")}
+              </Button>
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                title={t("equipment.abilities.addSpellHint")}
+                aria-label={t("equipment.abilities.addSpellHint")}
+                onClick={() =>
+                  set(i, {
+                    effects: [...a.effects, newEffectDraft("spell")],
+                  })
+                }
+                data-testid="ability-add-spell"
+              >
+                <Plus /> {t("equipment.abilities.addSpell")}
               </Button>
             </div>
           </div>

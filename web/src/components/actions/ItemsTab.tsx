@@ -1,11 +1,18 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { localized } from "@/i18n/localized";
 import { ArrowRight } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { useItemsStore } from "@/stores/items";
 import { useRollStore } from "@/stores/roll";
-import { type AbilityRow, abilityRows, limitText } from "@/lib/itemAbilities";
+import {
+  type AbilityRow,
+  abilityRows,
+  askedEffects,
+  limitText,
+} from "@/lib/itemAbilities";
 import { equipped } from "@/lib/equipment";
+import { UseAbilityDialog } from "./UseAbilityDialog";
 
 /**
  * Items tab of the Act panel (ADR 0049 step 14): one row per ability of every item that has some,
@@ -17,6 +24,9 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
   const { t, i18n } = useTranslation();
   const rows = abilityRows(useItemsStore((s) => s.items));
   const { activateAbility, rolling } = useRollStore();
+  // An ability with a spell effect that asks something opens the dialog; any other is used at once
+  // (the server's defaults for a spell that asks nothing).
+  const [asking, setAsking] = useState<AbilityRow | null>(null);
 
   return (
     <div className="flex flex-col gap-3">
@@ -35,7 +45,11 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
               row={{ item, ability }}
               lang={i18n.language}
               rolling={rolling}
-              onUse={() => void activateAbility(item.id, ability.id)}
+              onUse={() =>
+                askedEffects(ability).length > 0
+                  ? setAsking({ item, ability })
+                  : void activateAbility(item.id, ability.id)
+              }
             />
           ))}
         </ul>
@@ -50,6 +64,15 @@ export function ItemsTab({ onManage }: { onManage: () => void }) {
         {t("actions.items.manage")}
         <ArrowRight />
       </Button>
+      <UseAbilityDialog
+        row={asking}
+        onClose={() => setAsking(null)}
+        onUse={(body) => {
+          const row = asking;
+          setAsking(null);
+          if (row) void activateAbility(row.item.id, row.ability.id, body);
+        }}
+      />
     </div>
   );
 }

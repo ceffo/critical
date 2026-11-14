@@ -1983,10 +1983,17 @@ async function scrollSpellStep(page: Page, size: Viewport) {
       },
       category: "magic",
       magicKind: "scroll",
-      spellId: "long_spell",
       behaviour: "stock",
       count: 2,
-      abilities: [{ id: "use", limit: { kind: "with_item" }, effects: [] }],
+      // The scroll's spell is the spell effect of its ability (ADR 0049 step 9); no level sent: the
+      // server writes the book's (DMG p.145).
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [{ kind: "spell", spellId: "long_spell" }],
+        },
+      ],
     }),
   ).toBe(true);
   expect(await call("POST", "/api/round/advance", {})).toBe(true);
@@ -2036,8 +2043,9 @@ async function scrollSpellStep(page: Page, size: Viewport) {
       })
       .click();
     const form = page.getByTestId("item-form");
-    const picker = form.getByLabel("Sort", { exact: true });
+    const picker = form.getByTestId("ability-spell");
     await expect(picker).toHaveValue("long_spell");
+    await expect(form.getByTestId("ability-spell-level")).toHaveValue("6");
     await expect(picker.locator("option:checked")).toHaveText(FR_SPELL);
     await expectNoClippedText(form, `item form, ${where}`);
     await expectWholeWords(form, `item form, ${where}`);
@@ -2058,6 +2066,79 @@ async function scrollSpellStep(page: Page, size: Viewport) {
     await form.getByRole("button", { name: "Annuler" }).click();
     await expect(form).toHaveCount(0);
     await rail.nth(0).click();
+  }
+}
+
+// An ability with a spell effect that asks something (ADR 0049 steps 9 and 10): Use opens the dialog
+// of what the server serves for that effect (a to-hit's target AC), the use rolls and logs the cast,
+// and the result card draws the cast's own breakdown. In French first, then English, at the two big
+// sizes: the dialog, the card and the journal row show nothing cut.
+async function itemSpellStep(page: Page, size: Viewport) {
+  await page.setViewportSize(size);
+  await openDashboard(page);
+  const call = (method: string, url: string, body: unknown) =>
+    apiCall(page, method, url, body);
+  expect(
+    await call("POST", "/api/items", {
+      name: { en: "Opal", fr: "Opale" },
+      category: "gear",
+      component: "gem",
+      behaviour: "stock",
+      count: 20,
+    }),
+  ).toBe(true);
+  expect(
+    await call("POST", "/api/items", {
+      name: { en: "Scroll of orbs", fr: "Parchemin des orbes" },
+      category: "magic",
+      magicKind: "scroll",
+      behaviour: "stock",
+      count: 10,
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [{ kind: "spell", spellId: "chromatic_orb" }],
+        },
+      ],
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+  const rail = page.getByTestId("rail").getByRole("button");
+  for (const lang of ["fr", "en"] as const) {
+    const fr = lang === "fr";
+    await chooseLanguage(page, lang);
+    await rail.nth(0).click();
+    await page.getByRole("tab", { name: fr ? "Objets" : "Items" }).click();
+    for (const vp of sizesAt(size, [
+      { width: 1920, height: 1080 },
+      { width: 2560, height: 1440 },
+    ])) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await page
+        .getByRole("button", {
+          name: fr ? "Utiliser Parchemin des orbes" : "Use Scroll of orbs",
+        })
+        .click();
+      const dialog = page.getByTestId("use-ability-dialog");
+      await expect(dialog).toBeVisible();
+      // The to-hit asks the target AC; Use waits for it.
+      await expect(dialog.getByTestId("use-ability-confirm")).toBeDisabled();
+      await expectNoClippedText(dialog, `use dialog, ${where}`);
+      await expectWholeWords(dialog, `use dialog, ${where}`);
+      await expectInside(dialog, page.locator("body"), `use dialog, ${where}`);
+      await snap(page, `use-ability-dialog-${lang}-${vp.width}x${vp.height}`);
+      await dialog.getByTestId("use-ability-ac").fill("5");
+      await dialog.getByTestId("use-ability-confirm").click();
+      await expect(dialog).toHaveCount(0);
+      const card = page.getByTestId("item-result");
+      await expect(card.getByTestId("cast-entry")).toBeVisible();
+      await expect(card.getByTestId("cast-entry-damage")).toHaveCount(0);
+      await expectNoClippedText(card, `use result card, ${where}`);
+      await expectWholeWords(card, `use result card, ${where}`);
+      await snap(page, `use-ability-card-${lang}-${vp.width}x${vp.height}`);
+    }
   }
 }
 
@@ -2988,6 +3069,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["spell description", spellDescriptionStep],
   ["inventory, AC shield", acShieldStep],
   ["scroll spell", scrollSpellStep],
+  ["scroll spell effect: use dialog and card", itemSpellStep],
   ["piece editor spell component", pieceSpellStep],
   ["item form steps and edit dialog", itemFormStep],
   ["piece editor powers", piecePowersStep],

@@ -5,6 +5,7 @@ import { draftFromItem, emptyDraft } from "@/lib/itemForm";
 import { pieceFixture } from "@/test/pieceFixture";
 import { equipmentRules } from "@/test/equipmentRules";
 import { useEquipmentRulesStore } from "@/stores/equipmentRules";
+import { useSpellNamesStore } from "@/stores/spellNames";
 import { ItemForm } from "./ItemForm";
 
 // The typed add form (ADR 0033 step 1): step 1 is what the piece is, step 2 only its category's
@@ -352,6 +353,64 @@ describe("ItemForm, quantity and abilities", () => {
       await v.user.type(screen.getByLabelText(roundsLabel), "a lot");
       await v.user.click(screen.getByRole("button", { name: save }));
       expect(v.onSave).not.toHaveBeenCalled();
+    },
+  );
+
+  // ADR 0049 step 9: a scroll's spell is picked in its ability, not in a field of its own; the level is
+  // left to the server unless typed, and the picker is worded in French.
+  it.each([
+    ["en", "Name", "Magic kind", "Spell", "Choose a spell", "Add"],
+    ["fr", "Nom", "Type d’objet magique", "Sort", "Choisir un sort", "Ajouter"],
+  ] as const)(
+    "a scroll's spell is a spell effect of its ability, in %s",
+    async (lng, nameLabel, kindLabel, spellLabel, none, add) => {
+      useSpellNamesStore.setState({
+        names: {
+          magic_missile: {
+            id: "magic_missile",
+            name: { en: "Magic Missile", fr: "Projectile magique" },
+          },
+          fireball: {
+            id: "fireball",
+            name: { en: "Fireball", fr: "Boule de feu" },
+          },
+        },
+      });
+      const v = await form(lng);
+      await v.user.type(screen.getByLabelText(nameLabel), "Parchemin");
+      await v.user.selectOptions(
+        screen.getByLabelText(lng === "en" ? "Category" : "Catégorie"),
+        "magic",
+      );
+      await v.user.click(
+        screen.getByRole("button", { name: lng === "en" ? "Next" : "Suivant" }),
+      );
+      await v.user.selectOptions(screen.getByLabelText(kindLabel), "scroll");
+      // No field of its own for the spell on the item.
+      expect(field("spellId")).toBeNull();
+      await v.user.click(screen.getByTestId("ability-add"));
+      await v.user.click(screen.getByTestId("ability-add-spell"));
+      const pick = screen.getByTestId("ability-spell");
+      expect(screen.getByLabelText(spellLabel, { selector: "select" })).toBe(
+        pick,
+      );
+      expect(screen.getByRole("option", { name: none })).toBeVisible();
+      // Spells are listed by name in the UI language, sorted.
+      expect(
+        Array.from((pick as HTMLSelectElement).options).map((o) => o.text),
+      ).toEqual(
+        lng === "en"
+          ? [none, "Fireball", "Magic Missile"]
+          : [none, "Boule de feu", "Projectile magique"],
+      );
+      await v.user.selectOptions(pick, "fireball");
+      await v.user.click(screen.getByRole("button", { name: add }));
+      const sent = v.onSave.mock.calls[0][0];
+      expect(sent.spellId).toBeUndefined();
+      // No level typed: none sent, the server gives the book's.
+      expect(sent.abilities[0].effects).toEqual([
+        { kind: "spell", spellId: "fireball" },
+      ]);
     },
   );
 

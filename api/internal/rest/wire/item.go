@@ -6,6 +6,8 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 )
 
 // ItemDTO is the wire shape of a piece of equipment (ADR 0033 step 1): the
@@ -172,6 +174,57 @@ type EffectDTO struct {
 	// caster level it is cast at (1 to 30).
 	SpellID string `json:"spellId,omitempty"`
 	Level   int    `json:"level,omitempty"`
+	// Asks is what the use of a spell effect asks of the player (ADR 0049 steps 9 and 10), served on
+	// the item list only: the spellbook's cast fields at the effect's level.
+	Asks *SpellAsksDTO `json:"asks,omitempty"`
+}
+
+// CastTargetDTO is the target choice of a cast: the default and its alternate.
+type CastTargetDTO struct {
+	Default   string `json:"default"`
+	Alternate string `json:"alternate"`
+}
+
+// CastTargetToDTO maps the target choice to the wire (nil: none).
+func CastTargetToDTO(c *spelleffectsvc.TargetChoice) *CastTargetDTO {
+	if c == nil {
+		return nil
+	}
+	return &CastTargetDTO{Default: string(c.Default), Alternate: string(c.Alternate)}
+}
+
+// SpendableItemDTO is an inventory item a spell can spend.
+type SpendableItemDTO struct {
+	ID string `json:"id"`
+	// Name is a language map (ADR 0023 step 9).
+	Name  localized.Text `json:"name"`
+	Count int            `json:"count"`
+}
+
+// SpellAsksDTO is what casting a spell asks of the player, by the spellbook's own field names (the
+// spell effects data): the splits of the extra slots it grants (the first is the default), the type
+// of the item it spends and the items it can spend now, whether it rolls a to-hit (a target AC is
+// then required), the cast-time modes (the first is the default) and the choice of target a buff's
+// cast offers. Every field is absent when the cast asks nothing.
+type SpellAsksDTO struct {
+	SlotSplits      [][]int                     `json:"slot_splits,omitempty"`
+	ConsumeItemType string                      `json:"consume_item_type,omitempty"`
+	AttackRoll      bool                        `json:"attack_roll,omitempty"`
+	Modes           []spelleffectsvc.ModeAtWire `json:"modes,omitempty"`
+	CastTarget      *CastTargetDTO              `json:"cast_target,omitempty"`
+	Items           []SpendableItemDTO          `json:"items,omitempty"`
+}
+
+// SpellAsksToDTO maps the asks of a spell effect to the wire.
+func SpellAsksToDTO(a prepsvc.SpellAsks) *SpellAsksDTO {
+	out := &SpellAsksDTO{
+		SlotSplits: a.Cast.SlotSplits, ConsumeItemType: a.Cast.ConsumeItemType, AttackRoll: a.Cast.AttackRoll,
+		Modes: spelleffectsvc.ModesWire(a.Cast.Modes), CastTarget: CastTargetToDTO(a.Cast.Target),
+	}
+	for _, it := range a.Items {
+		out.Items = append(out.Items, SpendableItemDTO{ID: it.ID, Name: it.Name, Count: it.Count})
+	}
+	return out
 }
 
 // effectFromDTO is the domain effect the editor sent.

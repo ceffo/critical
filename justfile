@@ -434,6 +434,15 @@ buff-ability-rehearsal:
 spell-ability-rehearsal:
     scripts/spell-ability-rehearsal.sh
 
+# Local only: the boot step that folds a scroll's spell into a spell effect of its ability (ADR 0049 step 9, the
+# level of DMG p.145) on a copy of a real database (default: the main checkout's dev database, only read by
+# pg_dump) and on a scratch one, in a throwaway compose PostgreSQL (own project and port, never `just dev`'s):
+# folded, idempotent on a second start, the release before still runs on it. Removes the compose project.
+# Needs docker, psql, pg_restore, jq, curl and go.
+# Rehearse the scroll spell conversion
+scroll-spell-rehearsal container="critical-postgres-1" database="critical":
+    scripts/scroll-spell-rehearsal.sh {{container}} {{database}}
+
 # Local only: the skill armour carry-over (020, ADR 0033 step 14) on a database written by the release before
 # (old ref, default the merge base with origin/main), in a throwaway compose PostgreSQL (own project and port,
 # never `just dev`'s): every thief's and bard's skill percentages compared, restarts, the old entries popped.

@@ -14,6 +14,8 @@ SVC  # Technical: port, service or wiring type (clean architecture plumbing)
 Maxima  # Technical: port, service or wiring type (clean architecture plumbing)
 Deps  # Technical: port, service or wiring type (clean architecture plumbing)
 Config  # Technical: port, service or wiring type (clean architecture plumbing)
+ScrollLevels  # Technical: port, service or wiring type (clean architecture plumbing): the caster level of a scroll's spell, a function handed by the composition root
+LevelCheck  # Technical: port, service or wiring type (clean architecture plumbing): a function handed by the composition root
 Module  # Technical: port, service or wiring type (clean architecture plumbing)
 Service  # Technical: port, service or wiring type (clean architecture plumbing)
 TxRunner  # Technical: port, service or wiring type (clean architecture plumbing)

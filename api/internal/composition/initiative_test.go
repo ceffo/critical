@@ -110,11 +110,11 @@ func TestInitiative_ADR0035Item6_WeaponSpeedThenAnItemUsedCorrectsTheRound(t *te
 	assert.Equal(t, map[string]int{"die": 2}, dice.calls)
 }
 
-// ADR 0035 item 6.2 with ADR 0033 step 2 through the real services and the
-// fixture's spell catalogue: a scroll named in the editor (burning hands,
-// casting time 1) is stored, cleared and given back by undo; used in round 1
-// (d10 7, no weapon in hand), it corrects the round to 7 + 1 = 8, its term
-// carrying the spell.
+// ADR 0035 item 6.2 with ADR 0049 step 9 through the real services and the
+// fixture's spell catalogue: a scroll whose ability casts a spell (light,
+// casting time 1) mirrors it in its stored spell, loses it with the effect and
+// gets it back by undo; used in round 1 (d10 7, no weapon in hand), it casts the
+// spell and corrects the round to 7 + 1 = 8, its term carrying the spell.
 func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *testing.T) {
 	ctx := context.Background()
 	dice := &attackDice{t: t, dies: []int{7}, calls: map[string]int{}}
@@ -135,6 +135,8 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 		Behaviour: itemsvc.BehaviourStock, Count: 1, Abilities: useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem}),
 	})
 	require.NoError(t, err)
+	holding := useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem})
+	holding[0].Effects = []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: "light", Level: 6}}
 	spellOf := func() string {
 		t.Helper()
 		items, err := bs.Items.List(ctx, id)
@@ -148,16 +150,17 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 		return ""
 	}
 
-	named := "burning_hands"
-	_, err = bs.Items.Update(ctx, id, scroll.Item.ID, itemsvc.ItemPatch{SpellID: &named})
+	assert.Empty(t, spellOf())
+	_, err = bs.Items.Update(ctx, id, scroll.Item.ID, itemsvc.ItemPatch{Abilities: &holding})
 	require.NoError(t, err)
-	none := ""
-	cleared, err := bs.Items.Update(ctx, id, scroll.Item.ID, itemsvc.ItemPatch{SpellID: &none})
+	assert.Equal(t, "light", spellOf(), "the stored spell mirrors the spell effect")
+	none := useAbility(itemsvc.Limit{Kind: itemsvc.LimitWithItem})
+	cleared, err := bs.Items.Update(ctx, id, scroll.Item.ID, itemsvc.ItemPatch{Abilities: &none})
 	require.NoError(t, err)
 	assert.Empty(t, spellOf())
 	_, err = bs.Log.Undo(ctx, id, cleared.LogEntryID)
 	require.NoError(t, err)
-	assert.Equal(t, "burning_hands", spellOf(), "undo gives the spell back")
+	assert.Equal(t, "light", spellOf(), "undo gives the spell back")
 
 	_, _, round, rolled, _, err := bs.Buffs.AdvanceRound(ctx, id)
 	require.NoError(t, err)
@@ -170,7 +173,7 @@ func TestInitiative_ADR0035Item6_2_ANamedScrollCorrectsTheRoundByItsSpell(t *tes
 	require.NoError(t, err)
 	require.NotNil(t, corrected)
 	assert.Equal(t, []buffsvc.InitiativeModifier{
-		{Source: buffsvc.InitiativeItem, Value: 1, ItemID: scroll.Item.ID, Name: "Scroll", MagicKind: "scroll", SpellID: "burning_hands"},
+		{Source: buffsvc.InitiativeItem, Value: 1, ItemID: scroll.Item.ID, Name: "Scroll", MagicKind: "scroll", SpellID: "light"},
 	}, corrected.Modifiers)
 	assert.Equal(t, 8, corrected.Total())
 	assert.Equal(t, map[string]int{"die": 1}, dice.calls, "the correction rolls nothing")

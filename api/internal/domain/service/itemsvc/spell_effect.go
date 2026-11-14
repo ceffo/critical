@@ -117,9 +117,53 @@ func (s *service) knownSpellEffects(ctx context.Context, abilities []Ability) er
 			if !found {
 				return fieldErr("abilities", CodeUnknown)
 			}
+			// A level the spell's data cannot be read at would blank the list's asks: refused here.
+			if s.levelCheck != nil {
+				if err := s.levelCheck(e.SpellID, e.Level); err != nil {
+					return domain.FieldErrorf("abilities", "the data of %s cannot be read at caster level %d", e.SpellID, e.Level)
+				}
+			}
 		}
 	}
 	return nil
+}
+
+// LevelCheck says whether a spell's data can be read at a caster level (its modes' damage, its target
+// choice: the asks of a use); the composition root hands one built on the same reading the item list
+// serves. Nil: no check.
+type LevelCheck func(spellID string, level int) error
+
+// withSpellFromColumn is the old spell column carried into the spell effect (ADR 0049 step 9, one
+// mirror path both ways): a scroll whose spell_id differs from the spell its abilities cast casts that
+// one, at the level the books give (sent as 0, filled by withScrollLevels); "" removes the spell
+// effect. A scroll with no abilities yet is converted first. Another piece is as it is.
+func withSpellFromColumn(i Item) Item {
+	if !i.HoldsSpell() || i.SpellID == FirstSpell(i.Abilities) {
+		return i
+	}
+	if i.Abilities == nil {
+		i.Abilities = ConvertLegacy(i).Abilities
+	}
+	abilities := slices.Clone(i.Abilities)
+	for a := range abilities {
+		abilities[a].Effects = slices.Clone(abilities[a].Effects)
+		if i.SpellID == "" {
+			abilities[a].Effects = slices.DeleteFunc(abilities[a].Effects, func(e Effect) bool { return e.Kind == EffectSpell })
+			continue
+		}
+		for e := range abilities[a].Effects {
+			if abilities[a].Effects[e].Kind == EffectSpell {
+				abilities[a].Effects[e].SpellID, abilities[a].Effects[e].Level = i.SpellID, 0
+				i.Abilities = abilities
+				return i
+			}
+		}
+	}
+	if i.SpellID != "" {
+		abilities = WithScrollSpell(abilities, i.SpellID, 0)
+	}
+	i.Abilities = abilities
+	return i
 }
 
 // runSpell applies a spell effect through the port (ADR 0049 step 12): the

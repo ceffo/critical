@@ -53,7 +53,7 @@ func TestBuild_StartupStepsRunInOrder(t *testing.T) {
 			book, seeded = b, w
 			return nil
 		}).Once()
-	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
+	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, nil).Once()
 	var cat catalogue.Catalogue
 	var refs []catalogue.Ref
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).
@@ -112,12 +112,12 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		{"convert items", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, boom).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, boom).Once()
 		}, "convert items: boom"},
 		{"adopting the characters without an owner", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
 			h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once()
@@ -126,14 +126,14 @@ func TestBuild_AFailingStepRefusesTheStartAndClosesTheStore(t *testing.T) {
 		{"spell catalogue read", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, boom).Once()
 		}, "load the spell catalogue: boom"},
 		{"catalogue import", func(h *harness) {
 			h.Store.EXPECT().Migrate(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 			h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
+			h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, nil).Once()
 			h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(boom).Once()
 		}, "boom"},
 	}
@@ -549,7 +549,7 @@ func TestBuild_SpellCatalogueReadOnceAtStartup(t *testing.T) {
 	h := newHarness(t)
 	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
 	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
-	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds).Return(itemsvc.BootConversion{}, nil).Once()
+	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).Return(itemsvc.BootConversion{}, nil).Once()
 	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
 	fire := spellsvc.Spell{ID: "fireball", Class: "Wizard", Level: 3}
 	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return([]spellsvc.Spell{fire}, nil).Once()
@@ -584,4 +584,36 @@ func TestStartup_Step1_RefusesAGridCellNamingADevotion(t *testing.T) {
 	})
 	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
 	require.ErrorContains(t, err, `"contact" is not an attack mode`)
+}
+
+// ADR 0049 step 9, DMG p.145: the boot conversion gets the resolver of a scroll's caster level, which
+// reads the spell's list and level in the catalogue and the slot tables of the rule tables: a 6th-level
+// wizard spell is written at 13th level (a wizard's first 6th-level slot is at 12), the book's example;
+// a 8th-level one at 17th (first slot at 16); a 1st-level one at the 6th-level floor; a spell the
+// catalogue does not know has none.
+func TestBuild_ScrollLevelsAreTheDMGOnesFromTheSlotTables(t *testing.T) {
+	h := newHarness(t)
+	h.Store.EXPECT().Migrate(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Store.EXPECT().Seed(mock.Anything, fixtureSeeds, mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	var levels itemsvc.ScrollLevels
+	h.Store.EXPECT().ConvertItems(mock.Anything, fixtureSeeds, mock.Anything).
+		RunAndReturn(func(_ context.Context, _ string, l itemsvc.ScrollLevels) (itemsvc.BootConversion, error) {
+			levels = l
+			return itemsvc.BootConversion{}, nil
+		}).Once()
+	h.Store.EXPECT().ImportCatalogue(mock.Anything, mock.Anything, mock.Anything).Return(nil).Once()
+	h.Spell.EXPECT().Search(mock.Anything, spellsvc.Filter{}).Return(nil, nil).Once()
+	h.Spell.EXPECT().Details(mock.Anything, []string{}).Return(nil, nil).Once()
+	h.Auth.EXPECT().RootUser(mock.Anything).Return(nil, domain.ErrNotFound).Once()
+
+	_, err := h.build(t, fixtureConfig())
+	require.NoError(t, err)
+	require.NotNil(t, levels)
+	for spell, want := range map[string]int{"chain_lightning": 13, "incendiary_cloud": 17, "magic_missile": 6, "meteor_swarm": 19} {
+		got, ok := levels(spell)
+		assert.True(t, ok, spell)
+		assert.Equal(t, want, got, spell)
+	}
+	_, ok := levels("gone_from_the_catalogue")
+	assert.False(t, ok)
 }

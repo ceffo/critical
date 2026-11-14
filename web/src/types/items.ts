@@ -4,6 +4,12 @@
 import type { BuffEffects } from "./buffs";
 import type { WeaponType } from "./combat";
 import type { LocalizedText } from "./localized";
+import type {
+  CastBreakdown,
+  CastTarget,
+  SpellMode,
+  SpendableItem,
+} from "./spells";
 
 /**
  * How an item's count behaves: stock is used and restocked (stays at 0),
@@ -249,6 +255,39 @@ export interface ItemAbilityEffect {
   /** A spell effect's spell (a catalogue id) and the caster level it is cast at. */
   spellId?: string;
   level?: number;
+  /** What the use of a spell effect asks of the player, served on the item list (absent elsewhere). */
+  asks?: SpellAsks;
+}
+
+/**
+ * Mirrors wire.SpellAsksDTO: what casting a spell asks of the player, by the spellbook's own field
+ * names, read at the effect's caster level. Every field is absent when the cast asks nothing.
+ */
+export interface SpellAsks {
+  slot_splits?: number[][];
+  consume_item_type?: string;
+  attack_roll?: boolean;
+  modes?: SpellMode[];
+  cast_target?: CastTarget;
+  items?: SpendableItem[];
+}
+
+/**
+ * The answers for one spell effect of the ability used (itemhdl SpellAskDTO), by the cast request's
+ * own names; `effect` is the index of the spell effect in the ability's list.
+ */
+export interface SpellAnswer {
+  effect: number;
+  onSelf?: boolean;
+  targetAc?: number;
+  itemId?: string;
+  extraSlots?: number[];
+  mode?: string;
+}
+
+/** The body of POST /api/items/{id}/abilities/{abilityId}/use: absent or empty takes the cast's defaults. */
+export interface UseAbilityBody {
+  spells?: SpellAnswer[];
 }
 
 /**
@@ -298,7 +337,7 @@ export interface AbilityEffectResult {
   buff?: AppliedBuff;
   /** A spell effect's spell and the breakdown of its cast, as a cast from a slot logs it (action "item"). */
   spellId?: string;
-  cast?: Record<string, unknown>;
+  cast?: CastBreakdown;
   /** Absent for a full heal. */
   dice?: string;
   full?: boolean;

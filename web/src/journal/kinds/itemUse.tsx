@@ -15,6 +15,8 @@ import { dieFaces } from "../dice";
 import { powerEffectsText } from "@/lib/itemPowers";
 import { counters, plusTerm } from "../words";
 import { DieChip, Total, labelClass } from "../parts";
+import type { SpellNamer } from "@/i18n/spellName";
+import { CastEntry, castDetails } from "./cast";
 
 /** The use as recorded, with its entry id. */
 export function decodeItemUse(e: LogEntry): UseResult | null {
@@ -40,14 +42,43 @@ function usedName(p: UseResult, names: InventoryNamer): string {
   return ability ? `${item} · ${ability}` : item;
 }
 
-/** What the use's heals took from the HP ledger and what they rolled, summed; null when it healed nothing. */
+/**
+ * What the use's heals took from the HP ledger and what they rolled, summed (a heal effect, and the
+ * heal of a spell effect); null when it healed nothing.
+ */
 function healed(p: UseResult): { applied: number; rolled: number } | null {
-  const heals = (p.effects ?? []).filter((e) => e.kind === "heal" && e.applied);
+  const heals = (p.effects ?? []).filter(
+    (e) => (e.kind === "heal" || e.kind === "spell") && e.applied,
+  );
   if (heals.length === 0) return null;
   return {
     applied: heals.reduce((n, e) => n + (e.applied?.hpDelta ?? 0), 0),
-    rolled: heals.reduce((n, e) => n + e.total, 0),
+    rolled: heals.reduce(
+      (n, e) => n + (e.kind === "spell" ? (e.cast?.heal?.total ?? 0) : e.total),
+      0,
+    ),
   };
+}
+
+/** The spell effects the use cast, in effect order. */
+function castsOf(p: UseResult): AbilityEffectResult[] {
+  return (p.effects ?? []).filter((e) => e.kind === "spell" && e.cast);
+}
+
+/** What a spell effect did, in a phrase: "cast Fireball: 28 fire damage, ..."; its heal is the use's heal phrase. */
+function spellText(
+  e: AbilityEffectResult,
+  t: TFunction,
+  spellName: SpellNamer,
+  names: InventoryNamer,
+): string {
+  const cast = e.cast;
+  if (!cast) return "";
+  const head = t("log.item.spellCast", {
+    spell: spellName(cast.spellId, cast.spell),
+  });
+  const details = castDetails({ ...cast, heal: undefined }, t, names);
+  return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
 }
 
 /** The buffs the use put on the list, in effect order. */
@@ -55,9 +86,15 @@ function buffsOf(p: UseResult): AppliedBuff[] {
   return (p.effects ?? []).flatMap((e) => (e.buff ? [e.buff] : []));
 }
 
-function itemText(p: UseResult, t: TFunction, names: InventoryNamer): string {
+function itemText(
+  p: UseResult,
+  t: TFunction,
+  names: InventoryNamer,
+  spellName: SpellNamer,
+): string {
   const withBuffs = [
     baseText(p, t, names),
+    ...castsOf(p).map((e) => spellText(e, t, spellName, names)),
     ...buffsOf(p).map((b) =>
       t("log.item.buff", { name: b.name, counters: counters(t, b.rounds) }),
     ),
@@ -100,11 +137,14 @@ function baseText(p: UseResult, t: TFunction, names: InventoryNamer): string {
 export const itemUseKind: KindView<UseResult, UseResult> = {
   decode: decodeItemUse,
   icon: Flask,
-  text: (p, w) => itemText(p, w.t, w.names),
+  text: (p, w) => itemText(p, w.t, w.names, w.spellName),
   value: (p) => {
     const h = healed(p);
     if (h) return { text: `+${h.applied}`, tone: "heal" };
-    return p.dice ? { text: String(p.total), tone: "ink" } : null;
+    if (p.dice) return { text: String(p.total), tone: "ink" };
+    // A spell effect that rolled damage: its total is the use's result.
+    const damage = castsOf(p).find((e) => e.cast?.damage)?.cast?.damage;
+    return damage ? { text: String(damage.total), tone: "ink" } : null;
   },
   rolled: () => true,
   subtitle: (p, w) => usedName(p, w.names),
@@ -178,13 +218,19 @@ function ItemUseCard({ r }: { r: UseResult }) {
 function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
   const { t } = useTranslation();
   if (e.kind === "buff" && e.buff) return <BuffBlock b={e.buff} />;
-  // The spell effect's own breakdown (damage, heal, buff of the cast) is drawn with its slice; here
-  // the card names the spell cast, so a use never shows an empty dice block.
+  // The spell effect's own breakdown (the to-hit, the damage, the heal, the buff, the slots or the
+  // item the cast spent) is the cast's, drawn as a cast from the journal is (ADR 0049 step 9); a
+  // spell the server could not break down is only named.
   if (e.kind === "spell") {
-    const spell = typeof e.cast?.spell === "string" ? e.cast.spell : e.spellId;
+    if (e.cast)
+      return (
+        <div data-testid="item-spell">
+          <CastEntry cast={e.cast} interactive={false} />
+        </div>
+      );
     return (
       <p className="text-body" data-testid="item-spell">
-        {t("result.itemSpell", { spell })}
+        {t("result.itemSpell", { spell: e.spellId ?? "" })}
       </p>
     );
   }

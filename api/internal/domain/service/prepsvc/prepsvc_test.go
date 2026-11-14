@@ -227,6 +227,41 @@ func TestInfo_ItemsListFailure(t *testing.T) {
 	require.Error(t, err)
 }
 
+// ADR 0049 steps 9 and 10: what the use of a spell effect of an item asks is the spell's cast inputs
+// read at the effect's caster level (not the character's: the fixture's bard is 15th level), with the
+// inventory items the spell can spend, and nothing for a spell the effects data does not hold.
+func TestAsksFor_ADR0049Step9_TheSpellsCastInputsAtTheEffectsLevel(t *testing.T) {
+	f := newFixture(t)
+	wall, err := f.svc.AsksFor("wall_of_ice", 9, nil)
+	require.NoError(t, err)
+	require.Len(t, wall.Cast.Modes, 3)
+	assert.Equal(t, 9, wall.Cast.Modes[2].Damage.CasterLevel, "the effect's level, not the bard's 15")
+
+	orb, err := f.svc.AsksFor("chromatic_orb", 6, []itemsvc.Item{
+		{ID: "ruby", Name: localized.Of("Ruby"), Component: "gem", Behaviour: itemsvc.BehaviourStock, Count: 2},
+		{ID: "arrow", Name: localized.Of("Arrow"), Type: "arrow", Behaviour: itemsvc.BehaviourStock, Count: 20},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, prepsvc.CastInputs{ConsumeItemType: "gem", AttackRoll: true}, orb.Cast)
+	require.Len(t, orb.Items, 1)
+	assert.Equal(t, "ruby", orb.Items[0].ID)
+
+	grants, err := f.svc.AsksFor("rarys_mnemonic_enhancer", 12, nil)
+	require.NoError(t, err)
+	assert.Equal(t, [][]int{{1, 1, 1}, {1, 2}, {3}}, grants.Cast.SlotSplits)
+
+	enlarge, err := f.svc.AsksFor("enlarge", 6, nil)
+	require.NoError(t, err)
+	assert.Equal(t, &spelleffectsvc.TargetChoice{Default: spelleffectsvc.CastOnSelf, Alternate: spelleffectsvc.CastOnOther}, enlarge.Cast.Target)
+
+	none, err := f.svc.AsksFor("gone_from_the_data", 6, nil)
+	require.NoError(t, err)
+	assert.Equal(t, prepsvc.SpellAsks{}, none)
+	alarm, err := f.svc.AsksFor("alarm", 6, nil)
+	require.NoError(t, err)
+	assert.Equal(t, prepsvc.SpellAsks{}, alarm, "a spell that asks nothing")
+}
+
 // catalog is the test seed of spell effects.
 func catalog(t *testing.T) spelleffectsvc.Catalog {
 	t.Helper()

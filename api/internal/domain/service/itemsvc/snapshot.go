@@ -202,11 +202,22 @@ func (s *service) keepCurrent(ctx context.Context, characterID int64, id string,
 // strips the abilities the boot conversion gave it; its count becomes the
 // quantity of the conversion. Abilities that the item
 // now stored has under the same id lend their names (the conversion cannot
-// know a name an edit or the seed gave). A snapshot with the key is as it was.
+// know a name an edit or the seed gave). A snapshot with the key keeps its abilities. A scroll
+// that names a spell then gets its spell effect (withScrollSpell).
 func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c itemState, item Item) (Item, error) {
-	if c.Item.Abilities != nil {
-		return item, nil
+	if c.Item.Abilities == nil {
+		var err error
+		if item, err = s.convertedLegacy(ctx, characterID, item); err != nil {
+			return Item{}, err
+		}
 	}
+	return s.withScrollSpell(item), nil
+}
+
+// convertedLegacy is item, the old fields of a snapshot with no abilities key, as
+// ConvertLegacy gives them (names lent by the stored item's abilities of the same
+// id), or as it is when the conversion gives none.
+func (s *service) convertedLegacy(ctx context.Context, characterID int64, item Item) (Item, error) {
 	conv := ConvertLegacy(item)
 	converted := conv.Abilities
 	if len(converted) == 0 || conv.Check(item) != nil {
@@ -227,6 +238,21 @@ func (s *service) withLegacyAbilities(ctx context.Context, characterID int64, c 
 		NamedFrom(item.Abilities, cur.Abilities)
 	}
 	return item, nil
+}
+
+// withScrollSpell is the scroll a snapshot holds with its spell folded into its
+// ability when it names one and no ability casts it yet (ADR 0049 step 9: the
+// boot conversion's rule, WithScrollSpell, at the caster level of DMG p.145), so
+// popping an entry of before the spell effect never gives back a scroll the
+// conversion has not reached. A spell the levels do not know leaves it as it is.
+func (s *service) withScrollSpell(item Item) Item {
+	if !item.HoldsSpell() || item.SpellID == "" || s.scrollLevels == nil || FirstSpell(item.Abilities) != "" {
+		return item
+	}
+	if level, ok := s.scrollLevels(item.SpellID); ok {
+		item.Abilities = WithScrollSpell(slices.Clone(item.Abilities), item.SpellID, level)
+	}
+	return item
 }
 
 // keepCurrentFields is keepCurrent without the abilities.

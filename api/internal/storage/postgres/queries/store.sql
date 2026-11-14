@@ -137,6 +137,19 @@ FROM items WHERE abilities IS NULL ORDER BY character_id, position, id;
 UPDATE items SET abilities = sqlc.arg(abilities)::text
 WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id AND abilities IS NULL;
 
+-- The spell of a scroll folded into its ability (ADR 0049 step 9): the converted scrolls that name a
+-- spell, and the write of the list with the spell effect (guarded by the list it was read as, so a
+-- rerun or a second instance writes nothing twice). spell_id stays as stored, mirrored by the
+-- effect, for the release that still reads it.
+-- name: ListScrollsWithSpell :many
+SELECT character_id, id, spell_id, abilities
+FROM items WHERE category = 'magic' AND magic_kind = 'scroll' AND spell_id <> '' AND abilities IS NOT NULL
+ORDER BY character_id, position, id;
+
+-- name: SetScrollAbilities :exec
+UPDATE items SET abilities = sqlc.arg(abilities)::text
+WHERE character_id = sqlc.arg(character_id)::bigint AND id = @id AND abilities = sqlc.arg(was)::text;
+
 -- The quantity of ADR 0049 step 2 for an item whose counter is an ability's (per_day or charges): one
 -- object, so its count is 1. Read the converted rows whose count is not 1, decide in Go which hold
 -- such an ability (the list is JSON text), and write the count; a rerun finds none.

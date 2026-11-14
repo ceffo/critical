@@ -66,6 +66,8 @@ type tables struct {
 	Items   map[string]storeq.InsertItemParams
 	// Abilities is items.abilities by rowKey: a missing key is NULL (not converted).
 	Abilities map[string]string
+	// ScrollSpells is items.spell_id by rowKey (the seed writes none): '' for a missing key.
+	ScrollSpells map[string]string
 	// Reviews are equipment_review rows, "character|item|reason"; Renames item_id_renames, by rowKey
 	// of the old id.
 	Reviews map[string]bool
@@ -150,7 +152,7 @@ type correctionRow struct {
 func newFakeStore() *fakeStore {
 	return &fakeStore{t: tables{
 		Slots: map[int64]string{}, Buffs: map[int64]string{}, Rounds: map[int64]bool{},
-		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{}, Abilities: map[string]string{},
+		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{}, Abilities: map[string]string{}, ScrollSpells: map[string]string{},
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
 		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
@@ -1236,6 +1238,31 @@ func (f *fakeStore) ListCountedItemAbilities(context.Context) ([]storeq.ListCoun
 		return cmp.Or(cmp.Compare(a.CharacterID, b.CharacterID), cmp.Compare(a.ID, b.ID))
 	})
 	return out, nil
+}
+
+func (f *fakeStore) ListScrollsWithSpell(context.Context) ([]storeq.ListScrollsWithSpellRow, error) {
+	var out []storeq.ListScrollsWithSpellRow
+	for key, it := range f.t.Items {
+		raw, ok := f.t.Abilities[key]
+		if !ok || it.Category != "magic" || it.MagicKind != "scroll" || f.t.ScrollSpells[key] == "" {
+			continue
+		}
+		out = append(out, storeq.ListScrollsWithSpellRow{
+			CharacterID: it.CharacterID, ID: it.ID, SpellID: f.t.ScrollSpells[key], Abilities: sql.NullString{String: raw, Valid: true},
+		})
+	}
+	slices.SortFunc(out, func(a, b storeq.ListScrollsWithSpellRow) int {
+		return cmp.Or(cmp.Compare(a.CharacterID, b.CharacterID), cmp.Compare(a.ID, b.ID))
+	})
+	return out, nil
+}
+
+func (f *fakeStore) SetScrollAbilities(_ context.Context, arg storeq.SetScrollAbilitiesParams) error {
+	key := rowKey(arg.CharacterID, arg.ID)
+	if f.t.Abilities[key] == arg.Was {
+		f.t.Abilities[key] = arg.Abilities
+	}
+	return nil
 }
 
 func (f *fakeStore) SetItemQuantity(_ context.Context, arg storeq.SetItemQuantityParams) error {

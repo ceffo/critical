@@ -1,4 +1,5 @@
 import type { TFunction } from "i18next";
+import { asksAnything } from "@/lib/castInputs";
 import type {
   AbilityUseResult,
   Item,
@@ -70,4 +71,18 @@ export function limitText(
   return kind === "charges" && cost > 1
     ? t("actions.items.limit.chargesCost", { left, max, cost })
     : t(`actions.items.limit.${kind}`, { left, max, count: quantity });
+}
+
+/**
+ * The spell effects of an ability whose use leaves the player something to answer, with their
+ * index in the ability's list: what the server serves per effect (`asks`) decides, nothing here.
+ */
+export function askedEffects(
+  ability: ItemAbility,
+): { index: number; effect: ItemAbility["effects"][number] }[] {
+  return ability.effects.flatMap((effect, index) =>
+    effect.kind === "spell" && asksAnything(effect.asks)
+      ? [{ index, effect }]
+      : [],
+  );
 }

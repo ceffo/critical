@@ -1,4 +1,83 @@
 {
+  "abilityCharges": {
+    "payload": {
+      "itemId": "wand_lightning",
+      "abilityId": "bolt",
+      "name": "Wand of lightning",
+      "abilityName": {
+        "en": "Lightning bolt",
+        "fr": "Éclair"
+      },
+      "type": "wand",
+      "behaviour": "charges",
+      "limit": "charges",
+      "left": 2,
+      "max": 10,
+      "removed": false,
+      "remaining": 2,
+      "maxCount": 10,
+      "dice": "6d6",
+      "rolls": [6, 1, 3, 4, 2, 5],
+      "total": 21,
+      "save": "rod_staff_wand",
+      "effects": [
+        {
+          "kind": "dice",
+          "dice": "6d6",
+          "rolls": [6, 1, 3, 4, 2, 5],
+          "total": 21,
+          "save": "rod_staff_wand"
+        }
+      ]
+    },
+    "roll": true
+  },
+  "abilityUnlimited": {
+    "payload": {
+      "itemId": "ring_light",
+      "abilityId": "glow",
+      "name": "Ring of light",
+      "type": "ring",
+      "limit": "unlimited",
+      "removed": false,
+      "remaining": 0,
+      "maxCount": 0,
+      "rolls": [],
+      "total": 0
+    },
+    "roll": true
+  },
+  "abilityUnlimitedDice": {
+    "payload": {
+      "itemId": "rod_x",
+      "abilityId": "zap",
+      "name": "Rod",
+      "type": "rod",
+      "limit": "unlimited",
+      "removed": false,
+      "remaining": 0,
+      "maxCount": 0,
+      "dice": "1d6",
+      "rolls": [4],
+      "total": 4,
+      "effects": [
+        {
+          "kind": "dice",
+          "dice": "1d6",
+          "rolls": [4],
+          "total": 4
+        },
+        {
+          "kind": "dice",
+          "dice": "2d4+1",
+          "rolls": [2, 3],
+          "modifier": 1,
+          "total": 6
+        }
+      ]
+    },
+    "roll": true
+  },
   "lastCharge": {
     "payload": {
       "itemId": "potion_healing",
@@ -29,80 +108,151 @@
     },
     "roll": true
   },
-  "abilityCharges": {
+  "spellDamage": {
     "payload": {
-      "itemId": "wand_lightning",
-      "name": "Wand of lightning",
-      "abilityId": "bolt",
-      "abilityName": {
-        "en": "Lightning bolt",
-        "fr": "Éclair"
-      },
-      "type": "wand",
-      "limit": "charges",
-      "left": 2,
-      "max": 10,
-      "behaviour": "charges",
-      "removed": false,
-      "remaining": 2,
-      "maxCount": 10,
-      "dice": "6d6",
-      "rolls": [6, 1, 3, 4, 2, 5],
-      "total": 21,
-      "save": "rod_staff_wand",
+      "itemId": "scroll_fireball",
+      "abilityId": "use",
+      "name": "Scroll of fireball",
+      "type": "",
+      "behaviour": "stock",
+      "limit": "with_item",
+      "removed": true,
+      "remaining": 0,
+      "maxCount": 0,
+      "rolls": [],
+      "total": 0,
       "effects": [
         {
-          "kind": "dice",
-          "dice": "6d6",
-          "rolls": [6, 1, 3, 4, 2, 5],
-          "total": 21,
-          "save": "rod_staff_wand"
+          "kind": "spell",
+          "rolls": [],
+          "total": 0,
+          "spellId": "fireball",
+          "cast": {
+            "action": "item",
+            "spellId": "fireball",
+            "spell": "Fireball",
+            "casterLevel": 13,
+            "damage": {
+              "total": 41,
+              "type": "fire",
+              "dice": "10d6",
+              "instances": 1,
+              "rounds": 1,
+              "rolls": [
+                {
+                  "formula": "10d6",
+                  "dice": [
+                    {
+                      "sides": 6,
+                      "value": 6
+                    },
+                    {
+                      "sides": 6,
+                      "value": 1
+                    },
+                    {
+                      "sides": 6,
+                      "value": 3
+                    },
+                    {
+                      "sides": 6,
+                      "value": 4
+                    },
+                    {
+                      "sides": 6,
+                      "value": 3
+                    },
+                    {
+                      "sides": 6,
+                      "value": 5
+                    },
+                    {
+                      "sides": 6,
+                      "value": 2
+                    },
+                    {
+                      "sides": 6,
+                      "value": 6
+                    },
+                    {
+                      "sides": 6,
+                      "value": 5
+                    },
+                    {
+                      "sides": 6,
+                      "value": 6
+                    }
+                  ],
+                  "total": 41
+                }
+              ]
+            },
+            "save": {
+              "type": "spell",
+              "effect": "half"
+            },
+            "level": 0,
+            "untracked": null
+          }
         }
       ]
     },
     "roll": true
   },
-  "abilityUnlimited": {
+  "spellHeal": {
     "payload": {
-      "itemId": "ring_light",
-      "name": "Ring of light",
-      "abilityId": "glow",
-      "type": "ring",
-      "limit": "unlimited",
+      "itemId": "staff_curing",
+      "abilityId": "use",
+      "name": "Staff of curing",
+      "type": "",
+      "behaviour": "charges",
+      "limit": "charges",
+      "left": 9,
+      "max": 10,
       "removed": false,
-      "remaining": 0,
-      "maxCount": 0,
+      "remaining": 9,
+      "maxCount": 10,
       "rolls": [],
-      "total": 0
-    },
-    "roll": true
-  },
-  "abilityUnlimitedDice": {
-    "payload": {
-      "itemId": "rod_x",
-      "name": "Rod",
-      "abilityId": "zap",
-      "type": "rod",
-      "limit": "unlimited",
-      "removed": false,
-      "remaining": 0,
-      "maxCount": 0,
-      "dice": "1d6",
-      "rolls": [4],
-      "total": 4,
+      "total": 0,
       "effects": [
         {
-          "kind": "dice",
-          "dice": "1d6",
-          "rolls": [4],
-          "total": 4
-        },
-        {
-          "kind": "dice",
-          "dice": "2d4+1",
-          "rolls": [2, 3],
-          "modifier": 1,
-          "total": 6
+          "kind": "spell",
+          "rolls": [],
+          "total": 0,
+          "applied": {
+            "hpDelta": 8,
+            "hpBefore": 12,
+            "hpAfter": 20
+          },
+          "spellId": "cure_serious_wounds",
+          "cast": {
+            "action": "item",
+            "spellId": "cure_serious_wounds",
+            "spell": "Cure Serious Wounds",
+            "casterLevel": 13,
+            "heal": {
+              "dice": "2d8+1",
+              "rolls": [
+                {
+                  "sides": 8,
+                  "value": 8
+                },
+                {
+                  "sides": 8,
+                  "value": 6
+                }
+              ],
+              "constant": 1,
+              "total": 15,
+              "hpBefore": 12,
+              "hpAfter": 20
+            },
+            "level": 0,
+            "kind": "heal",
+            "confidence": "high",
+            "target": "self_or_other",
+            "untracked": null
+          }
         }
       ]
     },

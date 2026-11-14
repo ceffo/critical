@@ -88,4 +88,43 @@ describeKind("item_use", fixtures, {
     value: { text: "4", tone: "ink" },
     rolled: true,
   },
+  // ADR 0049 step 9: a scroll's spell effect: the use's text carries what the cast did (its damage
+  // here), the value is the damage total, the card draws the cast's breakdown (the dice, the save).
+  spellDamage: {
+    en: {
+      text: "Used Scroll of fireball (last charge, removed), cast Fireball: 41 fire damage",
+      short: "Scroll of fireball",
+      subtitle: "Scroll of fireball",
+      card: [
+        'data-testid="item-spell"',
+        'data-testid="cast-entry"',
+        "Cast Fireball",
+        'data-testid="cast-entry-damage"',
+      ],
+    },
+    fr: {
+      text: "Objet utilisé : Scroll of fireball (dernière charge, retiré), lance Fireball: 41 dégâts (fire)",
+      short: "Scroll of fireball",
+      subtitle: "Scroll of fireball",
+    },
+    value: { text: "41", tone: "ink" },
+    rolled: true,
+  },
+  // A spell that heals: the HP the ledger took is the use's heal phrase and value, once (the cast's own
+  // heal phrase is not repeated after the spell's name).
+  spellHeal: {
+    en: {
+      text: "Used Staff of curing (9 left), cast Cure Serious Wounds, heals 8 HP (15 rolled, capped at max HP)",
+      short: "Staff of curing",
+      subtitle: "Staff of curing",
+      card: ['data-testid="item-spell"', "Cast Cure Serious Wounds"],
+    },
+    fr: {
+      text: "Objet utilisé : Staff of curing (9 restant), lance Cure Serious Wounds, soigne 8 PV (15 obtenus, plafonnés aux PV max)",
+      short: "Staff of curing",
+      subtitle: "Staff of curing",
+    },
+    value: { text: "+8", tone: "heal" },
+    rolled: true,
+  },
 });

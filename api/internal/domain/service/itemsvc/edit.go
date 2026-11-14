@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
+	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 )
 
 // ItemInput is a new piece (ADR 0033 step 24), typed or picked. MaxCount is
@@ -234,6 +235,14 @@ func (s *service) Create(ctx context.Context, characterID int64, in ItemInput) (
 	if item.Behaviour != BehaviourDaily {
 		item.MaxCount = item.Count
 	}
+	if in.Abilities == nil && item.HoldsSpell() {
+		// The column names the spell: an unknown one is the column's refusal, before it reaches the effect.
+		if err := s.knownSpell(ctx, item); err != nil {
+			return nil, err
+		}
+		item = withSpellFromColumn(item)
+	}
+	item = s.withScrollLevels(item)
 	if err := item.Validate(); err != nil {
 		return nil, err
 	}
@@ -305,7 +314,7 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 	if in.CatalogueCode != "" {
 		return s.picked(in)
 	}
-	return clean(Item{
+	return mirrorSpell(clean(Item{
 		Name: in.Name, Category: in.Category, MagicKind: in.MagicKind, Component: in.Component, SpellID: in.SpellID, State: StateCarried,
 		Behaviour: in.Behaviour, Count: in.Count, MaxCount: in.MaxCount,
 		EffectDice: in.EffectDice, EffectSave: in.EffectSave, Notes: in.Notes, Powers: withPowerIDs(in.Powers),
@@ -317,7 +326,47 @@ func (s *service) newPiece(in ItemInput) (Item, error) {
 		StrengthRating: in.StrengthRating,
 		BaseAC:         in.BaseAC, SkillColumn: in.SkillColumn, ArmorRow: in.ArmorRow,
 		ShieldKind: in.ShieldKind, ACMelee: in.ACMelee, ACMissile: in.ACMissile,
-	}), nil
+	})), nil
+}
+
+// withScrollLevels gives a scroll's spell effect sent with no level the level DMG p.145 writes that
+// spell at (ADR 0049 step 9, the level of the boot conversion): the editor leaves it empty and the
+// server, which holds the class data, fills it. The level stays editable (a level sent is kept), and
+// a spell no table reaches takes the 6th-level floor; any other piece with no level is refused as before (a wand states its own).
+func (s *service) withScrollLevels(i Item) Item {
+	if !i.HoldsSpell() {
+		return i
+	}
+	abilities := slices.Clone(i.Abilities)
+	for a := range abilities {
+		abilities[a].Effects = slices.Clone(abilities[a].Effects)
+		for e := range abilities[a].Effects {
+			eff := &abilities[a].Effects[e]
+			if eff.Kind != EffectSpell || eff.Level != 0 {
+				continue
+			}
+			// No table for the spell's list (or no tables): the floor DMG p.145 gives every scroll.
+			eff.Level = ruletablesvc.MinScrollLevel
+			if s.scrollLevels != nil {
+				if level, ok := s.scrollLevels(strings.ToLower(strings.TrimSpace(eff.SpellID))); ok {
+					eff.Level = level
+				}
+			}
+		}
+	}
+	i.Abilities = abilities
+	return i
+}
+
+// mirrorSpell is a scroll whose stored spell_id is the spell its abilities cast (ADR 0049 step 9:
+// the spell effect is the source, the old column mirrors it so the previous release still runs,
+// until the contract). A scroll whose abilities cast none holds no spell; another piece is as it
+// is (it holds none, Validate refuses one).
+func mirrorSpell(i Item) Item {
+	if i.HoldsSpell() && i.Abilities != nil {
+		i.SpellID = FirstSpell(i.Abilities)
+	}
+	return i
 }
 
 // clean trims the typed text and lower-cases the codes and dice.
@@ -376,6 +425,13 @@ func (s *service) Update(ctx context.Context, characterID int64, itemID string, 
 				item.State = StateCarried
 			}
 		}
+		if p.SpellID != nil && p.Abilities == nil && item.HoldsSpell() {
+			if err := s.knownSpell(ctx, item); err != nil {
+				return err
+			}
+			item = withSpellFromColumn(item)
+		}
+		item = s.withScrollLevels(item)
 		if err := item.Validate(); err != nil {
 			return err
 		}
@@ -481,6 +537,9 @@ func patched(old Item, p ItemPatch) Item {
 	// the edit); one the patch names is refused by Validate.
 	if p.SpellID == nil && !item.HoldsSpell() {
 		item.SpellID = ""
+	}
+	if p.Abilities != nil && p.SpellID == nil {
+		item = mirrorSpell(item)
 	}
 	set(&item.EffectDice, p.EffectDice)
 	set(&item.EffectSave, p.EffectSave)

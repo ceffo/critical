@@ -227,27 +227,37 @@ describe("draftToBody", () => {
 });
 
 describe("changedFields", () => {
-  // ADR 0033 step 2: a magic scroll names the spell it holds; the form sends it, sets and clears it.
-  it("sends a scroll's spell when it is set or cleared, and none for another piece", () => {
-    const scroll = piece({ id: "s", category: "magic", magicKind: "scroll" });
-    const named = draftToBody(
-      { ...draftFromItem(scroll, "en"), spellId: "burning_hands" },
-      "en",
-    ).body;
-    expect(changedFields(scroll, named, "en")).toEqual({
-      spellId: "burning_hands",
+  // ADR 0049 step 9: a scroll's spell is the spell effect of its ability; the form sends the abilities
+  // (the server mirrors the old spell column) and never a spellId of its own.
+  it("sends a scroll's spell with its abilities, never as a spellId", () => {
+    const scroll = piece({
+      id: "s",
+      category: "magic",
+      magicKind: "scroll",
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [],
+          usable: true,
+        },
+      ],
     });
-    const held = { ...scroll, spellId: "burning_hands" };
-    const cleared = draftToBody(
-      { ...draftFromItem(held, "en"), spellId: "" },
-      "en",
-    ).body;
-    expect(changedFields(held, cleared, "en")).toEqual({ spellId: "" });
-    const potion = draftToBody(
-      { ...draftFromItem(held, "en"), magicKind: "potion" },
-      "en",
-    ).body;
-    expect(potion.spellId).toBeUndefined();
+    const draft = draftFromItem(scroll, "en");
+    draft.abilities[0].effects = [
+      { ...newEffectDraft("spell"), spellId: "burning_hands", level: "13" },
+    ];
+    const { body } = draftToBody(draft, "en");
+    expect(body.spellId).toBeUndefined();
+    expect(changedFields(scroll, body, "en")).toEqual({
+      abilities: [
+        {
+          id: "use",
+          limit: { kind: "with_item" },
+          effects: [{ kind: "spell", spellId: "burning_hands", level: 13 }],
+        },
+      ],
+    });
   });
 
   it("sends only what changed: the wand's charges 4 to 3", () => {

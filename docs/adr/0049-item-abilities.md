@@ -658,7 +658,7 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      default (first active) entry. A choice for an item, revisited if it matters. The breakdown's action
      `item` is read by no journal or web code as a use's action: the journal words the `item_use` entry, and
      a cast breakdown nested in it is drawn by its own fields (9b draws it).
-   - **Not in 9a, so the app stays as it is:** the scroll's `spellId` field and its conversion, the Use
+   - **Not in 9a, so the app stays as it is (built by 9b):** the scroll's `spellId` field and its conversion, the Use
      dialog, the editor's spell picker (the editor keeps a stored spell effect through a save and shows it
      read-only), and the card's drawing of the cast (it names the spell). A spell effect can only be written
      through the API until 9b. `just spell-ability-rehearsal` proves use, undo, redo, the asks and the rollback
@@ -667,8 +667,41 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      (`dmg/app3-magical-item-descriptions/04-level-of.md`): a scroll spell is written at a level one higher
      than the one required to cast it, never below 6th level of experience ("a 6th-level wizard spell is written
      at 13th level of ability, a 7th-level spell at 15th"), and the DM may write it higher.
-   - **To do in 9b:** a scroll's initiative term must read its spell effect (today it reads the item's
-     `spellId`, so a scroll holding only a spell effect gets the kind row), with a test.
+   *Built, 9b.* The user-facing part:
+   - **The conversion of the scrolls** (boot step, same transaction as step 18's): every scroll that names a
+     spell (`spell_id`) and whose abilities hold no spell effect gets one on its first `with_item` ability, at
+     the level below. `spell_id` stays as stored and is **mirrored** from the first spell effect by every edit
+     of the abilities (and a create), so the previous release still runs; an edit that removes the effect clears
+     it. Idempotent (a list that casts a spell is never read again; the write is guarded by the list it was read
+     as). Left as stored, and counted in the log line (`scrollsSkipped`): a spell the catalogue does not know, a
+     scroll with no `with_item` ability (the player removed it; the conversion gives none back). The log line adds
+     `scrolls=N scrollsSkipped=M`. The user's existing local database holds no scroll, so the first start folds
+     nothing there; `just scroll-spell-rehearsal` proves the step on a copy of it and on a scratch database.
+   - **The old field, both ways:** a request that sets `spellId` alone (an older client) carries into the
+     effect through the same functions: another spell replaces the effect's spell at the book's level, `""`
+     removes the effect, a scroll with no abilities is converted first; the one mirror path both ways. A
+     level the books' tables cannot give (a list no slot table serves) is the 6th-level floor in the editor
+     (the boot step skips it and counts it). A spell effect whose spell data cannot be read at its level is
+     refused when saved (field `abilities`); the item list serves an effect it cannot read without asks, logged,
+     never failing the list.
+   - **The snapshot restorer:** a scroll popped from a snapshot that names a spell and casts none (recorded
+     before abilities, or before the effect) gets the same effect at the same level (`WithScrollSpell`, the one
+     function of the boot step); a level the player set is kept.
+   - **The scroll's caster level** (DMG p.145): one above the minimum level required to cast the spell, never
+     below 6th. The minimum is read from the slot tables the classes name (`spell_progression`: the lowest level
+     with a slot of the spell's level in the table of the spell's list, `ruletablesvc.ScrollCasterLevel`), not
+     from a formula on the spell level: a 6th-level wizard spell is 13th, a 3rd-level one the floor, 6th. The
+     level stays editable: the editor leaves it empty and the server writes the book's level for a scroll (any
+     other piece must state one).
+   - **The scroll's initiative** reads the spell of the used ability's spell effect, not `spell_id`.
+   - **The asks** are served on the item wire, per spell effect (`asks`: the spellbook's cast fields
+     `slot_splits`, `consume_item_type`, `attack_roll`, `modes`, `cast_target` and the spendable `items`, at the
+     effect's level, `prepsvc.AsksFor`). The Use dialog opens only when something is left to choose (a to-hit,
+     one of several items, splits or modes, a target) and posts the answers in the body of step 9a; the web
+     decides nothing else.
+   - **The result card and the journal** draw the cast's breakdown (the card as a cast entry; the entry's text
+     appends what the cast did, its heal being the use's heal phrase). The editor picks a spell in the ability
+     (a Spell effect row: spell, caster level); the scroll form's own spell field is gone.
 10. **The contract.** Drop `behaviour`, `max_count`, `effect_dice`, `effect_save` and the old reads,
     retire the old use endpoint and the `behaviour` wire field, delete the legacy half of the
     snapshot restorer once no environment holds an old entry that needs it, amend ADR 0016, 0033, 0008

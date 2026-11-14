@@ -169,7 +169,13 @@ type Deps struct {
 	// Casts applies a spell effect (ADR 0049 step 12). castsvc imports this
 	// package, so the composition root hands a late-bound one; nil makes a use
 	// with a spell effect fail, never skip it.
-	Casts           Caster
+	Casts Caster
+	// ScrollLevels is the caster level a scroll's spell is written at (DMG p.145), for the
+	// spell effect an old scroll snapshot gets when it is popped (ADR 0049 step 9). Nil: none
+	// is added.
+	ScrollLevels ScrollLevels
+	// LevelCheck refuses a spell effect whose spell data cannot be read at its level (nil: none).
+	LevelCheck      LevelCheck
 	InitiativeItems *ruletablesvc.InitiativeItems
 	// Spells is the spell catalogue: a scroll names one of its spells (ADR
 	// 0033 step 2) and its use reads that spell's casting time (ADR 0035
@@ -218,16 +224,18 @@ type Initiative interface {
 }
 
 type service struct {
-	buffs     Buffs
-	casts     Caster
-	dal       DAL
-	dice      Dice
-	log       Log
-	tx        domain.TxRunner
-	chars     Characters
-	catalogue []ruletablesvc.Weapon
-	equipment *ruletablesvc.Equipment
-	classes   ClassLookup
+	buffs        Buffs
+	casts        Caster
+	scrollLevels ScrollLevels
+	levelCheck   LevelCheck
+	dal          DAL
+	dice         Dice
+	log          Log
+	tx           domain.TxRunner
+	chars        Characters
+	catalogue    []ruletablesvc.Weapon
+	equipment    *ruletablesvc.Equipment
+	classes      ClassLookup
 	// initiative and initiativeItems: ADR 0035 item 6.2 (Deps).
 	initiative      Initiative
 	initiativeItems *ruletablesvc.InitiativeItems
@@ -244,7 +252,7 @@ func New(dal DAL, d Deps) (SVC, error) {
 	s := &service{
 		dal: specializedDAL{DAL: dal, chars: d.Chars}, dice: d.Dice, log: d.Log, tx: d.Tx, chars: d.Chars, equipment: d.Equipment, classes: d.Classes,
 		initiative: d.Initiative, initiativeItems: d.InitiativeItems, spells: d.Spells, rulesets: d.Rulesets,
-		strength: d.Strength, buffs: d.Buffs, casts: d.Casts,
+		strength: d.Strength, buffs: d.Buffs, casts: d.Casts, scrollLevels: d.ScrollLevels, levelCheck: d.LevelCheck,
 	}
 	if d.Equipment != nil {
 		s.catalogue = d.Equipment.Weapons

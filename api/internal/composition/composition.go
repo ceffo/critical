@@ -260,11 +260,13 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 		return nil, fmt.Errorf("seed: %w", err)
 	}
 	// ADR 0049 step 18: the items not converted to abilities yet are, once, in one transaction.
-	conv, err := db.ConvertItems(ctx, cfg.SeedsDir)
+	// A scroll's spell becomes a spell effect at the caster level DMG p.145 gives it (ADR 0049 step 9).
+	conv, err := db.ConvertItems(ctx, cfg.SeedsDir, scrollLevels(cat, ruleTables))
 	if err != nil {
 		return nil, fmt.Errorf("convert items: %w", err)
 	}
-	slog.Info("items converted to abilities", "converted", conv.Converted, "review", conv.Review, "quantities", conv.Quantities)
+	slog.Info("items converted to abilities", "converted", conv.Converted, "review", conv.Review, "quantities", conv.Quantities,
+		"scrolls", conv.Scrolls, "scrollsSkipped", conv.ScrollsSkipped)
 	if err := db.ImportCatalogue(ctx, cat, seedSpellRefs(spellbookSeed, effects)); err != nil {
 		return nil, err
 	}
@@ -372,6 +374,17 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment, Classes: ruleTables,
 		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
+		// An old scroll snapshot gets its spell effect at the level the boot step gives (ADR 0049 step 9).
+		ScrollLevels: scrollLevels(cat, ruleTables),
+		// A spell effect's level must be one the spell's data can be read at: what the item list's asks read,
+		// through the preparation service built below.
+		LevelCheck: func(spellID string, level int) error {
+			if bs.Prep == nil {
+				return nil
+			}
+			_, err := bs.Prep.AsksFor(spellID, level, nil)
+			return err
+		},
 		// A buff effect of an ability goes through the buff service's Add (ADR
 		// 0049 step 12), built below from the items.
 		Buffs: bridgeadpt.BuffAddFunc(func(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
@@ -617,4 +630,18 @@ func seedSpellRefs(spellbook []string, effects *spelleffectsadpt.Catalog) []cata
 		refs = append(refs, catalogue.Ref{ID: e.ID, Where: "spell effects seed"})
 	}
 	return refs
+}
+
+// scrollLevels is the caster level a scroll's spell is written at (ADR 0049 step 9, DMG p.145): the
+// catalogue's list and level of the spell, through the slot tables of the rule tables. The boot
+// conversion and the items service's snapshot restorer share it.
+func scrollLevels(cat catalogue.Catalogue, tables *ruletablesvc.Tables) itemsvc.ScrollLevels {
+	spells := cat.ByID()
+	return func(spellID string) (int, bool) {
+		spell, ok := spells[spellID]
+		if !ok {
+			return 0, false
+		}
+		return tables.ScrollCasterLevel(spell.Class, spell.Level)
+	}
 }

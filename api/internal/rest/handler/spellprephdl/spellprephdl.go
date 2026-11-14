@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -66,27 +65,15 @@ type SpellbookEntryDTO struct {
 	Items []SpendableItemDTO `json:"items,omitempty"`
 }
 
-// CastTargetDTO is the target choice of a cast: the default and its alternate.
-type CastTargetDTO struct {
-	Default   string `json:"default"`
-	Alternate string `json:"alternate"`
-}
+// CastTargetDTO is the target choice of a cast: the default and its alternate (the wire's, shared
+// with the asks of an item's spell effect).
+type CastTargetDTO = wire.CastTargetDTO
 
 // castTargetToDTO maps the target choice to the wire (nil: none).
-func castTargetToDTO(c *spelleffectsvc.TargetChoice) *CastTargetDTO {
-	if c == nil {
-		return nil
-	}
-	return &CastTargetDTO{Default: string(c.Default), Alternate: string(c.Alternate)}
-}
+func castTargetToDTO(c *spelleffectsvc.TargetChoice) *CastTargetDTO { return wire.CastTargetToDTO(c) }
 
 // SpendableItemDTO is an inventory item a spell can spend.
-type SpendableItemDTO struct {
-	ID string `json:"id"`
-	// Name is a language map (ADR 0023 step 9).
-	Name  localized.Text `json:"name"`
-	Count int            `json:"count"`
-}
+type SpendableItemDTO = wire.SpendableItemDTO
 
 // LevelLimitDTO is the preparation limit of one spell level.
 type LevelLimitDTO struct {

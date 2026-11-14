@@ -495,8 +495,11 @@ export interface Character {
     available?: number;
     left?: number;
     /** ADR 0042 step 7: `level_limit` (field `level`) names the class entry above the race's
-     * limit, its level in `value` and the limit in `max`. */
+     * limit, its level in `value` and the limit in `max`. ADR 0050 step 14.1: `specialist_race`
+     * (field `race`) names the specialist's class entry and, in `race`, the race PHB Table 22 does
+     * not list for it. */
     class?: string;
+    race?: string;
     /** ADR 0037 step 21.8.3: `weapon_pick_to_redo` (field `weapon.<type>`) names the weapon type
      * left to redo and the slots it spent. */
     type?: string;
@@ -593,6 +596,10 @@ export interface CreationOptions {
   /** The classes never part of a multi-class character (ADR 0042 step 2.1): the form leaves them
    * out of a second or third class. Absent from a release that predates it. */
   noMultiClass?: string[];
+  /** By class, the only races of a multi-class character the class may be part of (ADR 0050 step
+   * 14.3: the gnome illusionist); a class it does not name is not limited this way. Absent from a
+   * release that predates it. */
+  multiclassRaces?: Record<string, string[]>;
   /** The prime requisite score a dual-class character needs in a class it left, and in its new
    * class (ADR 0042 step 2.2). */
   dualClassOldPrime?: number;

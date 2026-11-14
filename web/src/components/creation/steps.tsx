@@ -101,8 +101,9 @@ export function ClassStep(props: StepProps) {
   // character starts with one more class to pick (ADR 0042 step 1).
   const pickKind = (kind: ClassKind) => {
     if (kind === draft.kind) return;
-    // A class a multi-class character cannot have (the server's `noMultiClass`) is cleared.
-    const offered = classesFor(options, kind).map((c) => c.class);
+    // A class a multi-class character cannot have (the server's `noMultiClass`, or `multiclassRaces`
+    // without the race chosen) is cleared.
+    const offered = classesFor(options, kind, draft.race).map((c) => c.class);
     const keep = (cls: string) => (offered.includes(cls) ? cls : "");
     const more = (
       draft.others.length > 0 ? draft.others : [{ cls: "", xp: "", level: "" }]

@@ -2203,7 +2203,15 @@
       "fighter": "Fighter",
       "mage": "Mage",
       "thief": "Thief",
-      "psionicist": "Psionicist"
+      "psionicist": "Psionicist",
+      "abjurer": "Abjurer",
+      "conjurer": "Conjurer",
+      "diviner": "Diviner",
+      "enchanter": "Enchanter",
+      "illusionist": "Illusionist",
+      "invoker": "Invoker",
+      "necromancer": "Necromancer",
+      "transmuter": "Transmuter"
     },
     "errors": {
       "too_long": "Too long.",
@@ -3072,7 +3080,15 @@
         "cleric": "a cleric",
         "fighter": "a fighter",
         "mage": "a mage",
-        "thief": "a thief"
+        "thief": "a thief",
+        "abjurer": "an abjurer",
+        "conjurer": "a conjurer",
+        "diviner": "a diviner",
+        "enchanter": "an enchanter",
+        "illusionist": "an illusionist",
+        "invoker": "an invoker",
+        "necromancer": "a necromancer",
+        "transmuter": "a transmuter"
       }
     },
     "abilities": {

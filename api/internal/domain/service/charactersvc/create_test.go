@@ -531,7 +531,7 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		groups[got.Classes[i].Class] = got.Classes[i].Group
 		got.Classes[i].Group = "" // asserted just below
 		got.Classes[i].HitDie, got.Classes[i].LevelXP, got.Classes[i].Minimums, got.Classes[i].Weapons = 0, nil, nil, nil
-		got.Classes[i].Schools = nil // TestOptions_Step2_ASpecialistClassCarriesItsSchool
+		got.Classes[i].Schools = nil   // TestOptions_Step2_ASpecialistClassCarriesItsSchool
 		got.Classes[i].Spellbook = nil // TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage
 	}
 	// ADR 0050 step 15.1: the groups the entry switch keeps equal (ADR 0040 step 1.2's codes).

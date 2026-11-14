@@ -584,7 +584,12 @@ When the developer reports the full verification passed on HEAD:
   the default branch's up-to-date setting (GitHub's strict status checks, GitLab's fast-forward or semi-linear merge method) means no
   train on that repo: land the changes one at a time, each caught up and green first. After `TRAIN STOPPED`, the
   changes it names go back to the usual path (upkeep catch-up, then `fleet land`). After `GATE RED ... after #n landed`, fixing `<db>`
-  comes first: it is a rework item for #n's developer. A `QUEUED` change is the merge queue's: wait for its `MERGED`. After `TRAIN INTERRUPTED` after a
+  comes first: it is a rework item for #n's developer. `TRAIN SETUP FAILED: <cause> (on <db> alone too)` merged nothing and blames no
+  change: the gate cannot run on `<db>` itself either (`FLEET_WORKTREE_SETUP_CMD` failed, or a tool the gate needs is missing, exit
+  126/127); tell the user the cause (a missing tool usually means `FLEET_WORKTREE_SETUP_CMD` must install it) and land the changes one
+  at a time meanwhile. `TRAIN GATE FAILED at #n ...: the gate cannot run (<cause>)` is #n's fault (it broke the setup or removed what
+  the gate runs): send it back like any gate failure. After a stop, `NOT RUN, setup failed` means `<db>` is not gated: run the gate
+  on it yourself. A `QUEUED` change is the merge queue's: wait for its `MERGED`. After `TRAIN INTERRUPTED` after a
   merge, run the gate on `<db>` yourself.
 - A change that changes a design decision (a decision record, an API or data contract, a schema) is the user's
   call: before it merges, tell them in a few plain lines what changes and why, even when CI is green

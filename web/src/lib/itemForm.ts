@@ -37,8 +37,6 @@ export interface ItemDraft {
   magicKind: MagicKind | "";
   /** The spell component it is, any category (ADR 0033 step 1.1); empty for none. */
   component: Component | "";
-  /** The spell a magic scroll holds (ADR 0033 step 2), a catalogue id; empty for none. */
-  spellId: string;
   /** The quantity as typed (ADR 0049 step 2), 0 to the rules' `maxQuantity`. */
   count: string;
   notes: string;
@@ -121,13 +119,6 @@ export function hasQuantity(
   return c.magicKinds.find((k) => k.kind === d.magicKind)?.hasQuantity ?? false;
 }
 
-/** Whether the piece may name the spell it holds: a magic scroll (ADR 0033 step 2). */
-export function holdsSpell(
-  d: Pick<ItemDraft, "category" | "magicKind">,
-): boolean {
-  return d.category === "magic" && d.magicKind === "scroll";
-}
-
 /**
  * The weapon types of the bows, which may carry a Strength rating (ADR 0033 step 3). A copy of
  * the server's list, `bowTypes` behind itemsvc.IsBowType (api/internal/domain/service/itemsvc/
@@ -178,7 +169,6 @@ export function emptyDraft(category: Category = "gear"): ItemDraft {
     category,
     magicKind: category === "magic" ? "misc" : "",
     component: "",
-    spellId: "",
     count: "1",
     notes: "",
     ammoKind: "arrow",
@@ -215,7 +205,6 @@ export function draftFromItem(i: Item, lang: string): ItemDraft {
     category: i.category,
     magicKind: i.magicKind,
     component: i.component ?? "",
-    spellId: i.spellId ?? "",
     count: String(i.count),
     notes: i.notes,
     ammoKind: i.ammoKind || empty.ammoKind,
@@ -328,8 +317,8 @@ export function draftToBody(
   const out = body as Record<string, unknown>;
   for (const f of CATEGORY_FIELDS[d.category])
     out[f] = (all as Record<string, unknown>)[f];
-  // Only a magic scroll holds a spell; another piece sends none and the server drops it.
-  if (holdsSpell(d)) body.spellId = d.spellId;
+  // A scroll's spell is the spell effect of its ability (ADR 0049 step 9): the form sends the abilities
+  // and the server keeps the old spell column in step.
   // Every piece has powers (ADR 0033 step 17); the "+N" is an armour's or a shield's.
   const powers = draftsToPowers(d.category, d.plus, d.powers);
   if (powers) body.powers = powers;

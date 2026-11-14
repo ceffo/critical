@@ -73,9 +73,9 @@ func (_c *MockStore_Close_Call) RunAndReturn(run func() error) *MockStore_Close_
 	return _c
 }
 
-// ConvertItems provides a mock function with given fields: ctx, seedsDir
-func (_m *MockStore) ConvertItems(ctx context.Context, seedsDir string) (itemsvc.BootConversion, error) {
-	ret := _m.Called(ctx, seedsDir)
+// ConvertItems provides a mock function with given fields: ctx, seedsDir, levels
+func (_m *MockStore) ConvertItems(ctx context.Context, seedsDir string, levels itemsvc.ScrollLevels) (itemsvc.BootConversion, error) {
+	ret := _m.Called(ctx, seedsDir, levels)
 
 	if len(ret) == 0 {
 		panic("no return value specified for ConvertItems")
@@ -83,17 +83,17 @@ func (_m *MockStore) ConvertItems(ctx context.Context, seedsDir string) (itemsvc
 
 	var r0 itemsvc.BootConversion
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string) (itemsvc.BootConversion, error)); ok {
-		return rf(ctx, seedsDir)
+	if rf, ok := ret.Get(0).(func(context.Context, string, itemsvc.ScrollLevels) (itemsvc.BootConversion, error)); ok {
+		return rf(ctx, seedsDir, levels)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string) itemsvc.BootConversion); ok {
-		r0 = rf(ctx, seedsDir)
+	if rf, ok := ret.Get(0).(func(context.Context, string, itemsvc.ScrollLevels) itemsvc.BootConversion); ok {
+		r0 = rf(ctx, seedsDir, levels)
 	} else {
 		r0 = ret.Get(0).(itemsvc.BootConversion)
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string) error); ok {
-		r1 = rf(ctx, seedsDir)
+	if rf, ok := ret.Get(1).(func(context.Context, string, itemsvc.ScrollLevels) error); ok {
+		r1 = rf(ctx, seedsDir, levels)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -109,13 +109,14 @@ type MockStore_ConvertItems_Call struct {
 // ConvertItems is a helper method to define mock.On call
 //   - ctx context.Context
 //   - seedsDir string
-func (_e *MockStore_Expecter) ConvertItems(ctx interface{}, seedsDir interface{}) *MockStore_ConvertItems_Call {
-	return &MockStore_ConvertItems_Call{Call: _e.mock.On("ConvertItems", ctx, seedsDir)}
+//   - levels itemsvc.ScrollLevels
+func (_e *MockStore_Expecter) ConvertItems(ctx interface{}, seedsDir interface{}, levels interface{}) *MockStore_ConvertItems_Call {
+	return &MockStore_ConvertItems_Call{Call: _e.mock.On("ConvertItems", ctx, seedsDir, levels)}
 }
 
-func (_c *MockStore_ConvertItems_Call) Run(run func(ctx context.Context, seedsDir string)) *MockStore_ConvertItems_Call {
+func (_c *MockStore_ConvertItems_Call) Run(run func(ctx context.Context, seedsDir string, levels itemsvc.ScrollLevels)) *MockStore_ConvertItems_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(string))
+		run(args[0].(context.Context), args[1].(string), args[2].(itemsvc.ScrollLevels))
 	})
 	return _c
 }
@@ -125,7 +126,7 @@ func (_c *MockStore_ConvertItems_Call) Return(_a0 itemsvc.BootConversion, _a1 er
 	return _c
 }
 
-func (_c *MockStore_ConvertItems_Call) RunAndReturn(run func(context.Context, string) (itemsvc.BootConversion, error)) *MockStore_ConvertItems_Call {
+func (_c *MockStore_ConvertItems_Call) RunAndReturn(run func(context.Context, string, itemsvc.ScrollLevels) (itemsvc.BootConversion, error)) *MockStore_ConvertItems_Call {
 	_c.Call.Return(run)
 	return _c
 }

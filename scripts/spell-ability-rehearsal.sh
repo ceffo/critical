@@ -12,6 +12,7 @@
 # 4. A wand whose second spell effect asks an AC nobody gave: the whole use is refused, the first effect's heal and
 #    the charge included (HP, charge and journal unchanged).
 # 5. A spell no catalogue knows is refused by the editor (400, nothing stored).
+# 9b adds: the item list serves what a spell effect asks (its to-hit, the gem type and the gems it can spend).
 #
 # Nothing touches the development database: the server is the `postgres` service of docker-compose.yml under its
 # own compose project (criticalspell<pid>) on a free port with its own volume, removed at the end whatever the
@@ -152,6 +153,9 @@ expect "wand: undo gives the charge back" 5 "$(left wand_of_missiles)"
 # --- 3. the asks: refused with none, answered, one undo ---
 item '{"name":{"en":"Opal"},"category":"gear","component":"gem","behaviour":"stock","count":2}'
 wand "Wand of orbs" "[$orb]"
+# 9b: the item list serves what the use asks, per spell effect, in the spellbook's own field names.
+expect "asks: served on the item list (to-hit, gem type, the one gem)" 'true,"gem",1' \
+    "$(call GET /api/items | jq -r '.[] | select(.id == "wand_of_orbs") | .abilities[0].effects[0].asks | [.attack_roll, .consume_item_type, (.items | length)] | @csv')"
 entries_before="$(entries)"
 code="$(status_of POST /api/items/wand_of_orbs/abilities/zap/use '')"
 expect "asks: no answer is a 400" 400 "$code"

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AttackRequest, SaveCategory } from "@/types/combat";
 import type { ExposureRequest } from "@/types/spells";
+import type { UseAbilityBody } from "@/types/items";
 import { rollExposure as postExposure } from "@/api/spells";
 import { resolveAttack } from "@/api/combat";
 import {
@@ -56,7 +57,11 @@ interface RollStore {
   /** Uses one charge of an item (rolls its effect, logs it). Resolves true on success. */
   spendItem: (id: string) => Promise<boolean>;
   /** Uses one ability of an item (ADR 0049 step 7: pays its limit, rolls its effects, logs it). */
-  activateAbility: (itemId: string, abilityId: string) => Promise<boolean>;
+  activateAbility: (
+    itemId: string,
+    abilityId: string,
+    body?: UseAbilityBody,
+  ) => Promise<boolean>;
   /** Rolls a proficiency or bard skill check (the server rolls and logs it); a non-zero adjustment moves its target. */
   rollSkill: (
     id: string,
@@ -101,10 +106,10 @@ export const useRollStore = create<RollStore>((set) => {
       roll(async () => ({ kind: "attack", result: await resolveAttack(req) })),
     spendItem: (id) =>
       roll(async () => ({ kind: "item_use", result: await postUseItem(id) })),
-    activateAbility: (itemId, abilityId) =>
+    activateAbility: (itemId, abilityId, body) =>
       roll(async () => ({
         kind: "item_use",
-        result: loggedAbilityUse(await postUseAbility(itemId, abilityId)),
+        result: loggedAbilityUse(await postUseAbility(itemId, abilityId, body)),
       })),
     rollSkill: (id, adjustment, set) =>
       roll(async () => ({

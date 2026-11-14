@@ -71,6 +71,20 @@ function castText(
 ): string {
   const spell = spellName(p.spellId, p.spell);
   const head = t(`log.cast.${p.action}`, { spell, level: p.casterLevel });
+  const details = castDetails(p, t, names);
+  return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
+}
+
+/**
+ * What a cast did, one phrase each (the spell failure, the mode, the buff, the damage, the heal, the
+ * slots, the item, the to-hit): the entry's text after its head, and the part of an item use's text
+ * that follows the spell it cast (ADR 0049 step 9).
+ */
+export function castDetails(
+  p: CastBreakdown,
+  t: TFunction,
+  names: InventoryNamer,
+): string[] {
   const details: string[] = [];
   // ADR 0030 step 14: the spell failure d100 first; a failed spell has nothing else.
   if (p.failure)
@@ -120,7 +134,7 @@ function castText(
         counters: counters(t, p.buff.rounds, p.buff.charges),
       }),
     );
-  return details.length > 0 ? `${head}: ${details.join(", ")}` : head;
+  return details;
 }
 
 /** One damage instance of a cast: its dice as chips and its total; `parts` when the damage has parts. */
@@ -212,8 +226,11 @@ export const castKind: KindView<CastPayload, CastResult> = {
   live: (r) => ({ breakdown: r, answer: r }),
 };
 
-/** A cast from its journal payload: who cast it, the buff, the to-hit roll, the damage, the item. */
-function CastEntry({
+/**
+ * A cast from its journal payload: who cast it, the buff, the to-hit roll, the damage, the item. An
+ * item's spell effect carries the same breakdown (action `item`), drawn by this view in the use's card.
+ */
+export function CastEntry({
   cast: c,
   interactive,
 }: {

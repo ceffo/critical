@@ -4,6 +4,7 @@ import type {
   EquipmentRules,
   Item,
   ItemBody,
+  UseAbilityBody,
   ItemChange,
   RestockResult,
   StateBody,
@@ -24,10 +25,11 @@ export function postUseItem(id: string): Promise<UseResult> {
 export function postUseAbility(
   itemId: string,
   abilityId: string,
+  body: UseAbilityBody = {},
 ): Promise<AbilityUseResult> {
   return post<AbilityUseResult>(
     `/api/items/${encodeURIComponent(itemId)}/abilities/${encodeURIComponent(abilityId)}/use`,
-    {},
+    body,
   );
 }
 

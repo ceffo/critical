@@ -75,8 +75,9 @@ type Store interface {
 	Seed(ctx context.Context, seedsDir string, spellbook []string, equipment ruletablesvc.Equipment, defs *classes.Registry) error
 	// ConvertItems converts the items not yet converted to abilities (ADR 0049 step 18), in one
 	// transaction, after Migrate and Seed; seedsDir's items seed lends the names of abilities.
-	// Running it again converts nothing.
-	ConvertItems(ctx context.Context, seedsDir string) (itemsvc.BootConversion, error)
+	// Running it again converts nothing. It also folds each scroll's spell into a spell effect
+	// of its ability (ADR 0049 step 9), at the caster level levels gives.
+	ConvertItems(ctx context.Context, seedsDir string, levels itemsvc.ScrollLevels) (itemsvc.BootConversion, error)
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
 	// ProficiencyDescriptions reads back the descriptions the import stored (ADR 0021 step 16.6).
 	ProficiencyDescriptions(ctx context.Context) ([]catalogue.ProficiencyDescription, error)

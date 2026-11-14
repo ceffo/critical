@@ -297,3 +297,37 @@ func TestRaceAdjustmentsFor_Step6_Table8(t *testing.T) {
 	_, err := tbl.RaceAdjustmentsFor("orc")
 	require.Error(t, err)
 }
+
+// DMG p.145, "Spell Level of Scroll Spells": a scroll spell is written one level
+// above the minimum level required to cast it, never below 6th level of
+// experience; the book's examples are a 6th-level wizard spell at 13th level and
+// a 7th-level one at 15th. The minimum is read from the slot tables (a wizard
+// has its first 6th-level slot at 12, its first 7th-level one at 14), not from a
+// formula on the spell level.
+func TestScrollCasterLevel_DMGp145(t *testing.T) {
+	tbl := phb(t)
+	for _, tc := range []struct {
+		name      string
+		list      string
+		spellLvl  int
+		want      int
+		wantFound bool
+	}{
+		{"book example: 6th-level wizard spell", "wizard", 6, 13, true},
+		{"book example: 7th-level wizard spell", "Wizard", 7, 15, true},
+		{"1st-level spell: floor of 6th", "wizard", 1, 6, true},
+		{"3rd-level wizard spell (5th+1=6)", "wizard", 3, 6, true},
+		{"4th-level wizard spell: 7+1", "wizard", 4, 8, true},
+		{"9th-level wizard spell: first slot at 18, +1", "wizard", 9, 19, true},
+		{"priest list reads its own table", "Priest", 1, 6, true},
+		{"a list with no slot table", "bard", 2, 0, false},
+		{"spell level 0", "wizard", 0, 0, false},
+		{"spell level no table reaches", "wizard", 10, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := tbl.ScrollCasterLevel(tc.list, tc.spellLvl)
+			assert.Equal(t, tc.wantFound, ok)
+			assert.Equal(t, tc.want, got)
+		})
+	}
+}

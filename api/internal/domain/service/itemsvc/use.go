@@ -119,13 +119,15 @@ func (s *service) UseItem(ctx context.Context, characterID int64, itemID string)
 // correctInitiative is ADR 0049 step 15 (ADR 0035 item 6.2) for an ability
 // used: the round's initiative takes the d10 plus the item's PHB Table 56
 // modifier by its magic kind. A scroll's row is the casting time of its spell:
-// a scroll that names its spell adds that spell's casting time
-// (buffsvc.ScrollInitiative); one that names none is not counted
+// the spell is the one the used ability's first spell effect names (ADR 0049
+// step 9: the scroll's spell lives in its effect), which adds that spell's
+// casting time (buffsvc.ScrollInitiative); a scroll whose ability holds none is
+// not counted
 // (buffsvc.ItemInitiative). An item of any other category (the sword's "turn
 // zombies", a rope) takes the miscellaneous row (the user's ruling Q3). It is
 // the use transaction's last entry. Nothing is corrected before catalogue
 // format 7 (no Table 56); out of combat the corrector itself does nothing.
-func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item) error {
+func (s *service) correctInitiative(ctx context.Context, characterID int64, item Item, ability Ability) error {
 	if s.initiativeItems == nil {
 		return nil
 	}
@@ -138,29 +140,29 @@ func (s *service) correctInitiative(ctx context.Context, characterID int64, item
 		return nil
 	}
 	cause := buffsvc.ItemInitiative(item.ID, item.Name.Any(), kind, row.Modifier, row.HasModifier)
-	if !row.HasModifier && item.Category == CategoryMagic && item.SpellID != "" {
+	if spellID := ability.spellID(); !row.HasModifier && item.Category == CategoryMagic && spellID != "" {
 		var err error
-		if cause, err = s.scrollInitiative(ctx, item); err != nil {
+		if cause, err = s.scrollInitiative(ctx, item, spellID); err != nil {
 			return err
 		}
 	}
 	return s.correctBy(ctx, characterID, cause)
 }
 
-// scrollInitiative is the term of a scroll that names its spell: the
+// scrollInitiative is the term of a scroll whose ability casts spellID: the
 // catalogue's casting time of that spell (a spell it no longer knows, or no
 // catalogue, reads as special).
-func (s *service) scrollInitiative(ctx context.Context, item Item) (buffsvc.InitiativeModifier, error) {
+func (s *service) scrollInitiative(ctx context.Context, item Item, spellID string) (buffsvc.InitiativeModifier, error) {
 	var ct spellstats.CastingTime
 	found := false
 	if s.spells != nil {
-		spell, ok, err := s.spells.Describe(ctx, item.SpellID)
+		spell, ok, err := s.spells.Describe(ctx, spellID)
 		if err != nil {
-			return buffsvc.InitiativeModifier{}, fmt.Errorf("describe %s: %w", item.SpellID, err)
+			return buffsvc.InitiativeModifier{}, fmt.Errorf("describe %s: %w", spellID, err)
 		}
 		ct, found = spell.Stats.CastingTime, ok
 	}
-	return buffsvc.ScrollInitiative(item.ID, item.Name.Any(), item.MagicKind, item.SpellID, ct, found), nil
+	return buffsvc.ScrollInitiative(item.ID, item.Name.Any(), item.MagicKind, spellID, ct, found), nil
 }
 
 // correctBy corrects the round's initiative by cause.

@@ -6,6 +6,8 @@ import (
 	context "context"
 
 	domain "github.com/ceffo/critical/api/internal/domain"
+	itemsvc "github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+
 	mock "github.com/stretchr/testify/mock"
 
 	prepsvc "github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -24,6 +26,64 @@ type MockSVC_Expecter struct {
 
 func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
+}
+
+// AsksFor provides a mock function with given fields: spellID, level, inventory
+func (_m *MockSVC) AsksFor(spellID string, level int, inventory []itemsvc.Item) (prepsvc.SpellAsks, error) {
+	ret := _m.Called(spellID, level, inventory)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AsksFor")
+	}
+
+	var r0 prepsvc.SpellAsks
+	var r1 error
+	if rf, ok := ret.Get(0).(func(string, int, []itemsvc.Item) (prepsvc.SpellAsks, error)); ok {
+		return rf(spellID, level, inventory)
+	}
+	if rf, ok := ret.Get(0).(func(string, int, []itemsvc.Item) prepsvc.SpellAsks); ok {
+		r0 = rf(spellID, level, inventory)
+	} else {
+		r0 = ret.Get(0).(prepsvc.SpellAsks)
+	}
+
+	if rf, ok := ret.Get(1).(func(string, int, []itemsvc.Item) error); ok {
+		r1 = rf(spellID, level, inventory)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_AsksFor_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AsksFor'
+type MockSVC_AsksFor_Call struct {
+	*mock.Call
+}
+
+// AsksFor is a helper method to define mock.On call
+//   - spellID string
+//   - level int
+//   - inventory []itemsvc.Item
+func (_e *MockSVC_Expecter) AsksFor(spellID interface{}, level interface{}, inventory interface{}) *MockSVC_AsksFor_Call {
+	return &MockSVC_AsksFor_Call{Call: _e.mock.On("AsksFor", spellID, level, inventory)}
+}
+
+func (_c *MockSVC_AsksFor_Call) Run(run func(spellID string, level int, inventory []itemsvc.Item)) *MockSVC_AsksFor_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(string), args[1].(int), args[2].([]itemsvc.Item))
+	})
+	return _c
+}
+
+func (_c *MockSVC_AsksFor_Call) Return(_a0 prepsvc.SpellAsks, _a1 error) *MockSVC_AsksFor_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_AsksFor_Call) RunAndReturn(run func(string, int, []itemsvc.Item) (prepsvc.SpellAsks, error)) *MockSVC_AsksFor_Call {
+	_c.Call.Return(run)
+	return _c
 }
 
 // Close provides a mock function with given fields: ctx

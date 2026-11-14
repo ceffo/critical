@@ -1219,6 +1219,51 @@ func (q *Queries) ListLegacyWeapons(ctx context.Context, characterID int64) ([]L
 	return items, nil
 }
 
+const listScrollsWithSpell = `-- name: ListScrollsWithSpell :many
+SELECT character_id, id, spell_id, abilities
+FROM items WHERE category = 'magic' AND magic_kind = 'scroll' AND spell_id <> '' AND abilities IS NOT NULL
+ORDER BY character_id, position, id
+`
+
+type ListScrollsWithSpellRow struct {
+	CharacterID int64
+	ID          string
+	SpellID     string
+	Abilities   sql.NullString
+}
+
+// The spell of a scroll folded into its ability (ADR 0049 step 9): the converted scrolls that name a
+// spell, and the write of the list with the spell effect (guarded by the list it was read as, so a
+// rerun or a second instance writes nothing twice). spell_id stays as stored, mirrored by the
+// effect, for the release that still reads it.
+func (q *Queries) ListScrollsWithSpell(ctx context.Context) ([]ListScrollsWithSpellRow, error) {
+	rows, err := q.db.QueryContext(ctx, listScrollsWithSpell)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListScrollsWithSpellRow{}
+	for rows.Next() {
+		var i ListScrollsWithSpellRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.ID,
+			&i.SpellID,
+			&i.Abilities,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listUnconvertedItems = `-- name: ListUnconvertedItems :many
 SELECT character_id, id, category, magic_kind, behaviour, count, max_count, effect_dice, effect_save
 FROM items WHERE abilities IS NULL ORDER BY character_id, position, id
@@ -1646,6 +1691,28 @@ type SetRaceIfUnsetParams struct {
 // so a rerun changes nothing and a race set since is kept.
 func (q *Queries) SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error {
 	_, err := q.db.ExecContext(ctx, setRaceIfUnset, arg.RaceCode, arg.ID)
+	return err
+}
+
+const setScrollAbilities = `-- name: SetScrollAbilities :exec
+UPDATE items SET abilities = $1::text
+WHERE character_id = $2::bigint AND id = $3 AND abilities = $4::text
+`
+
+type SetScrollAbilitiesParams struct {
+	Abilities   string
+	CharacterID int64
+	ID          string
+	Was         string
+}
+
+func (q *Queries) SetScrollAbilities(ctx context.Context, arg SetScrollAbilitiesParams) error {
+	_, err := q.db.ExecContext(ctx, setScrollAbilities,
+		arg.Abilities,
+		arg.CharacterID,
+		arg.ID,
+		arg.Was,
+	)
 	return err
 }
 

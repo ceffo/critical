@@ -208,6 +208,138 @@ describe("ItemsTab lists abilities (ADR 0049 step 14)", () => {
     useItemsStore.setState({ items: [wand] });
     const { user } = await renderApp(<ItemsTab onManage={() => {}} />);
     await user.click(screen.getByRole("button", { name: /^Use / }));
-    expect(postUseAbility).toHaveBeenCalledWith("wand", "bolt");
+    expect(postUseAbility).toHaveBeenCalledWith("wand", "bolt", undefined);
+  });
+
+  // ADR 0049 steps 9 and 10: an ability whose spell effect asks something (a to-hit, one of several
+  // items, a mode, a target) opens the Use dialog, from what the server serves per effect; one that asks
+  // nothing is used at once with no body, and the dialog sends the cast's own field names.
+  describe("the Use dialog of a spell effect", () => {
+    const answered = () =>
+      postUseAbility.mockResolvedValue({
+        itemId: "scroll",
+        abilityId: "use",
+        name: "Scroll",
+        type: "",
+        limit: "with_item",
+        remaining: 0,
+        removed: true,
+        effects: [],
+        logEntryId: 2,
+      });
+    const scrollOf = (asks: object) =>
+      pieceFixture({
+        id: "scroll",
+        name: { en: "Scroll" },
+        category: "magic",
+        magicKind: "scroll",
+        count: 1,
+        abilities: [
+          ability({
+            id: "use",
+            limit: { kind: "with_item" },
+            effects: [
+              { kind: "dice", dice: "1d4" },
+              { kind: "spell", spellId: "chromatic_orb", level: 13, asks },
+            ],
+          }),
+        ],
+      });
+
+    it("answers a to-hit with the target AC, by the effect's index", async () => {
+      answered();
+      useItemsStore.setState({ items: [scrollOf({ attack_roll: true })] });
+      const { user } = await renderApp(<ItemsTab onManage={() => {}} />);
+      await user.click(screen.getByRole("button", { name: /^Use / }));
+      expect(postUseAbility).not.toHaveBeenCalled();
+      const dialog = await screen.findByTestId("use-ability-dialog");
+      const confirm = within(dialog).getByTestId("use-ability-confirm");
+      expect(confirm).toBeDisabled();
+      await user.type(within(dialog).getByTestId("use-ability-ac"), "4");
+      expect(confirm).toBeEnabled();
+      await user.click(confirm);
+      expect(postUseAbility).toHaveBeenCalledWith("scroll", "use", {
+        spells: [{ effect: 1, targetAc: 4 }],
+      });
+    });
+
+    it("offers the items, modes, splits and target the server serves, and sends the picks", async () => {
+      answered();
+      useItemsStore.setState({
+        items: [
+          scrollOf({
+            consume_item_type: "gem",
+            items: [
+              { id: "ruby", name: { en: "Ruby" }, count: 2 },
+              { id: "opal", name: { en: "Opal" }, count: 1 },
+            ],
+            modes: [{ key: "ice_plane" }, { key: "hemisphere" }],
+            slot_splits: [
+              [1, 1, 1],
+              [1, 2],
+            ],
+            cast_target: { default: "self", alternate: "other" },
+          }),
+        ],
+      });
+      const { user } = await renderApp(<ItemsTab onManage={() => {}} />);
+      await user.click(screen.getByRole("button", { name: /^Use / }));
+      const dialog = await screen.findByTestId("use-ability-dialog");
+      await user.selectOptions(
+        within(dialog).getByTestId("use-ability-item"),
+        "opal",
+      );
+      await user.selectOptions(
+        within(dialog).getByTestId("use-ability-mode"),
+        "hemisphere",
+      );
+      await user.selectOptions(
+        within(dialog).getByTestId("use-ability-split"),
+        "1,2",
+      );
+      await user.selectOptions(
+        within(dialog).getByTestId("use-ability-target"),
+        "other",
+      );
+      await user.click(within(dialog).getByTestId("use-ability-confirm"));
+      expect(postUseAbility).toHaveBeenCalledWith("scroll", "use", {
+        spells: [
+          {
+            effect: 1,
+            itemId: "opal",
+            mode: "hemisphere",
+            extraSlots: [1, 2],
+            onSelf: false,
+          },
+        ],
+      });
+    });
+
+    it("opens no dialog when nothing is left to choose, and sends no body", async () => {
+      answered();
+      useItemsStore.setState({
+        items: [
+          scrollOf({
+            consume_item_type: "gem",
+            items: [{ id: "ruby", name: { en: "Ruby" }, count: 2 }],
+            cast_target: { default: "self", alternate: "self" },
+          }),
+        ],
+      });
+      const { user } = await renderApp(<ItemsTab onManage={() => {}} />);
+      await user.click(screen.getByRole("button", { name: /^Use / }));
+      expect(screen.queryByTestId("use-ability-dialog")).toBeNull();
+      expect(postUseAbility).toHaveBeenCalledWith("scroll", "use", undefined);
+    });
+
+    it("cancelling uses nothing", async () => {
+      answered();
+      useItemsStore.setState({ items: [scrollOf({ attack_roll: true })] });
+      const { user } = await renderApp(<ItemsTab onManage={() => {}} />);
+      await user.click(screen.getByRole("button", { name: /^Use / }));
+      const dialog = await screen.findByTestId("use-ability-dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      expect(postUseAbility).not.toHaveBeenCalled();
+    });
   });
 });

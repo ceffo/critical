@@ -23,18 +23,28 @@ import (
 //
 // A seed character's item that the seed names with abilities lends the names of its abilities
 // (the Power Gem's "Dispel Magic"), by ability id: the name is data of the seed row, not a branch.
-func (d *DB) ConvertItems(ctx context.Context, seedsDir string) (itemsvc.BootConversion, error) {
-	return convertItems(ctx, d, d.q, seedsDir)
+//
+// Then, in the same transaction, every scroll that names a spell (spell_id) and whose abilities
+// hold no spell effect gets one on its with_item ability (ADR 0049 step 9): the spell, at the
+// caster level levels gives it (DMG p.145, ruletablesvc.Tables.ScrollCasterLevel). spell_id stays
+// as stored, so the previous release still runs; a rerun finds every list holding its effect and
+// writes nothing. A scroll whose spell levels does not know, or that has no with_item ability, is
+// left as it is and counted in BootConversion.ScrollsSkipped.
+func (d *DB) ConvertItems(ctx context.Context, seedsDir string, levels itemsvc.ScrollLevels) (itemsvc.BootConversion, error) {
+	return convertItems(ctx, d, d.q, seedsDir, levels)
 }
 
 // convertItems is ConvertItems over its ports: tx runs the transaction, q runs on the transaction
 // tx carries.
-func convertItems(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string) (out itemsvc.BootConversion, err error) {
+func convertItems(ctx context.Context, tx domain.TxRunner, q storeq.Querier, seedsDir string, levels itemsvc.ScrollLevels) (out itemsvc.BootConversion, err error) {
 	err = tx.InTx(ctx, func(ctx context.Context) error {
 		if out, err = convertAbilities(ctx, q, seedsDir); err != nil {
 			return err
 		}
-		out.Quantities, err = applyQuantities(ctx, q)
+		if out.Quantities, err = applyQuantities(ctx, q); err != nil {
+			return err
+		}
+		out.Scrolls, out.ScrollsSkipped, err = foldScrollSpells(ctx, q, levels)
 		return err
 	})
 	return out, err
@@ -111,6 +121,47 @@ func applyQuantities(ctx context.Context, q storeq.Querier) (int, error) {
 		n++
 	}
 	return n, nil
+}
+
+// foldScrollSpells adds the spell effect to each converted scroll that names a spell and has none
+// (ADR 0049 step 9), and returns how many it changed and how many it could not (a spell levels
+// does not know, a scroll with no with_item ability).
+func foldScrollSpells(ctx context.Context, q storeq.Querier, levels itemsvc.ScrollLevels) (changed, skipped int, err error) {
+	rows, err := q.ListScrollsWithSpell(ctx)
+	if err != nil {
+		return 0, 0, fmt.Errorf("list scrolls: %w", err)
+	}
+	for _, r := range rows {
+		abilities, err := itemsvc.DecodeAbilities(r.Abilities.String, r.Abilities.Valid)
+		if err != nil {
+			return 0, 0, fmt.Errorf("item %s: %w", r.ID, err)
+		}
+		if itemsvc.FirstSpell(abilities) != "" {
+			continue
+		}
+		level, ok := 0, false
+		if levels != nil {
+			level, ok = levels(r.SpellID)
+		}
+		if !ok {
+			skipped++
+			continue
+		}
+		folded := itemsvc.WithScrollSpell(abilities, r.SpellID, level)
+		if itemsvc.FirstSpell(folded) == "" {
+			skipped++
+			continue
+		}
+		text, _, err := itemsvc.EncodeAbilities(folded)
+		if err != nil {
+			return 0, 0, fmt.Errorf("item %s: %w", r.ID, err)
+		}
+		if err := q.SetScrollAbilities(ctx, storeq.SetScrollAbilitiesParams{CharacterID: r.CharacterID, ID: r.ID, Abilities: text, Was: r.Abilities.String}); err != nil {
+			return 0, 0, fmt.Errorf("fold the spell of scroll %s: %w", r.ID, err)
+		}
+		changed++
+	}
+	return changed, skipped, nil
 }
 
 // seedAbilityNames is the seed character and, by item id, the abilities its seed row has; none when

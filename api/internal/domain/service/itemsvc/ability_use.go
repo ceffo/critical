@@ -218,7 +218,7 @@ func (s *service) UseAbility(ctx context.Context, characterID int64, itemID, abi
 		}
 		r.LogEntryID = id
 		res = r
-		return s.correctInitiative(ctx, characterID, after)
+		return s.correctInitiative(ctx, characterID, after, ability)
 	})
 	if err != nil {
 		return nil, err

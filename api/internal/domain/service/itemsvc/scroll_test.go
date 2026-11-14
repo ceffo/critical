@@ -12,6 +12,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
@@ -150,12 +151,18 @@ func TestItems_ADR0033Step2_OnlyAScrollNamesAKnownSpell(t *testing.T) {
 	})
 }
 
-// ADR 0035 item 6.2 with ADR 0033 step 15.1 (a scroll as the spell it
-// holds): using a scroll that names its spell corrects the round's
-// initiative with that spell's casting time, by the cast's rules
-// (buffsvc.ScrollInitiative); a spell the catalogue no longer knows reads as
-// special; an unnamed scroll is still not counted.
-func TestUseAbility_ADR0049Step15_ANamedScrollAddsItsSpellsCastingTime(t *testing.T) {
+// castsNothing is a Caster whose spell does nothing: the use's initiative is what these tests read.
+type castsNothing struct{}
+
+func (castsNothing) CastFromItem(context.Context, int64, itemsvc.SpellCast) (itemsvc.SpellCastResult, error) {
+	return itemsvc.SpellCastResult{Cast: []byte(`{}`)}, nil
+}
+
+// ADR 0049 step 15 (ADR 0035 item 6.2): using a scroll corrects the round's initiative with the casting
+// time of the spell its ability's spell effect casts, by the cast's rules (buffsvc.ScrollInitiative); a
+// spell the catalogue no longer knows reads as special; a scroll whose ability casts nothing is not
+// counted, whatever its stored spell_id says (the effect is the source, the column only a mirror).
+func TestUseAbility_ADR0049Step15_AScrollAddsItsSpellEffectsCastingTime(t *testing.T) {
 	catalogue := map[string]string{"magic_missile": "1", "fireball": "3", "identify": "1 rd."}
 	term := func(spell string, value int, timing buffsvc.CastTiming) buffsvc.InitiativeModifier {
 		return buffsvc.InitiativeModifier{
@@ -164,26 +171,37 @@ func TestUseAbility_ADR0049Step15_ANamedScrollAddsItsSpellsCastingTime(t *testin
 		}
 	}
 	tests := []struct {
-		spell string
-		want  buffsvc.InitiativeModifier
+		name   string
+		effect string // the spell the ability casts, "" for none
+		stored string // the item's spell_id column
+		want   buffsvc.InitiativeModifier
 	}{
-		{"magic_missile", term("magic_missile", 1, buffsvc.TimingSegments)},
-		{"fireball", term("fireball", 3, buffsvc.TimingSegments)},
-		{"identify", term("identify", 0, buffsvc.TimingEndOfRound)},
-		{"gone_from_the_catalogue", term("gone_from_the_catalogue", 0, buffsvc.TimingSpecial)},
-		{"", term("", 0, buffsvc.TimingSpellCastingTime)},
+		{"magic missile, 1 segment", "magic_missile", "magic_missile", term("magic_missile", 1, buffsvc.TimingSegments)},
+		{"fireball, 3 segments", "fireball", "fireball", term("fireball", 3, buffsvc.TimingSegments)},
+		{"identify, a round", "identify", "identify", term("identify", 0, buffsvc.TimingEndOfRound)},
+		{"a spell gone from the catalogue", "gone_from_the_catalogue", "gone_from_the_catalogue", term("gone_from_the_catalogue", 0, buffsvc.TimingSpecial)},
+		{"no effect: not counted", "", "", term("", 0, buffsvc.TimingSpellCastingTime)},
+		{"the effect, not the column", "fireball", "magic_missile", term("fireball", 3, buffsvc.TimingSegments)},
+		{"a stored spell with no effect is not read", "", "magic_missile", term("", 0, buffsvc.TimingSpellCastingTime)},
 	}
 	for _, tt := range tests {
-		t.Run("spell "+tt.spell, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			dal := mocks.NewMockDAL(t)
 			f := deps(t)
 			f.InitiativeItems = table56(t)
 			f.Spells = spellsKnowing(t, catalogue)
+			f.Casts = castsNothing{}
 			svc, err := itemsvc.New(dal, f.Deps)
 			require.NoError(t, err)
-			held := scroll
-			held.SpellID = tt.spell
-			expectUse(dal, withUse(held, itemsvc.Limit{Kind: itemsvc.LimitWithItem}))
+			held := withUse(scroll, itemsvc.Limit{Kind: itemsvc.LimitWithItem})
+			held.SpellID = tt.stored
+			if tt.effect != "" {
+				held.Abilities[0].Effects = []itemsvc.Effect{{Kind: itemsvc.EffectSpell, SpellID: tt.effect, Level: 13}}
+				// The spell effect reads the ledger and the character for a heal it may ask.
+				f.log.EXPECT().HPTotal(mock.Anything, int64(1)).Return(0, nil).Once()
+				f.chars.EXPECT().View(mock.Anything, int64(1)).Return(viewtest.Single("mage", 1), nil).Once()
+			}
+			expectUse(dal, held)
 			f.log.EXPECT().Record(mock.Anything, mock.Anything).Return(int64(9), nil).Once()
 			f.initiative.EXPECT().CorrectInitiative(mock.Anything, int64(1), tt.want).Return(nil, nil).Once()
 

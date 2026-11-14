@@ -101,6 +101,18 @@ type SVC interface {
 	// first active spellcasting entry, as Info and Prepare.
 	InfoFor(ctx context.Context, characterID int64, class string) (Info, error)
 	PrepareFor(ctx context.Context, characterID int64, class string, spellIDs []string) ([]spellsvc.SpellSlot, error)
+	// AsksFor is what the use of a spell effect of an item asks of the player (ADR 0049 steps 9
+	// and 10): the spell's cast inputs at the effect's caster level, and the items of the
+	// inventory it can spend, as the spellbook serves them for a cast from a slot.
+	AsksFor(spellID string, level int, inventory []itemsvc.Item) (SpellAsks, error)
+}
+
+// SpellAsks are the answers a spell effect of an item asks for: the cast inputs at the effect's
+// level (the same fields a spellbook entry carries) and the items it can spend now. Nothing is
+// asked when every field is empty.
+type SpellAsks struct {
+	Cast  CastInputs
+	Items []itemsvc.Item
 }
 
 // Spellbook is the read port over the spells a character knows, each in
@@ -251,6 +263,32 @@ func (s *service) InfoFor(ctx context.Context, characterID int64, class string) 
 		out.Limits = append(out.Limits, LevelLimit{Level: level, Max: max})
 	}
 	sort.Slice(out.Limits, func(i, j int) bool { return out.Limits[i].Level < out.Limits[j].Level })
+	return out, nil
+}
+
+// AsksFor is SVC.AsksFor: the cast mechanics of the spell's effects entry read at the effect's caster
+// level (its modes, its target choice), no slot and no preparation involved. A spell without an
+// effects entry asks nothing.
+func (s *service) AsksFor(spellID string, level int, inventory []itemsvc.Item) (SpellAsks, error) {
+	out := SpellAsks{Cast: s.castInputs(spellID)}
+	fx, ok := s.Effects.Get(spellID)
+	if !ok {
+		return out, nil
+	}
+	var err error
+	if out.Cast.Modes, err = fx.ModesAt(level); err != nil {
+		return SpellAsks{}, err
+	}
+	if out.Cast.Target, err = fx.TargetChoiceAt(level); err != nil {
+		return SpellAsks{}, err
+	}
+	if t := out.Cast.ConsumeItemType; t != "" {
+		for _, it := range inventory {
+			if it.Spendable(t) {
+				out.Items = append(out.Items, it)
+			}
+		}
+	}
 	return out, nil
 }
 

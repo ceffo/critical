@@ -186,4 +186,56 @@ type BootConversion struct {
 	// Quantities is the items whose count the boot step set to their quantity, 1
 	// (ADR 0049 step 2): the ones whose counter is an ability's.
 	Quantities int
+	// Scrolls is the scrolls that got a spell effect (ADR 0049 step 9); ScrollsSkipped
+	// the ones that name a spell and could not (an unknown spell, no with_item ability).
+	Scrolls        int
+	ScrollsSkipped int
 }
+
+// spellID is the spell the ability's first spell effect casts, "" for none.
+func (a Ability) spellID() string {
+	for _, e := range a.Effects {
+		if e.Kind == EffectSpell {
+			return e.SpellID
+		}
+	}
+	return ""
+}
+
+// FirstSpell is the spell the first spell effect of abilities casts, "" for
+// none: the scroll's spell, which the item's stored spell_id mirrors (ADR 0049
+// step 9) so an older release still runs.
+func FirstSpell(abilities []Ability) string {
+	for _, a := range abilities {
+		if id := a.spellID(); id != "" {
+			return id
+		}
+	}
+	return ""
+}
+
+// WithScrollSpell is abilities with a spell effect of spellID at level on a
+// scroll's ability (ADR 0049 step 9: the scroll's spell folded into its
+// effect), the conversion's one rule for a scroll that names a spell: the
+// first with_item ability takes it, as its last effect. It changes nothing
+// when an ability already casts a spell (idempotent) or when the scroll has no
+// with_item ability (the player removed it: the conversion does not give one
+// back). The list is changed in place and returned.
+func WithScrollSpell(abilities []Ability, spellID string, level int) []Ability {
+	if spellID == "" || FirstSpell(abilities) != "" {
+		return abilities
+	}
+	effect := Effect{Kind: EffectSpell, SpellID: spellID, Level: level}
+	for n := range abilities {
+		if abilities[n].Limit.Kind == LimitWithItem {
+			abilities[n].Effects = append(abilities[n].Effects, effect)
+			return abilities
+		}
+	}
+	return abilities
+}
+
+// ScrollLevels gives the caster level a scroll's spell is written at (DMG
+// p.145: ruletablesvc.Tables.ScrollCasterLevel over the spell's list and
+// level); ok is false for a spell it does not know or no table serves.
+type ScrollLevels func(spellID string) (level int, ok bool)

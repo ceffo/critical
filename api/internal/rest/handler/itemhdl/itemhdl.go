@@ -12,6 +12,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -43,17 +44,22 @@ type itemSvc interface {
 	Catalogue() ruletablesvc.Equipment
 }
 
+// SpellAsker serves what the use of a spell effect asks of the player (prepsvc.SVC).
+type SpellAsker interface {
+	AsksFor(spellID string, level int, inventory []itemsvc.Item) (prepsvc.SpellAsks, error)
+}
+
 // RegisterRoutes wires item endpoints onto r.
-func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC) {
-	r.Get("/api/items", render.Handle(List(charID, svc)))
-	r.Post("/api/items", render.Handle(Create(charID, svc)))
-	r.Patch("/api/items/{id}", render.Handle(Update(charID, svc)))
-	r.Delete("/api/items/{id}", render.Handle(Delete(charID, svc)))
+func RegisterRoutes(r Router, charID CharacterIDFunc, svc itemsvc.SVC, asker SpellAsker) {
+	r.Get("/api/items", render.Handle(List(charID, svc, asker)))
+	r.Post("/api/items", render.Handle(Create(charID, svc, asker)))
+	r.Patch("/api/items/{id}", render.Handle(Update(charID, svc, asker)))
+	r.Delete("/api/items/{id}", render.Handle(Delete(charID, svc, asker)))
 	r.Post("/api/items/{id}/use", render.Handle(Use(charID, svc)))
 	r.Post("/api/items/{id}/abilities/{abilityId}/use", render.Handle(UseAbility(charID, svc)))
 	r.Post("/api/items/{id}/restock", render.Handle(Restock(charID, svc)))
-	r.Post("/api/items/{id}/state", render.Handle(SetState(charID, svc)))
-	r.Delete("/api/items/{id}/review", render.Handle(DismissReview(charID, svc)))
+	r.Post("/api/items/{id}/state", render.Handle(SetState(charID, svc, asker)))
+	r.Delete("/api/items/{id}/review", render.Handle(DismissReview(charID, svc, asker)))
 	r.Get("/api/equipment/catalogue", render.Handle(Catalogue(svc)))
 	r.Get("/api/equipment/rules", render.Handle(Rules()))
 }
@@ -230,8 +236,9 @@ func Restock(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 var _ Router = (*chi.Mux)(nil)
 
 // List returns every piece with its current count, its review reasons
-// (ADR 0033 step 27) and its class warnings (step 20).
-func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+// (ADR 0033 step 27), its class warnings (step 20) and, for each spell effect of
+// its abilities, what the use of it asks of the player (ADR 0049 steps 9 and 10).
+func List(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		items, err := svc.List(r.Context(), charID(r))
 		if err != nil {
@@ -247,6 +254,9 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		}
 		out := wire.ItemsToDTO(items, warnings)
 		for i := range out {
+			if err := serveAsks(&out[i], items, asker); err != nil {
+				return err
+			}
 			for _, rv := range reviews {
 				if rv.ItemID == out[i].ID {
 					out[i].Review = append(out[i].Review, rv.Reason)
@@ -256,6 +266,68 @@ func List(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		render.OK(r.Context(), w, out)
 		return nil
 	}
+}
+
+// serveAsks fills the asks of each spell effect of item's abilities: the spell's cast inputs at the
+// effect's level and the items of the inventory it can spend. The server decides, the web only
+// collects the answers.
+func serveAsks(item *wire.ItemDTO, inventory []itemsvc.Item, asker SpellAsker) error {
+	if item.Abilities == nil || asker == nil {
+		return nil
+	}
+	for a := range *item.Abilities {
+		effects := (*item.Abilities)[a].Effects
+		for e := range effects {
+			if effects[e].Kind != string(itemsvc.EffectSpell) {
+				continue
+			}
+			asks, err := asker.AsksFor(effects[e].SpellID, effects[e].Level, inventory)
+			if err != nil {
+				return err
+			}
+			effects[e].Asks = wire.SpellAsksToDTO(asks)
+		}
+	}
+	return nil
+}
+
+// serveAllAsks is serveAsks for items answered by a change or a state move: the inventory the asks
+// read (the items a spell can spend) is the character's list, read only when an item holds a spell
+// effect.
+func serveAllAsks(ctx context.Context, svc itemSvc, characterID int64, asker SpellAsker, out []wire.ItemDTO) error {
+	var inventory []itemsvc.Item
+	read := false
+	for i := range out {
+		if !holdsSpellEffect(out[i]) {
+			continue
+		}
+		if !read {
+			var err error
+			if inventory, err = svc.List(ctx, characterID); err != nil {
+				return err
+			}
+			read = true
+		}
+		if err := serveAsks(&out[i], inventory, asker); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// holdsSpellEffect reports whether an ability of the item has a spell effect.
+func holdsSpellEffect(item wire.ItemDTO) bool {
+	if item.Abilities == nil {
+		return false
+	}
+	for _, a := range *item.Abilities {
+		for _, e := range a.Effects {
+			if e.Kind == string(itemsvc.EffectSpell) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // ChangeDTO is the wire shape of POST/PATCH/DELETE /api/items: the item as it
@@ -377,12 +449,16 @@ func decodeBody(r *http.Request) (ItemBody, error) {
 // change answers a create, edit or delete with the piece and its class warnings (step 20), which
 // depend on the other pieces too (a shield and a two-handed weapon), so the character's pieces are
 // read once for them.
-func change(r *http.Request, w http.ResponseWriter, svc itemSvc, charID int64, res *itemsvc.ChangeResult) error {
+func change(r *http.Request, w http.ResponseWriter, svc itemSvc, asker SpellAsker, charID int64, res *itemsvc.ChangeResult) error {
 	warnings, err := svc.Warnings(r.Context(), charID, nil)
 	if err != nil {
 		return err
 	}
-	render.OK(r.Context(), w, ChangeDTO{Item: wire.ItemsToDTO([]itemsvc.Item{res.Item}, warnings)[0], LogEntryID: res.LogEntryID})
+	out := wire.ItemsToDTO([]itemsvc.Item{res.Item}, warnings)
+	if err := serveAllAsks(r.Context(), svc, charID, asker, out); err != nil {
+		return err
+	}
+	render.OK(r.Context(), w, ChangeDTO{Item: out[0], LogEntryID: res.LogEntryID})
 	return nil
 }
 
@@ -411,7 +487,7 @@ func abilities(dtos *[]wire.AbilityDTO) []itemsvc.Ability {
 }
 
 // Create adds an item and logs it.
-func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+func Create(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		b, err := decodeBody(r)
 		if err != nil {
@@ -435,12 +511,12 @@ func Create(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return change(r, w, svc, charID(r), res)
+		return change(r, w, svc, asker, charID(r), res)
 	}
 }
 
 // Update edits the fields present in the body and logs the change.
-func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+func Update(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		b, err := decodeBody(r)
 		if err != nil {
@@ -476,18 +552,18 @@ func Update(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		return change(r, w, svc, charID(r), res)
+		return change(r, w, svc, asker, charID(r), res)
 	}
 }
 
 // Delete removes an item and logs it.
-func Delete(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+func Delete(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		res, err := svc.Delete(r.Context(), charID(r), chi.URLParam(r, "id"))
 		if err != nil {
 			return err
 		}
-		return change(r, w, svc, charID(r), res)
+		return change(r, w, svc, asker, charID(r), res)
 	}
 }
 
@@ -509,7 +585,7 @@ type StateDTO struct {
 
 // SetState wears, takes off, wields or puts away a piece (ADR 0033 steps 6
 // and 7).
-func SetState(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
+func SetState(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		var req StateRequest
 		dec := json.NewDecoder(r.Body)
@@ -525,15 +601,19 @@ func SetState(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
 		if err != nil {
 			return err
 		}
-		render.OK(r.Context(), w, StateDTO{Items: wire.ItemsToDTO(res.Items, warnings), LogEntryID: res.LogEntryID})
+		out := wire.ItemsToDTO(res.Items, warnings)
+		if err := serveAllAsks(r.Context(), svc, charID(r), asker, out); err != nil {
+			return err
+		}
+		render.OK(r.Context(), w, StateDTO{Items: out, LogEntryID: res.LogEntryID})
 		return nil
 	}
 }
 
 // DismissReview takes a piece off the review list (ADR 0033 step 27), not
 // logged, and answers the list as GET /api/items does.
-func DismissReview(charID CharacterIDFunc, svc itemSvc) render.HandlerFunc {
-	list := List(charID, svc)
+func DismissReview(charID CharacterIDFunc, svc itemSvc, asker SpellAsker) render.HandlerFunc {
+	list := List(charID, svc, asker)
 	return func(w http.ResponseWriter, r *http.Request) error {
 		if err := svc.DismissReview(r.Context(), charID(r), chi.URLParam(r, "id")); err != nil {
 			return err

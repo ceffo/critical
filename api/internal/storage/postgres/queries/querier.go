@@ -91,6 +91,11 @@ type Querier interface {
 	// skill set its class grants. Only the characters that have points and no skill sets yet.
 	ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
+	// The spell of a scroll folded into its ability (ADR 0049 step 9): the converted scrolls that name a
+	// spell, and the write of the list with the spell effect (guarded by the list it was read as, so a
+	// rerun or a second instance writes nothing twice). spell_id stays as stored, mirrored by the
+	// effect, for the release that still reads it.
+	ListScrollsWithSpell(ctx context.Context) ([]ListScrollsWithSpellRow, error)
 	// The boot conversion to abilities (ADR 0049 step 18): the rows whose abilities are NULL, in the old
 	// fields' meaning, and the write that converts one (guarded, so a rerun or a second instance converts
 	// nothing twice). Only the abilities column is written: count and the old columns keep their meaning.
@@ -131,6 +136,7 @@ type Querier interface {
 	// The race of a character stored before races had codes (migration 007): only while it has none,
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error
+	SetScrollAbilities(ctx context.Context, arg SetScrollAbilitiesParams) error
 	// The skill points of a character stored before bards entered them (migration 012): only while it
 	// has none, so a rerun changes nothing and points spent since are kept.
 	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error

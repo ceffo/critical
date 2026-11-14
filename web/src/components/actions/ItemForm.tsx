@@ -10,7 +10,6 @@ import {
   draftToBody,
   hasField,
   hasQuantity,
-  holdsSpell,
   ratesStrength,
   type DraftErrors,
   type ItemDraft,
@@ -38,7 +37,6 @@ import { hasPlus, MAX_PLUS } from "@/lib/powerEditor";
 import { formatSigned } from "@/lib/format";
 import { PowersEditor } from "./PowersEditor";
 import { AbilitiesEditor } from "./AbilitiesEditor";
-import { useSpellNamesStore } from "@/stores/spellNames";
 import { useEquipmentRulesStore } from "@/stores/equipmentRules";
 
 /** The shared fields folded under "More options" (every category has them). */
@@ -86,13 +84,6 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
     void loadRules();
   }, [loadRules]);
   const quantity = hasQuantity(rules, draft);
-  const spellNames = useSpellNamesStore((s) => s.names);
-  // The catalogue's spells by name in the UI language, for a scroll's spell (ADR 0033 step 2).
-  const spellOptions = Object.values(spellNames)
-    .map((s) => ({ id: s.id, name: localized(i18n.language, s.name) || s.id }))
-    .sort((a, b) => a.name.localeCompare(b.name, i18n.language));
-  if (draft.spellId && !spellNames[draft.spellId])
-    spellOptions.unshift({ id: draft.spellId, name: draft.spellId });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -279,33 +270,6 @@ export function ItemForm({ initial, editing, busy, onSave, onCancel }: Props) {
             select("magicKind", MAGIC_KINDS, (k) =>
               t(`equipment.magicKinds.${k as MagicKind}`),
             ),
-          )}
-        {details &&
-          holdsSpell(draft) &&
-          field(
-            "spellId",
-            t("equipment.form.spell"),
-            (props) => (
-              <select
-                {...props}
-                className={cn(
-                  fieldClass,
-                  errors.spellId && "border-destructive",
-                )}
-                title={t("equipment.form.spellHint")}
-                value={draft.spellId}
-                onChange={(e) => set("spellId", e.target.value)}
-              >
-                <option value="">{t("equipment.form.noSpell")}</option>
-                {spellOptions.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            ),
-            // A spell name is long: the picker takes the whole row, never cut.
-            "col-span-2 sm:col-span-4",
           )}
 
         {/* Weapon (ADR 0033 step 3). */}

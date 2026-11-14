@@ -2,7 +2,7 @@
 // form holds for an item's abilities and how it turns them into the `abilities` list of the request
 // body and back. The server validates every ability (limit kind and numbers, dice, the bounds) and
 // names the field; this only parses what was typed. The editor builds the limit, the `dice` and
-// `heal` and `buff` effects and the note (Q4); `spell` comes with its slice.
+// `heal`, `buff` and `spell` effects and the note (Q4).
 import { editLang } from "@/i18n/localized";
 import type { BuffEffectKey, BuffEffects } from "@/types/buffs";
 import type { LocalizedText } from "@/types/localized";
@@ -66,9 +66,9 @@ function keptConditions(b: BuffEffects | undefined): BuffEffects {
 /** One effect row of an ability as the form holds it: dice rolled, a heal (dice or full) or a buff. */
 export interface DiceDraft {
   kind: "dice" | "heal" | "buff" | "spell";
-  /** A spell effect's spell and caster level, kept as stored (the picker comes with its slice). */
+  /** A spell effect's spell (a catalogue id) and caster level as typed; empty: the server's (a scroll's, DMG p.145). */
   spellId: string;
-  level: number;
+  level: string;
   /** A buff's name; empty: the ability's, else the item's. */
   name: string;
   /** A buff's rounds as typed; 0: until dismissed. */
@@ -117,7 +117,7 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
     effects: a.effects.map((e) => ({
       kind: e.kind,
       spellId: e.spellId ?? "",
-      level: e.level ?? 0,
+      level: e.level ? String(e.level) : "",
       name: e.name ?? "",
       rounds: String(e.rounds ?? 0),
       mods: BUFF_EFFECT_KEYS.flatMap((key) =>
@@ -134,12 +134,12 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
   };
 }
 
-/** A new effect row: dice rolled, a heal, or a buff (10 rounds of saves +1, to edit). */
+/** A new effect row: dice rolled, a heal, a buff (10 rounds of saves +1, to edit) or a spell (none picked yet). */
 export function newEffectDraft(kind: DiceDraft["kind"]): DiceDraft {
   return {
     kind,
     spellId: "",
-    level: 0,
+    level: "",
     name: "",
     rounds: kind === "buff" ? "10" : "0",
     mods: kind === "buff" ? [{ key: "save_bonus", value: "1" }] : [],
@@ -231,7 +231,15 @@ export function draftsToAbilities(
     const effects: ItemAbilityEffect[] = [];
     for (const e of d.effects) {
       if (e.kind === "spell") {
-        effects.push({ kind: "spell", spellId: e.spellId, level: e.level });
+        // A spell effect with no spell picked is not sent; no level typed is the server's to give.
+        if (!e.spellId) continue;
+        const level = e.level.trim() === "" ? 0 : parseInteger(e.level);
+        if (Number.isNaN(level)) return null;
+        effects.push({
+          kind: "spell",
+          spellId: e.spellId,
+          ...(level > 0 ? { level } : {}),
+        });
       } else if (e.kind === "buff") {
         const buff = buffOf(e);
         const rounds = parseInteger(e.rounds);

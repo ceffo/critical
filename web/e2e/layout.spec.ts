@@ -3122,16 +3122,43 @@ async function runWalk(
   }
 }
 
+// The steps whose layout depends on the width, the only ones the 1440 walk runs (the other
+// widths run every step). 1440 sits between the 1280 and 1920 walks, so a step stays when it checks how
+// the page's own regions lay out, wrap or clip (the shell, the act panel and its cards, the character
+// card's class lines and saves heading, the dice bar) or branches on the width
+// (the shell, the French long names, the class lines and the saves label line). The dropped steps
+// check the content of a dialog, popover, editor or list whose box does not move with the window
+// (item and piece editors, spell and scroll dialogs, popups, the journal, the spellbook), or only
+// change at a height the 1440x900 window shares with 1280x800 (the card's details, which also read the
+// languages the skills editor step sets): 1280 and 1920 cover them at both ends of the width range.
+const WIDTH_STEPS = new Set([
+  "shell",
+  "text floor",
+  "act panel",
+  "French and long names",
+  "saves label line",
+  "attack card",
+  "dice bar",
+  "class lines, multi-class",
+  "class lines, three classes",
+  "class lines, dual-class",
+]);
+
 // Two halves per size, each on a stack of its own: one session would run past the 90 s test timeout on
 // the CI runner. The split is where the steps' time halves (measured at 2560x1440, locally: the first 18
 // of the 37 steps take as long as the other 19); move it when steps are added, or a half runs into the
-// timeout (CI runs the walks about 1.7 times slower than a local machine).
+// timeout (CI runs the walks about 1.7 times slower than a local machine). 1440 runs the width steps
+// only, in one test.
 const HALF = 18;
 for (const size of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3], VIEWPORTS[4]]) {
-  for (const [part, steps] of [
-    ["first half", DASHBOARD_STEPS.slice(0, HALF)],
-    ["second half", DASHBOARD_STEPS.slice(HALF)],
-  ] as const) {
+  const parts: (readonly [string, [string, Step][]])[] =
+    size.width === 1440
+      ? [["width steps", DASHBOARD_STEPS.filter(([n]) => WIDTH_STEPS.has(n))]]
+      : [
+          ["first half", DASHBOARD_STEPS.slice(0, HALF)],
+          ["second half", DASHBOARD_STEPS.slice(HALF)],
+        ];
+  for (const [part, steps] of parts) {
     test(`dashboard walk at ${size.width}x${size.height}, ${part}`, async ({
       page,
       stack,

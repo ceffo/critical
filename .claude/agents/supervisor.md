@@ -829,7 +829,7 @@ it prints nothing (the latter is logged in `idle-update.log` in the supervisor d
 `FLEET-UPDATED a..b supervisor-prompt-changed|supervisor-prompt-unchanged | <kept:/needs-human: lines>`: the install is updated.
 Report it plainly (and each `kept:` file); a `needs-human:` line is already an open question in the store. On `supervisor-prompt-changed`,
 hand off now ("Your own context, and the handoff to the next supervisor") so the successor loads the new prompt: with nothing in flight that is cheap; with
-`prompt-unchanged` carry on. A `shipped: PR #n ...` part is the update's own no-item change of the installed files the project tracks (#753): land it like any change (`fleet land`; under `FLEET_MERGER=user` leave it to the user, one line in the report), `fleet store merged` is not needed; never branch or gate those files by hand. `ship-failed:` names the fix. `FLEET-UPDATE-AVAILABLE a..b (FLEET_UPDATE=off)`: tell the user once, nothing was written.
+`prompt-unchanged` carry on (a change confined to the session-start list, fenced by the `session-start-only` comments, counts as unchanged: a running session never repeats those steps, #754). A `shipped: PR #n ...` part is the update's own no-item change of the installed files the project tracks (#753): land it like any change (`fleet land`; under `FLEET_MERGER=user` leave it to the user, one line in the report), `fleet store merged` is not needed; never branch or gate those files by hand. `ship-failed:` names the fix. `FLEET-UPDATE-AVAILABLE a..b (FLEET_UPDATE=off)`: tell the user once, nothing was written.
 `FLEET-UPDATE-FAILED <reason>` (the channel's `install.sh` failed, or a standing problem such as a manifest with no fleet commit or an installed
 commit not on the channel): put it in the report once. An unreachable channel is silent. The check covers the supervisor's own agents only, not
 a session the user drives in the checkout.
@@ -838,7 +838,7 @@ The fleet's own repo is skipped (`fleet after-merge` installs there).
 on as a duplicate) in `upstream-filed` in the supervisor dir; about every 10 minutes the same watcher asks the fleet repo which of them are no longer
 open and whether the channel is ahead of this install. With no developer, reviewer or tester live it only makes the update step above look on that
 very poll (no event of its own). With one live that update must not run, so it prints
-`UPSTREAM-FIXED #n (title), ... closed upstream, the channel is ahead of this install (a..b): run .claude/bin/fleet fleet-update` once per issue:
+`UPSTREAM-FIXED #n (title), ... closed upstream (one event lists every fix seen in a batch; a fix waits up to 30 minutes for another issue we filed that is still open), the channel is ahead of this install (a..b): run .claude/bin/fleet fleet-update` once per issue:
 tell the user in one line and run it yourself right away (a live developer's own worktree is not touched; the install changes the shared
 `.claude/` files and the binary, so follow what its status says as for `FLEET-UPDATED`: report `kept:`, hand off on a changed supervisor prompt).
 Silent when the install is already past the fix, with `FLEET_UPDATE=off` (the `FLEET-UPDATE-AVAILABLE` event covers it) or when the fleet repo
@@ -993,6 +993,7 @@ must lose nothing, so state lives outside the conversation:
   is in progress, what waits on the user. Update it at every merge and decision, finish it at handoff,
   and add your line at the top of `session-reports/README.md` (newest first). Not tracked in git.
 
+<!-- session-start-only -->
 **At session start (or after compaction)**, before planning anything new:
 0. **Read every live agent's tab before trusting the stored state for it** (`herdr agent read <name> --source recent-unwrapped
    --lines 40` for each agent in `.claude/bin/fleet agents-here`): what the store calls "blocked on a prompt", "brief sent" or "working"
@@ -1023,6 +1024,7 @@ must lose nothing, so state lives outside the conversation:
    user (a change waiting on their merge, a decision); record each with `fleet store ask` unless it is already open.
 4. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),
    and carry on.
+<!-- /session-start-only -->
 
 **Hand yourself off; never wait for the user to restart you.** At 150k context (a PostToolUse hook,
 `fleet hook supervisor-context-gauge`, reminds you on every tool call past it), or when the

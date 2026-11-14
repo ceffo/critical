@@ -74,6 +74,29 @@ describe("details popover shows only what is set", () => {
 });
 
 describe("card details", () => {
+  it("words the specialist's race warning under the race, and only when there is one", async () => {
+    const warned = character({
+      raceCode: "elf",
+      warnings: [
+        {
+          code: "specialist_race",
+          field: "race",
+          class: "abjurer",
+          race: "elf",
+        },
+      ] as Character["warnings"],
+    });
+    const { unmount } = await renderApp(<DetailRows character={warned} />);
+    expect(screen.getByTestId("details-race-warning")).toHaveTextContent(
+      "The race (Elf) is not one the book lists for this specialist",
+    );
+    unmount();
+    await renderApp(<DetailRows character={character({ raceCode: "elf" })} />);
+    expect(
+      screen.queryByTestId("details-race-warning"),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows the set details inline, without the name, class and level", async () => {
     await renderApp(
       <DetailRows

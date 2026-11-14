@@ -90,6 +90,17 @@ export function DetailRows({
       {c.raceCode !== "" && (
         <Row label={t("details.raceCode")}>
           {t(`details.races.${c.raceCode}`)}
+          {c.warnings.some((w) => w.code === "specialist_race") && (
+            // ADR 0050 step 14.1: a race the book does not list for a specialist; kept, the DM decides.
+            <span
+              className="block text-label text-muted-foreground"
+              data-testid="details-race-warning"
+            >
+              {t("details.warnings.specialist_race", {
+                race: t(`details.races.${c.raceCode}`),
+              })}
+            </span>
+          )}
         </Row>
       )}
       <Row label={t("details.fields.alignment")}>

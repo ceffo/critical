@@ -17,6 +17,7 @@ import { preparedDots } from "@/lib/slotDots";
 import { cn } from "@/lib/utils";
 import type { LevelLimit, SpellbookEntry } from "@/types/spells";
 import { Dots } from "./Dots";
+import { OpposedMark, SchoolSlot } from "./SchoolMarks";
 import { SpellDetailsDialog } from "./SpellDetailsDialog";
 
 interface Props {
@@ -241,7 +242,7 @@ export function PrepareEditor({
                   {t("spellSlots.draftEmpty")}
                 </p>
               )}
-              {shown.map(({ level, count, max }) => {
+              {shown.map(({ level, count, max, school }) => {
                 const items = rows.filter((r) => r.entry.level === level);
                 return (
                   <div key={level} data-testid={`draft-level-${level}`}>
@@ -249,10 +250,25 @@ export function PrepareEditor({
                       <h4 className="section-label">
                         {t("spellSlots.level", { level })}
                       </h4>
+                      {school > 0 && (
+                        <SchoolSlot
+                          max={max}
+                          school={school}
+                          testId={`school-slot-${level}`}
+                        />
+                      )}
                       <span className="ml-auto">
                         <Dots
-                          dots={preparedDots(count, max)}
-                          label={t("spellSlots.preparedCount", { count, max })}
+                          dots={preparedDots(count, max + school)}
+                          label={
+                            school > 0
+                              ? t("spellSlots.preparedCountSchool", {
+                                  count,
+                                  max,
+                                  school,
+                                })
+                              : t("spellSlots.preparedCount", { count, max })
+                          }
                           testId={`prepared-dots-${level}`}
                         />
                       </span>
@@ -343,10 +359,16 @@ export function PrepareEditor({
                           name={label(s)}
                           onOpen={() => setDetails(s)}
                         />
+                        {s.opposed && <OpposedMark id={s.id} />}
                         <Button
                           size="xs"
                           aria-label={t("spellSlots.add", { name: label(s) })}
-                          title={t("spellSlots.add", { name: label(s) })}
+                          title={
+                            s.opposed
+                              ? t("spellSlots.opposedHint")
+                              : t("spellSlots.add", { name: label(s) })
+                          }
+                          disabled={s.opposed}
                           onClick={() => setDraft((d) => addOne(d, s.id))}
                         >
                           {t("spellSlots.addShort")}

@@ -9,6 +9,7 @@ import { useLookupStore } from "@/stores/lookup";
 import { useSpellStore } from "@/stores/spells";
 import { useTableStore } from "@/stores/table";
 import type { LearnResult } from "@/types/character";
+import { formatSigned } from "@/lib/format";
 import { spellbookOffer } from "./spellbookOffer";
 
 /**
@@ -45,13 +46,12 @@ export function LearnSpell({
   const grant = useLookupStore((s) => s.grant);
   const clearGrant = useLookupStore((s) => s.clearGrant);
   // The free spell being claimed, while the server still owes it.
-  const claim =
-    grant &&
-    owed?.some(
-      (f) => f.level === grant.level && f.spellLevel === grant.spellLevel,
-    )
-      ? grant
-      : null;
+  const owedGrant = grant
+    ? owed?.find(
+        (f) => f.level === grant.level && f.spellLevel === grant.spellLevel,
+      )
+    : undefined;
+  const claim = grant && owedGrant ? grant : null;
   // The answer and the journal entry it was logged as (the log's top once the roll is in).
   const [result, setResult] = useState<{
     res: LearnResult;
@@ -67,6 +67,9 @@ export function LearnSpell({
     level: spellLevel,
   });
   if (offer.kind === "none" || !rules) return null;
+  // A specialist's chance moves with the spell's school, which the server judges at the roll: the
+  // two adjustments it serves are worded before it (ADR 0050 step 7).
+  const adjusts = rules.schoolAdjustment !== 0 || rules.otherAdjustment !== 0;
   const shown =
     result?.res.spellId === spellId && result.entry === topId
       ? result.res
@@ -114,9 +117,14 @@ export function LearnSpell({
           })}
         </span>
       ) : offer.kind === "known" ? (
-        <span className="inline-flex items-center gap-1 text-label text-magic">
+        <span
+          className="inline-flex items-center gap-1 text-label text-magic"
+          data-testid="learn-known"
+        >
           <BookOpen aria-hidden />
-          {t("lookup.learn.known")}
+          {book.find((e) => e.id === spellId)?.opposed
+            ? t("lookup.learn.knownOpposed")
+            : t("lookup.learn.known")}
         </span>
       ) : (
         <>
@@ -140,12 +148,29 @@ export function LearnSpell({
             <BookmarkSimple aria-hidden />
             {t("lookup.learn.add")}
           </Button>
+          {adjusts && (
+            <span
+              className="text-label text-muted-foreground"
+              data-testid="learn-chance"
+            >
+              {t("lookup.learn.chance", {
+                chance: rules.learnChance,
+                school: formatSigned(rules.schoolAdjustment),
+                other: formatSigned(rules.otherAdjustment),
+              })}
+            </span>
+          )}
           {claim && (
             <span
               className="text-label text-magic"
               data-testid="free-spell-claim"
             >
-              {t("lookup.learn.free", { level: claim.level })}
+              {t(
+                owedGrant?.ofSchool
+                  ? "lookup.learn.freeSchool"
+                  : "lookup.learn.free",
+                { level: claim.level },
+              )}
             </span>
           )}
         </>
@@ -165,6 +190,17 @@ export function LearnSpell({
                 chance: shown.chanceUsed ?? shown.chance,
                 level: shown.retryLevel,
               })}
+          {shown.adjustment !== undefined && shown.adjustment !== 0 && (
+            <span data-testid="learn-adjusted">
+              {" "}
+              (
+              {t("lookup.learn.adjusted", {
+                base: shown.chance,
+                adjustment: formatSigned(shown.adjustment),
+              })}
+              )
+            </span>
+          )}
         </span>
       )}
     </div>

@@ -186,6 +186,26 @@ export function classesFor(
 }
 
 /**
+ * The options of a class row's select: `classesFor`, plus the class the row holds when the list drops it
+ * (the illusionist after a change to an elf, ADR 0050 step 14.3), flagged `held` so the select keeps
+ * showing it, disabled, instead of falling back to its placeholder.
+ */
+export function classOptions(
+  options: CreationOptions,
+  kind: ClassKind,
+  race: string,
+  held: string,
+): { class: string; held: boolean }[] {
+  const list = classesFor(options, kind, race);
+  return [
+    ...list.map((c) => ({ class: c.class, held: false })),
+    ...(held && !list.some((c) => c.class === held)
+      ? [{ class: held, held: true }]
+      : []),
+  ];
+}
+
+/**
  * ADR 0034 step 4: the XP a picked level stands for, the class's lowest for that level, read from the
  * server's table; undefined when the class or the table is missing (an older server: XP is typed).
  */

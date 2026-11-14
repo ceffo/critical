@@ -315,7 +315,9 @@ code (ADR 0040 step 10).
     his school that is also of an opposed school gives nothing (Q4); combatsvc reads the spell
     through a `Spells` port (spellbookadpt's catalogue), and an id the catalogue does not hold gives
     nothing, as before. The term has no detail; the web words it (`result.mods.specialist`). The
-    save card names a spell without the mind flag through a wand toggle on its label line.
+    save card names a spell without the mind flag through a wand toggle on its label line (the mind
+    box's caption shortened to "Mind" / "Esprit" so the line stays one line at 1440 in French, the
+    detail in its tooltip).
     Test: `TestResolveSavingThrow_Step12_PlusOneAgainstHisSchool` (combatsvc: distinct dice, the term,
     target and verdict; nothing for a priest spell or another school),
     `TestResolveSavingThrow_Step12_AnImmunityStillRollsNothing`.
@@ -330,7 +332,7 @@ code (ADR 0040 step 10).
     none, a priest spell or not in the catalogue, before anything is read or rolled. The cast's
     modifier is `save.targetSaveModifier` in the cast answer and its logged payload (absent for 0;
     `saves.CasterModifier`: step 5's standing, his school), worded on the cast card and the journal.
-    The save card's "Specialist caster" box sits on its spell line, enabled once a spell is named.
+    The save card's "Specialist caster" box sits on its spell line, shown once a spell is named.
     Tests: `TestResolveSavingThrow_Step13_MinusOneAgainstASpecialistCaster` (both terms cancel),
     `TestResolveSavingThrow_Step13_TheFlagNeedsAWizardSpell`, `TestRollSave_Step13_TheCasterSpecialistFlag`
     (combathdl), `TestErrorMapping_Step13_CasterSpecialistNeedsSpell` (render),

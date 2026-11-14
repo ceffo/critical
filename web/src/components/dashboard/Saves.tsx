@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { Check, MagicWand, X } from "@phosphor-icons/react";
 import { lastSaves } from "@/journal/hpAndSaves";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { groupHeadClass } from "./fieldStyles";
 import { SaveSpell } from "./SaveSpell";
 import { useCharacterStore } from "@/stores/character";
@@ -17,16 +16,15 @@ import { SAVE_FIELD as TARGET_FIELD } from "@/lib/saveFields";
  * "click to roll" is the rows' tooltip), always visible: one row each, name | target (the server's, derived from class and level, ADR 0030 step 6) |
  * last roll
  * (the newest logged save in that category, with the server's verdict). A click rolls it through
- * the save endpoint; the result card shows the breakdown. "Against the mind" flags the next save as
- * against magic that attacks the mind (ADR 0006 step 9.3): the server adds the Wisdom modifier. It
- * is the player's call for one save, so it clears once that save is rolled (not when
- * the request fails). Ticked, it shows a line to name the spell the save is against (ADR 0006 step
- * 10.2; every PHB Table 5 immunity is a spell that attacks the mind), cleared with it: against one
- * the character's Wisdom makes them immune to, the server rolls nothing and the last-roll column
- * shows the check with no die. The wand beside it opens the same line without the flag: a
- * specialist names the spell for his +1 against his school (ADR 0050 step 12), and the line's
- * "Specialist caster" box, once a spell is named, says a specialist of its school cast it: −1
- * (step 13). The server decides both; everything clears once the save is rolled.
+ * the save endpoint; the result card shows the breakdown. "Mind" flags the next save as against
+ * magic that attacks the mind (ADR 0006 step 9.3): the server adds the Wisdom modifier. It is the
+ * player's call for one save, so it clears once that save is rolled (not when the request fails).
+ * Ticked, or with the wand beside it pressed, a line names the spell the save is against (ADR 0006
+ * step 10.2): against one the character's Wisdom makes them immune to, the server rolls nothing
+ * and the last-roll column shows the check with no die; a specialist gets his +1 against his school
+ * (ADR 0050 step 12). Once a spell is named, "Specialist caster" says a specialist of its school
+ * cast it: −1 (step 13). The server decides all of it; the line and its choices clear with the roll,
+ * or when it closes.
  */
 export function Saves() {
   const { t } = useTranslation();
@@ -42,6 +40,7 @@ export function Saves() {
     setSpellId(id);
     if (!id) setCasterSpecialist(false);
   };
+  // The line closes when neither the flag nor the wand holds it open; its choices go with it.
   const setMind = (on: boolean) => {
     setMindAffecting(on);
     if (!on && !spellOpen) setSpell(undefined);
@@ -67,8 +66,9 @@ export function Saves() {
       className="flex min-w-0 flex-col gap-2"
       aria-label={t("saves.title")}
     >
-      {/* The mind flag sits on the label's line (as HpBar's last change), at the label's line height:
-          a rare option, one click away, that costs the card no height (ADR 0027 step 1). */}
+      {/* The mind flag and the spell's wand sit on the label's line (as HpBar's last change), at the
+          label's line height: rare options, one click away, that cost the card no height (ADR 0027
+          step 1). */}
       <div
         className={cn(
           groupHeadClass,
@@ -91,8 +91,9 @@ export function Saves() {
           />
           {t("saves.mindAffecting")}
         </label>
-        <Button
-          size="icon-xs"
+        <button
+          type="button"
+          className="hit-24 flex h-4 w-6 items-center justify-center rounded-sm text-ink-muted hover:text-foreground disabled:opacity-50 aria-pressed:text-foreground"
           aria-pressed={spellLine}
           aria-label={t("saves.spellLine")}
           title={t("saves.spellLineHint")}
@@ -100,28 +101,30 @@ export function Saves() {
           onClick={toggleSpell}
           data-testid="save-spell-toggle"
         >
-          <MagicWand aria-hidden />
-        </Button>
+          <MagicWand aria-hidden className="size-3.5" />
+        </button>
       </div>
       {spellLine && (
         <div
           className="flex min-w-0 flex-wrap items-center justify-end gap-x-2 gap-y-1"
           data-testid="save-spell-line"
         >
-          <label
-            className="hit-24 flex items-center gap-1.5 text-label"
-            title={t("saves.casterSpecialistHint")}
-          >
-            <input
-              type="checkbox"
-              className="relative z-10 size-3.5"
-              checked={casterSpecialist}
-              disabled={rolling || !spellId}
-              onChange={(e) => setCasterSpecialist(e.target.checked)}
-              data-testid="save-caster-specialist"
-            />
-            {t("saves.casterSpecialist")}
-          </label>
+          {spellId && (
+            <label
+              className="hit-24 flex items-center gap-1.5 text-label"
+              title={t("saves.casterSpecialistHint")}
+            >
+              <input
+                type="checkbox"
+                className="relative z-10 size-3.5"
+                checked={casterSpecialist}
+                disabled={rolling}
+                onChange={(e) => setCasterSpecialist(e.target.checked)}
+                data-testid="save-caster-specialist"
+              />
+              {t("saves.casterSpecialist")}
+            </label>
+          )}
           <SaveSpell spellId={spellId} onChange={setSpell} disabled={rolling} />
         </div>
       )}

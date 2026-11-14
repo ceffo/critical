@@ -40,8 +40,8 @@ vi.mock("./SaveSpell", () => ({
 }));
 
 // ADR 0050 steps 12 and 13 on the save card: the wand opens the spell line without the mind flag
-// (a specialist names the spell for his +1), and its "Specialist caster" box, enabled once a spell
-// is named, reaches the request (the −1). The rule itself is Go's (combatsvc).
+// (a specialist names the spell for his +1), and "Specialist caster", shown once a spell is named,
+// reaches the request (the −1). The rule itself is Go's (combatsvc).
 describe("Saves: the spell line and the specialist caster flag", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -52,11 +52,9 @@ describe("Saves: the spell line and the specialist caster flag", () => {
     const { user } = await renderApp(<Saves />);
     expect(screen.queryByTestId("save-spell-line")).toBeNull();
     await user.click(screen.getByTestId("save-spell-toggle"));
-    const caster = screen.getByTestId("save-caster-specialist");
-    expect(caster).toBeDisabled();
+    expect(screen.queryByTestId("save-caster-specialist")).toBeNull();
     await user.click(screen.getByTestId("stub-name"));
-    expect(caster).toBeEnabled();
-    await user.click(caster);
+    await user.click(screen.getByTestId("save-caster-specialist"));
     await user.click(
       screen.getByRole("button", { name: "Roll save vs Petrify/Polymorph" }),
     );
@@ -69,14 +67,14 @@ describe("Saves: the spell line and the specialist caster flag", () => {
     expect(screen.queryByTestId("save-spell-line")).toBeNull();
   });
 
-  it("names a spell without the flag; clearing the spell unticks it", async () => {
+  it("names a spell without the flag; clearing the spell drops the flag", async () => {
     const { user } = await renderApp(<Saves />);
     await user.click(screen.getByTestId("save-spell-toggle"));
     await user.click(screen.getByTestId("stub-name"));
     await user.click(screen.getByTestId("save-caster-specialist"));
     await user.click(screen.getByTestId("stub-clear"));
-    expect(screen.getByTestId("save-caster-specialist")).not.toBeChecked();
     await user.click(screen.getByTestId("stub-name"));
+    expect(screen.getByTestId("save-caster-specialist")).not.toBeChecked();
     await user.click(
       screen.getByRole("button", { name: "Roll save vs Spells" }),
     );
@@ -96,7 +94,6 @@ describe("Saves: the spell line and the specialist caster flag", () => {
     await user.click(toggle);
     expect(screen.queryByTestId("save-spell-line")).toBeNull();
     await user.click(screen.getByTestId("save-mind-affecting"));
-    expect(screen.getByTestId("save-spell-line")).toBeInTheDocument();
     expect(screen.getByTestId("stub-name")).toBeInTheDocument();
     expect(toggle).toBeDisabled();
     await user.click(

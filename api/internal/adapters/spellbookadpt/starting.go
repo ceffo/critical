@@ -60,8 +60,11 @@ func ParseStartingSeed(raw []byte, cat catalogue.Catalogue, defs *classes.Regist
 		seen := map[string]bool{}
 		for _, id := range ids {
 			s, ok := spells[id]
+			if !ok {
+				return nil, fmt.Errorf("starting spellbook: %s: %q is not a Wizard spell of the catalogue", class, id)
+			}
 			sp := spellbook.FromCatalogue(s)
-			if !ok || !sp.Wizard {
+			if !sp.Wizard {
 				return nil, fmt.Errorf("starting spellbook: %s: %q is not a Wizard spell of the catalogue", class, id)
 			}
 			if spellbook.School(spec, sp) == spellbook.StandingOpposed {

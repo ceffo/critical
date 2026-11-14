@@ -5544,8 +5544,10 @@ async function versionBadgeStep(
         `${where}: at the right end`,
       ).toBeLessThanOrEqual(16);
     // No band under the screen: the lowest visible box ends at the window's bottom padding at most.
-    // A box inside a scrolling or clipping container counts only up to that container's bottom (the
-    // creation's step card scrolls its class cards: a card cut by its edge is not past the window).
+    // A box inside a scroll container (overflow-y auto or scroll) below the screen's root counts only
+    // up to that container's bottom (the creation's step card scrolls its class cards: a card cut by
+    // its edge is not past the window). The root itself and hidden/clip boxes never clip: the h-dvh
+    // overflow-hidden roots would cut every box at the window and the check could not fail.
     const vp = page.viewportSize()!;
     const lowest = await page.evaluate(() => {
       let bottom = 0;
@@ -5555,8 +5557,13 @@ async function versionBadgeStep(
         const r = el.getBoundingClientRect();
         if (!(r.width > 0 && r.height > 0 && r.top < innerHeight)) continue;
         let visible = r.bottom;
-        for (let a = el.parentElement; a; a = a.parentElement) {
-          if (getComputedStyle(a).overflowY !== "visible")
+        for (
+          let a = el.parentElement;
+          a && !a.hasAttribute("data-screen");
+          a = a.parentElement
+        ) {
+          const oy = getComputedStyle(a).overflowY;
+          if (oy === "auto" || oy === "scroll")
             visible = Math.min(visible, a.getBoundingClientRect().bottom);
         }
         bottom = Math.max(bottom, visible);

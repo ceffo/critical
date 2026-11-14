@@ -507,10 +507,12 @@ A priest spell's sphere of access. [ADR 0030](docs/adr/0030-classes-and-races.md
 _Code_: SphereAccess, Spheres
 
 **School** (fr: école):
-A wizard spell's school of magic; today the book's raw text, _(planned)_ also one or more of nine catalogue codes (the PHB's eight greater schools and lesser divination) that a specialist's rules read. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 1. _Avoid_: discipline (psionic), sphere (priest).
+A wizard spell's school of magic: the book's raw text, shown as written, and zero or more of nine catalogue codes (the PHB's eight greater schools and lesser divination) that a specialist's rules read. A wizard spell's **standing** for a specialist is opposed, of his school or other. [ADR 0050](docs/adr/0050-specialist-wizards.md) steps 1 and 5. _Avoid_: discipline (psionic), sphere (priest).
+_Code_: Schools, Standing
 
 **Specialist wizard** (fr: spécialiste) _(planned)_:
 A wizard-group class that specializes in a school through the `school_specialization` feature (abjurer, conjurer, diviner, enchanter, illusionist, invoker, necromancer, transmuter): a school slot per spell level, ±15% to learn, ±1 on saves, a free spell of his school. [ADR 0050](docs/adr/0050-specialist-wizards.md). _Avoid_: specialization (that is the fighter's **weapon specialization**), mage (the wizard who does not specialize).
+_Code_: SchoolSpecialization, Specialization
 
 **Opposition school** (fr: école opposée _(to confirm)_) _(planned)_:
 A school a specialist may never learn or prepare a spell of (PHB Table 22); a spell of two schools is opposed when either is. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 5.

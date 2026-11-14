@@ -9,6 +9,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
@@ -16,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/domain/spellstats"
 )
 
@@ -129,6 +131,12 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		res.SlotIndex = &slotIndex
 		res.Failure = failure
 		res.Class, res.Warnings = who.class, warnings
+		// ADR 0050 step 13: the targets of a specialist's own cast of a
+		// wizard spell of his school save at -1 (the saves owner's
+		// criterion); the cast answer says so for the DM.
+		if res.Save != nil {
+			res.TargetSaveModifier = saves.CasterModifier(c.Specialization(), spellbook.SpellOfClass(res.Spell.Class, res.Spell.Level, res.Spell.Schools))
+		}
 		res.ExtraSlots = extra
 		res.Slots = after
 		res.EntryID, err = s.record(ctx, characterID, res, append([]actionlog.Snapshot{slotSnap}, snaps...))

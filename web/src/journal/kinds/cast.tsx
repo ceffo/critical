@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { MagicWand } from "@phosphor-icons/react";
 import { useSpellName, type SpellNamer } from "@/i18n/spellName";
 import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
+import { formatSigned } from "@/lib/format";
 import { splitText } from "@/lib/slotSplit";
 import { modeName } from "@/lib/spellMode";
 import { rollLabel } from "@/lib/spellDice";
@@ -407,6 +408,15 @@ export function CastEntry({
               defaultValue: c.save.effect,
             }),
           })}
+          {/* ADR 0050 step 13: a specialist's own spell of his school; the server's figure. */}
+          {c.save.targetSaveModifier ? (
+            <span data-testid="cast-entry-save-modifier">
+              {" "}
+              {t("result.cast.saveTargetModifier", {
+                value: formatSigned(c.save.targetSaveModifier),
+              })}
+            </span>
+          ) : null}
         </p>
       )}
       {c.item && (

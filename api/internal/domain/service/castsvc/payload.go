@@ -119,6 +119,10 @@ func toCastHeal(h *HealResult) *CastHeal {
 type CastSave struct {
 	Type   string `json:"type"`
 	Effect string `json:"effect"`
+	// TargetSaveModifier is the targets' modifier on that save (ADR 0050
+	// step 13: -1 against a specialist's spell of his school); absent for
+	// none and on casts logged before it.
+	TargetSaveModifier int `json:"targetSaveModifier,omitempty"`
 }
 
 // FormulaRoll is one evaluated formula of a cast: the formula, every die it
@@ -252,7 +256,7 @@ func toBreakdown(res CastResult) CastBreakdown {
 	r.Heal = toCastHeal(res.Heal)
 	r.Exposure = res.Exposure.Wire()
 	if s := res.Save; s != nil {
-		r.Save = &CastSave{Type: string(s.Type), Effect: string(s.Effect)}
+		r.Save = &CastSave{Type: string(s.Type), Effect: string(s.Effect), TargetSaveModifier: res.TargetSaveModifier}
 	}
 	r.ExtraSlots = res.ExtraSlots
 	r.Immunity = res.Immunity

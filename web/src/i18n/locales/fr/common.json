@@ -665,14 +665,18 @@
     "target": "{{value}}+",
     "bonus": "{{name}} +{{value}}",
     "bonusLabel": "Bonus aux jets",
-    "mindAffecting": "Contre l’esprit",
+    "mindAffecting": "Esprit",
     "mindAffectingHint": "Magie qui attaque l’esprit (charme, peur, illusion, suggestion…) : le prochain jet ajoute l’ajustement défensif contre la magie de votre Sagesse",
     "spell": "Sort",
-    "spellHint": "Le sort visé par le prochain jet : un sort dont votre Sagesse vous immunise ne lance aucun dé",
+    "spellHint": "Le sort visé par le prochain jet : un sort dont votre Sagesse vous immunise ne lance aucun dé, et un spécialiste a +1 contre son école",
     "spellSearchLabel": "Sort visé par le jet",
     "spellPick": "Sauvegarde contre {{name}}",
     "spellTag": "contre {{name}}",
-    "spellClear": "Retirer {{name}}"
+    "spellLine": "Sort",
+    "spellLineHint": "Nommer le sort visé par le prochain jet : un sort dont votre Sagesse vous immunise ne lance aucun dé, un spécialiste a +1 contre son école",
+    "spellClear": "Retirer {{name}}",
+    "casterSpecialist": "Lanceur spécialiste",
+    "casterSpecialistHint": "Le sort a été lancé par un magicien spécialiste de son école : le jet prend −1 (il annule le +1 d’un spécialiste)"
   },
   "items": {
     "title": "Inventaire",
@@ -1430,7 +1434,9 @@
       "point_blank": "Bout portant",
       "backstab": "Attaque dans le dos",
       "nonproficient": "Non-maîtrise ({{weapon}})",
-      "dice_modifier": "{{detail}} : partie fixe"
+      "dice_modifier": "{{detail}} : partie fixe",
+      "specialist": "Spécialiste, son école",
+      "caster_specialist": "Lanceur spécialiste"
     },
     "cast": {
       "castHeading": "{{name}} (niveau {{level}}), niveau du lanceur {{casterLevel}}",
@@ -1522,7 +1528,8 @@
       },
       "spellFailed": "Échec du sort : l'emplacement est dépensé, rien ne se produit.",
       "spellHeld": "Pas d'échec du sort",
-      "failureRoll": "d100 {{roll}} contre {{chance}} % (Sagesse)"
+      "failureRoll": "d100 {{roll}} contre {{chance}} % (Sagesse)",
+      "saveTargetModifier": "(cibles {{value}} : lanceur spécialiste)"
     },
     "itemHeading": "Objet utilisé : {{name}}",
     "effect": "Effet",
@@ -2656,7 +2663,8 @@
     "mind_closed": "Le contact ne marche pas sur un esprit fermé.",
     "level_out_of_table": "La table de contact n’a pas de ligne pour ce niveau : donnez le coût fixé par le MJ.",
     "use_contact_route": "Ce pouvoir s’utilise par Contact, pas par Utiliser.",
-    "no_contact": "Aucun contact avec cette cible depuis un tour précédent : utilisez d’abord Contact sur elle."
+    "no_contact": "Aucun contact avec cette cible depuis un tour précédent : utilisez d’abord Contact sur elle.",
+    "caster_specialist_needs_spell": "Nommez le sort de magicien contre lequel se fait le jet : le −1 du lanceur spécialiste en a besoin."
   },
   "lastShort": {
     "attack": "Attaque",

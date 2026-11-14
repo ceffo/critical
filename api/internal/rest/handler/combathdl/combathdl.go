@@ -132,6 +132,11 @@ type SaveRequestDTO struct {
 	// SpellID optionally names the spell the save is against (ADR 0006
 	// step 10.2): one the character is immune to rolls nothing.
 	SpellID string `json:"spellId"`
+	// CasterSpecialist optionally says the spell named was cast by a
+	// specialist of its school (ADR 0050 step 13): the save takes -1;
+	// refused (400 caster_specialist_needs_spell) without a wizard spell
+	// named.
+	CasterSpecialist bool `json:"casterSpecialist"`
 }
 
 // ResolveAttack runs an attack and returns its breakdown, the payload of its
@@ -167,7 +172,9 @@ func RollSave(charID CharacterIDFunc, svc combatSvc) render.HandlerFunc {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			return render.BadRequestError("invalid request body")
 		}
-		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category, combatsvc.SaveOptions{MindAffecting: req.MindAffecting, SpellID: strings.TrimSpace(req.SpellID)})
+		res, err := svc.ResolveSavingThrow(r.Context(), charID(r), req.Category, combatsvc.SaveOptions{
+			MindAffecting: req.MindAffecting, SpellID: strings.TrimSpace(req.SpellID), CasterSpecialist: req.CasterSpecialist,
+		})
 		if err != nil {
 			return err
 		}

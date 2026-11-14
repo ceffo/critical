@@ -187,12 +187,16 @@ type CastResult struct {
 	Confidence spelleffectsvc.Confidence
 	Target     spelleffectsvc.Target
 	// Spell is the spell database row (zero when not found).
-	Spell     spellsvc.Spell
-	Save      *spelleffectsvc.Save
-	TextOnly  TextOnly
-	Buff      *AppliedBuff
-	Damage    *DamageResult
-	Untracked []Untracked
+	Spell spellsvc.Spell
+	Save  *spelleffectsvc.Save
+	// TargetSaveModifier is what the targets take on that save (ADR 0050
+	// step 13): -1 on a specialist's own cast of a wizard spell of his
+	// school, information for the DM; 0 otherwise, and without a save.
+	TargetSaveModifier int
+	TextOnly           TextOnly
+	Buff               *AppliedBuff
+	Damage             *DamageResult
+	Untracked          []Untracked
 	// Slots is the slot list after a cast.
 	Slots []spellsvc.SpellSlot
 	// ExtraSlots are the levels of the extra slots this cast added (a spell

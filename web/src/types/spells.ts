@@ -454,8 +454,10 @@ export interface CastBreakdown {
   item?: CastItem;
   /** The spell's to-hit roll. */
   attack?: CastAttack;
-  /** The target's saving throw (the DM's side); absent on older casts. */
-  save?: { type: string; effect: string };
+  /** The target's saving throw (the DM's side); absent on older casts. targetSaveModifier is the
+   * targets' modifier on it (ADR 0050 step 13: -1 on a specialist's own spell of his school);
+   * absent: none. */
+  save?: { type: string; effect: string; targetSaveModifier?: number };
   /** The low-Wisdom spell failure d100 (ADR 0030 step 14); absent: no die. `failed`: the slot is
    * spent and nothing else applies. */
   failure?: SpellFailure;

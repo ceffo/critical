@@ -18,12 +18,11 @@ import { fieldClass } from "./fieldStyles";
 const SEARCH_PAGE_SIZE = 30;
 
 /**
- * The spell the next save is against (ADR 0006 step 10.2), on a line under the saves' label shown
- * while "Against the mind" is ticked (every Table 5 immunity is a spell that attacks the mind): a
- * rare choice, one click away, that costs the card no height otherwise (ADR 0027 step 1). Unset, a
+ * The spell the next save is against (ADR 0006 step 10.2, ADR 0050 steps 12 and 13), on a line
+ * under the saves' label: a rare choice, one click away (ADR 0027 step 1). Unset, a
  * "Spell" button opens a name search (English
  * and French, the lookup's ranked search); set, it shows as a tag that clears it. The server decides
- * whether the character is immune; the panel only sends the id.
+ * whether the character is immune or a specialist's term applies; the panel only sends the id.
  */
 export function SaveSpell({
   spellId,

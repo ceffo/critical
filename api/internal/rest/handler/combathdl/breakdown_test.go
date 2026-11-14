@@ -28,6 +28,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/combatsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/rest/handler/combathdl"
 )
 
@@ -91,6 +92,7 @@ func newWire(t *testing.T, kind actionlog.Kind, logged json.RawMessage) *wire {
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: w.chars, Buffs: w.buffs, Dice: w.dice, Weapons: w.weapons, Rulesets: rulesets,
 		Items: w.items, Forms: mocks.NewMockFormStore(t), Rules: rules, Strength: rules.Strength(), Log: log, Tx: noTx{},
+		Spells: noSpells{},
 	})
 	require.NoError(t, err)
 	r := chi.NewRouter()
@@ -229,3 +231,8 @@ func TestSave_AdjustedLegacyEntry_AnswerIsTheViewedPayload(t *testing.T) {
 	assert.Equal(t, withKeys(t, served, ""), adjusted)
 	assert.Contains(t, adjusted, `"rollTotal":13,"adjustedTarget":12`)
 }
+
+// noSpells is a spell catalogue that holds none: these saves name no spell.
+type noSpells struct{}
+
+func (noSpells) Spell(string) (spellbook.Spell, bool) { return spellbook.Spell{}, false }

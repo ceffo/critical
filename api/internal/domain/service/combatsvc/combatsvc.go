@@ -14,6 +14,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/itemsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/domain/strength"
 )
 
@@ -103,6 +104,13 @@ type FormStore interface {
 	Put(ctx context.Context, characterID int64, form AttackForm) error
 }
 
+// Spells reads the spell catalogue as the spellbook's rules read a spell
+// (spellbookadpt.Book, as learnsvc reads it).
+type Spells interface {
+	// Spell returns the catalogue spell id; ok is false when it holds none.
+	Spell(id string) (s spellbook.Spell, ok bool)
+}
+
 // Rules is the PHB rule-table lookup (ruletablesvc.Lookup). Strength is not
 // read through it: the Strength owner's table is a value (Deps.Strength).
 type Rules interface {
@@ -133,6 +141,9 @@ type Deps struct {
 	Strength strength.Table
 	Log      Log
 	Tx       domain.TxRunner
+	// Spells reads the spell a save names, for the specialist's terms (ADR
+	// 0050 steps 12 and 13).
+	Spells Spells
 }
 
 type service struct {
@@ -147,6 +158,7 @@ type service struct {
 	strength strength.Table
 	log      Log
 	tx       domain.TxRunner
+	spells   Spells
 }
 
 // New constructs the service.
@@ -160,12 +172,12 @@ func NewWithConfig(cfg *Config, d Deps) (SVC, error) {
 		return nil, fmt.Errorf("combatsvc: nil config")
 	}
 	if d.Chars == nil || d.Buffs == nil || d.Dice == nil || d.Weapons == nil || d.Rulesets == nil ||
-		d.Items == nil || d.Forms == nil || d.Rules == nil || !d.Strength.Valid() || d.Log == nil || d.Tx == nil {
+		d.Items == nil || d.Forms == nil || d.Rules == nil || !d.Strength.Valid() || d.Log == nil || d.Tx == nil || d.Spells == nil {
 		return nil, fmt.Errorf("combatsvc: nil dependency")
 	}
 	return &service{
 		chars: d.Chars, buffs: d.Buffs, dice: d.Dice, weapons: d.Weapons, rulesets: d.Rulesets,
-		items: d.Items, forms: d.Forms, rules: d.Rules, strength: d.Strength, log: d.Log, tx: d.Tx,
+		items: d.Items, forms: d.Forms, rules: d.Rules, strength: d.Strength, log: d.Log, tx: d.Tx, spells: d.Spells,
 	}, nil
 }
 

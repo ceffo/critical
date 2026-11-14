@@ -36,9 +36,9 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
     expect(stops).toBeLessThan(60);
   }
   expect(railStops).toBe(1);
-  // 26 stops stood before the first tab with four rail stops and no skip link; now 24: the skip
-  // link, and the rail once.
-  expect(stops - 1).toBe(24);
+  // 26 stops stood before the first tab with four rail stops and no skip link; then 24: the skip
+  // link, and the rail once; now 25: the saves' spell wand beside the mind box.
+  expect(stops - 1).toBe(25);
 
   // The tablist is one stop: Right moves and selects, Home and End jump, and Tab leaves it.
   await page.keyboard.press("ArrowRight");

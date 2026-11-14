@@ -16,6 +16,8 @@ export interface MultiClassOptions {
   pending?: boolean;
   /** A long first class name, to prove wrapping: the code, as the web has no wording for it. */
   longClass?: string;
+  /** The first class is a specialist and the character's race is one the book does not list for it. */
+  specialistRace?: boolean;
 }
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -110,6 +112,16 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
             }));
             c.warnings = [
               ...(c.warnings ?? []),
+              ...(opts.specialistRace
+                ? [
+                    {
+                      code: "specialist_race",
+                      field: "race",
+                      class: first,
+                      race: c.raceCode,
+                    },
+                  ]
+                : []),
               ...(opts.dual
                 ? []
                 : [

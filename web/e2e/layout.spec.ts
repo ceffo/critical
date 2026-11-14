@@ -4714,6 +4714,113 @@ async function creationExtrasStep(page: Page, size: Viewport) {
   }
 }
 
+// ADR 0050 steps 14.1 and 17.5 in French at 1920x1080 and 2560x1440: the specialist's class card on
+// the creation route (the specialty's races row), the review's specialist_race warning for an elf
+// (a race the book does not list for the abjurer: kept; the DMG's dash would refuse an elf illusionist), and the sheet's class card carrying the same
+// warning, none of it cut.
+async function creationSpecialistStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const step = page.getByTestId("creation-step");
+  const next = () =>
+    step.getByRole("button", { name: "Passer à l'étape suivante" }).click();
+  const vps = sizesAt(size, [
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ]);
+  const audit = async (region: Locator, name: string) => {
+    for (const vp of vps) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(region, `${name}, ${vp.width}x${vp.height}`);
+      await expectNoPageScroll(page);
+      await snap(
+        page,
+        `creation-specialist-${name}-fr-${vp.width}x${vp.height}`,
+      );
+    }
+    await page.setViewportSize(vps[0]!);
+  };
+  await page.setViewportSize(vps[0]!);
+  await page.goto("/create");
+  await step.getByRole("radio", { name: "Abjurateur", exact: true }).click();
+  await expect(step.getByTestId("specialist-races-abjurer")).toHaveText(
+    "Humain",
+  );
+  await audit(step, "class");
+  await next();
+  await step.getByRole("radio", { name: "Elfe", exact: true }).click();
+  await next();
+  await step.getByRole("radio", { name: "Saisir" }).click();
+  for (const [ability, score] of Object.entries({
+    FOR: "10",
+    DEX: "16",
+    CON: "12",
+    INT: "17",
+    SAG: "16",
+    CHA: "10",
+  }))
+    await step.getByLabel(ability, { exact: true }).fill(score);
+  await next();
+  await step.getByLabel("PV max").fill("4");
+  await next();
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await next();
+  await expect(step).toHaveAttribute("data-step", "spellbook");
+  await next();
+  await step.getByLabel("Nom", { exact: true }).fill("Ilvaren");
+  await step
+    .getByTestId("alignment-grid")
+    .getByRole("radio", { name: /^[^:]+$/ })
+    .first()
+    .click();
+  await step
+    .getByRole("radiogroup", { name: "Sexe" })
+    .getByRole("radio")
+    .first()
+    .click();
+  await next();
+  await expect(step.getByTestId("review-warning")).toContainText(
+    "La race (Elfe) ne figure pas parmi celles que le livre liste pour ce spécialiste",
+  );
+  await audit(step, "review");
+  await step
+    .getByRole("button", { name: "Créer ce personnage et le jouer" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText("Ilvaren");
+  // A single-class sheet words the warning under the race, in the details popover.
+  await page.getByTestId("details-trigger").click();
+  await expect(
+    page.getByTestId("details-popover").getByTestId("details-race-warning"),
+  ).toContainText(
+    "La race (Elfe) ne figure pas parmi celles que le livre liste pour ce spécialiste",
+  );
+  await audit(page.getByTestId("details-popover"), "sheet-details");
+  await page.keyboard.press("Escape");
+  // The class card of a multi-class sheet (the server cannot serve a warned multi-class specialist
+  // but by a switch it refuses, so the entries are overlaid as the other multi-class specs do).
+  await asMultiClass(page, { longClass: "abjurer", specialistRace: true });
+  await page.reload();
+  const detail = await openClassDetail(page);
+  await expect(page.getByTestId("class-race-abjurer")).toContainText(
+    "Hors des races que le livre liste pour ce spécialiste (Elfe)",
+  );
+  await audit(detail, "sheet-class-card");
+  // Retire the specialist: the later steps count the characters.
+  await page
+    .unroute((url) => url.pathname === "/api/character")
+    .catch(() => {});
+  const list = await page.evaluate(async () => {
+    const r = await fetch("/api/characters");
+    return (await r.json()) as { currentId: number };
+  });
+  expect(
+    await apiCall(page, "PATCH", `/api/characters/${list.currentId}`, {
+      retired: true,
+    }),
+  ).toBe(true);
+  await reloadSettled(page);
+}
+
 // ADR 0030 steps 9, 11 and 12 in French at 1280x800 and 2560x1440: the 18/50 Strength tile, the
 // attack card's rate, "spécialisée" tag and point-blank checkbox (the heavy crossbow is the
 // specialization pick, ADR 0037 step 9; the long sword a plain pick), and the weapon editor's Type
@@ -6339,6 +6446,7 @@ const PAGES_STEPS: [string, Step][] = [
   ["creation route", creationStep],
   ["creation, multi-class", creationMultiStep],
   ["creation extras", creationExtrasStep],
+  ["creation, specialist", creationSpecialistStep],
   ["login page", loginStep],
   ["roster", rosterStep],
 ];

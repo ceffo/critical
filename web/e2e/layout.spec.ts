@@ -4732,24 +4732,36 @@ async function creationSpecialistStep(page: Page, size: Viewport) {
     { width: 1920, height: 1080 },
     { width: 2560, height: 1440 },
   ]);
-  const audit = async (region: Locator, name: string) => {
+  const audit = async (region: Locator, name: string, lang = "fr") => {
     for (const vp of vps) {
       await page.setViewportSize(vp);
       await expectNoClippedText(region, `${name}, ${vp.width}x${vp.height}`);
       await expectNoPageScroll(page);
       await snap(
         page,
-        `creation-specialist-${name}-fr-${vp.width}x${vp.height}`,
+        `creation-specialist-${name}-${lang}-${vp.width}x${vp.height}`,
       );
     }
     await page.setViewportSize(vps[0]!);
   };
   await page.setViewportSize(vps[0]!);
+  // English too (the school row, and the diviner's two schools, wrap without cut text), then back to French.
+  await chooseLanguage(page, "en");
+  await page.goto("/create");
+  await expect(step.getByTestId("school-diviner")).toHaveText(
+    "Greater divination / Lesser divination",
+  );
+  await audit(step, "class", "en");
+  await page.goto("/");
+  await chooseLanguage(page, "fr");
   await page.goto("/create");
   await step.getByRole("radio", { name: "Abjurateur", exact: true }).click();
   await expect(step.getByTestId("specialist-races-abjurer")).toHaveText(
     "Humain",
   );
+  await expect(step.getByTestId("school-abjurer")).toHaveText("Abjuration");
+  await expect(step.getByTestId("school-illusionist")).toHaveText("Illusion");
+  await expect(step.getByTestId("school-mage")).toHaveCount(0);
   await audit(step, "class");
   await next();
   await step.getByRole("radio", { name: "Elfe", exact: true }).click();

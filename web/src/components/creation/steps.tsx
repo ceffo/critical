@@ -18,6 +18,7 @@ import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { ALIGNMENT_CODES } from "@/lib/characterDetails";
+import { schoolCodesLabel } from "@/lib/lookupLabels";
 import {
   alignmentLimit,
   allRaces,
@@ -198,6 +199,16 @@ export function ClassStep(props: StepProps) {
                       : c.races.map((r) => t(`details.races.${r}`)).join(", ")
                   }
                 />
+                {c.schools && c.schools.length > 0 ? (
+                  <Row
+                    k={t("creation.class.school")}
+                    v={
+                      <span data-testid={`school-${c.class}`}>
+                        {schoolCodesLabel(t, c.schools)}
+                      </span>
+                    }
+                  />
+                ) : null}
                 {options.specialistRaces?.[c.class] ? (
                   <Row
                     k={t("creation.class.specialistRaces")}

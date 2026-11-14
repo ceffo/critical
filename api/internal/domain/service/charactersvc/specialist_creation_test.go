@@ -262,3 +262,31 @@ func TestDerive_Step14_TheGnomeFighterIllusionistsSchoolSlots(t *testing.T) {
 	assert.Equal(t, []string{"illusion"}, d.Spellbook.Specialization.Schools)
 	assert.Equal(t, []string{"necromancy", "invocation_evocation", "abjuration"}, d.Spellbook.Specialization.OppositionSchools)
 }
+
+// The creation options name each specialist class's school (ADR 0050 step 2, PHB Table 22), so the
+// web words it without a class id; any other class carries none. Compared against an explicit table.
+func TestOptions_Step2_ASpecialistClassCarriesItsSchool(t *testing.T) {
+	e := specialistEnv(t, ruleset.RacialLift{})
+	got, err := e.svc.CreationOptions(context.Background())
+	require.NoError(t, err)
+	schools := map[string][]string{}
+	for _, c := range got.Classes {
+		require.NotNil(t, c.Schools, c.Class)
+		schools[c.Class] = c.Schools
+	}
+	assert.Equal(t, map[string][]string{
+		"abjurer": {"abjuration"}, "conjurer": {"conjuration_summoning"}, "diviner": {"greater_divination", "lesser_divination"},
+		"enchanter": {"enchantment_charm"}, "illusionist": {"illusion"}, "invoker": {"invocation_evocation"},
+		"necromancer": {"necromancy"}, "transmuter": {"alteration"},
+	}, onlyNonEmpty(schools))
+}
+
+func onlyNonEmpty(m map[string][]string) map[string][]string {
+	out := map[string][]string{}
+	for k, v := range m {
+		if len(v) > 0 {
+			out[k] = v
+		}
+	}
+	return out
+}

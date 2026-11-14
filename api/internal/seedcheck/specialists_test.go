@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt"
 	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
+	"github.com/ceffo/critical/api/internal/adapters/spellbookadpt"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 )
 
@@ -61,7 +62,7 @@ func TestFeatures_Step2_TheEightSpecialistsGrantTheKind(t *testing.T) {
 		assert.Equal(t, want.opposed, f.SchoolSpecialization.OppositionSchools, "%s: opposition", id)
 		assert.Contains(t, c.AbilityMinimums, classes.AbilityMinimum{Ability: want.second, Min: want.secondMin}, id)
 		assert.Equal(t, []string{"int", want.second}, c.PrimeRequisites, id)
-		assert.False(t, c.Implemented(), "%s is not creatable before the engine", id)
+		assert.True(t, c.Implemented(), "%s is creatable (ADR 0050 step 17.2)", id)
 	}
 
 	fixture, err := catalogueadpt.LoadArtifact(filepath.Join("..", "..", "testdata", "catalogue.json"))
@@ -93,5 +94,25 @@ func TestRealCatalogue_Step1_EverySpellsSchoolsAreTheNine(t *testing.T) {
 	}
 	for _, c := range classes.Schools {
 		assert.True(t, carried[c], "no spell carries the school %s", c)
+	}
+}
+
+// ADR 0050 step 9: the real starting spellbook seed gives each of the eight specialists the mage's
+// pre-ticked spells, Read Magic and Detect Magic (DMG p.40), which the real artifact's specialists
+// accept (both lesser divination, open to every wizard: no class opposes them, or the seed would
+// stop the start).
+func TestStartingSeed_Step9_TheSpecialistsArePreTickedLikeTheMage(t *testing.T) {
+	cat := realCatalogue(t)
+	real, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	tables, err := ruletablesadpt.Parse(real.RuleTables, real.Equipment, real.Languages, real.Definitions)
+	require.NoError(t, err)
+	defs, err := tables.Definitions()
+	require.NoError(t, err)
+	seed, err := spellbookadpt.ReadStartingSeed(seedsDir, cat, defs)
+	require.NoError(t, err)
+	assert.Equal(t, []string{"read_magic", "detect_magic"}, seed["mage"])
+	for _, id := range []string{"abjurer", "conjurer", "diviner", "enchanter", "illusionist", "invoker", "necromancer", "transmuter"} {
+		assert.Equal(t, seed["mage"], seed[id], id)
 	}
 }

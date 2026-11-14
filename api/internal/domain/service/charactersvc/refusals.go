@@ -91,7 +91,11 @@ func classShape(n NewCharacter) []error {
 
 // multiClassClassRefusals are ADR 0042 step 2.1's refusal of a class the catalogue marks as never
 // one of a multi-class character's classes (`multiclass: false`): each such active entry of a
-// character with more than one active entry. A class left (dual-class) is not concerned.
+// character with more than one active entry. A class left (dual-class) is not concerned. So is,
+// with the same code, ADR 0050 step 14.3's class whose school_specialization names the races of a
+// multi-class one (multiclassRaces) when the character's race is not among them: the gnome
+// illusionist. The ruleset's racial lift does not waive it; a race not chosen yet (a draft) is not
+// judged.
 func multiClassClassRefusals(n NewCharacter, defs *classes.Registry) []error {
 	active := 0
 	for _, e := range n.Classes {
@@ -107,11 +111,25 @@ func multiClassClassRefusals(n NewCharacter, defs *classes.Registry) []error {
 		if e.frozen() {
 			continue
 		}
-		if def, ok := defs.Class(e.Class); ok && def.NoMultiClass {
+		def, ok := defs.Class(e.Class)
+		if !ok {
+			continue
+		}
+		races := multiclassRaces(def)
+		if def.NoMultiClass || (len(races) > 0 && n.Race != "" && !slices.Contains(races, n.Race)) {
 			out = append(out, &domain.FieldError{Field: n.field(i, "class"), Message: CodeMultiClassClassNotAllowed})
 		}
 	}
 	return out
+}
+
+// multiclassRaces are the races of a multi-class character def may be part of (ADR 0050 step
+// 14.3: its school_specialization's multiclass_races); none when def names none (no such limit).
+func multiclassRaces(def classes.Class) []string {
+	if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
+		return f.SchoolSpecialization.MulticlassRaces
+	}
+	return nil
 }
 
 // raceRefusals are ADR 0042 step 2's refusals of the race for the entries: the book's limit on a

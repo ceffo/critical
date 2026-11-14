@@ -113,8 +113,8 @@ func schoolSpecialization() *classes.SchoolSpecialization {
 // ADR 0050 step 2 and 2.1: school_specialization takes schools, opposition schools and races (and
 // the races of a multi-class character), each code of the closed list or a defined race; every
 // start-up check of 2.1 refuses its offence naming the class, and the kind once per class is the
-// registry's "a kind listed twice" (2.2). Until the engine item the kind is not implemented: a
-// class listing it is not creatable.
+// registry's "a kind listed twice" (2.2). The engine computes the kind (step 17.2): a class
+// listing it is creatable.
 func TestFeatures_Step2_SchoolSpecializationParses(t *testing.T) {
 	book := classes.Feature{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 9}}
 	specialist := func(mutate func(s *classes.SchoolSpecialization)) []classes.Feature {
@@ -144,7 +144,7 @@ func TestFeatures_Step2_SchoolSpecializationParses(t *testing.T) {
 		Races:             []string{"human", "gnome"},
 		MulticlassRaces:   []string{"gnome"},
 	}, f.SchoolSpecialization, "the params come back as the catalogue wrote them")
-	assert.False(t, c.Implemented(), "the kind has no engine yet (ADR 0050 step 17.2): the class is not creatable")
+	assert.True(t, c.Implemented(), "the kind is computed (ADR 0050 steps 5 to 11 and 14): the class is creatable")
 
 	// The diviner's reading (Q3): lesser divination among his schools, never in an opposition.
 	_, err = build(specialist(func(s *classes.SchoolSpecialization) {
@@ -271,10 +271,11 @@ func TestFeatures_Step3_5_ARogueSkillsPerSkillSet(t *testing.T) {
 }
 
 // ADR 0040 step 8, the creation gate: a class is implemented only when every
-// kind it lists is computed. save_bonus was the last kind without a reader
-// (ADR 0043 step 3; psionics left with the PSP pool, step 5): every kind of the
-// closed list is computed now, alone or together, so a class listing psionics
-// and save_bonus is creatable. The gate reads kinds, never class ids.
+// kind it lists is computed. school_specialization was the last kind without
+// a reader (ADR 0050 step 17.2; save_bonus before it, ADR 0043 step 3): every
+// kind of the closed list is computed now, alone or together, so a class
+// listing spellbook and school_specialization is creatable. The gate reads
+// kinds, never class ids.
 func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -287,6 +288,10 @@ func TestFeatures_Step8_AClassIsImplementedWhenEveryKindIs(t *testing.T) {
 		{"save_bonus", []classes.Feature{{Kind: classes.KindSaveBonus, SaveBonus: saveBonus()}}, true},
 		{"a computed kind and psionics", []classes.Feature{{Kind: classes.KindBackstab, Table: "t"}, {Kind: classes.KindPsionics, Psionics: psionics()}}, true},
 		{"psionics and save_bonus", []classes.Feature{{Kind: classes.KindPsionics, Psionics: psionics()}, {Kind: classes.KindSaveBonus, SaveBonus: saveBonus()}}, true},
+		{"spellbook and school_specialization", []classes.Feature{
+			{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 9}},
+			{Kind: classes.KindSchoolSpecialization, SchoolSpecialization: schoolSpecialization()},
+		}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, ok := registry(t, withFeatures(tc.fs...)).Class("test_class")

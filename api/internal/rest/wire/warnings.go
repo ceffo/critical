@@ -25,8 +25,12 @@ type WarningDTO struct {
 	Available *int   `json:"available,omitempty"`
 	Left      *int   `json:"left,omitempty"`
 	// Class is the class entry of a level_limit warning (ADR 0042 step 7),
-	// its level in value and the race's limit in max.
+	// its level in value and the race's limit in max, or of a specialist_race
+	// warning (ADR 0050 step 14.1).
 	Class string `json:"class,omitempty"`
+	// Race is a specialist_race warning's race, outside PHB Table 22's for
+	// the class (ADR 0050 step 14.1).
+	Race string `json:"race,omitempty"`
 	// Type and Slots are a weapon_pick_to_redo warning's weapon type and the
 	// slots it spent (ADR 0037 step 21.8.3).
 	Type  string `json:"type,omitempty"`

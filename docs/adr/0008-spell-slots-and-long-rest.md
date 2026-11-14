@@ -31,7 +31,7 @@ named otherwise.
    (the whole request is refused, nothing written).
    Tests: `TestPrepare_Refused` ("spell outside the spellbook", "valid and invalid mixed"; the slots mock has no write expectation, so a refused call changes
    nothing).
-   _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 10 and 11, proposed, on implementation: a specialist wizard's limit of a spell level with an allotment is one more, which only a spell of his school may fill (`school_slot_needs_school_spell`; no slot is marked, the cast is unchanged), and a spell of one of his opposition schools is never prepared (`spell_school_opposed`), the extra slots of step 9 included.)_
+   _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 10 and 11, as built 2026-11-13: a specialist wizard's limit of a spell level with an allotment is one more, which only a spell of his school may fill (`school_slot_needs_school_spell`; no slot is marked, the cast is unchanged), and a spell of one of his opposition schools is never prepared (`spell_school_opposed`), the extra slots of step 9 included.)_
 4. **Preparing again keeps the casts.** A new preparation replaces the list, but a spell that was
    already prepared keeps its used flag, one for one (three Mirror Images with one cast used and
    one in the new list as well: still one used). Editing the preparation never refills a slot.

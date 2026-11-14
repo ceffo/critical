@@ -40,6 +40,21 @@ func TestParseStartingSeed_Step20_7_CheckedAgainstTheCatalogue(t *testing.T) {
 	}
 }
 
+// ADR 0050 steps 6 and 9: a specialist's pre-ticked spells are data like the mage's, and one of a
+// school in his opposition (PHB Table 22: the illusionist's are necromancy, invocation/evocation
+// and abjuration) is a start-up error, since the creation would refuse it; a spell of his school
+// (Mirror Image, an illusion) or of a school he does not oppose (Fireball for a transmuter, who
+// opposes abjuration and necromancy) is accepted.
+func TestParseStartingSeed_Step9_AnOpposedPreTickStopsTheStart(t *testing.T) {
+	defs := cataloguetest.Definitions(t)
+	seed, err := spellbookadpt.ParseStartingSeed([]byte(`{"illusionist":["mirror_image"],"transmuter":["fireball"]}`), cat, defs)
+	require.NoError(t, err)
+	assert.Equal(t, spellbookadpt.StartingSeed{"illusionist": {"mirror_image"}, "transmuter": {"fireball"}}, seed)
+
+	_, err = spellbookadpt.ParseStartingSeed([]byte(`{"illusionist":["mirror_image","fireball"]}`), cat, defs)
+	require.ErrorContains(t, err, `illusionist: "fireball" is of a school in the class's opposition`)
+}
+
 func TestReadStartingSeed_MissingFile(t *testing.T) {
 	defs := cataloguetest.Definitions(t)
 	_, err := spellbookadpt.ReadStartingSeed(t.TempDir(), cat, defs)

@@ -1387,6 +1387,1125 @@
           }
         ],
         "Spellbook": null
+      },
+      {
+        "Class": "abjurer",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "int",
+            "Min": 9
+          },
+          {
+            "Ability": "wis",
+            "Min": 15
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "conjurer",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "con",
+            "Min": 15
+          },
+          {
+            "Ability": "int",
+            "Min": 9
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "diviner",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "int",
+            "Min": 9
+          },
+          {
+            "Ability": "wis",
+            "Min": 16
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "enchanter",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "int",
+            "Min": 9
+          },
+          {
+            "Ability": "cha",
+            "Min": 16
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "illusionist",
+        "Races": [
+          "gnome",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "dex",
+            "Min": 16
+          },
+          {
+            "Ability": "int",
+            "Min": 9
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "invoker",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "con",
+            "Min": 16
+          },
+          {
+            "Ability": "int",
+            "Min": 9
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "necromancer",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "int",
+            "Min": 9
+          },
+          {
+            "Ability": "wis",
+            "Min": 16
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
+      },
+      {
+        "Class": "transmuter",
+        "Races": [
+          "elf",
+          "half_elf",
+          "human"
+        ],
+        "Skills": [],
+        "Alignments": [
+          "lawful_good",
+          "neutral_good",
+          "chaotic_good",
+          "lawful_neutral",
+          "true_neutral",
+          "chaotic_neutral",
+          "lawful_evil",
+          "neutral_evil",
+          "chaotic_evil"
+        ],
+        "HitDie": 4,
+        "LevelXP": [
+          {
+            "Level": 1,
+            "XP": 0
+          },
+          {
+            "Level": 2,
+            "XP": 2500
+          },
+          {
+            "Level": 3,
+            "XP": 5000
+          },
+          {
+            "Level": 4,
+            "XP": 10000
+          },
+          {
+            "Level": 5,
+            "XP": 20000
+          },
+          {
+            "Level": 6,
+            "XP": 40000
+          },
+          {
+            "Level": 7,
+            "XP": 60000
+          },
+          {
+            "Level": 8,
+            "XP": 90000
+          },
+          {
+            "Level": 9,
+            "XP": 135000
+          },
+          {
+            "Level": 10,
+            "XP": 250000
+          },
+          {
+            "Level": 11,
+            "XP": 375000
+          },
+          {
+            "Level": 12,
+            "XP": 750000
+          },
+          {
+            "Level": 13,
+            "XP": 1125000
+          },
+          {
+            "Level": 14,
+            "XP": 1500000
+          },
+          {
+            "Level": 15,
+            "XP": 1875000
+          },
+          {
+            "Level": 16,
+            "XP": 2250000
+          },
+          {
+            "Level": 17,
+            "XP": 2625000
+          },
+          {
+            "Level": 18,
+            "XP": 3000000
+          },
+          {
+            "Level": 19,
+            "XP": 3375000
+          },
+          {
+            "Level": 20,
+            "XP": 3750000
+          }
+        ],
+        "Minimums": [
+          {
+            "Ability": "dex",
+            "Min": 15
+          },
+          {
+            "Ability": "int",
+            "Min": 9
+          }
+        ],
+        "Weapons": [
+          {
+            "Code": "dagger",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "dart",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "sling",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "knife",
+            "SpecializationSlots": 0
+          },
+          {
+            "Code": "quarterstaff",
+            "SpecializationSlots": 0
+          }
+        ],
+        "Spellbook": {
+          "StartingSpells": [
+            "detect_magic"
+          ]
+        }
       }
     ],
     "Sexes": [
@@ -3801,6 +4920,11 @@
       "necromancer",
       "transmuter"
     ],
+    "MulticlassRaces": {
+      "illusionist": [
+        "gnome"
+      ]
+    },
     "DualClassOldPrime": 15,
     "DualClassNewPrime": 17
   },

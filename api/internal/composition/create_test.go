@@ -257,8 +257,9 @@ func TestCreate_Options(t *testing.T) {
 			Skills              []string `json:"skills"`
 			SkillArmors         []string `json:"skillArmors"` // retired (ADR 0033 step 14)
 		} `json:"classes"`
-		Ability        struct{ Min, Max int } `json:"ability"`
-		StrExceptional struct{ Min, Max int } `json:"strExceptional"`
+		Ability         struct{ Min, Max int } `json:"ability"`
+		StrExceptional  struct{ Min, Max int } `json:"strExceptional"`
+		MulticlassRaces map[string][]string    `json:"multiclassRaces"`
 	}
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &got))
 	// ADR 0040 step 8: the classes and races in the catalogue's order.
@@ -266,7 +267,15 @@ func TestCreate_Options(t *testing.T) {
 	for _, c := range got.Classes {
 		order = append(order, c.Class)
 	}
-	require.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist"}, order, "every kind the classes list is computed: all offered")
+	require.Equal(t, []string{
+		"fighter", "mage", "cleric", "thief", "bard", "psionicist",
+		"abjurer", "conjurer", "diviner", "enchanter", "illusionist", "invoker", "necromancer", "transmuter",
+	}, order, "every kind the classes list is computed: all offered (the specialists since ADR 0050 step 17.2)")
+	// ADR 0050 step 3.5: DMG Table 7's Illusionist row (gnome 15, human) and the Mage row for the others.
+	assert.Equal(t, []string{"gnome", "human"}, got.Classes[10].Races, "the illusionist")
+	assert.Equal(t, []string{"elf", "half_elf", "human"}, got.Classes[13].Races, "the transmuter")
+	// ADR 0050 step 14.3: the illusionist is part of a multi-class character only for a gnome.
+	assert.Equal(t, map[string][]string{"illusionist": {"gnome"}}, got.MulticlassRaces)
 	fighter, mage, cleric, thief, bard := got.Classes[0], got.Classes[1], got.Classes[2], got.Classes[3], got.Classes[4]
 	assert.Equal(t, []string{"half_elf", "human"}, bard.Races)
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, fighter.Races)
@@ -318,7 +327,11 @@ func TestCreate_Options_LevelXPTableHitDiceMethodsAndRaceAdjustments(t *testing.
 		"bard": {6, 10_000}, "fighter": {10, 16_000}, "mage": {4, 20_000}, "cleric": {8, 13_000}, "thief": {6, 10_000},
 		"psionicist": {6, 16_500},
 	}
-	require.Len(t, got.Classes, 6)
+	// ADR 0050 step 3: each specialist has the mage's d4 and PHB Table 20 (level 5 at 20,000).
+	for _, sp := range []string{"abjurer", "conjurer", "diviner", "enchanter", "illusionist", "invoker", "necromancer", "transmuter"} {
+		want[sp] = struct{ die, xp5 int }{4, 20_000}
+	}
+	require.Len(t, got.Classes, 14)
 	for _, c := range got.Classes {
 		require.Len(t, c.LevelXP, 20, c.Class)
 		assert.Equal(t, 1, c.LevelXP[0].Level, c.Class)

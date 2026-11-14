@@ -515,6 +515,12 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		e.rules.EXPECT().RaceAllows(race, "cleric").Return(race != "elf", nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "thief").Return(true, nil).Once()
 		e.rules.EXPECT().RaceAllows(race, "psionicist").Return(true, nil).Once()
+		// ADR 0050 step 3.5: DMG Table 7's Illusionist row (human, gnome) and the Mage row for the
+		// seven other specialists.
+		for _, sp := range []string{"abjurer", "conjurer", "diviner", "enchanter", "invoker", "necromancer", "transmuter"} {
+			e.rules.EXPECT().RaceAllows(race, sp).Return(race == "human" || race == "elf" || race == "half_elf", nil).Once()
+		}
+		e.rules.EXPECT().RaceAllows(race, "illusionist").Return(race == "human" || race == "gnome", nil).Once()
 	}
 	expectOptionTables(e)
 	got, err := e.svc.CreationOptions(context.Background())
@@ -548,12 +554,24 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{},
 				Alignments: []string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
 			},
+			// ADR 0050 step 17.2: the eight specialists, creatable, each with the mage's alignments.
+			{Class: "abjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "conjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "diviner", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "enchanter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "illusionist", Races: []string{"gnome", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "invoker", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "necromancer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "transmuter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, MaxClasses: 3, MinLeftAtLevel: 2, MulticlassAnyRace: true, DualclassAnyRace: true, RestrictedRaces: []string{"dwarf", "elf", "gnome", "half_elf", "halfling"},
 		// ADR 0042 step 2.1: the classes the catalogue marks `multiclass: false`.
 		// the classes the catalogue bars from a multi-class character, creatable or not (the seven specialists, ADR 0050 step 3.3)
-		NoMultiClass: []string{"bard", "abjurer", "conjurer", "diviner", "enchanter", "invoker", "necromancer", "transmuter"}, DualClassOldPrime: 15, DualClassNewPrime: 17, Sexes: []string{"male", "female"},
+		NoMultiClass: []string{"bard", "abjurer", "conjurer", "diviner", "enchanter", "invoker", "necromancer", "transmuter"},
+		// ADR 0050 step 14.3: the illusionist is part of a multi-class character only for a gnome.
+		MulticlassRaces:   map[string][]string{"illusionist": {"gnome"}},
+		DualClassOldPrime: 15, DualClassNewPrime: 17, Sexes: []string{"male", "female"},
 	}, got)
 }
 
@@ -641,6 +659,15 @@ func TestCreationOptions_Table13_EachClassCarriesItsAbilityMinimums(t *testing.T
 		"bard":    {minimum("dex", 12), minimum("int", 13), minimum("cha", 15)},
 		// ADR 0043 step 1.2: creatable once every kind it lists is computed (step 3).
 		"psionicist": {minimum("con", 11), minimum("int", 12), minimum("wis", 15)},
+		// ADR 0050 step 3.1: Int 9 and PHB Table 22's second ability.
+		"abjurer":     {minimum("int", 9), minimum("wis", 15)},
+		"conjurer":    {minimum("con", 15), minimum("int", 9)},
+		"diviner":     {minimum("int", 9), minimum("wis", 16)},
+		"enchanter":   {minimum("int", 9), minimum("cha", 16)},
+		"illusionist": {minimum("dex", 16), minimum("int", 9)},
+		"invoker":     {minimum("con", 16), minimum("int", 9)},
+		"necromancer": {minimum("int", 9), minimum("wis", 16)},
+		"transmuter":  {minimum("dex", 15), minimum("int", 9)},
 	}, byClass)
 }
 
@@ -670,12 +697,24 @@ func TestDraft_Table13_ScoresUnderAClassMinimumAreUnmet(t *testing.T) {
 		"thief":      {},             // dex 11 >= 9
 		"bard":       {"dex", "cha"}, // dex 11 < 12, int 13 ok, cha 14 < 15
 		"psionicist": {"wis"},        // con blank, int 13 >= 12, wis 9 < 15
+		// ADR 0050 step 3.1: int 13 >= 9 for each, and Table 22's second ability.
+		"abjurer":     {"wis"}, // wis 9 < 15
+		"conjurer":    {},      // con blank
+		"diviner":     {"wis"}, // wis 9 < 16
+		"enchanter":   {"cha"}, // cha 14 < 16
+		"illusionist": {"dex"}, // dex 11 < 16
+		"invoker":     {},      // con blank
+		"necromancer": {"wis"}, // wis 9 < 16
+		"transmuter":  {"dex"}, // dex 11 < 15
 	}, unmetOf(got))
 	assert.Nil(t, got.Character, "no race and no XP: nothing to derive")
 
 	none, err := e.svc.Draft(context.Background(), charactersvc.NewCharacter{Class: "bard"}, allNumbers)
 	require.NoError(t, err)
-	assert.Equal(t, map[string][]string{"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}, "psionicist": {}}, unmetOf(none))
+	assert.Equal(t, map[string][]string{
+		"fighter": {}, "mage": {}, "cleric": {}, "thief": {}, "bard": {}, "psionicist": {},
+		"abjurer": {}, "conjurer": {}, "diviner": {}, "enchanter": {}, "illusionist": {}, "invoker": {}, "necromancer": {}, "transmuter": {},
+	}, unmetOf(none))
 }
 
 // ADR 0034 amendment of 2026-10-20: an empty draft is no refusal; it lists every field the

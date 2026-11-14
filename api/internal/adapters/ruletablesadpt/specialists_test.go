@@ -97,7 +97,7 @@ func TestDefinitions_Step3_TheEightSpecialists(t *testing.T) {
 			}, f.SchoolSpecialization)
 			_, ok = c.Feature(classes.KindSpellbook, 1)
 			assert.True(t, ok, "a specialist keeps a spellbook")
-			assert.False(t, c.Implemented(), "not creatable until the engine item")
+			assert.True(t, c.Implemented(), "creatable: the engine computes the kind (ADR 0050 step 17.2)")
 
 			for race, level := range want.level {
 				row, ok := tables.LevelLimit(race, id)

@@ -3,9 +3,10 @@
 **Status**: proposed 2026-11-13 (CRI-343, under the epic CRI-336). The user's triage of 2026-11-13 is
 quoted in Context and binds; the points it left open are decided below against the existing ADRs and
 the code, and the readings the books leave open are in "Questions for the user", each with a
-recommended default that the record takes as written unless the user says otherwise. Design only:
-not implemented (steps 1 to 4, the catalogue, are built: CRI-344, format 23 of
-[ADR 0021](0021-spell-catalogue.md) step 31; the eight classes are in the catalogue and not creatable). On implementation it amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
+recommended default that the record takes as written unless the user says otherwise. Steps 1 to 4,
+the catalogue, are built (CRI-344, format 23 of [ADR 0021](0021-spell-catalogue.md) step 31); steps 5
+to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The saves (steps
+12 and 13) and the entry switch (step 15) are not implemented. It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
 feature kind), [ADR 0021](0021-spell-catalogue.md) (school codes on a spell, a format bump),
 [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3 (the school slot, opposed spells),
 [ADR 0006](0006-saving-throws.md) step 10.2 (the school modifiers of a save that names its spell),
@@ -217,8 +218,12 @@ code (ADR 0040 step 10).
    The code gets a row in `internal/render` and an `apiError.spell_school_opposed` key (en, fr).
    Tests: `TestCheck_Step6_OpposedRefusedInOrder` (spellbook), `TestLearn_Step6_OpposedRefusedBeforeAnyDie`
    (learnsvc, the dice mock expects no call: Learn, Ajouter and the free spell),
-   `Draft_Step6_OpposedStartingSpellRefused` (charactersvc; with the creation, step 17.2, since a
+   `TestDraft_Step6_OpposedStartingSpellRefused` (charactersvc; with the creation, step 17.2, since a
    specialist reaches the draft only once creatable).
+   Built (the starting book): the draft's and the creation's check passes the specialist school of
+   the spellbook's entry to `spellbook.Check`, so an opposed starting spell is refused at
+   `spellbook.<id>` in the check's order (a 3rd-level abjuration at level 1 reads opposed, not above
+   the class).
 7. **The chance to learn: ±15** (amends 20.2). For a specialist the chance the d100 is compared with
    is Table 4's chance **+15** for a spell of his school and **-15** for any other (PHB p.32). It is
    not capped (a chance over 100 always succeeds; Int 9's 35 becomes 20 for another school). The
@@ -249,7 +254,12 @@ code (ADR 0040 step 10).
    no learn roll, the same limits, Read Magic and Detect Magic pre-ticked as for the mage (the seed
    is keyed by class: the eight specialists get the mage's entry, data). The DMG's "one spell of his
    school" (DMG p.40) is the DM's to give, entered like any starting spell (Q6).
-   Test: `Options_Step9_ASpecialistIsPreTickedLikeAMage` (charactersvc).
+   Built: `seeds/starting_spellbook.json` (and the fixture's) gives each of the eight the mage's
+   list; the seed's start-up check also refuses a pre-ticked spell the class opposes (the creation
+   would refuse it).
+   Tests: `TestOptions_Step9_ASpecialistIsPreTickedLikeAMage` (charactersvc, on the fixture's seed),
+   `TestStartingSeed_Step9_TheSpecialistsArePreTickedLikeTheMage` (seedcheck, the real seed),
+   `TestParseStartingSeed_Step9_AnOpposedPreTickStopsTheStart` (spellbookadpt).
 
 ### Slots (amends [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3)
 
@@ -332,12 +342,23 @@ code (ADR 0040 step 10).
        gnome's multi-class rows only.
     4. **Dual-class** is unchanged (ADR 0042 step 2.2): a human, or any race with the lift; the 15
        and 17 apply to each prime requisite, the specialist's two included (step 3.1).
-    Tests: `Create_Step14_TableTwentyTwoRaceWarns` (an elf abjurer created, warned),
-    `Create_Step14_TheDashStillRefuses` (a gnome transmuter refused, a gnome illusionist created),
-    `Create_Step14_MultiClassSpecialistOnlyAGnomeIllusionist` (gnome fighter/illusionist accepted;
+    Built: the warning is `{code: specialist_race, field: race, class, race}` (the warning gains
+    `race`), for each entry whose class has the kind, frozen ones included, on every read and on the
+    draft's sheet. The multi-class refusal reads the kind's `multiclass_races` beside
+    `multiclass: false`; a draft whose race is not chosen yet is not judged on it (the class step
+    comes before the race step). The options' `multiclassRaces` is a map, class to races (only the
+    classes that have the limit); the creation's class picker leaves such a class out of a
+    multi-class row once the race chosen is not in it. The eight classes' names are worded by the
+    web (`details.classes.<id>`, en and fr).
+    Tests: `TestCreate_Step14_TableTwentyTwoRaceWarns` (an elf abjurer created, warned),
+    `TestCreate_Step14_TheDashStillRefuses` (a gnome transmuter refused, a gnome illusionist created),
+    `TestCreate_Step14_MultiClassSpecialistOnlyAGnomeIllusionist` (gnome fighter/illusionist accepted;
     half-elf fighter/transmuter and elf fighter/illusionist refused, with the lift on and off),
-    `Create_Step14_DualClassToASpecialist` (a human fighter to transmuter with Int 17 and Dex 17,
-    refused with Dex 16) (charactersvc).
+    `TestCreate_Step14_DualClassToASpecialist` (a human fighter to transmuter with Int 17 and Dex 17,
+    refused with Dex 16), `TestGetCharacter_Step14_TheRaceWarningOnEveryRead`,
+    `TestDerive_Step14_TheGnomeFighterIllusionistsSchoolSlots` (step 10 on the one multi-class
+    specialist) (charactersvc), `TestWarningsDTO_Step14_TheSpecialistRaceWarningCarriesClassAndRace`
+    (wire).
 
 ### The entry switch
 
@@ -385,7 +406,7 @@ code (ADR 0040 step 10).
        `Implemented` set; the specialists become creatable. It ships as three changes, each leaving
        the app as it was until the last: the spellbook (steps 5, 6 and 7 and 8 on Learn, Ajouter and
        the free spell; built), the slots (steps 10 and 11; built), then the creation (step 6's starting
-       book, steps 9 and 14, and `Implemented`): a specialist reaches the draft and the creation
+       book, steps 9 and 14, and `Implemented`; built): a specialist reaches the draft and the creation
        options only once creatable.
     3. **The entry switch** (step 15), with its Settings or class-card action in the web (the user's
        fix for the friend's character comes here).

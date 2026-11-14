@@ -3245,6 +3245,7 @@
       "allBut": "Tous sauf {{list}}",
       "races": "Races",
       "allRaces": "Toutes",
+      "school": "École",
       "specialistRaces": "Races de la spécialité",
       "minimums": "Minimums",
       "minimumUnmet": "Score sous le minimum"

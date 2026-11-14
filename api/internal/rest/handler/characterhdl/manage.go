@@ -49,6 +49,9 @@ type ClassOptionDTO struct {
 	// Group is the class's group code (ADR 0040 step 1.2); the entry switch (ADR 0050 step 15.1)
 	// stays within it. Additive.
 	Group string `json:"group"`
+	// Schools are the school codes (ADR 0050 step 1) a specialist class specialises in; empty
+	// for any other class. Additive.
+	Schools []string `json:"schools"`
 	// Skills are the thieving skills the class enters points in (ADR 0030
 	// steps 1 and 17); empty for a class without them.
 	Skills []string `json:"skills"`
@@ -322,7 +325,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 		}
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
-				Class: c.Class, Races: c.Races, Group: c.Group,
+				Class: c.Class, Races: c.Races, Group: c.Group, Schools: c.Schools,
 				Skills: c.Skills, Alignments: c.Alignments,
 				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 				Weapons: weaponOptionDTOs(c.Weapons), Spellbook: spellbookOptionDTO(c.Spellbook),

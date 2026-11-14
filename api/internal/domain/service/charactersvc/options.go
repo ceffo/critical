@@ -18,6 +18,10 @@ type ClassOption struct {
 	// 15.1) keeps equal, so the web offers a class's own group only.
 	Group string
 	Races []string
+	// Schools are the school codes (ADR 0050 step 1) a specialist class specialises in
+	// (school_specialization's schools); empty for any other class, so the web names the school
+	// without holding a class id.
+	Schools []string
 	// Skills are the skills the class enters points in (steps 17 and 18, in
 	// ruletablesvc.SkillsOf order); empty for a class without skill
 	// points.
@@ -268,7 +272,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Group: def.Group, Alignments: slices.Clone(def.Alignments), Races: []string{}, Skills: []string{},
+			Class: class, Group: def.Group, Alignments: slices.Clone(def.Alignments), Races: []string{}, Schools: []string{}, Skills: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, classes.MaxLevel),
 			Minimums: slices.Clone(def.AbilityMinimums), Weapons: ClassWeaponOptions(s.profs.Weapons(), def),
 		}
@@ -282,6 +286,9 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 		}
 		if f, ok := def.Lists(classes.KindRogueSkills); ok {
 			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(f.RogueSkills))
+		}
+		if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
+			opt.Schools = slices.Clone(f.SchoolSpecialization.Schools)
 		}
 		if _, ok := def.Lists(classes.KindSpellbook); ok {
 			opt.Spellbook = s.spellbookOption(class)

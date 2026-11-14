@@ -613,6 +613,9 @@ export interface CreationOptions {
      * 15.1). Absent from a release that predates it. */
     group?: string;
     races: string[];
+    /** The school codes a specialist class specialises in (ADR 0050 step 1), empty for any other
+     * class: the creation names the school from it. Absent from a release that predates it. */
+    schools?: string[];
     /** The skills the class enters points in (ADR 0030 steps 17 and 18); empty for none. */
     skills: string[];
     /** The alignment codes the class admits (ADR 0032 step 2). */

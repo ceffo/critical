@@ -4750,6 +4750,9 @@ async function creationSpecialistStep(page: Page, size: Viewport) {
   await expect(step.getByTestId("specialist-races-abjurer")).toHaveText(
     "Humain",
   );
+  await expect(step.getByTestId("school-abjurer")).toHaveText("Abjuration");
+  await expect(step.getByTestId("school-illusionist")).toHaveText("Illusion");
+  await expect(step.getByTestId("school-mage")).toHaveCount(0);
   await audit(step, "class");
   await next();
   await step.getByRole("radio", { name: "Elfe", exact: true }).click();

@@ -34,6 +34,7 @@ test.use({
           class: "Wizard",
           level: 3,
           school: "Evocation",
+          schools: ["invocation_evocation"],
           casting_time: "3",
           range: "10 yds. + 10 yds./level",
           duration: "Instantaneous",

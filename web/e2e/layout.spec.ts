@@ -83,6 +83,7 @@ test.use({
         class: "Wizard",
         level: 1,
         school: "Divination",
+        schools: ["greater_divination"],
         range: "Special, see the description of the ritual circle",
         area_of_effect:
           "10-ft. cube per level, up to one creature/level of the caster",
@@ -3489,6 +3490,7 @@ const COMPOSER_EXTRA_SPELLS = {
       class: "Wizard",
       level: 3,
       school: "Alteration",
+      schools: ["alteration"],
       casting_time: "3",
       range: "Touch",
       duration: "8 rds. + 1d8 rds.",

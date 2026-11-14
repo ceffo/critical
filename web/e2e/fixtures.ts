@@ -421,6 +421,8 @@ export interface ExtraSpell {
   class: "Wizard" | "Priest";
   level: number;
   school: string;
+  /** The school codes (format 23, Table 22), required by the artifact schema: e.g. "alteration", "greater_divination" (wizard Divination), "lesser_divination" (priest). */
+  schools: readonly string[];
   sphere?: string;
   casting_time?: string;
   range?: string;

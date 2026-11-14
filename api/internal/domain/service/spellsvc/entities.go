@@ -31,6 +31,9 @@ type Spell struct {
 	Source string
 	// Stats is the typed form of the six stat fields above, parsed at import.
 	Stats spellstats.Stats
+	// Schools are the school codes of the spell (ADR 0050 step 1.4, catalogue format 23): what the
+	// specialist rules read, never School. Empty for a spell of no PHB school.
+	Schools []string
 }
 
 // SpellName is a spell's id with its name in every language the catalogue

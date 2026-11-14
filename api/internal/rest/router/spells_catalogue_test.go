@@ -23,6 +23,7 @@ func TestSpells_TextsAreLanguageMaps(t *testing.T) {
 		Name:        localized.Text{"en": "Magic Missile", "fr": "Projectile magique"},
 		Description: localized.Text{"en": "Fixture text for Magic Missile", "fr": "Texte de test pour Projectile magique"},
 		Range:       localized.Of("60 yds. + 10 yds./level"),
+		Schools:     []string{"invocation_evocation"},
 	}
 	armor := spellsvc.Spell{
 		ID: "armor", Class: "wizard", Level: 1, Source: "PHB",
@@ -51,6 +52,9 @@ func TestSpells_TextsAreLanguageMaps(t *testing.T) {
 	assert.Contains(t, desc["fr"], "Texte de test pour Projectile magique")
 	assert.Equal(t, map[string]any{"en": "60 yds. + 10 yds./level"}, mm["range"])
 	assert.Equal(t, "PHB", mm["source"])
+	// ADR 0050 step 1.4: the school codes are served with the spell, [] for a spell of none.
+	assert.Equal(t, []any{"invocation_evocation"}, mm["schools"])
+	assert.Equal(t, []any{}, page.Items[1]["schools"], "never null")
 
 	ar := page.Items[1]
 	assert.Equal(t, map[string]any{"en": "Armor"}, ar["name"], "no French name: no fr key")

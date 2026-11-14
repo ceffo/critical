@@ -120,6 +120,9 @@ func (d *DAL) Search(ctx context.Context, f spellsvc.Filter) ([]spellsvc.Spell, 
 		if sp.Stats, err = storedStats(r); err != nil {
 			return nil, err
 		}
+		if sp.Schools, err = storedSchools(r); err != nil {
+			return nil, err
+		}
 		spells = append(spells, sp)
 	}
 	slices.SortStableFunc(spells, func(a, b spellsvc.Spell) int {
@@ -239,8 +242,25 @@ func storedStats(r queries.Spell) (spellstats.Stats, error) {
 	return st, nil
 }
 
+// storedSchools decodes a row's school codes (ADR 0050 step 1.4): a NULL (a row not imported from a
+// format-23 artifact yet) reads as none; unreadable JSON is an error naming the spell.
+func storedSchools(r queries.Spell) ([]string, error) {
+	if !r.Schools.Valid {
+		return nil, nil
+	}
+	var out []string
+	if err := json.Unmarshal([]byte(r.Schools.String), &out); err != nil {
+		return nil, fmt.Errorf("spell %q has unreadable stored schools: %w", r.Key.String, err)
+	}
+	return out, nil
+}
+
 func toSpell(r queries.Spell, texts textsByID) (spellsvc.Spell, error) {
 	st, err := storedStats(r)
+	if err != nil {
+		return spellsvc.Spell{}, err
+	}
+	schools, err := storedSchools(r)
 	if err != nil {
 		return spellsvc.Spell{}, err
 	}
@@ -257,5 +277,6 @@ func toSpell(r queries.Spell, texts textsByID) (spellsvc.Spell, error) {
 		SavingThrow:  texts.of(r.SavingThrow),
 		Description:  texts.of(r.Description),
 		Stats:        st,
+		Schools:      schools,
 	}, nil
 }

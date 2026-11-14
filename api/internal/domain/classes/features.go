@@ -46,7 +46,33 @@ const (
 	// KindSaveBonus: a bonus on a save against a kind of effect (ADR 0043
 	// step 3). Param SaveBonus.
 	KindSaveBonus = "save_bonus"
+	// KindSchoolSpecialization: a specialist wizard's school, its opposition
+	// and the races that may be one (ADR 0050 step 2, PHB Table 22). Param
+	// SchoolSpecialization.
+	KindSchoolSpecialization = "school_specialization"
 )
+
+// The school codes of a spell (ADR 0050 step 1): the PHB's nine schools,
+// language-neutral. Lesser divination is every divination of spell level 4 or
+// less and is open to every wizard; greater divination is level 5 or more.
+const (
+	SchoolAbjuration           = "abjuration"
+	SchoolAlteration           = "alteration"
+	SchoolConjurationSummoning = "conjuration_summoning"
+	SchoolEnchantmentCharm     = "enchantment_charm"
+	SchoolLesserDivination     = "lesser_divination"
+	SchoolGreaterDivination    = "greater_divination"
+	SchoolIllusion             = "illusion"
+	SchoolInvocationEvocation  = "invocation_evocation"
+	SchoolNecromancy           = "necromancy"
+)
+
+// Schools is the closed list of school codes (ADR 0050 step 1), in the
+// artifact schema's order.
+var Schools = []string{
+	SchoolAbjuration, SchoolAlteration, SchoolConjurationSummoning, SchoolEnchantmentCharm,
+	SchoolLesserDivination, SchoolGreaterDivination, SchoolIllusion, SchoolInvocationEvocation, SchoolNecromancy,
+}
 
 // SaveAgainstMindAffecting is the one effect tag a save_bonus may name (ADR
 // 0043 step 3, Q12): a save the request flags as against magic that attacks
@@ -64,15 +90,17 @@ const MaxSaveBonus = 5
 var FeatureKinds = []string{
 	KindExceptionalStrength, KindMeleeAttacksPerRound, KindWeaponSpecialization,
 	KindWisdomBonusSpells, KindSpellFailure, KindSphereAccess, KindTurnUndead,
-	KindRogueSkills, KindBackstab, KindSpellbook, KindPsionics, KindSaveBonus,
+	KindRogueSkills, KindBackstab, KindSpellbook, KindPsionics, KindSaveBonus, KindSchoolSpecialization,
 }
 
 // notImplemented are the kinds of the closed list the code does not compute
 // yet: the catalogue may list them (a class is data), but a class that does
 // is not offered at creation until its kinds are built (ADR 0040 step 8).
 // A kind leaves this list when its reader lands: every kind of the closed
-// list has one now (save_bonus was the last, ADR 0043 step 3).
-var notImplemented []string
+// list has one except school_specialization, whose engine is the next item
+// of ADR 0050 (step 17.2): the eight specialist wizards are in the catalogue
+// and not creatable until it lands.
+var notImplemented = []string{KindSchoolSpecialization}
 
 // Implemented reports whether the code computes every feature kind the class
 // lists: the creation gate of ADR 0040 step 8 ("passed the check = fully
@@ -109,6 +137,8 @@ type Feature struct {
 	Psionics *Psionics
 	// SaveBonus is save_bonus's params.
 	SaveBonus *SaveBonus
+	// SchoolSpecialization is school_specialization's params.
+	SchoolSpecialization *SchoolSpecialization
 	// Specialization is weapon_specialization's params (ADR 0040 step 13):
 	// what a specialization costs and which Table 35 column it reads.
 	Specialization *WeaponSpecialization
@@ -179,6 +209,58 @@ type SpecializationType struct {
 type SaveBonus struct {
 	Against string
 	Bonus   int
+}
+
+// SchoolSpecialization are the params of school_specialization (ADR 0050 step
+// 2, PHB Table 22): the school codes the specialist specialises in, those in
+// opposition (their spells are neither learned nor used), the race codes that
+// may be one and, apart, those that may be one in a multi-class character
+// (the gnome illusionist, PHB p.31).
+type SchoolSpecialization struct {
+	Schools, OppositionSchools, Races, MulticlassRaces []string
+}
+
+func (s SchoolSpecialization) clone() SchoolSpecialization {
+	return SchoolSpecialization{
+		Schools: slices.Clone(s.Schools), OppositionSchools: slices.Clone(s.OppositionSchools),
+		Races: slices.Clone(s.Races), MulticlassRaces: slices.Clone(s.MulticlassRaces),
+	}
+}
+
+// check is ADR 0050 step 2.1 without the race lookup (the registry's): every
+// code a school of the closed list, at least one school and one race, schools
+// and opposition disjoint, lesser divination in no opposition (it is open to
+// every wizard, PHB p.31), no code twice, multi-class races among the races.
+func (s SchoolSpecialization) check() error {
+	if len(s.Schools) == 0 || len(s.Races) == 0 {
+		return errors.New("a school and a race are needed")
+	}
+	for _, list := range [][]string{s.Schools, s.OppositionSchools} {
+		for _, c := range list {
+			if !slices.Contains(Schools, c) {
+				return fmt.Errorf("unknown school %q", c)
+			}
+		}
+	}
+	for _, list := range [][]string{s.Schools, s.OppositionSchools, s.Races, s.MulticlassRaces} {
+		if err := unique(list, func(c string) string { return c }); err != nil {
+			return err
+		}
+	}
+	for _, c := range s.Schools {
+		if slices.Contains(s.OppositionSchools, c) {
+			return fmt.Errorf("school %q is also in the opposition", c)
+		}
+	}
+	if slices.Contains(s.OppositionSchools, SchoolLesserDivination) {
+		return fmt.Errorf("%q is in the opposition: it is open to every wizard", SchoolLesserDivination)
+	}
+	for _, r := range s.MulticlassRaces {
+		if !slices.Contains(s.Races, r) {
+			return fmt.Errorf("multi-class race %q is not among the races", r)
+		}
+	}
+	return nil
 }
 
 // Psionics are the params of psionics (ADR 0043 step 2): the power
@@ -373,6 +455,10 @@ func (f Feature) clone() Feature {
 		b := *f.SaveBonus
 		f.SaveBonus = &b
 	}
+	if f.SchoolSpecialization != nil {
+		s := f.SchoolSpecialization.clone()
+		f.SchoolSpecialization = &s
+	}
 	return f
 }
 
@@ -396,6 +482,11 @@ func checkFeatures(fs []Feature) ([]Feature, error) {
 		}
 		out = append(out, f.clone())
 	}
+	// A specialist wizard keeps a spellbook (ADR 0050 step 2.1).
+	if slices.ContainsFunc(out, func(f Feature) bool { return f.Kind == KindSchoolSpecialization }) &&
+		!slices.ContainsFunc(out, func(f Feature) bool { return f.Kind == KindSpellbook }) {
+		return nil, fmt.Errorf("feature %s: the class lists no %s", KindSchoolSpecialization, KindSpellbook)
+	}
 	return out, nil
 }
 
@@ -416,7 +507,8 @@ func checkSaveBonus(b SaveBonus) error {
 func checkParams(f Feature) error {
 	table, ability, spheres, rogue, book := f.Table != "", f.Ability != "", f.Spheres != nil, f.RogueSkills != nil, f.Spellbook != nil
 	if (f.Kind != KindPsionics && f.Psionics != nil) || (f.Kind != KindSaveBonus && f.SaveBonus != nil) ||
-		(f.Kind != KindWeaponSpecialization && f.Specialization != nil) {
+		(f.Kind != KindWeaponSpecialization && f.Specialization != nil) ||
+		(f.Kind != KindSchoolSpecialization && f.SchoolSpecialization != nil) {
 		return errors.New("a missing or unexpected parameter")
 	}
 	want := func(t, a, s, r, b bool) error {
@@ -436,6 +528,14 @@ func checkParams(f Feature) error {
 			return errors.New("a missing or unexpected parameter")
 		}
 		return checkSaveBonus(*f.SaveBonus)
+	case KindSchoolSpecialization:
+		if err := want(false, false, false, false, false); err != nil {
+			return err
+		}
+		if f.SchoolSpecialization == nil {
+			return errors.New("a missing or unexpected parameter")
+		}
+		return f.SchoolSpecialization.check()
 	case KindPsionics:
 		if err := want(false, false, false, false, false); err != nil {
 			return err

@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/rest/wire"
@@ -35,4 +37,15 @@ func TestSpellToDTO_ASpellWithoutValuesServesAnEmptyMarkedObject(t *testing.T) {
 	if string(raw) != "{}" {
 		t.Errorf("marked = %s, want {}", raw)
 	}
+}
+
+// ADR 0050 step 1.4: a spell is served with its school codes beside the raw school text; a spell of
+// no PHB school serves [] and never null.
+func TestSpellToDTO_ServesTheSchoolCodes(t *testing.T) {
+	dto := wire.SpellToDTO(spellsvc.Spell{ID: "screen", School: localized.Text{"en": "Divination/Illusion"}, Schools: []string{"greater_divination", "illusion"}}, 0)
+	require.Equal(t, []string{"greater_divination", "illusion"}, dto.Schools)
+	require.Equal(t, "Divination/Illusion", dto.School["en"], "the raw text stays")
+	raw, err := json.Marshal(wire.SpellToDTO(spellsvc.Spell{ID: "cantrip"}, 0))
+	require.NoError(t, err)
+	require.Contains(t, string(raw), `"schools":[]`)
 }

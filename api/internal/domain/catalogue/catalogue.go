@@ -73,15 +73,20 @@ const FormatMeditating = 20
 // format 20 plus the optional effect of a psionic power.
 const FormatPowerEffects = 21
 
-// FormatStaffSling is format 22 (ADR 0021 step 30, ADR 0030 steps 22.3 and
+// FormatStaffSling was format 22 (ADR 0021 step 30, ADR 0030 steps 22.3 and
 // 23): format 21 plus the staff_sling weapon type and the optional hurled
-// flag of a race's weapon_to_hit trait. It is the only format the API reads
-// (step 30.3): the formats 1 to 21 are refused like any unknown format, with
-// the advice to run `just catalogue`.
+// flag of a race's weapon_to_hit trait.
 const FormatStaffSling = 22
 
-// Formats lists the formats this API reads: format 22 only (step 30.3).
-var Formats = []int{FormatStaffSling}
+// FormatSchools is format 23 (ADR 0021 step 31, ADR 0050 steps 1 to 4):
+// format 22 plus each spell's school codes, the school_specialization
+// feature kind and the eight specialist wizards with their level limits.
+// It is the only format the API reads (step 31.3): the formats 1 to 22 are
+// refused like any unknown format, with the advice to run `just catalogue`.
+const FormatSchools = 23
+
+// Formats lists the formats this API reads: format 23 only (step 31.3).
+var Formats = []int{FormatSchools}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:
@@ -163,7 +168,11 @@ type Spell struct {
 	// Spheres are the sphere codes of a priest spell (format 6, ADR 0030
 	// step 23): what the rules read, never Sphere. Empty before format 6
 	// and for wizard spells.
-	Spheres      []string
+	Spheres []string
+	// Schools are the school codes of the spell (format 23, ADR 0050 step 1):
+	// what the specialist rules read, never School. The codes are the PHB's
+	// nine schools; the list is empty for a spell of no PHB school.
+	Schools      []string
 	CastingTime  localized.Text
 	Range        localized.Text
 	Duration     localized.Text

@@ -375,3 +375,42 @@ func TestSearch_Errors(t *testing.T) {
 	_, err = dal.Search(ctx, spellsvc.Filter{})
 	require.ErrorIs(t, err, errBoom)
 }
+
+// ADR 0050 step 1.4: the school codes a row stores (a JSON list) come back with the spell in Search
+// and in Details; a NULL (a row not imported from format 23 yet) reads as none; unreadable JSON is an
+// error naming the spell.
+func TestSpells_ReadTheStoredSchoolCodes(t *testing.T) {
+	ctx := context.Background()
+	row := func(schools sql.NullString) queries.Spell {
+		return queries.Spell{ID: 1, Key: str("screen"), Class: "wizard", Level: 8, Name: id(1), Stats: str(`{}`), Schools: schools}
+	}
+	stored := map[int64]localized.Text{1: localized.Of("Screen")}
+	for name, tc := range map[string]struct {
+		schools sql.NullString
+		want    []string
+	}{
+		"two codes": {str(`["greater_divination","illusion"]`), []string{"greater_divination", "illusion"}},
+		"none":      {str(`[]`), []string{}},
+		"NULL":      {sql.NullString{}, nil},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dal, q := mocked(t)
+			q.EXPECT().SearchSpells(ctx, queries.SearchSpellsParams{AnyLevel: 1, Levels: []int64{}}).Return([]queries.Spell{row(tc.schools)}, nil).Once()
+			q.EXPECT().SpellsByKey(ctx, []string{"screen"}).Return([]queries.Spell{row(tc.schools)}, nil).Once()
+			(&texts{stored: stored}).expect(q)
+			found, err := dal.Search(ctx, spellsvc.Filter{})
+			require.NoError(t, err)
+			require.Len(t, found, 1)
+			assert.Equal(t, tc.want, found[0].Schools)
+			sp, ok, err := dal.Describe(ctx, "screen")
+			require.NoError(t, err)
+			require.True(t, ok)
+			assert.Equal(t, tc.want, sp.Schools)
+		})
+	}
+	dal, q := mocked(t)
+	q.EXPECT().SearchSpells(ctx, queries.SearchSpellsParams{AnyLevel: 1, Levels: []int64{}}).Return([]queries.Spell{row(str(`{`))}, nil).Once()
+	(&texts{stored: stored}).expect(q)
+	_, err := dal.Search(ctx, spellsvc.Filter{})
+	require.ErrorContains(t, err, `spell "screen" has unreadable stored schools`)
+}

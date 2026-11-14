@@ -60,6 +60,7 @@ type catalogueRow struct {
 	ID           int64
 	Key, Source  sql.NullString
 	Class, Stats string
+	Schools      sql.NullString
 	Level        int64
 	// Texts are the row's texts by column; a NULL key has no entry.
 	Texts map[string]localized.Text
@@ -77,7 +78,7 @@ func catalogueRows(f *fakeStore) []catalogueRow {
 	var out []catalogueRow
 	for _, s := range f.sortedSpells() {
 		r := catalogueRow{
-			ID: s.ID, Key: s.Key, Source: s.Source, Class: s.Class, Stats: s.Stats.String, Level: s.Level,
+			ID: s.ID, Key: s.Key, Source: s.Source, Class: s.Class, Stats: s.Stats.String, Schools: s.Schools, Level: s.Level,
 			Texts: map[string]localized.Text{}, TextKeys: map[string]int64{},
 		}
 		for i, c := range textColumns {
@@ -194,6 +195,27 @@ func TestImportCatalogue_Step6_TypedStatsParsedAtImport(t *testing.T) {
 		CastingTime: "1", Range: "60 yds. + 10 yds./level", Duration: "Instantaneous",
 		AreaOfEffect: "1-5 targets", Components: "V, S", SavingThrow: "None",
 	}), stats)
+}
+
+// ADR 0050 step 1.4: the import writes each spell's school codes as a JSON list, [] for a spell of
+// no PHB school, and a new artifact version rewrites them.
+func TestImportCatalogue_Step31_SchoolsAreStoredWithTheSpell(t *testing.T) {
+	f := newFakeStore()
+	cat := fixtureCatalogue(t)
+	require.NoError(t, importOn(f, cat, nil))
+	rows := byKey(catalogueRows(f))
+	assert.JSONEq(t, `["abjuration","invocation_evocation"]`, rows["alarm"].Schools.String)
+	assert.JSONEq(t, `["lesser_divination"]`, rows["detect_magic_priest"].Schools.String)
+	for _, r := range rows {
+		assert.True(t, r.Schools.Valid, "%s: schools written", r.Key.String)
+	}
+	// A spell of no PHB school is "[]", never NULL or "null".
+	next := withVersion(cat, "1970-01-02", func(in []catalogue.Spell) []catalogue.Spell {
+		in[0].Schools = nil
+		return in
+	})
+	require.NoError(t, importOn(f, next, nil))
+	assert.Equal(t, "[]", byKey(catalogueRows(f))[next.Spells[0].ID].Schools.String)
 }
 
 // ADR 0021 step 26.3: the importer is the only writer of typed stats. Every spell of a fresh

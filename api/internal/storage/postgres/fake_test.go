@@ -121,7 +121,9 @@ type spellRow struct {
 	Level  int64
 	Source sql.NullString
 	Stats  sql.NullString
-	Keys   [10]sql.NullInt64
+	// Schools is the spells.schools column (ADR 0050 step 1.4).
+	Schools sql.NullString
+	Keys    [10]sql.NullInt64
 }
 
 // snapshotRow is an action_snapshots row: Before and After are the columns written before the
@@ -855,7 +857,7 @@ func (f *fakeStore) UpsertSpell(_ context.Context, arg storeq.UpsertSpellParams)
 		arg.AreaOfEffect, arg.Components, arg.SavingThrow,
 	}
 	if s := f.spell(arg.Key); s != nil {
-		s.Class, s.Level, s.Source, s.Stats, s.Keys = arg.Class, arg.Level, arg.Source, arg.Stats, keys
+		s.Class, s.Level, s.Source, s.Stats, s.Schools, s.Keys = arg.Class, arg.Level, arg.Source, arg.Stats, arg.Schools, keys
 		return nil
 	}
 	id := int64(1)
@@ -863,7 +865,7 @@ func (f *fakeStore) UpsertSpell(_ context.Context, arg storeq.UpsertSpellParams)
 		id = max(id, s.ID+1)
 	}
 	f.t.Spells = append(f.t.Spells, spellRow{
-		ID: id, Key: arg.Key, Class: arg.Class, Level: arg.Level, Source: arg.Source, Stats: arg.Stats, Keys: keys,
+		ID: id, Key: arg.Key, Class: arg.Class, Level: arg.Level, Source: arg.Source, Stats: arg.Stats, Schools: arg.Schools, Keys: keys,
 	})
 	return nil
 }

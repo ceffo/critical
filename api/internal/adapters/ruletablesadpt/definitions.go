@@ -115,6 +115,11 @@ type featureParamsDTO struct {
 	Recovery      string           `json:"recovery"`
 	Against       string           `json:"against"`
 	Bonus         int              `json:"bonus"`
+	// The school_specialization params (format 23, ADR 0050 step 2).
+	Schools           []string `json:"schools"`
+	OppositionSchools []string `json:"opposition_schools"`
+	Races             []string `json:"races"`
+	MulticlassRaces   []string `json:"multiclass_races"`
 	// The weapon_specialization params (format 19, ADR 0040 step 13).
 	DefaultSlots  int                `json:"default_slots"`
 	MeleeColumn   string             `json:"melee_column"`
@@ -199,6 +204,10 @@ func (f featureDTO) feature() (classes.Feature, error) {
 		}
 	case classes.KindSaveBonus:
 		out.SaveBonus = &classes.SaveBonus{Against: p.Against, Bonus: p.Bonus}
+	case classes.KindSchoolSpecialization:
+		out.SchoolSpecialization = &classes.SchoolSpecialization{
+			Schools: p.Schools, OppositionSchools: p.OppositionSchools, Races: p.Races, MulticlassRaces: p.MulticlassRaces,
+		}
 	}
 	return out, nil
 }

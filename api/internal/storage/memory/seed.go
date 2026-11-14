@@ -174,7 +174,7 @@ func (s *Store) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, _ 
 			}
 			spells[sp.ID] = spellsvc.Spell{
 				ID: sp.ID, Class: sp.Class, Level: sp.Level, Source: sp.Source,
-				Name: stored(sp.Name), School: stored(sp.School), Sphere: stored(sp.Sphere),
+				Name: stored(sp.Name), School: stored(sp.School), Sphere: stored(sp.Sphere), Schools: append([]string(nil), sp.Schools...),
 				CastingTime: stored(sp.CastingTime), Range: stored(sp.Range), Duration: stored(sp.Duration),
 				AreaOfEffect: stored(sp.AreaOfEffect), Components: stored(sp.Components),
 				SavingThrow: stored(sp.SavingThrow), Description: stored(sp.Description),

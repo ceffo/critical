@@ -12,7 +12,15 @@
     {"class": "cleric", "groups": ["priest", "general"]},
     {"class": "thief", "groups": ["rogue", "general"]},
     {"class": "bard", "groups": ["rogue", "warrior", "wizard", "general"]},
-    {"class": "psionicist", "groups": ["psionicist", "general"]}
+    {"class": "psionicist", "groups": ["psionicist", "general"]},
+    {"class": "abjurer", "groups": ["wizard", "general"]},
+    {"class": "conjurer", "groups": ["wizard", "general"]},
+    {"class": "diviner", "groups": ["wizard", "general"]},
+    {"class": "enchanter", "groups": ["wizard", "general"]},
+    {"class": "illusionist", "groups": ["wizard", "general"]},
+    {"class": "invoker", "groups": ["wizard", "general"]},
+    {"class": "necromancer", "groups": ["wizard", "general"]},
+    {"class": "transmuter", "groups": ["wizard", "general"]}
   ],
   "nonweapon": [
     {"id": "agriculture", "ability": "int", "modifier": 0, "slots": 1, "groups": ["general"]},

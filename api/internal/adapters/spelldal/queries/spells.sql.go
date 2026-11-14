@@ -24,7 +24,7 @@ func (q *Queries) GetSpellSlots(ctx context.Context, characterID int64) (string,
 
 const searchSpells = `-- name: SearchSpells :many
 
-SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats FROM spells
+SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats, schools FROM spells
 WHERE key IS NOT NULL
   AND ($1::text = '' OR lower(class) = $1::text)
   AND ($2::bigint = 1 OR level = ANY($3::bigint[]))
@@ -68,6 +68,7 @@ func (q *Queries) SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]S
 			&i.Description,
 			&i.Source,
 			&i.Stats,
+			&i.Schools,
 		); err != nil {
 			return nil, err
 		}
@@ -83,7 +84,7 @@ func (q *Queries) SearchSpells(ctx context.Context, arg SearchSpellsParams) ([]S
 }
 
 const spellsByKey = `-- name: SpellsByKey :many
-SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats FROM spells WHERE key = ANY($1::text[])
+SELECT id, key, name, class, level, school, sphere, casting_time, range, duration, area_of_effect, components, saving_throw, description, source, stats, schools FROM spells WHERE key = ANY($1::text[])
 `
 
 func (q *Queries) SpellsByKey(ctx context.Context, keys []string) ([]Spell, error) {
@@ -112,6 +113,7 @@ func (q *Queries) SpellsByKey(ctx context.Context, keys []string) ([]Spell, erro
 			&i.Description,
 			&i.Source,
 			&i.Stats,
+			&i.Schools,
 		); err != nil {
 			return nil, err
 		}

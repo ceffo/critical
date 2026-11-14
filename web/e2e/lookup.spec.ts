@@ -44,6 +44,16 @@ function row(
   sphere = "",
   extra: Partial<ExtraSpell> = {},
 ) {
+  const codes: Record<string, string> = {
+    Abjuration: "abjuration",
+    Alteration: "alteration",
+    Dimension: "alteration",
+    Divination: cls === "Priest" ? "lesser_divination" : "greater_divination",
+    Evocation: "invocation_evocation",
+    "Illusion/Phantasm": "illusion",
+    Necromancy: "necromancy",
+  };
+  const schools = school.split(", ").map((n) => codes[n]);
   const id = name.toLowerCase().replace(/[^a-z0-9]+/g, "_");
   return catalogueSpell({
     id,
@@ -51,6 +61,7 @@ function row(
     class: cls,
     level,
     school,
+    schools,
     sphere,
     ...extra,
   });

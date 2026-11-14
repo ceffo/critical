@@ -63,7 +63,7 @@ func TestProficiencies_NoCheckRowAndEmptyCatalogue(t *testing.T) {
 	}, okCrossovers(t), nil, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	assert.Equal(t, "blind_fighting", p.All()[0].ID)
-	assert.Len(t, p.Crossovers(), 6)
+	assert.Len(t, p.Crossovers(), 14, "the fixture's six classes and the eight specialists")
 
 	var none *ruletablesvc.Proficiencies
 	assert.Empty(t, none.All())

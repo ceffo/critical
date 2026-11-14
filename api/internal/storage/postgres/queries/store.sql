@@ -285,14 +285,14 @@ FROM spells WHERE key IS NOT NULL;
 
 -- name: UpsertSpell :exec
 INSERT INTO spells (key, class, level, source, stats, name, description, school, sphere, casting_time, range,
-                    duration, area_of_effect, components, saving_throw)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                    duration, area_of_effect, components, saving_throw, schools)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
 ON CONFLICT (key) DO UPDATE SET
     class = excluded.class, level = excluded.level, source = excluded.source, stats = excluded.stats,
     name = excluded.name, description = excluded.description, school = excluded.school,
     sphere = excluded.sphere, casting_time = excluded.casting_time, range = excluded.range,
     duration = excluded.duration, area_of_effect = excluded.area_of_effect,
-    components = excluded.components, saving_throw = excluded.saving_throw;
+    components = excluded.components, saving_throw = excluded.saving_throw, schools = excluded.schools;
 
 -- name: DeleteSpell :exec
 DELETE FROM spells WHERE key = $1;

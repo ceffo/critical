@@ -96,7 +96,7 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 			{Kind: classes.KindSaveBonus, FromLevel: 1, SaveBonus: &classes.SaveBonus{Against: classes.SaveAgainstMindAffecting, Bonus: 2}},
 		}},
 	}
-	assert.Len(t, defs.Classes(), len(want), "the fixture's five book classes and the psionicist")
+	assert.Len(t, defs.Classes(), len(want)+len(specialists), "the fixture's five book classes, the psionicist and the eight specialists")
 	for id, w := range want {
 		t.Run(id, func(t *testing.T) {
 			c := get(id)

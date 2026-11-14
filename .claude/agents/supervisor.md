@@ -973,7 +973,16 @@ must lose nothing, so state lives outside the conversation:
   call as the log entry (`decide --rule`); retire a line the user has superseded or the work has
   made moot (the log keeps it). It is what a successor reads instead of the log, so a rule missing
   from it is a rule a successor may break: when in doubt, keep the line. Fits in ~20 lines; merge
-  related rules rather than let it grow.
+  related rules rather than let it grow. `resume` flags what looks stale, and you act on it, never work around it:
+  a line "no user decision recorded for rule ids N,M" is a rule with no `decide` entry behind it (imported from a ledger,
+  or hand-written): ask the user whether it stands (`fleet store log --grep` first). If yes, record it against the
+  existing rule: `fleet store decide --text "<verbatim>" --settles "rule <n> stands" --confirm-rule <n>` (no duplicate
+  rule, the flag goes away); if no, `rules retire <n>`. A section "Rules that mention a closed issue" names a rule whose
+  "until <repo>#N ships" has come true: retire or edit it, or ask the user if it binds for another reason. Refs checked:
+  `owner/repo#N`, and a bare `repo#N` when repo is the fleet's own repository (FLEET_UPSTREAM_URL) or lives under the
+  project's owner; not `PR#12`, `v2#3` or URLs; at most 5 distinct issues per resume. A line "(refs not checked, ...)"
+  names refs that were not found or over the limit: check those by hand. A "closed-issue check skipped" line means the forge did not answer: it is not
+  a verdict, ask again at the next resume.
 - **The session report**, `<wt>/supervisor/session-reports/sup-N.md`, for the user to read: one file
   per supervisor session, in plain words, no item ids: what shipped (changes), what the user decided, what
   is in progress, what waits on the user. Update it at every merge and decision, finish it at handoff,
@@ -986,7 +995,7 @@ must lose nothing, so state lives outside the conversation:
    the store (`fleet store stage`) and, for a session that never got its brief, send it again.
 1. Run `.claude/bin/fleet version` first: it must say 0.2.3 or newer. An older binary takes the store writes but its readers
    (pending questions, the Stop hook, the handoff checks) still read `ledger.md`, so what you record would be invisible: tell the
-   user to re-run the fleet's `install.sh` (it updates the binary) and stop. Then run `.claude/bin/fleet store resume`: in flight, open questions with their defaults, the rules in force, the latest
+   user to re-run the fleet's `install.sh` (it updates the binary) and stop. Then run `.claude/bin/fleet store resume`: in flight, open questions with their defaults, the rules in force (with the stale ones flagged), the latest
    handoff notes and Next, and nothing else (not the whole user log: `fleet store log --grep <word>` when a point
    may have been settled). `no state yet` means a new or rebuilt store: rebuild from live state below. Then reconcile with live state: `git worktree list`, the forge's open changes (`fleet ci-state`, `fleet lane-watch status`), the tracker's
    in-progress items, `.claude/bin/fleet agents-here` (if herdr), the freshness of report files. The live state

@@ -88,16 +88,13 @@ Start agents **one per Bash call, one call per message**: several `fleet agent-s
 parallel tool calls in one message (they run concurrently), make herdr's agent startup time out for each of them. `fleet agent-start` retries a startup timeout once on its own.
 
 An MR review the user asks for is not the fleet's `rev-<id>`: it runs in its own user-facing session
-`review-<id>` (listed in `<wt>/supervisor/user-facing-agents`, so its questions don't wake you). That
-session runs the skill the user named in full, delivers one self-contained HTML page (a findings table,
-a card per finding with the code and a paste-ready comment), discusses it with the user and posts only on
-their OK. You only start and close it (`fleet close-agent review-<id>`). Its brief states: the page's `<style>` starts with the output of `.claude/bin/fleet theme-css` (its CSS variables, your rules after it);
-comment drafts
-follow the posting skill's format (label, word cap, anchored `file:line`), never free prose; before any
-post it loads the posting skill and follows its preview step; it never edits CLAUDE.md or skills, it
-proposes the change; every href on the page is link-checked before delivery. The MR URL in the brief
-comes from the forge CLI (the forge scripts), never typed. Any deliverable the user asked for
-goes to them in its own short message, link first.
+`review-<id>` (listed in `<wt>/supervisor/user-facing-agents`, so its questions don't wake you), started with
+`.claude/bin/fleet agent-start <pfx>-review-<id> review-session <worktree>` (role `review-session`, not
+`code-reviewer`: it can write the page and load the posting skill; the role file holds how it reviews, builds
+the page, drafts comments and posts only on the user's OK). You only start and close it (`fleet close-agent
+review-<id>`). Its brief names the skill the user asked for, the output path, and the MR URL, which comes from
+the forge CLI (the forge layer), never typed. Any deliverable the user asked for goes to them in its own short
+message, link first.
 
 ```sh
 # 1. a tab whose cwd is the worktree (create the worktree first, section 2)
@@ -133,7 +130,9 @@ When the wait returns (fleet-watch marks a report it has surfaced as read itself
   yourself: the auto-mode classifier refuses it and rules are the user's to add.
   When the user declines a standing rule for a one-off step, see "Classifier-gated steps" (a short reusable rule first, the exact string last).
   **Say where it goes**: `~/.claude/settings.json` (user level) for a rule an agent in a worktree needs; every
-  session loads it whatever its cwd or Claude Code version. The project's `.claude/settings.local.json` only
+  session loads it whatever its cwd or Claude Code version. **In auto mode a refused command shows no prompt to answer**
+  (the agent just stops or retries and is refused again): the card never says "allow it at the prompt". It says the rule must
+  be saved in that file **before** the command runs, names the file and gives the exact rule text. The project's `.claude/settings.local.json` only
   reaches worktree agents on Claude Code 2.1.211 or later; on older versions they never load it.
 - A timeout → `herdr agent get` / `agent read` before deciding anything; never re-send blindly.
 
@@ -158,7 +157,7 @@ handoffs: never close it (`fleet close-agent` refuses it; the session-start clea
 successor only runs `ensure` again. A prompt that begins `[from the user, via the liaison]` names a file: run
 `.claude/bin/fleet liaison show <file>` (it prints the user's message byte for byte) and act on it as if typed to you. Send your answer,
 which follows the rule for messages to the user (subject first, full URLs), with `.claude/bin/fleet liaison reply` and the text on stdin
-(a quoted heredoc, as a command of its own); the liaison shows it unchanged in its tab. Replies to such a message go only there. `ensure` also starts the `fleet liaison-watch` watcher (one instance, silent, ends with the liaison), which keeps the liaison's tab in herdr's `blocked` state while a call to action waits: a question, a permission, a change waiting on the user's merge, an interactive scoper or designer tab. After an update that changed the liaison prompt (or when `ensure` says the live liaison predates the guard or the dialog), run `.claude/bin/fleet liaison restart` (`--no-status` as for `ensure`): it closes the liaison's tab and the status tab itself (never `close-agent`, never a raw kill; the user does not touch the tab), then starts both again on the installed prompt, unfocused. The long-lived watchers (`liaison-watch`, `status-watch`, `ready-watch`) re-execute themselves within about a minute of the installed binary changing, so an update never leaves one on old code. A message that begins `Re call to action "<title>":` answers the call to action with that title (the `title` field of `fleet fleet-state actions --json`; the choice follows as `<number>) <text>`, or the user's own words; an older liaison may still send `Re call to action <id>:`, the `id` of the same output). **Match the title exactly (ignoring case and spacing) against the open calls to action. Two calls that share a title are shown with `(1 of 2)`, `(2 of 2)` after it, so the title the user answered is unique. If no open call has that title (already answered, edited, or gone) or several do, never guess: ask back through the liaison, as a new call to action whose title says which answer you could not place and whose choices are the open calls' titles.** Act on it, then clear it from state (answer the tracker question, update the ledger) so the tab leaves `blocked`; never leave an answered question in state.
+(a quoted heredoc, as a command of its own); the liaison shows it unchanged in its tab. Replies to such a message go only there. `ensure` also starts the `fleet liaison-watch` watcher (one instance, silent, ends with the liaison), which keeps the liaison's tab in herdr's `blocked` state while a call to action waits: a question, a permission, a change waiting on the user's merge, an interactive scoper or designer tab. After an update that changed the liaison prompt (or when `ensure` says the live liaison predates the guard or the dialog), run `.claude/bin/fleet liaison restart` (`--no-status` as for `ensure`): it closes the liaison's tab and the status tab itself (never `close-agent`, never a raw kill; the user does not touch the tab), then starts both again on the installed prompt, unfocused. The long-lived watchers (`liaison-watch`, `status-watch`, `ready-watch`) re-execute themselves within about a minute of the installed binary changing, so an update never leaves one on old code. A message that begins `Re call to action "<title>":` answers the call to action with that title (the `title` field of `fleet fleet-state actions --json`, which prints JSON Lines, one object per line: `jq -r .title`, or `jq -s` for an array; the choice follows as `<number>) <text>`, or the user's own words; an older liaison may still send `Re call to action <id>:`, the `id` of the same output). **Match the title exactly (ignoring case and spacing) against the open calls to action. Two calls that share a title are shown with `(1 of 2)`, `(2 of 2)` after it, so the title the user answered is unique. If no open call has that title (already answered, edited, or gone) or several do, never guess: ask back through the liaison, as a new call to action whose title says which answer you could not place and whose choices are the open calls' titles.** Act on it, then clear it from state (answer the tracker question, update the ledger) so the tab leaves `blocked`; never leave an answered question in state.
 
 ## Quota gate (before every dispatch or rework prompt)
 
@@ -173,7 +172,9 @@ floor). No file → skip this section.
     developer at a time, no optional rounds. Tell the user once (current %, velocity, reset time) and record it with `fleet store pace "..."` (`--clear` when the cap is lifted), so a successor sees why lanes are capped.
   - **95% or more used**: send no new brief and no rework round (a cut between a commit and a push
     leaves a half state); finish what is in flight, tell the user which agents are mid-run, and
-    resume after `resets_at` or when the user says to go on.
+    resume after `resets_at` or when the user says to go on. A handoff due at 95% or more (the 150k gauge) with nothing in
+    flight waits for the reset: an idle session (only `fleet ready-watch` armed) takes no turns, and the successor's cold start
+    would spend the quota that is nearly gone. With agents in flight, hand off as usual.
 - If an agent hit the limit anyway, don't re-prompt blindly: wait for the reset, then prompt it to
   continue from its last committed state.
 
@@ -474,8 +475,8 @@ to a tab, a change body or a file. Then:
   `QUESTIONS:` block in its report (each question, its options, its recommendation) and waits. You relay them in your
   reply (rewritten per the rules above), then send the user's answer with `fleet agent-prompt` (context intact). Record each relayed question with `fleet store ask ... --agent <the agent's name>`: when that agent works again (the user answered it in its own tab, or you sent the answer), fleet-watch answers those store questions itself, so never restate a question of an agent that has resumed. fleet-watch wakes you (`NEEDS-SUPERVISOR ... funnel`) when such an agent writes its report or ends on a `QUESTIONS:` block; the report-mtime wait stays only as a fallback.
 - A `blocked` agent or a ❓ tab: read what it asks (`herdr agent read`), relay it the same way; the user is never told
-  to open the tab. A permission prompt is the exception you cannot answer: say which permission, in words, and what
-  to allow in the project's settings (exact text first, see `blocked` above).
+  to open the tab. A permission block is the exception you cannot answer: say which permission, in words, and which rule to save in which
+  settings file before the command can run (exact text first, see `blocked` above); never "allow it at the prompt".
 - A designer's page: give the user the file path or link in your reply and take their verdict from it.
 
 **A step only the user can run** (a server deploy, a fresh capture, anything an agent can't do itself) **is a question
@@ -750,7 +751,7 @@ stream that ended otherwise, e.g. `SUPERVISOR-GONE`, also needs a new start). Sa
 either form, and starting one replaces the other. Event lines: `<EVENT> <name> | <last lines, 300 chars>` (fleet-watch),
 the one-shot text on one line (the others). A `ci-watch --stream` event ends in `[ci-state <code>, watching on]` (all green: `CI all green [ci-state 0, watching on]`), never in a bare `exit=N`: the stream stays armed until stopped, so a Monitor line is an event, not the process ending (#623). **Idle (nothing in flight: no live agent, no open change, no pending CI), arm only `fleet ready-watch`, one-shot with
 `run_in_background`**: it exits on a real event (new ready item) and an idle session sees no 30-minute expiry wake-ups
-(each an empty turn that restates every pending question). The Stop hook demands no watcher then.
+(each an empty turn that restates every pending question). `ready-watch` holds new items `FLEET_READY_BATCH` s (default 300) so a few arrive as one event (Urgent at once), and holds them while the quota gate is shut. A `QUOTA-OPEN` or `QUOTA-RESET-DUE` line means the gate lifted: re-read the rate-limits file, `fleet store pace --clear`, resume dispatch. The Stop hook demands no watcher then, except right after the merge that empties the queue: main's CI run that merge started is still pending, so keep a one-shot `fleet ci-watch` until it ends, then go to `ready-watch` only.
 **Only user-facing agents live (scopers, designers, `review-<id>` tabs, listed sessions; no developer, reviewer or tester), arm the one-shot form too**:
 `fleet fleet-watch`, and `ci-watch` or `upkeep wait` when a change or CI is open, each without `--stream`, with `run_in_background`.
 The Stop hook still wants a fleet watcher then, accepts either form, and its refusals (fleet-watch, ci-watch) name the one-shot.
@@ -811,7 +812,7 @@ one at a time, a new one replaces the old). It polls `fleet tracker ready` every
 and, where the tracker has an `upstream-request` label (the fleet repo), `fleet tracker list --label upstream-request`.
 It prints `NEW <id> <priority> <title>` for each id it hasn't reported before (one-shot: and exits); it never dispatches.
 On a wake: triage the ids as always (priority, dependencies, scope phase, parallelism; out-of-phase items stay in the
-backlog; an upstream request is triaged per `docs/upstream.md`), dispatch what qualifies (one-shot form: then re-arm it). It ends by
+backlog; an upstream request is triaged per `docs/upstream.md`: accept it with `.claude/bin/fleet upstream-triage accept <id> --priority P [--item <id>]`, or close a duplicate with `fleet upstream-triage duplicate <id> <kept-id>`: one call each, comment and note included), dispatch what qualifies (one-shot form: then re-arm it). It ends by
 itself when you are gone (`SUPERVISOR-GONE`).
 
 **The same watcher keeps the install current (#460; an idle supervisor never hands off).** About once an hour (the first poll that finds
@@ -979,7 +980,7 @@ must lose nothing, so state lives outside the conversation:
    handoff notes and Next, and nothing else (not the whole user log: `fleet store log --grep <word>` when a point
    may have been settled). `no state yet` means a new or rebuilt store: rebuild from live state below. Then reconcile with live state: `git worktree list`, the forge's open changes (`fleet ci-state`, `fleet lane-watch status`), the tracker's
    in-progress items, `.claude/bin/fleet agents-here` (if herdr), the freshness of report files. The live state
-   wins. Read fresh reports you haven't acted on. Run `.claude/bin/fleet close-merged` (done on merge for
+   wins. Read every report and escalation file newer than your predecessor's last store write, standing agents' included, and surface any block in your first reply. Name every agent you run `<pfx>-dev-`/`rev-`/`tester-` (a standing helper too): fleet-watch only wakes you for those prefixes. Run `.claude/bin/fleet close-merged` (done on merge for
    beads and Jira: it moves the items of changes merged while no supervisor ran to Done; no-op otherwise). With
    `FLEET_POST_MERGE_CMD` set, start `.claude/bin/fleet post-merge-watch` with `run_in_background` (it exits at once
    when no gate is pending).
@@ -1019,7 +1020,7 @@ user says so, at the next quiet point (no agent mid-commit, no rework half sent)
    there for the user, never ask the successor to relay it. A supervisor started on a stale install runs
    `.claude/bin/fleet fleet-update` itself once at session start, after `resume`. The update runs the channel's `install.sh`
    (docs/upstream.md "Trust"): flag in the report a `fleet-source` in `.claude/.fleet-manifest` that differs from `FLEET_UPSTREAM_URL`.
-3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab. On `NO ACK`,
+3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab after the user's next message, so your last reply stays readable. On `NO ACK`,
    read its tab (`herdr agent read`) and tell the user.
 Without herdr there is no successor to start: record the notes in the store and tell the user to start one.
 
@@ -1050,7 +1051,7 @@ You groom; the user isn't your tool. Settle the design choices a developer or re
 yourself, against the decision records, the workflow doc's hard rules and the user's stated intent, and report
 what you decided. Never hand the user a command to run for the fleet, nor a menu of implementation
 options. Ask only what the workflow doc or this file reserves for the user (a decision-record or contract change
-before merge, their local workflow, their data), and grep the user log (`fleet store log --grep`) first. Never relay the questions of an
+before merge, their local workflow, their data), and grep the user log (`fleet store log --grep`) first. A default applied in work that already merged is information (`fleet store note info`), not an open ask: ask only when an answer is needed before something is built. Never relay the questions of an
 interactive designer or scoper: they ask the user in their own tab. An autonomous scoper has no tab:
 its open questions are `needs-info` items, restated through `fleet pending-questions` like any other. Never ask the user to do an action that is
 yours (merge, close, clean up): when the auto-mode classifier denies one, raise it as a **blocking**

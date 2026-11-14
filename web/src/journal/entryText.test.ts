@@ -643,6 +643,55 @@ describe("inventory entries", () => {
     expect(entryText(entry("item_use", old), t)).toBe("Used Gem (0 left)");
   });
 
+  // ADR 0049 step 12: a buff effect's row shows in the entry's text, its name and rounds (or until dismissed).
+  it("renders a potion's buff in both languages, timed and untimed", async () => {
+    const potion = {
+      itemId: "potion",
+      abilityId: "use",
+      name: "Potion of heroism",
+      type: "potion",
+      limit: "with_item",
+      removed: false,
+      remaining: 2,
+      maxCount: 0,
+      dice: "",
+      rolls: [],
+      total: 0,
+      effects: [
+        {
+          kind: "buff",
+          rolls: [],
+          total: 0,
+          buff: {
+            id: "b1",
+            name: "Heroism",
+            rounds: 60,
+            effects: { to_hit: 1 },
+          },
+        },
+      ],
+    };
+    const en = await makeT("en");
+    expect(entryText(entry("item_use", potion), en)).toBe(
+      "Used Potion of heroism (2 left), effect Heroism (60 rd)",
+    );
+    const untimed = {
+      ...potion,
+      effects: [
+        {
+          ...potion.effects[0],
+          buff: { ...potion.effects[0].buff, rounds: 0 },
+        },
+      ],
+    };
+    expect(entryText(entry("item_use", untimed), en)).toBe(
+      "Used Potion of heroism (2 left), effect Heroism (until dismissed)",
+    );
+    expect(entryText(entry("item_use", potion), await makeT("fr"))).toContain(
+      "effet Heroism (60",
+    );
+  });
+
   // ADR 0049 step 12: a heal effect's HP shows in the entry's text, what the ledger took (capped).
   it("renders a potion's heal in both languages, capped at max HP", async () => {
     const potion = {

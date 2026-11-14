@@ -227,9 +227,11 @@ export interface ItemAbilityLimit {
 /**
  * An effect of an ability (ADR 0049 step 10). `dice`: dice rolled and shown, applied to nothing.
  * `heal`: hit points regained through the HP ledger, by `dice` or `full` (the gap to max HP), never both.
+ * `buff`: a timed buff put on the buff list when used: `name` (absent: the ability's, else the item's),
+ * `rounds` (0: until dismissed) and `buff`, its modifiers in the buffs' effect keys.
  */
 export interface ItemAbilityEffect {
-  kind: "dice" | "heal";
+  kind: "dice" | "heal" | "buff";
   /** NdM or NdM+K; absent for a full heal. */
   dice?: string;
   /** A heal that fills the gap to max HP (no dice). */
@@ -237,6 +239,12 @@ export interface ItemAbilityEffect {
   /** A save category (the item's `effectSave` values), absent for none; a dice effect only. */
   save?: string;
   label?: string;
+  /** A buff effect's own name; absent: the ability's, else the item's. */
+  name?: string;
+  /** A buff effect's rounds; 0 or absent: until dismissed. */
+  rounds?: number;
+  /** A buff effect's modifiers. */
+  buff?: BuffEffects;
 }
 
 /**
@@ -268,12 +276,22 @@ export interface EffectApplied {
   hpAfter: number;
 }
 
+/** The row a buff effect put on the buff list (itemsvc AppliedBuff): rounds 0 is until dismissed. */
+export interface AppliedBuff {
+  id: string;
+  name: string;
+  rounds: number;
+  effects: BuffEffects;
+}
+
 /**
  * One effect of an ability's use (itemsvc EffectResult): a dice effect's rolls, applied to nothing;
- * a heal's rolls (none for a full heal) with `applied`, what the HP ledger took.
+ * a heal's rolls (none for a full heal) with `applied`, what the HP ledger took; a buff's `buff`,
+ * the row put on the list.
  */
 export interface AbilityEffectResult {
-  kind: "dice" | "heal";
+  kind: "dice" | "heal" | "buff";
+  buff?: AppliedBuff;
   /** Absent for a full heal. */
   dice?: string;
   full?: boolean;

@@ -419,6 +419,13 @@ db-restore-drill dump="":
 equipment-rehearsal ref="":
     scripts/equipment-upgrade-rehearsal.sh {{ref}}
 
+# Local only: the buff item ability (ADR 0049 slice 8) on a throwaway compose PostgreSQL (own project and port,
+# never `just dev`'s): use, undo and redo of a heal + buff potion, a failing effect rolled back, a same-name
+# buff renewed, checked through the API and SQL. Removes the compose project. Needs docker, psql, jq, go.
+# Rehearse the buff item ability
+buff-ability-rehearsal:
+    scripts/buff-ability-rehearsal.sh
+
 # Local only: the skill armour carry-over (020, ADR 0033 step 14) on a database written by the release before
 # (old ref, default the merge base with origin/main), in a throwaway compose PostgreSQL (own project and port,
 # never `just dev`'s): every thief's and bard's skill percentages compared, restarts, the old entries popped.

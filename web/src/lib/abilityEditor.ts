@@ -2,8 +2,9 @@
 // form holds for an item's abilities and how it turns them into the `abilities` list of the request
 // body and back. The server validates every ability (limit kind and numbers, dice, the bounds) and
 // names the field; this only parses what was typed. The editor builds the limit, the `dice` and
-// `heal` effects and the note (Q4); `buff` and `spell` come with their slices.
+// `heal` and `buff` effects and the note (Q4); `spell` comes with its slice.
 import { editLang } from "@/i18n/localized";
+import type { BuffEffectKey, BuffEffects } from "@/types/buffs";
 import type { LocalizedText } from "@/types/localized";
 import type {
   AbilityLimitKind,
@@ -28,9 +29,51 @@ export const SAVE_CATEGORIES = [
   "spell",
 ] as const;
 
-/** One effect row of an ability as the form holds it: dice rolled, or a heal (dice or full). */
+/**
+ * The modifiers a buff effect may carry from the editor: the powers' list plus the Strength effects
+ * (ADR 0049 step 9: a potion of Strength is a buff; ADR 0004 step 11). The server judges the values.
+ */
+export const BUFF_EFFECT_KEYS = [
+  "ac",
+  "save_bonus",
+  "to_hit",
+  "damage",
+  "weapon_buff",
+  "multiplier",
+  "spells_buff",
+  "base_ac",
+  "initiative",
+  "str_bonus",
+  "str_max",
+] as const satisfies readonly BuffEffectKey[];
+export type BuffModKey = (typeof BUFF_EFFECT_KEYS)[number];
+
+/** One modifier row of a buff effect: its key and the value as typed. */
+export interface ModDraft {
+  key: BuffModKey;
+  value: string;
+}
+
+/** The buff keys the editor has no field for (conditions, the STR gate): kept as stored. */
+function keptConditions(b: BuffEffects | undefined): BuffEffects {
+  const kept: BuffEffects = {};
+  if (b?.min_str !== undefined) kept.min_str = b.min_str;
+  if (b?.weapon_kind) kept.weapon_kind = b.weapon_kind;
+  if (b?.without_magic_armour) kept.without_magic_armour = true;
+  return kept;
+}
+
+/** One effect row of an ability as the form holds it: dice rolled, a heal (dice or full) or a buff. */
 export interface DiceDraft {
-  kind: "dice" | "heal";
+  kind: "dice" | "heal" | "buff";
+  /** A buff's name; empty: the ability's, else the item's. */
+  name: string;
+  /** A buff's rounds as typed; 0: until dismissed. */
+  rounds: string;
+  /** A buff's modifiers. */
+  mods: ModDraft[];
+  /** A buff's stored conditions, which the form has no field for. */
+  kept: BuffEffects;
   /** A heal that fills the gap to max HP: no dice (heal rows only). */
   full: boolean;
   dice: string;
@@ -70,6 +113,14 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
     cost: cost !== undefined && cost > 0 ? String(cost) : "1",
     effects: a.effects.map((e) => ({
       kind: e.kind,
+      name: e.name ?? "",
+      rounds: String(e.rounds ?? 0),
+      mods: BUFF_EFFECT_KEYS.flatMap((key) =>
+        e.buff?.[key] !== undefined
+          ? [{ key, value: String(e.buff[key]) }]
+          : [],
+      ),
+      kept: keptConditions(e.buff),
       full: e.full === true,
       dice: e.dice ?? "",
       save: e.save ?? "",
@@ -78,9 +129,25 @@ export function abilityDraft(a: ItemAbility, lang: string): AbilityDraft {
   };
 }
 
-/** A new effect row: dice rolled, or a heal. */
+/** A new effect row: dice rolled, a heal, or a buff (10 rounds of saves +1, to edit). */
 export function newEffectDraft(kind: DiceDraft["kind"]): DiceDraft {
-  return { kind, full: false, dice: "", save: "", label: "" };
+  return {
+    kind,
+    name: "",
+    rounds: kind === "buff" ? "10" : "0",
+    mods: kind === "buff" ? [{ key: "save_bonus", value: "1" }] : [],
+    kept: {},
+    full: false,
+    dice: "",
+    save: "",
+    label: "",
+  };
+}
+
+/** A number as typed; NaN for anything else (including empty). */
+function parseNumber(s: string): number {
+  const text = s.trim().replace(",", ".");
+  return /^[+-]?\d+(\.\d+)?$/.test(text) ? Number(text) : Number.NaN;
 }
 
 /** The form's drafts for a piece's abilities (none: not converted yet, shown as empty). */
@@ -114,6 +181,17 @@ function parseInteger(s: string): number {
   return /^\d+$/.test(text) ? Number(text) : Number.NaN;
 }
 
+/** A buff effect's modifiers as sent: the typed rows and the kept conditions; null when a value is no number. */
+function buffOf(e: DiceDraft): BuffEffects | null {
+  const buff: BuffEffects = { ...e.kept };
+  for (const m of e.mods) {
+    const v = parseNumber(m.value);
+    if (Number.isNaN(v)) return null;
+    buff[m.key] = v;
+  }
+  return buff;
+}
+
 /**
  * The abilities list a form sends: the drafts in order; null when a number typed is not a whole
  * number. The name is written in the UI language `lang` only, the stored other languages are kept
@@ -141,23 +219,37 @@ export function draftsToAbilities(
     const typed = d.name.trim();
     if (typed) names[editLang(lang)] = typed;
     else delete names[editLang(lang)];
-    // A row with no dice typed is not sent, except a full heal, which has none to type.
-    const effects: ItemAbilityEffect[] = d.effects
-      .filter((e) => (e.kind === "heal" && e.full) || e.dice.trim() !== "")
-      .map((e) =>
-        e.kind === "heal"
-          ? {
-              kind: "heal",
-              ...(e.full ? { full: true } : { dice: e.dice.trim() }),
-              ...(e.label ? { label: e.label } : {}),
-            }
-          : {
-              kind: "dice",
-              dice: e.dice.trim(),
-              ...(e.save ? { save: e.save } : {}),
-              ...(e.label ? { label: e.label } : {}),
-            },
-      );
+    // A row with no dice typed is not sent, except a full heal, which has none to type, and a buff,
+    // which holds none: its numbers must be numbers.
+    const effects: ItemAbilityEffect[] = [];
+    for (const e of d.effects) {
+      if (e.kind === "buff") {
+        const buff = buffOf(e);
+        const rounds = parseInteger(e.rounds);
+        if (!buff || Number.isNaN(rounds)) return null;
+        effects.push({
+          kind: "buff",
+          rounds,
+          buff,
+          ...(e.name.trim() ? { name: e.name.trim() } : {}),
+        });
+      } else if ((e.kind === "heal" && e.full) || e.dice.trim() !== "") {
+        effects.push(
+          e.kind === "heal"
+            ? {
+                kind: "heal",
+                ...(e.full ? { full: true } : { dice: e.dice.trim() }),
+                ...(e.label ? { label: e.label } : {}),
+              }
+            : {
+                kind: "dice",
+                dice: e.dice.trim(),
+                ...(e.save ? { save: e.save } : {}),
+                ...(e.label ? { label: e.label } : {}),
+              },
+        );
+      }
+    }
     const a: ItemAbility = { id: d.id, limit, effects };
     if (Object.keys(names).length > 0) a.name = names;
     if (d.note.trim()) a.note = d.note.trim();
@@ -193,6 +285,13 @@ export function abilitiesKey(
         full: e.full === true,
         save: e.save ?? "",
         label: e.label ?? "",
+        name: e.name ?? "",
+        rounds: e.rounds ?? 0,
+        buff: Object.fromEntries(
+          Object.entries(e.buff ?? {})
+            .filter(([, v]) => v !== undefined && v !== false)
+            .sort(([x], [y]) => x.localeCompare(y)),
+        ),
       })),
     })),
   );

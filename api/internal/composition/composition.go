@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/adapters/spelldal"
 	"github.com/ceffo/critical/api/internal/adapters/spelleffectsadpt"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/acsvc"
@@ -371,6 +372,14 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	bs.Items, err = itemsvc.New(itemDAL, itemsvc.Deps{
 		Dice: dice, Log: logSvc, Tx: tx, Chars: charSvc, Equipment: equipment, Classes: ruleTables,
 		Initiative: itemInitiative, InitiativeItems: initiativeItems, Spells: catalogue, Rulesets: bs.Rulesets,
+		// A buff effect of an ability goes through the buff service's Add (ADR
+		// 0049 step 12), built below from the items.
+		Buffs: bridgeadpt.BuffAddFunc(func(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
+			if bs.Buffs == nil {
+				return buffsvc.BuffEffect{}, actionlog.Snapshot{}, fmt.Errorf("item buff effect: no buff service")
+			}
+			return bs.Buffs.Add(ctx, characterID, buff)
+		}),
 		// The bow warning's Strength in effect (ADR 0002 step 4.1): the buff
 		// service, built below from the items, read when a warning is computed.
 		Strength: bridgeadpt.EffectiveStrFunc(func(ctx context.Context, characterID int64) (buffsvc.Strength, error) {

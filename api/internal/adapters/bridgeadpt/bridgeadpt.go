@@ -32,6 +32,18 @@ func (f EffectiveStrFunc) GetEffectiveStr(ctx context.Context, characterID int64
 
 var _ itemsvc.EffectiveStrength = EffectiveStrFunc(nil)
 
+// BuffAddFunc satisfies itemsvc.Buffs with a function: the composition root
+// hands it the buff service's Add, read at call time, since the buff service is
+// built after the items that apply a buff effect (ADR 0049 step 12).
+type BuffAddFunc func(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error)
+
+// Add puts the buff on the active list without recording.
+func (f BuffAddFunc) Add(ctx context.Context, characterID int64, buff buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {
+	return f(ctx, characterID, buff)
+}
+
+var _ itemsvc.Buffs = BuffAddFunc(nil)
+
 // RoundStore is the buff store's round read.
 type RoundStore interface {
 	GetRoundNumber(ctx context.Context, characterID int64) (int, error)

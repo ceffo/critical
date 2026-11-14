@@ -155,15 +155,39 @@ func (l LimitDTO) MarshalJSON() ([]byte, error) {
 	return json.Marshal(o)
 }
 
-// EffectDTO is one effect of an ability (ADR 0049 step 10); "dice" and "heal"
-// exist so far: dice (a heal has dice or full), an optional save category (not
-// for a heal) and an optional label.
+// EffectDTO is one effect of an ability (ADR 0049 step 10); "dice", "heal" and
+// "buff" exist so far: dice (a heal has dice or full), an optional save category
+// (not for a heal) and an optional label; a buff has an optional name, its
+// rounds (0: untimed) and its modifiers in the buffs' effect keys.
 type EffectDTO struct {
-	Kind  string `json:"kind"`
-	Dice  string `json:"dice,omitempty"`
-	Full  bool   `json:"full,omitempty"`
-	Save  string `json:"save,omitempty"`
-	Label string `json:"label,omitempty"`
+	Kind   string          `json:"kind"`
+	Dice   string          `json:"dice,omitempty"`
+	Full   bool            `json:"full,omitempty"`
+	Save   string          `json:"save,omitempty"`
+	Label  string          `json:"label,omitempty"`
+	Name   string          `json:"name,omitempty"`
+	Rounds int             `json:"rounds,omitempty"`
+	Buff   *BuffEffectsDTO `json:"buff,omitempty"`
+}
+
+// effectFromDTO is the domain effect the editor sent.
+func effectFromDTO(e EffectDTO) itemsvc.Effect {
+	out := itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+	if e.Buff != nil {
+		out.Buff = buffsvc.BuffEffects(*e.Buff)
+	}
+	return out
+}
+
+// effectToDTO is the wire shape of a stored effect; a buff always sends its
+// modifiers, even none (a potion of invisibility holds a name and rounds).
+func effectToDTO(e itemsvc.Effect) EffectDTO {
+	out := EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label, Name: e.Name, Rounds: e.Rounds}
+	if e.Kind == itemsvc.EffectBuff {
+		b := BuffEffectsDTO(e.Buff)
+		out.Buff = &b
+	}
+	return out
 }
 
 // AbilitiesFromDTO is the domain list sent by the editor, in the order sent;
@@ -175,7 +199,7 @@ func AbilitiesFromDTO(dtos []AbilityDTO) []itemsvc.Ability {
 			Kind: itemsvc.LimitKind(d.Limit.Kind), Max: d.Limit.Max, Left: d.Limit.Left, Cost: d.Limit.Cost,
 		}}
 		for _, e := range d.Effects {
-			a.Effects = append(a.Effects, itemsvc.Effect{Kind: itemsvc.EffectKind(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label})
+			a.Effects = append(a.Effects, effectFromDTO(e))
 		}
 		out = append(out, a)
 	}
@@ -193,7 +217,7 @@ func AbilitiesToDTO(item itemsvc.Item) *[]AbilityDTO {
 		reason := item.UseRefusal(a)
 		effects := make([]EffectDTO, 0, len(a.Effects))
 		for _, e := range a.Effects {
-			effects = append(effects, EffectDTO{Kind: string(e.Kind), Dice: e.Dice, Full: e.Full, Save: e.Save, Label: e.Label})
+			effects = append(effects, effectToDTO(e))
 		}
 		out = append(out, AbilityDTO{
 			ID: a.ID, Name: a.Name, Note: a.Note, Effects: effects, Usable: reason == "", Reason: reason,

@@ -4,6 +4,7 @@ import { Plus, Trash, X } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
 import { cn } from "@/lib/utils";
+import { BuffEffectFields } from "./BuffEffectFields";
 import {
   LIMIT_KINDS,
   newAbilityDraft,
@@ -227,6 +228,18 @@ export function AbilitiesEditor({
                     j === k ? { ...x, ...patch } : x,
                   ),
                 });
+              if (e.kind === "buff")
+                return (
+                  <BuffEffectFields
+                    key={k}
+                    effect={e}
+                    n={k + 1}
+                    onChange={setEffect}
+                    onRemove={() =>
+                      set(i, { effects: a.effects.filter((_, j) => j !== k) })
+                    }
+                  />
+                );
               return (
                 <div
                   key={k}
@@ -350,6 +363,21 @@ export function AbilitiesEditor({
                 data-testid="ability-add-heal"
               >
                 <Plus /> {t("equipment.abilities.addHeal")}
+              </Button>
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                title={t("equipment.abilities.addBuffHint")}
+                aria-label={t("equipment.abilities.addBuffHint")}
+                onClick={() =>
+                  set(i, {
+                    effects: [...a.effects, newEffectDraft("buff")],
+                  })
+                }
+                data-testid="ability-add-buff"
+              >
+                <Plus /> {t("equipment.abilities.addBuff")}
               </Button>
             </div>
           </div>

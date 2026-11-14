@@ -4,11 +4,16 @@ import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { Flask } from "@phosphor-icons/react";
 import { type InventoryNamer, useInventoryName } from "@/i18n/inventoryName";
-import type { AbilityEffectResult, UseResult } from "@/types/items";
+import type {
+  AbilityEffectResult,
+  AppliedBuff,
+  UseResult,
+} from "@/types/items";
 import type { LogEntry } from "@/types/log";
 import type { KindView } from "../kindView";
 import { dieFaces } from "../dice";
-import { plusTerm } from "../words";
+import { powerEffectsText } from "@/lib/itemPowers";
+import { counters, plusTerm } from "../words";
 import { DieChip, Total, labelClass } from "../parts";
 
 /** The use as recorded, with its entry id. */
@@ -45,8 +50,22 @@ function healed(p: UseResult): { applied: number; rolled: number } | null {
   };
 }
 
+/** The buffs the use put on the list, in effect order. */
+function buffsOf(p: UseResult): AppliedBuff[] {
+  return (p.effects ?? []).flatMap((e) => (e.buff ? [e.buff] : []));
+}
+
 function itemText(p: UseResult, t: TFunction, names: InventoryNamer): string {
-  const base = baseText(p, t, names);
+  const withBuffs = [
+    baseText(p, t, names),
+    ...buffsOf(p).map((b) =>
+      t("log.item.buff", { name: b.name, counters: counters(t, b.rounds) }),
+    ),
+  ].join(", ");
+  return healText(p, t, withBuffs);
+}
+
+function healText(p: UseResult, t: TFunction, base: string): string {
   const h = healed(p);
   if (!h) return base;
   // Nothing regained (already at max HP) is worded plainly, never as a cap.
@@ -101,7 +120,15 @@ export const itemUseKind: KindView<UseResult, UseResult> = {
 /** One rolled effect: what the card draws (an ability's effect, or the flat dice of an older entry). */
 type Roll = Pick<
   AbilityEffectResult,
-  "kind" | "dice" | "rolls" | "modifier" | "total" | "save" | "full" | "applied"
+  | "kind"
+  | "dice"
+  | "rolls"
+  | "modifier"
+  | "total"
+  | "save"
+  | "full"
+  | "applied"
+  | "buff"
 >;
 
 function ItemUseCard({ r }: { r: UseResult }) {
@@ -148,6 +175,7 @@ function ItemUseCard({ r }: { r: UseResult }) {
 /** One effect on the card: a dice effect's rolls, or a heal's rolls (none for a full heal) and the HP it moved. */
 function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
   const { t } = useTranslation();
+  if (e.kind === "buff" && e.buff) return <BuffBlock b={e.buff} />;
   const heal = e.kind === "heal";
   const dice = e.dice ?? "";
   // A heal's headline is what the ledger took, the roll is the working under it.
@@ -204,6 +232,28 @@ function EffectBlock({ e, r }: { e: Roll; r: UseResult }) {
           {t("result.save", {
             name: t(`saves.categories.${e.save}`, { defaultValue: e.save }),
           })}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** A buff effect on the card: the row it put on the list, its rounds and what it changes. */
+function BuffBlock({ b }: { b: AppliedBuff }) {
+  const { t } = useTranslation();
+  const effects = powerEffectsText(t, b.effects);
+  return (
+    <div className="flex flex-col gap-1" data-testid="item-buff">
+      <span className={labelClass}>{t("result.itemBuffed")}</span>
+      <p className="text-body font-medium" data-testid="item-buff-name">
+        {b.name} · {counters(t, b.rounds)}
+      </p>
+      {effects && (
+        <p
+          className="text-body text-muted-foreground"
+          data-testid="item-buff-effects"
+        >
+          {effects}
         </p>
       )}
     </div>

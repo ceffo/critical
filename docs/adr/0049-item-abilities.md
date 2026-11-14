@@ -594,6 +594,27 @@ independently: it is today's field rule, and slice 3's "no ability, no Use" subs
      effect only.
 8. **The `buff` effect.** A timed buff through `buffsvc`, with the editor field and the buff's
    effects (steps 9, 10, 12). Needs 3 and 6.
+   *Built.* How it reads the steps:
+   - **A buff effect** (step 10) is `{kind: "buff", name?, rounds, buff: {effects}}`: the name defaults to the
+     ability's, else the item's; rounds 0 to 10000 (0 untimed); the effects are the buffs' keys validated by
+     `buffsvc.ValidateEffects` (a Strength effect allowed, `min_str` and the weapon-kind and magic-armour
+     conditions kept as stored, no field for them in the editor). No dice, save or label. An empty effect set is
+     valid: a potion of invisibility is a name and rounds.
+   - **Through buffsvc's one path** (step 12): the use calls `buffsvc.Add` (the call a cast makes), so the row
+     has the same fields, the start round and the renewal by same name (a Strength bonus stacks) as any buff.
+     `Add` records nothing: its `buffs` snapshot rides the use's own `item_use` entry, so one undo pops buff and
+     use. Two buff effects of one use merge into one snapshot (before the first, after the last; an entry holds
+     one snapshot per key). A failure in any effect (a bad stored value, buffsvc's refusal) rolls the whole use
+     back, limit included. The answer's changed keys include `buffs`, so the web re-reads the list.
+   - **Wiring:** itemsvc takes a `Buffs` port; the buff service is built after the items, so the composition
+     root hands a late-bound function (as it does for the Strength read). A nil port fails a use with a buff
+     effect, never skips it.
+   - **Result and journal:** an effect's result carries `buff {id, name, rounds, effects}`; the journal words
+     "effect Heroism (60 rd)" and the card shows the row and its modifiers.
+   - **The conversion is unchanged and needs no review for these items** (step 11 table): a stored potion or
+     scroll without dice is a `with_item` ability with no effect and no review reason (heroism, speed, giant
+     strength, invisibility, protection), tested. A database already converted keeps every row as it is; the boot
+     step writes nothing new. The player adds the buff in the editor.
 9. **The `spell` effect.** A port from itemsvc to castsvc's effect path at a fixed level, the asks at
    Use, the scroll's `spellId` folded into it, the editor's spell picker (steps 9, 10, 12). Needs 3, 6
    and the inversion of the dependency between `itemsvc` and `castsvc` (a port in the composition

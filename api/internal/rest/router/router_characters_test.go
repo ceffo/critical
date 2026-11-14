@@ -324,7 +324,7 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 		"turning": null,
 		"skillSets": [],
 		"backstab": 0,
-		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false},
+		"spellbook": {"classMaxSpellLevel": 6, "intMaxSpellLevel": 7, "learnChance": 60, "maxSpellsPerLevel": 9, "noMaximum": false, "schoolAdjustment": 0, "otherAdjustment": 0},
 		"psp": {"current": 18, "max": 25, "recovery": [
 			{"activity": "sleeping", "perHour": 12},
 			{"activity": "meditating", "perHour": 12, "requiresProficiency": "rejuvenation"}

@@ -10,6 +10,8 @@ const rules: SpellbookRules = {
   learnChance: 65,
   maxSpellsPerLevel: 11,
   noMaximum: false,
+  schoolAdjustment: 0,
+  otherAdjustment: 0,
 };
 
 describe("lookupClasses", () => {

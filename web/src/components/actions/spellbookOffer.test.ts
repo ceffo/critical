@@ -13,6 +13,8 @@ const rules: SpellbookRules = {
   learnChance: 65,
   maxSpellsPerLevel: 2,
   noMaximum: false,
+  schoolAdjustment: 0,
+  otherAdjustment: 0,
 };
 const entry = (id: string, level: number): SpellbookEntry => ({
   id,

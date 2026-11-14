@@ -204,8 +204,9 @@ code (ADR 0040 step 10).
    A priest spell is none of these. One pure function in the domain (`domain/spellbook` or the
    kind's own package), read by every rule below; for a character with several entries, each
    specialist entry judges with its own params (a gnome fighter/illusionist has one).
-   Test: `School_Step5_OpposedWinsThenHisThenOther` (the three cases, a two-school spell each way,
-   a spell with no code, a priest spell).
+   Test: `TestSchool_Step5_OpposedWinsThenHisThenOther` (the three cases, a two-school spell each way,
+   a spell with no code, a priest spell). Built: `spellbook.School` (domain/spellbook), which reads
+   the entry's `spellbook.Specialization` from the derived spellbook block.
 
 ### The spellbook (amends [ADR 0030](0030-classes-and-races.md) step 20)
 
@@ -214,18 +215,23 @@ code (ADR 0040 step 10).
    (400 on the endpoints, a field refusal on `spellbook.<id>` in the draft and the creation), before
    any die. In `spellbook.Check` it comes after `already_in_spellbook` and before the level checks.
    The code gets a row in `internal/render` and an `apiError.spell_school_opposed` key (en, fr).
-   Tests: `Check_Step6_OpposedRefusedInOrder` (spellbook), `Learn_Step6_OpposedRefusedBeforeAnyDie`
-   (learnsvc, the dice mock expects no call), `Draft_Step6_OpposedStartingSpellRefused`
-   (charactersvc).
+   Tests: `TestCheck_Step6_OpposedRefusedInOrder` (spellbook), `TestLearn_Step6_OpposedRefusedBeforeAnyDie`
+   (learnsvc, the dice mock expects no call: Learn, Ajouter and the free spell),
+   `Draft_Step6_OpposedStartingSpellRefused` (charactersvc; with the creation, step 17.2, since a
+   specialist reaches the draft only once creatable).
 7. **The chance to learn: ±15** (amends 20.2). For a specialist the chance the d100 is compared with
    is Table 4's chance **+15** for a spell of his school and **-15** for any other (PHB p.32). It is
    not capped (a chance over 100 always succeeds; Int 9's 35 becomes 20 for another school). The
    learn answer's breakdown carries the Table 4 chance, the adjustment (`+15`, `-15`, or 0 for a
    mage) and the chance used; the derived `spellbook` block carries the adjustments, so the web
-   words the chance before the roll without computing it. A mage is unchanged.
-   Tests: `Learn_Step7_SchoolSpellPlusFifteen`, `Learn_Step7_OtherSpellMinusFifteen`,
-   `Learn_Step7_AMageIsUnchanged` (learnsvc: distinct dice values, one call each, the roll that
-   succeeds only with the bonus and the one that fails only with the penalty).
+   words the chance before the roll without computing it. A mage is unchanged. Built: the answer's
+   `chance` (Table 4), `adjustment` and `chanceUsed`, also in the `spell_learn` journal entry
+   (absent from an entry written before them: its chance used is `chance`); the derived block's
+   `schoolAdjustment` (+15) and `otherAdjustment` (-15), both 0 for a mage or a bard.
+   Tests: `TestLearn_Step7_SchoolSpellPlusFifteen`, `TestLearn_Step7_OtherSpellMinusFifteen`,
+   `TestLearn_Step7_AMageIsUnchanged` (learnsvc: distinct dice values, one call each, the roll that
+   succeeds only with the bonus and the one that fails only with the penalty),
+   `TestGetCharacter_Step7_TheSpellbookBlockCarriesTheAdjustments` (charactersvc).
 8. **The free spell is of his school** (amends 20.8). A specialist entry owes the same one free spell
    per new spell level as the mage (DMG p.41; PHB p.32 describes the same grant, not a second one,
    Q5). Claiming it (`AddFreeSpell`) is refused with `free_spell_not_of_school` (400) for a spell
@@ -234,9 +240,11 @@ code (ADR 0040 step 10).
    any spell he may add is accepted (an opposed one stays refused, step 6). The pending level's
    grant says `ofSchool: true` for a specialist, so the web's "free spell" reminder words it. A
    free spell claimed before a switch (step 15) is kept.
-   Tests: `AddFreeSpell_Step8_ASpecialistsFreeSpellIsOfHisSchool`,
-   `AddFreeSpell_Step8_AnySpellWhenNoneOfHisSchoolIsLeft` (learnsvc),
-   `GetCharacter_Step8_TheGrantSaysOfSchool` (charactersvc).
+   Built: learnsvc's catalogue port lists the wizard spells of a spell level for the look; the
+   grant's `ofSchool` is absent for a mage.
+   Tests: `TestAddFreeSpell_Step8_ASpecialistsFreeSpellIsOfHisSchool`,
+   `TestAddFreeSpell_Step8_AnySpellWhenNoneOfHisSchoolIsLeft` (learnsvc),
+   `TestGetCharacter_Step8_TheGrantSaysOfSchool` (charactersvc).
 9. **The starting book** (amends 20.7). Opposed spells are refused (step 6); nothing else changes:
    no learn roll, the same limits, Read Magic and Detect Magic pre-ticked as for the mage (the seed
    is keyed by class: the eight specialists get the mage's entry, data). The DMG's "one spell of his
@@ -354,7 +362,11 @@ code (ADR 0040 step 10).
        rows, the format bump; then the API reads the format (steps 1 to 4). The eight are not
        creatable yet.
     2. **Engine**: the kind's code, steps 5 to 11 and 14, the new codes' render rows and i18n keys,
-       `Implemented` set; the specialists become creatable.
+       `Implemented` set; the specialists become creatable. It ships as three changes, each leaving
+       the app as it was until the last: the spellbook (steps 5, 6 and 7 and 8 on Learn, Ajouter and
+       the free spell; built), the slots (steps 10 and 11), then the creation (step 6's starting
+       book, steps 9 and 14, and `Implemented`): a specialist reaches the draft and the creation
+       options only once creatable.
     3. **The entry switch** (step 15), with its Settings or class-card action in the web (the user's
        fix for the friend's character comes here).
     4. **Saves** (steps 12 and 13), with the save card's flag.

@@ -47,6 +47,9 @@ export interface LevelGrants {
 export interface FreeSpell {
   level: number;
   spellLevel: number;
+  /** ADR 0050 step 8: a specialist's free spell, of his school while one is left; absent for a
+   * mage. */
+  ofSchool?: true;
 }
 
 /** ADR 0030 step 7: the levels from the realized level up to the target, still to take. */
@@ -394,6 +397,10 @@ export interface SpellbookRules {
   learnChance: number;
   maxSpellsPerLevel: number;
   noMaximum: boolean;
+  /** ADR 0050 step 7: a specialist's adjustment of `learnChance` for a spell of his school (+15)
+   * and for any other (-15); both 0 for a mage or a bard. */
+  schoolAdjustment: number;
+  otherAdjustment: number;
 }
 
 /** The breakdown of a chance-to-learn roll (`POST /api/character/spellbook/learn`, ADR 0030 step
@@ -402,7 +409,12 @@ export interface LearnResult {
   spellId: string;
   spellLevel: number;
   roll: number;
+  /** PHB Table 4's chance to learn. */
   chance: number;
+  /** ADR 0050 step 7: a specialist's +15 or -15 (0 for a mage), and the chance the roll was
+   * compared with. Absent from a journal entry written before them (its chance used is `chance`). */
+  adjustment?: number;
+  chanceUsed?: number;
   learned: boolean;
   /** The realized level the roll was made at: a failure is refused until a higher one. */
   characterLevel: number;

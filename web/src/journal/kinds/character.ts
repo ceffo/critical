@@ -197,7 +197,7 @@ export const spellLearnKind: KindView<LearnResult> = {
     const vars = {
       spell: spellName(p.spellId),
       roll: p.roll,
-      chance: p.chance,
+      chance: p.chanceUsed ?? p.chance,
     };
     return p.learned
       ? t("log.learn.learned", vars)

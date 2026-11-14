@@ -40,13 +40,17 @@ type addRecord struct {
 // /api/character/spellbook/learn wire names. The UI words it. Add fields,
 // never rename.
 type record struct {
-	SpellID        string `json:"spellId"`
-	SpellLevel     int    `json:"spellLevel"`
-	Roll           int    `json:"roll"`
-	Chance         int    `json:"chance"`
-	Learned        bool   `json:"learned"`
-	CharacterLevel int    `json:"characterLevel"`
-	RetryLevel     int    `json:"retryLevel"`
+	SpellID    string `json:"spellId"`
+	SpellLevel int    `json:"spellLevel"`
+	Roll       int    `json:"roll"`
+	Chance     int    `json:"chance"`
+	// Adjustment and ChanceUsed are a specialist's (ADR 0050 step 7); an
+	// entry written before them has neither, its chance used is Chance.
+	Adjustment     int  `json:"adjustment,omitempty"`
+	ChanceUsed     int  `json:"chanceUsed,omitempty"`
+	Learned        bool `json:"learned"`
+	CharacterLevel int  `json:"characterLevel"`
+	RetryLevel     int  `json:"retryLevel"`
 }
 
 // spellbookSnaps is the snapshotter of a spell's place in the spellbook (ADR

@@ -8,6 +8,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // Rules is the driven port over the class tables the derivation reads
@@ -424,17 +425,25 @@ func bestCore(entries []entryCalc, rules Rules) (int, Saves, error) {
 
 // spellbookRules is step 20.1 for the grant of the spellbook feature (ADR
 // 0040 step 3): its max_spell_level and PHB Table 4 at the sheet's
-// Intelligence.
+// Intelligence, with the entry class's school_specialization (ADR 0050).
 func spellbookRules(c *Character, g classes.Grant, rules Rules) (*SpellbookRules, error) {
 	classMax := g.Feature.Spellbook.MaxSpellLevel
 	row, err := rules.IntelligenceFor(c.Int)
 	if err != nil {
 		return nil, fmt.Errorf("derive %s spellbook: %w", g.Class.ID, err)
 	}
-	return &SpellbookRules{
+	out := &SpellbookRules{
 		ClassMaxSpellLevel: classMax, IntMaxSpellLevel: row.MaxSpellLevel, LearnChance: row.LearnChance,
 		MaxSpellsPerLevel: row.MaxSpells, NoMaximum: row.NoMaximum,
-	}, nil
+	}
+	// ADR 0050 steps 5 to 7: the specialist school of the same entry's class.
+	if f, ok := g.Class.Lists(classes.KindSchoolSpecialization); ok {
+		out.Specialization = spellbook.Specialization{
+			Schools: f.SchoolSpecialization.Schools, OppositionSchools: f.SchoolSpecialization.OppositionSchools,
+		}
+		out.SchoolAdjustment, out.OtherAdjustment = spellbook.SchoolLearnBonus, spellbook.OtherLearnPenalty
+	}
+	return out, nil
 }
 
 // levelUp is step 7 for one entry of class (ADR 0042 step 7): a level-up is

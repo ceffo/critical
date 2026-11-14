@@ -55,6 +55,9 @@ func TestOwed_Step20_8_OwedIsOpenedLevelsMinusGrants(t *testing.T) {
 		{"a claim of another spell level pays nothing", []spellbook.FreeSpell{three}, []spellbook.FreeSpell{{Level: 3, SpellLevel: 1}}, []spellbook.FreeSpell{three}},
 		{"a claim of a level not granted pays nothing", []spellbook.FreeSpell{five}, []spellbook.FreeSpell{three}, []spellbook.FreeSpell{five}},
 		{"one claim pays one grant", []spellbook.FreeSpell{three, three}, []spellbook.FreeSpell{three}, []spellbook.FreeSpell{three}},
+		// ADR 0050 step 8: a specialist's grant carries OfSchool, a claim
+		// (read from the level_grant entry) never does; it still pays it.
+		{"a claim pays a specialist's grant of its school", []spellbook.FreeSpell{{Level: 3, SpellLevel: 2, OfSchool: true}}, []spellbook.FreeSpell{three}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			assert.Equal(t, tc.want, spellbook.Owed(tc.granted, tc.claimed))

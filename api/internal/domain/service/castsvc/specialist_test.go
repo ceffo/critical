@@ -65,7 +65,8 @@ func TestCast_Step11_AnOpposedSpellIsRefusedInAnExtraSlot(t *testing.T) {
 // answer and in the logged payload's save. The invoker (PHB Table 22:
 // invocation/evocation) casting Fireball (a save for half): -1. A mage, or a
 // transmuter, casting it: none, and no key. The invoker's Magic Missile
-// allows no save: none.
+// allows no save: none. A Fireball that were also enchantment/charm is of his
+// opposition too, and opposed wins (ADR 0050 step 5, Q4): none.
 func TestCast_Step13_ASchoolSpellTellsTheTargetsPenalty(t *testing.T) {
 	invoker := spellbook.Specialization{Schools: []string{"invocation_evocation"}, OppositionSchools: []string{"enchantment_charm", "conjuration_summoning"}}
 	transmuter := spellbook.Specialization{Schools: []string{"alteration"}, OppositionSchools: []string{"abjuration", "necromancy"}}
@@ -76,33 +77,43 @@ func TestCast_Step13_ASchoolSpellTellsTheTargetsPenalty(t *testing.T) {
 		caster   charactersvc.View
 		slot     spellsvc.SpellSlot
 		dice     []int
+		schools  []string // the slot's spell's schools, when not the table's
 		want     int
 		wantSave map[string]any
 	}{
 		{
-			"an invoker's Fireball: -1", wizardOf("invoker", invoker), slot("fireball", "Fireball", 3), tenD6,
+			"an invoker's Fireball: -1", wizardOf("invoker", invoker), slot("fireball", "Fireball", 3), tenD6, nil,
 			-1,
 			map[string]any{"type": "spell", "effect": "half", "targetSaveModifier": float64(-1)},
 		},
 		{
-			"a mage's Fireball: none", wizardOf("mage", spellbook.Specialization{}), slot("fireball", "Fireball", 3), tenD6,
+			"a mage's Fireball: none", wizardOf("mage", spellbook.Specialization{}), slot("fireball", "Fireball", 3), tenD6, nil,
 			0,
 			map[string]any{"type": "spell", "effect": "half"},
 		},
 		{
-			"a transmuter's Fireball: none", wizardOf("transmuter", transmuter), slot("fireball", "Fireball", 3), tenD6,
+			"a transmuter's Fireball: none", wizardOf("transmuter", transmuter), slot("fireball", "Fireball", 3), tenD6, nil,
 			0,
 			map[string]any{"type": "spell", "effect": "half"},
 		},
 		{
 			"an invoker's Magic Missile, no save: none", wizardOf("invoker", invoker), slot("magic_missile", "Magic Missile", 1),
-			[]int{1, 2, 3, 4, 1},
+			[]int{1, 2, 3, 4, 1}, nil,
 			0, nil,
+		},
+		{
+			"an invoker's Fireball also of his opposition: none", wizardOf("invoker", invoker), slot("fireball", "Fireball", 3), tenD6,
+			[]string{"invocation_evocation", "enchantment_charm"},
+			0,
+			map[string]any{"type": "spell", "effect": "half"},
 		},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			f := newFixtureOf(t, catalog(t), c.caster, c.dice...)
 			f.schools = schools
+			if c.schools != nil {
+				f.schools = map[string][]string{"fireball": c.schools}
+			}
 			f.prepared(c.slot)
 			res, err := f.svc.Cast(context.Background(), charID, 0, castsvc.CastRequest{})
 			require.NoError(t, err)

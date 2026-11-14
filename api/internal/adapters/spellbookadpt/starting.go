@@ -36,8 +36,10 @@ func ReadStartingSeed(seedsDir string, cat catalogue.Catalogue, defs *classes.Re
 
 // ParseStartingSeed maps a starting spellbook seed and checks it: each class
 // lists the spellbook feature (ADR 0040 step 3), each id is a wizard
-// spell of the catalogue, once per class. A spell the catalogue lacks is a
-// start-up error rather than a pre-tick silently dropped.
+// spell of the catalogue, once per class, and none is of a school in the
+// class's opposition (ADR 0050 steps 6 and 9: the creation would refuse it).
+// A spell the catalogue lacks is a start-up error rather than a pre-tick
+// silently dropped.
 func ParseStartingSeed(raw []byte, cat catalogue.Catalogue, defs *classes.Registry) (StartingSeed, error) {
 	var seed StartingSeed
 	dec := json.NewDecoder(bytes.NewReader(raw))
@@ -51,11 +53,22 @@ func ParseStartingSeed(raw []byte, cat catalogue.Catalogue, defs *classes.Regist
 		if _, ok := def.Lists(classes.KindSpellbook); !ok {
 			return nil, fmt.Errorf("starting spellbook: class %q keeps no spellbook", class)
 		}
+		var spec spellbook.Specialization
+		if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
+			spec = spellbook.Specialization{Schools: f.SchoolSpecialization.Schools, OppositionSchools: f.SchoolSpecialization.OppositionSchools}
+		}
 		seen := map[string]bool{}
 		for _, id := range ids {
 			s, ok := spells[id]
-			if !ok || !spellbook.FromCatalogue(s).Wizard {
+			if !ok {
 				return nil, fmt.Errorf("starting spellbook: %s: %q is not a Wizard spell of the catalogue", class, id)
+			}
+			sp := spellbook.FromCatalogue(s)
+			if !sp.Wizard {
+				return nil, fmt.Errorf("starting spellbook: %s: %q is not a Wizard spell of the catalogue", class, id)
+			}
+			if spellbook.School(spec, sp) == spellbook.StandingOpposed {
+				return nil, fmt.Errorf("starting spellbook: %s: %q is of a school in the class's opposition", class, id)
 			}
 			if seen[id] {
 				return nil, fmt.Errorf("starting spellbook: %s: duplicate spell %q", class, id)

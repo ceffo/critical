@@ -440,6 +440,7 @@ func (s *service) readWarnings(c *Character, defs *classes.Registry, lift rulese
 	c.Warnings = append(c.Warnings, c.Details.RangeWarnings(identity)...)
 	c.Warnings = append(c.Warnings, fromSkills(slotWarnings)...)
 	c.Warnings = append(c.Warnings, LevelLimitWarnings(c.Race, c.Derived.Classes, s.rules.LevelLimit)...)
+	c.Warnings = append(c.Warnings, SpecialistRaceWarnings(c.Race, c.Derived.Classes, defs)...)
 	// ADR 0037 step 15, once the pools are known: a level of one entry
 	// among the character's (ADR 0042 steps 7 and 15).
 	cls := c.ProficiencyClasses()
@@ -465,6 +466,25 @@ func LevelLimitWarnings(race string, entries []EntryDerived, limit func(race, cl
 		}
 		level, limit := float64(e.RealizedLevel), float64(row.MaxLevel)
 		out = append(out, Warning{Code: CodeLevelLimit, Field: FieldLevel, Class: e.Class, Value: &level, Max: &limit})
+	}
+	return out
+}
+
+// SpecialistRaceWarnings are ADR 0050 step 14.1: each entry of entries, frozen ones included,
+// whose class lists school_specialization and whose races (PHB Table 22) do not hold race warns
+// specialist_race with the class and the race. Never a refusal (the triage), nor a ruleset switch.
+func SpecialistRaceWarnings(race string, entries []EntryDerived, defs *classes.Registry) []Warning {
+	var out []Warning
+	for _, e := range entries {
+		def, ok := defs.Class(e.Class)
+		if !ok {
+			continue
+		}
+		f, ok := def.Lists(classes.KindSchoolSpecialization)
+		if !ok || slices.Contains(f.SchoolSpecialization.Races, race) {
+			continue
+		}
+		out = append(out, Warning{Code: CodeSpecialistRace, Field: "race", Class: e.Class, Race: race})
 	}
 	return out
 }

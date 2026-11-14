@@ -152,6 +152,11 @@ type CreationOptions struct {
 	// catalogue's `multiclass: false`), in catalogue order: the form leaves them out of a second or
 	// third class.
 	NoMultiClass []string
+	// MulticlassRaces are, by class, the only races of a multi-class character that class may be
+	// part of (ADR 0050 step 14.3, a school_specialization's `multiclass_races`: the gnome
+	// illusionist); a class it does not name is not limited this way. The form offers such a class
+	// in a multi-class row only for those races.
+	MulticlassRaces map[string][]string
 	// DualClassOldPrime and DualClassNewPrime are the prime requisite scores of a dual-class
 	// character in the class it left and in its new class (step 2.2).
 	DualClassOldPrime, DualClassNewPrime int
@@ -215,7 +220,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 	out := CreationOptions{
 		MaxClasses: classes.MaxMultiClasses, MinLeftAtLevel: classes.MinLeftAtLevel,
 		MulticlassAnyRace: rs.RacialLift.MulticlassAnyRace, DualclassAnyRace: rs.RacialLift.DualclassAnyRace,
-		RestrictedRaces: []string{}, NoMultiClass: []string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
+		RestrictedRaces: []string{}, NoMultiClass: []string{}, MulticlassRaces: map[string][]string{}, DualClassOldPrime: DualClassOldPrime, DualClassNewPrime: DualClassNewPrime,
 		MinAbility: MinAbility, MaxAbility: MaxAbility, MinHPMax: MinHPMax, MaxHPMax: MaxHPMax,
 		MinXP: MinStartingXP, MaxXP: MaxStartingXP,
 		MinStrExceptional: MinStrExceptional, MaxStrExceptional: MaxStrExceptional,
@@ -225,6 +230,9 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 	for _, def := range defs.Classes() {
 		if def.NoMultiClass {
 			out.NoMultiClass = append(out.NoMultiClass, def.ID)
+		}
+		if races := multiclassRaces(def); len(races) > 0 {
+			out.MulticlassRaces[def.ID] = slices.Clone(races)
 		}
 	}
 	for _, race := range races {

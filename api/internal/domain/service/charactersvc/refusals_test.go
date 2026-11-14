@@ -237,13 +237,11 @@ func TestCreatableClassAndRaceKnown(t *testing.T) {
 		assert.True(t, ok, id)
 		assert.Equal(t, id, def.ID)
 	}
-	// ADR 0050 step 4: the eight specialist wizards are defined and not creatable until the engine item.
+	// ADR 0050 step 17.2: the eight specialist wizards are creatable once the engine computes their kind.
 	for _, id := range []string{"abjurer", "conjurer", "diviner", "enchanter", "illusionist", "invoker", "necromancer", "transmuter"} {
-		def, ok := defs.Class(id)
-		require.True(t, ok, "%s is in the catalogue", id)
+		def, ok := creatableClass(defs, id)
+		assert.True(t, ok, "%s is creatable", id)
 		assert.Equal(t, id, def.ID)
-		_, ok = creatableClass(defs, id)
-		assert.False(t, ok, "%s is not creatable", id)
 	}
 	for _, id := range []string{"", "nope"} {
 		_, ok := creatableClass(defs, id)

@@ -1,3 +1,11 @@
 {
-  "mage": ["detect_magic"]
+  "mage": ["detect_magic"],
+  "abjurer": ["detect_magic"],
+  "conjurer": ["detect_magic"],
+  "diviner": ["detect_magic"],
+  "enchanter": ["detect_magic"],
+  "illusionist": ["detect_magic"],
+  "invoker": ["detect_magic"],
+  "necromancer": ["detect_magic"],
+  "transmuter": ["detect_magic"]
 }

@@ -40,6 +40,9 @@ const (
 	// limit in that class (ADR 0041 step 5, ADR 0042 step 7): a warning,
 	// never a refusal or a cap, since the ruleset's level_limits is warn.
 	CodeLevelLimit = "level_limit"
+	// CodeSpecialistRace is a specialist wizard's race outside PHB Table 22's for his class (ADR
+	// 0050 step 14.1): a warning on every read, never a refusal (the user's triage).
+	CodeSpecialistRace = "specialist_race"
 	// CodeNotANumber is a height, weight or age that is no number (ADR 0032
 	// step 5.2).
 	CodeNotANumber = "not_a_number"
@@ -185,9 +188,13 @@ type Warning struct {
 	// left; nil (Pool "") for the other warnings.
 	Pool                   string
 	Spent, Available, Left *int
-	// Class is the class entry a level_limit warning is about (its level in
-	// Value, the race's limit in Max); "" for the other warnings.
+	// Class is the class entry a level_limit or specialist_race warning is
+	// about (a level_limit's level in Value, the race's limit in Max); "" for
+	// the other warnings.
 	Class string
+	// Race is a specialist_race warning's race, the one Table 22 does not list
+	// for Class (ADR 0050 step 14.1); "" for the other warnings.
+	Race string
 	// Type and Slots are a weapon_pick_to_redo warning's weapon type and the
 	// slots it spent (ADR 0037 step 21.8.3); "" and nil for the others.
 	Type  string

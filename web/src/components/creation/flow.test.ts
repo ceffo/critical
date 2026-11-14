@@ -968,6 +968,21 @@ describe("classesFor", () => {
     expect(ids("dual")).toEqual(["fighter", "bard", "mage"]);
   });
 
+  it("offers a multiclassRaces class in a multi-class row of those races only (ADR 0050 step 14.3)", () => {
+    const withIllusionist = {
+      classes: [{ class: "fighter" }, { class: "illusionist" }],
+      noMultiClass: [],
+      multiclassRaces: { illusionist: ["gnome"] },
+    } as unknown as CreationOptions;
+    const of = (kind: "single" | "multi" | "dual", race: string) =>
+      classesFor(withIllusionist, kind, race).map((c) => c.class);
+    expect(of("multi", "gnome")).toEqual(["fighter", "illusionist"]);
+    expect(of("multi", "elf")).toEqual(["fighter"]);
+    expect(of("multi", "")).toEqual(["fighter", "illusionist"]);
+    expect(of("single", "elf")).toEqual(["fighter", "illusionist"]);
+    expect(of("dual", "elf")).toEqual(["fighter", "illusionist"]);
+  });
+
   it("offers every class when the server names none (an older server)", () => {
     const old = { classes: options.classes } as unknown as CreationOptions;
     expect(classesFor(old, "multi")).toHaveLength(3);

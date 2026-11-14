@@ -113,7 +113,7 @@ export function ClassRows({
                   onChange={(e) => setRow(i, { cls: e.target.value })}
                 >
                   <option value="">{t("creation.classes.choose")}</option>
-                  {classesFor(options, draft.kind).map((c) => (
+                  {classesFor(options, draft.kind, draft.race).map((c) => (
                     <option key={c.class} value={c.class}>
                       {t(`details.classes.${c.class}`, {
                         defaultValue: c.class,

@@ -96,11 +96,10 @@ var FeatureKinds = []string{
 // notImplemented are the kinds of the closed list the code does not compute
 // yet: the catalogue may list them (a class is data), but a class that does
 // is not offered at creation until its kinds are built (ADR 0040 step 8).
-// A kind leaves this list when its reader lands: every kind of the closed
-// list has one except school_specialization, whose engine is the next item
-// of ADR 0050 (step 17.2): the eight specialist wizards are in the catalogue
-// and not creatable until it lands.
-var notImplemented = []string{KindSchoolSpecialization}
+// A kind leaves this list when its reader lands; every kind of the closed list
+// has one now (school_specialization's engine is ADR 0050 steps 5 to 11 and
+// 14), so the list is empty and every catalogue class is creatable.
+var notImplemented []string
 
 // Implemented reports whether the code computes every feature kind the class
 // lists: the creation gate of ADR 0040 step 8 ("passed the check = fully

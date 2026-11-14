@@ -165,11 +165,24 @@ export function classOf(options: CreationOptions | null, cls: string) {
 
 /**
  * The classes a row of this kind of character offers: a multi-class character's leave out the
- * server's `noMultiClass` classes (ADR 0042 step 2.1); the others offer every creatable class.
+ * server's `noMultiClass` classes (ADR 0042 step 2.1) and, once the race is chosen, a class whose
+ * `multiclassRaces` do not hold it (ADR 0050 step 14.3: the illusionist is offered to a gnome
+ * only); the others offer every creatable class. The race is picked after the class: before it,
+ * the server's draft judges the pick.
  */
-export function classesFor(options: CreationOptions, kind: ClassKind) {
-  const no = kind === "multi" ? (options.noMultiClass ?? []) : [];
-  return options.classes.filter((c) => !no.includes(c.class));
+export function classesFor(
+  options: CreationOptions,
+  kind: ClassKind,
+  race = "",
+) {
+  if (kind !== "multi") return options.classes;
+  const no = options.noMultiClass ?? [];
+  const races = options.multiclassRaces ?? {};
+  return options.classes.filter(
+    (c) =>
+      !no.includes(c.class) &&
+      (race === "" || !races[c.class] || races[c.class].includes(race)),
+  );
 }
 
 /**

@@ -336,6 +336,11 @@ func TestOptions_Step20_7_ReadMagicAndDetectMagicPreTickedForAMage(t *testing.T)
 		"mage":    {StartingSpells: []string{"read_magic", "detect_magic"}},
 		"bard":    {StartingSpells: []string{}},
 		"fighter": nil, "cleric": nil, "thief": nil, "psionicist": nil,
+		// The stub's data pre-ticks the mage's only; the seed's specialists are
+		// TestOptions_Step9_ASpecialistIsPreTickedLikeAMage's.
+		"abjurer": {StartingSpells: []string{}}, "conjurer": {StartingSpells: []string{}}, "diviner": {StartingSpells: []string{}},
+		"enchanter": {StartingSpells: []string{}}, "illusionist": {StartingSpells: []string{}}, "invoker": {StartingSpells: []string{}},
+		"necromancer": {StartingSpells: []string{}}, "transmuter": {StartingSpells: []string{}},
 	}, books)
 	assert.Equal(t, e.spells.WizardSpells(), got.WizardSpells)
 	assert.Equal(t, charactersvc.SpellOption{ID: "detect_magic", Level: 1}, got.WizardSpells[0])

@@ -120,15 +120,18 @@ type OptionsDTO struct {
 	// race be multi-class (`multiclassAnyRace`) or dual-class (`dualclassAnyRace`); with it off the
 	// multi-class races are the `restrictedRaces`. A dual-class character needs `dualClassOldPrime` in
 	// every prime requisite of a class it left and `dualClassNewPrime` in its new class's. The
-	// `noMultiClass` classes are never part of a multi-class character (ADR 0042 step 2.1). Additive.
-	MaxClasses        int      `json:"maxClasses"`
-	MinLeftAtLevel    int      `json:"minLeftAtLevel"`
-	MulticlassAnyRace bool     `json:"multiclassAnyRace"`
-	DualclassAnyRace  bool     `json:"dualclassAnyRace"`
-	RestrictedRaces   []string `json:"restrictedRaces"`
-	NoMultiClass      []string `json:"noMultiClass"`
-	DualClassOldPrime int      `json:"dualClassOldPrime"`
-	DualClassNewPrime int      `json:"dualClassNewPrime"`
+	// `noMultiClass` classes are never part of a multi-class character (ADR 0042 step 2.1), and a class
+	// `multiclassRaces` names is part of one only for those races (ADR 0050 step 14.3: the gnome
+	// illusionist). Additive.
+	MaxClasses        int                 `json:"maxClasses"`
+	MinLeftAtLevel    int                 `json:"minLeftAtLevel"`
+	MulticlassAnyRace bool                `json:"multiclassAnyRace"`
+	DualclassAnyRace  bool                `json:"dualclassAnyRace"`
+	RestrictedRaces   []string            `json:"restrictedRaces"`
+	NoMultiClass      []string            `json:"noMultiClass"`
+	MulticlassRaces   map[string][]string `json:"multiclassRaces"`
+	DualClassOldPrime int                 `json:"dualClassOldPrime"`
+	DualClassNewPrime int                 `json:"dualClassNewPrime"`
 	// Sexes are the sex codes (ADR 0032 step 3).
 	Sexes []string `json:"sexes"`
 	// Languages is the language catalogue with its names by language (ADR
@@ -266,6 +269,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			MaxNameLen:     o.MaxNameLen,
 			MaxClasses:     o.MaxClasses, MinLeftAtLevel: o.MinLeftAtLevel, MulticlassAnyRace: o.MulticlassAnyRace,
 			DualclassAnyRace: o.DualclassAnyRace, RestrictedRaces: o.RestrictedRaces, NoMultiClass: o.NoMultiClass,
+			MulticlassRaces:   o.MulticlassRaces,
 			DualClassOldPrime: o.DualClassOldPrime, DualClassNewPrime: o.DualClassNewPrime,
 			Sexes:             o.Sexes,
 			Languages:         make([]LanguageDTO, 0, len(o.Languages)),

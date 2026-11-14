@@ -32,6 +32,8 @@ const (
 	CodeSpellLevelAboveIntelligence = string(spellbook.RefusedAboveIntelligence)
 	// CodeSpellbookLevelFull is a spell over Table 4's maximum number of spells of its level.
 	CodeSpellbookLevelFull = string(spellbook.RefusedLevelFull)
+	// CodeSpellSchoolOpposed is a specialist's spell of a school in his opposition (ADR 0050 step 6).
+	CodeSpellSchoolOpposed = string(spellbook.RefusedOpposed)
 )
 
 // SpellCatalogue reads the spell catalogue and the starting spellbook's data.
@@ -113,7 +115,7 @@ func (s *service) startingBook(c *Character, ids []string) (*StartingSpellbook, 
 	var kept []string
 	var refusals []error
 	for _, id := range ids {
-		code, level := s.startingRefusal(out, id, kept, counts)
+		code, level := s.startingRefusal(out, rules.Specialization, id, kept, counts)
 		if code != "" {
 			refusals = append(refusals, &domain.FieldError{Field: FieldSpellbook + "." + id, Message: code})
 			continue
@@ -128,14 +130,16 @@ func (s *service) startingBook(c *Character, ids []string) (*StartingSpellbook, 
 }
 
 // startingRefusal is the code refusing spell id after the entries kept (counts: kept by spell
-// level), "" with its spell level when it is kept: step 20.1's check (spellbook.Check) with the
+// level) for a wizard of the specialist school spec (the zero value for none), "" with its spell
+// level when it is kept: step 20.1's check (spellbook.Check) with the
 // class's highest level read at the starting level (b.ClassMaxSpellLevel, from the slots), not
-// the class's table maximum the Learn endpoint passes.
-func (s *service) startingRefusal(b *StartingSpellbook, id string, kept []string, counts map[int]int) (string, int) {
+// the class's table maximum the Learn endpoint passes. A specialist's opposed spell is refused
+// (ADR 0050 step 6, spell_school_opposed, in the check's order).
+func (s *service) startingRefusal(b *StartingSpellbook, spec spellbook.Specialization, id string, kept []string, counts map[int]int) (string, int) {
 	sp, found := s.spells.Spell(id)
 	limits := spellbook.Limits{
 		ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel,
-		MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+		MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum, Specialization: spec,
 	}
 	if r := spellbook.Check(limits, sp, found, slices.Contains(kept, id), counts[sp.Level]); r != spellbook.Fits {
 		return string(r), 0

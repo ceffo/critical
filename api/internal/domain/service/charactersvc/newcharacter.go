@@ -60,7 +60,8 @@ const (
 	CodeMultiClassNotAllowed = "multiclass_not_allowed"
 	CodeDualClassNotAllowed  = "dualclass_not_allowed"
 	// CodeMultiClassClassNotAllowed is a class of a multi-class character that the catalogue marks as
-	// never part of one (`multiclass: false`, the bard).
+	// never part of one (`multiclass: false`, the bard), or whose school_specialization names the
+	// races a multi-class one may be and not the character's (ADR 0050 step 14.3).
 	CodeMultiClassClassNotAllowed = "multiclass_class_not_allowed"
 	// CodePrimeRequisiteTooLow is a dual-class character with a prime requisite under 15 in a class
 	// it left or under 17 in its new class.

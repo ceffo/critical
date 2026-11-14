@@ -93,7 +93,7 @@ export function Saves() {
         </label>
         <button
           type="button"
-          className="hit-24 flex h-4 w-6 items-center justify-center rounded-sm text-ink-muted hover:text-foreground disabled:opacity-50 aria-pressed:text-foreground"
+          className="hit-24 flex h-4 w-6 items-center justify-center rounded-sm text-ink-muted hover:text-foreground disabled:pointer-events-none disabled:text-ink-muted aria-pressed:text-foreground"
           aria-pressed={spellLine}
           aria-label={t("saves.spellLine")}
           title={t("saves.spellLineHint")}

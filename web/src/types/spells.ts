@@ -273,6 +273,9 @@ export interface SpellbookEntry {
   origin?: SpellbookOrigin;
   /** The realized level that granted a level_grant entry; absent otherwise. */
   grant_level?: number;
+  /** A spell of the specialist's opposition school (ADR 0050 step 15.3): kept in the book after a
+   * switch of the entry, never prepared. Absent for anyone else's spell. */
+  opposed?: boolean;
   /** The spell grants extra slots: the ways to split them (levels, ascending); the first is the default. */
   slot_splits?: number[][];
   /** The spell spends one inventory item of this type. */

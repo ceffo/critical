@@ -1,0 +1,9 @@
+{
+  "switch": {
+    "payload": {
+      "entry": 0,
+      "from": "mage",
+      "to": "transmuter"
+    }
+  }
+}

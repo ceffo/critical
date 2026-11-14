@@ -600,12 +600,18 @@ export interface CreationOptions {
    * 14.3: the gnome illusionist); a class it does not name is not limited this way. Absent from a
    * release that predates it. */
   multiclassRaces?: Record<string, string[]>;
+  /** By class, the races PHB Table 22 lists for a specialist (ADR 0050 step 14.1): a character of
+   * another race is warned (`specialist_race`), never refused. Absent from a release that predates it. */
+  specialistRaces?: Record<string, string[]>;
   /** The prime requisite score a dual-class character needs in a class it left, and in its new
    * class (ADR 0042 step 2.2). */
   dualClassOldPrime?: number;
   dualClassNewPrime?: number;
   classes: {
     class: string;
+    /** The class's group code (ADR 0040 step 1.2): an entry switches within it (ADR 0050 step
+     * 15.1). Absent from a release that predates it. */
+    group?: string;
     races: string[];
     /** The skills the class enters points in (ADR 0030 steps 17 and 18); empty for none. */
     skills: string[];

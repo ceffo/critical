@@ -4,6 +4,7 @@ import {
   fetchCharacter,
   patchCharacterDetails,
   rollLevelUp,
+  switchEntryClass,
   takeNewClass,
 } from "@/api/character";
 import { renameCharacter } from "@/api/characters";
@@ -40,6 +41,10 @@ interface CharacterStore {
    * Null on success; a refusal is returned as its ApiError (the dialog words it), anything else goes
    * to the action module's error notice. */
   takeNewClass: (cls: string) => Promise<ApiError | null>;
+  /** Switches the class of the entry `entry` to `cls`, a mage and a specialist (ADR 0050 step
+   * 15), a transaction on the action stack read again by the action module. Null on success; a
+   * refusal (409 with the rule's code) is returned as its ApiError for the dialog to word. */
+  switchEntryClass: (entry: number, cls: string) => Promise<ApiError | null>;
   /** Saves the whole list of known powers (ADR 0043 step 9), a transaction on the action stack: the
    * answer is set on the character's derived block, the journal is read again by the action
    * module. Null on success; a refusal (409 with the rule's code) is returned as its ApiError for
@@ -56,6 +61,22 @@ export const useCharacterStore = create<CharacterStore>((set, get) => ({
     await useTableStore.getState().submit(async () => {
       try {
         await takeNewClass(cls);
+      } catch (e) {
+        // A refusal (409 with a code) is the dialog's to word; nothing changed, nothing to read.
+        if (e instanceof ApiError && e.status < 500) {
+          refused = e;
+          return;
+        }
+        throw e;
+      }
+    });
+    return refused;
+  },
+  switchEntryClass: async (entry, cls) => {
+    let refused: ApiError | null = null;
+    await useTableStore.getState().submit(async () => {
+      try {
+        await switchEntryClass(entry, cls);
       } catch (e) {
         // A refusal (409 with a code) is the dialog's to word; nothing changed, nothing to read.
         if (e instanceof ApiError && e.status < 500) {

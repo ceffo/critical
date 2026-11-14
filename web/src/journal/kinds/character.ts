@@ -181,6 +181,29 @@ export const classSwitchKind: KindView<ClassSwitchPayload> = {
     }),
 };
 
+/** Payload of a class_entry_switch entry (classentrysvc record, ADR 0050 step 15.5). */
+interface ClassEntrySwitchPayload {
+  entry: number;
+  from: string;
+  to: string;
+}
+
+export const classEntrySwitchKind: KindView<ClassEntrySwitchPayload> = {
+  decode(e) {
+    const p = e.payload as Partial<ClassEntrySwitchPayload> | null;
+    return p && typeof p.from === "string" && typeof p.to === "string"
+      ? (p as ClassEntrySwitchPayload)
+      : null;
+  },
+  icon: ArrowsLeftRight,
+  // "Class changed: Mage to Transmuter".
+  text: (p, { t }) =>
+    t("log.classEntrySwitch.text", {
+      from: t(`details.classes.${p.from}`, { defaultValue: p.from }),
+      to: t(`details.classes.${p.to}`, { defaultValue: p.to }),
+    }),
+};
+
 /** The payload of a spell_learn entry (learnsvc record, ADR 0030 step 20.2), or null. */
 export function decodeSpellLearn(e: LogEntry): LearnResult | null {
   const p = e.payload as Partial<LearnResult> | null;

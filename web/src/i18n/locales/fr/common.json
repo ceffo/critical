@@ -1665,6 +1665,7 @@
       "xp_remove": "XP",
       "level_up": "Niveau",
       "class_switch": "Classe",
+      "class_entry_switch": "Classe",
       "spell_learn": "Apprentissage",
       "turn_undead": "Renvoi",
       "skill_points": "Talents",
@@ -1944,6 +1945,9 @@
     },
     "classSwitch": {
       "text": "Nouvelle classe : {{to}} (ancienne classe : {{from}}, quittée au niveau {{level}} avec {{xp, number}} PX)"
+    },
+    "classEntrySwitch": {
+      "text": "Classe changée : {{from}} devient {{to}}"
     },
     "acOverride": {
       "set": "CA forcée : {{value}}",
@@ -2321,6 +2325,21 @@
     "take": "Prendre {{class}}",
     "confirm": "La classe {{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
   },
+  "switchClass": {
+    "open": "Changer",
+    "openTitle": "Changer la classe d'une entrée",
+    "title": "Changer de classe",
+    "entry": "Classe à changer",
+    "pick": "Nouvelle classe",
+    "placeholder": "Choisir une classe",
+    "next": "Suivant",
+    "back": "Retour",
+    "switch": "Changer",
+    "confirm": "{{from}} devient {{to}}. Tout reste tel quel : niveau, PX, points de vie, compétences et tout le grimoire. Seule la classe change.",
+    "opposed": "Les sorts des écoles opposées de {{to}} restent dans le grimoire mais ne peuvent plus être préparés, et ils quittent les sorts préparés du jour.",
+    "race": "Un personnage de race {{race}} ne figure pas parmi les races que le Manuel des joueurs donne pour {{to}} (table 22). C'est permis : la feuille de personnage le signale seulement.",
+    "undo": "Vous pouvez annuler depuis le journal."
+  },
   "xp": {
     "heading": "Expérience · niveau {{level}}",
     "unit": "XP",
@@ -2622,6 +2641,10 @@
     "spell_learn_failed_at_level": "Sort raté à ce niveau : à retenter au niveau suivant.",
     "no_free_spell_owed": "Ce niveau ne doit aucun sort gratuit.",
     "free_spell_wrong_level": "Le sort gratuit de ce niveau est d'un autre niveau de sort.",
+    "class_switch_not_allowed": "Cette classe ne peut pas remplacer celle-ci : seuls un magicien et un spécialiste peuvent être échangés, entre magiciens.",
+    "class_switch_minimums_not_met": "Le personnage n'atteint pas les minimums de caractéristiques de cette classe.",
+    "class_switch_alignment_not_allowed": "Cette classe n'admet pas l'alignement du personnage.",
+    "multiclass_class_not_allowed": "Cette classe ne fait jamais partie d'un personnage multiclassé (seul un illusionniste gnome le peut).",
     "spell_school_opposed": "Sort d'une école opposée : un spécialiste ne peut jamais l'apprendre, le préparer ni le lancer.",
     "school_slot_needs_school_spell": "Pas assez de sorts de l'école du spécialiste : son emplacement en plus à chaque niveau ne reçoit qu'un sort de son école.",
     "free_spell_not_of_school": "Le sort gratuit d'un spécialiste doit être de son école tant qu'il en reste un de ce niveau de sort.",

@@ -65,7 +65,14 @@ describe("journal bookkeeping filter", () => {
       ["attack", "save", "cast", "hp_change", "buff_change", "dice"] as const
     ).map((k, i) => entry(k, 100 + i));
     const progress = (
-      ["spell_learn", "xp_add", "xp_edit", "xp_remove", "class_switch"] as const
+      [
+        "spell_learn",
+        "xp_add",
+        "xp_edit",
+        "xp_remove",
+        "class_switch",
+        "class_entry_switch",
+      ] as const
     ).map((k, i) => entry(k, 200 + i));
     const all = [...setup, ...kept, ...progress];
     const shown = filterEntries(all, "hideSetup");

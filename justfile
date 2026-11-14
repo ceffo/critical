@@ -13,7 +13,7 @@ validate: check-scripts check-api check-web
 # The repo-wide checks and the shell-script tests: the part of `validate` that is neither the backend nor the
 # frontend. CI runs it, check-api and check-web as three parallel jobs (validate-scripts, validate-api,
 # validate-web) and a `validate` job that needs all three; `just validate` is the same three groups in a row.
-check-scripts: check-no-tracker-ids check-no-class-ids check-linear check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture
+check-scripts: check-no-tracker-ids check-no-class-ids check-linear check-no-language-fields check-glossary check-pr-title check-adr-tests check-no-sqlite check-release-scripts check-ci-skip check-main-catchup check-ci-install-deps check-ci-e2e test-priest-effects-audit test-fly-open test-fly-brevo-secrets test-gate-stamp check-spell-stats-fixture
     @echo "--- Scripts Validation Successful ---"
 
 # The gate stamp that ties a green `just validate` to the tree it ran on (ship.sh refuses a HEAD without it).
@@ -67,6 +67,10 @@ check-main-catchup:
 # The e2e job's Chromium apt install retries (scripts/test-ci-install-chromium-deps.sh): a timed-out attempt must not keep the apt lock.
 check-ci-install-deps:
     scripts/test-ci-install-chromium-deps.sh
+
+# The e2e job's slot on the shared machine (scripts/test-ci-e2e.sh): one suite at a time, the limit counts from getting it.
+check-ci-e2e:
+    scripts/test-ci-e2e.sh
 
 # The release version's, the release build's, the staging deploy's and the promotion's scripts (ADR 0024
 # steps 3, 4, 7, 8.3 and 10.4), and the backup and restore drill's (step 9), offline: docker, fly, gh and the

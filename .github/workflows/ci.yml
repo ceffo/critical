@@ -149,7 +149,8 @@ jobs:
     needs: changes
     if: needs.changes.outputs.skip_e2e != 'true'
     runs-on: [self-hosted, critical]
-    timeout-minutes: 15
+    # Room for a wait behind other suites on the machine (the step below takes one slot at a time) plus its own 6 minutes.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       # cache: false on the self-hosted runner: setup-go's restore untars ~/go/pkg/mod over the runner's own
@@ -173,10 +174,13 @@ jobs:
         run: mkdir -p "$HOME/.cache" && flock "$HOME/.cache/ms-playwright.lock" npx playwright install chromium
         working-directory: web
       - name: Run the e2e suite
-        # The suite's budget is 3 minutes (ADR 0048, docs/agent-workflow.md); 6 here makes a regression fail on this
+        # The suite's budget is 3 minutes (ADR 0048, docs/agent-workflow.md); 6 makes a regression fail on this
         # step instead of the job timeout hiding which step was slow: the tripwire for a regression.
-        timeout-minutes: 6
-        run: just e2e
+        # scripts/ci-e2e.sh holds the machine's e2e slot first (the runner services share one machine and the suite is
+        # CPU-bound: three suites at once took 6+ minutes with every test green), and the 6 minutes count from getting
+        # it, so the step's own limit is the job's. It logs the host's cpus and load before and after.
+        timeout-minutes: 25
+        run: scripts/ci-e2e.sh
       # Only a failure needs the screens and traces; nothing reads them after a green run.
       - name: Upload e2e results
         if: ${{ failure() }}

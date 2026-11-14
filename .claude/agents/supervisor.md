@@ -192,8 +192,9 @@ and keep refining the process to spend fewer of them. The biggest costs, in orde
    type, supervisor included** (`FLEET_CONTEXT_LIMIT`; in practice most of a day's usage went to turns
    past 150k context): past it, hand yourself off (see "the handoff to the next supervisor") at the next quiet point, and
    don't prompt another round into an agent: close it and brief a fresh one (`fleet agent-prompt` appends the target's
-   reading to its line, `context 68k (7%)`, and says so past the limit: it only warns, the prompt is sent; the gauge is
-   absent when the pane shows none). Below it, change count and
+   reading to its line, `context 68k (7%)`, and past the limit it refuses before sending anything, one line naming the
+   reading, exit 2; `--force` before the name sends anyway, e.g. waking yourself or a user-facing session; the gauge is
+   absent when the pane shows none, and then nothing is refused). Below it, change count and
    hours elapsed are not reasons to hand off: a fresh session costs a full cold start. Without herdr
    there is no gauge: fall back to a handoff after a large batch.
 2. **Wake-ups that do nothing.** Run **one** change watcher for all open changes (see "Change watch"): running `fleet upkeep wait`
@@ -828,6 +829,15 @@ hand off now ("Your own context, and the handoff to the next supervisor") so the
 commit not on the channel): put it in the report once. An unreachable channel is silent. The check covers the supervisor's own agents only, not
 a session the user drives in the checkout.
 The fleet's own repo is skipped (`fleet after-merge` installs there).
+**A fix to an issue this project filed upstream does not wait for that hour (#743).** `fleet upstream-file` records each issue it filed (or commented
+on as a duplicate) in `upstream-filed` in the supervisor dir; about every 10 minutes the same watcher asks the fleet repo which of them are no longer
+open and whether the channel is ahead of this install. With no developer, reviewer or tester live it only makes the update step above look on that
+very poll (no event of its own). With one live that update must not run, so it prints
+`UPSTREAM-FIXED #n (title), ... closed upstream, the channel is ahead of this install (a..b): run .claude/bin/fleet fleet-update` once per issue:
+tell the user in one line and run it yourself right away (a live developer's own worktree is not touched; the install changes the shared
+`.claude/` files and the binary, so follow what its status says as for `FLEET-UPDATED`: report `kept:`, hand off on a changed supervisor prompt).
+Silent when the install is already past the fix, with `FLEET_UPDATE=off` (the `FLEET-UPDATE-AVAILABLE` event covers it) or when the fleet repo
+cannot be reached (retried).
 
 ## Change watch (never rely on remembering to check)
 

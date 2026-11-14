@@ -198,6 +198,18 @@ export function ClassStep(props: StepProps) {
                       : c.races.map((r) => t(`details.races.${r}`)).join(", ")
                   }
                 />
+                {options.specialistRaces?.[c.class] ? (
+                  <Row
+                    k={t("creation.class.specialistRaces")}
+                    v={
+                      <span data-testid={`specialist-races-${c.class}`}>
+                        {options.specialistRaces[c.class]
+                          .map((r) => t(`details.races.${r}`))
+                          .join(", ")}
+                      </span>
+                    }
+                  />
+                ) : null}
                 {c.minimums && c.minimums.length > 0 ? (
                   <Row
                     k={t("creation.class.minimums")}

@@ -36,7 +36,8 @@
         "nonWeaponSlots_other": "{{count}} emplacements de compétence",
         "skillPoints_one": "{{count}} point de talent",
         "skillPoints_other": "{{count}} points de talent",
-        "freeSpell": "1 sort gratuit, niv. {{spellLevel}}"
+        "freeSpell": "1 sort gratuit, niv. {{spellLevel}}",
+        "freeSpellSchool": "1 sort gratuit de son école, niv. {{spellLevel}}"
       },
       "settled": {
         "weaponSlots": "Maîtrises d’armes",
@@ -49,7 +50,8 @@
         "weapon": "Choisir les maîtrises d’armes",
         "nonWeapon": "Choisir les compétences",
         "skillPoints": "Dépenser les points de talent",
-        "freeSpell": "Choisir le sort gratuit de niveau {{spellLevel}} dans la recherche de sorts"
+        "freeSpell": "Choisir le sort gratuit de niveau {{spellLevel}} dans la recherche de sorts",
+        "freeSpellSchool": "Choisir le sort gratuit de son école, de niveau {{spellLevel}}, dans la recherche de sorts"
       },
       "dismissTitle": "Fermer ce que le niveau apporte",
       "dieErrors": {
@@ -72,7 +74,8 @@
       "frozen": "Figée",
       "frozenTitle": "{{class}} quittée au niveau {{level}} : ni XP ni nouveau niveau tant qu’elle est figée",
       "open": "{{class}}, niveau {{level}} : ouvrir l’expérience",
-      "limit": "Au-dessus de la limite de niveau de la race ({{max}})"
+      "limit": "Au-dessus de la limite de niveau de la race ({{max}})",
+      "specialistRace": "Hors des races que le livre liste pour ce spécialiste ({{race}}) : permis, le MJ décide"
     }
   },
   "language": {
@@ -749,6 +752,11 @@
     "prepareShort": "Préparer",
     "prepareTitle": "Préparer les sorts du jour",
     "preparedCount": "{{count}} / {{max}} préparés",
+    "preparedCountSchool": "{{count}} / {{max}} + {{school}} préparés",
+    "schoolSlot": "{{max}} + {{school}}",
+    "schoolSlotHint": "{{max}} emplacements, plus {{school}} pour un sort de son école",
+    "opposed": "École opposée",
+    "opposedHint": "Sort d'une école opposée : gardé dans le grimoire, jamais préparé",
     "save": "Enregistrer la préparation",
     "saveShort": "Enregistrer",
     "cancel": "Annuler",
@@ -861,6 +869,8 @@
       "conjuration": "Conjuration",
       "summoning": "Convocation",
       "conjuration_summoning": "Conjuration",
+      "lesser_divination": "Divination mineure",
+      "greater_divination": "Divination majeure",
       "divination": "Divination",
       "enchantment": "Enchantement",
       "charm": "Charme",
@@ -1321,6 +1331,10 @@
       "add": "Ajouter au grimoire",
       "addTitle": "Écrire ce sort dans le grimoire sans jet (don du MJ, entraînement, correction)",
       "free": "Sort gratuit du niveau {{level}}",
+      "freeSchool": "Sort gratuit du niveau {{level}}, de son école",
+      "chance": "Chance d'apprendre : {{chance}} %, {{school}} pour un sort de son école, {{other}} pour tout autre",
+      "adjusted": "Table {{base}} %, école {{adjustment}}",
+      "knownOpposed": "Dans le grimoire, école opposée",
       "addFreeTitle": "Écrire ce sort dans le grimoire comme sort gratuit du niveau {{level}}, sans jet",
       "refused": {
         "spell_level_above_class": "La classe ne peut pas apprendre de sort au-delà du niveau {{classMax}}.",
@@ -2285,7 +2299,8 @@
       "alignment_not_allowed": "Cet alignement n’est pas permis à un personnage de classe {{className}} ; conservé tel qu’enregistré.",
       "height_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
       "weight_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}}) : le MJ décide.",
-      "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MJ décide."
+      "age_outside_range": "Hors de la plage habituelle pour cette race ({{min}} à {{max}} ans) : le MJ décide.",
+      "specialist_race": "La race ({{race}}) ne figure pas parmi celles que le livre liste pour ce spécialiste : permis, le MJ décide."
     },
     "unitHint": {
       "height": {
@@ -3119,6 +3134,7 @@
         "illusionist": "un illusionniste",
         "invoker": "un invocateur",
         "necromancer": "un nécromancien",
+        "psionicist": "un psioniste",
         "transmuter": "un transmutateur"
       }
     },
@@ -3229,6 +3245,7 @@
       "allBut": "Tous sauf {{list}}",
       "races": "Races",
       "allRaces": "Toutes",
+      "specialistRaces": "Races de la spécialité",
       "minimums": "Minimums",
       "minimumUnmet": "Score sous le minimum"
     },

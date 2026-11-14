@@ -57,3 +57,13 @@ export function schoolLabel(t: TFunction, raw: string): string {
     .map((p) => schoolPart(t, p))
     .join(", ");
 }
+
+/**
+ * A spell's school codes (ADR 0050 step 1.4), worded: "Alteration/Necromancy" for two. Empty when the
+ * spell has none (the book's raw wording is then the caller's fallback).
+ */
+export function schoolCodesLabel(t: TFunction, codes: string[]): string {
+  return codes
+    .map((c) => t(`lookup.schoolNames.${c}`, { defaultValue: c }))
+    .join(" / ");
+}

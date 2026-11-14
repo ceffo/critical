@@ -91,10 +91,12 @@ export function GrantRows({
         );
       })}
       {grants.freeSpells.map((fs) => {
-        const what = t("app.levelUp.grant.freeSpell", {
+        // A specialist's is of his school (ADR 0050 step 8, the server's `ofSchool`).
+        const kind = fs.ofSchool ? "freeSpellSchool" : "freeSpell";
+        const what = t(`app.levelUp.grant.${kind}`, {
           spellLevel: fs.spellLevel,
         });
-        const actionTitle = t("app.levelUp.open.freeSpell", {
+        const actionTitle = t(`app.levelUp.open.${kind}`, {
           spellLevel: fs.spellLevel,
         });
         return (

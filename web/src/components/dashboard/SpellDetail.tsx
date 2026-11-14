@@ -14,7 +14,12 @@ import { statDice, statValue, type StatKey } from "@/lib/spellValues";
 import { statLocale, statText, type StatField } from "@/lib/statText";
 import { damageFormula, damageText, exposureDamageText } from "@/lib/spellDice";
 import { damageRows, exposureRows } from "@/lib/spellMode";
-import { classLabel, schoolLabel, spheresLabel } from "@/lib/lookupLabels";
+import {
+  classLabel,
+  schoolCodesLabel,
+  schoolLabel,
+  spheresLabel,
+} from "@/lib/lookupLabels";
 import type { Spell } from "@/types/spells";
 
 // A spell's detail (ADR 0022 step 2.5): the lookup's right card and the Spells tab's details popup
@@ -91,7 +96,10 @@ export function SpellDetail({
   const meta = [
     classLabel(t, spell.class),
     t("lookup.levelLabel", { level: spell.level }),
-    schoolLabel(t, localized(i18n.language, spell.school)),
+    // The school codes, worded (ADR 0050 step 1.4); a spell with none keeps the book's own text.
+    spell.schools && spell.schools.length > 0
+      ? schoolCodesLabel(t, spell.schools)
+      : schoolLabel(t, localized(i18n.language, spell.school)),
     spheresLabel(t, localized(i18n.language, spell.sphere)),
     statText(loc, spell, "components").text,
   ].filter(Boolean);

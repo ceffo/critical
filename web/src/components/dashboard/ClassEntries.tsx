@@ -33,6 +33,11 @@ export function ClassEntries({
   const entries = character.derived.classes ?? [];
   const limitOf = (cls: string) =>
     character.warnings.find((w) => w.code === "level_limit" && w.class === cls);
+  // ADR 0050 step 14.1: a specialist of a race the book does not list for the class.
+  const raceOf = (cls: string) =>
+    character.warnings.find(
+      (w) => w.code === "specialist_race" && w.class === cls,
+    );
   const summary = entries
     .map((e) =>
       t("app.classEntry.summaryItem", {
@@ -49,7 +54,7 @@ export function ClassEntries({
         className="flex w-full min-w-0 cursor-pointer items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-left text-body font-medium break-words hover:bg-raised-hover"
       >
         <span className="min-w-0">{summary}</span>
-        {entries.some((e) => limitOf(e.class)) && (
+        {entries.some((e) => limitOf(e.class) || raceOf(e.class)) && (
           <Warning
             aria-hidden
             className="size-3.5 shrink-0 self-center text-warning"
@@ -136,6 +141,21 @@ export function ClassEntries({
                     <Warning aria-hidden className="size-3.5 shrink-0" />
                     <span className="min-w-0 break-words">
                       {t("app.classEntry.limit", { max: limit.max })}
+                    </span>
+                  </span>
+                )}
+                {raceOf(e.class) && (
+                  <span
+                    className="flex items-center gap-1 px-2.5 text-label text-warning"
+                    data-testid={`class-race-${e.class}`}
+                  >
+                    <Warning aria-hidden className="size-3.5 shrink-0" />
+                    <span className="min-w-0 break-words">
+                      {t("app.classEntry.specialistRace", {
+                        race: t(`details.races.${raceOf(e.class)?.race}`, {
+                          defaultValue: raceOf(e.class)?.race ?? "",
+                        }),
+                      })}
                     </span>
                   </span>
                 )}

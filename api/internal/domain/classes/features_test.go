@@ -39,12 +39,17 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		classes.KindSpellbook:            {Kind: classes.KindSpellbook, Spellbook: book},
 		classes.KindPsionics:             {Kind: classes.KindPsionics, Psionics: psionics()},
 		classes.KindSaveBonus:            {Kind: classes.KindSaveBonus, SaveBonus: saveBonus()},
+		classes.KindSchoolSpecialization: {Kind: classes.KindSchoolSpecialization, SchoolSpecialization: schoolSpecialization()},
 	}
 	require.Len(t, valid, len(classes.FeatureKinds), "one case per kind of the closed list")
 	for _, kind := range classes.FeatureKinds {
 		t.Run(kind, func(t *testing.T) {
 			f := valid[kind]
-			r := registry(t, withFeatures(f))
+			fs := []classes.Feature{f}
+			if kind == classes.KindSchoolSpecialization { // a specialist keeps a spellbook (ADR 0050 step 2.1)
+				fs = append(fs, valid[classes.KindSpellbook])
+			}
+			r := registry(t, withFeatures(fs...))
 			c, ok := r.Class("test_class")
 			require.True(t, ok)
 			got, ok := c.Feature(kind, 1)
@@ -91,6 +96,100 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 			_, err := classes.New([]classes.Class{withFeatures(tc.fs...)}, groups("warrior"), []classes.Race{{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}}})
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "test_class", "names the class")
+		})
+	}
+}
+
+// schoolSpecialization are valid school_specialization params (ADR 0050 step 2): a transmuter's
+// of Table 22, with human the only race the test registry defines.
+func schoolSpecialization() *classes.SchoolSpecialization {
+	return &classes.SchoolSpecialization{
+		Schools:           []string{classes.SchoolAlteration},
+		OppositionSchools: []string{classes.SchoolAbjuration, classes.SchoolNecromancy},
+		Races:             []string{"human"},
+	}
+}
+
+// ADR 0050 step 2 and 2.1: school_specialization takes schools, opposition schools and races (and
+// the races of a multi-class character), each code of the closed list or a defined race; every
+// start-up check of 2.1 refuses its offence naming the class, and the kind once per class is the
+// registry's "a kind listed twice" (2.2). Until the engine item the kind is not implemented: a
+// class listing it is not creatable.
+func TestFeatures_Step2_SchoolSpecializationParses(t *testing.T) {
+	book := classes.Feature{Kind: classes.KindSpellbook, Spellbook: &classes.Spellbook{MaxSpellLevel: 9}}
+	specialist := func(mutate func(s *classes.SchoolSpecialization)) []classes.Feature {
+		s := schoolSpecialization()
+		mutate(s)
+		return []classes.Feature{book, {Kind: classes.KindSchoolSpecialization, SchoolSpecialization: s}}
+	}
+	races := []classes.Race{
+		{ID: "human", Identity: identity(), Name: localized.Text{"en": "Human"}},
+		{ID: "gnome", Identity: identity(), Name: localized.Text{"en": "Gnome"}},
+	}
+	build := func(fs []classes.Feature) (*classes.Registry, error) {
+		return classes.New([]classes.Class{withFeatures(fs...)}, groups("warrior"), races)
+	}
+
+	r, err := build(specialist(func(s *classes.SchoolSpecialization) {
+		s.Races, s.MulticlassRaces = []string{"human", "gnome"}, []string{"gnome"}
+	}))
+	require.NoError(t, err)
+	c, ok := r.Class("test_class")
+	require.True(t, ok)
+	f, ok := c.Feature(classes.KindSchoolSpecialization, 1)
+	require.True(t, ok)
+	assert.Equal(t, &classes.SchoolSpecialization{
+		Schools:           []string{"alteration"},
+		OppositionSchools: []string{"abjuration", "necromancy"},
+		Races:             []string{"human", "gnome"},
+		MulticlassRaces:   []string{"gnome"},
+	}, f.SchoolSpecialization, "the params come back as the catalogue wrote them")
+	assert.False(t, c.Implemented(), "the kind has no engine yet (ADR 0050 step 17.2): the class is not creatable")
+
+	// The diviner's reading (Q3): lesser divination among his schools, never in an opposition.
+	_, err = build(specialist(func(s *classes.SchoolSpecialization) {
+		s.Schools = []string{classes.SchoolGreaterDivination, classes.SchoolLesserDivination}
+	}))
+	require.NoError(t, err)
+
+	refused := []struct {
+		name   string
+		fs     []classes.Feature
+		needle string
+	}{
+		{"an unknown school", specialist(func(s *classes.SchoolSpecialization) { s.Schools = []string{"dimension"} }), `unknown school "dimension"`},
+		{"an unknown opposition school", specialist(func(s *classes.SchoolSpecialization) {
+			s.OppositionSchools = append(s.OppositionSchools, "Illusion")
+		}), `unknown school "Illusion"`},
+		{"no school", specialist(func(s *classes.SchoolSpecialization) { s.Schools = nil }), "a school and a race are needed"},
+		{"no race", specialist(func(s *classes.SchoolSpecialization) { s.Races = nil }), "a school and a race are needed"},
+		{"a school that is also opposed", specialist(func(s *classes.SchoolSpecialization) {
+			s.OppositionSchools = append(s.OppositionSchools, classes.SchoolAlteration)
+		}), `school "alteration" is also in the opposition`},
+		{"lesser divination opposed", specialist(func(s *classes.SchoolSpecialization) {
+			s.OppositionSchools = append(s.OppositionSchools, classes.SchoolLesserDivination)
+		}), "open to every wizard"},
+		{"a school twice", specialist(func(s *classes.SchoolSpecialization) {
+			s.Schools = []string{classes.SchoolAlteration, classes.SchoolAlteration}
+		}), "twice"},
+		{"a race that is no race", specialist(func(s *classes.SchoolSpecialization) { s.Races = []string{"human", "orc"} }), `unknown race "orc"`},
+		{"a multi-class race that is no race", specialist(func(s *classes.SchoolSpecialization) {
+			s.MulticlassRaces = []string{"orc"}
+		}), `multi-class race "orc" is not among the races`},
+		{"a multi-class race outside the races", specialist(func(s *classes.SchoolSpecialization) {
+			s.MulticlassRaces = []string{"gnome"}
+		}), `multi-class race "gnome" is not among the races`},
+		{"no spellbook", []classes.Feature{{Kind: classes.KindSchoolSpecialization, SchoolSpecialization: schoolSpecialization()}}, "lists no spellbook"},
+		{"no params", []classes.Feature{book, {Kind: classes.KindSchoolSpecialization}}, "a missing or unexpected parameter"},
+		{"its params on another kind", []classes.Feature{{Kind: classes.KindExceptionalStrength, SchoolSpecialization: schoolSpecialization()}}, "a missing or unexpected parameter"},
+		{"the kind twice", append(specialist(func(*classes.SchoolSpecialization) {}), classes.Feature{Kind: classes.KindSchoolSpecialization, SchoolSpecialization: schoolSpecialization()}), "twice"},
+	}
+	for _, tc := range refused {
+		t.Run("refused: "+tc.name, func(t *testing.T) {
+			_, err := build(tc.fs)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "test_class", "names the class")
+			assert.Contains(t, err.Error(), tc.needle)
 		})
 	}
 }

@@ -4,7 +4,8 @@
 quoted in Context and binds; the points it left open are decided below against the existing ADRs and
 the code, and the readings the books leave open are in "Questions for the user", each with a
 recommended default that the record takes as written unless the user says otherwise. Design only:
-not implemented. On implementation it amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
+not implemented (steps 1 to 4, the catalogue, are built: CRI-344, format 23 of
+[ADR 0021](0021-spell-catalogue.md) step 31; the eight classes are in the catalogue and not creatable). On implementation it amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
 feature kind), [ADR 0021](0021-spell-catalogue.md) (school codes on a spell, a format bump),
 [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3 (the school slot, opposed spells),
 [ADR 0006](0006-saving-throws.md) step 10.2 (the school modifiers of a save that names its spell),
@@ -138,7 +139,7 @@ code (ADR 0040 step 10).
       spell's school is for reference).
    4. The API serves the codes with the spell (lookup, spellbook, preparation); the web words them.
    Tests (rulebooks repo): the builder's case for each mapping rule and the unknown-token failure;
-   (API) `Parse_Step1_ASpellReadsItsSchools` (catalogueadpt).
+   (API) `TestParse_Step1_ASpellReadsItsSchools` (catalogueadpt).
 2. **The feature kind `school_specialization`** (amends [ADR 0040](0040-classes-are-data.md) step
    3, a new row of the closed list):
 
@@ -151,9 +152,11 @@ code (ADR 0040 step 10).
       `opposition_schools` (PHB p.31: open to every wizard); the class also lists `spellbook` (a
       specialist is a wizard who keeps a book).
    2. A class lists the kind at most once (one specialty: PHB p.31, "a single school").
-   Tests: `Features_Step2_SchoolSpecializationParses` (domain/classes: the params, each refusal of
-   2.1 and 2.2), `Features_Step2_TheEightSpecialistsGrantTheKind` (seedcheck on the real artifact:
-   the table of Context, row for row).
+   Tests: `TestFeatures_Step2_SchoolSpecializationParses` (domain/classes: the params, each refusal of
+   2.1 and 2.2), `TestFeatures_Step2_TheEightSpecialistsGrantTheKind` (seedcheck on the real artifact:
+   the table of Context, row for row), `TestParse_Step2_RefusesAnUnknownSchoolOrKind` (catalogueadpt: the
+   schema's refusals) and `TestDefinitions_Step2_ARefusedSpecializationStopsTheImport` (ruletablesadpt: the
+   registry's, at start).
 3. **The eight class definitions** (catalogue data, the builder's). Each is the mage's definition
    (group `wizard`, equipment, Table 20's experience, hit dice, `spell_progression: wizard_spells`,
    non-weapon groups, alignments, the `spellbook` feature with `max_spell_level: 9` and
@@ -166,14 +169,16 @@ code (ADR 0040 step 10).
       multi-class character, and on the illusionist the feature's `multiclass_races: [gnome]`
       instead (step 14);
    4. `name`: a language map (en: the table's names; fr: Abjurateur, Conjurateur, Devin,
-      Enchanteur, Illusionniste, Évocateur, Nécromancien, Transmutateur, _to confirm_ against the
-      French PHB, which is not in the rulebooks clone).
+      Enchanteur, Illusionniste, Invocateur, Nécromancien, Transmutateur: the French PHB's Tableau 22,
+      `source/phb-fr/phb-fr_djvu.txt` of the rulebooks clone, which says Invocateur where this record
+      first guessed Évocateur).
    5. **Their DMG Table 7 rows** (`race_level_limits`, a row per restricted race): the illusionist
       takes DMG Table 7's Illusionist row (gnome 15, dwarf, elf, half-elf and halfling a dash); the
       seven others take the Mage row (elf 15, half-elf 12, dwarf, gnome and halfling a dash). The
       human has no row (unlimited), as today.
-   Test: `Definitions_Step3_TheEightSpecialists` (ruletablesadpt: the fixture's illusionist and
-   transmuter parse with their params, minimums, prime requisites and rows).
+   Test: `TestDefinitions_Step3_TheEightSpecialists` (ruletablesadpt: the fixture's eight parse with
+   their params, minimums, prime requisites and rows; the fixture holds all eight because the schema
+   pins the 70 level-limit rows and `seeds/proficiencies.json` must name every class).
 4. **The catalogue format bump** (a new step of [ADR 0021](0021-spell-catalogue.md), the next
    format: 23 if no other bump lands first). The spell's `schools` (step 1, required, possibly
    empty), the feature kind (step 2) and the eight classes with their rows (step 3). **Rollout, as
@@ -181,8 +186,8 @@ code (ADR 0040 step 10).
    `just catalogue`); the builder publishes it first, then the API change immediately. The API reads
    the kind but does not compute it in that change: `Class.Implemented` is false for the eight, so
    they are not creatable and no character changes, until the engine item (step 17) sets it.
-   Tests: `Parse_Step4_ReadsTheNewFormatAndRefusesTheOld` (catalogueadpt),
-   `Schema_Step4_SchoolsAndTheSpecializationKind` (cataloguecheck).
+   Tests: `TestParse_Step4_ReadsTheNewFormatAndRefusesTheOld` (catalogueadpt),
+   `TestSchema_Step4_SchoolsAndTheSpecializationKind` (cataloguecheck).
 
 ### A spell for a specialist
 

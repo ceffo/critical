@@ -150,6 +150,14 @@ func TestProficiencyTables_Step1_Table38Crossovers(t *testing.T) {
 		{Class: "thief", Groups: []string{"rogue", "general"}},
 		{Class: "bard", Groups: []string{"rogue", "warrior", "wizard", "general"}},
 		{Class: "psionicist", Groups: []string{"psionicist", "general"}},
+		{Class: "abjurer", Groups: []string{"wizard", "general"}},
+		{Class: "conjurer", Groups: []string{"wizard", "general"}},
+		{Class: "diviner", Groups: []string{"wizard", "general"}},
+		{Class: "enchanter", Groups: []string{"wizard", "general"}},
+		{Class: "illusionist", Groups: []string{"wizard", "general"}},
+		{Class: "invoker", Groups: []string{"wizard", "general"}},
+		{Class: "necromancer", Groups: []string{"wizard", "general"}},
+		{Class: "transmuter", Groups: []string{"wizard", "general"}},
 	}, p.Crossovers())
 }
 

@@ -43,6 +43,10 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 		"fighter": {"warrior", "general"}, "mage": {"wizard", "general"}, "cleric": {"priest", "general"},
 		"thief": {"rogue", "general"}, "bard": {"rogue", "warrior", "wizard", "general"},
 		"psionicist": {"psionicist", "general"},
+		// ADR 0050 step 3: the eight specialist wizards share the mage's groups (PHB Table 38).
+		"abjurer": {"wizard", "general"}, "conjurer": {"wizard", "general"}, "diviner": {"wizard", "general"},
+		"enchanter": {"wizard", "general"}, "illusionist": {"wizard", "general"}, "invoker": {"wizard", "general"},
+		"necromancer": {"wizard", "general"}, "transmuter": {"wizard", "general"},
 	}, groups)
 
 	// Step 4: each proficiency's cost by class, the crossover's +1 included.
@@ -57,7 +61,7 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 		assert.Len(t, byID, 65, "every pickable catalogue proficiency has a cost for %s", class)
 		assert.NotContains(t, byID, "languages_modern", "step 6: a language is no pick of its own, so %s gets no cost for it", class)
 	}
-	assert.Len(t, costs, 6)
+	assert.Len(t, costs, 14, "the six classes and the eight specialist wizards")
 }
 
 // ADR 0037 steps 21.2, 21.5 and 21.6: each class option of GET /api/characters/options carries

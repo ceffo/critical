@@ -52,7 +52,10 @@ func TestClassCatalogue_Step1_EveryClassCarriesEveryField(t *testing.T) {
 			16_500, 30_000,
 		},
 	}
-	assert.Equal(t, []string{"fighter", "mage", "cleric", "thief", "bard", "psionicist"}, defs.ClassIDs())
+	assert.Equal(t, []string{
+		"fighter", "mage", "cleric", "thief", "bard", "psionicist",
+		"abjurer", "conjurer", "diviner", "enchanter", "illusionist", "invoker", "necromancer", "transmuter",
+	}, defs.ClassIDs(), "the eight specialist wizards (ADR 0050 step 3) follow the psionicist in the fixture")
 	for id, w := range page {
 		c, err := defs.Get(id)
 		require.NoError(t, err)
@@ -246,7 +249,12 @@ func TestClassCatalogue_Step20_PsionicistGridsEqualItsClassAndGroupEntries(t *te
 // NoMultiClass; an absent flag lets the class be one of a multi-class character's classes.
 func TestDefinitions_Step24_TheMultiClassFlag(t *testing.T) {
 	defs := cataloguetest.Definitions(t)
+	// The bard and the seven specialists a gnome illusionist is not one of (ADR 0050 step 3.3).
+	barred := map[string]bool{
+		"bard": true, "abjurer": true, "conjurer": true, "diviner": true, "enchanter": true, "invoker": true,
+		"necromancer": true, "transmuter": true,
+	}
 	for _, c := range defs.Classes() {
-		assert.Equal(t, c.ID == "bard", c.NoMultiClass, c.ID)
+		assert.Equal(t, barred[c.ID], c.NoMultiClass, c.ID)
 	}
 }

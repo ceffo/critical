@@ -152,6 +152,16 @@ func New(classes []Class, groups []Group, races []Race) (*Registry, error) {
 		if err != nil {
 			return nil, fmt.Errorf("class %q: %w", c.ID, err)
 		}
+		for _, f := range v.Features {
+			if f.SchoolSpecialization == nil {
+				continue
+			}
+			for _, race := range append(slices.Clone(f.SchoolSpecialization.Races), f.SchoolSpecialization.MulticlassRaces...) {
+				if !slices.ContainsFunc(out.races, func(r Race) bool { return r.ID == race }) {
+					return nil, fmt.Errorf("class %q: feature %s: unknown race %q", c.ID, f.Kind, race)
+				}
+			}
+		}
 		out.classes = append(out.classes, v)
 	}
 	return out, nil

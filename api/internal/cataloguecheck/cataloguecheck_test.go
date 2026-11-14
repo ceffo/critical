@@ -31,7 +31,7 @@ func compile(t *testing.T) *jsonschema.Schema {
 
 func spell(id string, desc map[string]any) map[string]any {
 	return map[string]any{
-		"id": id, "class": "Wizard", "level": 1, "school": "Evocation",
+		"id": id, "class": "Wizard", "level": 1, "school": "Evocation", "schools": []any{"invocation_evocation"},
 		"casting_time": "1", "range": "10 yards", "duration": "1 round",
 		"area_of_effect": "One creature", "components": "V, S", "saving_throw": "None",
 		"name": map[string]any{"en": "Spell"}, "description": desc, "source": "PHB",
@@ -198,13 +198,13 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 }
 
 // TestSchema_Step14_OnlyTheNextFormatIsValid (ADR 0040 step 14, ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2,
-// 22.2, 23.2, 24.2, 25.5, 27.5 and 30.3): the schema accepts format 22 only; every earlier format, retired, is refused
-// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 22
+// 22.2, 23.2, 24.2, 25.5, 27.5, 30.3 and 31.3): the schema accepts format 23 only; every earlier format, retired, is refused
+// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 23
 // requires, or with a table or a shape of an earlier format.
 func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 22")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 23")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -212,20 +212,20 @@ func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	for _, part := range []string{"skill_sets", "equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 22 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 23 requires %s", part)
 	}
 	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 22 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 23 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 22 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 23 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 22 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 23 requires the spell immunities")
 	// ADR 0040 steps 12 to 14: the skill sets, Table 28 by skill and the specialization params.
 	refuseEach(t, map[string]func(a map[string]any){
 		"the thief skill base table back":   func(a map[string]any) { tables(a)["thief_skill_base"] = tables(a)["skill_race"] },
@@ -665,5 +665,97 @@ func TestSchema_Step30_TheStaffSlingTypeAndTheHurledFlag(t *testing.T) {
 		"a weapon type outside the list": func(a map[string]any) { weaponRow(t, a, "staff_sling")["weapon_type"] = "staff" },
 		"a hurled that is a word":        func(a map[string]any) { weaponToHit(t, a)["hurled"] = "yes" },
 		"an unknown trait param":         func(a map[string]any) { weaponToHit(t, a)["thrown"] = true },
+	})
+}
+
+// classByID is the class of a fixture document with that id, for a test to edit.
+func classByID(t *testing.T, a map[string]any, id string) map[string]any {
+	t.Helper()
+	for _, c := range a["classes"].([]any) {
+		if m := c.(map[string]any); m["id"] == id {
+			return m
+		}
+	}
+	require.FailNow(t, "no class "+id)
+	return nil
+}
+
+// ADR 0050 steps 1 to 4 (ADR 0021 step 31): format 23's schema. A spell, wizard or priest, carries a
+// list of school codes from the PHB's nine, each once, empty for a spell of no PHB school; the feature
+// kind school_specialization takes schools (one at least), opposition_schools, races (one at least)
+// and the optional multiclass_races, nothing else; the level limits are a row per race and class,
+// the eight specialists' included (70 rows); and the format-22 shapes are refused.
+func TestSchema_Step4_SchoolsAndTheSpecializationKind(t *testing.T) {
+	sch := compile(t)
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 23")
+
+	wizard := func(a map[string]any) map[string]any { return a["spells"].([]any)[0].(map[string]any) }
+	priest := func(a map[string]any) map[string]any {
+		for _, s := range a["spells"].([]any) {
+			if m := s.(map[string]any); m["class"] == "Priest" {
+				return m
+			}
+		}
+		require.FailNow(t, "the fixture has no priest spell")
+		return nil
+	}
+	params := func(a map[string]any) map[string]any {
+		return feature(t, classByID(t, a, "illusionist"), "school_specialization")["params"].(map[string]any)
+	}
+
+	// What is accepted: every one of the nine, two schools, none, a priest's, and the optional param left out.
+	for name, schools := range map[string][]any{
+		"all nine": {
+			"abjuration", "alteration", "conjuration_summoning", "enchantment_charm", "lesser_divination",
+			"greater_divination", "illusion", "invocation_evocation", "necromancy",
+		},
+		"two schools": {"alteration", "necromancy"},
+		"none":        {},
+	} {
+		a := fixtureDoc(t)
+		wizard(a)["schools"] = schools
+		priest(a)["schools"] = schools
+		assert.NoError(t, sch.Validate(a), name)
+	}
+	a := fixtureDoc(t)
+	delete(params(a), "multiclass_races")
+	assert.NoError(t, sch.Validate(a), "multiclass_races is optional")
+	a = fixtureDoc(t)
+	params(a)["opposition_schools"] = []any{}
+	assert.NoError(t, sch.Validate(a), "a specialist may have no opposition (the data's, not the schema's, rule)")
+
+	refuseEach(t, map[string]func(a map[string]any){
+		"a wizard spell without schools": func(a map[string]any) { delete(wizard(a), "schools") },
+		"a priest spell without schools": func(a map[string]any) { delete(priest(a), "schools") },
+		"a school outside the nine":      func(a map[string]any) { wizard(a)["schools"] = []any{"shadow"} },
+		"a Tome of Magic school":         func(a map[string]any) { wizard(a)["schools"] = []any{"dimension"} },
+		"a school in capitals":           func(a map[string]any) { wizard(a)["schools"] = []any{"Abjuration"} },
+		"a school in the book's words":   func(a map[string]any) { wizard(a)["schools"] = []any{"Conjuration/Summoning"} },
+		"a school twice":                 func(a map[string]any) { wizard(a)["schools"] = []any{"illusion", "illusion"} },
+		"schools that is a string":       func(a map[string]any) { wizard(a)["schools"] = "illusion" },
+		"the old format":                 func(a map[string]any) { a["format"] = 22 },
+		"a kind outside the list": func(a map[string]any) {
+			feature(t, classByID(t, a, "illusionist"), "school_specialization")["kind"] = "school_mastery"
+		},
+		"a specialization without params": func(a map[string]any) {
+			delete(feature(t, classByID(t, a, "illusionist"), "school_specialization"), "params")
+		},
+		"no schools":                       func(a map[string]any) { params(a)["schools"] = []any{} },
+		"an unknown school":                func(a map[string]any) { params(a)["schools"] = []any{"shadow"} },
+		"an unknown opposition school":     func(a map[string]any) { params(a)["opposition_schools"] = []any{"shadow"} },
+		"a school twice in the opposition": func(a map[string]any) { params(a)["opposition_schools"] = []any{"necromancy", "necromancy"} },
+		"no races":                         func(a map[string]any) { params(a)["races"] = []any{} },
+		"a race in capitals":               func(a map[string]any) { params(a)["races"] = []any{"Human"} },
+		"a race twice":                     func(a map[string]any) { params(a)["races"] = []any{"human", "human"} },
+		"no multi-class race when given":   func(a map[string]any) { params(a)["multiclass_races"] = []any{} },
+		"a param of none":                  func(a map[string]any) { params(a)["spell_slots"] = 1 },
+		"no schools key":                   func(a map[string]any) { delete(params(a), "schools") },
+		"no races key":                     func(a map[string]any) { delete(params(a), "races") },
+		"no opposition key":                func(a map[string]any) { delete(params(a), "opposition_schools") },
+		"the level limits of format 22":    func(a map[string]any) { tables(a)["race_level_limits"] = tables(a)["race_level_limits"].([]any)[:30] },
+		"a level limit of a ninth specialist": func(a map[string]any) {
+			rows := tables(a)["race_level_limits"].([]any)
+			rows[0].(map[string]any)["class"] = "wild_mage"
+		},
 	})
 }

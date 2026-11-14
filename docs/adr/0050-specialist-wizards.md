@@ -374,6 +374,9 @@ code (ADR 0040 step 10).
        scores), `class_switch_alignment_not_allowed`, and step 14.3's
        `multiclass_class_not_allowed` for a multi-class character. A race outside Table 22 warns
        (step 14.1); DMG Table 7's dash does not refuse a switch (the character exists; Q8).
+       A frozen entry (the first class of a dual-class character) may be switched like an active
+       one: only its class changes, and the new class's opposed spells leave the slot list (15.4);
+       an undo gives class and slots back (15.5). `TestSwitch_Step15_AFrozenEntryMayBeSwitched`.
     2. **What changes**: the entry's class only. XP, realized level, `left_at_level`, hit points,
        proficiency picks and skill points are unchanged (the group, so Table 20, Table 21, THAC0 and
        saves, is the same).

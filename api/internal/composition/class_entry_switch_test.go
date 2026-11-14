@@ -163,3 +163,123 @@ func TestSwitch_Step15_UndoRestoresClassAndSlots(t *testing.T) {
 	assert.Equal(t, "transmuter", c.Entries()[0].Class)
 	assert.Equal(t, slotsAfter, slotsOf(t, m, id))
 }
+
+// Step 15.5 with an extra slot a spell granted: undo then redo give back slots, used flags, the
+// extra slot and the class entry exactly, each time (the snapshots hold the whole slot list).
+func TestSwitch_Step15_UndoThenRedoIsExactWithAnExtraSlot(t *testing.T) {
+	ctx := context.Background()
+	bs, m, id := elfMage14(t)
+	slots := append(slotsOf(t, m, id), spellsvc.SpellSlot{Level: 2, Extra: true, Used: true})
+	require.NoError(t, m.Spells().SaveSlots(ctx, id, slots))
+	charBefore, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	slotsBefore := slotsOf(t, m, id)
+
+	_, err = bs.ClassEntry.Switch(ctx, id, 0, "transmuter")
+	require.NoError(t, err)
+	slotsAfter := slotsOf(t, m, id)
+	charAfter, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	require.Len(t, slotsAfter, len(slotsBefore)-2)
+	assert.Contains(t, slotsAfter, spellsvc.SpellSlot{Level: 2, Extra: true, Used: true}, "the extra slot is kept")
+
+	for round := 0; round < 2; round++ {
+		undoTop(t, bs, id)
+		c, err := bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, charBefore.Entries(), c.Entries(), "round %d: the class entry is back", round)
+		assert.Equal(t, slotsBefore, slotsOf(t, m, id), "round %d: slots, used flags and the extra slot are back", round)
+
+		redo, err := bs.Log.RedoTarget(ctx, id)
+		require.NoError(t, err)
+		_, err = bs.Log.Redo(ctx, id, redo.ID)
+		require.NoError(t, err)
+		c, err = bs.Character.GetCharacter(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, charAfter.Entries(), c.Entries(), "round %d: the switch is done again", round)
+		assert.Equal(t, slotsAfter, slotsOf(t, m, id), "round %d", round)
+	}
+}
+
+// Step 15.5 when nothing is prepared that the target opposes: the slot list is untouched, and an
+// undo gives the class back with the very same slots.
+func TestSwitch_Step15_NothingOpposedPreparedUndoIsExact(t *testing.T) {
+	ctx := context.Background()
+	bs, m, id := elfMage14(t)
+	_, err := bs.Prep.Prepare(ctx, id, []string{"enlarge", "magic_missile"})
+	require.NoError(t, err)
+	slotsBefore := slotsOf(t, m, id)
+	charBefore, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+
+	_, err = bs.ClassEntry.Switch(ctx, id, 0, "transmuter")
+	require.NoError(t, err)
+	assert.Equal(t, slotsBefore, slotsOf(t, m, id), "no slot left")
+
+	undoTop(t, bs, id)
+	c, err := bs.Character.GetCharacter(ctx, id)
+	require.NoError(t, err)
+	assert.Equal(t, charBefore.Entries(), c.Entries())
+	assert.Equal(t, slotsBefore, slotsOf(t, m, id))
+}
+
+// switchFrom stores a human mage 14 whose book holds the four spells (learned as a mage: a
+// specialist cannot learn an opposed one), nothing prepared.
+func switchFrom(t *testing.T) (*composition.BackingServices, *memory.Store, int64) {
+	t.Helper()
+	ctx := context.Background()
+	m := memory.New()
+	bs, err := composition.Build(ctx, composition.MemoryStorage(m), fixtureConfig())
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, bs.Close(ctx)) })
+	id, err := m.AddCharacter(ctx, charactersvc.Character{
+		Name: "Ilsevel", Race: "human", Class: "mage", RealizedLevel: 14, XPTotal: 1_500_000,
+		Str: 9, Dex: 16, Con: 16, Int: 18, Wis: 16, Cha: 10, HPMax: 37, Details: charactersvc.Details{Alignment: "neutral_good"},
+	})
+	require.NoError(t, err)
+	for _, spell := range []string{"enlarge", "magic_missile", "alarm", "magic_jar"} {
+		_, err = bs.Learn.Add(ctx, id, spell)
+		require.NoError(t, err, spell)
+	}
+	return bs, m, id
+}
+
+func slotSpells(t *testing.T, m *memory.Store, id int64) []string {
+	t.Helper()
+	var out []string
+	for _, sl := range slotsOf(t, m, id) {
+		out = append(out, sl.SpellID)
+	}
+	return out
+}
+
+// Step 15.4: the spells taken out are the target's opposed ones only. A transmuter (alteration;
+// opposes abjuration and necromancy) holding Enlarge and Magic Missile goes to an abjurer, who
+// opposes alteration: Enlarge leaves; back to a mage nothing is opposed and nothing leaves.
+func TestSwitch_Step15_TheOpposedSetIsTheTargetsOnly(t *testing.T) {
+	ctx := context.Background()
+	bs, m, id := switchFrom(t)
+	_, err := bs.ClassEntry.Switch(ctx, id, 0, "transmuter")
+	require.NoError(t, err)
+	_, err = bs.Prep.Prepare(ctx, id, []string{"enlarge", "magic_missile"})
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{"enlarge", "magic_missile"}, slotSpells(t, m, id))
+
+	_, err = bs.ClassEntry.Switch(ctx, id, 0, "abjurer")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"magic_missile"}, slotSpells(t, m, id), "the specialist to another: the abjurer's opposed set, not the transmuter's")
+
+	_, err = bs.ClassEntry.Switch(ctx, id, 0, "mage")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"magic_missile"}, slotSpells(t, m, id), "a specialist to a mage: nothing is opposed")
+	info, err := bs.Prep.Info(ctx, id)
+	require.NoError(t, err)
+	for _, e := range info.Spellbook {
+		assert.False(t, e.Opposed, "%s: a mage opposes nothing", e.ID)
+	}
+
+	// The transmuter's own set (abjuration, necromancy) is no longer applied after the first switch.
+	_, err = bs.ClassEntry.Switch(ctx, id, 0, "transmuter")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"magic_missile"}, slotSpells(t, m, id))
+}

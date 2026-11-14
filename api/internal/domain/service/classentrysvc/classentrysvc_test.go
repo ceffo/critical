@@ -15,7 +15,9 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/classentrysvc"
 	"github.com/ceffo/critical/api/internal/domain/service/classentrysvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	prepmocks "github.com/ceffo/critical/api/internal/domain/service/prepsvc/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 )
 
 const charID = int64(1)
@@ -109,11 +111,27 @@ func TestSwitch_Step15_Refusals(t *testing.T) {
 	strict.AbilityMinimums = []classes.AbilityMinimum{{Ability: "dex", Min: 17}}
 	narrow := transmuter
 	narrow.Alignments = []string{"lawful_good"}
+	strictFighter := fighter
+	strictFighter.AbilityMinimums = []classes.AbilityMinimum{{Ability: "dex", Min: 17}}
 	multi := viewtest.Multi(
 		viewtest.WithEntry("mage", 5), viewtest.WithEntry("fighter", 5),
 		viewtest.WithIdentity(charID, "Ilsevel", "gnome"), viewtest.WithScores(9, 16, 12, 18, 12, 10),
 	)
 	multi.Alignment = "neutral_good"
+
+	both := transmuter
+	both.AbilityMinimums = []classes.AbilityMinimum{{Ability: "dex", Min: 17}}
+	both.Alignments = []string{"lawful_good"}
+	mageThief := viewtest.Multi(
+		viewtest.WithEntry("mage", 5), viewtest.WithEntry("thief", 5),
+		viewtest.WithIdentity(charID, "Ilsevel", "elf"), viewtest.WithScores(9, 16, 12, 18, 12, 10),
+	)
+	mageThief.Alignment = "neutral_good"
+	bothMulti := viewtest.Multi(
+		viewtest.WithEntry("mage", 5), viewtest.WithEntry("thief", 5),
+		viewtest.WithIdentity(charID, "Ilsevel", "elf"), viewtest.WithScores(9, 16, 12, 18, 12, 10),
+	)
+	bothMulti.Alignment = "neutral_good"
 
 	for _, tc := range []struct {
 		name  string
@@ -123,6 +141,11 @@ func TestSwitch_Step15_Refusals(t *testing.T) {
 		cat   []classes.Class
 		want  error
 	}{
+		{"order: minimums before alignment", mageSheet(), 0, "transmuter", append([]classes.Class{both}, mage), classentrysvc.ErrMinimumsNotMet},
+		{"order: minimums before alignment and multi-class", bothMulti, 0, "transmuter", append([]classes.Class{both}, mage), classentrysvc.ErrMinimumsNotMet},
+		{"order: alignment before multi-class", bothMulti, 0, "transmuter", append([]classes.Class{narrow}, mage), classentrysvc.ErrAlignmentNotAllowed},
+		{"order: not allowed before minimums", mageSheet(), 0, "fighter", append([]classes.Class{strictFighter}, mage), classentrysvc.ErrNotAllowed},
+		{"multiclass_class_not_allowed: a mage/thief of a race outside multiclass_races", mageThief, 0, "illusionist", all, classentrysvc.ErrMultiClassNotAllowed},
 		{"class_switch_not_allowed: another group", mageSheet(), 0, "fighter", all, classentrysvc.ErrNotAllowed},
 		{"class_switch_not_allowed: a class with no spellbook", mageSheet(), 0, "scholar", all, classentrysvc.ErrNotAllowed},
 		{"class_switch_not_allowed: a spellbook of another group", mageSheet(), 0, "bard", all, classentrysvc.ErrNotAllowed},
@@ -201,6 +224,36 @@ func TestSwitch_Step15_AllowedCases(t *testing.T) {
 			assert.Equal(t, []string{"class_entries", "spell_slots"}, []string{f.log.got[0].Snapshots[0].Key, f.log.got[0].Snapshots[1].Key})
 		})
 	}
+}
+
+// Step 15.1: a frozen entry (the first class of a dual-class character) may be switched like an
+// active one. Only its class changes (its frozen state and left-at level stay, 15.2); the new
+// class's opposed spells leave the slot list (15.4) and the journal entry's snapshots carry both
+// lists, so an undo gives them back (15.5).
+func TestSwitch_Step15_AFrozenEntryMayBeSwitched(t *testing.T) {
+	sheet := viewtest.Multi(
+		viewtest.WithEntry("fighter", 5), viewtest.WithFrozen("mage", 6),
+		viewtest.WithIdentity(charID, "Ilsevel", "human"), viewtest.WithScores(9, 16, 12, 18, 12, 10),
+	)
+	sheet.Alignment = "neutral_good"
+	f := newFixture(t, all...)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(sheet, nil)
+	frozen := sheet.StoredEntries()[1]
+	frozen.Class = "transmuter"
+	f.dal.EXPECT().ReplaceClassEntries(mock.Anything, charID, []classes.Entry{sheet.StoredEntries()[0], frozen}).Return(nil)
+	prepared := []spellsvc.SpellSlot{{Level: 1, SpellID: "alarm", Used: true}, {Level: 1, SpellID: "enlarge"}}
+	f.slots.EXPECT().GetSlots(mock.Anything, charID).Return(prepared, nil)
+	f.slots.EXPECT().SaveSlots(mock.Anything, charID, []spellsvc.SpellSlot{{Level: 1, SpellID: "enlarge"}}).Return(nil)
+	f.book.EXPECT().All(mock.Anything, charID).Return([]prepsvc.SpellbookEntry{
+		{ID: "alarm", Level: 1, Wizard: true, Schools: []string{"abjuration"}},
+		{ID: "enlarge", Level: 1, Wizard: true, Schools: []string{"alteration"}},
+	}, nil)
+
+	got, err := f.svc.Switch(context.Background(), charID, 1, "transmuter")
+	require.NoError(t, err)
+	assert.Equal(t, &classentrysvc.Result{Entry: 1, From: "mage", To: "transmuter"}, got)
+	require.Len(t, f.log.got, 1)
+	assert.Len(t, f.log.got[0].Snapshots, 2)
 }
 
 // An entry the character does not have and a class the catalogue does not know are field errors

@@ -41,6 +41,10 @@ type SaveOptions struct {
 	// id): one the character is immune to rolls nothing (ADR 0006 step
 	// 10.2).
 	SpellID string
+	// CasterSpecialist says the spell named was cast by a specialist of its
+	// school (ADR 0050 step 13): the roll gets the -1; refused without a
+	// wizard spell named.
+	CasterSpecialist bool
 }
 
 // Immunity says why a save or a spell received rolled nothing (ADR 0006
@@ -67,12 +71,25 @@ func ImmunityTo(char charactersvc.View, spellID string) *Immunity {
 // ResolveSavingThrow rolls a D20 against the character's per-category target,
 // applying the save's terms the saves owner builds from the view's figure
 // and the request's flags (ADR 0046 step 3.3: the race's bonus, the Wisdom
-// adjustment on a mind-affecting save, the class save_bonus grants) and the
+// adjustment on a mind-affecting save, the class save_bonus grants, the
+// specialist's +1 and the specialist caster's -1 of ADR 0050 steps 12 and 13) and the
 // buffs' SaveBonus modifiers, and records the save in the action log (kind
 // save, no snapshots: it changes no state). A natural 1 or 20 is plain
 // arithmetic.
 func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, category SaveCategory, opts SaveOptions) (*SaveBreakdown, error) {
 	if err := saves.Check(string(category)); err != nil {
+		return nil, err
+	}
+	// ADR 0050 steps 12 and 13: the spell named, as the saves owner reads
+	// it (nil: none named, or not in the catalogue); its refusal comes before
+	// anything is rolled or written.
+	flags := saves.Flags{MindAffecting: opts.MindAffecting, CasterSpecialist: opts.CasterSpecialist}
+	if opts.SpellID != "" {
+		if sp, ok := s.spells.Spell(opts.SpellID); ok {
+			flags.Spell = &sp
+		}
+	}
+	if err := saves.CheckFlags(flags); err != nil {
 		return nil, err
 	}
 	var res *SaveBreakdown
@@ -106,7 +123,7 @@ func (s *service) ResolveSavingThrow(ctx context.Context, characterID int64, cat
 		}
 		// The owner's terms come first, in its order; each is one named
 		// modifier on the roll, never the target.
-		for _, t := range saves.Terms(figure, string(category), saves.Flags{MindAffecting: opts.MindAffecting}) {
+		for _, t := range saves.Terms(figure, string(category), flags) {
 			rec.Modifiers = append(rec.Modifiers, BreakdownModifier{Kind: t.Code, Detail: t.Source, Value: t.Value})
 		}
 		// One modifier per buff, named like attack buff modifiers (Detail =

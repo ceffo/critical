@@ -180,7 +180,7 @@ Tests live in `api/internal/domain/service/combatsvc/` unless named otherwise.
    `castsvc` `TestReceive_Step10_ImmuneSpellAppliesNothing`; `router` `TestRollSave_Step10_SpellIDAndImmunity` (the wire:
    `spellId` in, `immunity` out, `save_immune`).
 
-   _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 12 and 13, proposed, on implementation: the spell a save names (10.2) also gives a specialist wizard's +1 against a wizard spell of his school (term `specialist`), and the request's optional `casterSpecialist` flag a -1 (term `caster_specialist`); both cancel.)_
+   _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) steps 12 and 13, proposed, on implementation: the spell a save names (10.2) also gives a specialist wizard's +1 against a wizard spell of his school (term `specialist`), and the request's optional `casterSpecialist` flag a -1 (term `caster_specialist`, refused 400 `caster_specialist_needs_spell` without a wizard spell named); both cancel. Built.)_
 
 ## Consequences
 

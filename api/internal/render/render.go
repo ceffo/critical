@@ -13,6 +13,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/actionlogsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
@@ -204,6 +205,9 @@ var mappings = []mapping{
 	// A specialist's school slot holds only a spell of his school (step 10);
 	// before ErrInvalidInput's row, which it wraps.
 	{target: prepsvc.ErrSchoolSlot, status: http.StatusBadRequest, code: "school_slot_needs_school_spell"},
+	// A save's specialist caster flag names a wizard spell (step 13); before
+	// ErrInvalidInput's row, which it wraps.
+	{target: saves.ErrCasterSpecialistNeedsSpell, status: http.StatusBadRequest, code: "caster_specialist_needs_spell"},
 	{target: ruletablesvc.ErrCannotTurn, status: http.StatusBadRequest, code: "cannot_turn_undead"},
 	{target: turnsvc.ErrClassCannotTurn, status: http.StatusBadRequest, code: "class_cannot_turn"},
 	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},

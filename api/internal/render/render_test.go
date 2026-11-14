@@ -10,6 +10,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
+	"github.com/ceffo/critical/api/internal/domain/saves"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
@@ -82,4 +83,14 @@ func TestErrorMapping_Step10_11_SchoolSlotAndOpposed(t *testing.T) {
 			assert.Equal(t, tc.code, render.Code(tc.err))
 		})
 	}
+}
+
+// ADR 0050 step 13: a save's specialist caster flag without a wizard spell
+// named is 400 caster_specialist_needs_spell, not the invalid_input it wraps.
+func TestErrorMapping_Step13_CasterSpecialistNeedsSpell(t *testing.T) {
+	err := fmt.Errorf("save: %w", saves.ErrCasterSpecialistNeedsSpell)
+	rec := httptest.NewRecorder()
+	render.Error(t.Context(), rec, err)
+	assert.Equal(t, http.StatusBadRequest, rec.Code)
+	assert.Equal(t, "caster_specialist_needs_spell", render.Code(err))
 }

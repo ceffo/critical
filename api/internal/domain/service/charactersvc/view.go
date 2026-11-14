@@ -94,12 +94,14 @@ type View struct {
 }
 
 // SaveInputs is what the saves owner builds a save from, for the saves owner (ADR 0046
-// step 3.3): the targets, the race's bonus, the Wisdom adjustment and the
-// class grants the derived block holds.
+// step 3.3): the targets, the race's bonus, the Wisdom adjustment, the
+// class grants and the specialist school (ADR 0050 step 12) the derived
+// block holds.
 func (v View) SaveInputs() saves.Inputs {
 	return saves.Inputs{
 		Saves: v.Saves, Race: v.RaceSaveBonus, RaceID: v.Race,
 		MagicDefence: v.MagicDefence, Wis: v.Wis, Class: v.ClassSaveBonuses,
+		Specialization: v.Specialization(),
 	}
 }
 

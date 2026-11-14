@@ -73,8 +73,11 @@ type fixture struct {
 	rulesets *rulesetmocks.MockResolver
 	critRows []combatsvc.CritRow
 	log      *mocks.MockLog
-	svc      combatsvc.SVC
-	entries  []actionlog.NewEntry
+	// spells is the catalogue a save's spell is read from (ADR 0050 steps
+	// 12 and 13); empty unless a test adds to it before rolling.
+	spells  catalogueSpells
+	svc     combatsvc.SVC
+	entries []actionlog.NewEntry
 }
 
 func newFixture(t *testing.T) *fixture {
@@ -94,12 +97,13 @@ func newFixtureWithRules(t *testing.T, rules combatsvc.Rules) *fixture {
 		forms:    mocks.NewMockFormStore(t),
 		rulesets: rulesetmocks.NewMockResolver(t),
 		log:      mocks.NewMockLog(t),
+		spells:   catalogueSpells{},
 	}
 	f.rulesets.EXPECT().ForCharacter(mock.Anything, mock.Anything).RunAndReturn(
 		func(context.Context, int64) (ruleset.Ruleset, error) { return rulesetWithCrit(f.critRows), nil }).Maybe()
 	svc, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
-		Items: f.items, Forms: f.forms, Rules: rules, Strength: phb(t).Strength(), Log: f.log, Tx: noTx{},
+		Items: f.items, Forms: f.forms, Rules: rules, Strength: phb(t).Strength(), Log: f.log, Tx: noTx{}, Spells: f.spells,
 	})
 	require.NoError(t, err)
 	f.svc = svc
@@ -111,7 +115,7 @@ func TestNew_RefusesAZeroStrengthTable(t *testing.T) {
 	f := newFixture(t)
 	_, err := combatsvc.NewWithConfig(combatsvc.DefaultConfig(), combatsvc.Deps{
 		Chars: f.chars, Buffs: f.buffs, Dice: f.dice, Weapons: f.weapons, Rulesets: f.rulesets,
-		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{},
+		Items: f.items, Forms: f.forms, Rules: phb(t), Log: f.log, Tx: noTx{}, Spells: f.spells,
 	})
 	require.Error(t, err)
 }

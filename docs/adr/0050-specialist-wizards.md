@@ -5,8 +5,8 @@ quoted in Context and binds; the points it left open are decided below against t
 the code, and the readings the books leave open are in "Questions for the user", each with a
 recommended default that the record takes as written unless the user says otherwise. Steps 1 to 4,
 the catalogue, are built (CRI-344, format 23 of [ADR 0021](0021-spell-catalogue.md) step 31); steps 5
-to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The entry switch (step 15) is built (CRI-383); the saves (steps
-12 and 13) are not implemented. It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
+to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The saves (steps
+12 and 13) are built (CRI-346). The entry switch (step 15) is built (CRI-383). It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
 feature kind), [ADR 0021](0021-spell-catalogue.md) (school codes on a spell, a format bump),
 [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3 (the school slot, opposed spells),
 [ADR 0006](0006-saving-throws.md) step 10.2 (the school modifiers of a save that names its spell),
@@ -310,8 +310,15 @@ code (ADR 0040 step 10).
     by other wizards" (PHB p.32). A Wisdom immunity (step 10.2) still rolls nothing. A priest spell
     or no spell named gives nothing. With several specialist entries (not possible today, step 14)
     the term counts once.
-    Test: `ResolveSavingThrow_Step12_PlusOneAgainstHisSchool` (combatsvc: distinct dice, the term,
-    target and verdict; nothing for a priest spell or another school).
+    Built: `saves.Terms` reads step 5's standing (`spellbook.School`) of the named spell for the
+    saver's specialization (`saves.Inputs.Specialization`, from the view's spellbook), so a spell of
+    his school that is also of an opposed school gives nothing (Q4); combatsvc reads the spell
+    through a `Spells` port (spellbookadpt's catalogue), and an id the catalogue does not hold gives
+    nothing, as before. The term has no detail; the web words it (`result.mods.specialist`). The
+    save card names a spell without the mind flag through a wand toggle on its label line.
+    Test: `TestResolveSavingThrow_Step12_PlusOneAgainstHisSchool` (combatsvc: distinct dice, the term,
+    target and verdict; nothing for a priest spell or another school),
+    `TestResolveSavingThrow_Step12_AnImmunityStillRollsNothing`.
 13. **-1 against a specialist caster.** The save request takes an optional boolean
     `casterSpecialist`: the spell named was cast by a specialist of its school (the player says so;
     the caster is outside the app, or another character the app does not link, until games exist,
@@ -319,8 +326,15 @@ code (ADR 0040 step 10).
     it is refused (400 `caster_specialist_needs_spell`). Both terms on one save cancel, as the book
     says. For a specialist's **own** cast of a spell of his school that allows a save, the cast
     answer carries `targetSaveModifier: -1`, information the web shows for the DM (Q7).
-    Tests: `ResolveSavingThrow_Step13_MinusOneAgainstASpecialistCaster` (both terms cancel; refused
-    without a spell), `Cast_Step13_ASchoolSpellTellsTheTargetsPenalty` (castsvc).
+    Built: the request's `casterSpecialist` (`saves.CheckFlags`), refused when the spell named is
+    none, a priest spell or not in the catalogue, before anything is read or rolled. The cast's
+    modifier is `save.targetSaveModifier` in the cast answer and its logged payload (absent for 0;
+    `saves.CasterModifier`: step 5's standing, his school), worded on the cast card and the journal.
+    The save card's "Specialist caster" box sits on its spell line, enabled once a spell is named.
+    Tests: `TestResolveSavingThrow_Step13_MinusOneAgainstASpecialistCaster` (both terms cancel),
+    `TestResolveSavingThrow_Step13_TheFlagNeedsAWizardSpell`, `TestRollSave_Step13_TheCasterSpecialistFlag`
+    (combathdl), `TestErrorMapping_Step13_CasterSpecialistNeedsSpell` (render),
+    `TestCast_Step13_ASchoolSpellTellsTheTargetsPenalty` (castsvc).
 
 ### Who may be a specialist
 
@@ -425,7 +439,7 @@ code (ADR 0040 step 10).
        options only once creatable.
     3. **The entry switch** (step 15), with its Settings or class-card action in the web (the user's
        fix for the friend's character comes here).
-    4. **Saves** (steps 12 and 13), with the save card's flag.
+    4. **Saves** (steps 12 and 13), with the save card's flag; built.
     5. **UI**: the school codes worded on the spell lookup, book and preparation (opposed marked),
        the learn chance's adjustment, the school slot "+1", the free spell "of his school", the
        warnings worded; the creation's class picker already lists the catalogue's classes.

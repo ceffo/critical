@@ -10,7 +10,7 @@ ever queues or fails for billing, check Settings → Billing first. [agent-workf
 
 | Where | Jobs | Why |
 |---|---|---|
-| GitHub-hosted `ubuntu-latest` | `changes`, `validate`, `generated`, `pr-title`, Dependabot auto-merge | Small, parallel-friendly, no queue (about 2 s start, against minutes behind the runners); a fork's code never runs on the VM anyway |
+| GitHub-hosted `ubuntu-latest` | `changes`, `validate` (and its `validate-scripts`, `validate-api`, `validate-web` groups), `generated`, `pr-title`, Dependabot auto-merge | Small, parallel-friendly, no queue (about 2 s start, against minutes behind the runners); a fork's code never runs on the VM anyway |
 | Self-hosted runners (`critical`) | `e2e`, `dev-smoke`, `image`, release, promote, major, main catch-up | Chromium's system packages are preinstalled (no per-run apt), docker is there, and release/promote hold the environment secrets and deploy key |
 
 Queueing was the whole PR-latency regression when every job shared one runner (median wait 4 min, p90 15-20 min,

@@ -42,6 +42,9 @@ type LevelGrantsDTO struct {
 type FreeSpellDTO struct {
 	Level      int `json:"level"`
 	SpellLevel int `json:"spellLevel"`
+	// OfSchool is a specialist's free spell (ADR 0050 step 8): of his school
+	// when one is left; absent for a mage.
+	OfSchool bool `json:"ofSchool,omitempty"`
 }
 
 // GrantsDTO maps a level's grants, or what is left to spend: the skills
@@ -52,7 +55,7 @@ func GrantsDTO(g skills.LevelGrants, free []spellbook.FreeSpell) LevelGrantsDTO 
 		FreeSpells: make([]FreeSpellDTO, 0, len(free)),
 	}
 	for _, f := range free {
-		out.FreeSpells = append(out.FreeSpells, FreeSpellDTO{Level: f.Level, SpellLevel: f.SpellLevel})
+		out.FreeSpells = append(out.FreeSpells, FreeSpellDTO{Level: f.Level, SpellLevel: f.SpellLevel, OfSchool: f.OfSchool})
 	}
 	return out
 }

@@ -218,12 +218,12 @@ func TestLearn_Step20_2_OneD100AtOrUnderTheChance(t *testing.T) {
 			res, err := f.svc.Learn(context.Background(), charID, "new3")
 			require.NoError(t, err)
 			assert.Equal(t, &learnsvc.Result{
-				SpellID: "new3", SpellLevel: 3, Roll: tc.roll, Chance: 60, Learned: tc.learned, CharacterLevel: 5,
+				SpellID: "new3", SpellLevel: 3, Roll: tc.roll, Chance: 60, ChanceUsed: 60, Learned: tc.learned, CharacterLevel: 5,
 				RetryLevel: tc.retry,
 			}, res)
 			assert.Equal(t, 1, f.tx.n, "one transaction")
 			assert.Equal(t, actionlog.KindSpellLearn, got.Kind)
-			assert.JSONEq(t, `{"spellId":"new3","spellLevel":3,"roll":`+itoa(tc.roll)+`,"chance":60,"learned":`+
+			assert.JSONEq(t, `{"spellId":"new3","spellLevel":3,"roll":`+itoa(tc.roll)+`,"chance":60,"chanceUsed":60,"learned":`+
 				map[bool]string{true: "true", false: "false"}[tc.learned]+`,"characterLevel":5,"retryLevel":`+itoa(tc.retry)+`}`, string(got.Payload))
 			require.Len(t, got.Snapshots, 1)
 			assert.Equal(t, "spellbook:new3", got.Snapshots[0].Key)

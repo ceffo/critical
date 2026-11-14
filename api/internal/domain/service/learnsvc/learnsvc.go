@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
@@ -39,6 +40,9 @@ var (
 	// ErrLevelFull is a spellbook that holds Table 4's maximum of the
 	// spell's level.
 	ErrLevelFull = fmt.Errorf("spellbook full at the spell's level: %w", domain.ErrInvalidInput)
+	// ErrSchoolOpposed is a spell of a school in the specialist's opposition
+	// (ADR 0050 step 6): never learned, added or claimed as a free spell.
+	ErrSchoolOpposed = fmt.Errorf("spell of an opposition school: %w", domain.ErrInvalidInput)
 	// ErrFailedAtLevel is a spell the character failed to learn at his
 	// current realized level (or higher, after an undone level-up).
 	ErrFailedAtLevel = fmt.Errorf("spell failed at this level: %w", domain.ErrInvalidInput)
@@ -54,6 +58,10 @@ var (
 	// ErrFreeSpellWrongLevel is a claim with a spell of another spell level
 	// than the one the level's free spell must be of.
 	ErrFreeSpellWrongLevel = fmt.Errorf("the free spell is of another spell level: %w", domain.ErrInvalidInput)
+	// ErrFreeSpellNotOfSchool is a specialist's claim with a spell not of his
+	// school while the catalogue holds a wizard spell of his school of that
+	// spell level that is not in his book yet (ADR 0050 step 8, DMG p.41).
+	ErrFreeSpellNotOfSchool = fmt.Errorf("the free spell must be of the specialist's school: %w", domain.ErrInvalidInput)
 )
 
 // StateFamily is the action-log state key family of one spell's place in a
@@ -77,7 +85,8 @@ type SVC interface {
 	// owes (step 20.8): the entry's origin is spellbook.OriginLevelGrant with
 	// that level. Refused like Add, then ErrNoFreeSpellOwed when that level
 	// owes none, ErrFreeSpellWrongLevel when the spell is not of the spell
-	// level it owes.
+	// level it owes, ErrFreeSpellNotOfSchool for a specialist's spell not of
+	// his school while one of his school is left (ADR 0050 step 8).
 	AddFreeSpell(ctx context.Context, characterID int64, spellID string, grantLevel int) (*Added, error)
 }
 
@@ -96,7 +105,11 @@ type Result struct {
 	SpellLevel int
 	// Roll is the d100, Chance Table 4's chance to learn.
 	Roll, Chance int
-	// Learned is a roll at or under the chance.
+	// Adjustment is a specialist's +15 for a spell of his school or -15 for
+	// any other (ADR 0050 step 7), 0 for a mage or a bard; ChanceUsed is
+	// Chance plus Adjustment, what the roll is compared with (not capped).
+	Adjustment, ChanceUsed int
+	// Learned is a roll at or under ChanceUsed.
 	Learned bool
 	// CharacterLevel is the realized level the roll was made at (a failure
 	// blocks the spell until a higher one).
@@ -114,6 +127,10 @@ type Spell = spellbook.Spell
 type Spells interface {
 	// Spell returns the catalogue spell id; ok is false when it holds none.
 	Spell(id string) (s Spell, ok bool)
+	// WizardSpellsOfLevel are the ids of the catalogue's wizard spells of
+	// spell level level, in any order (ADR 0050 step 8's "a spell of his
+	// school available").
+	WizardSpellsOfLevel(level int) []string
 }
 
 // Book reads a character's spellbook: the catalogue keys it holds, and its
@@ -200,11 +217,14 @@ func (s *service) Learn(ctx context.Context, characterID int64, spellID string) 
 			return ErrFailedAtLevel
 		}
 		rules := c.Spellbook
-		// Step 20.2: one d100 against Table 4's chance to learn.
+		// Step 20.2: one d100 against Table 4's chance to learn, with a
+		// specialist's adjustment (ADR 0050 step 7, PHB p.32).
+		adj := spellbook.LearnAdjustment(rules.Specialization, sp)
+		used := rules.LearnChance + adj
 		roll := s.d.Dice.RollD100()
 		res = &Result{
 			SpellID: spellID, SpellLevel: sp.Level, Roll: roll, Chance: rules.LearnChance,
-			Learned: roll <= rules.LearnChance, CharacterLevel: level,
+			Adjustment: adj, ChanceUsed: used, Learned: roll <= used, CharacterLevel: level,
 		}
 		before, err := s.state(ctx, c.ID, spellID)
 		if err != nil {
@@ -257,6 +277,9 @@ func (s *service) add(ctx context.Context, characterID int64, spellID string, gr
 			if err := owes(c.LevelUp.FreeSpellsOwed, grantLevel, sp.Level); err != nil {
 				return err
 			}
+			if err := s.ofSchool(ctx, c, spellID, sp); err != nil {
+				return err
+			}
 			res.Origin, res.GrantLevel = spellbook.OriginLevelGrant, grantLevel
 		}
 		before, err := s.state(ctx, c.ID, spellID)
@@ -291,6 +314,31 @@ func owes(owed []spellbook.FreeSpell, grantLevel, spellLevel int) error {
 	return err
 }
 
+// ofSchool is ADR 0050 step 8 on a free spell's claim: a specialist's free
+// spell is of his school, unless the catalogue holds no wizard spell of his
+// school at its spell level that is not in his book yet (DMG p.41, "if there
+// is a spell available"); then any spell he may add is accepted (an opposed
+// one was refused before, step 6). Nothing for one who is no specialist.
+func (s *service) ofSchool(ctx context.Context, c charactersvc.View, spellID string, sp Spell) error {
+	spec := c.Spellbook.Specialization
+	if !spec.Specialist() || spellbook.School(spec, sp) == spellbook.StandingHisSchool {
+		return nil
+	}
+	keys, err := s.d.Book.Keys(ctx, c.ID)
+	if err != nil {
+		return fmt.Errorf("read spellbook: %w", err)
+	}
+	for _, id := range s.d.Spells.WizardSpellsOfLevel(sp.Level) {
+		if id == spellID || slices.Contains(keys, id) {
+			continue
+		}
+		if other, ok := s.d.Spells.Spell(id); ok && spellbook.School(spec, other) == spellbook.StandingHisSchool {
+			return ErrFreeSpellNotOfSchool
+		}
+	}
+	return nil
+}
+
 // writable reads the character and the spell and returns step 20.1's
 // refusal (spellbook.Check, the class's highest spell level as the class's
 // table has it), the reason the spell may not be written in his spellbook (by
@@ -322,6 +370,7 @@ func (s *service) writable(ctx context.Context, characterID int64, spellID strin
 	limits := spellbook.Limits{
 		ClassMaxSpellLevel: rules.ClassMaxSpellLevel, IntMaxSpellLevel: rules.IntMaxSpellLevel,
 		MaxSpellsPerLevel: rules.MaxSpellsPerLevel, NoMaximum: rules.NoMaximum,
+		Specialization: rules.Specialization,
 	}
 	switch spellbook.Check(limits, sp, found, inBook, sameLevel) {
 	case spellbook.Fits:
@@ -332,6 +381,8 @@ func (s *service) writable(ctx context.Context, characterID int64, spellID strin
 		return charactersvc.View{}, Spell{}, ErrNotAWizardSpell
 	case spellbook.RefusedAlreadyIn:
 		return charactersvc.View{}, Spell{}, ErrAlreadyKnown
+	case spellbook.RefusedOpposed:
+		return charactersvc.View{}, Spell{}, ErrSchoolOpposed
 	case spellbook.RefusedAboveClass:
 		return charactersvc.View{}, Spell{}, ErrAboveClass
 	case spellbook.RefusedAboveIntelligence:

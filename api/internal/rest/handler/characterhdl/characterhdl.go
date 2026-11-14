@@ -407,13 +407,17 @@ type TurningTargetDTO struct {
 // SpellbookRulesDTO is what a character may write in its spellbook (ADR 0030
 // step 20.1): the class's and PHB Table 4's highest spell level, Table 4's
 // chance to learn (percent) and its maximum spells per level
-// (`noMaximum`: the book's "All", `maxSpellsPerLevel` then 0).
+// (`noMaximum`: the book's "All", `maxSpellsPerLevel` then 0), and a
+// specialist's adjustments of the chance (ADR 0050 step 7: +15 for a spell of
+// his school, -15 for any other; both 0 for a mage or a bard).
 type SpellbookRulesDTO struct {
 	ClassMaxSpellLevel int  `json:"classMaxSpellLevel"`
 	IntMaxSpellLevel   int  `json:"intMaxSpellLevel"`
 	LearnChance        int  `json:"learnChance"`
 	MaxSpellsPerLevel  int  `json:"maxSpellsPerLevel"`
 	NoMaximum          bool `json:"noMaximum"`
+	SchoolAdjustment   int  `json:"schoolAdjustment"`
+	OtherAdjustment    int  `json:"otherAdjustment"`
 }
 
 // PSPDTO is a character's PSPs (ADR 0043 step 5): the current PSPs (the
@@ -527,6 +531,7 @@ func derivedDTO(d charactersvc.Derived) DerivedDTO {
 		out.Spellbook = &SpellbookRulesDTO{
 			ClassMaxSpellLevel: b.ClassMaxSpellLevel, IntMaxSpellLevel: b.IntMaxSpellLevel, LearnChance: b.LearnChance,
 			MaxSpellsPerLevel: b.MaxSpellsPerLevel, NoMaximum: b.NoMaximum,
+			SchoolAdjustment: b.SchoolAdjustment, OtherAdjustment: b.OtherAdjustment,
 		}
 	}
 	for _, level := range slices.Sorted(maps.Keys(d.SpellSlots)) {

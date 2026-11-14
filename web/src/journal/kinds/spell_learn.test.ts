@@ -21,4 +21,13 @@ describeKind("spell_learn", fixtures, {
       text: "Échec : sleep (d100 80 > 65 %), à retenter au niveau 2",
     },
   },
+  // ADR 0050 step 7: a specialist's roll is worded against the chance used (60% + 15).
+  specialist: {
+    en: {
+      text: "Learned: sleep (d100 70 ≤ 75%)",
+    },
+    fr: {
+      text: "Appris : sleep (d100 70 ≤ 75 %)",
+    },
+  },
 });

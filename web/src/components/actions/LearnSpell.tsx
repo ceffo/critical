@@ -158,11 +158,11 @@ export function LearnSpell({
           {shown.learned
             ? t("lookup.learn.learned", {
                 roll: shown.roll,
-                chance: shown.chance,
+                chance: shown.chanceUsed ?? shown.chance,
               })
             : t("lookup.learn.failed", {
                 roll: shown.roll,
-                chance: shown.chance,
+                chance: shown.chanceUsed ?? shown.chance,
                 level: shown.retryLevel,
               })}
         </span>

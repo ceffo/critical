@@ -395,7 +395,8 @@ func (s *service) setFreeSpells(ctx context.Context, c *Character) error {
 
 // freeSpellsAt are the free spells level of the class def grants (step
 // 20.8): the spell levels its slot table (step 8) opens there, up to the
-// Intelligence's maximum spell level (PHB Table 4).
+// Intelligence's maximum spell level (PHB Table 4); a specialist's grants
+// say OfSchool (ADR 0050 step 8).
 func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]spellbook.FreeSpell, error) {
 	at, err := s.rules.SpellsPerDay(def, level, c.Wis)
 	if err != nil {
@@ -407,7 +408,13 @@ func (s *service) freeSpellsAt(c *Character, def classes.Class, level int) ([]sp
 			return nil, err
 		}
 	}
-	return spellbook.FreeSpellsAt(level, below, at, c.Derived.Spellbook.IntMaxSpellLevel), nil
+	out := spellbook.FreeSpellsAt(level, below, at, c.Derived.Spellbook.IntMaxSpellLevel)
+	if c.Derived.Spellbook.Specialization.Specialist() {
+		for i := range out {
+			out[i].OfSchool = true // ADR 0050 step 8: a specialist's is of his school
+		}
+	}
+	return out, nil
 }
 
 // readWarnings sets c's languages, pools, level grants and warnings as a read shows them. The

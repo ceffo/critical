@@ -51,12 +51,17 @@ type AddBody struct {
 
 // ResultDTO is the roll's full breakdown (step 20.2).
 type ResultDTO struct {
-	SpellID        string `json:"spellId"`
-	SpellLevel     int    `json:"spellLevel"`
-	Roll           int    `json:"roll"`
-	Chance         int    `json:"chance"`
-	Learned        bool   `json:"learned"`
-	CharacterLevel int    `json:"characterLevel"`
+	SpellID    string `json:"spellId"`
+	SpellLevel int    `json:"spellLevel"`
+	Roll       int    `json:"roll"`
+	Chance     int    `json:"chance"`
+	// Adjustment is a specialist's +15 (a spell of his school) or -15 (any
+	// other), 0 for a mage (ADR 0050 step 7); ChanceUsed is Chance plus
+	// Adjustment, what the roll was compared with.
+	Adjustment     int  `json:"adjustment"`
+	ChanceUsed     int  `json:"chanceUsed"`
+	Learned        bool `json:"learned"`
+	CharacterLevel int  `json:"characterLevel"`
 	// RetryLevel is the realized level from which a failed spell may be
 	// tried again; 0 when learned.
 	RetryLevel int `json:"retryLevel"`
@@ -137,7 +142,7 @@ func Learn(charID CharacterIDFunc, svc learner) render.HandlerFunc {
 		}
 		render.OK(r.Context(), w, ResultDTO{
 			SpellID: res.SpellID, SpellLevel: res.SpellLevel, Roll: res.Roll, Chance: res.Chance,
-			Learned: res.Learned, CharacterLevel: res.CharacterLevel,
+			Adjustment: res.Adjustment, ChanceUsed: res.ChanceUsed, Learned: res.Learned, CharacterLevel: res.CharacterLevel,
 			RetryLevel: res.RetryLevel,
 		})
 		return nil

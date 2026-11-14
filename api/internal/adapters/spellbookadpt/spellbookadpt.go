@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/catalogue"
 	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
@@ -151,6 +152,20 @@ func (b *Book) Spell(id string) (learnsvc.Spell, bool) {
 		return learnsvc.Spell{}, false
 	}
 	return spellbook.FromCatalogue(s), true
+}
+
+// WizardSpellsOfLevel are the ids of the catalogue's wizard spells of spell
+// level level, sorted (learnsvc's look for a free spell of a specialist's
+// school, ADR 0050 step 8).
+func (b *Book) WizardSpellsOfLevel(level int) []string {
+	var out []string
+	for id, s := range b.spells {
+		if sp := spellbook.FromCatalogue(s); sp.Wizard && sp.Level == level {
+			out = append(out, id)
+		}
+	}
+	slices.Sort(out)
+	return out
 }
 
 // Claimed are the character's free spells already in the book (ADR 0030

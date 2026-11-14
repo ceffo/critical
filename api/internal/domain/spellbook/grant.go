@@ -7,6 +7,10 @@ import "sort"
 type FreeSpell struct {
 	Level      int
 	SpellLevel int
+	// OfSchool is a specialist's grant (ADR 0050 step 8): the spell is of his
+	// school when one is left. It says how the grant is claimed, not which
+	// grant it is: Owed ignores it.
+	OfSchool bool
 }
 
 // FreeSpellsAt is step 20.8 for a class whose levels grant free spells (a
@@ -33,14 +37,15 @@ func FreeSpellsAt(level int, below, at map[int]int, intMax int) []FreeSpell {
 // one grant of the same level and spell level. In granted's order; nil when
 // none is owed.
 func Owed(granted, claimed []FreeSpell) []FreeSpell {
-	paid := make(map[FreeSpell]int, len(claimed))
+	type grant struct{ level, spellLevel int }
+	paid := make(map[grant]int, len(claimed))
 	for _, c := range claimed {
-		paid[c]++
+		paid[grant{c.Level, c.SpellLevel}]++
 	}
 	var out []FreeSpell
 	for _, g := range granted {
-		if paid[g] > 0 {
-			paid[g]--
+		if k := (grant{g.Level, g.SpellLevel}); paid[k] > 0 {
+			paid[k]--
 			continue
 		}
 		out = append(out, g)

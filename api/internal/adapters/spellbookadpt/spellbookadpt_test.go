@@ -136,3 +136,20 @@ func TestBook_Step20_8_AClaimTheCatalogueLacksIsSkippedAndLogged(t *testing.T) {
 	assert.Contains(t, logged.String(), "spell=shield")
 	assert.Contains(t, logged.String(), "character=1")
 }
+
+// ADR 0050 step 8: the wizard spells of one spell level, the look for a free
+// spell of a specialist's school; a priest spell and another level's are not
+// among them, and Spell carries a spell's school codes.
+func TestBook_Step8_WizardSpellsOfLevel(t *testing.T) {
+	book := spellbookadpt.New(books{}, catalogue.Catalogue{Spells: []catalogue.Spell{
+		{ID: "web", Class: "Wizard", Level: 2, Schools: []string{"conjuration_summoning"}},
+		{ID: "levitate", Class: "Wizard", Level: 2, Schools: []string{"alteration"}},
+		{ID: "sleep", Class: "Wizard", Level: 1, Schools: []string{"enchantment_charm"}},
+		{ID: "aid", Class: "Priest", Level: 2, Schools: []string{"necromancy"}},
+	}})
+	assert.Equal(t, []string{"levitate", "web"}, book.WizardSpellsOfLevel(2))
+	assert.Empty(t, book.WizardSpellsOfLevel(3))
+	sp, ok := book.Spell("levitate")
+	require.True(t, ok)
+	assert.Equal(t, []string{"alteration"}, sp.Schools)
+}

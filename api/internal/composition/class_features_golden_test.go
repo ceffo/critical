@@ -121,6 +121,13 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 		delete(p, "Weapons")
 		delete(p, "WeaponRedo")
 	}
+	// A specialist's school and learn adjustments (ADR 0050 steps 5 and 7) are new; the specialist
+	// tests cover them.
+	if b, ok := m["Spellbook"].(map[string]any); ok {
+		delete(b, "Specialization")
+		delete(b, "SchoolAdjustment")
+		delete(b, "OtherAdjustment")
+	}
 
 	return m
 }

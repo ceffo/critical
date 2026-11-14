@@ -56,3 +56,16 @@ func TestAdd_RefusesABadBody(t *testing.T) {
 		require.Error(t, err, body)
 	}
 }
+
+// ADR 0050 step 7: the learn answer's breakdown carries Table 4's chance,
+// a specialist's adjustment and the chance the roll was compared with.
+func TestLearn_Step7_TheBreakdownCarriesTheAdjustment(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().Learn(mock.Anything, int64(3), "levitate").Return(&learnsvc.Result{
+		SpellID: "levitate", SpellLevel: 2, Roll: 75, Chance: 60, Adjustment: 15, ChanceUsed: 75, Learned: true, CharacterLevel: 5,
+	}, nil).Once()
+	rec, err := post(t, learnhdl.Learn(func(*http.Request) int64 { return 3 }, svc), `{"spellId":"levitate"}`)
+	require.NoError(t, err)
+	assert.JSONEq(t, `{"spellId":"levitate","spellLevel":2,"roll":75,"chance":60,"adjustment":15,"chanceUsed":75,`+
+		`"learned":true,"characterLevel":5,"retryLevel":0}`, rec.Body.String())
+}

@@ -2614,6 +2614,8 @@
     "spell_learn_failed_at_level": "Failed at this level: try again at the next level.",
     "no_free_spell_owed": "That level owes no free spell.",
     "free_spell_wrong_level": "That level's free spell is of another spell level.",
+    "spell_school_opposed": "A spell of an opposition school: a specialist can never learn it.",
+    "free_spell_not_of_school": "A specialist's free spell must be of his school while one is left at that spell level.",
     "cannot_turn_undead": "This priest cannot turn that undead yet.",
     "class_cannot_turn": "This class does not turn undead.",
     "end_cause_required": "This spell does something when it ends: say whether you ended it or it was dispelled.",

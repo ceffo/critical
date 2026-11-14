@@ -5,6 +5,7 @@
       "spellLevel": 1,
       "roll": 80,
       "chance": 65,
+      "chanceUsed": 65,
       "learned": false,
       "characterLevel": 1,
       "retryLevel": 2
@@ -16,6 +17,20 @@
       "spellLevel": 1,
       "roll": 37,
       "chance": 65,
+      "chanceUsed": 65,
+      "learned": true,
+      "characterLevel": 1,
+      "retryLevel": 0
+    }
+  },
+  "specialist": {
+    "payload": {
+      "spellId": "sleep",
+      "spellLevel": 1,
+      "roll": 70,
+      "chance": 60,
+      "adjustment": 15,
+      "chanceUsed": 75,
       "learned": true,
       "characterLevel": 1,
       "retryLevel": 0

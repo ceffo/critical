@@ -3,10 +3,12 @@ package spellbook
 import "github.com/ceffo/critical/api/internal/domain/catalogue"
 
 // Spell is what the spellbook's rules read of a catalogue spell: its spell
-// level and whether it is a wizard spell (only those go in a spellbook).
+// level, whether it is a wizard spell (only those go in a spellbook) and its
+// school codes (ADR 0050 step 1, what the specialist rules read).
 type Spell struct {
-	Level  int
-	Wizard bool
+	Level   int
+	Wizard  bool
+	Schools []string
 }
 
 // wizardClass is the catalogue's class of a wizard spell.
@@ -15,7 +17,7 @@ const wizardClass = "Wizard"
 // FromCatalogue is the spellbook's reading of a catalogue spell: the one
 // mapping of the catalogue's class to a wizard spell.
 func FromCatalogue(s catalogue.Spell) Spell {
-	return Spell{Level: s.Level, Wizard: s.Class == wizardClass}
+	return Spell{Level: s.Level, Wizard: s.Class == wizardClass, Schools: s.Schools}
 }
 
 // Limits are step 20.1's limits of one spellbook (ADR 0030): the class's
@@ -23,12 +25,15 @@ func FromCatalogue(s catalogue.Spell) Spell {
 // Intelligence and its maximum number of spells of one level (NoMaximum: the
 // book's "All"). Which class maximum applies is the caller's: the class's
 // highest for a character's book (Learn, Ajouter), the highest of its slots
-// at the starting level for a starting book (step 20.7).
+// at the starting level for a starting book (step 20.7). Specialization is
+// the book's specialist school, the zero value for a wizard who is none (ADR
+// 0050 step 6).
 type Limits struct {
 	ClassMaxSpellLevel int
 	IntMaxSpellLevel   int
 	MaxSpellsPerLevel  int
 	NoMaximum          bool
+	Specialization     Specialization
 }
 
 // Refusal is the reason step 20.1 refuses a spell in a spellbook; "" (Fits)
@@ -45,6 +50,9 @@ const (
 	RefusedNotWizard Refusal = "not_a_wizard_spell"
 	// RefusedAlreadyIn is a spell already in the spellbook.
 	RefusedAlreadyIn Refusal = "already_in_spellbook"
+	// RefusedOpposed is a spell of a school in the specialist's opposition
+	// (ADR 0050 step 6, PHB p.32).
+	RefusedOpposed Refusal = "spell_school_opposed"
 	// RefusedAboveClass is a spell level above the class's highest.
 	RefusedAboveClass Refusal = "spell_level_above_class"
 	// RefusedAboveIntelligence is a spell level above Table 4's for the
@@ -55,7 +63,8 @@ const (
 	RefusedLevelFull Refusal = "spellbook_level_full"
 )
 
-// Check is step 20.1 (ADR 0030): whether spell sp (found: the catalogue
+// Check is step 20.1 (ADR 0030), with ADR 0050 step 6's opposed school after
+// the spell already in the book and before the level checks: whether spell sp (found: the catalogue
 // holds it) may go in a spellbook with limits l, which already holds it
 // (inBook) or not and holds sameLevel spells of its level. The refusals are
 // tried in the order of the constants above; Fits when none applies.
@@ -67,6 +76,8 @@ func Check(l Limits, sp Spell, found, inBook bool, sameLevel int) Refusal {
 		return RefusedNotWizard
 	case inBook:
 		return RefusedAlreadyIn
+	case School(l.Specialization, sp) == StandingOpposed: // ADR 0050 step 6
+		return RefusedOpposed
 	case sp.Level > l.ClassMaxSpellLevel:
 		return RefusedAboveClass
 	case sp.Level > l.IntMaxSpellLevel:

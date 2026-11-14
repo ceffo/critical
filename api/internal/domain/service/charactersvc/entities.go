@@ -521,6 +521,15 @@ type SpellbookRules struct {
 	// it means nothing when NoMaximum (the book's "All").
 	MaxSpellsPerLevel int
 	NoMaximum         bool
+	// Specialization is the specialist school of the spellbook's class entry
+	// (ADR 0050 step 2), the zero value for a mage or a bard: the rules of
+	// ADR 0050 steps 6 to 8 read it.
+	Specialization spellbook.Specialization
+	// SchoolAdjustment and OtherAdjustment are ADR 0050 step 7: what a
+	// specialist adds to LearnChance for a spell of his school (+15) and for
+	// any other (-15), both 0 for one who is no specialist. The web words the
+	// chance with them.
+	SchoolAdjustment, OtherAdjustment int
 }
 
 // PendingLevel is one level whose hit points are owed (ADR 0030 step 7): up

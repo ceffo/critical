@@ -79,7 +79,9 @@
       "intMaxSpellLevel": 7,
       "learnChance": 60,
       "maxSpellsPerLevel": 9,
-      "noMaximum": false
+      "noMaximum": false,
+      "schoolAdjustment": 0,
+      "otherAdjustment": 0
     },
     "psp": null,
     "knownPowers": null,

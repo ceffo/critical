@@ -74,7 +74,7 @@ func TestLearn_Step20_LearnFailUndoAndPrepareAMage(t *testing.T) {
 
 	got, err := bs.Learn.Learn(ctx, id, "sleep")
 	require.NoError(t, err)
-	assert.Equal(t, learnsvc.Result{SpellID: "sleep", SpellLevel: 1, Roll: 65, Chance: 65, Learned: true, CharacterLevel: 1}, *got)
+	assert.Equal(t, learnsvc.Result{SpellID: "sleep", SpellLevel: 1, Roll: 65, Chance: 65, ChanceUsed: 65, Learned: true, CharacterLevel: 1}, *got)
 	got, err = bs.Learn.Learn(ctx, id, "light")
 	require.NoError(t, err)
 	assert.False(t, got.Learned, "66 is above 65")

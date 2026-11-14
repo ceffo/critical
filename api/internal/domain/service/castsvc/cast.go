@@ -56,7 +56,7 @@ func (s *service) Cast(ctx context.Context, characterID int64, slotIndex int, re
 		if slot.Extra && id == "" {
 			// A blank extra slot: the player picks the spell now.
 			var err error
-			id, name, err = s.pickForExtra(ctx, slot.Level, req.SpellID)
+			id, name, err = s.pickForExtra(ctx, slot.Level, req.SpellID, c.Specialization())
 			if err != nil {
 				return err
 			}

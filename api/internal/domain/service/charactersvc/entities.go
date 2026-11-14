@@ -271,6 +271,10 @@ type Derived struct {
 	// are the first active spellcasting entry's (ADR 0042 step 14; each
 	// entry's are in Classes).
 	SpellSlots map[int]int
+	// SchoolSlots are ADR 0050 step 10's school slots of the same entry as
+	// SpellSlots: one per spell level it has slots of, for a specialist; nil
+	// for anyone else. Not counted in SpellSlots (the web shows "2 + 1").
+	SchoolSlots map[int]int
 	// LevelUp is step 7: the levels the target is above the realized one.
 	LevelUp LevelUp
 	// Specializes is step 12: the character specializes in a weapon (ADR 0042
@@ -335,6 +339,10 @@ type EntryDerived struct {
 	// SpellSlots are the class's slots at RealizedLevel (ADR 0042 step 14),
 	// empty for a class without a spell progression.
 	SpellSlots map[int]int
+	// SchoolSlots are ADR 0050 step 10's: one more slot per spell level of
+	// SpellSlots, for a spell of the school of a class with
+	// school_specialization; nil for any other class.
+	SchoolSlots map[int]int
 	// Casts is a class with a spell progression (ADR 0040 step 1.9).
 	Casts bool
 	// NoArmour is a class that allows no body armour (its equipment's

@@ -11,7 +11,10 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/learnsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 	"github.com/ceffo/critical/api/internal/render"
 )
 
@@ -57,4 +60,26 @@ func TestErrorMapping_Step9_KnownPowers(t *testing.T) {
 	render.Error(t.Context(), rec, psionicsvc.ErrNotPsionicist)
 	assert.Equal(t, http.StatusConflict, rec.Code)
 	assert.Equal(t, "not_a_psionicist", render.Code(psionicsvc.ErrNotPsionicist))
+}
+
+// ADR 0050 steps 10 and 11: a specialist's preparation with too few spells of
+// his school is 400 school_slot_needs_school_spell; an opposed spell is 400
+// spell_school_opposed from every service that refuses it (learn, prepare, a
+// blank extra slot's pick), wrapped.
+func TestErrorMapping_Step10_11_SchoolSlotAndOpposed(t *testing.T) {
+	for _, tc := range []struct {
+		err  error
+		code string
+	}{
+		{fmt.Errorf("prepare: %w", prepsvc.ErrSchoolSlot), "school_slot_needs_school_spell"},
+		{fmt.Errorf("prepare: %w: %q", spellbook.ErrSchoolOpposed, "alarm"), "spell_school_opposed"},
+		{fmt.Errorf("learn: %w", learnsvc.ErrSchoolOpposed), "spell_school_opposed"},
+	} {
+		t.Run(tc.code, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			render.Error(t.Context(), rec, tc.err)
+			assert.Equal(t, http.StatusBadRequest, rec.Code)
+			assert.Equal(t, tc.code, render.Code(tc.err))
+		})
+	}
 }

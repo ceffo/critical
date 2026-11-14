@@ -79,3 +79,21 @@ func TestGetCharacter_Step7_TheSpellbookBlockCarriesTheAdjustments(t *testing.T)
 	assert.Zero(t, mage.Derived.Spellbook.OtherAdjustment)
 	assert.False(t, mage.Derived.Spellbook.Specialization.Specialist())
 }
+
+// ADR 0050 step 10: a specialist has one school slot "for each spell level
+// whose allotment (ADR 0030 step 8, Table 21 at the entry's realized level) is
+// 1 or more" (PHB p.32, 06-mage.md l.56), carried beside the slots, not in
+// them. Table 21 (p.30) at level 3: two 1st and one 2nd; the 3rd opens at 5,
+// the XP's level, which is not realized yet. A mage has none.
+func TestDerive_Step10_TheSchoolSlotPerOpenLevel(t *testing.T) {
+	got := readWizard(t, "transmuter")
+	assert.Equal(t, map[int]int{1: 2, 2: 1}, got.Derived.SpellSlots)
+	assert.Equal(t, map[int]int{1: 1, 2: 1}, got.Derived.SchoolSlots)
+	for _, e := range got.Derived.Classes {
+		assert.Equal(t, map[int]int{1: 1, 2: 1}, e.SchoolSlots, "the entry's own")
+	}
+
+	mage := readWizard(t, "mage")
+	assert.Equal(t, map[int]int{1: 2, 2: 1}, mage.Derived.SpellSlots)
+	assert.Nil(t, mage.Derived.SchoolSlots)
+}

@@ -128,6 +128,8 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 		delete(b, "SchoolAdjustment")
 		delete(b, "OtherAdjustment")
 	}
+	// A specialist's school slots (ADR 0050 step 10) are new; the step 10 tests cover them.
+	delete(m, "SchoolSlots")
 
 	return m
 }

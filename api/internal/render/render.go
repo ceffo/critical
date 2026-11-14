@@ -29,6 +29,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/spelleffectsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/turnsvc"
+	"github.com/ceffo/critical/api/internal/domain/spellbook"
 )
 
 // JSON writes v as JSON with the given status code. Encoding errors are logged,
@@ -195,8 +196,13 @@ var mappings = []mapping{
 	{target: learnsvc.ErrNoFreeSpellOwed, status: http.StatusBadRequest, code: "no_free_spell_owed"},
 	{target: learnsvc.ErrFreeSpellWrongLevel, status: http.StatusBadRequest, code: "free_spell_wrong_level"},
 	// A specialist wizard's spellbook (ADR 0050 steps 6 and 8).
-	{target: learnsvc.ErrSchoolOpposed, status: http.StatusBadRequest, code: "spell_school_opposed"},
+	// Learn, Ajouter, the free spell, a preparation and a blank extra slot's
+	// pick (steps 6 and 11): one sentinel for every service.
+	{target: spellbook.ErrSchoolOpposed, status: http.StatusBadRequest, code: "spell_school_opposed"},
 	{target: learnsvc.ErrFreeSpellNotOfSchool, status: http.StatusBadRequest, code: "free_spell_not_of_school"},
+	// A specialist's school slot holds only a spell of his school (step 10);
+	// before ErrInvalidInput's row, which it wraps.
+	{target: prepsvc.ErrSchoolSlot, status: http.StatusBadRequest, code: "school_slot_needs_school_spell"},
 	{target: ruletablesvc.ErrCannotTurn, status: http.StatusBadRequest, code: "cannot_turn_undead"},
 	{target: turnsvc.ErrClassCannotTurn, status: http.StatusBadRequest, code: "class_cannot_turn"},
 	{target: levelupsvc.ErrNotPending, status: http.StatusConflict, code: "level_up_not_pending"},

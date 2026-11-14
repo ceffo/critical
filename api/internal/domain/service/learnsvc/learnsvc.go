@@ -42,7 +42,9 @@ var (
 	ErrLevelFull = fmt.Errorf("spellbook full at the spell's level: %w", domain.ErrInvalidInput)
 	// ErrSchoolOpposed is a spell of a school in the specialist's opposition
 	// (ADR 0050 step 6): never learned, added or claimed as a free spell.
-	ErrSchoolOpposed = fmt.Errorf("spell of an opposition school: %w", domain.ErrInvalidInput)
+	// It is spellbook.ErrSchoolOpposed, the one code prepsvc and castsvc
+	// refuse with too (step 11).
+	ErrSchoolOpposed = fmt.Errorf("%w: %w", spellbook.ErrSchoolOpposed, domain.ErrInvalidInput)
 	// ErrFailedAtLevel is a spell the character failed to learn at his
 	// current realized level (or higher, after an undone level-up).
 	ErrFailedAtLevel = fmt.Errorf("spell failed at this level: %w", domain.ErrInvalidInput)

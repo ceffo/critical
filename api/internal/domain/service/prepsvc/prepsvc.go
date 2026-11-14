@@ -29,8 +29,13 @@ const StateKey = "spell_slots"
 var (
 	// ErrNotInSpellbook: a requested spell id is not in the Bard's spellbook.
 	ErrNotInSpellbook = errors.New("spell is not in the spellbook")
-	// ErrOverLimit: more spells of one level than the PHB table allows.
+	// ErrOverLimit: more spells of one level than the PHB table allows (a
+	// specialist's school slot counted, ADR 0050 step 10).
 	ErrOverLimit = errors.New("too many spells for this level")
+	// ErrSchoolSlot: a specialist's preparation of one level with more spells
+	// not of his school than the allotment (ADR 0050 step 10: his school slot
+	// holds only a spell of his school).
+	ErrSchoolSlot = fmt.Errorf("the school slot needs a spell of his school: %w", domain.ErrInvalidInput)
 )
 
 // SpellbookEntry is one spell the Bard knows. ID is the snake_case slug of the
@@ -44,6 +49,11 @@ type SpellbookEntry struct {
 	// both zero for a priest's sphere spell, which is in no book.
 	Origin     spellbook.Origin
 	GrantLevel int
+	// Wizard and Schools are the catalogue's: a wizard spell and its school
+	// codes, what a specialist's preparation reads (ADR 0050 steps 10 and
+	// 11). A priest's sphere spell is no wizard spell.
+	Wizard  bool
+	Schools []string
 	// Cast is what casting the spell asks of the player, from the spell
 	// effects catalog (Info fills it).
 	Cast CastInputs
@@ -180,6 +190,11 @@ type caster struct {
 	// step 2 as amended by ADR 0030 steps 7 and 8).
 	level  int
 	limits map[int]int
+	// school is the entry's school slots per spell level (ADR 0050 step
+	// 10), nil for one who is no specialist; spec the specialist school his
+	// spells stand against (step 11), the spellbook's.
+	school map[int]int
+	spec   spellbook.Specialization
 	c      charactersvc.View
 }
 
@@ -195,13 +210,18 @@ func (s *service) casterOf(ctx context.Context, characterID int64, class string)
 		if class != "" && class != c.Primary().Class {
 			return caster{}, fmt.Errorf("%w: %q is not a spellcasting class of the character", domain.ErrInvalidInput, class)
 		}
-		return caster{class: c.Primary().Class, level: c.CasterLevel(), limits: c.SpellSlots, c: c}, nil
+		return caster{class: c.Primary().Class, level: c.CasterLevel(), limits: c.SpellSlots, school: c.SchoolSlots, spec: c.Specialization(), c: c}, nil
 	}
-	out := caster{class: e.Class, level: e.RealizedLevel, limits: e.SpellSlots, c: c}
+	out := caster{class: e.Class, level: e.RealizedLevel, limits: e.SpellSlots, school: e.SchoolSlots, spec: c.Specialization(), c: c}
 	if c.Casters() > 1 {
 		out.tag = e.Class
 	}
 	return out, nil
+}
+
+// spell is the spellbook's reading of the entry (ADR 0050 step 5).
+func (e SpellbookEntry) spell() spellbook.Spell {
+	return spellbook.Spell{Level: e.Level, Wizard: e.Wizard, Schools: e.Schools}
 }
 
 // owner is the entry class a stored slot belongs to: its Class, or the
@@ -333,18 +353,32 @@ func (s *service) PrepareFor(ctx context.Context, characterID int64, class strin
 		known[e.ID] = e
 	}
 	picked := make([]SpellbookEntry, 0, len(spellIDs))
-	perLevel := map[int]int{}
+	perLevel, notSchool := map[int]int{}, map[int]int{}
 	for _, id := range spellIDs {
 		e, ok := known[id]
 		if !ok {
 			return nil, fmt.Errorf("%w: %q", ErrNotInSpellbook, id)
 		}
+		// ADR 0050 step 11: an opposed spell is never prepared.
+		standing := spellbook.School(who.spec, e.spell())
+		if standing == spellbook.StandingOpposed {
+			return nil, fmt.Errorf("%w: %q", spellbook.ErrSchoolOpposed, id)
+		}
+		if standing != spellbook.StandingHisSchool {
+			notSchool[e.Level]++
+		}
 		picked = append(picked, e)
 		perLevel[e.Level]++
 	}
+	// ADR 0008 step 3, with ADR 0050 step 10: a specialist's level holds the
+	// allotment + his school slot, and its spells not of his school at most
+	// the allotment.
 	for level, n := range perLevel {
-		if n > limits[level] {
-			return nil, fmt.Errorf("%w: %d at level %d, the limit is %d", ErrOverLimit, n, level, limits[level])
+		if room := limits[level] + who.school[level]; n > room {
+			return nil, fmt.Errorf("%w: %d at level %d, the limit is %d", ErrOverLimit, n, level, room)
+		}
+		if who.school[level] > 0 && notSchool[level] > limits[level] {
+			return nil, fmt.Errorf("%w: %d not of his school at level %d, the limit is %d", ErrSchoolSlot, notSchool[level], level, limits[level])
 		}
 	}
 	// Stable by level so the request order is kept within a level.

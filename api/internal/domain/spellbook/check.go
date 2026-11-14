@@ -17,7 +17,13 @@ const wizardClass = "Wizard"
 // FromCatalogue is the spellbook's reading of a catalogue spell: the one
 // mapping of the catalogue's class to a wizard spell.
 func FromCatalogue(s catalogue.Spell) Spell {
-	return Spell{Level: s.Level, Wizard: s.Class == wizardClass, Schools: s.Schools}
+	return SpellOfClass(s.Class, s.Level, s.Schools)
+}
+
+// SpellOfClass is FromCatalogue for a spell read through another port: its
+// catalogue class (the spell list, Wizard or Priest), level and school codes.
+func SpellOfClass(class string, level int, schools []string) Spell {
+	return Spell{Level: level, Wizard: class == wizardClass, Schools: schools}
 }
 
 // Limits are step 20.1's limits of one spellbook (ADR 0030): the class's

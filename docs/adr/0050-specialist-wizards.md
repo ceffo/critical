@@ -264,13 +264,29 @@ code (ADR 0040 step 10).
     derived slots per level (the view's, ADR 0046 step 4.4) carry the school slot separately
     (`school: 1`), so the web shows "2 + 1" and never adds it itself. For a multi-class gnome
     fighter/illusionist the illusionist entry's progression gets it (ADR 0042 step 14).
-    Tests: `Prepare_Step10_TheSchoolSlotTakesOnlyASchoolSpell` (prepsvc: allotment + 1 with one
+    Built: `spellbook.SchoolSlots` (one per spell level with an allotment, `SchoolSlotsPerLevel`),
+    derived per entry from the class's `school_specialization` (`EntryDerived.SchoolSlots`; the
+    character's `SchoolSlots` follow the same entry as `SpellSlots`) and served as each
+    `spellSlots` row's `school` (absent for anyone else). A preparation over the allotment + 1 is
+    refused with the existing `prep_over_limit` (the limit counted with the school slot, so a level
+    with no allotment still refuses any spell); `school_slot_needs_school_spell` is the one that
+    fits the count but holds too few spells of his school. prepsvc reads the spell's school codes
+    from the spellbook entry and the specialization from the character's spellbook block.
+    Tests: `TestPrepare_Step10_TheSchoolSlotTakesOnlyASchoolSpell` (prepsvc: allotment + 1 with one
     school spell accepted; allotment + 1 with none refused; allotment + 2 refused; a level with no
-    allotment has no school slot), `Derive_Step10_TheSchoolSlotPerOpenLevel` (charactersvc).
+    allotment has no school slot), `TestDerive_Step10_TheSchoolSlotPerOpenLevel` (charactersvc),
+    `TestSchoolSlots_Step10_OnePerSpellLevelWithAnAllotment` (spellbook),
+    `TestCharacter_Step10_TheSlotsCarryTheSchoolSlot` (the route's `school`).
 11. **Opposed spells are not prepared.** A preparation holding an opposed spell is refused,
     `spell_school_opposed` (step 6's code), nothing written; so is picking one for a blank extra
     slot (ADR 0008 step 9). An opposed spell can only be in the book after a switch (step 15).
-    Test: `Prepare_Step11_AnOpposedSpellIsRefused` (prepsvc, the slot list and the extra-slot pick).
+    Built: one sentinel, `spellbook.ErrSchoolOpposed`, for learnsvc, prepsvc and castsvc's
+    blank extra slot pick (a spell picked there need not be in the book, so castsvc reads its
+    schools from the spell catalogue).
+    Tests: `TestPrepare_Step11_AnOpposedSpellIsRefused` (prepsvc, the slot list),
+    `TestCast_Step11_AnOpposedSpellIsRefusedInAnExtraSlot` (castsvc: the extra slot is picked
+    at cast time, so the pick is castsvc's), `TestErrorMapping_Step10_11_SchoolSlotAndOpposed`
+    (render: both codes, 400).
 
 ### Saves (amends [ADR 0006](0006-saving-throws.md) step 10.2)
 
@@ -364,7 +380,7 @@ code (ADR 0040 step 10).
     2. **Engine**: the kind's code, steps 5 to 11 and 14, the new codes' render rows and i18n keys,
        `Implemented` set; the specialists become creatable. It ships as three changes, each leaving
        the app as it was until the last: the spellbook (steps 5, 6 and 7 and 8 on Learn, Ajouter and
-       the free spell; built), the slots (steps 10 and 11), then the creation (step 6's starting
+       the free spell; built), the slots (steps 10 and 11; built), then the creation (step 6's starting
        book, steps 9 and 14, and `Implemented`): a specialist reaches the draft and the creation
        options only once creatable.
     3. **The entry switch** (step 15), with its Settings or class-card action in the web (the user's

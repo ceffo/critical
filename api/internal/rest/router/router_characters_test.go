@@ -333,6 +333,34 @@ func TestCharacter_ServesTheDerivedBlock(t *testing.T) {
 	}`, string(derived))
 }
 
+// GET /api/character's slots carry a specialist's school slot of each level
+// apart (ADR 0050 step 10: "school: 1", the web shows "2 + 1" and never adds
+// it); a level without one has no school field.
+func TestCharacter_Step10_TheSlotsCarryTheSchoolSlot(t *testing.T) {
+	h, m := newRouterWith(t, usersAuth(t, map[string]authsvc.User{
+		"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer, CurrentCharacterID: 3},
+	}))
+	m.char.EXPECT().GetCharacter(mock.Anything, int64(3)).Return(&charactersvc.Character{
+		ID: 3, Name: "Tenser", Class: "transmuter", Race: "human",
+		Derived: charactersvc.Derived{
+			RealizedLevel: 3,
+			SpellSlots:    map[int]int{1: 2, 2: 1, 3: 0},
+			SchoolSlots:   map[int]int{1: 1, 2: 1},
+		},
+		Details: charactersvc.Details{Languages: []string{}},
+	}, nil).Once()
+
+	rec := as(h, "ann", "GET", "/api/character", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	var body struct {
+		Derived struct {
+			SpellSlots json.RawMessage `json:"spellSlots"`
+		} `json:"derived"`
+	}
+	require.NoError(t, json.Unmarshal(rec.Body.Bytes(), &body))
+	assert.JSONEq(t, `[{"level": 1, "count": 2, "school": 1}, {"level": 2, "count": 1, "school": 1}]`, string(body.Derived.SpellSlots))
+}
+
 // POST /api/characters/draft (ADR 0034, amendment of 2026-10-20): the body as far as it is
 // entered goes to the service with the numbers it leaves out; the answer is the sheet's derived
 // block in GET /api/character's shape (the skill budget named as GET /api/skills names it), the

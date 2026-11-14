@@ -92,7 +92,10 @@ type fixture struct {
 	correctedAfter []int
 	// stats are the parsed stat blocks Describe serves, by spell id (none:
 	// a spell without, its casting time special).
-	stats   map[string]spellstats.Stats
+	stats map[string]spellstats.Stats
+	// schools are the school codes Describe serves for a wizard spell, by
+	// spell id (none: a spell with no class or school; ADR 0050 step 11).
+	schools map[string][]string
 	dice    *seqDice
 	tx      *fakeTx
 	entries []actionlog.NewEntry
@@ -154,7 +157,11 @@ func newFixtureOf(t *testing.T, effects spelleffectsvc.Catalog, caster character
 			if id == "no_such_spell" {
 				return spellsvc.Spell{}, false, nil
 			}
-			return spellsvc.Spell{Name: localized.Of("Text of " + id), Description: localized.Of("desc " + id), Stats: f.stats[id]}, true, nil
+			sp := spellsvc.Spell{Name: localized.Of("Text of " + id), Description: localized.Of("desc " + id), Stats: f.stats[id]}
+			if schools, ok := f.schools[id]; ok {
+				sp.Class, sp.Schools = "Wizard", schools
+			}
+			return sp, true, nil
 		}).Maybe()
 	f.buffs.EXPECT().Add(mock.Anything, charID, mock.Anything).RunAndReturn(
 		func(_ context.Context, _ int64, b buffsvc.BuffEffect) (buffsvc.BuffEffect, actionlog.Snapshot, error) {

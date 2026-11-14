@@ -66,7 +66,7 @@ describe("CastResultView", () => {
       fireball({ type: "spell", effect: "half", targetSaveModifier: -1 }),
     );
     expect(screen.getByTestId("cast-save")).toHaveTextContent(
-      "spell, half damage (targets -1: specialist caster)",
+      "spell, half damage (targets −1: specialist caster)",
     );
     first.unmount();
     await renderApp(fireball({ type: "spell", effect: "half" }));

@@ -481,7 +481,7 @@ export function CastResultView({ result: r }: { result: CastResult }) {
             <span data-testid="cast-save-modifier">
               {" "}
               {t("result.cast.saveTargetModifier", {
-                value: r.save.targetSaveModifier,
+                value: formatSigned(r.save.targetSaveModifier),
               })}
             </span>
           ) : null}

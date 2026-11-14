@@ -40,8 +40,9 @@ network; about 30 leaks exhaust the daemon's address pools and every `docker net
 address pools have been fully subnetted". `dev-smoke` and `image` therefore start with `scripts/ci-docker-sweep.sh`,
 which removes smoke containers and networks older than an hour (never a running job's). If it ever recurs, run
 `docker network prune -f` on the VM by hand, and consider `"default-address-pools": [{"base":"10.200.0.0/16","size":24}]`
-in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; Go and npm caches under `$HOME` are
-safe to share. If e2e slows down with several jobs at once, give the VM more cores and memory.
+in `/etc/docker/daemon.json` (254 networks). Each runner has its own `_work` directory; the Go module cache (`~/go/pkg/mod`) and
+npm's under `$HOME` are safe to share as the runner's own persistent caches; the self-hosted jobs set setup-go
+`cache: false`, because its restore untars over that shared directory and fails with 'File exists' errors. If e2e slows down with several jobs at once, give the VM more cores and memory.
 
 ## Fork pull requests never run here
 

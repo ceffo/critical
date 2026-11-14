@@ -128,10 +128,12 @@ jobs:
       - uses: actions/checkout@v7
       # Cancelled runs leak docker networks; a full address-pool table fails every later job.
       - run: scripts/ci-docker-sweep.sh
+      # cache: false on the self-hosted runner: setup-go's restore untars ~/go/pkg/mod over the runner's own
+      # persistent module cache (shared by its jobs) and floods 'File exists' errors that failed the post step.
       - uses: actions/setup-go@v7
         with:
           go-version-file: api/go.mod
-          cache-dependency-path: api/go.sum
+          cache: false
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*
@@ -150,10 +152,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
+      # cache: false on the self-hosted runner: setup-go's restore untars ~/go/pkg/mod over the runner's own
+      # persistent module cache (shared by its jobs) and floods 'File exists' errors that failed the post step.
       - uses: actions/setup-go@v7
         with:
           go-version-file: api/go.mod
-          cache-dependency-path: api/go.sum
+          cache: false
       - uses: actions/setup-node@v7
         with:
           node-version: lts/*

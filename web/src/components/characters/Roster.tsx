@@ -247,7 +247,7 @@ function RosterCard({
     <li
       className={cn(
         "zone-card flex flex-col",
-        current && "latest bg-selected!",
+        current && "latest bg-selected! shadow-[inset_6px_0_0_var(--tint)]!",
       )}
       data-testid="roster-card"
       data-current={current || undefined}

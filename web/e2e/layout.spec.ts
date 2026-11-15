@@ -5933,17 +5933,17 @@ async function newVersionStep(page: Page) {
     await snap(page, `new-version-dashboard-${vp.width}x${vp.height}`);
   }
 
-  // It follows to another screen without a reset (the roster's header card).
+  // It follows to another screen without a reset (the roster's footer row).
   await page.setViewportSize(sizes[0]!);
   await page.getByTestId("roster-open").click();
   await expect(page.getByTestId("roster")).toBeVisible();
   await expect(toast).toBeVisible();
-  const header = (await page
-    .locator("[data-screen] > header")
-    .first()
+  const footerRow = (await page
+    .locator("[data-screen] > footer")
     .boundingBox())!;
   const tr = (await toast.boundingBox())!;
-  expect(tr.y + tr.height).toBeLessThanOrEqual(header.y + header.height);
+  expect(tr.y).toBeGreaterThanOrEqual(footerRow.y);
+  expect(tr.y + tr.height).toBeLessThanOrEqual(footerRow.y + footerRow.height);
   await expectNoPageScroll(page);
   await snap(page, "new-version-roster-1920x1080");
 

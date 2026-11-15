@@ -853,7 +853,7 @@ open and whether the channel is ahead of this install. With no developer, review
 very poll (no event of its own). With one live that update must not run, so it prints
 `UPSTREAM-FIXED #n (title), ... closed upstream (one event lists every fix seen in a batch; a fix waits up to 30 minutes for another issue we filed that is still open), the channel is ahead of this install (a..b): run .claude/bin/fleet fleet-update` once per issue:
 tell the user in one line and run it yourself right away (a live developer's own worktree is not touched; the install changes the shared
-`.claude/` files and the binary, so follow what its status says as for `FLEET-UPDATED`: report `kept:`, hand off on a changed supervisor prompt).
+`.claude/` files and the binary). Run by hand it prints the same status as the event: `updated: a..b`, then `  supervisor-prompt-changed` or `  supervisor-prompt-unchanged`, then any `kept:` / `needs-human:` / `shipped:` lines: follow it as for `FLEET-UPDATED` (report `kept:`, hand off on `supervisor-prompt-changed`).
 Silent when the install is already past the fix, with `FLEET_UPDATE=off` (the `FLEET-UPDATE-AVAILABLE` event covers it) or when the fleet repo
 cannot be reached (retried).
 

@@ -10,12 +10,14 @@ import { useTranslation } from "react-i18next";
 import {
   Archive,
   ArrowLeft,
+  Copy,
   PencilSimple,
   Play,
   UserPlus,
   X,
 } from "@phosphor-icons/react";
 import {
+  copyCharacter,
   fetchCharacters,
   renameCharacter,
   retireCharacter,
@@ -33,6 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { APP_NAME } from "@/lib/brand";
+import { copyName } from "@/lib/copyName";
 import { navigate } from "@/lib/navigation";
 import { useCreationOptions } from "@/lib/useCreationOptions";
 import {
@@ -91,6 +94,9 @@ export function Roster({ onBack }: { onBack?: () => void }) {
   const { list, opened, pending } = state;
   const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+  // A failed read leaves the name's length unchecked here; the server still refuses.
+  const maxName = useCreationOptions().options?.maxNameLength ?? null;
 
   useEffect(() => {
     document.title = `${t("roster.title")} · ${APP_NAME}`;
@@ -139,6 +145,27 @@ export function Roster({ onBack }: { onBack?: () => void }) {
     }
   };
 
+  /** A copy of the character, named by the wording of the user's language; it is not made current. */
+  const copy = async (c: CharacterSummary) => {
+    setError(null);
+    setCopied(null);
+    try {
+      const l = await write(false, () =>
+        copyCharacter(
+          c.id,
+          copyName(
+            c.name,
+            (name) => t("characters.copyName", { name }),
+            maxName,
+          ),
+        ),
+      );
+      if (l?.copiedId !== undefined) setCopied(c.name);
+    } catch (e) {
+      setError(message(e));
+    }
+  };
+
   return (
     <div
       className="flex h-dvh flex-col gap-3 overflow-hidden p-3"
@@ -162,6 +189,15 @@ export function Roster({ onBack }: { onBack?: () => void }) {
                 {error}
               </p>
             )}
+            {copied && (
+              <p
+                role="status"
+                className="text-body"
+                data-testid="roster-copied"
+              >
+                {t("characters.copied", { name: copied })}
+              </p>
+            )}
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] gap-3">
               {currentFirst(list).map((c) => (
                 <RosterCard
@@ -171,6 +207,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
                   busy={pending !== null}
                   onBack={c.id === list.currentId ? onBack : undefined}
                   onPlay={() => void play(c)}
+                  onCopy={() => void copy(c)}
                   onRename={() =>
                     apply({ type: "open", kind: "rename", character: c })
                   }
@@ -227,6 +264,7 @@ function RosterCard({
   busy,
   onBack,
   onPlay,
+  onCopy,
   onRename,
   onRetire,
 }: {
@@ -236,6 +274,7 @@ function RosterCard({
   /** On the current card only: back to the game (absent for a user with no game to go back to). */
   onBack?: () => void;
   onPlay: () => void;
+  onCopy: () => void;
   onRename: () => void;
   onRetire: () => void;
 }) {
@@ -339,6 +378,17 @@ function RosterCard({
           </Button>
         )}
         <span className="flex-1" />
+        <Button
+          variant="quiet"
+          disabled={busy}
+          data-testid="roster-copy"
+          aria-label={t("characters.copyHint", { name: c.name })}
+          title={t("characters.copyHint", { name: c.name })}
+          onClick={onCopy}
+        >
+          <Copy aria-hidden />
+          {t("characters.copy")}
+        </Button>
         <Button
           variant="quiet"
           disabled={busy}

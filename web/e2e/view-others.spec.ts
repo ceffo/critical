@@ -78,3 +78,58 @@ test("open another user's character read-only, move around, return to your own",
   await expect(page.getByTestId("character")).toContainText("Test Bard");
   expect(writes).toEqual([]);
 });
+
+// Copying a character (ADR 0029 step 12): from another user's read-only view, then from the user's
+// own roster card. The copy is the user's own, named in their language, listed in the roster and not
+// current until they play it; it carries the source's sheet. The rules (everything but the log, the
+// HP and PSP carried, independence, the 404s) are Go tests (composition/copy_test.go,
+// storage/memory/copy_test.go); the name's wording and the failure paths are component tests
+// (Roster.dom.test.tsx, ViewBanner.dom.test.tsx). Only a browser proves the read-only page may send
+// this one write, that the roster shows the copy, and that playing it opens its sheet.
+test("copy another user's character from its view, then your own from the roster", async ({
+  page,
+  stack,
+}) => {
+  await seedOtherUser(stack.apiUrl, "bruno@example.com", [
+    newCharacter("Brunhilde Voss", "mage"),
+  ]);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  const roster = await openRoster(page);
+  await roster
+    .getByTestId("roster-others")
+    .getByRole("button", { name: "Consulter Brunhilde Voss" })
+    .click();
+  await expect(page).toHaveURL(/\/view\/\d+$/);
+  await expect(page.getByTestId("view-banner")).toContainText("Brunhilde Voss");
+
+  // The one write a read-only page sends: its answer is the user's roster, the copy not current.
+  await page.getByTestId("view-copy").click();
+  await expect(page).toHaveURL(/\/characters$/);
+  const cards = page.getByTestId("roster-card");
+  await expect(cards).toHaveCount(2);
+  await expect(cards.first()).toContainText("Test Bard");
+  await expect(cards.first()).toHaveAttribute("data-current", "true");
+  const copy = cards.filter({ hasText: "Brunhilde Voss (copie)" });
+  await expect(copy).toHaveCount(1);
+  await expect(copy).not.toHaveAttribute("data-current", "true");
+  await expect(copy).toContainText("Magicien · niveau 1");
+
+  // The user's own card: Copier makes a third character, named in French, and says so.
+  await cards.first().getByTestId("roster-copy").click();
+  await expect(cards).toHaveCount(3);
+  await expect(cards.filter({ hasText: "Test Bard (copie)" })).toHaveCount(1);
+  await expect(page.getByTestId("roster-copied")).toContainText(
+    "Une copie de Test Bard a été ajoutée à vos personnages.",
+  );
+  await snap(page, "roster-copies-fr");
+
+  // Playing the copy of Brunhilde opens her sheet, as the user's own character this time.
+  await copy
+    .getByRole("button", { name: "Jouer Brunhilde Voss (copie)" })
+    .click();
+  await expect(page.getByTestId("character")).toContainText(
+    "Brunhilde Voss (copie)",
+  );
+  await expect(page.getByTestId("view-banner")).toHaveCount(0);
+});

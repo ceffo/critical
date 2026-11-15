@@ -74,6 +74,18 @@ export function renameCharacter(
   return patch<CharacterList>(`/api/characters/${id}`, { name });
 }
 
+/**
+ * Copies a character the user may read, their own or another's, as a new character of theirs, named
+ * `name` (ADR 0029 step 12): everything but the action log; it is not made current. The answer is the
+ * user's list, `copiedId` the copy. The name is built by `copyName`: the backend builds no text.
+ */
+export function copyCharacter(
+  id: number,
+  name: string,
+): Promise<CharacterList> {
+  return post<CharacterList>(`/api/characters/${id}/copy`, { name });
+}
+
 /** Rolls the six scores by a method (ADR 0032 step 6); writes nothing. The race adds Table 8's adjustments. */
 export function rollScores(
   method: string,

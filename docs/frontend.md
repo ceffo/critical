@@ -233,6 +233,12 @@ flowchart TD
   (`components/shell/ViewBanner.tsx`: character, owner, Retour). The page sends `X-Viewed-Character-Id`, the http
   layer refuses every write but the logout before the network, and `lib/readOnly.ts` locks every control that is
   not for moving around (mark one that must stay usable with `data-view-ok`, e.g. a display preference).
+- Copy a character ([ADR 0029](adr/0029-users-login-and-access.md) step 12): Copier on the banner of a read-only
+  view and on each own roster card (`copyCharacter`, `POST /api/characters/<id>/copy`). The name is built here,
+  never by the backend: `characters.copyName` ("<name> (copy)" / "(copie)") through `lib/copyName.ts`, which
+  trims a long source name to the creation options' `maxNameLength`. The one write a read-only page sends: it
+  leaves `X-Viewed-Character-Id` off (`lib/viewed.ts` `isCopyRequest`). The banner then shows the roster; a card
+  says a copy was added and the copy is not current until Jouer.
 - Creation route ([ADR 0034](adr/0034-onboarding-screens.md), `components/creation/`): a user whose
   `currentCharacterId` is null and who has no character sees the intro (`CreationRoute.tsx`), on every
   path but `/admin`; Commencer opens the flow and Quitter comes back. `/create` opens the flow straight

@@ -558,6 +558,8 @@ export interface CharacterSummary {
 export interface CharacterList {
   characters: CharacterSummary[];
   currentId: number | null;
+  /** The character a copy just made (ADR 0029 step 12), only in the answer to a copy. */
+  copiedId?: number;
 }
 
 /** The user who owns a character another user reads; `name` is their display name, "" when none is known (never an email). */

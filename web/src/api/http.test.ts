@@ -292,6 +292,29 @@ describe("a read-only page (another user's character)", () => {
     );
   });
 
+  it("sends a copy of the viewed character, with no character header at all", async () => {
+    respond(201, { characters: [], currentId: 3, copiedId: 9 });
+    viewing(7);
+    useSessionStore.getState().setMe({
+      id: "u",
+      email: "a@b.c",
+      role: "player",
+      root: false,
+      currentCharacterId: 3,
+    });
+    const l = await post<{ copiedId: number }>("/api/characters/7/copy", {
+      name: "Ilyana (copy)",
+    });
+    expect(l.copiedId).toBe(9);
+    expect(calls()).toHaveLength(1);
+    const headers = new Headers(calls()[0]![1]?.headers);
+    expect(headers.has("X-Viewed-Character-Id")).toBe(false);
+    expect(headers.has(CHARACTER_HEADER)).toBe(false);
+    expect(calls()[0]![1]?.body).toBe(
+      JSON.stringify({ name: "Ilyana (copy)" }),
+    );
+  });
+
   it("still sends the logout, which touches no character", async () => {
     respond(200, {});
     viewing(7);

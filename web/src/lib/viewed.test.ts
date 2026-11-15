@@ -35,6 +35,15 @@ describe("mayLeaveReadOnly", () => {
     ["/api/characters/current", "PUT", false],
     ["/api/roll/dice", "POST", false],
     ["/api/auth/logout", "POST", true],
+    // A copy writes only the user's own new character (ADR 0029 step 12.3).
+    ["/api/characters/7/copy", "POST", true],
+    ["/api/characters/7/copy", "GET", true],
+    ["/api/characters/7/copy", "PUT", false],
+    ["/api/characters/7/copy", "DELETE", false],
+    ["/api/characters/7", "PATCH", false],
+    ["/api/characters/0/copy", "POST", false],
+    ["/api/characters/7/copy/x", "POST", false],
+    ["/api/characters/x/copy", "POST", false],
   ])("%s %s -> %s", (url, method, want) => {
     expect(mayLeaveReadOnly(url, method)).toBe(want);
   });

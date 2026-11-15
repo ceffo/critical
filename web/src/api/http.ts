@@ -3,7 +3,12 @@ import { loginUrl } from "@/lib/session";
 import { noteAnswer, noteWrite, STATE_KEYS_HEADER } from "@/lib/stateKeys";
 import { useDatabaseStore } from "@/stores/database";
 import { useSessionStore } from "@/stores/session";
-import { mayLeaveReadOnly, viewedId, VIEWED_HEADER } from "@/lib/viewed";
+import {
+  isCopyRequest,
+  mayLeaveReadOnly,
+  viewedId,
+  VIEWED_HEADER,
+} from "@/lib/viewed";
 
 /** The login endpoints: their callers decide where to go, a 401 there never redirects. */
 const AUTH_PREFIX = "/api/auth/";
@@ -224,9 +229,13 @@ export const CHARACTER_CHANGED = "character_changed";
 /** The code of a write a read-only page refused to send (the server's own `read_only` is the same refusal). */
 export const READ_ONLY = "read_only";
 
-/** init with the character the page shows (the session's current character), when it has one; a read-only page names the viewed one instead. */
-function withCharacter(init?: RequestInit): RequestInit | undefined {
+/** init with the character the page shows (the session's current character), when it has one; a read-only page names the viewed one instead, a copy of it none (ADR 0029 step 12.3). */
+function withCharacter(
+  url: string,
+  init?: RequestInit,
+): RequestInit | undefined {
   const viewed = viewedId();
+  if (viewed !== null && isCopyRequest(url, init?.method)) return init;
   if (viewed !== null) {
     const headers = new Headers(init?.headers);
     headers.set(VIEWED_HEADER, String(viewed));
@@ -285,7 +294,7 @@ async function send<T>(url: string, init?: RequestInit): Promise<T> {
   for (;;) {
     let res: Response;
     try {
-      res = await fetch(url, withCharacter(init));
+      res = await fetch(url, withCharacter(url, init));
     } catch (e) {
       // The write may or may not have landed: what it changed is unknown.
       if (!read) noteWrite(null);

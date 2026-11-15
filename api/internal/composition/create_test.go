@@ -459,9 +459,9 @@ func TestCharacters_Step14_SkillArmourIsNoEntry(t *testing.T) {
 	assert.Equal(t, "none", shown.Derived.SkillSets[0].SkillArmor, "a new bard wears nothing")
 }
 
-// CRI-404: skillPoints is {set: {skill: points}}; the old flat {skill: points} body is a 400 that
+// skillPoints is {set: {skill: points}}; the old flat {skill: points} body is a 400 that
 // says what is wrong, not a 500, and nothing is stored.
-func TestCreate_CRI404_AFlatSkillPointsBodyIsRefusedAsBadRequest(t *testing.T) {
+func TestCreate_AFlatSkillPointsBodyIsRefusedAsBadRequest(t *testing.T) {
 	tb, _ := newTable(t)
 	bob, _ := tb.login("bob@example.com")
 	body := bardStart + `,"skillPoints":{"climb_walls":15},"details":{"alignment":"neutral_good","sex":"male"}}`

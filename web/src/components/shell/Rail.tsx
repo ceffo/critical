@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import {
   Backpack,
   BookOpenText,
+  GraduationCap,
   HandFist,
   TrendUp,
   type IconProps,
@@ -11,18 +12,22 @@ import { cn } from "@/lib/utils";
 import { VerticalButton, VerticalButtons } from "@/components/ui/tabs";
 import { ACTIVITIES, type Activity } from "@/lib/activities";
 import { lookupLabelKey, useActFeatures } from "@/lib/actFeatures";
+import { useSkillsPending } from "@/lib/skillsPending";
 
 const ICONS: Record<Activity, ComponentType<IconProps>> = {
   act: HandFist,
   spells: BookOpenText,
   inventory: Backpack,
+  skills: GraduationCap,
   xp: TrendUp,
 };
 
 /**
  * The rail (ADR 0022 step 2.4), on the ground between the character card and the stage: bare icons
  * with their caption under them, the focused activity on a tint pill. A click focuses that
- * activity. Captions wrap rather than being cut.
+ * activity. Captions wrap rather than being cut. Skills carries a red pill while a pool has
+ * something left to spend or is over budget (ADR 0037 step 15, amended); screen readers get its
+ * label (an image role, not a text node, so the caption's words stay whole).
  */
 export function Rail({
   active,
@@ -33,13 +38,14 @@ export function Rail({
 }) {
   const { t } = useTranslation();
   const features = useActFeatures();
+  const pending = useSkillsPending();
   // The lookup activity is named by its content (ADR 0022 steps 2.4 and 2.5).
   const label = (a: Activity) =>
     t(`shell.activity.${a === "spells" ? lookupLabelKey(features) : a}`);
   return (
     <nav
       aria-label={t("shell.activities")}
-      className="flex w-[4.25rem] shrink-0 flex-col"
+      className="-mx-1.5 flex w-[5rem] shrink-0 flex-col"
       data-testid="rail"
     >
       <VerticalButtons
@@ -54,7 +60,7 @@ export function Rail({
               key={a}
               aria-current={on ? "page" : undefined}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-lg px-0.5 py-2.5 text-center text-label break-words transition-colors [&_svg]:size-5",
+                "relative flex flex-col items-center gap-1 rounded-lg px-0 py-2.5 text-center text-label break-words transition-colors [&_svg]:size-5",
                 on
                   ? "selected font-medium"
                   : "text-muted-foreground hover:bg-raised-hover hover:text-foreground",
@@ -62,7 +68,15 @@ export function Rail({
               onClick={() => onSelect(a)}
             >
               <Icon weight={on ? "fill" : "regular"} aria-hidden />
-              <span className="max-w-full">{label(a)}</span>
+              <span className="max-w-full tracking-tight">{label(a)}</span>
+              {a === "skills" && pending && (
+                <span
+                  role="img"
+                  aria-label={t("shell.skillsPending")}
+                  className="absolute top-1.5 right-2 size-2.5 rounded-full bg-danger ring-2 ring-background"
+                  data-testid="skills-pill"
+                />
+              )}
             </VerticalButton>
           );
         })}

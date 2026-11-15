@@ -112,7 +112,7 @@ B's choice and is marked "(design)".
       bare Phosphor icons with their caption under them, the active one on a tint pill
       (`bg-amb-900 text-tint`; *amended by [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 5.1, 2026-10-17:* the
       selected tone with a 3 px tint bar, the one selection mark; *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* in the journal the selected row is the tone without the bar, see ADR 0026 step 5.1 and ADR 0027 step 9.7). Activities: **Act**, **Spells** (lookup), **Experience**,
-      **Inventory**. A click focuses that activity; the stage reshapes, the always-visible zones do
+      **Inventory**, **Skills** (*amended 2026-11-15, user triage of the skills overhaul, [ADR 0037](0037-proficiencies.md) step 15: a fifth activity after Inventory, in the rail's order Act, Spells, Inventory, Skills, Experience, with a red pill while something is left to spend; it hosts the proficiency, language and skill-point editors at any time*). A click focuses that activity; the stage reshapes, the always-visible zones do
       not move. Each activity mounts on its first visit and stays mounted while hidden (ADR 0009
       step 2, kept). No settings item in the rail.
       *Amended 2026-11-11, user accepted the item's defaults 2026-11-10:* the lookup activity is
@@ -152,6 +152,9 @@ B's choice and is marked "(design)".
         the ledger card below with the rest of the height.
       - **Inventory**: the inventory and weapons cards (not drawn in B; the area item lays them out
         under these steps).
+      - **Skills** (*2026-11-15*): the weapon proficiency, proficiency-and-language and skill-point
+        editors, one block each in one scrolling card, as they were in the spend dialog; the blocks
+        wrap, never cut (step 1). The level-up box's links focus it on the editor they name.
    6. **Dice footer card**, full width, one line, in every activity: the **settings cog first** (it
       opens the settings popover of ADR 0009 step 6), then the dice, the formula, −1 / +1, Roll and
       the favourites strip (step 1.2). *Amended 2026-11-11 ([ADR 0027](0027-space-follows-frequency-of-use.md)

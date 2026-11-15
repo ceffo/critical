@@ -26,8 +26,6 @@
       "realizedAbove": "Level {{realized}} taken, XP gives level {{target}}",
       "realizedAboveHint": "Undo the roll or correct the XP.",
       "grantsTitle": "Level {{level}} grants",
-      "toSpendHint": "Proficiency slots (weapon and non-weapon), skill points and free spells not taken yet. Open to assign them.",
-      "toSpendTitle": "Slots to spend",
       "gained": "+{{what}}",
       "grant": {
         "weaponSlots_one": "{{count}} weapon proficiency slot",
@@ -38,11 +36,6 @@
         "skillPoints_other": "{{count}} skill points",
         "freeSpell": "1 free level {{spellLevel}} spell",
         "freeSpellSchool": "1 free level {{spellLevel}} spell of his school"
-      },
-      "settled": {
-        "weaponSlots": "Weapon proficiencies",
-        "nonWeaponSlots": "Proficiencies",
-        "skillPoints": "Skill points"
       },
       "choose": "Choose",
       "spend": "Spend",
@@ -145,8 +138,10 @@
       "spellsAndPowers": "Spells and powers",
       "reference": "Reference",
       "xp": "Experience",
-      "inventory": "Inventory"
+      "inventory": "Inventory",
+      "skills": "Skills"
     },
+    "skillsPending": "Something is left to spend in Skills",
     "character": "Character",
     "lastResult": "Last result",
     "noResult": "No roll yet.",
@@ -2438,7 +2433,7 @@
     "headingMulti": "Experience"
   },
   "skills": {
-    "empty": "Nothing to roll here yet. Choose proficiencies, or spend skill points, from “Slots to spend” on the character card.",
+    "empty": "Nothing to roll here yet. Choose proficiencies, or spend skill points, in the Skills activity.",
     "proficiencies": "Proficiencies",
     "percent": "{{value}}%",
     "rollLabel": "Roll {{name}}",
@@ -3700,7 +3695,7 @@
     "unspecializeHint": "Remove the specialization in {{name}} (back to 1 slot)",
     "remove": "Remove {{name}}",
     "nonproficient": "Not proficient: {{value}} to hit",
-    "nonproficientHint": "No proficiency with this weapon: {{value}} to hit. Pick it by name in the Skills tab.",
+    "nonproficientHint": "No proficiency with this weapon: {{value}} to hit. Pick it by name in the Skills activity.",
     "nonproficientHintNoCode": "No proficiency with this weapon: {{value}} to hit. It has no catalogue weapon: pick one in its item’s edit.",
     "errors": {
       "out_of_range": "This number of slots is neither a proficiency nor a specialization.",

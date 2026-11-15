@@ -24,7 +24,7 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
   await expect(skip).toBeVisible();
   await expect(skip).toHaveText("Skip to the action panel");
 
-  // Walk to the first tab, counting the stops (the skip link is the first). The four rail buttons
+  // Walk to the first tab, counting the stops (the skip link is the first). The five rail buttons
   // are one stop: Act is reached, then the next Tab leaves the rail for the tablist.
   let stops = 1;
   let railStops = 0;
@@ -37,8 +37,9 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
   }
   expect(railStops).toBe(1);
   // 26 stops stood before the first tab with four rail stops and no skip link; then 24: the skip
-  // link, and the rail once; now 25: the saves' spell wand beside the mind box.
-  expect(stops - 1).toBe(25);
+  // link, and the rail once; then 25: the saves' spell wand beside the mind box; now 24: the
+  // "to spend" tag left the character card for the Skills rail entry (one stop with the rail).
+  expect(stops - 1).toBe(24);
 
   // The tablist is one stop: Right moves and selects, Home and End jump, and Tab leaves it.
   await page.keyboard.press("ArrowRight");
@@ -69,6 +70,15 @@ test("Tab order, the skip link, and arrow keys in the rail and the tablist", asy
   await expect(act).toHaveAttribute("aria-current", "page");
   await page.keyboard.press("End");
   await expect(rail.getByRole("button").last()).toBeFocused();
+  // Skills (after Inventory, the red pill's text in its name) is one Up from the end, reachable by
+  // arrows like the others and focused on Enter.
+  await page.keyboard.press("ArrowUp");
+  const skills = rail.getByRole("button", { name: /^Skills/ });
+  await expect(skills).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(skills).toHaveAttribute("aria-current", "page");
+  await act.click();
+  await act.focus();
   await page.keyboard.press("Home");
   await expect(act).toBeFocused();
   await page.keyboard.press("ArrowDown");

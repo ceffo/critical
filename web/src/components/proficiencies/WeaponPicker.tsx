@@ -23,7 +23,7 @@ import {
 } from "./weapons";
 
 /**
- * The weapon proficiency picker (ADR 0037 steps 3, 12 and 21), shared by the Skills tab's editor
+ * The weapon proficiency picker (ADR 0037 steps 3, 12 and 21), shared by the Skills activity's editor
  * and the creation's step: the weapon pool with its terms, the type picks left to redo (step
  * 21.8.3), then one row per catalogue weapon the class may pick (the derived `weapons`, named from
  * the equipment catalogue) and per kept pick it may not (shown as such, removable). A row adds or

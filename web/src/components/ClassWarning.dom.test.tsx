@@ -8,10 +8,10 @@ describe("NonproficientTag's hint", () => {
     [
       "en",
       true,
-      /^No proficiency with this weapon: .* Pick it by name in the Skills tab\.$/,
+      /^No proficiency with this weapon: .* Pick it by name in the Skills activity\.$/,
     ],
     ["en", false, /no catalogue weapon: pick one in its item’s edit\.$/],
-    ["fr", true, /par son nom dans l’onglet Compétences\.$/],
+    ["fr", true, /par son nom dans l’activité Compétences\.$/],
     ["fr", false, /dans la modification de l’objet\.$/],
   ] as const)("%s, has a catalogue code: %s", async (lng, hasCode, hint) => {
     await renderApp(<NonproficientTag penalty={-2} hasCode={hasCode} />, {

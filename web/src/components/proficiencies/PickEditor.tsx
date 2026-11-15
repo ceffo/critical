@@ -61,7 +61,7 @@ function startingPicks(
 }
 
 /**
- * The Skills tab's pick editor (ADR 0037 steps 7, 9, 12, 13 and 18), one for each pool of picks,
+ * The Skills activity's pick editor (ADR 0037 steps 7, 9, 12, 13 and 18), one for each pool of picks,
  * opened with the pool: the weapon picks and, for a fighter, the specialization; or the non-weapon
  * picks with the languages, the two spending the same pool. Changed at any time (a level-up,
  * catching up, a correction) and saved in one move the journal's Undo takes back, the pool's picks

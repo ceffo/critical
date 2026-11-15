@@ -3,7 +3,7 @@ import { LanguagePicker } from "@/components/characters/LanguagePicker";
 import type { CreationOptions } from "@/types/character";
 
 /**
- * The languages pool of the Skills tab's editor (ADR 0037 step 18, ADR 0032 step 4): the catalogue
+ * The languages pool of the Skills activity's editor (ADR 0037 step 18, ADR 0032 step 4): the catalogue
  * as the details card offered it (the race's PHB list first, its own language ticked and fixed),
  * the slots the languages beyond the native one and Common spend (`slots`, the server's preview,
  * ADR 0037 step 6) and the server's refusal on field `languages` (`error`, worded). Nothing without

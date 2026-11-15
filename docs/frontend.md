@@ -227,6 +227,12 @@ flowchart TD
   first field, Nom (`CharacterDetails.tsx`; `stores/character.ts` `saveDetails` renames on its own
   endpoint before saving the details). A user with no current character (`components/shell/NoCurrent.tsx`)
   gets the roster without Retour when they have other characters, the intro when they have none.
+- Another user's character, read-only ([ADR 0029](adr/0029-users-login-and-access.md) step 11.6): the roster
+  lists `GET /api/characters/others` under the user's own cards, grouped by owner (`Others.tsx`); Consulter opens
+  `/view/<id>` (`lib/viewed.ts`) through a full load, which shows the usual `App` with the banner
+  (`components/shell/ViewBanner.tsx`: character, owner, Retour). The page sends `X-Viewed-Character-Id`, the http
+  layer refuses every write but the logout before the network, and `lib/readOnly.ts` locks every control that is
+  not for moving around (mark one that must stay usable with `data-view-ok`, e.g. a display preference).
 - Creation route ([ADR 0034](adr/0034-onboarding-screens.md), `components/creation/`): a user whose
   `currentCharacterId` is null and who has no character sees the intro (`CreationRoute.tsx`), on every
   path but `/admin`; Commencer opens the flow and Quitter comes back. `/create` opens the flow straight

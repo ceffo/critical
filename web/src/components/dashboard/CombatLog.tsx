@@ -68,6 +68,7 @@ export function CombatLog() {
         <div
           role="radiogroup"
           aria-label={t("journal.filter.label")}
+          data-view-ok
           className="flex rounded-lg bg-raised p-0.5"
         >
           {LOG_FILTERS.map((f) => (

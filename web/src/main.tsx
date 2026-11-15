@@ -4,6 +4,7 @@ import "./index.css";
 import "./i18n";
 import { startSettings } from "./stores/settings";
 import { readSession } from "./api/auth";
+import App from "./App";
 import { AdminPage } from "./components/admin/AdminPage";
 import { RulesetPage } from "./components/ruleset/RulesetPage";
 import { LoginPage } from "./components/login/LoginPage";
@@ -40,6 +41,8 @@ void readSession().then((session) => {
         <AdminPage />
       ) : start.show === "ruleset" ? (
         <RulesetPage />
+      ) : start.show === "view" ? (
+        <App />
       ) : start.show === "create" && !start.hasCurrent ? (
         <NoCurrent />
       ) : (

@@ -1,5 +1,6 @@
 import {
   expect,
+  request as playwrightRequest,
   type Locator,
   type BrowserContext,
   type Page,
@@ -686,4 +687,48 @@ export async function showWizardSpells(page: Page) {
     .getByRole("button", { name: /^(Wizard|Magicien)$/, exact: false });
   await wizard.click();
   await expect(wizard).toHaveAttribute("aria-pressed", "true");
+}
+
+/** A character body for `POST /api/characters`, a level 1 human with the given class and name. */
+export function newCharacter(name: string, cls: string) {
+  return {
+    name,
+    class: cls,
+    raceCode: "human",
+    details: { alignment: "neutral_good", sex: "female" },
+    str: 12,
+    dex: 12,
+    con: 12,
+    int: 14,
+    wis: 12,
+    cha: 10,
+    hpMax: 7,
+    xp: 0,
+  };
+}
+
+/**
+ * Another user of the stack (the dev login names one by email) with characters of their own, made
+ * through the API under their own session: the stack's own user then has someone to browse.
+ */
+export async function seedOtherUser(
+  apiUrl: string,
+  email: string,
+  characters: ReturnType<typeof newCharacter>[],
+) {
+  const anon = await playwrightRequest.newContext({
+    baseURL: apiUrl,
+    extraHTTPHeaders: { Origin: apiUrl },
+  });
+  try {
+    const login = await anon.post("/api/auth/dev", { data: { email } });
+    expect(login.ok(), await login.text()).toBe(true);
+    // The context keeps the session cookie the login set.
+    for (const c of characters) {
+      const res = await anon.post("/api/characters", { data: c });
+      expect(res.ok(), await res.text()).toBe(true);
+    }
+  } finally {
+    await anon.dispose();
+  }
 }

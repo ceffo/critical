@@ -2579,6 +2579,7 @@
     "forDm": "For the DM: your HP is unchanged"
   },
   "apiError": {
+    "read_only": "This character is read-only: nothing can be changed in it.",
     "save_immune": "You were immune to that spell: there is no roll to adjust.",
     "over_budget": "Over budget: {{spent}} for {{limit}} available.",
     "character_not_found": "This character no longer exists.",
@@ -2833,7 +2834,19 @@
       "metal": "Metal, up to chain mail"
     }
   },
+  "view": {
+    "banner": "Viewing {{name}}, played by {{owner}}.",
+    "unnamedOwner": "another player",
+    "readOnly": "Read-only: nothing can be changed here.",
+    "back": "Back",
+    "backHint": "Back to your own character"
+  },
   "roster": {
+    "unnamedOwner": "Unnamed player",
+    "othersTitle": "Other players' characters",
+    "othersError": "Other players' characters could not be loaded.",
+    "view": "View",
+    "viewHint": "View {{name}}, read-only",
     "title": "Your characters",
     "open": "Your characters: play, rename, retire or create a character",
     "back": "Resume",

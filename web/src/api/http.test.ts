@@ -242,3 +242,67 @@ describe("known powers refusals", () => {
     ).toMatch(/4.*3/);
   });
 });
+
+describe("a read-only page (another user's character)", () => {
+  const viewing = (id: number) =>
+    vi.stubGlobal("location", { pathname: `/view/${id}`, assign: vi.fn() });
+  const calls = () =>
+    (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls as [
+      string,
+      RequestInit | undefined,
+    ][];
+
+  it("names the viewed character on a read and never the session's current one", async () => {
+    respond(200, {});
+    viewing(7);
+    useSessionStore.getState().setMe({
+      id: "u",
+      email: "a@b.c",
+      role: "player",
+      root: false,
+      currentCharacterId: 3,
+    });
+    await request("/api/hp");
+    const headers = new Headers(calls()[0]![1]?.headers);
+    expect(headers.get("X-Viewed-Character-Id")).toBe("7");
+    expect(headers.has(CHARACTER_HEADER)).toBe(false);
+  });
+
+  it.each([
+    ["POST", () => post("/api/hp/event", { delta: -1 })],
+    ["PUT", () => request("/api/x", { method: "PUT" })],
+    ["PATCH", () => request("/api/x", { method: "PATCH" })],
+    ["DELETE", () => request("/api/x", { method: "DELETE" })],
+  ])("never sends a %s", async (_m, send) => {
+    respond(200, {});
+    viewing(7);
+    const err = await send().catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe("read_only");
+    expect(calls()).toHaveLength(0);
+  });
+
+  it("words the refusal in the player's language", async () => {
+    viewing(7);
+    respond(200, {});
+    await i18n.changeLanguage("fr");
+    const err = await post("/api/hp/event", {}).catch((e: unknown) => e);
+    expect((err as ApiError).message).toBe(
+      "Ce personnage est en lecture seule : rien ne peut y être modifié.",
+    );
+  });
+
+  it("still sends the logout, which touches no character", async () => {
+    respond(200, {});
+    viewing(7);
+    await post("/api/auth/logout");
+    expect(calls()).toHaveLength(1);
+  });
+
+  it("sends a write as usual on the user's own page", async () => {
+    respond(200, {});
+    vi.stubGlobal("location", { pathname: "/", assign: vi.fn() });
+    await post("/api/hp/event", { delta: -1 });
+    expect(calls()).toHaveLength(1);
+  });
+});

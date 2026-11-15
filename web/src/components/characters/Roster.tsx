@@ -22,6 +22,7 @@ import {
   switchCharacter,
 } from "@/api/characters";
 import { ApiError } from "@/api/http";
+import { Others } from "@/components/characters/Others";
 import { PageFooter, PageHeader } from "@/components/shell/PageHeader";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
@@ -194,6 +195,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
                 </span>
               </li>
             </ul>
+            <Others />
           </div>
         )}
       </main>

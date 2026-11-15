@@ -590,3 +590,11 @@
     }
   }
 }
+
+/* Another user's character is read-only (ADR 0029 step 11): `lib/readOnly.ts` locks every write control. */
+[data-view-locked] {
+  opacity: 0.55;
+}
+[data-view-locked]:not(button) {
+  pointer-events: none;
+}

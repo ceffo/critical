@@ -118,6 +118,7 @@ export function SettingsPopover() {
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         data-testid="settings-trigger"
+        data-view-ok
         aria-label={t("settings.open")}
         title={t("settings.open")}
         className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-raised-hover hover:text-foreground data-popup-open:bg-raised-hover data-popup-open:text-foreground [&_svg]:size-5"
@@ -130,6 +131,7 @@ export function SettingsPopover() {
         className="flex w-80 flex-col gap-3"
         aria-label={t("settings.title")}
         data-testid="settings-popover"
+        data-view-ok
       >
         <PopoverTitle className="section-label">
           {t("settings.title")}

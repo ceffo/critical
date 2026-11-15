@@ -61,22 +61,32 @@ cleanup() {
 trap cleanup EXIT
 trap 'exit 130' INT TERM
 
-taken() { [ -n "$(ss -H -ltn "sport = :$1")" ]; }
+# `fly proxy` cannot pick its own port, so the script picks a free one and the proxy binds it a moment later:
+# another program can take it in between. So the proxy counts as up only when the listener on that port is
+# the proxy's own process; when it lost the port (it exits, or someone else listens) the script tries a new one.
+listening_pid() { ss -H -ltnp "sport = :$1" | grep -q "pid=$2,"; }
 if [ -n "${CRITICAL_DB_ENDPOINT:-}" ]; then
     host="${CRITICAL_DB_ENDPOINT%:*}"
     port="${CRITICAL_DB_ENDPOINT##*:}"
 else
     host=127.0.0.1
-    port="$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
     log="$(mktemp)"
-    "$fly" proxy "$port:5432" "$cluster.flycast" -a "$cluster" -q >"$log" 2>&1 &
-    proxy=$!
-    for _ in $(seq 1 90); do
-        kill -0 "$proxy" 2>/dev/null || { cat "$log" >&2; fail "fly proxy exited"; }
-        taken "$port" && break
-        sleep 1
+    up=""
+    for _ in $(seq 1 5); do
+        port="$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])')"
+        "$fly" proxy "$port:5432" "$cluster.flycast" -a "$cluster" -q >"$log" 2>&1 &
+        proxy=$!
+        for _ in $(seq 1 90); do
+            kill -0 "$proxy" 2>/dev/null || break
+            if listening_pid "$port" "$proxy"; then up=1; break; fi
+            sleep 1
+        done
+        [ -z "$up" ] || break
+        # lost the port, or never listened: stop this proxy and try another port
+        kill "$proxy" 2>/dev/null || true; wait "$proxy" 2>/dev/null || true
+        proxy=""
     done
-    taken "$port" || fail "fly proxy not listening on local port $port after 90 s"
+    [ -n "$up" ] || { cat "$log" >&2; fail "fly proxy did not start listening on a free local port"; }
 fi
 conn="host=$host port=$port user=$user dbname=$db sslmode=disable"
 

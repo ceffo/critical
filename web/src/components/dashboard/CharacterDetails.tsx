@@ -24,7 +24,7 @@ import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
 import { primaryEntry } from "@/lib/classEntries";
 import { TakeClassDialog } from "@/components/dashboard/TakeClassDialog";
-import { switchableEntries } from "@/lib/classSwitch";
+import { useSwitchableEntries } from "@/lib/classSwitch";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -119,8 +119,7 @@ function DetailsView({
   onOpenSchool: (entry: number) => void;
 }) {
   const { t } = useTranslation();
-  const { options } = useCreationOptions();
-  const schoolEntry = switchableEntries(c, options)[0];
+  const schoolEntry = useSwitchableEntries(c)[0];
   // Only what is set shows; one link to the form stands for every field left out.
   const hasUnset = unsetDetails(c).length > 0;
   return (

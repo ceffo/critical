@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { screen, waitFor, within } from "@testing-library/react";
+import { renderHook, screen, waitFor, within } from "@testing-library/react";
 import { renderApp } from "@/test/render";
 import { useCreationOptionsStore } from "@/stores/creationOptions";
 import { useCharacterStore } from "@/stores/character";
 import { ApiError } from "@/api/http";
 import { fetchSwitchTargets, type SwitchTarget } from "@/api/character";
-import { schoolOf, switchableEntries, switchTargets } from "@/lib/classSwitch";
+import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
 import type { Character, CreationOptions } from "@/types/character";
 import { SwitchClassDialog } from "./SwitchClassDialog";
 
@@ -105,17 +105,17 @@ beforeEach(() => {
 afterEach(() => useCreationOptionsStore.setState({ options: null }));
 
 describe("what an entry may switch to", () => {
-  it("links the entries of a wizard group that keep a spellbook, none a character holds", () => {
-    const mage = sheet([{ class: "mage" }]);
-    expect(switchTargets(mage, options, 0)).toEqual(["transmuter", "abjurer"]);
-    // A bard keeps a spellbook but is alone of its group: nothing to switch to.
-    expect(switchableEntries(sheet([{ class: "bard" }]), options)).toEqual([]);
-    expect(switchableEntries(sheet([{ class: "fighter" }]), options)).toEqual(
-      [],
-    );
-    // A wizard held by another entry is not offered.
-    const two = sheet([{ class: "mage" }, { class: "transmuter" }]);
-    expect(switchTargets(two, options, 0)).toEqual(["abjurer"]);
+  it("links exactly the entries the server lists a target for, and compares nothing itself", async () => {
+    // The server answers per entry: a mage has targets, a fighter none, a refused list still counts.
+    vi.mocked(fetchSwitchTargets).mockImplementation(async (entry) => ({
+      entry,
+      from: "x",
+      targets: entry === 1 ? [] : targetsOfAMage,
+    }));
+    const character = sheet([{ class: "mage" }, { class: "fighter" }]);
+    const { result } = renderHook(() => useSwitchableEntries(character));
+    expect(result.current).toEqual([]);
+    await waitFor(() => expect(result.current).toEqual([0]));
     expect(schoolOf(options, "transmuter")).toBe("alteration");
     expect(schoolOf(options, "mage")).toBe("");
   });

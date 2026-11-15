@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/popover";
 import { useClassName } from "@/lib/useClassName";
 import { useCreationOptions } from "@/lib/useCreationOptions";
-import { schoolOf, switchableEntries } from "@/lib/classSwitch";
+import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
 import type { Character } from "@/types/character";
 
 /**
@@ -34,7 +34,7 @@ export function ClassEntries({
   onOpenSchool: (entry: number) => void;
 }) {
   const { options } = useCreationOptions();
-  const switchable = switchableEntries(character, options);
+  const switchable = useSwitchableEntries(character);
   const { t, i18n } = useTranslation();
   const className = useClassName();
   const [open, setOpen] = useState(false);

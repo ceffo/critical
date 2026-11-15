@@ -19,7 +19,7 @@ import { useLookupStore } from "@/stores/lookup";
 import { useSkillsEditor } from "@/stores/skillsEditor";
 import type { Character, FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
-import { schoolOf, switchableEntries } from "@/lib/classSwitch";
+import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
 import { useClassName } from "@/lib/useClassName";
 import { useCreationOptions } from "@/lib/useCreationOptions";
 import { SwitchClassDialog } from "./SwitchClassDialog";
@@ -131,7 +131,6 @@ export function Identity({
                 <ClassLine
                   character={character}
                   onOpenSchool={setSchoolEntry}
-                  switchable={switchableEntries(character, options)}
                   school={(cls) => {
                     const code = schoolOf(options, cls);
                     return code === ""
@@ -325,18 +324,17 @@ export function Identity({
  */
 function ClassLine({
   character,
-  switchable,
   school,
   name,
   onOpenSchool,
 }: {
   character: Character;
-  switchable: number[];
   school: (cls: string) => string;
   name: (cls: string) => string;
   onOpenSchool: (entry: number) => void;
 }) {
   const { t } = useTranslation();
+  const switchable = useSwitchableEntries(character);
   const text = character.classes
     .map((e) => {
       const s = school(e.class);

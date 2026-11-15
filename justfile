@@ -562,7 +562,7 @@ psionics-shots *args:
     cd web && node e2e/check-browser.mjs
     node docs/design/psionics/shots.mjs {{args}}
 
-# Mage school design round (docs/design/mage-school/, CRI-392): the mock-ups of web/design/mage-school/
+# Mage school design round (docs/design/mage-school/): the mock-ups of web/design/mage-school/
 # shot in French and English at 1920x1080 and 2560x1440 into docs/design/mage-school/shots/, with the
 # review gallery; fails on cut text or a page scroll (`--fr`, `--only=a,b`, `--self-test`).
 mage-school-shots *args:

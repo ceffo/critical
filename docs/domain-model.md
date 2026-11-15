@@ -121,15 +121,18 @@ its definition; the hit dice are still read from the rule tables (step 11.3).
 A character's class is a registry id, and so is the seed's (step 9).
 
 **Specialist wizards** ([ADR 0050](adr/0050-specialist-wizards.md); creatable, the saves and the entry switch
-still planned) are eight more classes of
+still planned; the entry switch is built) are eight more classes of
 the wizard group: the mage's definition plus the `school_specialization` feature, whose parameters
 name the class's **schools**, its **opposition schools**, Table 22's races (outside them a
 `specialist_race` warning) and, for the illusionist, the races that may take it in a multi-class
 character (the gnome). A wizard spell carries **school** codes; for a specialist entry it is opposed
 (any of its schools in the opposition: never learned or prepared), else of his school (any of its
 schools his: +15% to learn, the **school slot**, the free spell, and (planned) +1 on his saves against
-it), else other (-15% to learn). (Planned) an entry's class may be switched to another class of its group (mage and
-specialists) by its owner, XP and level kept; opposed spells stay in the book, never prepared.
+it), else other (-15% to learn). An entry's class may be switched to another class of its group (mage and
+specialists) by its owner, XP and level kept; opposed spells stay in the book, never prepared. The
+**switch targets** (`classentrysvc.TargetList`, each `Target` with its `Minimum`s against the sheet's
+scores, the race warning and the refusal the switch would give) are what the picker lists; an entry is
+offered the switch when the list is not empty (step 15.8).
 
 ```mermaid
 erDiagram

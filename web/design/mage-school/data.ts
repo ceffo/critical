@@ -1,7 +1,7 @@
 // The mage school mock-ups' data (docs/design/mage-school/README.md). The specialists are ADR 0050's
 // table (PHB Table 22 restated: school, races, second ability, opposition), the school and class
 // names are the app's locale strings (lookup.schoolNames, details.classes), and the two characters
-// are the ones of the "where is the switch" screenshots (CRI-392-where.html): an elf mage 6, and an
+// are the ones of the "where is the switch" screenshots: an elf mage 6, and an
 // elf fighter 6 who took Mage as a second class.
 
 export type L = { fr: string; en: string };

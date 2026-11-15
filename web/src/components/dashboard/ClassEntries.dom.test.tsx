@@ -3,7 +3,13 @@ import { screen } from "@testing-library/react";
 import { renderApp } from "@/test/render";
 import { useCreationOptionsStore } from "@/stores/creationOptions";
 import type { Character, CreationOptions } from "@/types/character";
+import { fetchSwitchTargets } from "@/api/character";
 import { ClassEntries } from "./ClassEntries";
+
+vi.mock("@/api/character", async (orig) => ({
+  ...(await orig<typeof import("@/api/character")>()),
+  fetchSwitchTargets: vi.fn(),
+}));
 
 // ADR 0050 step 15.7: a fighter who took Mage. Only the mage entry's name is a link to the school
 // picker; the rest of the line still opens the class entries' popover, a separate click target.
@@ -34,7 +40,16 @@ function sheet(second: string): Character {
   } as unknown as Character;
 }
 
-beforeEach(() => useCreationOptionsStore.setState({ options }));
+// The server decides which entry may switch (ADR 0050 step 15.8): the fighter's entry (0) has no
+// target, the other entry has one.
+beforeEach(() => {
+  useCreationOptionsStore.setState({ options });
+  vi.mocked(fetchSwitchTargets).mockImplementation(async (entry) => ({
+    entry,
+    from: "x",
+    targets: entry === 0 ? [] : [{ class: "abjurer" } as never],
+  }));
+});
 afterEach(() => useCreationOptionsStore.setState({ options: null }));
 
 describe("the class entries line", () => {
@@ -47,8 +62,8 @@ describe("the class entries line", () => {
         onOpenSchool={onOpenSchool}
       />,
     );
+    await user.click(await screen.findByTestId("class-school-link-mage"));
     expect(screen.queryByTestId("class-school-link-fighter")).toBeNull();
-    await user.click(screen.getByTestId("class-school-link-mage"));
     expect(onOpenSchool).toHaveBeenCalledExactlyOnceWith(1);
     expect(screen.queryByTestId("class-entries")).toBeNull();
 
@@ -66,7 +81,7 @@ describe("the class entries line", () => {
       />,
     );
     expect(
-      screen.getByTestId("class-school-link-transmuter"),
+      await screen.findByTestId("class-school-link-transmuter"),
     ).toHaveTextContent("Transmuter · Alteration");
   });
 });

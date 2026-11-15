@@ -440,8 +440,15 @@ code (ADR 0040 step 10).
          school, the specialist's name, the opposed schools, the ability minimum ("WIS 15 needed
          (8)" greyed and not pickable when unmet) and the race note ("Elf not in Table 22:
          allowed", never a refusal); then step 15's confirmation. Labels are locale strings, the
-         school names the lookup's ([ADR 0023](0023-localized-text.md)); the entry list is the
-         options' group and spellbook (structure), every verdict the server's (15.6).
+         school names the lookup's ([ADR 0023](0023-localized-text.md)); every entry and every verdict is the server's (15.6, 15.8).
+    8. **Who is offered the switch** (review of CRI-392): only the server decides. For each entry the
+       web asks `GET /api/character/class-entry/targets` and links the class name and shows the
+       "School" action when the list is not empty; the web copy of the rule (same group, both
+       spellbooks, not held) is gone, so the specialist-on-one-side rule and any later one apply
+       with no web change. The list leaves out what `check` calls not allowed and keeps the other
+       refusals, so a mage whose every target is refused (minimums, alignment) still links to a
+       picker of greyed cards that says why: intended, the user learns what to raise. A plain priest,
+       or a mage whose every other class is held, gets no link. No new field: the endpoint is 15.6's.
     Tests: `Switch_Step15_AMageEntryBecomesATransmuter` (XP, level, HP unchanged; one entry),
     `Switch_Step15_Refusals` (one row per code), `Switch_Step15_OpposedSpellsKeptAndUnprepared`
     (the book keeps them flagged, the slot list loses them), `Switch_Step15_UndoRestoresClassAndSlots`

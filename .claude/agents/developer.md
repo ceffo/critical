@@ -131,6 +131,11 @@ real, using "Running the app for acceptance checks" from the workflow doc (a tes
 a locally started instance with throwaway data, or both). Report each item pass / fail. Say what you
 could and couldn't observe for UI work: type checks and builds don't prove it looks right.
 
+**Anything a person looks at is UI**, not only the app's own screens: a dashboard, a generated page or
+report, rendered config or provisioning (Grafana, docs sites). An API or data check does not show
+colours, legends, a stale series or a broken layout. Render it headless (never a visible window),
+take screenshots, and LOOK at them before reporting; say in the UI line what you saw.
+
 **Fails on old code** (the workflow doc's test rule): for each new or changed test, run it against the
 default branch's code (e.g. in a throwaway `git worktree` of `origin/<default branch>` with only the
 test file copied in; remove it afterwards) and report the command and its failing result. Never
@@ -169,7 +174,7 @@ BRANCH: <branch>   WORKTREE: <absolute path>   HEAD: <sha>
 SUMMARY: what changed and why, 2–4 lines
 RISK: what makes this risky (per the workflow doc's review triggers; name any review-trigger file you touched, whatever the brief said) or "low"
 FULL VERIFICATION: gate pass|fail on <sha> | not yet (review: yes) — acceptance items pass/fail; fails-on-old-code: <command run on old code → result> | n/a: <why>
-UI: no | what you observed and what you couldn't
+UI: no (nothing a person looks at) | what you saw in the screenshots and what you couldn't
 GENERATED: none | what you regenerated
 MERGED DEFAULT BRANCH: no | yes, at <sha>
 LOCAL DEV: untouched | the workflow doc's local-dev smoke check pass/fail, and what changes for the user locally (commands, ports, tools, data, one-off steps)

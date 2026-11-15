@@ -330,7 +330,7 @@ func Options(svc optionsReader) render.HandlerFunc {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, Group: c.Group, Schools: c.Schools,
 				Alignments: c.Alignments,
-				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
+				HitDie:     c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 				Weapons: weaponOptionDTOs(c.Weapons), Spellbook: spellbookOptionDTO(c.Spellbook),
 			})
 		}

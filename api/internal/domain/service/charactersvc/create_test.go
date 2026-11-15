@@ -545,34 +545,33 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
 		// catalogue's race order.
 		Classes: []charactersvc.ClassOption{
-			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"},
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(),
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 			{
 				Class: "bard", Races: []string{"half_elf", "human"},
-				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			},
 			// ADR 0043 step 1: creatable once its kinds are computed (step 3).
 			{
-				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{},
+				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(),
 				Alignments: []string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
 			},
 			// ADR 0050 step 17.2: the eight specialists, creatable, each with the mage's alignments.
-			{Class: "abjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "conjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "diviner", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "enchanter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "illusionist", Races: []string{"gnome", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "invoker", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "necromancer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "transmuter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "abjurer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "conjurer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "diviner", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "enchanter", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "illusionist", Races: []string{"gnome", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "invoker", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "necromancer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "transmuter", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, MaxClasses: 3, MinLeftAtLevel: 2, MulticlassAnyRace: true, DualclassAnyRace: true, RestrictedRaces: []string{"dwarf", "elf", "gnome", "half_elf", "halfling"},

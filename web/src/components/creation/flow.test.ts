@@ -162,7 +162,6 @@ describe("buildBody", () => {
       {
         class: "bard",
         races: ["half_elf"],
-        skills: ["climb_walls"],
         alignments: ["neutral_good"],
       },
     ],
@@ -346,7 +345,6 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       {
         class: "thief",
         races: ["elf"],
-        skills: ["open_locks", "pick_pockets"],
       },
     ],
   } as unknown as CreationOptions;
@@ -405,6 +403,27 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       thief: { pick_pockets: 20 },
       bard: { pick_pockets: 5, climb_walls: 10 },
     });
+  });
+
+  it("sends no points for a set the class's draft no longer lists (a class changed after typing)", () => {
+    const draft: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "thief",
+      skillPoints: {
+        thief: { open_locks: "25" },
+        bard: { climb_walls: "10", pick_pockets: "lots" },
+      },
+    };
+    const { body, error } = buildBody(
+      options,
+      draft,
+      "1250",
+      "fr",
+      false,
+      THIEF,
+    );
+    expect(error).toBeNull();
+    expect(body.skillPoints).toEqual({ thief: { open_locks: 25 } });
   });
 
   it("names the set in an unreadable value's field and leaves a set with no points out", () => {
@@ -736,7 +755,6 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
   ) => ({
     class: name,
     races: [],
-    skills: [],
     alignments: [],
     spellbook,
   });
@@ -822,13 +840,11 @@ describe("several classes", () => {
       {
         class: "fighter",
         races: [],
-        skills: [],
         alignments: ["lawful_good", "neutral_good"],
       },
       {
         class: "mage",
         races: [],
-        skills: [],
         alignments: ["neutral_good"],
         spellbook: { startingSpells: [] },
       },
@@ -952,7 +968,6 @@ describe("the psionics step (ADR 0043)", () => {
       {
         class: "psionicist",
         races: ["human"],
-        skills: [],
         alignments: ["neutral_good"],
       },
     ],

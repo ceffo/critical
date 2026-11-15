@@ -814,11 +814,21 @@ export function ExtrasStep({
   draft,
   update,
   errorFor,
+  error,
+  refusals,
+  wording,
   xp,
   watch,
   answer,
 }: StepProps) {
   const { t, i18n } = useTranslation();
+  // A refusal on a set the draft does not list has no block to show in: it shows once, on the step.
+  const listed = new Set(skillSetsOf(answer.latest).map((s) => s.set));
+  const strayRefusal = (error ? [error] : refusals).find(
+    (e) =>
+      e.field.startsWith("skillPoints.") &&
+      !listed.has(e.field.split(".")[1] ?? ""),
+  );
   // One block per skill set, each with the budget at the level the XP gives, the draft's own: it
   // reads the class and XP only, so a score out of range leaves it shown (ADR 0030 steps 17, 18).
   const sets = skillSetsOf(answer.latest);
@@ -1111,6 +1121,10 @@ export function ExtrasStep({
                 />
               </Group>
             ))}
+            <FieldError
+              id="new-character-skillPoints"
+              text={strayRefusal ? wording(strayRefusal) : null}
+            />
             {offersExceptional && (
               <Group title={t("characters.strExceptional")}>
                 <div className="flex w-40 min-w-0 flex-col gap-1">

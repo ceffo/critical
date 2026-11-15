@@ -115,11 +115,13 @@ function CharacterCard({
   who,
   className: cls,
   classLine,
+  entriesLine,
   nameHint,
 }: {
   who: Fixture;
   className?: string;
   classLine?: ReactNode;
+  entriesLine?: ReactNode;
   /** The name's way into the details shows a caret (the popover proposal). */
   nameHint?: boolean;
 }) {
@@ -163,7 +165,8 @@ function CharacterCard({
           </Button>
         </div>
       </div>
-      {several && (
+      {several && entriesLine}
+      {several && !entriesLine && (
         <span className="flex w-full min-w-0 items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-body font-medium">
           {entryText(who)}
         </span>
@@ -383,27 +386,81 @@ function ATagAfter() {
 // ---------------------------------------------------------------------------------------------
 // Variant B: the class itself is a link, like the level beside it.
 
+/** The class as a link (dotted underline and caret, like the level beside it) opening the picker. */
+function ClassLink({ children }: { children: ReactNode }) {
+  return (
+    <New>
+      <span className="inline-flex items-center gap-0.5 text-body text-foreground underline decoration-tint decoration-dotted underline-offset-4">
+        {children}
+        <CaretDown aria-hidden className="size-3" />
+      </span>
+    </New>
+  );
+}
+
+/** The tooltip, portalled to the page as the app's are. */
+function Tip({ top, children }: { top: string; children: ReactNode }) {
+  return (
+    <span
+      style={{ top }}
+      className="absolute left-8 z-10 w-max max-w-72 rounded-md bg-ink px-2 py-1 text-label text-surface shadow-float"
+    >
+      {children}
+    </span>
+  );
+}
+
 function BClassLink() {
+  return (
+    <Dashboard
+      card={<CharacterCard who={MAGE} classLine={<ClassLink>{tr("Magicien", "Mage")}</ClassLink>} />}
+      overlay={
+        <Tip top="11.9rem">
+          {tr("Généraliste, sans école de magie · choisir une école", "Generalist, no school of magic · pick a school")}
+        </Tip>
+      }
+    />
+  );
+}
+
+/** A fighter who took Mage: the mage entry's name in the entries line is the link. */
+function BClassLinkDual() {
+  return (
+    <Dashboard
+      who={DUAL}
+      card={
+        <CharacterCard
+          who={DUAL}
+          entriesLine={
+            <span className="flex w-full min-w-0 flex-wrap items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-body font-medium">
+              {tr("Guerrier", "Fighter")} 6 /
+              <ClassLink>{tr("Magicien", "Mage")}</ClassLink>1
+            </span>
+          }
+        />
+      }
+      overlay={
+        <Tip top="14rem">
+          {tr("Généraliste, sans école de magie · choisir une école", "Generalist, no school of magic · pick a school")}
+        </Tip>
+      }
+    />
+  );
+}
+
+/** After the switch: the link reads the specialist and its school; it still opens the picker. */
+function BClassLinkAfter() {
   return (
     <Dashboard
       card={
         <CharacterCard
           who={MAGE}
           classLine={
-            <New>
-              <span className="inline-flex items-center gap-0.5 text-body text-foreground underline decoration-tint decoration-dotted underline-offset-4">
-                {tr("Magicien", "Mage")}
-                <CaretDown aria-hidden className="size-3" />
-              </span>
-            </New>
+            <ClassLink>
+              {tr("Transmutateur", "Transmuter")} · {lt(SCHOOLS.alteration)}
+            </ClassLink>
           }
         />
-      }
-      overlay={
-        // The tooltip, portalled to the page as the app's are.
-        <span className="absolute top-[11.9rem] left-8 z-10 w-max max-w-72 rounded-md bg-ink px-2 py-1 text-label text-surface shadow-float">
-          {tr("Généraliste, sans école de magie · choisir une école", "Generalist, no school of magic · pick a school")}
-        </span>
       }
     />
   );
@@ -578,6 +635,8 @@ export const SCREENS: Record<string, () => ReactNode> = {
   "a-tag-dual": ATagDual,
   "a-tag-after": ATagAfter,
   "b-class-link": BClassLink,
+  "b-class-link-dual": BClassLinkDual,
+  "b-class-link-after": BClassLinkAfter,
   "c-spells": CSpells,
   popover: PopoverScreen,
   picker: PickerScreen,

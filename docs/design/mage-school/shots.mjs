@@ -23,6 +23,8 @@ const GALLERY = [
   ["a-tag-dual", "A · La même étiquette pour un guerrier qui a pris Magicien en seconde classe"],
   ["a-tag-after", "A · Après le choix : la classe lit le spécialiste et son école, l'étiquette disparaît"],
   ["b-class-link", "B · Plus discret : le nom de la classe devient un lien (souligné pointillé, comme Niveau), avec son infobulle"],
+  ["b-class-link-dual", "B · Guerrier qui a pris Magicien : le nom Magicien de la ligne des classes est le lien"],
+  ["b-class-link-after", "B · Après le choix : le lien lit le spécialiste et son école, et rouvre le choix"],
   ["c-spells", "C · Dans Sorts : un bandeau « Magicien généraliste » en tête du grimoire, avec le bouton"],
   ["popover", "Commun · Le nom porte un chevron ; dans les détails, le bouton « École » est sur la ligne Classe (au lieu de « Changer »)"],
   ["picker", "Commun · Le choix montre les écoles, leurs écoles opposées, le minimum de caractéristique et l'avertissement de race"],

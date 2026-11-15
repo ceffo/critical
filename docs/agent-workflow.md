@@ -360,6 +360,11 @@ model actually running.
   does not close (Linear would link and move that item); `fleet ship --verify` repeats the stamp check afterwards.
 - Catch-up is a rebase, as the fleet's default; `FLEET_VALIDATE_CMD=just validate` runs on each rebased worktree.
 
+### Developer
+
+- With `review: yes`, the targeted checks before the report include `just check-scripts` (tracker ids, glossary,
+  class ids, ADR tests and the other static checks): a mechanical failure found there costs no review round.
+
 ### Designer
 
 - Runs on Opus (see "Model selection"); building the approved design is UI work and stays on Sonnet.

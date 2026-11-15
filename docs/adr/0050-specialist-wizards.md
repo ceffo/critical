@@ -6,7 +6,7 @@ the code, and the readings the books leave open are in "Questions for the user",
 recommended default that the record takes as written unless the user says otherwise. Steps 1 to 4,
 the catalogue, are built (CRI-344, format 23 of [ADR 0021](0021-spell-catalogue.md) step 31); steps 5
 to 11 and 14, the engine, are built (CRI-345): the eight specialists are creatable. The saves (steps
-12 and 13) are built (CRI-346). The entry switch (step 15) is built (CRI-383). It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
+12 and 13) are built (CRI-346). The entry switch (step 15) is built (CRI-383), its picker list and where it is found (15.6, 15.7) in CRI-392. It amends [ADR 0040](0040-classes-are-data.md) step 3 (a new
 feature kind), [ADR 0021](0021-spell-catalogue.md) (school codes on a spell, a format bump),
 [ADR 0008](0008-spell-slots-and-long-rest.md) steps 2 and 3 (the school slot, opposed spells),
 [ADR 0006](0006-saving-throws.md) step 10.2 (the school modifiers of a save that names its spell),
@@ -414,9 +414,41 @@ code (ADR 0040 step 10).
     holds a spell only once cast). The preparation's spellbook entries carry `opposed: true`
     (`GET /api/spells/preparation`). The creation options gain, additively, each class's `group` and
     `specialistRaces` (Table 22's races by class), so the web offers a class's own group and words the
-    race warning before the switch. Web: a one-word "Switch" action in the details popover and a
-    dialog (picker, then a confirmation that names what is kept, the opposed spells and the race
-    warning).
+    race warning before the switch. Web: first a one-word "Switch" action in the details popover and
+    a dialog; replaced by 15.6 and 15.7 (CRI-392).
+    6. **The picker's list**: `GET /api/character/class-entry/targets?entry=N` answers, for the
+       entry, each class it could become (the allowed shape of 15.1: same group, spellbook, a
+       specialist on one side, not held by another entry) with its `schools`, `opposedSchools`, each
+       ability minimum against the sheet's score (`minimums: {ability, min, score, met}`), the race
+       warning (`raceWarning`, Table 22) and the `refusal` code the switch would give (empty when
+       allowed). It reads, writes nothing, and is built on the same `check` as the switch, so the
+       picker and the refusal cannot disagree; the web compares no score and no race. Additive.
+       `TestTargets_Step15_*` (classentrysvc), `TestTargets_Step15_*` (wire).
+    7. **Where the switch is found** (CRI-392, the user's choices after the designer's mock-ups; the
+       web replaces the one-word "Switch" action of the first build):
+       - **The class name on the character card is the link** to the school picker (dotted tint
+         underline and a caret, like the level beside it), for an entry that may switch: a mage reads
+         "Mage" with the tooltip "Generalist, no school of magic · pick a school"; once switched it
+         reads "Transmuter · Alteration" and still opens the picker (back to Mage or to another
+         specialist). A tag beside the class and a band in the Spells activity were rejected.
+       - **A dual-class or multi-class character**: only the switchable entry's name in the class
+         entries line is the link; the rest of the line still opens the class entries' popover (two
+         separate click targets, not nested).
+       - **The details popover's action is "School"** (one word, [ADR 0027](0027-space-follows-frequency-of-use.md)),
+         on the Class row, and opens the same picker.
+       - **The picker** ("Pick a school of magic") is a card per class the entry could become: the
+         school, the specialist's name, the opposed schools, the ability minimum ("WIS 15 needed
+         (8)" greyed and not pickable when unmet) and the race note ("Elf not in Table 22:
+         allowed", never a refusal); then step 15's confirmation. Labels are locale strings, the
+         school names the lookup's ([ADR 0023](0023-localized-text.md)); every entry and every verdict is the server's (15.6, 15.8).
+    8. **Who is offered the switch** (review of CRI-392): only the server decides. For each entry the
+       web asks `GET /api/character/class-entry/targets` and links the class name and shows the
+       "School" action when the list is not empty; the web copy of the rule (same group, both
+       spellbooks, not held) is gone, so the specialist-on-one-side rule and any later one apply
+       with no web change. The list leaves out what `check` calls not allowed and keeps the other
+       refusals, so a mage whose every target is refused (minimums, alignment) still links to a
+       picker of greyed cards that says why: intended, the user learns what to raise. A plain priest,
+       or a mage whose every other class is held, gets no link. No new field: the endpoint is 15.6's.
     Tests: `Switch_Step15_AMageEntryBecomesATransmuter` (XP, level, HP unchanged; one entry),
     `Switch_Step15_Refusals` (one row per code), `Switch_Step15_OpposedSpellsKeptAndUnprepared`
     (the book keeps them flagged, the slot list loses them), `Switch_Step15_UndoRestoresClassAndSlots`

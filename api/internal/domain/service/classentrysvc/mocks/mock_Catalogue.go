@@ -20,6 +20,53 @@ func (_m *MockCatalogue) EXPECT() *MockCatalogue_Expecter {
 	return &MockCatalogue_Expecter{mock: &_m.Mock}
 }
 
+// Classes provides a mock function with no fields
+func (_m *MockCatalogue) Classes() []classes.Class {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Classes")
+	}
+
+	var r0 []classes.Class
+	if rf, ok := ret.Get(0).(func() []classes.Class); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]classes.Class)
+		}
+	}
+
+	return r0
+}
+
+// MockCatalogue_Classes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Classes'
+type MockCatalogue_Classes_Call struct {
+	*mock.Call
+}
+
+// Classes is a helper method to define mock.On call
+func (_e *MockCatalogue_Expecter) Classes() *MockCatalogue_Classes_Call {
+	return &MockCatalogue_Classes_Call{Call: _e.mock.On("Classes")}
+}
+
+func (_c *MockCatalogue_Classes_Call) Run(run func()) *MockCatalogue_Classes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockCatalogue_Classes_Call) Return(_a0 []classes.Class) *MockCatalogue_Classes_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCatalogue_Classes_Call) RunAndReturn(run func() []classes.Class) *MockCatalogue_Classes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Get provides a mock function with given fields: class
 func (_m *MockCatalogue) Get(class string) (classes.Class, error) {
 	ret := _m.Called(class)

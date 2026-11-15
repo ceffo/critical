@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { ArrowsLeftRight } from "@phosphor-icons/react";
+import { useState } from "react";
+import { ArrowsLeftRight, CaretDown } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -16,8 +17,12 @@ import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
 import { useLookupStore } from "@/stores/lookup";
 import { useSkillsEditor } from "@/stores/skillsEditor";
-import type { FreeSpell } from "@/types/character";
+import type { Character, FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
+import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
+import { useClassName } from "@/lib/useClassName";
+import { useCreationOptions } from "@/lib/useCreationOptions";
+import { SwitchClassDialog } from "./SwitchClassDialog";
 import { CharacterDetails } from "./CharacterDetails";
 import { ClassEntries } from "./ClassEntries";
 import { LevelUpPrompt } from "./LevelUpPrompt";
@@ -49,6 +54,11 @@ export function Identity({
   onOpenSpells: () => void;
 }) {
   const { t, i18n } = useTranslation();
+  const className = useClassName();
+  const { options } = useCreationOptions();
+  // The class entry whose school picker is open (ADR 0050 step 15.7): from the class name's link
+  // or the details popover's "School".
+  const [schoolEntry, setSchoolEntry] = useState<number | null>(null);
   const xp = useXpStore((s) => s.ledger);
   const character = useCharacterStore((s) => s.character);
   const strength = useBuffsStore((s) => s.strength);
@@ -92,6 +102,16 @@ export function Identity({
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <SpendDialog />
+      {character && (
+        <SwitchClassDialog
+          character={character}
+          entry={schoolEntry ?? 0}
+          open={schoolEntry !== null}
+          onOpenChange={(next) => {
+            if (!next) setSchoolEntry(null);
+          }}
+        />
+      )}
       {/* The identity's sub-band at the card's top, in place of its top padding (ADR 0026 6.3, 6.5). */}
       <div
         className={cn(
@@ -100,23 +120,25 @@ export function Identity({
       >
         <div className="flex min-w-0 flex-1 flex-col">
           <h1 className="min-w-0">
-            <CharacterDetails character={character} />
+            <CharacterDetails
+              character={character}
+              onOpenSchool={setSchoolEntry}
+            />
           </h1>
           {character && (
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
               {!entries && (
-                <p
-                  className="text-body text-muted-foreground"
-                  data-testid="class"
-                >
-                  {character.classes
-                    .map((e) =>
-                      i18n.exists(`details.classes.${e.class}`)
-                        ? t(`details.classes.${e.class}`)
-                        : e.class,
-                    )
-                    .join(" / ")}
-                </p>
+                <ClassLine
+                  character={character}
+                  onOpenSchool={setSchoolEntry}
+                  school={(cls) => {
+                    const code = schoolOf(options, cls);
+                    return code === ""
+                      ? ""
+                      : t(`lookup.schoolNames.${code}`, { defaultValue: code });
+                  }}
+                  name={className}
+                />
               )}
               <ToSpendTag
                 toSpend={character.derived.levelUp.toSpend}
@@ -179,7 +201,11 @@ export function Identity({
         )}
       </div>
       {character && entries && (
-        <ClassEntries character={character} onOpenXp={onOpenXp} />
+        <ClassEntries
+          character={character}
+          onOpenXp={onOpenXp}
+          onOpenSchool={setSchoolEntry}
+        />
       )}
       {character && (
         <div
@@ -287,5 +313,56 @@ export function Identity({
         />
       )}
     </div>
+  );
+}
+
+/**
+ * The class under the name. When the entry may switch (a mage, or a specialist, ADR 0050 step 15)
+ * the class name is a link, dotted underline and caret like the level beside it, opening the school
+ * picker: it reads the specialist and its school once switched ("Transmuter · Alteration") and still
+ * opens the picker. Any other class is plain text.
+ */
+function ClassLine({
+  character,
+  school,
+  name,
+  onOpenSchool,
+}: {
+  character: Character;
+  school: (cls: string) => string;
+  name: (cls: string) => string;
+  onOpenSchool: (entry: number) => void;
+}) {
+  const { t } = useTranslation();
+  const switchable = useSwitchableEntries(character);
+  const text = character.classes
+    .map((e) => {
+      const s = school(e.class);
+      return s === "" ? name(e.class) : `${name(e.class)} · ${s}`;
+    })
+    .join(" / ");
+  const entry = switchable[0];
+  if (entry === undefined)
+    return (
+      <p className="text-body text-muted-foreground" data-testid="class">
+        {text}
+      </p>
+    );
+  const cls = character.classes[entry]?.class ?? "";
+  return (
+    <button
+      type="button"
+      onClick={() => onOpenSchool(entry)}
+      title={
+        school(cls) === ""
+          ? t("switchClass.linkTitleGeneralist")
+          : t("switchClass.linkTitleSpecialist", { school: school(cls) })
+      }
+      data-testid="class"
+      className="hit-24-up inline-flex min-w-0 cursor-pointer items-center gap-0.5 rounded-sm text-left text-body text-foreground underline decoration-tint decoration-dotted underline-offset-4 hover:text-amb-300"
+    >
+      <span className="min-w-0 break-words">{text}</span>
+      <CaretDown aria-hidden className="size-3 shrink-0" />
+    </button>
   );
 }

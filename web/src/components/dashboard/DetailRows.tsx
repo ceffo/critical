@@ -34,9 +34,12 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 export function DetailRows({
   character: c,
   withIdentity = false,
+  classAction,
 }: {
   character: Character;
   withIdentity?: boolean;
+  /** A button beside the class (the popover's "School", ADR 0050 step 15.7). */
+  classAction?: ReactNode;
 }) {
   const { t, i18n } = useTranslation();
   // The language catalogue, for the names (ADR 0032 step 4): tolerant of a release that predates
@@ -83,7 +86,12 @@ export function DetailRows({
       {withIdentity && (
         <>
           <Row label={t("characters.name")}>{c.name}</Row>
-          <Row label={t("details.class")}>{className}</Row>
+          <Row label={t("details.class")}>
+            <span className="flex flex-wrap items-center gap-2">
+              {className}
+              {classAction}
+            </span>
+          </Row>
           <Row label={t("details.level")}>{c.derived.realizedLevel}</Row>
         </>
       )}

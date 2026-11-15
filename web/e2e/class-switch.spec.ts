@@ -81,6 +81,26 @@ test.describe("a human fighter taking a new class", () => {
     await expect(detail.getByTestId("class-level-mage")).toHaveText("Level 1");
     await page.keyboard.press("Escape");
     await expect(mageXp).toHaveText("0 XP");
+
+    // The dual line (ADR 0050 step 15.7/15.8): only the mage's name is the school link, the rest
+    // of the line opens the class entries; both are reachable by Tab and open on Enter.
+    const link = card.getByTestId("class-school-link-mage");
+    await expect(link).toBeVisible();
+    await expect(card.getByTestId("class-school-link-fighter")).toHaveCount(0);
+    await link.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("switch-class-dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByTestId("switch-class-dialog")).toHaveCount(0);
+    const summary = card.getByTestId("class-summary");
+    await summary.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByTestId("class-entries")).toBeVisible();
+    await page.keyboard.press("Escape");
+    // Tab order: the summary trigger comes first in the DOM, the link right after it.
+    await summary.focus();
+    await page.keyboard.press("Tab");
+    await expect(link).toBeFocused();
     // The journal lives in the Act workspace.
     await openWorkspace(page, "Act");
     const entry = logEntry(page, "Mage");

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Snowflake, Warning } from "@phosphor-icons/react";
+import { CaretDown, Snowflake, Warning } from "@phosphor-icons/react";
 import {
   Popover,
   PopoverContent,
@@ -8,6 +8,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { useClassName } from "@/lib/useClassName";
+import { useCreationOptions } from "@/lib/useCreationOptions";
+import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
 import type { Character } from "@/types/character";
 
 /**
@@ -18,14 +20,21 @@ import type { Character } from "@/types/character";
  * dual-class's old class) carries its tag and the level it was left at; an entry above the race's
  * level limit carries the server's `level_limit` warning, and the summary line a warning mark. A
  * row opens the Experience activity. Nothing is cut: the summary and the class names wrap.
+ * An entry that may switch to a school of magic (ADR 0050 step 15.7) has its name in the line as a
+ * link, dotted underline and caret, opening the school picker. The line's popover trigger is then
+ * laid under the text and the link is a second button over it, so the two are separate targets.
  */
 export function ClassEntries({
   character,
   onOpenXp,
+  onOpenSchool,
 }: {
   character: Character;
   onOpenXp: () => void;
+  onOpenSchool: (entry: number) => void;
 }) {
+  const { options } = useCreationOptions();
+  const switchable = useSwitchableEntries(character);
   const { t, i18n } = useTranslation();
   const className = useClassName();
   const [open, setOpen] = useState(false);
@@ -46,21 +55,67 @@ export function ClassEntries({
       }),
     )
     .join(" / ");
+  const school = (cls: string) => {
+    const code = schoolOf(options, cls);
+    return code === ""
+      ? ""
+      : t(`lookup.schoolNames.${code}`, { defaultValue: code });
+  };
+  // The class entries' index in the character's classes is the switch's: derived.classes follows it
+  // by class, so the entry is found by its class.
+  const indexOf = (cls: string) =>
+    character.classes.findIndex((e) => e.class === cls);
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        aria-label={t("app.classEntry.summaryOpen", { summary })}
-        data-testid="class-summary"
-        className="flex w-full min-w-0 cursor-pointer items-baseline gap-x-1.5 rounded-md bg-raised px-2.5 py-1 text-left text-body font-medium break-words hover:bg-raised-hover"
+      <div
+        className="relative w-full min-w-0 rounded-md bg-raised px-2.5 py-1 text-body font-medium break-words hover:bg-raised-hover"
+        data-testid="class-summary-line"
       >
-        <span className="min-w-0">{summary}</span>
+        <PopoverTrigger
+          aria-label={t("app.classEntry.summaryOpen", { summary })}
+          data-testid="class-summary"
+          className="absolute inset-0 cursor-pointer rounded-md text-left"
+        >
+          <span className="sr-only">{summary}</span>
+        </PopoverTrigger>
+        {entries.map((e, i) => {
+          const at = indexOf(e.class);
+          const link = switchable.includes(at);
+          const name = className(e.class);
+          const sch = school(e.class);
+          return (
+            <span key={e.class} className="pointer-events-none relative">
+              {link ? (
+                <button
+                  type="button"
+                  onClick={() => onOpenSchool(at)}
+                  title={
+                    sch === ""
+                      ? t("switchClass.linkTitleGeneralist")
+                      : t("switchClass.linkTitleSpecialist", { school: sch })
+                  }
+                  data-testid={`class-school-link-${e.class}`}
+                  className="pointer-events-auto inline-flex cursor-pointer items-center gap-0.5 rounded-sm underline decoration-tint decoration-dotted underline-offset-4 hover:text-amb-300"
+                >
+                  {sch === "" ? name : `${name} · ${sch}`}
+                  <CaretDown aria-hidden className="size-3 shrink-0" />
+                </button>
+              ) : (
+                <span>{name}</span>
+              )}
+              {"\u00a0"}
+              {e.level}
+              {i < entries.length - 1 && " / "}
+            </span>
+          );
+        })}
         {entries.some((e) => limitOf(e.class) || raceOf(e.class)) && (
           <Warning
             aria-hidden
-            className="size-3.5 shrink-0 self-center text-warning"
+            className="pointer-events-none relative ml-1.5 inline size-3.5 align-middle text-warning"
           />
         )}
-      </PopoverTrigger>
+      </div>
       <PopoverContent
         align="start"
         className="w-(--anchor-width) min-w-64 max-w-[calc(100vw-2rem)] p-2"

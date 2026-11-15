@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { MagicWand } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,8 +24,7 @@ import type { ApiError } from "@/api/http";
 import type { Character } from "@/types/character";
 import { primaryEntry } from "@/lib/classEntries";
 import { TakeClassDialog } from "@/components/dashboard/TakeClassDialog";
-import { SwitchClassDialog } from "@/components/dashboard/SwitchClassDialog";
-import { switchableEntries } from "@/lib/classSwitch";
+import { useSwitchableEntries } from "@/lib/classSwitch";
 
 /**
  * The character's name, opening a popover with the details: the name first (Rename lives here too,
@@ -34,14 +34,16 @@ import { switchableEntries } from "@/lib/classSwitch";
  */
 export function CharacterDetails({
   character,
+  onOpenSchool,
 }: {
   character: Character | null;
+  /** Opens the school picker (ADR 0050 step 15.7) on a class entry; the card hosts it. */
+  onOpenSchool: (entry: number) => void;
 }) {
   const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [open, setOpen] = useState(false);
   const [taking, setTaking] = useState(false);
-  const [switching, setSwitching] = useState(false);
   const name = character?.name || t("app.loading");
 
   return (
@@ -85,9 +87,9 @@ export function CharacterDetails({
                   setOpen(false);
                   setTaking(true);
                 }}
-                onSwitchClass={() => {
+                onOpenSchool={(entry) => {
                   setOpen(false);
-                  setSwitching(true);
+                  onOpenSchool(entry);
                 }}
               />
             )}
@@ -101,13 +103,6 @@ export function CharacterDetails({
           onOpenChange={setTaking}
         />
       )}
-      {character && (
-        <SwitchClassDialog
-          character={character}
-          open={switching}
-          onOpenChange={setSwitching}
-        />
-      )}
     </>
   );
 }
@@ -116,21 +111,39 @@ function DetailsView({
   character: c,
   onEdit,
   onTakeClass,
-  onSwitchClass,
+  onOpenSchool,
 }: {
   character: Character;
   onEdit: () => void;
   onTakeClass: () => void;
-  onSwitchClass: () => void;
+  onOpenSchool: (entry: number) => void;
 }) {
   const { t } = useTranslation();
-  const { options } = useCreationOptions();
-  const canSwitch = switchableEntries(c, options).length > 0;
+  const schoolEntry = useSwitchableEntries(c)[0];
   // Only what is set shows; one link to the form stands for every field left out.
   const hasUnset = unsetDetails(c).length > 0;
   return (
     <>
-      <DetailRows character={c} withIdentity />
+      <DetailRows
+        character={c}
+        withIdentity
+        classAction={
+          schoolEntry === undefined ? undefined : (
+            <Button
+              type="button"
+              variant="quiet"
+              size="xs"
+              onClick={() => onOpenSchool(schoolEntry)}
+              title={t("switchClass.openTitle")}
+              aria-label={t("switchClass.openTitle")}
+              data-testid="switch-class-open"
+            >
+              <MagicWand aria-hidden />
+              {t("switchClass.open")}
+            </Button>
+          )
+        }
+      />
       <div className="flex flex-wrap justify-end gap-2">
         <Button
           type="button"
@@ -140,18 +153,6 @@ function DetailsView({
         >
           {t("takeClass.open")}
         </Button>
-        {canSwitch && (
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={onSwitchClass}
-            title={t("switchClass.openTitle")}
-            aria-label={t("switchClass.openTitle")}
-            data-testid="switch-class-open"
-          >
-            {t("switchClass.open")}
-          </Button>
-        )}
         {hasUnset && (
           <Button
             type="button"

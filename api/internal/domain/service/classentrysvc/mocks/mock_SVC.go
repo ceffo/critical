@@ -223,6 +223,66 @@ func (_c *MockSVC_Switch_Call) RunAndReturn(run func(context.Context, int64, int
 	return _c
 }
 
+// Targets provides a mock function with given fields: ctx, characterID, entry
+func (_m *MockSVC) Targets(ctx context.Context, characterID int64, entry int) (*classentrysvc.TargetList, error) {
+	ret := _m.Called(ctx, characterID, entry)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Targets")
+	}
+
+	var r0 *classentrysvc.TargetList
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) (*classentrysvc.TargetList, error)); ok {
+		return rf(ctx, characterID, entry)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64, int) *classentrysvc.TargetList); ok {
+		r0 = rf(ctx, characterID, entry)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*classentrysvc.TargetList)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64, int) error); ok {
+		r1 = rf(ctx, characterID, entry)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Targets_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Targets'
+type MockSVC_Targets_Call struct {
+	*mock.Call
+}
+
+// Targets is a helper method to define mock.On call
+//   - ctx context.Context
+//   - characterID int64
+//   - entry int
+func (_e *MockSVC_Expecter) Targets(ctx interface{}, characterID interface{}, entry interface{}) *MockSVC_Targets_Call {
+	return &MockSVC_Targets_Call{Call: _e.mock.On("Targets", ctx, characterID, entry)}
+}
+
+func (_c *MockSVC_Targets_Call) Run(run func(ctx context.Context, characterID int64, entry int)) *MockSVC_Targets_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64), args[2].(int))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Targets_Call) Return(_a0 *classentrysvc.TargetList, _a1 error) *MockSVC_Targets_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Targets_Call) RunAndReturn(run func(context.Context, int64, int) (*classentrysvc.TargetList, error)) *MockSVC_Targets_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockSVC creates a new instance of MockSVC. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockSVC(t interface {

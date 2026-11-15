@@ -47,6 +47,38 @@ type SVC interface {
 	// class. A *domain.FieldError on "entry" for an entry the character does not have and on
 	// "class" for an unknown or unplayable class; a refusal above otherwise.
 	Switch(ctx context.Context, characterID int64, entry int, class string) (*Result, error)
+	// Targets is what the school picker shows for the character's entry: every class the entry
+	// could be switched to, with the school, the opposed schools, each ability minimum against the
+	// sheet's score, the race warning and the refusal Switch would give. A *domain.FieldError on
+	// "entry" for an entry the character does not have. Reads only.
+	Targets(ctx context.Context, characterID int64, entry int) (*TargetList, error)
+}
+
+// TargetList is the answer of Targets: the entry, its class and the classes it may become.
+type TargetList struct {
+	Entry   int
+	From    string
+	Targets []Target
+}
+
+// Target is one class an entry could become (ADR 0050 step 15.6).
+type Target struct {
+	Class string
+	// Schools and OpposedSchools are the target's school codes, empty for a mage.
+	Schools, OpposedSchools []string
+	Minimums                []Minimum
+	// RaceWarning is a specialist whose PHB Table 22 races do not list the character's race:
+	// shown, never a refusal (step 14.1).
+	RaceWarning bool
+	// Refusal is the sentinel Switch would return, nil when the switch is allowed.
+	Refusal error
+}
+
+// Minimum is one ability minimum of a target against the sheet's score.
+type Minimum struct {
+	Ability    string
+	Min, Score int
+	Met        bool
 }
 
 // Result is what the switch did.
@@ -74,6 +106,7 @@ type Slots interface {
 // Catalogue is the class definitions.
 type Catalogue interface {
 	Get(class string) (classes.Class, error)
+	Classes() []classes.Class
 }
 
 // Log is the slice of the action log a switch is recorded into.
@@ -152,6 +185,50 @@ func (s *service) Switch(ctx context.Context, characterID int64, entry int, clas
 		return nil, err
 	}
 	return res, nil
+}
+
+// Targets is ADR 0050 step 15.6: the classes entry could become, each with what the picker shows,
+// and the refusal Switch would give (the same check). Nothing is written.
+func (s *service) Targets(ctx context.Context, characterID int64, entry int) (*TargetList, error) {
+	c, err := s.Characters.View(ctx, characterID)
+	if err != nil {
+		return nil, err
+	}
+	entries := c.StoredEntries()
+	if entry < 0 || entry >= len(entries) {
+		return nil, &domain.FieldError{Field: "entry", Message: "unknown_entry"}
+	}
+	from := entries[entry].Class
+	current, err := s.Catalogue.Get(from)
+	if err != nil {
+		return nil, err
+	}
+	scores := map[string]int{}
+	for _, a := range charactersvc.Abilities {
+		scores[string(a)], _ = c.Score(a)
+	}
+	out := &TargetList{Entry: entry, From: from, Targets: []Target{}}
+	for _, target := range s.Catalogue.Classes() {
+		if !target.Implemented() || target.ID == from {
+			continue
+		}
+		refusal := check(c, entries, entry, current, target)
+		if errors.Is(refusal, ErrNotAllowed) {
+			continue
+		}
+		t := Target{Class: target.ID, Schools: []string{}, OpposedSchools: []string{}, Minimums: []Minimum{}, Refusal: refusal}
+		if f, ok := target.Lists(classes.KindSchoolSpecialization); ok {
+			t.Schools = slices.Clone(f.SchoolSpecialization.Schools)
+			t.OpposedSchools = slices.Clone(f.SchoolSpecialization.OppositionSchools)
+			t.RaceWarning = !slices.Contains(f.SchoolSpecialization.Races, c.Race)
+		}
+		for _, m := range target.AbilityMinimums {
+			score := scores[m.Ability]
+			t.Minimums = append(t.Minimums, Minimum{Ability: m.Ability, Min: m.Min, Score: score, Met: score >= m.Min})
+		}
+		out.Targets = append(out.Targets, t)
+	}
+	return out, nil
 }
 
 // check is ADR 0050 step 15.1, in the order of its refusals.

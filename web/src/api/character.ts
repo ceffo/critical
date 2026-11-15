@@ -68,6 +68,33 @@ export function switchEntryClass(
   });
 }
 
+/** One class an entry could become, as the school picker shows it (ADR 0050 step 15.6). */
+export interface SwitchTarget {
+  class: string;
+  /** School codes the target specialises in and the schools it opposes; empty for a mage. */
+  schools: string[];
+  opposedSchools: string[];
+  /** Each ability minimum against the sheet's score, the server's comparison. */
+  minimums: { ability: string; min: number; score: number; met: boolean }[];
+  /** A race outside PHB Table 22 for the specialist: warned, never refused. */
+  raceWarning: boolean;
+  /** The code the switch would be refused with (class_switch_minimums_not_met...), "" when allowed. */
+  refusal: string;
+}
+
+export interface SwitchTargets {
+  entry: number;
+  from: string;
+  targets: SwitchTarget[];
+}
+
+/** What entry `entry` could become and what each choice costs (ADR 0050 step 15.6): the server's. */
+export function fetchSwitchTargets(entry: number): Promise<SwitchTargets> {
+  return request<SwitchTargets>(
+    `/api/character/class-entry/targets?entry=${entry}`,
+  );
+}
+
 /** The character takes `cls` as a new class and its old one is frozen (ADR 0042 step 3). A refusal
  * is an ApiError whose message is the code's wording. */
 export function takeNewClass(cls: string): Promise<DualClassResult> {

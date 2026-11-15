@@ -524,6 +524,10 @@ A school a specialist may never learn or prepare a spell of (PHB Table 22); a sp
 **School slot** (fr: emplacement d'école _(to confirm)_):
 A specialist's one extra spell of a spell level he has slots in, which only a spell of his school may fill; a preparation rule, not a marked slot. [ADR 0050](docs/adr/0050-specialist-wizards.md) step 10. _Avoid_: extra slot (that is one a spell grants).
 
+**School switch** (fr: changer d'école):
+Changing a class entry from the mage to a specialist, back, or to another specialist, XP and level kept. The **switch targets** of an entry are the classes it could become (same group, a spellbook, a specialist on one side, not held by another entry), each with its schools, opposition schools, **minimums** against the sheet's scores, the race warning and the refusal the switch would give; the picker shows them and the server alone judges them. [ADR 0050](docs/adr/0050-specialist-wizards.md) steps 15.6 to 15.8.
+_Code_: TargetList, Minimum
+
 ### Possessions
 
 **Item** (fr: objet):

@@ -178,12 +178,14 @@ func rows(path string, fix any, real []any, out *[]string) {
 		return
 	}
 	covered := 0
+	var coveredRows []map[string]any
 	for _, e := range real {
 		r, ok := e.(map[string]any)
 		if !ok || !covers(f, r, pairs) {
 			continue
 		}
 		covered++
+		coveredRows = append(coveredRows, r)
 		rest := map[string]any{}
 		for k, v := range f {
 			if !isRangeField(k, pairs) {
@@ -195,6 +197,43 @@ func rows(path string, fix any, real []any, out *[]string) {
 	if covered == 0 && len(pairs) > 0 {
 		*out = append(*out, path+": the fixture row covers no catalogue row")
 	}
+	for _, p := range pairs {
+		if lo, ok := uncovered(f, coveredRows, p); ok {
+			*out = append(*out, fmt.Sprintf("%s: the fixture row's %s range %v..%v is wider than the catalogue's rows (no row holds %v)", path, p, f[p+"_min"], f[p+"_max"], lo))
+		}
+	}
+}
+
+// uncovered reports the first value of the fixture row's range p that no covered catalogue row
+// holds: the catalogue's bands are narrower than the fixture's (a band was dropped or split).
+// Bands are whole numbers, so two rows are contiguous when the next starts at most one past the last.
+func uncovered(f map[string]any, rs []map[string]any, p string) (float64, bool) {
+	if len(rs) == 0 {
+		return 0, false // reported already as covering no row
+	}
+	fmin, _ := f[p+"_min"].(float64)
+	fmax, _ := f[p+"_max"].(float64)
+	sorted := append([]map[string]any(nil), rs...)
+	sort.Slice(sorted, func(i, j int) bool {
+		a, _ := sorted[i][p+"_min"].(float64)
+		b, _ := sorted[j][p+"_min"].(float64)
+		return a < b
+	})
+	next := fmin // the first value still to be held
+	for _, r := range sorted {
+		rmin, _ := r[p+"_min"].(float64)
+		rmax, _ := r[p+"_max"].(float64)
+		if rmin > next {
+			return next, true
+		}
+		if rmax+1 > next {
+			next = rmax + 1
+		}
+	}
+	if next <= fmax {
+		return next, true
+	}
+	return 0, false
 }
 
 func isRangeField(k string, pairs []string) bool {
@@ -246,4 +285,25 @@ func TestNumberDiffs_AMergedRowIsComparedWithEveryRowItCovers(t *testing.T) {
 	diffs = nil
 	numberDiffs("", map[string]any{"t": []any{row(7, 8, 0)}}, real, &diffs)
 	require.Equal(t, []string{".t[0]: the fixture row covers no catalogue row"}, diffs)
+}
+
+// TestNumberDiffs_AWiderFixtureRangeIsReported: a fixture row whose range reaches past the
+// catalogue's bands (a band shrank, or the catalogue split it around a gap) is reported with its
+// table and row, not passed because the rows that remain agree.
+func TestNumberDiffs_AWiderFixtureRangeIsReported(t *testing.T) {
+	row := func(lo, hi float64) any {
+		return map[string]any{"x_min": lo, "x_max": hi, "v": 0.0}
+	}
+	check := func(fix, real []any) []string {
+		var diffs []string
+		numberDiffs("", map[string]any{"t": fix}, map[string]any{"t": real}, &diffs)
+		return diffs
+	}
+	require.Empty(t, check([]any{row(1, 3)}, []any{row(1, 1), row(2, 3)}), "rows that tile the range")
+	require.Equal(t, []string{".t[0]: the fixture row's x range 1..3 is wider than the catalogue's rows (no row holds 3)"},
+		check([]any{row(1, 3)}, []any{row(1, 2)}), "a band dropped at the top")
+	require.Equal(t, []string{".t[0]: the fixture row's x range 1..3 is wider than the catalogue's rows (no row holds 2)"},
+		check([]any{row(1, 3)}, []any{row(1, 1), row(3, 3)}), "a gap inside")
+	require.Equal(t, []string{".t[0]: the fixture row's x range 1..3 is wider than the catalogue's rows (no row holds 1)"},
+		check([]any{row(1, 3)}, []any{row(2, 3)}), "a band dropped at the bottom")
 }

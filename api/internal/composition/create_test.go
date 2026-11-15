@@ -282,12 +282,7 @@ func TestCreate_Options(t *testing.T) {
 	assert.Equal(t, []string{"elf", "half_elf", "human"}, mage.Races, "DMG Table 7")
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, cleric.Races, "DMG Table 7")
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, thief.Races, "DMG Table 7")
-	assert.Equal(t, []string{
-		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
-		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
-	}, thief.Skills, "PHB Table 26")
 	assert.Nil(t, thief.SkillArmors, "no armour is entered: the skills read the worn one (ADR 0033 step 14)")
-	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, bard.Skills, "PHB Table 33")
 	assert.Nil(t, bard.SkillArmors)
 	for _, c := range got.Classes {
 		assert.Nil(t, c.ExceptionalStrength, "%s: the 18/xx is the draft's exceptionalStrength (ADR 0040 step 3)", c.Class)

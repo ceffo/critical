@@ -22,10 +22,6 @@ type ClassOption struct {
 	// (school_specialization's schools); empty for any other class, so the web names the school
 	// without holding a class id.
 	Schools []string
-	// Skills are the skills the class enters points in (steps 17 and 18, in
-	// ruletablesvc.SkillsOf order); empty for a class without skill
-	// points.
-	Skills []string
 	// Alignments are the alignments the class admits (ADR 0032 step 2), in
 	// ruletablesvc.Alignments order.
 	Alignments []string
@@ -272,7 +268,7 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 			return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 		}
 		opt := ClassOption{
-			Class: class, Group: def.Group, Alignments: slices.Clone(def.Alignments), Races: []string{}, Schools: []string{}, Skills: []string{},
+			Class: class, Group: def.Group, Alignments: slices.Clone(def.Alignments), Races: []string{}, Schools: []string{},
 			HitDie: hd.Die, LevelXP: make([]LevelXP, 0, classes.MaxLevel),
 			Minimums: slices.Clone(def.AbilityMinimums), Weapons: ClassWeaponOptions(s.profs.Weapons(), def),
 		}
@@ -283,9 +279,6 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 				return CreationOptions{}, fmt.Errorf("creation options: %w", err)
 			}
 			opt.LevelXP = append(opt.LevelXP, LevelXP{Level: level, XP: xp})
-		}
-		if f, ok := def.Lists(classes.KindRogueSkills); ok {
-			opt.Skills = slices.Clone(ruletablesvc.SkillsOf(f.RogueSkills))
 		}
 		if f, ok := def.Lists(classes.KindSchoolSpecialization); ok {
 			opt.Schools = slices.Clone(f.SchoolSpecialization.Schools)

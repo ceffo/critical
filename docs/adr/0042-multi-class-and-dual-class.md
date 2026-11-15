@@ -183,8 +183,9 @@ Every warning is structured data (a code and its numbers), worded by the web.
    party, in composition: `TestCreate_MultiClass_Step2_1_TheLiftDecidesTheRaceLimit`,
    `TestCreate_DualClass_Step2_2_PrimeRequisitesLevelAndNoReturn`,
    `TestCreate_Step1_TheShapeOfTheEntries`. The draft answer also carries `alignments` (those every
-   ACTIVE class admits: a class left does not limit), `skillsClass` and `spellbookClass` (the active
-   class that carries the skill points and the one that carries the starting spellbook), so the form
+   ACTIVE class admits: a class left does not limit), `skillSets` (one per skill set the active classes
+   list, ADR 0040 step 3.5, changed 2026-11-15: it was `skillsClass`) and `spellbookClass` (the active
+   class that carries the starting spellbook), so the form
    shows them and computes no rule: `TestDraft_NamesTheAlignmentsAndTheCarriers`.)_
 
 3. **Taking a new class (becoming dual-class).** A request names the new class. In one transaction

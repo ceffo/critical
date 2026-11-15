@@ -282,12 +282,7 @@ func TestCreate_Options(t *testing.T) {
 	assert.Equal(t, []string{"elf", "half_elf", "human"}, mage.Races, "DMG Table 7")
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, cleric.Races, "DMG Table 7")
 	assert.Equal(t, []string{"dwarf", "elf", "gnome", "half_elf", "halfling", "human"}, thief.Races, "DMG Table 7")
-	assert.Equal(t, []string{
-		"pick_pockets", "open_locks", "find_remove_traps", "move_silently",
-		"hide_in_shadows", "detect_noise", "climb_walls", "read_languages",
-	}, thief.Skills, "PHB Table 26")
 	assert.Nil(t, thief.SkillArmors, "no armour is entered: the skills read the worn one (ADR 0033 step 14)")
-	assert.Equal(t, []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"}, bard.Skills, "PHB Table 33")
 	assert.Nil(t, bard.SkillArmors)
 	for _, c := range got.Classes {
 		assert.Nil(t, c.ExceptionalStrength, "%s: the 18/xx is the draft's exceptionalStrength (ADR 0040 step 3)", c.Class)
@@ -457,4 +452,21 @@ func TestCharacters_Step14_SkillArmourIsNoEntry(t *testing.T) {
 	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/character", "", &shown))
 	require.Len(t, shown.Derived.SkillSets, 1)
 	assert.Equal(t, "none", shown.Derived.SkillSets[0].SkillArmor, "a new bard wears nothing")
+}
+
+// skillPoints is {set: {skill: points}}; the old flat {skill: points} body is a 400 that
+// says what is wrong, not a 500, and nothing is stored.
+func TestCreate_AFlatSkillPointsBodyIsRefusedAsBadRequest(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	body := bardStart + `,"skillPoints":{"climb_walls":15},"details":{"alignment":"neutral_good","sex":"male"}}`
+	var refused map[string]string
+	require.Equal(t, http.StatusBadRequest, tb.call(bob, "POST", "/api/characters", body, &refused))
+	assert.Equal(t, "bad_request", refused["code"])
+	assert.NotEmpty(t, refused["error"])
+	var list struct {
+		Characters []any `json:"characters"`
+	}
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
+	assert.Empty(t, list.Characters)
 }

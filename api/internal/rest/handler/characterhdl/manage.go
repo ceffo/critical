@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
 )
@@ -57,9 +58,6 @@ type ClassOptionDTO struct {
 	// Schools are the school codes (ADR 0050 step 1) a specialist class specialises in; empty
 	// for any other class. Additive.
 	Schools []string `json:"schools"`
-	// Skills are the thieving skills the class enters points in (ADR 0030
-	// steps 1 and 17); empty for a class without them.
-	Skills []string `json:"skills"`
 	// Alignments are the alignment codes the class admits (ADR 0032 step 2),
 	// so the form offers only those.
 	Alignments []string `json:"alignments"`
@@ -331,8 +329,8 @@ func Options(svc optionsReader) render.HandlerFunc {
 		for _, c := range o.Classes {
 			out.Classes = append(out.Classes, ClassOptionDTO{
 				Class: c.Class, Races: c.Races, Group: c.Group, Schools: c.Schools,
-				Skills: c.Skills, Alignments: c.Alignments,
-				HitDie: c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
+				Alignments: c.Alignments,
+				HitDie:     c.HitDie, LevelXP: levelXPDTO(c.LevelXP), Minimums: minimumDTOs(c.Minimums),
 				Weapons: weaponOptionDTOs(c.Weapons), Spellbook: spellbookOptionDTO(c.Spellbook),
 			})
 		}
@@ -361,10 +359,12 @@ type CreateBody struct {
 	// rules' own (1 to 999: a 0 is refused).
 	PSPMax *int `json:"pspMax"`
 	XP     *int `json:"xp"`
-	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18):
-	// points by skill code; absent for the other classes. The skills' armour
+	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18) per skill set, as a
+	// stored character holds them (ADR 0040 step 3.5): by set code, the points by skill code;
+	// absent for the other classes. A refusal's field names the set, skillPoints.<set> or
+	// skillPoints.<set>.<skill>. The skills' armour
 	// is the worn one (ADR 0033 step 14), no entry.
-	SkillPoints map[string]int `json:"skillPoints"`
+	SkillPoints skills.SetPoints `json:"skillPoints"`
 	// Proficiencies are the non-weapon and the weapon picks (ADR 0037 step
 	// 14), checked as PUT /api/proficiencies checks them with nothing picked
 	// before; absent (or a pool absent) for none.

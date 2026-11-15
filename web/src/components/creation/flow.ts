@@ -6,6 +6,7 @@ import {
   ABILITIES,
   type AbilityCode,
   type CreationDraft,
+  type DraftSkillSet,
   type DraftRefusal,
   type WeaponPickInput,
   type CreationOptions,
@@ -96,7 +97,7 @@ export function spellbookState(
 /**
  * The step a refusal's field belongs to, so the flow opens that step and shows the refusal there.
  * The fields are the server's, as the creation and the draft name them (`class`, `race`, the six
- * scores, `skillPoints.x`, `nonweapon.x`, `weapon.x`, `details.x`; `details.languages` is the
+ * scores, `skillPoints.<set>` and `skillPoints.<set>.<skill>`, `nonweapon.x`, `weapon.x`, `details.x`; `details.languages` is the
  * proficiency step's); `buildBody` names an unreadable value with the same names. An unknown field
  * stays on the review, where Créer is.
  */
@@ -149,13 +150,11 @@ export function bodyClasses(
   return b.classes ? b.classes.map((c) => c.class) : b.class ? [b.class] : [];
 }
 
-/** The skills the draft's skill points go to: those of the class its answer names (`skillsClass`),
- * none before the answer or for a draft without one. */
-export function skillsOf(
-  options: CreationOptions | null,
-  answer: CreationDraft | null,
-): string[] {
-  return classOf(options, answer?.skillsClass ?? "")?.skills ?? [];
+/** The skill sets the draft's skill points go to, each with its own skills and budget, as its
+ * answer lists them (the server reads the active classes): none before the answer or for a draft
+ * without one. */
+export function skillSetsOf(answer: CreationDraft | null): DraftSkillSet[] {
+  return answer?.skillSets ?? [];
 }
 
 /** The class's options entry, or undefined. */
@@ -458,7 +457,8 @@ export interface FlowDraft {
   hpOutdated: boolean;
   hpMax: string;
   strExceptional: string;
-  skillPoints: Record<string, string>;
+  /** The points typed, by skill set then skill (the shape the request sends). */
+  skillPoints: Record<string, Record<string, string>>;
   /** The non-weapon picks (ADR 0037 step 14), each at the slots the player gave it. */
   picks: PickInput[];
   /** The weapon picks and the specialization (ADR 0037 steps 7, 9 and 14), each type at its
@@ -669,21 +669,25 @@ export function buildBody(
       },
     );
   }
-  const skills = skillsOf(options, carried);
   if (offersExceptional && draft.strExceptional.trim() !== "") {
     const v = parseWhole(draft.strExceptional);
     if (v === null || Number.isNaN(v)) fail("strExceptional", "out_of_range");
     else body.strExceptional = v;
   }
-  if (skills.length > 0) {
+  const sets = skillSetsOf(carried);
+  if (sets.length > 0) {
     body.skillPoints = {};
-    for (const skill of skills) {
-      const raw = draft.skillPoints[skill] ?? "";
-      if (raw.trim() === "") continue;
-      const v = parseWhole(raw);
-      if (v === null || Number.isNaN(v))
-        fail(`skillPoints.${skill}`, "out_of_range");
-      else body.skillPoints[skill] = v;
+    for (const { set, skills } of sets) {
+      const entered: Record<string, number> = {};
+      for (const skill of skills) {
+        const raw = draft.skillPoints[set]?.[skill] ?? "";
+        if (raw.trim() === "") continue;
+        const v = parseWhole(raw);
+        if (v === null || Number.isNaN(v))
+          fail(`skillPoints.${set}.${skill}`, "out_of_range");
+        else entered[skill] = v;
+      }
+      if (Object.keys(entered).length > 0) body.skillPoints[set] = entered;
     }
   }
   if (draft.picks.length > 0 || draft.weaponPicks.length > 0)

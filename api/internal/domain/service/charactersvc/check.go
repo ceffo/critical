@@ -209,7 +209,7 @@ func (s *service) check(ctx context.Context, n NewCharacter, blank []string, dra
 	if stop() {
 		return out, nil
 	}
-	points, err := validSkills(n, out.def)
+	points, err := validSkills(n, entrySets(out.active))
 	pointsOK := err == nil
 	if err != nil {
 		refuse(err)

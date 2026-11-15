@@ -124,8 +124,9 @@ func rogueSkillsListed(def classes.Class, set string) *classes.RogueSkills {
 	return nil
 }
 
-// rogueSkillsAtFor are the params of set the class grants at level, nil for none.
-func rogueSkillsAtFor(def classes.Class, set string, level int) *classes.RogueSkills {
+// RogueSkillsAtFor are the params of set the class grants at level, nil for none (a creation's draft
+// reads the budget of each set through it).
+func RogueSkillsAtFor(def classes.Class, set string, level int) *classes.RogueSkills {
 	for _, rs := range RogueSetsAt(def, level) {
 		if rs.Set == set {
 			return &rs
@@ -185,7 +186,7 @@ func SkillPointsWithinBudget(def classes.Class, set string, level int, before, a
 	if listed == nil || level < 1 {
 		return nil
 	}
-	rs := rogueSkillsAtFor(def, set, level)
+	rs := RogueSkillsAtFor(def, set, level)
 	if rs == nil {
 		spent, was := 0, 0
 		for _, skill := range ruletablesvc.SkillsOf(listed) {

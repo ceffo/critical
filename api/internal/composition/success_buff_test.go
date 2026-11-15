@@ -41,7 +41,7 @@ func newTumblerBed(t *testing.T, dies ...int) *tumblerBed {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "human", Str: 12, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints:   map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints:   skills.SetPoints{"thief": {"open_locks": 30, "pick_pockets": 30}},
 		Proficiencies: skills.Picks{Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 1}}},
 	})
 	require.NoError(t, err)

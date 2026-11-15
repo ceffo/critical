@@ -13,7 +13,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -379,7 +378,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -520,7 +518,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -685,16 +682,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [
-          "pick_pockets",
-          "open_locks",
-          "find_remove_traps",
-          "move_silently",
-          "hide_in_shadows",
-          "detect_noise",
-          "climb_walls",
-          "read_languages"
-        ],
         "Alignments": [
           "neutral_good",
           "chaotic_good",
@@ -854,12 +841,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [
-          "climb_walls",
-          "detect_noise",
-          "pick_pockets",
-          "read_languages"
-        ],
         "Alignments": [
           "neutral_good",
           "lawful_neutral",
@@ -1234,7 +1215,6 @@
           "human"
         ],
         "Schools": [],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -1411,7 +1391,6 @@
         "Schools": [
           "abjuration"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -1555,7 +1534,6 @@
         "Schools": [
           "conjuration_summoning"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -1700,7 +1678,6 @@
           "greater_divination",
           "lesser_divination"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -1844,7 +1821,6 @@
         "Schools": [
           "enchantment_charm"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -1987,7 +1963,6 @@
         "Schools": [
           "illusion"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -2131,7 +2106,6 @@
         "Schools": [
           "invocation_evocation"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -2275,7 +2249,6 @@
         "Schools": [
           "necromancy"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",
@@ -2419,7 +2392,6 @@
         "Schools": [
           "alteration"
         ],
-        "Skills": [],
         "Alignments": [
           "lawful_good",
           "neutral_good",

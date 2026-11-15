@@ -215,14 +215,14 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		return charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-			SkillPoints: points,
+			SkillPoints: skills.SetPoints{"thief": points},
 		}
 	}
 	fighter := func(points map[string]int) charactersvc.NewCharacter {
 		return charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Bram", Class: "fighter", Race: "human", Str: 16, Dex: 12, Con: 14, Int: 9, Wis: 10, Cha: 8, HPMax: 10,
-			SkillPoints: points,
+			SkillPoints: skills.SetPoints{"thief": points},
 		}
 	}
 	for _, tt := range []struct {
@@ -230,10 +230,10 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 		n           charactersvc.NewCharacter
 		field, code string
 	}{
-		{"an unknown skill", thief(map[string]int{"backstab": 10}), "skillPoints.backstab", "unknown"},
-		{"negative points", thief(map[string]int{"open_locks": -1}), "skillPoints.open_locks", "out_of_range"},
-		{"more than 95 points", thief(map[string]int{"open_locks": 96}), "skillPoints.open_locks", "out_of_range"},
-		{"a fighter's points", fighter(map[string]int{"climb_walls": 10}), "skillPoints", "not_allowed"},
+		{"an unknown skill", thief(map[string]int{"backstab": 10}), "skillPoints.thief.backstab", "unknown"},
+		{"negative points", thief(map[string]int{"open_locks": -1}), "skillPoints.thief.open_locks", "out_of_range"},
+		{"more than 95 points", thief(map[string]int{"open_locks": 96}), "skillPoints.thief.open_locks", "out_of_range"},
+		{"a fighter's points", fighter(map[string]int{"climb_walls": 10}), "skillPoints.thief", "not_allowed"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			e := newEnv(t)
@@ -275,7 +275,7 @@ func TestCreate_Step17_ThiefSkillPointsAndArmour(t *testing.T) {
 func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 	bard := func(points map[string]int) charactersvc.NewCharacter {
 		n := lyra()
-		n.SkillPoints = points
+		n.SkillPoints = skills.SetPoints{"bard": points}
 		return n
 	}
 	for _, tt := range []struct {
@@ -283,9 +283,9 @@ func TestCreate_Step18_BardSkillPointsAndArmour(t *testing.T) {
 		n           charactersvc.NewCharacter
 		field, code string
 	}{
-		{"a thieving skill the bard lacks", bard(map[string]int{"open_locks": 10}), "skillPoints.open_locks", "unknown"},
-		{"negative points", bard(map[string]int{"climb_walls": -1}), "skillPoints.climb_walls", "out_of_range"},
-		{"more than 95 points", bard(map[string]int{"read_languages": 96}), "skillPoints.read_languages", "out_of_range"},
+		{"a thieving skill the bard lacks", bard(map[string]int{"open_locks": 10}), "skillPoints.bard.open_locks", "unknown"},
+		{"negative points", bard(map[string]int{"climb_walls": -1}), "skillPoints.bard.climb_walls", "out_of_range"},
+		{"more than 95 points", bard(map[string]int{"read_languages": 96}), "skillPoints.bard.read_languages", "out_of_range"},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			e := newEnv(t)
@@ -329,12 +329,12 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 		return charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Vex", Class: "thief", Race: "halfling", Str: 10, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-			SkillPoints: points,
+			SkillPoints: skills.SetPoints{"thief": points},
 		}
 	}
 	bard := func(points map[string]int) charactersvc.NewCharacter {
 		n := lyra()
-		n.SkillPoints = points
+		n.SkillPoints = skills.SetPoints{"bard": points}
 		return n
 	}
 	expectLevel1Thief := func(e *env, points map[string]int, times int) {
@@ -355,17 +355,17 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 			func(e *env) {
 				expectLevel1Thief(e, map[string]int{"open_locks": 30, "pick_pockets": 30, "climb_walls": 1}, 1)
 			},
-			"skillPoints", 61, 60,
+			"skillPoints.thief", 61, 60,
 		},
 		{
 			"a thief's skill over its cap", thief(map[string]int{"open_locks": 31}),
 			func(e *env) { expectLevel1Thief(e, map[string]int{"open_locks": 31}, 1) },
-			"skillPoints.open_locks", 31, 30,
+			"skillPoints.thief.open_locks", 31, 30,
 		},
 		{
 			"a bard's total", bard(map[string]int{"climb_walls": 15, "read_languages": 6}),
 			func(e *env) { expectLevel1Bard(e) },
-			"skillPoints", 21, 20,
+			"skillPoints.bard", 21, 20,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -387,7 +387,7 @@ func TestCreate_Step10_OverBudgetRefused(t *testing.T) {
 		expectLevel1Thief(e, points, 2) // the starting level, then the read
 		got, err := e.svc.Draft(context.Background(), thief(points), nil)
 		require.NoError(t, err)
-		assert.Equal(t, []error{&domain.BudgetError{Field: "skillPoints.open_locks", Spent: 31, Limit: 30}}, got.Refusals)
+		assert.Equal(t, []error{&domain.BudgetError{Field: "skillPoints.thief.open_locks", Spent: 31, Limit: 30}}, got.Refusals)
 		require.NotNil(t, got.Character)
 		assert.Equal(t, 1, got.Character.Derived.TargetLevel)
 	})
@@ -545,34 +545,33 @@ func TestCreationOptions_TheCreatableClassesAndTheirRaces(t *testing.T) {
 		// ADR 0040 step 8: every class of the catalogue, in its order, with its races in the
 		// catalogue's race order.
 		Classes: []charactersvc.ClassOption{
-			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "fighter", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "mage", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "cleric", Races: []string{"dwarf", "gnome", "half_elf", "halfling", "human"}, Alignments: ruletablesvc.Alignments},
 			// ADR 0030 step 17: the thief enters a point count per skill and its armour.
 			{
-				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{"pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"},
+				Class: "thief", Races: cataloguetest.Definitions(t).RaceIDs(),
 				Alignments: []string{"neutral_good", "chaotic_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "lawful_evil", "neutral_evil", "chaotic_evil"},
 			},
 			{
 				Class: "bard", Races: []string{"half_elf", "human"},
-				Skills: []string{"climb_walls", "detect_noise", "pick_pockets", "read_languages"},
 				// ADR 0032 step 2: the bard admits the five alignments with a neutral part.
 				Alignments: []string{"neutral_good", "lawful_neutral", "true_neutral", "chaotic_neutral", "neutral_evil"},
 			},
 			// ADR 0043 step 1: creatable once its kinds are computed (step 3).
 			{
-				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(), Skills: []string{},
+				Class: "psionicist", Races: cataloguetest.Definitions(t).RaceIDs(),
 				Alignments: []string{"lawful_good", "neutral_good", "lawful_neutral", "true_neutral", "lawful_evil", "neutral_evil"},
 			},
 			// ADR 0050 step 17.2: the eight specialists, creatable, each with the mage's alignments.
-			{Class: "abjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "conjurer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "diviner", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "enchanter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "illusionist", Races: []string{"gnome", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "invoker", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "necromancer", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
-			{Class: "transmuter", Races: []string{"elf", "half_elf", "human"}, Skills: []string{}, Alignments: ruletablesvc.Alignments},
+			{Class: "abjurer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "conjurer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "diviner", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "enchanter", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "illusionist", Races: []string{"gnome", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "invoker", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "necromancer", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
+			{Class: "transmuter", Races: []string{"elf", "half_elf", "human"}, Alignments: ruletablesvc.Alignments},
 		},
 		MinAbility: 3, MaxAbility: 19, MinHPMax: 1, MaxHPMax: 999, MinXP: 0, MaxXP: charactersvc.MaxStartingXP,
 		MinStrExceptional: 1, MaxStrExceptional: 100, MaxSkillPoints: 95, MaxNameLen: 40, MaxClasses: 3, MinLeftAtLevel: 2, MulticlassAnyRace: true, DualclassAnyRace: true, RestrictedRaces: []string{"dwarf", "elf", "gnome", "half_elf", "halfling"},

@@ -80,8 +80,11 @@ func (s *service) Create(ctx context.Context, owner uuid.UUID, n NewCharacter) (
 	}
 	// ADR 0037 step 10: nothing was spent before, so a new character is
 	// never created over its skill point budget.
-	if err := skills.SkillPointsWithinBudget(k.def, skills.FirstSet(k.def), entryLevel(&c, k.def.ID), nil, c.SkillPoints.Of(skills.FirstSet(k.def))); err != nil {
-		return 0, err
+	// Each skill set has its own budget, at the level of the entry that grants it.
+	for _, set := range entrySets(k.active) {
+		if err := skills.SkillPointsWithinBudget(set.def, set.rs.Set, entryLevel(&c, set.def.ID), nil, c.SkillPoints.Of(set.rs.Set)); err != nil {
+			return 0, inSet(err, set.rs.Set)
+		}
 	}
 	// ADR 0037 steps 6, 10, 14 and 18: nor with picks or languages the
 	// editor refuses, nor over its non-weapon slots.
@@ -238,15 +241,11 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	// of its own.
 	out.ExceptionalStrength = k.exceptional
 	out.Alignments = k.alignments
-	out.SkillsClass, out.SpellbookClass, out.PsionicsClass = carriers(k.active)
+	out.SpellbookClass, out.PsionicsClass = carriers(k.active)
 	if !k.derivable {
 		if k.levelled {
 			// The starting level is the target level at the entered XP (ADR 0030 step 3, step 7.5).
-			level, err := s.skillsLevel(k)
-			if err != nil {
-				return nil, fmt.Errorf("draft: %w", err)
-			}
-			out.SkillPoints = budgetAt(out, k.def, level, k.c.SkillPoints)
+			out.SkillSets = draftSets(out, entrySets(k.active), func(def classes.Class) int { return skillsLevel(k, def) }, k.c.SkillPoints)
 		}
 		return out, nil
 	}
@@ -254,7 +253,7 @@ func (s *service) Draft(ctx context.Context, n NewCharacter, blank []string) (*D
 	if _, err := started(&c, s.rules); err != nil {
 		return nil, err
 	}
-	out.SkillPoints = budgetAt(out, k.def, entryLevel(&c, k.def.ID), c.SkillPoints)
+	out.SkillSets = draftSets(out, entrySets(k.active), func(def classes.Class) int { return entryLevel(&c, def.ID) }, c.SkillPoints)
 	rs, err := s.ruleset(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("draft: %w", err)

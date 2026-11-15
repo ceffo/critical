@@ -23,6 +23,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/authsvc"
 	authmocks "github.com/ceffo/critical/api/internal/domain/service/authsvc/mocks"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
@@ -371,7 +372,7 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 		"new": {ID: bobID, Email: "new@example.com", Role: authsvc.RolePlayer},
 	}))
 	m.char.EXPECT().Draft(mock.Anything, mock.MatchedBy(func(n charactersvc.NewCharacter) bool {
-		return n.Class == "thief" && n.Race == "elf" && n.Dex == 25 && n.XP == 1250 && n.SkillPoints["open_locks"] == 40 &&
+		return n.Class == "thief" && n.Race == "elf" && n.Dex == 25 && n.XP == 1250 && n.SkillPoints.Of("thief")["open_locks"] == 40 &&
 			n.Proficiencies.Equal(skills.Picks{
 				Nonweapon: []skills.Pick{{ID: "tumbling", Slots: 2}}, Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 1}},
 			}) && slices.Equal(n.Languages, []string{"elvish", "orcish"})
@@ -389,13 +390,16 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 		},
 		Missing:       []string{"name", "hpMax", "alignment", "sex"},
 		UnmetMinimums: []charactersvc.ClassUnmet{{Class: "thief", Abilities: []string{}}, {Class: "bard", Abilities: []string{"cha"}}},
-		SkillPoints: &ruletablesvc.SkillPointsBudget{
-			Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
-			PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
-		},
+		SkillSets: []charactersvc.DraftSkillSet{{
+			Set: "thief", Name: localized.Text{"en": "Thief", "fr": "Voleur"}, Skills: []string{"pick_pockets", "open_locks"},
+			Budget: &ruletablesvc.SkillPointsBudget{
+				Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 40, Left: 50,
+				PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
+			},
+		}},
 	}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{"class":"thief","raceCode":"elf","str":9,"dex":25,"con":12,"int":11,"wis":10,"cha":12,
-		"xp":1250,"skillPoints":{"open_locks":40},
+		"xp":1250,"skillPoints":{"thief":{"open_locks":40}},
 		"proficiencies":{"nonweapon":[{"id":"tumbling","slots":2}],"weapon":[{"code":"dagger","slots":1}]},
 		"details":{"languages":["elvish","orcish"]}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
@@ -421,7 +425,18 @@ func TestCharacters_DraftWireShape(t *testing.T) {
 	assert.Empty(t, sets[0].Warnings)
 	assert.JSONEq(t, `{"level":2,"first":60,"perLevel":30,"available":90,"spent":40,"left":50,"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45}`,
 		string(sets[0].Budget))
-	assert.JSONEq(t, string(sets[0].Budget), string(got["skillPoints"]), "the draft's own budget, in the derived set's shape")
+	var draftSets []struct {
+		Set    string
+		Name   map[string]string
+		Skills []string
+		Budget json.RawMessage
+	}
+	require.NoError(t, json.Unmarshal(got["skillSets"], &draftSets))
+	require.Len(t, draftSets, 1)
+	assert.Equal(t, "thief", draftSets[0].Set)
+	assert.Equal(t, map[string]string{"en": "Thief", "fr": "Voleur"}, draftSets[0].Name)
+	assert.Equal(t, []string{"pick_pockets", "open_locks"}, draftSets[0].Skills)
+	assert.JSONEq(t, string(sets[0].Budget), string(draftSets[0].Budget), "the draft's own budget, in the derived set's shape")
 	assert.JSONEq(t, `2`, string(derived["targetLevel"]))
 }
 
@@ -462,7 +477,7 @@ func TestCharacters_DraftNeverRefusesContent(t *testing.T) {
 		Return(&charactersvc.Draft{Missing: []string{"name", "class"}}, nil).Once()
 	rec := as(h, "new", "POST", "/api/characters/draft", `{}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
-	assert.JSONEq(t, `{"derived":null,"exceptionalStrength":false,"skillPoints":null,"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[],"alignments":[],"skillsClass":"","spellbookClass":"","psionicsClass":"","computedPspMax":null}`, rec.Body.String())
+	assert.JSONEq(t, `{"derived":null,"exceptionalStrength":false,"skillSets":[],"spellbook":null,"warnings":[],"languages":[],"refusals":[],"missing":["name","class"],"unmetMinimums":[],"alignments":[],"spellbookClass":"","psionicsClass":"","computedPspMax":null}`, rec.Body.String())
 
 	rec = as(h, "new", "POST", "/api/characters/draft", `{"details":{"height_cm":"tall"}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())

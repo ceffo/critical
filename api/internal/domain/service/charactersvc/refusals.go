@@ -1,6 +1,8 @@
 package charactersvc
 
 import (
+	"errors"
+	"maps"
 	"slices"
 	"strconv"
 	"strings"
@@ -222,16 +224,42 @@ func cleanName(raw string) (string, error) {
 	return name, nil
 }
 
-// validSkills is ADR 0030 steps 1, 17 and 18: a class with skill sets enters
-// its points in its first set (skills.ValidSkillPoints, skills.FirstSet); any
-// other class enters none. The armour is no entry (ADR 0033 step 14).
-func validSkills(n NewCharacter, def classes.Class) (skills.SetPoints, error) {
-	set := skills.FirstSet(def)
-	points, err := skills.ValidSkillPoints(def, set, n.SkillPoints)
-	if err != nil {
-		return nil, err
+// validSkills is ADR 0030 steps 1, 17 and 18 and ADR 0040 step 3.5: the points are entered per
+// skill set, each set one the active classes list (entrySets), each checked by
+// skills.ValidSkillPoints against its own skills. A set no active class lists enters none: its
+// points are refused with field skillPoints.<set>. A refusal names its set, skillPoints.<set> or
+// skillPoints.<set>.<skill>. The armour is no entry (ADR 0033 step 14).
+func validSkills(n NewCharacter, sets []entrySet) (skills.SetPoints, error) {
+	var out skills.SetPoints
+	for _, s := range sets {
+		points, err := skills.ValidSkillPoints(s.def, s.rs.Set, n.SkillPoints.Of(s.rs.Set))
+		if err != nil {
+			return nil, inSet(err, s.rs.Set)
+		}
+		out = out.With(s.rs.Set, points)
 	}
-	return skills.SetPoints(nil).With(set, points), nil
+	for _, set := range slices.Sorted(maps.Keys(n.SkillPoints)) {
+		if len(n.SkillPoints[set]) > 0 && !slices.ContainsFunc(sets, func(s entrySet) bool { return s.rs.Set == set }) {
+			return nil, refusal(skills.FieldSkillPoints+"."+set, skills.CodeNotAllowed)
+		}
+	}
+	return out, nil
+}
+
+// inSet names the skill set in a skills refusal: the field skillPoints becomes skillPoints.<set>
+// and skillPoints.<skill> becomes skillPoints.<set>.<skill> (two sets can share a skill, a thief's
+// and a bard's pick pockets). Any other error stays as it is.
+func inSet(err error, set string) error {
+	named := func(field string) string {
+		return skills.FieldSkillPoints + "." + set + strings.TrimPrefix(field, skills.FieldSkillPoints)
+	}
+	if fe, ok := errors.AsType[*domain.FieldError](err); ok && strings.HasPrefix(fe.Field, skills.FieldSkillPoints) {
+		return &domain.FieldError{Field: named(fe.Field), Message: fe.Message}
+	}
+	if be, ok := errors.AsType[*domain.BudgetError](err); ok && strings.HasPrefix(be.Field, skills.FieldSkillPoints) {
+		return &domain.BudgetError{Field: named(be.Field), Spent: be.Spent, Limit: be.Limit}
+	}
+	return err
 }
 
 // validExceptional is ADR 0030 step 9: an exceptional strength is optional,

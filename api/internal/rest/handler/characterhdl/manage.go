@@ -16,6 +16,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 	"github.com/ceffo/critical/api/internal/render"
 	"github.com/ceffo/critical/api/internal/rest/wire"
 )
@@ -361,10 +362,12 @@ type CreateBody struct {
 	// rules' own (1 to 999: a 0 is refused).
 	PSPMax *int `json:"pspMax"`
 	XP     *int `json:"xp"`
-	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18):
-	// points by skill code; absent for the other classes. The skills' armour
+	// SkillPoints are a thief's or a bard's (ADR 0030 steps 1, 17 and 18) per skill set, as a
+	// stored character holds them (ADR 0040 step 3.5): by set code, the points by skill code;
+	// absent for the other classes. A refusal's field names the set, skillPoints.<set> or
+	// skillPoints.<set>.<skill>. The skills' armour
 	// is the worn one (ADR 0033 step 14), no entry.
-	SkillPoints map[string]int `json:"skillPoints"`
+	SkillPoints skills.SetPoints `json:"skillPoints"`
 	// Proficiencies are the non-weapon and the weapon picks (ADR 0037 step
 	// 14), checked as PUT /api/proficiencies checks them with nothing picked
 	// before; absent (or a pool absent) for none.

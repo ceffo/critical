@@ -13,6 +13,7 @@ import {
   UserCircle,
   Warning,
 } from "@phosphor-icons/react";
+import { localized } from "@/i18n/localized";
 import { rollHp, rollScores } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
@@ -26,7 +27,7 @@ import {
   classesFor,
   initialPlacement,
   KINDS,
-  skillsOf,
+  skillSetsOf,
   isPlaced,
   place,
   signed,
@@ -817,13 +818,12 @@ export function ExtrasStep({
   watch,
   answer,
 }: StepProps) {
-  const { t } = useTranslation();
-  // The budget at the level the XP gives, the draft's own: it reads the class and XP only, so a
-  // score out of range leaves it shown (ADR 0030 steps 17, 18).
-  const budget = answer.latest?.skillPoints ?? null;
+  const { t, i18n } = useTranslation();
+  // One block per skill set, each with the budget at the level the XP gives, the draft's own: it
+  // reads the class and XP only, so a score out of range leaves it shown (ADR 0030 steps 17, 18).
+  const sets = skillSetsOf(answer.latest);
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
-  const skills = skillsOf(options, answer.latest);
   // The hit points roll of ADR 0032 step 7 is for one class: the entries of several are typed.
   const several = draft.kind !== "single";
   // The server says whether the entries allow an 18/xx (ADR 0030 step 9 through the class's
@@ -987,12 +987,15 @@ export function ExtrasStep({
           </p>
         </Group>
 
-        {(skills.length > 0 || offersExceptional) && (
+        {(sets.length > 0 || offersExceptional) && (
           <div className="flex min-w-0 flex-col gap-5">
-            {skills.length > 0 && (
+            {sets.map(({ set, name, skills, budget }) => (
               <Group
-                title={t("creation.extras.skills", { className })}
-                testId="thief-skills-entry"
+                key={set}
+                title={t("creation.extras.skills", {
+                  className: localized(i18n.language, name) || set,
+                })}
+                testId={`${set}-skills-entry`}
               >
                 <p className="text-label text-ink-muted">
                   {t("characters.skillPointsLead")}
@@ -1065,7 +1068,7 @@ export function ExtrasStep({
                   </thead>
                   <tbody>
                     {skills.map((skill) => {
-                      const f = `skillPoints.${skill}`;
+                      const f = `skillPoints.${set}.${skill}`;
                       const text = errorFor(f);
                       return (
                         <tr key={skill} className="border-t border-border">
@@ -1082,12 +1085,15 @@ export function ExtrasStep({
                               title={t("characters.range", {
                                 ...options.skillPoints,
                               })}
-                              value={draft.skillPoints[skill] ?? ""}
+                              value={draft.skillPoints[set]?.[skill] ?? ""}
                               onChange={(e) =>
                                 update({
                                   skillPoints: {
                                     ...draft.skillPoints,
-                                    [skill]: e.target.value,
+                                    [set]: {
+                                      ...draft.skillPoints[set],
+                                      [skill]: e.target.value,
+                                    },
                                   },
                                 })
                               }
@@ -1100,11 +1106,11 @@ export function ExtrasStep({
                   </tbody>
                 </table>
                 <FieldError
-                  id="new-character-skillPoints"
-                  text={errorFor("skillPoints")}
+                  id={`new-character-skillPoints.${set}`}
+                  text={errorFor(`skillPoints.${set}`)}
                 />
               </Group>
-            )}
+            ))}
             {offersExceptional && (
               <Group title={t("characters.strExceptional")}>
                 <div className="flex w-40 min-w-0 flex-col gap-1">
@@ -1132,7 +1138,7 @@ export function ExtrasStep({
           </div>
         )}
       </div>
-      {skills.length === 0 && !offersExceptional && (
+      {sets.length === 0 && !offersExceptional && (
         <Note kind="info">
           {t("creation.extras.nothingElse", { className })}
         </Note>

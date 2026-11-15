@@ -555,8 +555,8 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
     defaultValue: draft.cls,
   });
   const details = body?.details;
-  // A new character enters its points in the first skill set its class grants.
-  const skills = d?.skillSets[0]?.skills ?? [];
+  // A new character enters points in each skill set its classes grant.
+  const skillSets = d?.skillSets ?? [];
   const warnedField = (f: string) => read?.warnings.some((w) => w.field === f);
   const fromRoll =
     draft.hpRoll && draft.hpMax.trim() === String(draft.hpRoll.total)
@@ -656,16 +656,18 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
                   : (body?.hpMax ?? dash),
                 "review-hp",
               ],
-              ...skills.map(
-                (s) =>
-                  [
-                    skillName(t, s.skill),
-                    t("creation.review.skillWithPoints", {
-                      percent: s.percent,
-                      count: body?.skillPoints?.[s.skill] ?? 0,
-                    }),
-                    `review-skill-${s.skill}`,
-                  ] as [string, ReactNode, string],
+              ...skillSets.flatMap((set) =>
+                set.skills.map(
+                  (s) =>
+                    [
+                      skillName(t, s.skill),
+                      t("creation.review.skillWithPoints", {
+                        percent: s.percent,
+                        count: body?.skillPoints?.[set.set]?.[s.skill] ?? 0,
+                      }),
+                      `review-skill-${set.set}-${s.skill}`,
+                    ] as [string, ReactNode, string],
+                ),
               ),
             ]}
           />

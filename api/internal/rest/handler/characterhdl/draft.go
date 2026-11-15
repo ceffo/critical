@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/render"
@@ -34,12 +35,24 @@ type RefusalDTO struct {
 	Count      *int   `json:"count,omitempty"`
 }
 
+// DraftSkillSetDTO is one skill set of a creation draft (ADR 0040 step 3.5): its code (the key of
+// the request's `skillPoints`), its heading (a language map), the skills the set enters points in
+// and its budget at the starting level, the derived set's shape (null before the level its points
+// start).
+type DraftSkillSetDTO struct {
+	Set    string                     `json:"set"`
+	Name   localized.Text             `json:"name"`
+	Skills []string                   `json:"skills"`
+	Budget *wire.SkillPointsBudgetDTO `json:"budget"`
+}
+
 // DraftDTO is POST /api/characters/draft (ADR 0034, amendment of 2026-10-20): the sheet as it
 // would read once created, in GET /api/character's shapes (`derived`, `warnings`, `languages`
 // with the native one added; `derived` null and the lists empty while the class, race, scores,
 // skill points or XP are missing or refused), a thief's or a bard's skill point budget
-// (`skillPoints`, the derived block's shape, as soon as the class and XP read: a score out of
-// range does not hide it; null otherwise), the creation's `refusals`, the required fields still blank
+// (`skillSets`, one per skill set the active classes list with its own budget in the derived
+// block's shape, as soon as the class and XP read: a score out of range does not hide it; empty
+// otherwise), the creation's `refusals`, the required fields still blank
 // (`missing`: name, class, race, the six scores, hpMax, xp, alignment, sex) and, for every
 // creatable class, the abilities whose entered score is under its minimum (`unmetMinimums`), and a
 // mage's or a bard's starting spellbook at the starting level (`spellbook`, ADR 0030 step 20.7;
@@ -47,23 +60,21 @@ type RefusalDTO struct {
 // (`exceptionalStrength`, ADR 0030 step 9 through the class's features: the form offers the field
 // on it).
 type DraftDTO struct {
-	Derived       *DerivedDTO                `json:"derived"`
-	SkillPoints   *wire.SkillPointsBudgetDTO `json:"skillPoints"`
-	Spellbook     *StartingSpellbookDTO      `json:"spellbook"`
-	Warnings      []WarningDTO               `json:"warnings"`
-	Languages     []string                   `json:"languages"`
-	Refusals      []RefusalDTO               `json:"refusals"`
-	Missing       []string                   `json:"missing"`
-	UnmetMinimums []ClassUnmetDTO            `json:"unmetMinimums"`
+	Derived       *DerivedDTO           `json:"derived"`
+	SkillSets     []DraftSkillSetDTO    `json:"skillSets"`
+	Spellbook     *StartingSpellbookDTO `json:"spellbook"`
+	Warnings      []WarningDTO          `json:"warnings"`
+	Languages     []string              `json:"languages"`
+	Refusals      []RefusalDTO          `json:"refusals"`
+	Missing       []string              `json:"missing"`
+	UnmetMinimums []ClassUnmetDTO       `json:"unmetMinimums"`
 	// ExceptionalStrength: the class lists exceptional_strength, the Strength entered is 18 and
 	// the race rolls it.
 	ExceptionalStrength bool `json:"exceptionalStrength"`
 	// Alignments are the alignments every active class admits (a class left admits none of its
 	// own); the form lists them and checks nothing itself.
 	Alignments []string `json:"alignments"`
-	// SkillsClass carries the skill points and SpellbookClass the starting spellbook: a class id,
-	// "" for none.
-	SkillsClass    string `json:"skillsClass"`
+	// SpellbookClass carries the starting spellbook: a class id, "" for none.
 	SpellbookClass string `json:"spellbookClass"`
 	// PsionicsClass lists psionics (ADR 0043): the form asks its known powers and PSP maximum.
 	PsionicsClass string `json:"psionicsClass"`
@@ -132,9 +143,14 @@ func draftDTO(d *charactersvc.Draft) (DraftDTO, error) {
 	out := DraftDTO{
 		Warnings: []WarningDTO{}, Languages: []string{}, Refusals: make([]RefusalDTO, 0, len(d.Refusals)),
 		Missing: append([]string{}, d.Missing...), UnmetMinimums: make([]ClassUnmetDTO, 0, len(d.UnmetMinimums)),
-		SkillPoints: wire.SkillPointsBudgetToDTO(d.SkillPoints), Spellbook: startingSpellbookDTO(d.Spellbook),
+		SkillSets: make([]DraftSkillSetDTO, 0, len(d.SkillSets)), Spellbook: startingSpellbookDTO(d.Spellbook),
 		ExceptionalStrength: d.ExceptionalStrength, Alignments: append([]string{}, d.Alignments...),
-		SkillsClass: d.SkillsClass, SpellbookClass: d.SpellbookClass, PsionicsClass: d.PsionicsClass, ComputedPSPMax: d.ComputedPSPMax,
+		SpellbookClass: d.SpellbookClass, PsionicsClass: d.PsionicsClass, ComputedPSPMax: d.ComputedPSPMax,
+	}
+	for _, set := range d.SkillSets {
+		out.SkillSets = append(out.SkillSets, DraftSkillSetDTO{
+			Set: set.Set, Name: set.Name, Skills: append([]string{}, set.Skills...), Budget: wire.SkillPointsBudgetToDTO(set.Budget),
+		})
 	}
 	if c := d.Character; c != nil {
 		derived := derivedDTO(c.Derived)

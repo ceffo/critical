@@ -297,12 +297,12 @@ func TestDraft_Step10_SkillPointsBelowTheFromLevelAreRefused(t *testing.T) {
 			got, err := svc.Draft(context.Background(), charactersvc.NewCharacter{
 				Details: identity(), Name: "Vex", Class: "test_latescout", Race: "human",
 				Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 10, XP: tc.xp,
-				SkillPoints: map[string]int{"open_locks": 10},
+				SkillPoints: domainskills.SetPoints{"thief": {"open_locks": 10}},
 			}, nil)
 			require.NoError(t, err)
 			var budget *domain.BudgetError
 			for _, r := range got.Refusals {
-				if be, ok := errors.AsType[*domain.BudgetError](r); ok && be.Field == "skillPoints" {
+				if be, ok := errors.AsType[*domain.BudgetError](r); ok && be.Field == "skillPoints.thief" {
 					budget = be
 				}
 			}

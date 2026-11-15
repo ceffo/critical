@@ -11,6 +11,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
+	"github.com/ceffo/critical/api/internal/domain/skills"
 )
 
 // The refusal rules run on the fixture's class and race definitions alone: no service, no store,
@@ -288,30 +289,36 @@ func TestValidExceptional_Step9(t *testing.T) {
 	}
 }
 
-// ADR 0030 steps 1, 17 and 18: a class with skill sets enters its points in its first set, each
-// from 0 to the cap; any other class enters none.
+// ADR 0030 steps 1, 17 and 18, ADR 0040 step 3.5: the points are entered per skill set, each set
+// one an active class lists and each from 0 to the cap; any other class enters none. A refusal
+// names its set.
 func TestValidSkills_Steps17And18(t *testing.T) {
 	defs := cataloguetest.Definitions(t)
 	thief, _ := defs.Class("thief")
+	bard, _ := defs.Class("bard")
 	fighter, _ := defs.Class("fighter")
 	for _, tc := range []struct {
 		name   string
-		def    classes.Class
-		points map[string]int
+		active []classes.Class
+		points skills.SetPoints
 		want   string
 	}{
-		{"none entered by a thief", thief, nil, ""},
-		{"points in a listed skill", thief, map[string]int{"pick_pockets": 20}, ""},
-		{"a skill the set does not list", thief, map[string]int{"nope": 5}, "skillPoints.nope: " + CodeUnknown},
-		{"over the cap", thief, map[string]int{"pick_pockets": MaxSkillPoints + 1}, "skillPoints.pick_pockets: " + CodeOutOfRange},
-		{"negative", thief, map[string]int{"pick_pockets": -1}, "skillPoints.pick_pockets: " + CodeOutOfRange},
-		{"none entered by a fighter", fighter, nil, ""},
-		{"points for a class without skills", fighter, map[string]int{"pick_pockets": 5}, "skillPoints: " + CodeNotAllowed},
+		{"none entered by a thief", []classes.Class{thief}, nil, ""},
+		{"points in a listed skill", []classes.Class{thief}, skills.SetPoints{"thief": {"pick_pockets": 20}}, ""},
+		{"a skill the set does not list", []classes.Class{thief}, skills.SetPoints{"thief": {"nope": 5}}, "skillPoints.thief.nope: " + CodeUnknown},
+		{"over the cap", []classes.Class{thief}, skills.SetPoints{"thief": {"pick_pockets": MaxSkillPoints + 1}}, "skillPoints.thief.pick_pockets: " + CodeOutOfRange},
+		{"negative", []classes.Class{thief}, skills.SetPoints{"thief": {"pick_pockets": -1}}, "skillPoints.thief.pick_pockets: " + CodeOutOfRange},
+		{"none entered by a fighter", []classes.Class{fighter}, nil, ""},
+		{"points for a class without skills", []classes.Class{fighter}, skills.SetPoints{"thief": {"pick_pockets": 5}}, "skillPoints.thief: " + CodeNotAllowed},
+		{"a set the classes do not list", []classes.Class{thief}, skills.SetPoints{"bard": {"climb_walls": 5}}, "skillPoints.bard: " + CodeNotAllowed},
+		{"two sets, each entered", []classes.Class{thief, bard}, skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}}, ""},
+		{"the second set's refusal names the second set", []classes.Class{thief, bard}, skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": MaxSkillPoints + 1}}, "skillPoints.bard.pick_pockets: " + CodeOutOfRange},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := validSkills(NewCharacter{SkillPoints: tc.points}, tc.def)
+			got, err := validSkills(NewCharacter{SkillPoints: tc.points}, entrySets(tc.active))
 			if tc.want == "" {
 				assert.NoError(t, err)
+				assert.Equal(t, len(tc.points), len(got), "every entered set is kept")
 				return
 			}
 			assert.Equal(t, []string{tc.want}, codes(t, []error{err}))

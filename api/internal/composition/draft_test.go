@@ -31,7 +31,7 @@ func firstBudget(derived map[string]any) any {
 // too.
 type draftView struct {
 	Derived       map[string]any   `json:"derived"`
-	SkillPoints   map[string]any   `json:"skillPoints"`
+	SkillSets     []draftSet       `json:"skillSets"`
 	Warnings      []map[string]any `json:"warnings"`
 	Languages     []string         `json:"languages"`
 	Missing       []string         `json:"missing"`
@@ -40,6 +40,22 @@ type draftView struct {
 		Class     string   `json:"class"`
 		Abilities []string `json:"abilities"`
 	} `json:"unmetMinimums"`
+}
+
+// draftSet is one skill set of a draft's answer: its code, its skills and its budget (null before
+// its from_level).
+type draftSet struct {
+	Set    string         `json:"set"`
+	Skills []string       `json:"skills"`
+	Budget map[string]any `json:"budget"`
+}
+
+// budget is the budget of the draft's first skill set, nil without one.
+func (d draftView) budget() map[string]any {
+	if len(d.SkillSets) == 0 {
+		return nil
+	}
+	return d.SkillSets[0].Budget
 }
 
 // refusalView is one of a draft's refusals.
@@ -81,12 +97,12 @@ func TestDraft_IsWhatTheCreatedCharacterReads(t *testing.T) {
 		// Five additional languages at Intelligence 14 (limit 4), a height
 		// outside the half-elf male range; the bard spends its 50 points at level 3.
 		"bard": bardStart +
-			`,"skillPoints":{"climb_walls":30,"detect_noise":20},"details":{"alignment":"neutral_good","sex":"male",` +
+			`,"skillPoints":{"bard":{"climb_walls":30,"detect_noise":20}},"details":{"alignment":"neutral_good","sex":"male",` +
 			`"languages":["elvish","gnomish","halfling","goblin","orcish"],"height_cm":250,"weight_kg":70,"age":20}}`,
 		"fighter": `{"name":"Brom","class":"fighter","raceCode":"human","str":18,"strExceptional":76,"dex":12,"con":16,"int":9,"wis":10,"cha":8,` +
 			`"hpMax":28,"xp":9000,"details":{"alignment":"lawful_good","sex":"male","age":200}}`,
 		"thief": `{"name":"Nib","class":"thief","raceCode":"halfling","str":9,"dex":17,"con":12,"int":11,"wis":10,"cha":12,"hpMax":4,"xp":0,` +
-			`"skillPoints":{"pick_pockets":30,"open_locks":30},"details":{"alignment":"chaotic_neutral","sex":"female"}}`,
+			`"skillPoints":{"thief":{"pick_pockets":30,"open_locks":30}},"details":{"alignment":"chaotic_neutral","sex":"female"}}`,
 		"mage": `{"name":"Ivo","class":"mage","raceCode":"elf","str":8,"dex":14,"con":10,"int":17,"wis":12,"cha":11,"hpMax":3,"xp":2600,` +
 			`"details":{"alignment":"true_neutral","sex":"male"}}`,
 		"cleric": `{"name":"Sol","class":"cleric","raceCode":"dwarf","str":12,"dex":9,"con":15,"int":10,"wis":16,"cha":10,"hpMax":20,"xp":13000,` +
@@ -110,9 +126,9 @@ func TestDraft_IsWhatTheCreatedCharacterReads(t *testing.T) {
 			require.Equal(t, http.StatusOK, tb.showing(bob, *list.CurrentID, "GET", "/api/character", "", &read))
 			assert.Equal(t, read.Derived, d.Derived)
 			if firstBudget(read.Derived) == nil {
-				assert.Nil(t, d.SkillPoints, "no budget for a class without skill points")
+				assert.Empty(t, d.SkillSets, "no skill set for a class without skill points")
 			} else {
-				assert.Equal(t, firstBudget(read.Derived), d.SkillPoints, "the draft's budget is the read's first skill set's")
+				assert.Equal(t, firstBudget(read.Derived), d.budget(), "the draft's budget is the read's first skill set's")
 			}
 			assert.Equal(t, read.Warnings, d.Warnings)
 			assert.Equal(t, read.Languages, d.Languages)
@@ -191,11 +207,11 @@ func TestDraft_PartialDraftsAnswer200(t *testing.T) {
 		assert.Empty(t, d.Warnings, body)
 		switch body {
 		case `{"class":"thief","xp":0}`:
-			assert.InDelta(t, 60.0, d.SkillPoints["available"], 0, "the budget reads the class and XP only")
+			assert.InDelta(t, 60.0, d.budget()["available"], 0, "the budget reads the class and XP only")
 		case `{"class":"bard","str":10,"dex":11,"con":12,"int":13,"wis":9,"cha":15,"xp":0}`:
-			assert.InDelta(t, 20.0, d.SkillPoints["available"], 0, "the budget reads the class and XP only")
+			assert.InDelta(t, 20.0, d.budget()["available"], 0, "the budget reads the class and XP only")
 		default:
-			assert.Nil(t, d.SkillPoints, body)
+			assert.Empty(t, d.SkillSets, body)
 		}
 	}
 }
@@ -250,14 +266,14 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 		want       budget
 		refusals   []refusalView
 	}{
-		{"thief level 1", thief + `"xp":0,"skillPoints":{"pick_pockets":20,"open_locks":15}}`, budget{1, 60, 35, 25, 30}, nil},
+		{"thief level 1", thief + `"xp":0,"skillPoints":{"thief":{"pick_pockets":20,"open_locks":15}}}`, budget{1, 60, 35, 25, 30}, nil},
 		{"thief level 2", thief + `"xp":1250}`, budget{2, 90, 0, 90, 45}, nil},
 		{
-			"thief level 3 over budget", thief + `"xp":2500,"skillPoints":{"pick_pockets":60,"open_locks":60,"climb_walls":10}}`,
+			"thief level 3 over budget", thief + `"xp":2500,"skillPoints":{"thief":{"pick_pockets":60,"open_locks":60,"climb_walls":10}}}`,
 			budget{3, 120, 130, -10, 60},
-			[]refusalView{{Field: "skillPoints", Code: "over_budget", Spent: new(130), Limit: new(120)}},
+			[]refusalView{{Field: "skillPoints.thief", Code: "over_budget", Spent: new(130), Limit: new(120)}},
 		},
-		{"bard level 1", bard + `"xp":0,"skillPoints":{"climb_walls":5}}`, budget{1, 20, 5, 15, 0}, nil},
+		{"bard level 1", bard + `"xp":0,"skillPoints":{"bard":{"climb_walls":5}}}`, budget{1, 20, 5, 15, 0}, nil},
 		{"bard level 2", bard + `"xp":1250}`, budget{2, 35, 0, 35, 0}, nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -268,7 +284,7 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 			var got budget
 			require.NoError(t, json.Unmarshal(raw, &got))
 			assert.Equal(t, tc.want, got)
-			assert.Equal(t, firstBudget(d.Derived), d.SkillPoints, "the draft's budget is the derived first skill set's")
+			assert.Equal(t, firstBudget(d.Derived), d.budget(), "the draft's budget is the derived first skill set's")
 			if tc.refusals == nil {
 				tc.refusals = []refusalView{}
 			}
@@ -278,7 +294,7 @@ func TestDraft_Steps17And18_TheBudgetAndWhatIsLeft(t *testing.T) {
 	d := tb.draft(t, bob, `{"class":"fighter","raceCode":"human","str":12,"dex":12,"con":12,"int":9,"wis":10,"cha":8,"xp":0}`)
 	require.NotNil(t, d.Derived)
 	assert.Nil(t, d.Derived["skillPoints"], "a fighter has no skill points")
-	assert.Nil(t, d.SkillPoints, "a fighter has no skill points")
+	assert.Empty(t, d.SkillSets, "a fighter has no skill points")
 }
 
 // ADR 0030 steps 17 and 18: the budget reads the class and the level the XP gives, nothing else,
@@ -297,28 +313,28 @@ func TestDraft_Steps17And18_TheBudgetNeedsTheClassAndXPOnly(t *testing.T) {
 		refusals         []refusalView
 	}{
 		{"a Strength of 2", thief(`"str":2,"dex":17`, ""), 90, 0, []refusalView{{Field: "str", Code: "out_of_range"}}},
-		{"a Dexterity of 20", thief(`"str":9,"dex":20`, `,"skillPoints":{"open_locks":20}`), 90, 20, []refusalView{{Field: "dex", Code: "out_of_range"}}},
+		{"a Dexterity of 20", thief(`"str":9,"dex":20`, `,"skillPoints":{"thief":{"open_locks":20}}`), 90, 20, []refusalView{{Field: "dex", Code: "out_of_range"}}},
 		{"no race yet", strings.Replace(thief(`"str":9,"dex":17`, ""), `"raceCode":"human",`, "", 1), 90, 0, []refusalView{}},
 		{
-			"a bad score and over the budget", thief(`"str":2,"dex":17`, `,"skillPoints":{"open_locks":45,"pick_pockets":45,"climb_walls":10}`), 90, 100,
-			[]refusalView{{Field: "str", Code: "out_of_range"}, {Field: "skillPoints", Code: "over_budget", Spent: new(100), Limit: new(90)}},
+			"a bad score and over the budget", thief(`"str":2,"dex":17`, `,"skillPoints":{"thief":{"open_locks":45,"pick_pockets":45,"climb_walls":10}}`), 90, 100,
+			[]refusalView{{Field: "str", Code: "out_of_range"}, {Field: "skillPoints.thief", Code: "over_budget", Spent: new(100), Limit: new(90)}},
 		},
-		{"refused skill points", thief(`"str":9,"dex":17`, `,"skillPoints":{"fly":5}`), 90, 0, []refusalView{{Field: "skillPoints.fly", Code: "unknown"}}},
+		{"refused skill points", thief(`"str":9,"dex":17`, `,"skillPoints":{"thief":{"fly":5}}`), 90, 0, []refusalView{{Field: "skillPoints.thief.fly", Code: "unknown"}}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := tb.draft(t, bob, tc.body)
 			assert.Nil(t, d.Derived, "the derived block needs every entry it reads")
-			require.NotNil(t, d.SkillPoints)
-			assert.InDelta(t, 2.0, d.SkillPoints["level"], 0, "1,250 XP is a level 2 thief")
-			assert.InDelta(t, tc.available, d.SkillPoints["available"], 0)
-			assert.InDelta(t, tc.spent, d.SkillPoints["spent"], 0)
+			require.NotNil(t, d.budget())
+			assert.InDelta(t, 2.0, d.budget()["level"], 0, "1,250 XP is a level 2 thief")
+			assert.InDelta(t, tc.available, d.budget()["available"], 0)
+			assert.InDelta(t, tc.spent, d.budget()["spent"], 0)
 			assert.Equal(t, tc.refusals, d.Refusals)
 		})
 	}
 	bard := tb.draft(t, bob, `{"class":"bard","str":2,"xp":0}`)
-	assert.InDelta(t, 20.0, bard.SkillPoints["available"], 0, "a bard's 20 points at level 1")
-	assert.Nil(t, tb.draft(t, bob, `{"class":"fighter","str":2,"xp":0}`).SkillPoints, "a fighter has none")
-	assert.Nil(t, tb.draft(t, bob, `{"class":"thief","str":2}`).SkillPoints, "no XP, no level")
+	assert.InDelta(t, 20.0, bard.budget()["available"], 0, "a bard's 20 points at level 1")
+	assert.Empty(t, tb.draft(t, bob, `{"class":"fighter","str":2,"xp":0}`).SkillSets, "a fighter has none")
+	assert.Nil(t, tb.draft(t, bob, `{"class":"thief","str":2}`).budget(), "no XP, no level")
 }
 
 // A body with several faults: the draft lists every one (a blank alignment as missing, the
@@ -392,9 +408,9 @@ func TestDraft_RefusesAsTheCreationRefuses(t *testing.T) {
 		{"a score over 19", bard(`"cha":16`, `"cha":20`), "cha", "out_of_range"},
 		{"an 18/xx for a bard", bard(`"str":10`, `"str":18,"strExceptional":50`), "strExceptional", "not_allowed"},
 		{"an 18/xx over 100", fighter + `"strExceptional":101}`, "strExceptional", "out_of_range"},
-		{"skill points for a fighter", fighter + `"skillPoints":{"climb_walls":5}}`, "skillPoints", "not_allowed"},
-		{"a skill the class has not", thief + `"skillPoints":{"fly":5}}`, "skillPoints.fly", "unknown"},
-		{"skill points over the most one skill holds", thief + `"skillPoints":{"open_locks":200}}`, "skillPoints.open_locks", "out_of_range"},
+		{"skill points for a fighter", fighter + `"skillPoints":{"thief":{"climb_walls":5}}}`, "skillPoints.thief", "not_allowed"},
+		{"a skill the class has not", thief + `"skillPoints":{"thief":{"fly":5}}}`, "skillPoints.thief.fly", "unknown"},
+		{"skill points over the most one skill holds", thief + `"skillPoints":{"thief":{"open_locks":200}}}`, "skillPoints.thief.open_locks", "out_of_range"},
 		{"max HP 0", bard(`"hpMax":6`, `"hpMax":0`), "hpMax", "out_of_range"},
 		{"a negative XP", bard(`"xp":2500`, `"xp":-1`), "xp", "out_of_range"},
 		{"an alignment that is no code", bardWith(`{"alignment":"good","sex":"male"}`), "details.alignment", "unknown"},
@@ -411,8 +427,8 @@ func TestDraft_RefusesAsTheCreationRefuses(t *testing.T) {
 		{"a proficiency twice", picks(`{"nonweapon":[{"id":"tumbling","slots":1},{"id":"tumbling","slots":1}]}`), "nonweapon.tumbling", "duplicate"},
 		{"a weapon at 5 slots", picks(`{"weapon":[{"code":"dagger","slots":5}]}`), "weapon.dagger", "out_of_range"},
 		{"a weapon the class may not pick", mage + `"proficiencies":{"weapon":[{"code":"long_sword","slots":1}]}}`, "weapon.long_sword", "weapon_not_allowed"},
-		{"skill points over the budget", bard(`"xp":2500`, `"xp":2500,"skillPoints":{"climb_walls":30,"detect_noise":21}`), "skillPoints", "over_budget"},
-		{"one skill over its cap", thief + `"skillPoints":{"open_locks":31}}`, "skillPoints.open_locks", "over_budget"},
+		{"skill points over the budget", bard(`"xp":2500`, `"xp":2500,"skillPoints":{"bard":{"climb_walls":30,"detect_noise":21}}`), "skillPoints.bard", "over_budget"},
+		{"one skill over its cap", thief + `"skillPoints":{"thief":{"open_locks":31}}}`, "skillPoints.thief.open_locks", "over_budget"},
 		{"non-weapon picks over the slots", picks(`{"nonweapon":[{"id":"tumbling","slots":6},{"id":"tracking","slots":2}]}`), "nonweapon", "over_budget"},
 		{"weapon picks over the slots", picks(`{"weapon":[{"code":"dagger","slots":1},{"code":"long_sword","slots":1},{"code":"short_bow","slots":1}]}`), "weapon", "over_budget"},
 		{"languages over the slots", strings.Replace(

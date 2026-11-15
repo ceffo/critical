@@ -198,8 +198,16 @@ writes `Test<name>` and adds the prefix here in the same PR.
       step copies the flat `skill_points` under the class's first set); a `skill_points`
       snapshot without a `set`, from before, restores the character's only set. What is left to
       spend (ADR 0037 step 15) adds the sets' left points, a set over budget leaving 0. A new
-      character enters its points in the class's first set; a creation that enters points in a
-      second set belongs to the multi-class item (ADR 0042).
+      character enters its points per set (changed 2026-11-15, was the class's first set only):
+      `POST /api/characters` takes `skillPoints` as `{"<set>": {"<skill>": points}}`, the shape
+      `characters.skill_sets` stores, one entry per set the active classes list; each set is
+      checked against its own skills (step 3.5) and its own budget at the level of the entry that
+      grants it (ADR 0037 step 10), and a set no active class lists is refused. A refusal names
+      its set: `skillPoints.<set>` (total, over budget, not allowed) or
+      `skillPoints.<set>.<skill>` (unknown, out of range, one skill over its cap). The draft
+      answers `skillSets: [{set, name, skills, budget}]` in the entries' order, the budget in the
+      derived set's shape (null before the set's `from_level`), instead of one `skillPoints`
+      budget and the `skillsClass` that picked its skills (both gone); the form renders one block per set.
 
    Tests: `TestFeatures_Step3_EveryKindParsesItsParams` (domain: each kind with its params, an unknown
    param or a missing one refused), `TestFeatures_Step3_TheFiveClassesGrantTodaysMechanics` (seedcheck:

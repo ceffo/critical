@@ -135,9 +135,26 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
   });
 });
 
-// The draft answer that names the thief as the class carrying the skill points.
-const THIEF = { skillsClass: "thief" } as CreationDraft;
-const BARD = { skillsClass: "bard" } as CreationDraft;
+// The draft answers that list the skill sets the points go to (ADR 0040 step 3.5).
+const set = (code: string, skills: string[]) => ({
+  set: code,
+  name: { en: code },
+  skills,
+  budget: null,
+});
+const THIEF = {
+  skillSets: [set("thief", ["open_locks", "pick_pockets"])],
+} as unknown as CreationDraft;
+const BARD = {
+  skillSets: [set("bard", ["climb_walls"])],
+} as unknown as CreationDraft;
+// A character of two skill sets: each is entered under its own code, a shared skill included.
+const BOTH = {
+  skillSets: [
+    set("thief", ["open_locks", "pick_pockets"]),
+    set("bard", ["pick_pockets", "climb_walls"]),
+  ],
+} as unknown as CreationDraft;
 
 describe("buildBody", () => {
   const options = {
@@ -157,7 +174,7 @@ describe("buildBody", () => {
     scores: { str: "10", dex: "15", con: "12", int: "14", wis: "9", cha: "16" },
     hpMax: "6",
     name: "Lyra",
-    skillPoints: { climb_walls: "15" },
+    skillPoints: { bard: { climb_walls: "15" } },
     details: {
       ...EMPTY_DRAFT.details,
       sex: "female",
@@ -264,7 +281,7 @@ describe("buildBody", () => {
       raceCode: "half_elf",
       xp: 2500,
       hpMax: 6,
-      skillPoints: { climb_walls: 15 },
+      skillPoints: { bard: { climb_walls: 15 } },
     });
     // ADR 0033 step 14: the skills read the worn armour; the body enters none.
     expect(out.body).not.toHaveProperty("skillArmor");
@@ -296,7 +313,7 @@ describe("buildBody", () => {
       {
         ...draft,
         scores: { ...draft.scores, str: "x" },
-        skillPoints: { climb_walls: "lots" },
+        skillPoints: { bard: { climb_walls: "lots" } },
       },
       "2500",
       "en",
@@ -339,7 +356,7 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       ...EMPTY_DRAFT,
       cls: "thief",
       scores: { ...EMPTY_DRAFT.scores, dex: "8", con: "" },
-      skillPoints: { open_locks: "25", pick_pockets: "" },
+      skillPoints: { thief: { open_locks: "25", pick_pockets: "" } },
       race: "elf",
       details: { ...EMPTY_DRAFT.details, languages: ["elvish", "orcish"] },
     };
@@ -360,10 +377,55 @@ describe("buildBody on a raw draft (what the class and extras steps ask the serv
       con: null,
       hpMax: null,
       xp: 1250,
-      skillPoints: { open_locks: 25 },
+      skillPoints: { thief: { open_locks: 25 } },
     });
     // ADR 0037 step 6: the server counts the languages into the non-weapon pool.
     expect(body.details?.languages).toEqual(["elvish", "orcish"]);
+  });
+
+  it("sends each skill set's points under its own code, the shared skill apart", () => {
+    const draft: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "thief",
+      skillPoints: {
+        thief: { pick_pockets: "20", open_locks: "" },
+        bard: { pick_pockets: "5", climb_walls: "10" },
+      },
+    };
+    const { body, error } = buildBody(
+      options,
+      draft,
+      "1250",
+      "fr",
+      false,
+      BOTH,
+    );
+    expect(error).toBeNull();
+    expect(body.skillPoints).toEqual({
+      thief: { pick_pockets: 20 },
+      bard: { pick_pockets: 5, climb_walls: 10 },
+    });
+  });
+
+  it("names the set in an unreadable value's field and leaves a set with no points out", () => {
+    const draft: FlowDraft = {
+      ...EMPTY_DRAFT,
+      cls: "thief",
+      skillPoints: { thief: { open_locks: "" }, bard: { climb_walls: "lots" } },
+    };
+    const { body, error } = buildBody(
+      options,
+      draft,
+      "1250",
+      "fr",
+      false,
+      BOTH,
+    );
+    expect(error).toEqual({
+      field: "skillPoints.bard.climb_walls",
+      code: "out_of_range",
+    });
+    expect(body.skillPoints).toEqual({});
   });
 
   it("sends no XP while it does not read", () => {
@@ -431,7 +493,8 @@ describe("stepOfField", () => {
     expect(stepOfField("cha")).toBe("scores");
     expect(stepOfField("hpMax")).toBe("extras");
     expect(stepOfField("strExceptional")).toBe("extras");
-    expect(stepOfField("skillPoints.climb_walls")).toBe("extras");
+    expect(stepOfField("skillPoints.bard.climb_walls")).toBe("extras");
+    expect(stepOfField("skillPoints.bard")).toBe("extras");
     expect(stepOfField("nonweapon")).toBe("proficiencies");
     expect(stepOfField("nonweapon.tumbling")).toBe("proficiencies");
     expect(stepOfField("weapon.dagger")).toBe("proficiencies");

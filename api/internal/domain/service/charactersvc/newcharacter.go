@@ -122,11 +122,12 @@ type NewCharacter struct {
 	// MaxPSPMax). Only a character with a psionics entry has one.
 	PSPMax *int
 	XP     int
-	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18): the points
-	// by skill code (0 to MaxSkillPoints each, absent is 0). Empty for the
-	// other classes. The armour the skills read is the worn one (ADR 0033
-	// step 14): nothing is worn at creation.
-	SkillPoints map[string]int
+	// SkillPoints are a thief's or a bard's (steps 1, 17 and 18), per skill set (ADR 0040 step
+	// 3.5, the shape the stored character uses): by set code, the points by skill code (0 to
+	// MaxSkillPoints each, absent is 0), each set against its own budget. Empty for the other
+	// classes. The armour the skills read is the worn one (ADR 0033 step 14): nothing is worn at
+	// creation.
+	SkillPoints skills.SetPoints
 	// Proficiencies are the picks (ADR 0037 step 14), checked as the
 	// editor checks them with nothing spent before.
 	Proficiencies skills.Picks

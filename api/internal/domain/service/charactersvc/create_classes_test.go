@@ -151,8 +151,8 @@ func TestCreate_Step4_EntersLevelAndXPPerEntry(t *testing.T) {
 }
 
 // The draft says what the form must offer, so the client computes no rule: the alignments every
-// ACTIVE class admits (a class left does not limit), and the active class that carries the skill
-// points and the one that carries the starting spellbook.
+// ACTIVE class admits (a class left does not limit), and the skill sets of the active classes and
+// the class that carries the starting spellbook.
 func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
 	e := classesEnv(t, ruleset.RacialLift{MulticlassAnyRace: true, DualclassAnyRace: true})
 	draft := func(es ...charactersvc.NewClass) *charactersvc.Draft {
@@ -167,18 +167,19 @@ func TestDraft_NamesTheAlignmentsAndTheCarriers(t *testing.T) {
 	// A thief admits eight alignments (no lawful good); left for the mage, it limits nothing.
 	d := draft(charactersvc.NewClass{Class: "thief", LeftAtLevel: 9}, charactersvc.NewClass{Class: "mage"})
 	assert.Equal(t, nine, d.Alignments, "the class left does not limit")
-	assert.Equal(t, "", d.SkillsClass, "a frozen thief carries no skill points")
+	assert.Empty(t, d.SkillSets, "a frozen thief carries no skill points")
 	assert.Equal(t, "mage", d.SpellbookClass)
 
 	// Active together, the thief limits the fighter's nine.
 	d = draft(charactersvc.NewClass{Class: "fighter", XP: 9_000}, charactersvc.NewClass{Class: "thief", XP: 9_000})
 	assert.Equal(t, noLawfulGood, d.Alignments)
-	assert.Equal(t, "thief", d.SkillsClass)
+	require.Len(t, d.SkillSets, 1)
+	assert.Equal(t, "thief", d.SkillSets[0].Set)
 	assert.Equal(t, "", d.SpellbookClass)
 
 	d = draft(charactersvc.NewClass{Class: "fighter", XP: 9_000}, charactersvc.NewClass{Class: "mage", XP: 9_000})
 	assert.Equal(t, nine, d.Alignments)
-	assert.Equal(t, "", d.SkillsClass)
+	assert.Empty(t, d.SkillSets)
 	assert.Equal(t, "mage", d.SpellbookClass)
 }
 

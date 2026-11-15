@@ -102,7 +102,7 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
   // read the one worn, ADR 0033 step 14).
   const review = step.getByTestId("review");
   await expect(review.getByTestId("review-skill-armor")).toHaveCount(0);
-  await expect(review.getByTestId("review-skill-climb_walls")).toHaveText(
+  await expect(review.getByTestId("review-skill-bard-climb_walls")).toHaveText(
     /\d+ % \(15 points\)/,
   );
   await snap(page, "creation-review-skills-fr");

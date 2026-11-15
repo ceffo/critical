@@ -65,7 +65,7 @@ func TestThief_Steps17_19_CreateRollASkillAndBackstab(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: skills.SetPoints{"thief": {"open_locks": 30, "pick_pockets": 30}},
 		// Proficient with the dagger, so no non-proficiency penalty (ADR 0037 steps 8 and 21.3).
 		Proficiencies: skills.Picks{Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 1}}},
 	})
@@ -129,7 +129,7 @@ func TestThief_Step17_SpendPointsAfterALevelUpAndUndo(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: skills.SetPoints{"thief": {"open_locks": 30, "pick_pockets": 30}},
 	})
 	require.NoError(t, err)
 	openLocks := func() int {
@@ -192,7 +192,7 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 		id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 			Details: identity(),
 			Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-			SkillPoints: points,
+			SkillPoints: skills.SetPoints{"thief": points},
 		})
 		require.NoError(t, err)
 		return id
@@ -228,7 +228,7 @@ func TestThief_Step17_TermsBudgetAdjustmentAndZeroPercent(t *testing.T) {
 	_, err = bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 12, Dex: 18, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints: overspent,
+		SkillPoints: skills.SetPoints{"thief": overspent},
 	})
 	require.ErrorIs(t, err, domain.ErrOverBudget, "never created over the budget")
 
@@ -378,7 +378,7 @@ func TestThief_Step14_TheSkillsFollowTheWornArmour(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints: map[string]int{"open_locks": 30, "pick_pockets": 30},
+		SkillPoints: skills.SetPoints{"thief": {"open_locks": 30, "pick_pockets": 30}},
 	})
 	require.NoError(t, err)
 	skill := func(skill string) (percent, term int) {
@@ -469,7 +469,7 @@ func TestBard_Step14_MetalArmourReadsTheBardsColumn(t *testing.T) {
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Lyra", Class: "bard", Race: "human", Str: 10, Dex: 15, Con: 12, Int: 14, Wis: 9, Cha: 16, HPMax: 6,
-		SkillPoints: map[string]int{"climb_walls": 15},
+		SkillPoints: skills.SetPoints{"bard": {"climb_walls": 15}},
 	})
 	require.NoError(t, err)
 	res, err := bs.Items.Create(ctx, id, itemsvc.ItemInput{
@@ -505,7 +505,7 @@ func TestThief_Step17_PreviewEqualsTheStoredPointsAndWritesNothing(t *testing.T)
 	id, err := bs.Character.Create(ctx, s.User.ID, charactersvc.NewCharacter{
 		Details: identity(),
 		Name:    "Vex", Class: "thief", Race: "halfling", Str: 16, Dex: 17, Con: 12, Int: 11, Wis: 9, Cha: 10, HPMax: 5,
-		SkillPoints: map[string]int{"open_locks": 30},
+		SkillPoints: skills.SetPoints{"thief": {"open_locks": 30}},
 	})
 	require.NoError(t, err)
 	before, err := bs.Skills.List(ctx, id)

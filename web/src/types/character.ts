@@ -752,6 +752,16 @@ export interface DraftRefusal {
   count?: number;
 }
 
+/** One skill set of a creation draft: `set` is the code the points are entered under (the key of
+ * `NewCharacter.skillPoints`), `name` its heading, `skills` the skills it enters points in and
+ * `budget` its own budget at the starting level (null before the level its points start). */
+export interface DraftSkillSet {
+  set: string;
+  name: LocalizedText;
+  skills: string[];
+  budget: SkillBudget | null;
+}
+
 /**
  * `POST /api/characters/draft` (ADR 0034, amendment of 2026-10-20): the sheet the draft would read
  * as once created, in `GET /api/character`'s shapes (`derived` null and the lists empty while the
@@ -761,10 +771,11 @@ export interface DraftRefusal {
  */
 export interface CreationDraft {
   derived: Derived | null;
-  /** A thief's or a bard's skill point budget at the starting level, as soon as the class and XP
-   * read (a score out of range does not hide it); null otherwise. The derived block's when there
-   * is one. */
-  skillPoints: SkillBudget | null;
+  /** The skill sets the active classes list (ADR 0040 step 3.5), in the entries' order, each with
+   * its own skills and its budget at the starting level, as soon as the class and XP read (a score
+   * out of range does not hide them); empty for a class without skill points. A set's budget is
+   * the derived set's when there is one. */
+  skillSets: DraftSkillSet[];
   /** A mage's or a bard's starting spellbook at the starting level (ADR 0030 step 20.7); null for
    * another class or while `derived` is. A refused spell is a refusal on `spellbook.<id>`. Absent
    * from an older release. */
@@ -781,9 +792,8 @@ export interface CreationDraft {
   /** The alignments every active class admits (a class left does not limit them): the form lists
    * them and checks none itself. */
   alignments: string[];
-  /** The class that carries the skill points and the one that carries the starting spellbook ("" for
-   * none): the form reads them, it does not choose. */
-  skillsClass: string;
+  /** The class that carries the starting spellbook ("" for none): the form reads it, it does not
+   * choose. */
   spellbookClass: string;
   /** The class that lists psionics ("" for none, ADR 0043): the form asks its PSP maximum and known
    * powers. Absent from an older release. */
@@ -904,9 +914,11 @@ export type NewCharacter = {
   xp?: number | null;
   /** The 18/xx percentile (ADR 0030 step 9), 0 for none. */
   strExceptional: number;
-  /** A thief's or a bard's points by skill (ADR 0030 steps 1, 17 and 18); absent for the other
-   * classes. The skills' armour is the one worn (ADR 0033 step 14), never entered. */
-  skillPoints?: Record<string, number>;
+  /** A thief's or a bard's points by skill, per skill set (ADR 0030 steps 1, 17 and 18, ADR 0040
+   * step 3.5, the shape a stored character holds): the set code, then the skill code; absent for
+   * the other classes. A refusal's field is `skillPoints.<set>` or `skillPoints.<set>.<skill>`.
+   * The skills' armour is the one worn (ADR 0033 step 14), never entered. */
+  skillPoints?: Record<string, Record<string, number>>;
   /** The non-weapon picks (ADR 0037 step 14), checked as the editor's save checks them. */
   proficiencies?: PicksInput;
   /** The details, as the card shows them (age null for none); a refusal's field is `details.<field>`. */

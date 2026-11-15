@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -15,11 +16,12 @@ type Draft struct {
 	// languages are read as entered when the skills module refuses them, the native language
 	// added as a read adds it.
 	Character *Character
-	// SkillPoints is a thief's or a bard's skill point budget at the starting level, set as soon
-	// as the class and XP read, whatever the race and scores (ADR 0030 steps 17 and 18); nil for
-	// another class or while the class or XP is missing or refused. With a Character, it equals
-	// the derived block's.
-	SkillPoints *ruletablesvc.SkillPointsBudget
+	// SkillSets are the skill sets the active classes list (ADR 0040 step 3.5), in the entries'
+	// order, each with its own skills and its skill point budget at the starting level (ADR 0030
+	// steps 17 and 18), set as soon as the class and XP read, whatever the race and scores; none
+	// for a class without skill points. With a Character, a set's budget equals the derived
+	// block's.
+	SkillSets []DraftSkillSet
 	// Spellbook is a mage's or a bard's starting spellbook at the starting level (ADR 0030 step
 	// 20.7): its limits and the spells entered by spell level; nil for another class or while
 	// Character is nil. Its refusals are among Refusals, by spell.
@@ -40,9 +42,9 @@ type Draft struct {
 	// first class's order: every one of the nine before a class is entered. The class left by a
 	// dual-class character does not limit them.
 	Alignments []string
-	// SkillsClass is the active class that carries the skill points (the first listing rogue
-	// skills), SpellbookClass the one that carries the starting spellbook; "" for none.
-	SkillsClass, SpellbookClass string
+	// SpellbookClass is the active class that carries the starting spellbook (the first listing
+	// one); "" for none.
+	SpellbookClass string
 	// PsionicsClass is the active class that lists psionics (ADR 0043: its known powers and PSP
 	// maximum are entered at creation); "" for none.
 	PsionicsClass string
@@ -52,21 +54,29 @@ type Draft struct {
 	ComputedPSPMax *int
 }
 
+// DraftSkillSet is one skill set of a creation draft: the set a creation enters points in, the
+// skills of it and its budget at the starting level of the entry that grants it.
+type DraftSkillSet struct {
+	Set string
+	// Name is the set's heading (ADR 0040 step 15).
+	Name   localized.Text
+	Skills []string
+	// Budget is nil while the set is not granted yet at the starting level (its from_level).
+	Budget *ruletablesvc.SkillPointsBudget
+}
+
 // ClassUnmet is a class and the abilities under its minimum.
 type ClassUnmet struct {
 	Class     string
 	Abilities []string
 }
 
-// carriers are the classes that carry the character's skill points (ADR 0030 steps 17 and 18) and
-// its starting spellbook (step 20.7), and its psionics (ADR 0043 step 9: the known powers and the
-// PSP maximum): the first active class listing rogue skills, the first listing a spellbook, the
-// first listing psionics, "" for none. The form reads them here instead of choosing.
-func carriers(active []classes.Class) (skills, book, psi string) {
+// carriers are the classes that carry the character's starting spellbook (ADR 0030 step 20.7) and
+// its psionics (ADR 0043 step 9: the known powers and the PSP maximum): the first active class
+// listing a spellbook, the first listing psionics, "" for none. The form reads them here instead
+// of choosing. The skill points are per skill set (entrySets).
+func carriers(active []classes.Class) (book, psi string) {
 	for _, def := range active {
-		if _, ok := def.Lists(classes.KindRogueSkills); ok && skills == "" {
-			skills = def.ID
-		}
 		if _, ok := def.Lists(classes.KindSpellbook); ok && book == "" {
 			book = def.ID
 		}
@@ -74,37 +84,64 @@ func carriers(active []classes.Class) (skills, book, psi string) {
 			psi = def.ID
 		}
 	}
-	return skills, book, psi
+	return book, psi
 }
 
-// skillsLevel is the level the skill point budget reads before a character derives: the skills
+// entrySet is a skill set a creation can enter points in (ADR 0040 step 3.5): the active class
+// that lists it and its params.
+type entrySet struct {
+	def classes.Class
+	rs  classes.RogueSkills
+}
+
+// entrySets are the skill sets the active classes list at any level, in the entries' order (one
+// per rogue_skills feature); a set code listed twice keeps its first class.
+func entrySets(active []classes.Class) []entrySet {
+	var out []entrySet
+	for _, def := range active {
+		for _, f := range def.ListsAll(classes.KindRogueSkills) {
+			if !slices.ContainsFunc(out, func(o entrySet) bool { return o.rs.Set == f.RogueSkills.Set }) {
+				out = append(out, entrySet{def: def, rs: *f.RogueSkills})
+			}
+		}
+	}
+	return out
+}
+
+// skillsLevel is the level a class's skill points read before a character derives: the active
 // entry's entered level, else the level its XP reaches (ADR 0030 step 3, step 7.5).
-func (s *service) skillsLevel(k checked) (int, error) {
+func skillsLevel(k checked, def classes.Class) int {
 	for _, e := range k.ents {
-		if e.Class != k.def.ID || e.frozen() {
+		if e.Class != def.ID || e.frozen() {
 			continue
 		}
 		if e.Level > 0 {
-			return e.Level, nil
+			return e.Level
 		}
-		return k.def.LevelFor(e.XP), nil
+		return def.LevelFor(e.XP)
 	}
-	return 0, nil
+	return 0
 }
 
-// budgetAt is a draft's skill point budget (of the first skill set) at level (ADR 0030 steps 17 and 18), nil for a class
-// without skill points, and adds to out the creation's refusal of points over it (ADR 0037 step
-// 10: nothing was spent before).
-func budgetAt(out *Draft, def classes.Class, level int, all skills.SetPoints) *ruletablesvc.SkillPointsBudget {
-	set := skills.FirstSet(def)
-	points := all.Of(set)
-	if err := skills.SkillPointsWithinBudget(def, set, level, nil, points); err != nil {
-		out.Refusals = append(out.Refusals, err)
+// draftSets are the draft's skill sets with the budget of each at its class's level (levelOf)
+// on the entered points, and adds to out the creation's refusal of points over a set's budget
+// (ADR 0037 step 10: nothing was spent before), named by its set.
+func draftSets(out *Draft, sets []entrySet, levelOf func(classes.Class) int, all skills.SetPoints) []DraftSkillSet {
+	var res []DraftSkillSet
+	for _, s := range sets {
+		level, points := levelOf(s.def), all.Of(s.rs.Set)
+		if err := skills.SkillPointsWithinBudget(s.def, s.rs.Set, level, nil, points); err != nil {
+			out.Refusals = append(out.Refusals, inSet(err, s.rs.Set))
+		}
+		ds := DraftSkillSet{Set: s.rs.Set, Name: s.rs.Name, Skills: slices.Clone(ruletablesvc.SkillsOf(&s.rs))}
+		if rs := skills.RogueSkillsAtFor(s.def, s.rs.Set, level); rs != nil {
+			if b, ok := ruletablesvc.SkillPointsFigures(rs, level, points); ok {
+				ds.Budget = &b
+			}
+		}
+		res = append(res, ds)
 	}
-	if b, ok := ruletablesvc.SkillPointsFigures(skills.RogueSkillsAt(def, level), level, points); ok {
-		return &b
-	}
-	return nil
+	return res
 }
 
 // unmetMinimums are, for every creatable class, the abilities whose entered score is under the

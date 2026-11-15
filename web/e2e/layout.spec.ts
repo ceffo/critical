@@ -5587,7 +5587,7 @@ async function thiefStep(page: Page, size: Viewport) {
       cha: 10,
       hpMax: 5,
       xp: 0,
-      skillPoints: { find_remove_traps: 30, hide_in_shadows: 30 },
+      skillPoints: { thief: { find_remove_traps: 30, hide_in_shadows: 30 } },
     }),
   ).toBe(true);
   // A character is never created or saved over its budget (ADR 0037 step 10): only imported data

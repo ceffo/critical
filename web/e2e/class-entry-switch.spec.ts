@@ -8,6 +8,14 @@ import {
   undoEntry,
 } from "./helpers";
 
+// The picker's no-clip sizes include the laptop ones (unmet minimum and the elf race note).
+const PICKER_VIEWPORTS = [
+  { width: 1280, height: 800 },
+  { width: 1440, height: 900 },
+  { width: 1920, height: 1080 },
+  { width: 2560, height: 1440 },
+];
+
 const VIEWPORTS = [
   { width: 1920, height: 1080 },
   { width: 2560, height: 1440 },
@@ -51,7 +59,7 @@ test.describe("an elf mage becoming a transmuter", () => {
     await page.getByTestId("switch-class-open").click();
     const dialog = page.getByTestId("switch-class-dialog");
     await expect(dialog.getByTestId("school-card-transmuter")).toBeVisible();
-    for (const vp of VIEWPORTS) {
+    for (const vp of PICKER_VIEWPORTS) {
       await page.setViewportSize(vp);
       await expectNoClippedText(dialog, "the picker in French");
       await snap(page, `picker-fr-${vp.width}x${vp.height}`);
@@ -77,6 +85,12 @@ test.describe("an elf mage becoming a transmuter", () => {
     await chooseLanguage(page, "en");
 
     await card.getByTestId("class").click();
+    await expect(dialog.getByTestId("school-card-transmuter")).toBeVisible();
+    for (const vp of PICKER_VIEWPORTS) {
+      await page.setViewportSize(vp);
+      await expectNoClippedText(dialog, "the picker");
+    }
+    await page.setViewportSize({ width: 1440, height: 900 });
     await dialog.getByTestId("school-card-transmuter").click();
     await dialog.getByTestId("switch-class-next").click();
     await expect(dialog.getByTestId("switch-class-confirm")).toContainText(
@@ -110,5 +124,32 @@ test.describe("an elf mage becoming a transmuter", () => {
     await undoEntry(page, "Class changed");
     await expect(card.getByTestId("class")).toHaveText("Mage");
     await expect(logEntry(page, "Class changed")).toContainText("Undone");
+  });
+});
+
+// Who is offered the switch is the server's list (ADR 0050 step 15.8): a class with nothing to
+// become has a plain name and no "School" action.
+test.describe("a priest", () => {
+  test.use({
+    character: {
+      class: "cleric",
+      race: "human",
+      alignment: "neutral_good",
+      wis: 16,
+      level: 3,
+      xp_total: 4000,
+      skill_points: {},
+      proficiencies: [],
+      weapon_proficiencies: [],
+    },
+  });
+
+  test("has no school link and no School action", async ({ page }) => {
+    await openDashboard(page);
+    const card = page.getByRole("complementary", { name: "Character" });
+    await expect(card.getByTestId("class")).toHaveText("Cleric");
+    await expect(card.getByRole("button", { name: /Cleric/ })).toHaveCount(0);
+    await page.getByTestId("details-trigger").click();
+    await expect(page.getByTestId("switch-class-open")).toHaveCount(0);
   });
 });

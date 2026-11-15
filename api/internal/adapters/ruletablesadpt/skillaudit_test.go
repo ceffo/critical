@@ -22,8 +22,14 @@ var thiefBase = []struct {
 	skill string
 	base  int
 }{
-	{"pick_pockets", 15}, {"open_locks", 10}, {"find_remove_traps", 5}, {"move_silently", 10},
-	{"hide_in_shadows", 5}, {"detect_noise", 15}, {"climb_walls", 60}, {"read_languages", 0},
+	{"pick_pockets", 15},
+	{"open_locks", 10},
+	{"find_remove_traps", 5},
+	{"move_silently", 10},
+	{"hide_in_shadows", 5},
+	{"detect_noise", 15},
+	{"climb_walls", 60},
+	{"read_languages", 0},
 }
 
 // bardBase is PHB Table 33, in its order.
@@ -39,13 +45,19 @@ var bardBase = []struct {
 var bookRace = map[string]map[string]int{
 	"human": {},
 	"dwarf": {"open_locks": 10, "find_remove_traps": 15, "climb_walls": -10, "read_languages": -5},
-	"elf": {"pick_pockets": 5, "open_locks": -5, "move_silently": 5, "hide_in_shadows": 10,
-		"detect_noise": 5},
-	"gnome": {"open_locks": 5, "find_remove_traps": 10, "move_silently": 5, "hide_in_shadows": 5,
-		"detect_noise": 10, "climb_walls": -15},
+	"elf": {
+		"pick_pockets": 5, "open_locks": -5, "move_silently": 5, "hide_in_shadows": 10,
+		"detect_noise": 5,
+	},
+	"gnome": {
+		"open_locks": 5, "find_remove_traps": 10, "move_silently": 5, "hide_in_shadows": 5,
+		"detect_noise": 10, "climb_walls": -15,
+	},
 	"half_elf": {"pick_pockets": 10, "hide_in_shadows": 5},
-	"halfling": {"pick_pockets": 5, "open_locks": 5, "find_remove_traps": 5, "move_silently": 10,
-		"hide_in_shadows": 15, "detect_noise": 5, "climb_walls": -15, "read_languages": -5},
+	"halfling": {
+		"pick_pockets": 5, "open_locks": 5, "find_remove_traps": 5, "move_silently": 10,
+		"hide_in_shadows": 15, "detect_noise": 5, "climb_walls": -15, "read_languages": -5,
+	},
 }
 
 // bookDex is PHB Table 28 for every Dexterity from 9 to 25, a row per score
@@ -80,10 +92,14 @@ var dexColumns = []string{"pick_pockets", "open_locks", "find_remove_traps", "mo
 // skill.
 var (
 	table29None  = map[string]int{"pick_pockets": 5, "move_silently": 10, "hide_in_shadows": 5, "climb_walls": 10}
-	table29Elven = map[string]int{"pick_pockets": -20, "open_locks": -5, "find_remove_traps": -5, "move_silently": -10,
-		"hide_in_shadows": -10, "detect_noise": -5, "climb_walls": -20}
-	table29Padded = map[string]int{"pick_pockets": -30, "open_locks": -10, "find_remove_traps": -10, "move_silently": -20,
-		"hide_in_shadows": -20, "detect_noise": -10, "climb_walls": -30}
+	table29Elven = map[string]int{
+		"pick_pockets": -20, "open_locks": -5, "find_remove_traps": -5, "move_silently": -10,
+		"hide_in_shadows": -10, "detect_noise": -5, "climb_walls": -20,
+	}
+	table29Padded = map[string]int{
+		"pick_pockets": -30, "open_locks": -10, "find_remove_traps": -10, "move_silently": -20,
+		"hide_in_shadows": -20, "detect_noise": -10, "climb_walls": -30,
+	}
 	table29Leather = map[string]int{}
 )
 
@@ -127,7 +143,8 @@ func bookDexOf(dex int, skill string) int {
 func auditSkills(t *testing.T, class string, base []struct {
 	skill string
 	base  int
-}, armour map[string]map[string]int, points int) {
+}, armour map[string]map[string]int, points int,
+) {
 	t.Helper()
 	tbl := phb(t)
 	rs := rogueOf(t, class)

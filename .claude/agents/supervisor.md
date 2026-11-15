@@ -768,6 +768,7 @@ The Stop hook still wants a fleet watcher then, accepts either form, and its ref
 Use the stream form as soon as a developer, reviewer or tester runs. Also use the one-shot form if the Monitor tool is missing from your tool list (an older Claude Code;
 see docs/installing.md): it exits on each event, re-arm it after every wake-up.
 Say which form runs in your first reply of the session.
+**A stream watcher says on stdout what it is doing when its process changes (#795).** After an update of the installed binary, every stream form (`ready-watch`, `fleet-watch`, `ci-watch`, `upkeep wait`, `lane-watch wait`) re-executes itself (same pid, same Monitor): the line `<watcher>: restarting on the updated fleet binary (same process, still watching: nothing to re-arm)` is informational, do not re-arm. A `ready-watch` that is installing an update finishes it first, so its `FLEET-UPDATED` line comes before that one. A signal that kills the stream, or a directory that vanished, prints (#799: for all five) `<watcher>: ended (<why>); not running any more: re-arm it`: start it again. A Monitor that ends with exit 0 and no line is a stop on purpose (`... stop`) or a replacement by a newer watcher: nothing to re-arm.
 **Stopping a watcher on purpose** (e.g. you went idle with a stream running): `.claude/bin/fleet fleet-watch stop`, `fleet ci-watch stop`,
 `fleet ready-watch stop`, `fleet upkeep stop` (never ps/kill). Each ends that watcher; its Monitor then ends with exit 0 (a "stopped" is
 not a failure), while a watcher killed any other way still reports 143. A replaced watcher is quiet, as before.
@@ -984,8 +985,8 @@ must lose nothing, so state lives outside the conversation:
   call as the log entry (`decide --rule`); retire a line the user has superseded or the work has
   made moot (the log keeps it). It is what a successor reads instead of the log, so a rule missing
   from it is a rule a successor may break: when in doubt, keep the line. Fits in ~20 lines; merge
-  related rules rather than let it grow. `resume` flags what looks stale, and you act on it, never work around it:
-  a line "no user decision recorded for rule ids N,M" is a rule with no `decide` entry behind it (imported from a ledger,
+  related rules rather than let it grow (past 20, `resume` adds one line "digest over budget: N rules": merge or retire, `rules edit|retire`; it never cuts a rule from the digest). `resume` flags what looks stale, and you act on it, never work around it:
+  a line "no user decision recorded for N rules, ids 1-3,7" (a count and ranges; `fleet store rules unconfirmed` lists them) is a rule with no `decide` entry behind it (imported from a ledger,
   or hand-written): ask the user whether it stands (`fleet store log --grep` first). If yes, record it against the
   existing rule: `fleet store decide --text "<verbatim>" --settles "rule <n> stands" --confirm-rule <n>` (no duplicate
   rule, the flag goes away; `--confirm-rule 1,2,5-8` confirms several rules in one call, one entry each, all or nothing); if no, `rules retire <n>`. A section "Rules that mention a closed issue" names a rule whose

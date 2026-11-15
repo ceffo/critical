@@ -5,7 +5,6 @@ import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
 import type { LevelGrants, LevelUp } from "@/types/character";
 import { GrantRows, LevelUpGrants } from "./LevelUpGrants";
-import { ToSpendTag } from "./ToSpendTag";
 import { LevelUpPrompt } from "./LevelUpPrompt";
 
 const none: LevelGrants = {
@@ -179,111 +178,18 @@ describe("level-up grants and the to-spend tag (ADR 0037 step 15)", () => {
     expect(en).toContain("+1 weapon proficiency slot<");
   });
 
-  it("leaves out a count of 0, and words what is left without the +", async () => {
+  it("leaves out a count of 0", async () => {
     const fr = await markup(
       "fr",
       <GrantRows
         grants={{ ...none, nonWeaponSlots: 2 }}
-        gained={false}
         onOpenEditor={noop}
         onOpenFreeSpell={noop}
       />,
     );
-    expect(fr).toContain(">2 emplacements de compétence<");
-    expect(fr).not.toContain("+2");
+    expect(fr).toContain(">+2 emplacements de compétence<");
     expect(fr).not.toContain("maîtrise");
     expect(fr).not.toContain(">Dépenser<");
-  });
-
-  it("shows the to-spend tag while any count is above 0, none at 0", async () => {
-    const tag = (toSpend: LevelGrants) => (
-      <ToSpendTag
-        toSpend={toSpend}
-        onOpenEditor={noop}
-        onOpenFreeSpell={noop}
-      />
-    );
-    const fr = await markup("fr", tag({ ...none, skillPoints: 5 }));
-    expect(fr).toContain(">Assigner<");
-    expect(fr).toContain('data-testid="to-spend-tag"');
-    // The tooltip says what waits and that opening it assigns it (a button, so keyboard-reachable).
-    expect(fr).toContain("Ouvrir pour les assigner");
-    expect(await markup("en", tag({ ...none, skillPoints: 5 }))).toContain(
-      "Open to assign them.",
-    );
-    expect(await markup("en", tag({ ...none, weaponSlots: 1 }))).toContain(
-      ">Slots to spend<",
-    );
-    expect(await markup("fr", tag(none))).toBe("");
-  });
-
-  // ADR 0037 step 15 (amended again): the tag is gone once every slot is spent; a pool over budget
-  // keeps it, since slots must be removed.
-  it("hides the to-spend tag when every pool is at 0 left, keeps it over budget", async () => {
-    const tagFor = (
-      pools: React.ComponentProps<typeof ToSpendTag>["pools"],
-    ) => (
-      <ToSpendTag
-        toSpend={none}
-        pools={pools}
-        onOpenEditor={noop}
-        onOpenFreeSpell={noop}
-      />
-    );
-    expect(
-      await markup(
-        "en",
-        tagFor({
-          weaponSlots: { spent: 2, available: 2, left: 0 },
-          nonWeaponSlots: { spent: 4, available: 4, left: 0 },
-          skillPoints: {},
-        }),
-      ),
-    ).toBe("");
-    expect(
-      await markup(
-        "en",
-        tagFor({ nonWeaponSlots: { spent: 5, available: 4, left: -1 } }),
-      ),
-    ).toContain('data-testid="to-spend-tag"');
-    const rows = await markup(
-      "en",
-      <GrantRows
-        grants={none}
-        gained={false}
-        pools={{ nonWeaponSlots: { spent: 4, available: 4, left: 0 } }}
-        onOpenEditor={noop}
-        onOpenFreeSpell={noop}
-      />,
-    );
-    expect(rows).toContain(">Proficiencies<");
-    expect(rows).toContain(">Choose<");
-  });
-
-  it("words an over-budget pool: what to remove, and the figures", async () => {
-    const pools = { nonWeaponSlots: { spent: 11, available: 10, left: -1 } };
-    const rows = (lang: string, p = pools) =>
-      markup(
-        lang,
-        <GrantRows
-          grants={none}
-          gained={false}
-          pools={p}
-          onOpenEditor={noop}
-          onOpenFreeSpell={noop}
-        />,
-      );
-    expect(await rows("en")).toContain(
-      "Remove 1 slot to continue: you have 11 of 10",
-    );
-    expect(await rows("fr")).toContain(
-      "Retirez 1 emplacement pour continuer : vous en avez 11 sur 10",
-    );
-    expect(
-      await rows("en", {
-        nonWeaponSlots: { spent: 12, available: 10, left: -2 },
-      }),
-    ).toContain("Remove 2 slots to continue: you have 12 of 10");
   });
 
   it("leaves the prompt alone: no reminder panel under it", async () => {
@@ -342,23 +248,16 @@ describe("the level-up free spell (ADR 0030 step 20.8)", () => {
     expect(en).toContain("+1 free level 2 spell");
   });
 
-  it("shows the to-spend tag for an owed free spell alone, and lists it without the +", async () => {
-    const owed = { ...none, freeSpells: [third] };
-    const fr = await markup(
-      "fr",
-      <ToSpendTag toSpend={owed} onOpenEditor={noop} onOpenFreeSpell={noop} />,
-    );
-    expect(fr).toContain(">Assigner<");
+  it("lists an owed free spell alone, with its link", async () => {
     const rows = await markup(
       "fr",
       <GrantRows
-        grants={owed}
-        gained={false}
+        grants={{ ...none, freeSpells: [third] }}
         onOpenEditor={noop}
         onOpenFreeSpell={noop}
       />,
     );
-    expect(rows).toContain(">1 sort gratuit, niv. 2<");
-    expect(rows).not.toContain("+1");
+    expect(rows).toContain(">+1 sort gratuit, niv. 2<");
+    expect(rows).toContain('data-testid="grant-open-freeSpell-3-2"');
   });
 });

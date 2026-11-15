@@ -4,17 +4,8 @@ import { Button } from "@/components/ui/button";
 import type { FreeSpell, LevelGrants } from "@/types/character";
 import type { SkillsEditor } from "@/stores/skillsEditor";
 
-/** What the card knows of each pool: absent when the character has none. A skill set's points
- * carry no figures here (the points editor shows its budget). */
-export type SpendPools = Partial<
-  Record<
-    "weaponSlots" | "nonWeaponSlots" | "skillPoints",
-    { spent?: number; available?: number; left?: number }
-  >
->;
-
-/** The editor each grant is spent in (the Skills tab's, ADR 0037 steps 7 and 12; ADR 0030 steps
- * 17 and 18), in the order the card lists them. */
+/** The editor each grant is spent in (the Skills activity's, ADR 0037 steps 7, 12 and 15; ADR 0030
+ * steps 17 and 18), in the order the card lists them. */
 const ROWS: {
   key: "weaponSlots" | "nonWeaponSlots" | "skillPoints";
   editor: SkillsEditor;
@@ -30,42 +21,25 @@ const ROWS: {
 const ROW_BUTTON = "h-[1.125rem]";
 
 /**
- * Slots and skill points beyond hit points (ADR 0037 step 15) as the server counts them, one row
- * per count above 0 with the way into its editor ("Choisir" / "Dépenser"), then a mage's free
- * spells (ADR 0030 step 20.8), each with the way into the spell lookup on its spell level:
- * `gained` words them as what a level grants ("+n"), otherwise as what is left.
+ * Slots and skill points a level grants beyond hit points (ADR 0037 step 15) as the server counts
+ * them, one row per count above 0 with the way into its editor in the Skills activity ("Choisir" /
+ * "Dépenser"), then a mage's free spells (ADR 0030 step 20.8), each with the way into the spell
+ * lookup on its spell level.
  */
 export function GrantRows({
   grants,
-  gained,
-  pools,
   onOpenEditor,
   onOpenFreeSpell,
 }: {
   grants: LevelGrants;
-  gained: boolean;
-  /** The pools the character has: their rows are listed at 0 left, and when over budget they say
-   * how many slots to remove (ADR 0037 step 15, amended). */
-  pools?: SpendPools;
   onOpenEditor: (editor: SkillsEditor) => void;
   onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {
   const { t } = useTranslation();
   return (
     <ul className="flex flex-col gap-0.5">
-      {ROWS.filter((r) => grants[r.key] > 0 || pools?.[r.key]).map((r) => {
-        const pool = pools?.[r.key];
-        const over = pool?.left !== undefined && pool.left < 0;
-        const what =
-          grants[r.key] > 0
-            ? t(`app.levelUp.grant.${r.key}`, { count: grants[r.key] })
-            : over
-              ? t("proficiencies.overBudget", {
-                  count: -(pool?.left ?? 0),
-                  spent: pool?.spent,
-                  available: pool?.available,
-                })
-              : t(`app.levelUp.settled.${r.key}`);
+      {ROWS.filter((r) => grants[r.key] > 0).map((r) => {
+        const what = t(`app.levelUp.grant.${r.key}`, { count: grants[r.key] });
         const actionTitle = t(`app.levelUp.open.${r.editor}`);
         return (
           <li
@@ -74,7 +48,7 @@ export function GrantRows({
             data-testid={`grant-${r.key}`}
           >
             <span className="min-w-0 break-words text-muted-foreground">
-              {gained ? t("app.levelUp.gained", { what }) : what}
+              {t("app.levelUp.gained", { what })}
             </span>
             <Button
               variant="quiet"
@@ -106,7 +80,7 @@ export function GrantRows({
             data-testid="grant-freeSpell"
           >
             <span className="min-w-0 break-words text-muted-foreground">
-              {gained ? t("app.levelUp.gained", { what }) : what}
+              {t("app.levelUp.gained", { what })}
             </span>
             <Button
               variant="quiet"
@@ -170,7 +144,6 @@ export function LevelUpGrants({
       </div>
       <GrantRows
         grants={grants}
-        gained
         onOpenEditor={onOpenEditor}
         onOpenFreeSpell={onOpenFreeSpell}
       />

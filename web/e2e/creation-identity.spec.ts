@@ -1,6 +1,12 @@
 import type { Locator, Page } from "@playwright/test";
 import { test, expect, snap } from "./fixtures";
-import { openDashboard, chooseLanguage, combatLog, openSpend } from "./helpers";
+import {
+  openDashboard,
+  chooseLanguage,
+  combatLog,
+  openSpend,
+  openWorkspace,
+} from "./helpers";
 
 // The identity step and the review of the creation route (ADR 0034 steps 3.5 and 3.6): what only a
 // browser proves is the timing and the navigation around the server's replies (a late roll, a stale
@@ -159,16 +165,13 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   const panel = page.getByRole("tabpanel", { name: "Compétences" });
   await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
   await expect(panel.getByTestId("skill-singing")).toBeVisible();
-  await page.getByTestId("to-spend-tag").click();
-  await expect(page.getByTestId("grant-nonWeaponSlots")).toContainText(
-    "5 emplacements de compétence",
-  );
-  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("skills-pill")).toBeVisible();
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");
+  const spent = editor.getByTestId("proficiency-pool-spent");
+  await expect(spent).toHaveText("Dépensés 2, restants 5");
   await editor.getByTestId("proficiency-search").fill("jongl");
   await editor.getByRole("button", { name: /^Ajouter Jonglerie/ }).click();
-  const spent = editor.getByTestId("proficiency-pool-spent");
   await expect(spent).toHaveText("Dépensés 3, restants 4");
   const juggling = editor.getByTestId("proficiency-pick-juggling");
   const figures = editor.locator("[data-stale]");
@@ -227,7 +230,9 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(figures).toHaveCount(0);
   await expect(spent).toHaveText("Dépensés 3, restants 4");
   await editor.getByTestId("proficiency-save").click();
-  await expect(editor).toHaveCount(0);
+  // The editor stays open in the Skills activity, on the stored picks; the Act activity shows the pick.
+  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("1");
+  await openWorkspace(page, "Act");
   await expect(panel.getByTestId("skill-juggling")).toBeVisible();
   await expect(combatLog(page)).toContainText(
     "Emplacements de compétence : Jonglerie 0 → 1",
@@ -237,9 +242,11 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await page.getByTestId("undo").click();
   await expect(panel.getByTestId("skill-juggling")).toHaveCount(0);
   await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
-  await page.getByTestId("to-spend-tag").click();
-  await expect(page.getByTestId("grant-nonWeaponSlots")).toContainText(
-    "5 emplacements de compétence",
-  );
-  await page.keyboard.press("Escape");
+  // The Skills editor follows the undo: the pool is back to what it was.
+  await openWorkspace(page, "Skills");
+  await expect(
+    page
+      .getByTestId("proficiency-editor")
+      .getByTestId("proficiency-pool-spent"),
+  ).toHaveText("Dépensés 2, restants 5");
 });

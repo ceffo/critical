@@ -26,7 +26,7 @@ import { LevelUpGrants } from "./LevelUpGrants";
  * ADR 0037 step 15: once a level's hit points are taken, what that level grants beyond them (the
  * pending level's `grants`, as the server sent them) shows with the ways into the editors, until
  * closed or the roll is undone (the realized level falls back under it). What is left to spend is
- * the card's tag (ToSpendTag). Neither blocks the level-up nor play.
+ * the Skills activity's red pill on the rail. Neither blocks the level-up nor play.
  */
 export function LevelUpPrompt({
   levelUp,
@@ -49,7 +49,7 @@ export function LevelUpPrompt({
     die?: number,
     cls?: string,
   ) => Promise<ApiError | null>;
-  /** Opens a Skills tab editor (ADR 0037 step 15's links). */
+  /** Focuses the Skills activity on an editor (ADR 0037 step 15's links). */
   onOpenEditor: (editor: SkillsEditor) => void;
   /** Opens the spell lookup on a level's free spell (ADR 0030 step 20.8). */
   onOpenFreeSpell: (fs: FreeSpell) => void;

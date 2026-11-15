@@ -1,5 +1,5 @@
 import { test, expect, snap } from "./fixtures";
-import { combatLog, openDashboard, openSpend } from "./helpers";
+import { combatLog, openDashboard, openSpend, openWorkspace } from "./helpers";
 
 const VIEWPORTS = [
   { width: 1280, height: 800 },
@@ -80,7 +80,7 @@ test("character details: view, edit with a field error, save, reload", async ({
   for (const name of ["Elvish", "Gnomish"])
     await pool.getByRole("checkbox", { name, exact: true }).check();
   await editor.getByTestId("proficiency-save").click();
-  await expect(editor).toHaveCount(0);
+  await openWorkspace(page, "Act");
   await expect(combatLog(page)).toContainText("Languages: + Elvish, + Gnomish");
   await page.getByTestId("details-trigger").click();
   await expect(pop.getByText("Common, Elvish, Gnomish")).toBeVisible();

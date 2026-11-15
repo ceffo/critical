@@ -77,7 +77,10 @@ test("fighter: pick and specialize in the editor, Undo from the journal, tags fo
   );
   await snap(page, "weapon-editor-dark");
   await editor.getByTestId("weapon-save").click();
-  await expect(editor).toBeHidden();
+  // The editor stays open in the Skills activity, now on the stored picks.
+  await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
+    "Spent 3, left 1",
+  );
   // A pick is a catalogue weapon (ADR 0037 step 21.6), named from the equipment catalogue.
   const entry =
     "Weapon proficiency slots: Fixture long sword 0 → 2 (specialization)";

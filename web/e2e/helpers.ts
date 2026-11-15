@@ -337,13 +337,21 @@ export const LOOKUP_RAIL =
 /** Focus an activity from the rail (English labels). */
 export async function openWorkspace(
   page: Page,
-  name: "Act" | "Inventory" | "Spells" | "Experience",
+  name: "Act" | "Inventory" | "Spells" | "Skills" | "Experience",
 ) {
+  // Skills may carry the red pill, whose text joins the button's name.
   await page
-    .getByRole("navigation", { name: "Activities" })
+    .getByRole("navigation", { name: /^(Activities|Activités)$/ })
     .getByRole("button", {
-      name: name === "Spells" ? LOOKUP_RAIL : name,
-      exact: true,
+      name:
+        name === "Spells"
+          ? LOOKUP_RAIL
+          : name === "Skills"
+            ? /^(Skills|Compétences)/
+            : name === "Act"
+              ? /^(Act|Agir)$/
+              : name,
+      exact: name !== "Skills",
     })
     .click();
 }
@@ -663,18 +671,19 @@ export async function openActPowers(page: Page) {
 }
 
 /**
- * Opens an editor from the character card's "To spend" entry (the dialog that hosts the weapon
- * proficiencies, the non-weapon ones and a bard's or thief's skill points) and returns the dialog.
+ * Opens the Skills activity from the rail (the weapon proficiencies, the non-weapon ones and a
+ * bard's or thief's skill points, all open at any time) and returns the block of `editor`.
  */
 export async function openSpend(
   page: Page,
   editor: "weapon" | "nonWeapon" | "skillPoints",
 ): Promise<Locator> {
-  await page.getByTestId("to-spend-tag").click();
-  await page.getByTestId(`grant-open-${editor}`).click();
-  const dialog = page.getByTestId("spend-dialog");
-  await expect(dialog).toBeVisible();
-  return dialog;
+  await openWorkspace(page, "Skills");
+  const block = page.getByTestId(
+    editor === "skillPoints" ? /^skills-points-/ : `skills-${editor}`,
+  );
+  await expect(block.first()).toBeVisible();
+  return block.first();
 }
 
 /**

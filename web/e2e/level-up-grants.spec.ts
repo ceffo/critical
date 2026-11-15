@@ -2,6 +2,7 @@ import { test, expect } from "./fixtures";
 import {
   apiCall,
   expectNoReload,
+  expectUndoOn,
   logEntry,
   LOOKUP_RAIL,
   markNoReload,
@@ -11,10 +12,10 @@ import {
 } from "./helpers";
 import type { Page } from "@playwright/test";
 
-// ADR 0037 step 15, what only a browser proves: the "to spend" tag and its links by keyboard, two
-// levels owed one after the other, the panel following the undo and the redo, an editor opened
-// from another tab or activity, and the tag going when the last slot or point is spent, all with
-// no reload. The counts themselves are Go tests (charactersvc, levelupsvc, composition).
+// ADR 0037 step 15, what only a browser proves: the level-up box's links by keyboard focus the
+// Skills activity on their editor, the rail's red pill while something is left, two levels owed one
+// after the other, the box following the undo and the redo, all with no reload. The counts themselves
+// are Go tests (charactersvc, levelupsvc, composition).
 
 async function makeCharacter(
   page: Page,
@@ -54,7 +55,7 @@ async function makeCharacter(
 
 const roll = (page: Page) => page.getByTestId("level-up-roll");
 
-test("thief 1 to 3: the tag by keyboard, the panel follows each level, undo and redo", async ({
+test("thief 1 to 3: the level-up box's link by keyboard focuses Skills on the points editor, under a red pill", async ({
   page,
 }) => {
   await makeCharacter(page, "thief", "Vex", 2500);
@@ -62,49 +63,32 @@ test("thief 1 to 3: the tag by keyboard, the panel follows each level, undo and 
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 2 reached",
   );
-  const tag = page.getByTestId("to-spend-tag");
-  await expect(tag).toBeVisible();
+  await expect(page.getByTestId("to-spend-tag")).toHaveCount(0);
+  const rail = page.getByRole("navigation", { name: "Activities" });
+  await expect(rail.getByTestId("skills-pill")).toBeVisible();
+  await roll(page).click();
+  const grants = page.getByTestId("level-up-grants");
+  await expect(grants).toContainText("Level 2 grants");
 
-  // Keyboard only: focus the tag, Enter opens it, Tab reaches a link, Enter opens the editor.
-  await tag.focus();
+  // Keyboard only: Tab to a link in the box, Enter focuses the Skills activity on its editor.
+  const link = grants.getByTestId("grant-open-skillPoints");
+  await link.focus();
   await page.keyboard.press("Enter");
-  const pop = page.getByTestId("level-up-to-spend");
-  await expect(pop).toBeVisible();
-  // The popover takes focus onto its first link.
-  const firstLink = pop.getByRole("button").first();
-  await expect(firstLink).toBeFocused();
-  // Every link is reachable by Tab, in order.
-  const links = await pop.getByRole("button").count();
-  expect(links).toBeGreaterThan(0);
-  for (let i = 1; i < links; i++) {
-    await page.keyboard.press("Tab");
-    await expect(pop.getByRole("button").nth(i)).toBeFocused();
-  }
-  // Escape returns focus to the tag.
-  await page.keyboard.press("Escape");
-  await expect(pop).toBeHidden();
-  await expect(tag).toBeFocused();
-  // Enter on a link: the editor opens in the Skills tab and the popover closes.
-  await page.keyboard.press("Enter");
-  await expect(firstLink).toBeFocused();
-  await page.keyboard.press("Enter");
-  await expect(pop).toBeHidden();
-  await expect(
-    page
-      .getByTestId("spend-dialog")
-      .getByTestId("weapon-editor")
-      .or(page.getByTestId("proficiency-editor"))
-      .or(page.getByTestId("thief-points-editor")),
-  ).toBeVisible();
+  await expect(rail.getByRole("button", { name: /^Skills/ })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  const block = page.getByTestId("skills-points-thief");
+  await expect(block).toBeFocused();
+  await expect(block.getByTestId("thief-points-editor")).toBeVisible();
+  await expect(block.getByTestId("skill-points-left")).toContainText("90");
 });
 
-async function toSpendText(page: Page): Promise<string> {
-  await page.getByTestId("to-spend-tag").click();
-  const pop = page.getByTestId("level-up-to-spend");
-  const text = (await pop.textContent()) ?? "";
-  await page.keyboard.press("Escape");
-  await expect(pop).toBeHidden();
-  return text;
+async function expectPointsLeft(page: Page, left: number) {
+  await openWorkspace(page, "Skills");
+  await expect(
+    page.getByTestId("skills-points-thief").getByTestId("skill-points-left"),
+  ).toHaveText(`Spent 0, left ${left}`);
 }
 
 test("thief 1 to 3: roll 2 then 3, the panel switches; undo takes it, redo brings it back", async ({
@@ -113,18 +97,21 @@ test("thief 1 to 3: roll 2 then 3, the panel switches; undo takes it, redo bring
   await makeCharacter(page, "thief", "Vex", 2500);
   const prompt = page.getByTestId("level-up");
   const grants = page.getByTestId("level-up-grants");
-  expect(await toSpendText(page)).toContain("60 skill points");
+  await expectPointsLeft(page, 60);
+  await openWorkspace(page, "Act");
   await roll(page).click();
   await expect(prompt.getByTestId("level-up-title")).toHaveText(
     "Level 3 reached",
   );
   await expect(grants).toContainText("Level 2 grants");
-  expect(await toSpendText(page)).toContain("90 skill points");
+  await expectPointsLeft(page, 90);
+  await openWorkspace(page, "Act");
   await roll(page).click();
   await expect(prompt).toHaveCount(0);
   await expect(grants).toContainText("Level 3 grants");
-  // The tag counts what both levels left.
-  expect(await toSpendText(page)).toContain("120 skill points");
+  // The points editor counts what both levels left.
+  await expectPointsLeft(page, 120);
+  await openWorkspace(page, "Act");
 
   // Undo the level 3 roll: its panel goes; redo: it is back.
   await page.getByTestId("undo").click();
@@ -157,18 +144,13 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
   await expect(grants.getByTestId("grant-freeSpell")).toHaveText(
     /\+1 free level 2 spell/,
   );
-  expect(await toSpendText(page)).toContain("1 free level 2 spell");
   await markNoReload(page);
   const learn = page.getByTestId("learn-spell");
   const rows = page.locator("[id^=lookup-row-]");
 
-  // From the tag, then a change of the level filter: the claim is dropped, Ajouter adds a plain
+  // From the box, then a change of the level filter: the claim is dropped, Ajouter adds a plain
   // spell (no grantLevel) and the free spell stays owed.
-  await page.getByTestId("to-spend-tag").click();
-  await page
-    .getByTestId("level-up-to-spend")
-    .getByTestId("grant-open-freeSpell-3-2")
-    .click();
+  await grants.getByTestId("grant-open-freeSpell-3-2").click();
   await page.locator("#lookup-row-mirror_image").click();
   await expect(learn.getByTestId("free-spell-claim")).toBeVisible();
   await page
@@ -182,8 +164,8 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
   await learn.getByTestId("add-spell").click();
   expect((await plain).postDataJSON()).toEqual({ spellId: "sleep" });
   await expect(learn).toContainText("In the spellbook");
-  expect(await toSpendText(page)).toContain("1 free level 2 spell");
 
+  await openWorkspace(page, "Act");
   await grants.getByTestId("grant-open-freeSpell-3-2").click();
   await expect(
     page
@@ -211,12 +193,14 @@ test("mage 1 to 3: the free spell's link opens the lookup on 2nd-level spells, A
   await expect(
     logEntry(page, "Level 3's free spell: Mirror Image (no roll)"),
   ).toBeVisible();
-  expect(await toSpendText(page)).not.toContain("free level");
 
-  // Undo the claim: the reminder owes it again; redo: it goes again. No reload.
+  // Undo the claim and redo it: the entry leaves the undo stack and comes back. No reload.
+  await expectUndoOn(page, "free spell");
   await page.getByTestId("undo").click();
-  await expect.poll(() => toSpendText(page)).toContain("1 free level 2 spell");
+  await expectUndoOn(page, "free spell", true);
   await page.getByTestId("redo").click();
-  await expect.poll(() => toSpendText(page)).not.toContain("free level");
+  await expect(
+    logEntry(page, "Level 3's free spell: Mirror Image (no roll)"),
+  ).toBeVisible();
   await expectNoReload(page);
 });

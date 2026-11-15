@@ -31,7 +31,7 @@ export type PickerOptions = Pick<
 >;
 
 /**
- * The non-weapon proficiency picker (ADR 0037 steps 3 to 5 and 12), shared by the Skills tab's
+ * The non-weapon proficiency picker (ADR 0037 steps 3 to 5 and 12), shared by the Skills activity's
  * editor and the creation's step: the slots with their terms, the picks with their cost, extra
  * slots and check target, and the catalogue (the class's groups first, a search). Every number is
  * the server's: the pool and each pick's figures come from its preview or checks (`figures`), a
@@ -92,7 +92,7 @@ export function ProficiencyPicker({
         </div>
       )}
       {budgetError && <Note kind="refusal">{budgetError}</Note>}
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(18rem,1fr))] items-start gap-5">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(22rem,1fr))] items-start gap-5">
         <section
           aria-labelledby="proficiency-picks-title"
           className="flex min-w-0 flex-col gap-2"

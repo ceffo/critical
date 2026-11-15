@@ -26,8 +26,6 @@
       "realizedAbove": "Niveau {{realized}} acquis, l'XP donne le niveau {{target}}",
       "realizedAboveHint": "Annulez le jet ou corrigez l'XP.",
       "grantsTitle": "Le niveau {{level}} apporte",
-      "toSpendHint": "Emplacements de maîtrise d’arme et de compétence, points de talent et sorts gratuits pas encore assignés. Ouvrir pour les assigner.",
-      "toSpendTitle": "Assigner",
       "gained": "+{{what}}",
       "grant": {
         "weaponSlots_one": "{{count}} emplacement de maîtrise d’arme",
@@ -38,11 +36,6 @@
         "skillPoints_other": "{{count}} points de talent",
         "freeSpell": "1 sort gratuit, niv. {{spellLevel}}",
         "freeSpellSchool": "1 sort gratuit de son école, niv. {{spellLevel}}"
-      },
-      "settled": {
-        "weaponSlots": "Maîtrises d’armes",
-        "nonWeaponSlots": "Compétences diverses",
-        "skillPoints": "Points de talent"
       },
       "choose": "Choisir",
       "spend": "Dépenser",
@@ -145,8 +138,10 @@
       "spellsAndPowers": "Sorts et pouvoirs",
       "reference": "Référence",
       "xp": "Expérience",
-      "inventory": "Inventaire"
+      "inventory": "Inventaire",
+      "skills": "Compétences"
     },
+    "skillsPending": "Il reste à dépenser dans Compétences",
     "character": "Personnage",
     "lastResult": "Dernier résultat",
     "noResult": "Aucun jet pour l’instant.",
@@ -2438,7 +2433,7 @@
     "headingMulti": "Expérience"
   },
   "skills": {
-    "empty": "Rien à lancer ici pour l’instant. Choisissez des compétences ou dépensez des points de talent depuis « À dépenser » sur la feuille de personnage.",
+    "empty": "Rien à lancer ici pour l’instant. Choisissez des compétences ou dépensez des points de talent dans l’activité Compétences.",
     "proficiencies": "Compétences diverses",
     "percent": "{{value}} %",
     "rollLabel": "Lancer {{name}}",
@@ -3700,7 +3695,7 @@
     "unspecializeHint": "Retirer la spécialisation en {{name}} (revient à 1 emplacement)",
     "remove": "Retirer {{name}}",
     "nonproficient": "Non maîtrisée : {{value}} au toucher",
-    "nonproficientHint": "Aucune maîtrise de cette arme : {{value}} pour toucher. Choisissez-la par son nom dans l’onglet Compétences.",
+    "nonproficientHint": "Aucune maîtrise de cette arme : {{value}} pour toucher. Choisissez-la par son nom dans l’activité Compétences.",
     "nonproficientHintNoCode": "Aucune maîtrise de cette arme : {{value}} pour toucher. Elle n’a pas d’arme du catalogue : choisissez-en une dans la modification de l’objet.",
     "errors": {
       "out_of_range": "Ce nombre d’emplacements n’est ni une maîtrise ni une spécialisation.",

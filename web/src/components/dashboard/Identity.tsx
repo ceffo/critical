@@ -26,8 +26,6 @@ import { SwitchClassDialog } from "./SwitchClassDialog";
 import { CharacterDetails } from "./CharacterDetails";
 import { ClassEntries } from "./ClassEntries";
 import { LevelUpPrompt } from "./LevelUpPrompt";
-import { SpendDialog } from "./SpendDialog";
-import { ToSpendTag, type SpendPools } from "./ToSpendTag";
 
 const ABILITIES = ["str", "dex", "con", "int", "wis", "cha"] as const;
 const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
@@ -43,7 +41,7 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
  * (ADR 0027 step 5.4: a click on a stat is kept for the ability check). The level and THAC0 are the
  * server's, derived from class and XP (ADR 0030 steps 3 and 5). A level whose hit points are owed
  * shows its prompt there too (step 7, LevelUpPrompt), and what a level grants or what is left to
- * spend, with the ways into the Skills tab's editors (ADR 0037 step 15).
+ * spend is the Skills activity's red pill on the rail (ADR 0037 step 15).
  */
 export function Identity({
   onOpenXp,
@@ -80,7 +78,7 @@ export function Identity({
   const rollAbility = useRollStore((s) => s.rollAbility);
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useTableStore((s) => s.busy);
-  // ADR 0037 step 15's links: the editor, in the dialog the card hosts.
+  // ADR 0037 step 15's links: the editor, in the Skills activity.
   const openSkillsEditor = useSkillsEditor((s) => s.open);
   // ADR 0030 step 20.8's link: the lookup on the free spell's spell level, Ajouter claiming it.
   const openFreeSpellLookup = useLookupStore((s) => s.openFreeSpell);
@@ -89,19 +87,8 @@ export function Identity({
     onOpenSpells();
   };
 
-  // The pools the character has: the tag stays while one has slots left or is over
-  // budget, and goes once all are spent (ADR 0037 step 15, amended).
-  const slots = character?.derived.proficiencySlots;
-  const pools: SpendPools = {
-    weaponSlots: slots?.weapon ?? undefined,
-    nonWeaponSlots: slots?.nonWeapon,
-    skillPoints:
-      (character?.derived.skillSets.length ?? 0) > 0 ? {} : undefined,
-  };
-
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <SpendDialog />
       {character && (
         <SwitchClassDialog
           character={character}
@@ -140,12 +127,6 @@ export function Identity({
                   name={className}
                 />
               )}
-              <ToSpendTag
-                toSpend={character.derived.levelUp.toSpend}
-                pools={pools}
-                onOpenEditor={openSkillsEditor}
-                onOpenFreeSpell={openFreeSpell}
-              />
             </div>
           )}
         </div>

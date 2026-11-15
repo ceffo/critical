@@ -23,6 +23,8 @@ import { DatabaseBanner } from "@/components/shell/DatabaseBanner";
 import { Rail } from "@/components/shell/Rail";
 import { SettingsPopover } from "@/components/shell/SettingsPopover";
 import { XpPanel } from "@/components/xp/XpPanel";
+import { SkillsPanel } from "@/components/skills/SkillsPanel";
+import { useSkillsEditor } from "@/stores/skillsEditor";
 import type { Activity } from "@/lib/activities";
 import { lookupLabelKey, useActFeatures } from "@/lib/actFeatures";
 import { cn } from "@/lib/utils";
@@ -111,6 +113,13 @@ function App() {
     setActivity(a);
     setVisited((v) => (v.has(a) ? v : new Set(v).add(a)));
   };
+
+  // The level-up's links ask for an editor: the Skills activity takes focus and shows it (ADR 0037
+  // step 15).
+  const askedEditor = useSkillsEditor((s) => s.editor);
+  useEffect(() => {
+    if (askedEditor) focus("skills");
+  }, [askedEditor]);
 
   useEffect(() => {
     // The sheet; the skills and the spellbook are read by their panels once shown.
@@ -207,6 +216,14 @@ function App() {
             label={t(`shell.activity.${lookupKey}`)}
           >
             <LookupPanel />
+          </Pane>
+          <Pane
+            id="skills"
+            active={activity}
+            visited={visited}
+            label={t("shell.activity.skills")}
+          >
+            <SkillsPanel />
           </Pane>
           <Pane
             id="xp"

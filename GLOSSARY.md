@@ -152,6 +152,10 @@ _Code_: HPBreakdown, HPEvent, HPInput, HPLevel, HPResult, HPState
 Current HP derived from the action log, not stored. [ADR 0007](docs/adr/0007-hp-ledger.md) step 2.
 _Avoid_: hp_events (a legacy table, dropped).
 
+**Opening balance** (fr: solde d'ouverture):
+The total a character's HP or PSP ledger held before its action log began: 0 for a character made in the app, the source's current deficit for a **copy**. Not an entry; nothing pops it. [ADR 0029](docs/adr/0029-users-login-and-access.md) step 12.4.
+_Code_: Openings
+
 **THAC0** (fr: TAC0), **AC** (fr: CA):
 To Hit Armour Class 0; the armour class, descending. [ADR 0002](docs/adr/0002-attack-resolution.md), [ADR 0033](docs/adr/0033-equipment.md) step 10.
 _Code_: AC
@@ -630,6 +634,9 @@ A logged-in browser, 30 days. [ADR 0029](docs/adr/0029-users-login-and-access.md
 
 **Current character** (fr: personnage joué):
 The one a request acts on; **switch** and **retire** (fr: retirer). [ADR 0029](docs/adr/0029-users-login-and-access.md) step 7.
+
+**Copy** (fr: copie):
+A new character of the caller's made from any character they may read: everything but its history (the action log), named by the web. [ADR 0029](docs/adr/0029-users-login-and-access.md) step 12. _Avoid_: clone, duplicate.
 
 **Roster** (fr: vos personnages):
 The user's list of characters. [ADR 0034](docs/adr/0034-onboarding-screens.md) step 7.

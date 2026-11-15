@@ -90,6 +90,10 @@ type tables struct {
 	dice    map[int64]diceFavourite
 	diceSeq int64
 
+	// openings are the HP and PSP ledgers' opening balances of a copied
+	// character (characters.hp_opening and psp_opening); none: 0 and 0.
+	openings map[int64]charactersvc.Openings
+
 	// users, invites and sessions of the login (ADR 0029); sessions by
 	// their stored id (the token's hash).
 	users    map[uuid.UUID]authsvc.User
@@ -120,6 +124,7 @@ func newTables() *tables {
 		acOverrides:   map[int64]acsvc.Override{},
 		skillArmors:   map[int64]string{},
 		dice:          map[int64]diceFavourite{},
+		openings:      map[int64]charactersvc.Openings{},
 		users:         map[uuid.UUID]authsvc.User{},
 		invites:       map[uuid.UUID]storedInvite{},
 		sessions:      map[string]authsvc.Session{},

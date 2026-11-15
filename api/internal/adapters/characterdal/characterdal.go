@@ -619,3 +619,68 @@ func (d *DAL) UpdateDetails(ctx context.Context, id int64, v charactersvc.Detail
 	}
 	return nil
 }
+
+// CopyCharacter implements charactersvc.Owners (ADR 0029 step 12): the character's row under a new
+// id, then each table's rows, in the caller's transaction. The first statement is the visibility
+// rule too: no row for an unknown, retired or disabled-owner's source.
+func (d *DAL) CopyCharacter(ctx context.Context, owner uuid.UUID, source int64, name string, opening charactersvc.Openings) (int64, error) {
+	if err := d.lockUser(ctx, owner); err != nil {
+		return 0, err
+	}
+	id, err := d.q.CopyCharacterRow(ctx, queries.CopyCharacterRowParams{
+		Name: name, OwnerUserID: uuid.NullUUID{UUID: owner, Valid: true},
+		HpOpening: int64(opening.HP), PspOpening: int64(opening.PSP), SourceID: source,
+	})
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, domain.ErrCharacterNotFound
+	}
+	if err != nil {
+		return 0, fmt.Errorf("copy character %d: %w", source, err)
+	}
+	for _, c := range []struct {
+		what string
+		run  func(ctx context.Context, target, source int64) error
+	}{
+		{"class entries", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyClassEntries(ctx, queries.CopyClassEntriesParams{TargetID: t, SourceID: s})
+		}},
+		{"spell slots", func(ctx context.Context, t, s int64) error {
+			return d.q.CopySpellSlots(ctx, queries.CopySpellSlotsParams{TargetID: t, SourceID: s})
+		}},
+		{"buffs", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyActiveBuffs(ctx, queries.CopyActiveBuffsParams{TargetID: t, SourceID: s})
+		}},
+		{"round state", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyRoundState(ctx, queries.CopyRoundStateParams{TargetID: t, SourceID: s})
+		}},
+		{"saved buffs", func(ctx context.Context, t, s int64) error {
+			return d.q.CopySavedBuffs(ctx, queries.CopySavedBuffsParams{TargetID: t, SourceID: s})
+		}},
+		{"attack form", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyAttackForm(ctx, queries.CopyAttackFormParams{TargetID: t, SourceID: s})
+		}},
+		{"XP entries", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyXPEntries(ctx, queries.CopyXPEntriesParams{TargetID: t, SourceID: s})
+		}},
+		{"dice favourites", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyDiceFavourites(ctx, queries.CopyDiceFavouritesParams{TargetID: t, SourceID: s})
+		}},
+		{"spellbook", func(ctx context.Context, t, s int64) error {
+			return d.q.CopySpellbookEntries(ctx, queries.CopySpellbookEntriesParams{TargetID: t, SourceID: s})
+		}},
+		{"learn failures", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyLearnFailures(ctx, queries.CopyLearnFailuresParams{TargetID: t, SourceID: s})
+		}},
+		{"equipment review", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyEquipmentReview(ctx, queries.CopyEquipmentReviewParams{TargetID: t, SourceID: s})
+		}},
+		{"items", func(ctx context.Context, t, s int64) error {
+			return d.q.CopyItems(ctx, queries.CopyItemsParams{TargetID: t, SourceID: s})
+		}},
+	} {
+		if err := c.run(ctx, id, source); err != nil {
+			return 0, fmt.Errorf("copy character %d to %d: %s: %w", source, id, c.what, err)
+		}
+	}
+	return id, nil
+}

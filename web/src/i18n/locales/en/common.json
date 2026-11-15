@@ -2784,6 +2784,10 @@
   "characters": {
     "new": "Create",
     "newHint": "Create a new character",
+    "copy": "Copy",
+    "copyHint": "Copy {{name}} as a new character of yours: everything but its history",
+    "copyName": "{{name}} (copy)",
+    "copied": "A copy of {{name}} was added to your characters.",
     "retire": "Retire",
     "retireHint": "Retire {{name}}: hidden from your lists, nothing is deleted",
     "rename": "Rename",

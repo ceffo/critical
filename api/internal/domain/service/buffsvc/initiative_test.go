@@ -146,7 +146,6 @@ func TestInitiative_Step4_RerollReplacesTheNewestInitiative(t *testing.T) {
 		ok   bool
 	}{
 		{"another entry is newer", 13, true},
-		{"nothing on the log", 0, false},
 	}
 	for _, tt := range refused {
 		t.Run(tt.name+": refused, nothing rolled", func(t *testing.T) {
@@ -162,6 +161,23 @@ func TestInitiative_Step4_RerollReplacesTheNewestInitiative(t *testing.T) {
 			f.dice.AssertNotCalled(t, "RollDie", mock.Anything)
 		})
 	}
+
+	// ADR 0029 step 12: a copy keeps the source's initiative, whose entry is not in its (empty) log.
+	t.Run("an empty log is a copy's: the reroll is allowed", func(t *testing.T) {
+		f := newFixture(t)
+		f.dal.EXPECT().GetRoundNumber(mock.Anything, charID).Return(3, nil).Once()
+		f.initiativeIs(current)
+		f.log.EXPECT().TopID(mock.Anything, charID).Return(0, false, nil).Once()
+		f.initiativeIs(current)
+		f.dice.EXPECT().RollDie(10).Return(9).Once()
+		f.records()
+		f.savesInitiative()
+
+		got, err := f.svc.RerollInitiative(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, 9, got.D10)
+		assert.Equal(t, int64(1), got.LogEntryID, "the new roll is the log's own entry")
+	})
 
 	t.Run("no initiative: a conflict, nothing rolled", func(t *testing.T) {
 		f := newFixture(t)

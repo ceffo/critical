@@ -79,6 +79,120 @@ func (_c *MockQuerier_GetAction_Call) RunAndReturn(run func(context.Context, que
 	return _c
 }
 
+// GetHPOpening provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) GetHPOpening(ctx context.Context, id int64) (int64, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHPOpening")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetHPOpening_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHPOpening'
+type MockQuerier_GetHPOpening_Call struct {
+	*mock.Call
+}
+
+// GetHPOpening is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockQuerier_Expecter) GetHPOpening(ctx interface{}, id interface{}) *MockQuerier_GetHPOpening_Call {
+	return &MockQuerier_GetHPOpening_Call{Call: _e.mock.On("GetHPOpening", ctx, id)}
+}
+
+func (_c *MockQuerier_GetHPOpening_Call) Run(run func(ctx context.Context, id int64)) *MockQuerier_GetHPOpening_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetHPOpening_Call) Return(_a0 int64, _a1 error) *MockQuerier_GetHPOpening_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetHPOpening_Call) RunAndReturn(run func(context.Context, int64) (int64, error)) *MockQuerier_GetHPOpening_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// GetPSPOpening provides a mock function with given fields: ctx, id
+func (_m *MockQuerier) GetPSPOpening(ctx context.Context, id int64) (int64, error) {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetPSPOpening")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) (int64, error)); ok {
+		return rf(ctx, id)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, int64) int64); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, int64) error); ok {
+		r1 = rf(ctx, id)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_GetPSPOpening_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetPSPOpening'
+type MockQuerier_GetPSPOpening_Call struct {
+	*mock.Call
+}
+
+// GetPSPOpening is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockQuerier_Expecter) GetPSPOpening(ctx interface{}, id interface{}) *MockQuerier_GetPSPOpening_Call {
+	return &MockQuerier_GetPSPOpening_Call{Call: _e.mock.On("GetPSPOpening", ctx, id)}
+}
+
+func (_c *MockQuerier_GetPSPOpening_Call) Run(run func(ctx context.Context, id int64)) *MockQuerier_GetPSPOpening_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_GetPSPOpening_Call) Return(_a0 int64, _a1 error) *MockQuerier_GetPSPOpening_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_GetPSPOpening_Call) RunAndReturn(run func(context.Context, int64) (int64, error)) *MockQuerier_GetPSPOpening_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // InsertAction provides a mock function with given fields: ctx, arg
 func (_m *MockQuerier) InsertAction(ctx context.Context, arg queries.InsertActionParams) (int64, error) {
 	ret := _m.Called(ctx, arg)

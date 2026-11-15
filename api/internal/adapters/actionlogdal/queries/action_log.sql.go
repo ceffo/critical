@@ -53,6 +53,32 @@ func (q *Queries) GetAction(ctx context.Context, arg GetActionParams) (GetAction
 	return i, err
 }
 
+const getHPOpening = `-- name: GetHPOpening :one
+
+SELECT hp_opening FROM characters WHERE id = $1
+`
+
+// GetHPOpening and GetPSPOpening read a character's ledger opening balances (ADR 0007 step 2, ADR
+// 0043 step 5): the total the ledger held before the log began, 0 for a character not copied. No
+// row for an unknown character.
+func (q *Queries) GetHPOpening(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getHPOpening, id)
+	var hp_opening int64
+	err := row.Scan(&hp_opening)
+	return hp_opening, err
+}
+
+const getPSPOpening = `-- name: GetPSPOpening :one
+SELECT psp_opening FROM characters WHERE id = $1
+`
+
+func (q *Queries) GetPSPOpening(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getPSPOpening, id)
+	var psp_opening int64
+	err := row.Scan(&psp_opening)
+	return psp_opening, err
+}
+
 const insertAction = `-- name: InsertAction :one
 
 INSERT INTO action_log (character_id, round, kind, summary, hp_delta, psp_delta, payload, transaction_id)

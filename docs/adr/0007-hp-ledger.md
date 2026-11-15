@@ -41,6 +41,12 @@ Tests live in `api/internal/domain/service/actionlogsvc/` unless named otherwise
    `adapters/actionlogdal` `TestHPTotal` (the character's deltas and corrections read and summed by
    the rule, as the log grows: amend, pop, redo, pop again, a correction step popped and redone);
    `TestEntryStatusAndEffectiveValues` (the same rules on one entry), `TestGetState`.
+   *Amended by [ADR 0029](0029-users-login-and-access.md) step 12.4 (2026-11-14):* a character may
+   have an **opening balance**, `characters.hp_opening` (0 unless it is a copy), the total the ledger
+   held before its log began; the total every reader gets is the opening plus that sum, so the copy
+   of a character has its source's current HP with an empty log. The opening is not an entry:
+   nothing amends, voids or pops it, and the log stays append-only. Test: `actionlogdal` `TestHPTotal`
+   ("opening balance" cases), `composition` `TestCopy_Step12_CopyAndSourceAreIndependent`.
 3. **Damage taken is entered as final.** The app never works the damage out: the player types the
    number after the DM's rulings (armour, resistance, saves), and it is logged as typed, never
    capped (HP may go below 0) down to the floor of -10, where it is clamped

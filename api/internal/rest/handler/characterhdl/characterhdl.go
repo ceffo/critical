@@ -60,6 +60,7 @@ func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 	r.Post("/api/characters", render.Handle(Create(svc)))
 	r.Post("/api/characters/draft", render.Handle(Draft(svc)))
 	r.Patch("/api/characters/{id}", render.Handle(Change(svc)))
+	r.Post("/api/characters/{id}/copy", render.Handle(Copy(svc)))
 }
 
 type ownedLister interface {
@@ -119,6 +120,8 @@ type SummaryDTO struct {
 type CharactersDTO struct {
 	Characters []SummaryDTO `json:"characters"`
 	CurrentID  *int64       `json:"currentId"`
+	// CopiedID is the character a copy just made (ADR 0029 step 12), only in the answer to a copy.
+	CopiedID *int64 `json:"copiedId,omitempty"`
 }
 
 // user is the request's user; the gate lets no request without one reach a
@@ -136,6 +139,11 @@ func renderCharacters(w http.ResponseWriter, r *http.Request, svc ownedLister, o
 }
 
 func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLister, owner uuid.UUID, current int64, status int) error {
+	return renderCharactersCopied(w, r, svc, owner, current, 0, status)
+}
+
+// renderCharactersCopied is renderCharactersStatus naming the character a copy made (0: none).
+func renderCharactersCopied(w http.ResponseWriter, r *http.Request, svc ownedLister, owner uuid.UUID, current, copied int64, status int) error {
 	list, err := svc.List(r.Context(), owner)
 	if err != nil {
 		return err
@@ -150,6 +158,9 @@ func renderCharactersStatus(w http.ResponseWriter, r *http.Request, svc ownedLis
 			id := c.ID
 			out.CurrentID = &id
 		}
+	}
+	if copied != 0 {
+		out.CopiedID = &copied
 	}
 	render.JSON(r.Context(), w, status, out)
 	return nil

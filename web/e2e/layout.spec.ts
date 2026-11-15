@@ -3084,6 +3084,7 @@ async function viewBannerStep(page: Page, size: Viewport, stack: Stack) {
     await expect(banner, where).toContainText("Aldéric de la Tour");
     await expectNoClippedText(banner, `banner, ${where}`);
     await expectMinTarget(page.getByTestId("view-back"), `back, ${where}`);
+    await expectMinTarget(page.getByTestId("view-copy"), `copy, ${where}`);
     await expectNoPageScroll(page);
     const vp = page.viewportSize()!;
     for (const zone of [
@@ -4130,6 +4131,9 @@ async function rosterStep(page: Page, size: Viewport) {
       ).toBeGreaterThanOrEqual(2);
       expect(parseFloat(other.outline), `other outline, ${where}`).toBe(0);
       expect(mine.fill, `current fill differs, ${where}`).not.toBe(other.fill);
+      // Copier is a full target on every card, its one word whole (ADR 0027 step 3).
+      for (const copy of await roster.getByTestId("roster-copy").all())
+        await expectMinTarget(copy, `copy button, ${where}`);
       await expectNoClippedText(page.locator("body"), `roster, ${where}`);
       await expectNoPageScroll(page);
       await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);

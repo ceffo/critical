@@ -88,6 +88,13 @@ type SVC interface {
 	// minimums missed; blank names the numbers not entered. It refuses
 	// nothing and stores nothing.
 	Draft(ctx context.Context, n NewCharacter, blank []string) (*Draft, error)
+	// Copy stores a copy of character source, one the owner may read (ADR 0029
+	// step 11.1: their own or another's), as a new character of the owner's
+	// called name (ADR 0029 step 12): the sheet and the play state as they are
+	// now, no action log, and it is not made current. The source is unchanged.
+	// An unreadable source is domain.ErrCharacterNotFound; a blank or too long
+	// name a *domain.FieldError. It returns the new character's id.
+	Copy(ctx context.Context, owner uuid.UUID, source int64, name string) (int64, error)
 	// Change renames or retires the owner's character id (step 7.3).
 	// Another user's character, a retired one and an unknown id are all
 	// domain.ErrCharacterNotFound; retiring the current character makes the
@@ -121,6 +128,10 @@ type HPLedger interface {
 	PSPTotal(ctx context.Context, characterID int64) (int, error)
 }
 
+// Openings are the opening balances of a character's HP and PSP ledgers: the
+// total (a deficit, 0 or less) the ledgers held before its action log began.
+type Openings struct{ HP, PSP int }
+
 // Owners is the driven port over who owns and plays which character.
 type Owners interface {
 	// CharactersOf is the owner's characters they have not retired, by id.
@@ -137,6 +148,14 @@ type Owners interface {
 	// domain.ErrCharacterNotFound and changes nothing (one statement: no
 	// check-then-write).
 	SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error
+	// CopyCharacter stores a copy of character source as the owner's, called
+	// name, and returns its id (ADR 0029 step 12): every row the character
+	// owns but its action log and what the log holds (its snapshots,
+	// corrections and the psionic contests' context), with opening as the two
+	// ledgers' opening balances (ADR 0007 step 2, ADR 0043 step 5). It does not
+	// change the owner's current character. A source that is unknown, retired
+	// or owned by a disabled user is domain.ErrCharacterNotFound.
+	CopyCharacter(ctx context.Context, owner uuid.UUID, source int64, name string, opening Openings) (int64, error)
 	// CreateCharacter stores c (its ID is ignored) as the owner's, with no
 	// spell prepared, no buff and round 0, and returns its id.
 	CreateCharacter(ctx context.Context, owner uuid.UUID, c Character) (int64, error)

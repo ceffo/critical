@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Eye } from "@phosphor-icons/react";
-import { fetchOthers } from "@/api/characters";
+import { ArrowLeft, Copy, Eye } from "@phosphor-icons/react";
+import { copyCharacter, fetchOthers } from "@/api/characters";
 import { Button } from "@/components/ui/button";
+import { copyName } from "@/lib/copyName";
+import { useCreationOptions } from "@/lib/useCreationOptions";
 import { whoIs } from "@/lib/viewBanner";
+import { ROSTER_PATH } from "@/lib/session";
 import { useCharacterStore } from "@/stores/character";
 import type { SharedCharacter } from "@/types/character";
 
@@ -29,6 +32,25 @@ export function ViewBanner({ id }: { id: number }) {
   const who = whoIs(others, id);
   const name = who.name ?? sheetName ?? "";
   const owner = who.owner || t("view.unnamedOwner");
+  // A failed read leaves the name's length unchecked here; the server still refuses.
+  const maxName = useCreationOptions().options?.maxNameLength ?? null;
+  const [copying, setCopying] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  /** Copies the viewed character into the user's own (ADR 0029 step 12) and shows their roster, where it is, not current. */
+  const copy = async () => {
+    setCopying(true);
+    setError(null);
+    try {
+      await copyCharacter(
+        id,
+        copyName(name, (n) => t("characters.copyName", { name: n }), maxName),
+      );
+      globalThis.location.assign(ROSTER_PATH);
+    } catch (e) {
+      setCopying(false);
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
   return (
     <div
       role="status"
@@ -42,7 +64,24 @@ export function ViewBanner({ id }: { id: number }) {
           {t("view.banner", { name, owner })}
         </span>{" "}
         <span className="text-ink-muted">{t("view.readOnly")}</span>
+        {error && (
+          <span role="alert" className="block text-danger">
+            {error}
+          </span>
+        )}
       </p>
+      <Button
+        variant="quiet"
+        data-view-ok
+        data-testid="view-copy"
+        disabled={copying || !name}
+        aria-label={t("characters.copyHint", { name })}
+        title={t("characters.copyHint", { name })}
+        onClick={() => void copy()}
+      >
+        <Copy aria-hidden />
+        {t("characters.copy")}
+      </Button>
       <Button
         variant="main"
         data-testid="view-back"

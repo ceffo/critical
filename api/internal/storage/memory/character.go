@@ -463,3 +463,78 @@ func (s *Store) AddCharacter(ctx context.Context, c charactersvc.Character) (int
 	})
 	return id, err
 }
+
+// CopyCharacter implements charactersvc.Owners (ADR 0029 step 12): every table
+// the character has a row in, but the action log (and so its snapshots and
+// corrections), under a new id, with the ledgers' opening balances. Rows with
+// ids of their own (saved buffs, XP entries, dice favourites) get new ones in
+// the source's order, as the database's identity columns give.
+func (c Characters) CopyCharacter(ctx context.Context, owner uuid.UUID, source int64, name string, opening charactersvc.Openings) (int64, error) {
+	var id int64
+	err := c.s.write(ctx, func(t *tables) error {
+		src, ok := t.characters[source]
+		own, hasOwner := t.users[t.owners[source]]
+		if !ok || !hasOwner || own.Disabled || t.retired[source] {
+			return domain.ErrCharacterNotFound
+		}
+		if _, ok := t.users[owner]; !ok {
+			return fmt.Errorf("%w: character of unknown user %s", errConstraint, owner)
+		}
+		id = nextID(&t.characterSeq)
+		cp := clone(src)
+		cp.ID, cp.Name = id, name
+		t.characters[id] = cp
+		t.owners[id] = owner
+		t.openings[id] = opening
+		t.slots[id] = clone(t.slots[source])
+		t.buffs[id] = clone(t.buffs[source])
+		t.rounds[id] = clone(t.rounds[source])
+		if f, ok := t.forms[source]; ok {
+			t.forms[id] = clone(f)
+		}
+		if o, ok := t.acOverrides[source]; ok {
+			t.acOverrides[id] = clone(o)
+		}
+		if a, ok := t.skillArmors[source]; ok {
+			t.skillArmors[id] = a
+		}
+		if b, ok := t.spellbooks[source]; ok {
+			t.spellbooks[id] = clone(b)
+		}
+		if f, ok := t.learnFailures[source]; ok {
+			t.learnFailures[id] = clone(f)
+		}
+		for _, sid := range slices.Sorted(maps.Keys(t.savedBuffs)) {
+			if sb := t.savedBuffs[sid]; sb.characterID == source {
+				sb = clone(sb)
+				sb.characterID, sb.ID = id, nextID(&t.savedBuffSeq)
+				t.savedBuffs[sb.ID] = sb
+			}
+		}
+		for _, xid := range slices.Sorted(maps.Keys(t.xp)) {
+			if e := t.xp[xid]; e.characterID == source {
+				e = clone(e)
+				e.characterID, e.ID = id, nextID(&t.xpSeq)
+				t.xp[e.ID] = e
+			}
+		}
+		for _, did := range slices.Sorted(maps.Keys(t.dice)) {
+			if d := t.dice[did]; d.characterID == source {
+				d.characterID, d.id = id, nextID(&t.diceSeq)
+				t.dice[d.id] = d
+			}
+		}
+		for k, it := range maps.All(t.items) {
+			if k.characterID == source {
+				t.items[owned{characterID: id, id: k.id}] = clone(it)
+			}
+		}
+		for k, v := range maps.All(t.reviews) {
+			if k.characterID == source && v {
+				t.reviews[review{characterID: id, itemID: k.itemID, reason: k.reason}] = true
+			}
+		}
+		return nil
+	})
+	return id, err
+}

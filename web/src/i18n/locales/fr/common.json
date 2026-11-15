@@ -2784,6 +2784,10 @@
   "characters": {
     "new": "Créer",
     "newHint": "Créer un nouveau personnage",
+    "copy": "Copier",
+    "copyHint": "Copier {{name}} en un nouveau personnage à vous : tout sauf son historique",
+    "copyName": "{{name}} (copie)",
+    "copied": "Une copie de {{name}} a été ajoutée à vos personnages.",
     "retire": "Retirer",
     "retireHint": "Retirer {{name}} : il disparaît de vos listes, rien n'est supprimé",
     "rename": "Renommer",

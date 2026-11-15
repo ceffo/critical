@@ -242,14 +242,18 @@ func (d *DAL) LatestID(ctx context.Context, characterID int64, kind actionlog.Ki
 // HPTotal returns the sum of the effective HP deltas of every entry of the
 // character, worked out by the domain rule (actionlog.HPTotal, ADR 0007
 // step 2) over the entries' own deltas and their corrections; 0 when the log
-// is empty.
+// is empty and the character has no opening balance.
 func (d *DAL) HPTotal(ctx context.Context, characterID int64) (int, error) {
 	rows, err := d.q.ListHPDeltas(ctx, characterID)
 	if err != nil {
 		return 0, fmt.Errorf("list action_log hp: %w", err)
 	}
+	opening, err := d.openingOf(ctx, d.q.GetHPOpening, characterID)
+	if err != nil {
+		return 0, fmt.Errorf("hp opening: %w", err)
+	}
 	if len(rows) == 0 {
-		return 0, nil
+		return opening, nil
 	}
 	entries := make([]actionlog.Entry, len(rows))
 	for i, r := range rows {
@@ -258,7 +262,7 @@ func (d *DAL) HPTotal(ctx context.Context, characterID int64) (int, error) {
 	if err := d.attachCorrections(ctx, characterID, entries, entries[0].ID); err != nil {
 		return 0, err
 	}
-	return actionlog.HPTotal(entries), nil
+	return opening + actionlog.HPTotal(entries), nil
 }
 
 // PSPTotal returns the sum of the effective PSP deltas of every entry of the
@@ -270,8 +274,12 @@ func (d *DAL) PSPTotal(ctx context.Context, characterID int64) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("list action_log psp: %w", err)
 	}
+	opening, err := d.openingOf(ctx, d.q.GetPSPOpening, characterID)
+	if err != nil {
+		return 0, fmt.Errorf("psp opening: %w", err)
+	}
 	if len(rows) == 0 {
-		return 0, nil
+		return opening, nil
 	}
 	entries := make([]actionlog.Entry, len(rows))
 	for i, r := range rows {
@@ -280,7 +288,20 @@ func (d *DAL) PSPTotal(ctx context.Context, characterID int64) (int, error) {
 	if err := d.attachCorrections(ctx, characterID, entries, entries[0].ID); err != nil {
 		return 0, err
 	}
-	return actionlog.PSPTotal(entries), nil
+	return opening + actionlog.PSPTotal(entries), nil
+}
+
+// openingOf is a character's opening balance of a ledger (ADR 0029 step 12): what its get query
+// reads, 0 for a character that is unknown (the ledger sum is 0 then too).
+func (d *DAL) openingOf(ctx context.Context, get func(context.Context, int64) (int64, error), characterID int64) (int, error) {
+	v, err := get(ctx, characterID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return int(v), nil
 }
 
 // attach loads snapshots and corrections for entries (any order) in two

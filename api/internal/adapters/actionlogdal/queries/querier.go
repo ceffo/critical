@@ -10,6 +10,11 @@ import (
 
 type Querier interface {
 	GetAction(ctx context.Context, arg GetActionParams) (GetActionRow, error)
+	// GetHPOpening and GetPSPOpening read a character's ledger opening balances (ADR 0007 step 2, ADR
+	// 0043 step 5): the total the ledger held before the log began, 0 for a character not copied. No
+	// row for an unknown character.
+	GetHPOpening(ctx context.Context, id int64) (int64, error)
+	GetPSPOpening(ctx context.Context, id int64) (int64, error)
 	// InsertAction appends an entry. The log is append-only (ADR 0007, 0010): an
 	// entry is never updated but by StartActionTransaction on the row just
 	// inserted; an amend, a void (pop) or a redo is a new action_corrections row.

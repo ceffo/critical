@@ -358,3 +358,32 @@ func (s *service) Change(ctx context.Context, owner uuid.UUID, id int64, c Chang
 	}
 	return current, nil
 }
+
+// Copy implements SVC (ADR 0029 step 12). The copy's opening balances are the
+// source's ledger totals now (HP and PSPs the source has lost), read in the
+// transaction that stores the copy, so the copy has the source's current HP and
+// PSPs with an empty log (ADR 0007 step 2, ADR 0043 step 5). The name is text
+// the web composed (ADR 0023: the backend builds no display text).
+func (s *service) Copy(ctx context.Context, owner uuid.UUID, source int64, name string) (int64, error) {
+	name, err := cleanName(name)
+	if err != nil {
+		return 0, err
+	}
+	var id int64
+	err = s.tx.InTx(ctx, func(ctx context.Context) error {
+		if err := s.owners.ViewableCharacter(ctx, source); err != nil {
+			return err
+		}
+		hp, err := s.hp.HPTotal(ctx, source)
+		if err != nil {
+			return fmt.Errorf("copy character %d: hp: %w", source, err)
+		}
+		psp, err := s.hp.PSPTotal(ctx, source)
+		if err != nil {
+			return fmt.Errorf("copy character %d: psp: %w", source, err)
+		}
+		id, err = s.owners.CopyCharacter(ctx, owner, source, name, Openings{HP: hp, PSP: psp})
+		return err
+	})
+	return id, err
+}

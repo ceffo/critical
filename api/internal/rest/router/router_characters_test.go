@@ -67,7 +67,7 @@ var characterFree = map[string]bool{
 	"GET /api/ruleset": true, "GET /api/ruleset/changes": true, "PUT /api/ruleset/crit-table": true,
 	"PUT /api/ruleset/racial-lift": true, "PUT /api/ruleset/weapon-lift": true, "PUT /api/ruleset/success-effects": true,
 	"GET /api/characters": true, "GET /api/characters/others": true, "PUT /api/characters/current": true,
-	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/draft": true, "PATCH /api/characters/{id}": true,
+	"GET /api/characters/options": true, "POST /api/characters": true, "POST /api/characters/draft": true, "PATCH /api/characters/{id}": true, "POST /api/characters/{id}/copy": true,
 	"POST /api/characters/rolls/scores": true, "POST /api/characters/rolls/hp": true,
 	"POST /api/characters/rolls/scores/arrangement": true, "POST /api/characters/rolls/identity": true,
 }

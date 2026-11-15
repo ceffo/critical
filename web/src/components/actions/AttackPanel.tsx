@@ -75,6 +75,7 @@ export function AttackPanel() {
   );
   const rolling = useRollStore((s) => s.rolling);
   const weapons = useItemsStore((s) => s.weapons);
+  const weaponsLoaded = useItemsStore((s) => s.weaponsLoaded);
   const items = useItemsStore((s) => s.items);
   const buffs = useBuffsStore((s) => s.buffs);
   const strength = useBuffsStore((s) => s.strength);
@@ -88,6 +89,11 @@ export function AttackPanel() {
     void load();
   }, [load, weapons, items, buffs, strength]);
 
+  if (weaponsLoaded && weapons.length === 0) {
+    return (
+      <p className="text-body text-muted-foreground">{t("attack.noWeapons")}</p>
+    );
+  }
   if (!view || weapons.length === 0) {
     return (
       <p className="text-body text-muted-foreground">{t("attack.loading")}</p>

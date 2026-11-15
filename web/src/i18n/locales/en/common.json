@@ -599,6 +599,7 @@
     "situationalLabel": "Reason",
     "situationalPlaceholder": "e.g. rear attack",
     "loading": "Loading weapons…",
+    "noWeapons": "No weapons.",
     "roll": "Attack",
     "form": "Attack",
     "target": "Target",

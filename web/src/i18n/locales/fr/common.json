@@ -599,6 +599,7 @@
     "situationalLabel": "Raison",
     "situationalPlaceholder": "ex. attaque de dos",
     "loading": "Chargement des armes…",
+    "noWeapons": "Aucune arme.",
     "roll": "Attaquer",
     "form": "Attaque",
     "target": "Cible",

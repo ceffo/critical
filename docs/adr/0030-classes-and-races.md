@@ -519,7 +519,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
 
 17. **Thieving skills.** Each of the eight skills of PHB Table 26 is: base (Table 26) + the
     entered points + race (Table 27) + Dexterity (Table 28, the sheet's Dexterity; skills without a
-    column get 0) + armour (Table 29, the column of the body armour worn, [ADR 0033](0033-equipment.md)
+    column get 0; a Dexterity of 20 or more reads the row of 19, the user's ruling of 2026-11-15: the
+    book's table stops at 19, and the catalogue publishes that row as 19 to 25; a Dexterity under 9
+    has no row and adjusts by 0, pending the user's ruling) + armour (Table 29, the column of the body armour worn, [ADR 0033](0033-equipment.md)
     step 14: none worn is the none column, an armour a thief may not wear the padded or studded
     one; leather is the table's baseline, 0), capped at 95% (PHB p.39: no skill above
     95 with every adjustment) and floored at 0. _(proposed: the points are checked against the
@@ -566,7 +568,11 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     (skillsvc), `TestThief_Steps17_19_CreateRollASkillAndBackstab` (composition); after creation
     `TestSetPoints_Step17_WritesAndLogsTheSpend`, `TestSetPoints_Step17_RefusalsAndNoChange`,
     `TestSetPoints_Step17_RestorerWritesThePointsBack`, `TestThiefSkill_Step17_ZeroPercentRefusedBeforeTheDie`
-    (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition).
+    (skillsvc), `TestThief_Step17_SpendPointsAfterALevelUpAndUndo` (composition). The audit against
+    the book (every term of every skill, each race, Dexterity 9 to 25, each body armour column, written
+    out from PHB Tables 26 to 29): `TestThiefSkills_Step17_EveryTermAgainstTheBook`,
+    `TestThiefSkills_Step17_Dexterity20AndMoreReadsTheRowOf19`,
+    `TestRogueSkills_Step17_DexterityUnder9AdjustsByNothing` (ruletablesadpt).
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `rogue_skills` feature (set `thief`, its budget and armours as params, no `min_to_use`: the book gives none and Go's floor stays 0) replaces `thiefSkillClasses`, the budget constants and `ThiefArmors`)_
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
@@ -600,7 +606,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     step 14's), `TestBardSkill_Step18_D100AtOrUnderTheDerivedPercent`,
     `TestBardSkill_Step18_ListedWithTheirTermsAndLastCheck`, `TestSetPoints_Step18_ABardSpendsItsPoints`
     (skillsvc), `TestBard_Step18_CreateRollSpendAndUndo`,
-    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
+    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition); the audit against the book
+    (Table 33 and Tables 27 to 29, as step 17's): `TestBardSkills_Step18_EveryTermAgainstTheBook`
+    (ruletablesadpt).
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the same `rogue_skills` kind with set `bard`, budget 20/15 and no per-skill limit, `metal` on the elven chain column with an extra -5 (no `min_to_use`), replacing `bardSkillClasses`, `BardArmors` and the bard constants; the check kind follows the set)_
 19. **Backstab.** A thief's attack has a backstab option (not a bard's): +4 to hit (a named
     modifier), and the weapon's damage dice multiplied by PHB Table 30 for the level (×2 at 1-4, ×3
@@ -1020,7 +1028,9 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     compared on read (no `sheetDifferences` entry for them).
     Tests: `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck),
     `TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration` (storage/postgres),
-    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
+    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition); the audit against the book
+    (Table 33 and Tables 27 to 29, as step 17's): `TestBardSkills_Step18_EveryTermAgainstTheBook`
+    (ruletablesadpt).
     _(Retirement as built, 2026-10-19)_ The derived block no longer lists differences. The API keeps
     `sheetDifferences` as an always empty array for one release only, because the previous
     release's web reads its `.length`; the web of this release neither types nor reads it. Drop the

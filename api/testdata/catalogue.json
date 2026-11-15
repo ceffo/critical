@@ -1282,11 +1282,11 @@
       {"dex_min": 18, "dex_max": 18, "skill": "find_remove_traps", "adjustment": 5},
       {"dex_min": 18, "dex_max": 18, "skill": "move_silently", "adjustment": 10},
       {"dex_min": 18, "dex_max": 18, "skill": "hide_in_shadows", "adjustment": 10},
-      {"dex_min": 19, "dex_max": 19, "skill": "pick_pockets", "adjustment": 15},
-      {"dex_min": 19, "dex_max": 19, "skill": "open_locks", "adjustment": 20},
-      {"dex_min": 19, "dex_max": 19, "skill": "find_remove_traps", "adjustment": 10},
-      {"dex_min": 19, "dex_max": 19, "skill": "move_silently", "adjustment": 15},
-      {"dex_min": 19, "dex_max": 19, "skill": "hide_in_shadows", "adjustment": 15}
+      {"dex_min": 19, "dex_max": 25, "skill": "pick_pockets", "adjustment": 15},
+      {"dex_min": 19, "dex_max": 25, "skill": "open_locks", "adjustment": 20},
+      {"dex_min": 19, "dex_max": 25, "skill": "find_remove_traps", "adjustment": 10},
+      {"dex_min": 19, "dex_max": 25, "skill": "move_silently", "adjustment": 15},
+      {"dex_min": 19, "dex_max": 25, "skill": "hide_in_shadows", "adjustment": 15}
     ],
     "skill_armor": [
       {"armor": "none", "skill": "pick_pockets", "adjustment": 5},

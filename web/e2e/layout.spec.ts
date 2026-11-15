@@ -3111,6 +3111,13 @@ async function viewBannerStep(page: Page, size: Viewport, stack: Stack) {
     expect(open, `${where}: no open write control`).toBe(0);
     await expect(page.getByTestId("settings-trigger")).toBeEnabled();
     await snap(page, `view-banner-${lang}-${size.width}x${size.height}`);
+    // The roster lists the same character under its owner, whole.
+    await page.goto("/characters");
+    const others = page.getByTestId("roster-others");
+    await expect(others, where).toContainText("Aldéric de la Tour");
+    await expectNoClippedText(others, `roster, others, ${where}`);
+    await expectNoPageScroll(page);
+    await snap(page, `roster-others-${lang}-${size.width}x${size.height}`);
   }
 }
 

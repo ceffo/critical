@@ -48,7 +48,7 @@ export function Others() {
           className="flex flex-col gap-2"
           data-testid="roster-owner"
         >
-          <h3 className="text-title [overflow-wrap:anywhere]">
+          <h3 className="section-label [overflow-wrap:anywhere]">
             {g.name || t("roster.unnamedOwner")}
           </h3>
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] gap-3">

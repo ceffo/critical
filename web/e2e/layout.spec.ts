@@ -28,6 +28,8 @@ import {
   logEntry,
   openSortsPowers,
   openSpend,
+  newCharacter,
+  seedOtherUser,
 } from "./helpers";
 import {
   test as base,
@@ -3052,6 +3054,66 @@ async function textFloorPagesStep(page: Page, size: Viewport) {
  * more (a multi-class sheet) come last; the browser's local storage is cleared between steps, so each
  * starts in the default language and theme.
  */
+/**
+ * The read-only banner of another user's character (ADR 0029 step 11), at every size, in French and in English and in
+ * a light and a dark theme: it names the character (a long one wraps, never cut) and the owner (no
+ * display name: the web's own word), the Back button is a full target, the shell under it still fits
+ * the window (no page scroll, every zone visible, nothing under the screen) and every write control
+ * is locked while the cog menu and the tabs keep working.
+ */
+async function viewBannerStep(page: Page, size: Viewport, stack: Stack) {
+  await seedOtherUser(stack.apiUrl, "viewer-layout@example.com", [
+    newCharacter("Aldéric de la Tour-d'Auvergne-Lesparre", "mage"),
+  ]);
+  await openDashboard(page);
+  const list = await page.evaluate(async () => {
+    const r = await fetch("/api/characters/others");
+    return (await r.json()) as { characters: { id: number }[] };
+  });
+  const id = list.characters[0]!.id;
+  for (const [lang, theme] of [
+    ["fr", "Sombre"],
+    ["en", "Light"],
+  ] as const) {
+    await page.goto("/");
+    await chooseLanguage(page, lang);
+    await chooseSetting(page, theme);
+    await page.goto(`/view/${id}`);
+    const banner = page.getByTestId("view-banner");
+    const where = `${lang}, ${theme}, ${size.width}x${size.height}`;
+    await expect(banner, where).toContainText("Aldéric de la Tour");
+    await expectNoClippedText(banner, `banner, ${where}`);
+    await expectMinTarget(page.getByTestId("view-back"), `back, ${where}`);
+    await expectNoPageScroll(page);
+    const vp = page.viewportSize()!;
+    for (const zone of [
+      page.getByTestId("dice-footer"),
+      page.getByTestId("character"),
+      page.getByTestId("stage"),
+    ]) {
+      const b = (await zone.boundingBox())!;
+      expect(
+        b.y + b.height,
+        `${where}: zone inside the window`,
+      ).toBeLessThanOrEqual(vp.height);
+    }
+    const bb = (await banner.boundingBox())!;
+    expect(
+      bb.x + bb.width,
+      `${where}: banner inside the window`,
+    ).toBeLessThanOrEqual(vp.width);
+    // Every write control is locked; the cog menu and the tabs still answer.
+    const open = await page
+      .locator(
+        "[data-testid=character] button:not([data-view-locked]), [data-testid=dice-footer] input:not([data-view-locked])",
+      )
+      .count();
+    expect(open, `${where}: no open write control`).toBe(0);
+    await expect(page.getByTestId("settings-trigger")).toBeEnabled();
+    await snap(page, `view-banner-${lang}-${size.width}x${size.height}`);
+  }
+}
+
 const DASHBOARD_STEPS: [string, Step][] = [
   ["end effects", endEffectsStep],
   ["shell", shellStep],
@@ -3091,6 +3153,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["class lines, dual-class", (p, s) => classLinesStep(p, s, "dual")],
   ["weapon proficiency editor", weaponProfEditorStep],
   ["prepare, long spellbook", prepareLongBookStep],
+  ["read-only banner", viewBannerStep],
 ];
 
 async function runWalk(
@@ -3139,6 +3202,7 @@ const WIDTH_STEPS = new Set([
   "saves label line",
   "attack card",
   "dice bar",
+  "read-only banner",
   "class lines, multi-class",
   "class lines, three classes",
   "class lines, dual-class",

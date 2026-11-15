@@ -560,6 +560,22 @@ export interface CharacterList {
   currentId: number | null;
 }
 
+/** The user who owns a character another user reads; `name` is their display name, "" when none is known (never an email). */
+export interface CharacterOwner {
+  id: string;
+  name: string;
+}
+
+/** A character of another user, in the list every user reads (`GET /api/characters/others`, ADR 0029 step 11.2). */
+export interface SharedCharacter extends CharacterSummary {
+  owner: CharacterOwner;
+}
+
+/** Other users' characters (not retired, owners enabled), by owner name then id. */
+export interface OthersList {
+  characters: SharedCharacter[];
+}
+
 /** An inclusive range the server checks. */
 export interface ValueRange {
   min: number;

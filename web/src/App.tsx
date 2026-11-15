@@ -1,4 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { ViewBanner } from "@/components/shell/ViewBanner";
+import { keepLocked } from "@/lib/readOnly";
+import { viewedId } from "@/lib/viewed";
 import { VersionBadge } from "@/components/shell/VersionBadge";
 import { setReload } from "@/api/http";
 import { useTranslation } from "react-i18next";
@@ -99,6 +102,7 @@ function App() {
   const loadEquipment = useEquipmentCatalogueStore((s) => s.load);
   const loadRules = useEquipmentRulesStore((s) => s.load);
   const lookupKey = lookupLabelKey(useActFeatures());
+  const viewed = viewedId();
   const [activity, setActivity] = useState<Activity>("act");
   const [visited, setVisited] = useState<ReadonlySet<Activity>>(
     () => new Set(["act"]),
@@ -127,8 +131,17 @@ function App() {
     return () => setReload(null);
   }, [refresh, loadSpellNames, loadLanguages, loadEquipment, loadRules]);
 
+  // Another user's character: every write control is locked, whatever renders later (ADR 0029 step 11).
+  useEffect(
+    () => (viewed === null ? undefined : keepLocked(document)),
+    [viewed],
+  );
+
   return (
-    <div className="relative flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3">
+    <div
+      data-read-only={viewed !== null || undefined}
+      className="relative flex h-dvh flex-col gap-3 overflow-hidden bg-background p-3"
+    >
       <a
         href="#stage"
         className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-1/2 focus:z-50 focus:-translate-x-1/2 focus:whitespace-nowrap focus:rounded-lg focus:border focus:border-border focus:bg-background focus:px-3 focus:py-2 focus:text-body focus:text-foreground"
@@ -146,6 +159,7 @@ function App() {
         {t("shell.skipToStage")}
       </a>
       <DatabaseBanner />
+      {viewed !== null && <ViewBanner id={viewed} />}
       <Header />
       <div className="flex min-h-0 flex-1 gap-3">
         <aside

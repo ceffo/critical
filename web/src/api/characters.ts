@@ -6,6 +6,7 @@ import type {
   IdentityFigure,
   IdentityRoll,
   NewCharacter,
+  OthersList,
   ScoresArrangement,
   ScoresRoll,
 } from "@/types/character";
@@ -14,6 +15,11 @@ import { patch, post, request } from "./http";
 /** The user's characters and the current one (ADR 0029 step 7.2). */
 export function fetchCharacters(): Promise<CharacterList> {
   return request<CharacterList>("/api/characters");
+}
+
+/** Other users' characters, which the user may read but not play (ADR 0029 step 11.2). */
+export function fetchOthers(): Promise<OthersList> {
+  return request<OthersList>("/api/characters/others");
 }
 
 /** Makes one of the user's characters current. */

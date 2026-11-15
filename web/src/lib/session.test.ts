@@ -66,6 +66,20 @@ describe("startFor", () => {
     },
   };
 
+  it("shows another user's character to a user with or without a character of their own", () => {
+    expect(startFor("/view/7", "", me)).toEqual({ show: "view" });
+    const none = {
+      ...me,
+      me: { ...me.me, currentCharacterId: null },
+    };
+    expect(startFor("/view/7", "", none)).toEqual({ show: "view" });
+    // Not a character id: the app, as for any unknown path.
+    expect(startFor("/view/x", "", me)).toEqual({ show: "app" });
+    expect(startFor("/view/7", "", { kind: "out" })).toEqual({
+      go: "/login",
+    });
+  });
+
   it("shows the app with a session", () => {
     expect(startFor("/", "", me)).toEqual({ show: "app" });
     expect(startFor("/spells/42", "", me)).toEqual({ show: "app" });

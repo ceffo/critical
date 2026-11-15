@@ -361,6 +361,22 @@ sequenceDiagram
        `composition` `TestViewed_Step11_AnnReadsBobsCharacterAndChangesNothing` (two users, every `GET`
        route read, every other refused, Bram's HP, round and log and Ann's current character
        unchanged), `TestViewed_Step11_ListAndUnreadableCharacters`.
+    6. **The web.** Another user's character is the page `/view/<character id>` (`lib/viewed.ts`), opened
+       and left through a **full page load** (the roster's Consulter, the banner's Retour), so the viewed
+       sheet never shares a page with the user's own state and the id of the path is the viewed character
+       for the page's whole life. The roster lists `GET /api/characters/others` under the user's own cards,
+       grouped by owner (`components/characters/Others.tsx`); an owner without a display name is worded by
+       the web (`roster.unnamedOwner`, `view.unnamedOwner`), never by the backend. The page names the
+       character in `X-Viewed-Character-Id` and never in `X-Character-Id` (`api/http.ts`), shows a **banner**
+       naming the character and its owner with a Retour to the user's own character
+       (`components/shell/ViewBanner.tsx`), and is read-only twice over: the http layer **throws before
+       the network** on any write but the logout (`read_only`, the server's own code, worded
+       `apiError.read_only`), and every control that is not for moving around is **locked by default**
+       (`lib/readOnly.ts`: disabled and dimmed; tabs, the split handle, disclosures, the rail and what is
+       marked `data-view-ok` stay usable), so a control added later is read-only without anyone
+       remembering it. Tests: `http.test.ts` "a read-only page", `readOnly.dom.test.tsx`,
+       `Others.dom.test.tsx`, `ViewBanner.dom.test.tsx`, `session.test.ts` (`startFor`), the e2e
+       `view-others.spec.ts` (two users, no write request) and `layout.spec.ts` "read-only banner".
 
 ## Amendment 2026-10-18: the static bundle is public
 

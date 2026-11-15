@@ -3,6 +3,7 @@ import { loginUrl } from "@/lib/session";
 import { noteAnswer, noteWrite, STATE_KEYS_HEADER } from "@/lib/stateKeys";
 import { useDatabaseStore } from "@/stores/database";
 import { useSessionStore } from "@/stores/session";
+import { mayLeaveReadOnly, viewedId, VIEWED_HEADER } from "@/lib/viewed";
 
 /** The login endpoints: their callers decide where to go, a 401 there never redirects. */
 const AUTH_PREFIX = "/api/auth/";
@@ -220,8 +221,17 @@ export const CHARACTER_HEADER = "X-Character-Id";
 /** The code of a request for a character that is not the user's current one any more (switched elsewhere). */
 export const CHARACTER_CHANGED = "character_changed";
 
-/** init with the character the page shows (the session's current character), when it has one. */
+/** The code of a write a read-only page refused to send (the server's own `read_only` is the same refusal). */
+export const READ_ONLY = "read_only";
+
+/** init with the character the page shows (the session's current character), when it has one; a read-only page names the viewed one instead. */
 function withCharacter(init?: RequestInit): RequestInit | undefined {
+  const viewed = viewedId();
+  if (viewed !== null) {
+    const headers = new Headers(init?.headers);
+    headers.set(VIEWED_HEADER, String(viewed));
+    return { ...init, headers };
+  }
   const id = useSessionStore.getState().me?.currentCharacterId;
   if (id == null) return init;
   const headers = new Headers(init?.headers);
@@ -261,6 +271,14 @@ export async function request<T>(url: string, init?: RequestInit): Promise<T> {
 async function send<T>(url: string, init?: RequestInit): Promise<T> {
   const read = isRead(init);
   const started = Date.now();
+  // A read-only page never sends a write: refused here, before the network (ADR 0029 step 11.4).
+  if (viewedId() !== null && !mayLeaveReadOnly(url, init?.method))
+    throw new ApiError(
+      codeMessage(READ_ONLY) ?? READ_ONLY,
+      403,
+      undefined,
+      READ_ONLY,
+    );
   if (!read && useDatabaseStore.getState().unavailable) {
     throw unavailableError();
   }

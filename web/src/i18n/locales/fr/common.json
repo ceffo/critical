@@ -2579,6 +2579,7 @@
     "forDm": "Pour le MJ : vos PV ne changent pas"
   },
   "apiError": {
+    "read_only": "Ce personnage est en lecture seule : rien ne peut y être modifié.",
     "save_immune": "Ce sort ne vous atteignait pas : il n’y a pas de jet à ajuster.",
     "over_budget": "Budget dépassé : {{spent}} pour {{limit}} disponibles.",
     "character_not_found": "Ce personnage n'existe plus.",
@@ -2833,7 +2834,19 @@
       "metal": "Métal, jusqu’à la maille"
     }
   },
+  "view": {
+    "banner": "Vous consultez {{name}}, joué par {{owner}}.",
+    "unnamedOwner": "un autre joueur",
+    "readOnly": "Lecture seule : rien ne peut être modifié ici.",
+    "back": "Retour",
+    "backHint": "Revenir à votre propre personnage"
+  },
   "roster": {
+    "unnamedOwner": "Joueur sans nom",
+    "othersTitle": "Personnages des autres joueurs",
+    "othersError": "Les personnages des autres joueurs n'ont pas pu être chargés.",
+    "view": "Consulter",
+    "viewHint": "Consulter {{name}}, en lecture seule",
     "title": "Vos personnages",
     "open": "Vos personnages : jouer, renommer, retirer ou créer un personnage",
     "back": "Reprendre",

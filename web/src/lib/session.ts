@@ -1,4 +1,5 @@
 import type { SessionState } from "@/api/auth";
+import { viewedIdOf } from "@/lib/viewed";
 
 /** The refusal codes the login page words, each its own message (`login.error.<code>`, en + fr). */
 export const LOGIN_ERRORS = [
@@ -38,6 +39,7 @@ export type Start =
   | { show: "admin" }
   | { show: "ruleset" }
   | { show: "create"; hasCurrent: boolean }
+  | { show: "view" }
   | { go: string };
 
 /** The creation route (ADR 0034 step 2), which the roster's Créer opens. */
@@ -90,6 +92,8 @@ export function startFor(
     // Every logged-in user reads it; only an admin edits (the page hides the controls from a player).
     return { show: "ruleset" };
   }
+  // Another user's character, read-only (ADR 0029 step 11): any logged-in user, whether or not they have a character of their own.
+  if (viewedIdOf(path) !== null) return { show: "view" };
   if (session.kind === "in" && session.me.currentCharacterId == null)
     return { show: "create", hasCurrent: false };
   if (path === CREATE_PATH) return { show: "create", hasCurrent: true };

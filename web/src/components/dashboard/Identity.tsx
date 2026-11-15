@@ -16,7 +16,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
 import { useTableStore } from "@/stores/table";
 import { useLookupStore } from "@/stores/lookup";
-import { useSkillsEditor } from "@/stores/skillsEditor";
+import { useSkillsEditor, type SkillsEditor } from "@/stores/skillsEditor";
 import type { Character, FreeSpell } from "@/types/character";
 import { useXpStore } from "@/stores/xp";
 import { schoolOf, useSwitchableEntries } from "@/lib/classSwitch";
@@ -46,10 +46,13 @@ const CELL = "flex min-w-0 flex-col items-center rounded-md bg-raised py-1";
 export function Identity({
   onOpenXp,
   onOpenSpells,
+  onOpenSkills,
 }: {
   onOpenXp: () => void;
   /** Focuses the Spells activity, the spell lookup (a free spell's link, ADR 0030 step 20.8). */
   onOpenSpells: () => void;
+  /** Focuses the Skills activity (the level-up box's links, ADR 0037 step 15). */
+  onOpenSkills: () => void;
 }) {
   const { t, i18n } = useTranslation();
   const className = useClassName();
@@ -79,7 +82,11 @@ export function Identity({
   const rollLevelUp = useCharacterStore((s) => s.rollLevelUp);
   const levelUpBusy = useTableStore((s) => s.busy);
   // ADR 0037 step 15's links: the editor, in the Skills activity.
-  const openSkillsEditor = useSkillsEditor((s) => s.open);
+  const askSkillsEditor = useSkillsEditor((s) => s.open);
+  const openSkillsEditor = (editor: SkillsEditor) => {
+    askSkillsEditor(editor);
+    onOpenSkills();
+  };
   // ADR 0030 step 20.8's link: the lookup on the free spell's spell level, Ajouter claiming it.
   const openFreeSpellLookup = useLookupStore((s) => s.openFreeSpell);
   const openFreeSpell = (fs: FreeSpell) => {

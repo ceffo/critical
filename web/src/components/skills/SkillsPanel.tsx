@@ -18,13 +18,13 @@ function Block({
   children,
 }: {
   id: string;
-  anchor: (el: HTMLElement | null) => void;
+  anchor: string;
   title?: string;
   children: ReactNode;
 }) {
   return (
     <section
-      ref={anchor}
+      data-anchor={anchor}
       tabIndex={-1}
       aria-label={title}
       data-testid={id}
@@ -60,11 +60,7 @@ export function SkillsPanel() {
   const [fresh, setFresh] = useState<Record<string, number>>({});
   const restart = (key: string) =>
     setFresh((f) => ({ ...f, [key]: (f[key] ?? 0) + 1 }));
-  const anchors = useRef(new Map<string, HTMLElement>());
-  const anchor = (key: string) => (el: HTMLElement | null) => {
-    if (el) anchors.current.set(key, el);
-    else anchors.current.delete(key);
-  };
+  const panel = useRef<HTMLDivElement>(null);
 
   // The points editors read the skill sets as the server derived them, read again whenever the
   // sheet changes (a level, an undo, a redo, a pick).
@@ -86,7 +82,9 @@ export function SkillsPanel() {
       : asked;
   useEffect(() => {
     if (!askedKey) return;
-    const el = anchors.current.get(askedKey);
+    const el = [
+      ...(panel.current?.querySelectorAll<HTMLElement>("[data-anchor]") ?? []),
+    ].find((b) => b.dataset.anchor === askedKey);
     // The points editors arrive with the skills: keep the request until their block exists.
     if (!el && asked === "skillPoints") return;
     el?.scrollIntoView({ block: "start" });
@@ -103,11 +101,12 @@ export function SkillsPanel() {
 
   return (
     <div
+      ref={panel}
       className="zone-card flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
       data-testid="skills-panel"
     >
       {slots?.weapon && cls && (
-        <Block id="skills-weapon" anchor={anchor("weapon")}>
+        <Block id="skills-weapon" anchor={"weapon"}>
           <PickEditor
             key={pickKey("weapon")}
             pool="weapon"
@@ -120,7 +119,7 @@ export function SkillsPanel() {
         </Block>
       )}
       {slots && cls && (
-        <Block id="skills-nonWeapon" anchor={anchor("nonWeapon")}>
+        <Block id="skills-nonWeapon" anchor={"nonWeapon"}>
           <PickEditor
             key={pickKey("nonWeapon")}
             pool="nonWeapon"
@@ -136,7 +135,7 @@ export function SkillsPanel() {
         <Block
           key={set.set}
           id={`skills-points-${set.set}`}
-          anchor={anchor(`set:${set.set}`)}
+          anchor={`set:${set.set}`}
           title={
             sets.length > 1 ? localized(i18n.language, set.name) : undefined
           }

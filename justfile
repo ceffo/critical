@@ -562,6 +562,13 @@ psionics-shots *args:
     cd web && node e2e/check-browser.mjs
     node docs/design/psionics/shots.mjs {{args}}
 
+# Mage school design round (docs/design/mage-school/, CRI-392): the mock-ups of web/design/mage-school/
+# shot in French and English at 1920x1080 and 2560x1440 into docs/design/mage-school/shots/, with the
+# review gallery; fails on cut text or a page scroll (`--fr`, `--only=a,b`, `--self-test`).
+mage-school-shots *args:
+    cd web && node e2e/check-browser.mjs
+    node docs/design/mage-school/shots.mjs {{args}}
+
 # Serve a design round's shots and gallery (docs/design/<round>/shots/index.html) for review from
 # another device of the tailnet: a server on 127.0.0.1 published by `tailscale serve` (tailnet only,
 # no firewall change) at http://<host>.<tailnet>.ts.net:<port>/. Ctrl-C stops both.

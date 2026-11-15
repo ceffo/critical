@@ -7,6 +7,8 @@ import { fetchWeapons } from "@/api/combat";
 interface ItemsStore {
   items: Item[];
   weapons: Weapon[];
+  /** The weapons were read at least once: an empty list is then an answer, not a read in flight. */
+  weaponsLoaded: boolean;
   fetchItems: () => Promise<void>;
   fetchWeapons: () => Promise<void>;
   /** The items as a write outside the action log answered them (it names no state key). */
@@ -17,7 +19,9 @@ interface ItemsStore {
 export const useItemsStore = create<ItemsStore>((set) => ({
   items: [],
   weapons: [],
+  weaponsLoaded: false,
   fetchItems: async () => set({ items: (await fetchItems()) ?? [] }),
-  fetchWeapons: async () => set({ weapons: (await fetchWeapons()) ?? [] }),
+  fetchWeapons: async () =>
+    set({ weapons: (await fetchWeapons()) ?? [], weaponsLoaded: true }),
   setItems: (items) => set({ items }),
 }));

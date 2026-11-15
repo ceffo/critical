@@ -45,6 +45,9 @@ type Querier interface {
 	// Serialises the writes that move a user's current character (switch, create, retire): the
 	// later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).
 	LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
+	// Every character not retired of an enabled user but the viewer's (ADR 0029 step 11.2), by owner
+	// then id (the service derives each level). The owner's display name is NULL when unknown.
+	OthersCharacters(ctx context.Context, id uuid.UUID) ([]OthersCharactersRow, error)
 	// Only a character the user owns and has not retired: none updated is an unknown character.
 	RenameCharacter(ctx context.Context, arg RenameCharacterParams) (int64, error)
 	// The user's first character they own and have not retired becomes current, unless the current
@@ -83,6 +86,9 @@ type Querier interface {
 	// The details card's edit: every detail but the languages, which the Skills tab saves (ADR 0037
 	// step 18, SetLanguages).
 	UpdateCharacterDetails(ctx context.Context, arg UpdateCharacterDetailsParams) (int64, error)
+	// The character's id when it is not retired and its owner is enabled (ADR 0029 step 11.1): no row
+	// for an unknown, retired or disabled-owner's character, or one nobody owns.
+	ViewableCharacter(ctx context.Context, id int64) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

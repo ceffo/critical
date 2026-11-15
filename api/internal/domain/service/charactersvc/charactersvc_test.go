@@ -270,3 +270,40 @@ func TestCharacter_Score(t *testing.T) {
 	_, ok := c.Score("luck")
 	assert.False(t, ok)
 }
+
+// ADR 0029 step 11.2: the list of other users' characters carries what the
+// own list does for each, and the owner the port gave; the viewer is the
+// one asked for.
+func TestListOthers_Step11_2_DerivesEachAndKeepsTheOwner(t *testing.T) {
+	e := newEnv(t)
+	bob := uuid.MustParse("22222222-2222-2222-2222-222222222222")
+	e.owners.EXPECT().OthersCharacters(mock.Anything, owner).Return([]charactersvc.Shared{
+		{Summary: charactersvc.Summary{ID: 1, Name: "Kelsen"}, OwnerID: bob, OwnerName: "Bob"},
+	}, nil).Once()
+	e.reader.EXPECT().GetCharacter(mock.Anything, int64(1)).Return(kelsen(), nil).Once()
+	e.xp.EXPECT().Awards(mock.Anything, int64(1)).Return(awardsOf(26_582), nil).Once()
+	e.rules.EXPECT().SavesFor("rogue", 15).Return(rogue13to16, nil).Once()
+	e.rules.EXPECT().SpellsPerDay(classDef("bard"), 15, mock.Anything).Return(level15Slots, nil).Once()
+	e.rules.EXPECT().HitDiceFor("rogue").Return(rogueHitDice, nil).Once()
+
+	got, err := e.svc.ListOthers(context.Background(), owner)
+
+	require.NoError(t, err)
+	assert.Equal(t, []charactersvc.Shared{{
+		Summary: charactersvc.Summary{
+			ID: 1, Name: "Kelsen", Classes: []classes.Entry{classes.SingleEntry("bard", 15, 1_293_418)}, Race: "half_elf",
+			Missing: []string{"alignment", "sex"}, MaxHP: 85, CurrentHP: 85,
+		},
+		OwnerID: bob, OwnerName: "Bob",
+	}}, got)
+}
+
+// ADR 0029 step 11.1: CanView is the port's answer, a refusal untouched.
+func TestCanView_Step11_1_IsThePortsAnswer(t *testing.T) {
+	e := newEnv(t)
+	e.owners.EXPECT().ViewableCharacter(mock.Anything, int64(4)).Return(nil).Once()
+	e.owners.EXPECT().ViewableCharacter(mock.Anything, int64(5)).Return(domain.ErrCharacterNotFound).Once()
+
+	require.NoError(t, e.svc.CanView(context.Background(), 4))
+	assert.ErrorIs(t, e.svc.CanView(context.Background(), 5), domain.ErrCharacterNotFound)
+}

@@ -25,7 +25,8 @@ Answers in the scoper session, the same day:
 
 - Facebook: _"forget about fb then"_. Google only.
 - Roles: admin and player now; a DM role and a shared table are a later epic.
-- A character belongs to exactly one user; only its owner sees and plays it. Admins see users and their
+- A character belongs to exactly one user; only its owner sees and plays it (**amended 2026-11-14, step
+  11: every user reads any character, the owner alone plays it**). Admins see users and their
   character names, not the sheets.
 - Root admin: _"it's in the database. a local script sets it. i don't want to tie too much stuff to the
   hosting platform"_.
@@ -280,7 +281,8 @@ sequenceDiagram
    3. User, role and session are read by the middleware once per request and passed on in the request
       context; services receive the owner as an argument and never read the cookie.
 7. **Characters belong to users.**
-   1. A character has **one owner** (a user) and only the owner sees and plays it. Every character
+   1. A character has **one owner** (a user) and only the owner sees and plays it (**amended
+      2026-11-14: any user reads it, step 11; only the owner plays it**). Every character
       route resolves the character through the logged-in user's characters; **another user's character
       answers 404**, the same as an unknown id, so its existence is not revealed. An admin has no
       exception: their view of other users is the names list of step 1.3.
@@ -318,6 +320,47 @@ sequenceDiagram
     arrive by new migration files only, additive, so the previous release keeps working on the new
     schema during a rolling deploy ([ADR 0024](0024-deployment.md) step 5.2). Existing characters get
     their owner when the root admin exists (step 5.3).
+
+11. **Any user reads any character, the owner alone plays it** (user, 2026-11-14: _"ability to see
+    characters from other users and explore them in read-only"_; amends the "only its owner sees" of the
+    context and of steps 1.3 and 7.1).
+    1. **The rule.** Every logged-in user **reads** every character that is not retired and whose owner
+       is not disabled, every screen of it: the sheet, spells, items, proficiencies, the action log and
+       the notes included. Only the owner **plays** it (changes it); nobody else does, an admin
+       included (an admin's edit is a later item). An unknown id, a retired character and a disabled
+       owner's character stay **404 `character_not_found`**; a request without a session still gets
+       nothing (step 6).
+    2. **The list.** `GET /api/characters/others` is the characters of other users the caller may read:
+       `{"characters": [{...the fields of a `GET /api/characters` entry, "owner": {"id", "name"}}]}`, by
+       the owner's name (unnamed last), then owner, then character id. The caller's own, retired
+       characters and a disabled user's are absent. `owner.name` is the Google display name (step 3.8),
+       `""` when unknown: the email is never given to another player. The web groups by owner.
+    3. **Naming the viewed character.** The page that shows a character it does not play names it in the
+       header **`X-Viewed-Character-Id`** on every request (a second header beside step 7.5's
+       `X-Character-Id`, which names the character the user *plays*). The reason for a header rather
+       than a path prefix is the rule of step 7.5, "no request reads or writes another character than the
+       one the page shows": the per-character routes keep their paths and their handlers, and one
+       resolver (`mw.CurrentCharacter`) turns the request into a character id; no handler learns who
+       owns what. With the header present the resolver acts on that character, if it may be read
+       (step 11.1, one query), else 404; it ignores the current character and `X-Character-Id`, so a view
+       reads nothing from, and writes nothing to, the user's own session. A value that is no positive id is
+       400 `invalid_input`. Naming one's own character is a view too, read-only.
+    4. **A view changes nothing.** A request that carries `X-Viewed-Character-Id` and is not a `GET` or a
+       `HEAD` is refused with **403 `read_only`** by one router-wide middleware (`mw.ReadOnlyView`,
+       behind the gate, in front of every route), before the resolver and any service run, whatever the
+       route: a roll or a preview that looks like a read is a `POST` and is refused too, and the user's own
+       routes (create, switch, rename) are refused so that a page of a viewed character never writes
+       anything. `/api/auth/*` (a logout) is the one exception: it touches no character. A `GET` reads
+       only: reading changes no log, no ledger and no current character, and no "last seen" is kept.
+       **The owner is not told** who read their character. The web drops the header to play.
+    5. **Tests.** `router` `TestViewedCharacter_Step11_3_EveryWriteIsRefused` (walks every route),
+       `TestViewedCharacter_Step11_1_ReadsAnotherUsersCharacter`,
+       `TestViewedCharacter_Step11_1_UnreadableIsNotFound`, `TestViewedCharacter_Step11_1_NeedsASession`,
+       `TestCharacters_Step11_2_OthersListsWithOwners`; `charactersvc`
+       `TestListOthers_Step11_2_DerivesEachAndKeepsTheOwner`, `TestCanView_Step11_1_IsThePortsAnswer`;
+       `composition` `TestViewed_Step11_AnnReadsBobsCharacterAndChangesNothing` (two users, every `GET`
+       route read, every other refused, Bram's HP, round and log and Ann's current character
+       unchanged), `TestViewed_Step11_ListAndUnreadableCharacters`.
 
 ## Amendment 2026-10-18: the static bundle is public
 

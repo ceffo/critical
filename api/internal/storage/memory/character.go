@@ -1,6 +1,8 @@
 package memory
 
 import (
+	"bytes"
+	"cmp"
 	"context"
 	"fmt"
 	"maps"
@@ -210,6 +212,48 @@ func (c Characters) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charac
 		return nil
 	})
 	return out, err
+}
+
+// OthersCharacters implements charactersvc.Owners: by the owner's display name
+// (unnamed last), then owner, then id, as the database does.
+func (c Characters) OthersCharacters(ctx context.Context, viewer uuid.UUID) ([]charactersvc.Shared, error) {
+	out := []charactersvc.Shared{}
+	err := c.s.read(ctx, func(t *tables) error {
+		for _, id := range slices.Sorted(maps.Keys(t.characters)) {
+			owner, ok := t.users[t.owners[id]]
+			if !ok || owner.ID == viewer || owner.Disabled || t.retired[id] {
+				continue
+			}
+			out = append(out, charactersvc.Shared{
+				Summary: charactersvc.Summary{ID: id, Name: t.characters[id].Name}, OwnerID: owner.ID, OwnerName: owner.DisplayName,
+			})
+		}
+		return nil
+	})
+	slices.SortStableFunc(out, func(a, b charactersvc.Shared) int {
+		if (a.OwnerName == "") != (b.OwnerName == "") {
+			if a.OwnerName == "" {
+				return 1
+			}
+			return -1
+		}
+		if c := cmp.Compare(a.OwnerName, b.OwnerName); c != 0 {
+			return c
+		}
+		return bytes.Compare(a.OwnerID[:], b.OwnerID[:])
+	})
+	return out, err
+}
+
+// ViewableCharacter implements charactersvc.Owners.
+func (c Characters) ViewableCharacter(ctx context.Context, id int64) error {
+	return c.s.read(ctx, func(t *tables) error {
+		owner, ok := t.users[t.owners[id]]
+		if _, exists := t.characters[id]; !exists || !ok || owner.Disabled || t.retired[id] {
+			return domain.ErrCharacterNotFound
+		}
+		return nil
+	})
 }
 
 // SetCurrentCharacter implements charactersvc.Owners.

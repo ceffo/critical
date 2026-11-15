@@ -47,6 +47,7 @@ Values  # Technical: generic helper or envelope with no domain meaning of its ow
 Version  # Technical: generic helper or envelope with no domain meaning of its own
 Status  # Technical: generic helper or envelope with no domain meaning of its own
 Summary  # Technical: generic helper or envelope with no domain meaning of its own
+Shared  # Technical: generic helper or envelope with no domain meaning of its own: a Summary with its owner, a row of the list of other users' characters
 Info  # Technical: generic helper or envelope with no domain meaning of its own
 Kind  # Technical: generic helper or envelope with no domain meaning of its own
 Mode  # Technical: generic helper or envelope with no domain meaning of its own

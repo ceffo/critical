@@ -120,12 +120,20 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// web app outside /api, needs a session unless mw.Public lists it.
 	var auth mw.Authenticator
 	var fresh mw.FreshCharacters
+	var viewers mw.Viewers
+	if bs.Character != nil {
+		viewers = bs.Character
+	}
 	if bs.Auth != nil {
 		auth, fresh = bs.Auth, bs.Auth
 	}
 	r.Use(mw.Gate(auth, mw.GateConfig{
 		Host: opts.Host, Secure: opts.SecureCookies, Cookie: mw.SessionCookieName(opts.CookieApp),
 	}))
+
+	// A page that shows a character it only views changes nothing (ADR 0029
+	// step 11.3).
+	r.Use(mw.ReadOnlyView)
 
 	// Every state-changing answer names the state keys it changed (ADR 0018
 	// step 11).
@@ -175,7 +183,7 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// (ADR 0029 step 7): mw.CurrentCharacter is the one resolver, a route
 	// mounted here gets it.
 	r.Group(func(r chi.Router) {
-		r.Use(mw.CurrentCharacter(fresh))
+		r.Use(mw.CurrentCharacter(fresh, viewers))
 		charID := mw.CharacterID
 
 		characterhdl.RegisterRoutes(r, charID, bs.Character, bs.Psionics)

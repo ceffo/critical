@@ -97,6 +97,21 @@ SELECT id, name FROM characters
 WHERE owner_user_id = $1 AND NOT retired
 ORDER BY id;
 
+-- name: OthersCharacters :many
+-- Every character not retired of an enabled user but the viewer's (ADR 0029 step 11.2), by owner
+-- then id (the service derives each level). The owner's display name is NULL when unknown.
+SELECT c.id, c.name, u.id AS owner_id, u.display_name AS owner_name FROM characters c
+JOIN users u ON u.id = c.owner_user_id
+WHERE u.id <> $1 AND NOT u.disabled AND NOT c.retired
+ORDER BY u.display_name NULLS LAST, u.id, c.id;
+
+-- name: ViewableCharacter :one
+-- The character's id when it is not retired and its owner is enabled (ADR 0029 step 11.1): no row
+-- for an unknown, retired or disabled-owner's character, or one nobody owns.
+SELECT c.id FROM characters c
+JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
+WHERE c.id = $1 AND NOT c.retired;
+
 -- name: LockUser :one
 -- Serialises the writes that move a user's current character (switch, create, retire): the
 -- later one waits for the earlier one's commit, then sees its effect (READ COMMITTED).

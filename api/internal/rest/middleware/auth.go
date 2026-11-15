@@ -258,6 +258,17 @@ type characterKey struct{}
 // the request acts on that one, or on none.
 const CharacterHeader = "X-Character-Id"
 
+// ViewedHeader names a character the page only reads (ADR 0029 step 11): the
+// request is read-only, and the character is any not-retired one of an enabled
+// user, the caller's own or not.
+const ViewedHeader = "X-Viewed-Character-Id"
+
+// Viewers decides which characters any user may read (charactersvc.SVC
+// satisfies it).
+type Viewers interface {
+	CanView(ctx context.Context, id int64) error
+}
+
 // FreshCharacters reads a user's current character from the database
 // (authsvc.SVC satisfies it).
 type FreshCharacters interface {
@@ -283,7 +294,12 @@ type FreshCharacters interface {
 // charactersvc.ErrCharacterChanged before any service runs. A request
 // without the header (an API client with no screen) acts on the remembered
 // current character.
-func CurrentCharacter(fresh FreshCharacters) func(http.Handler) http.Handler {
+//
+// A request that names a viewed character in ViewedHeader (ADR 0029 step 11)
+// acts on that one, whoever owns it, as long as viewers lets it be read; the
+// current character and CharacterHeader play no part in it, and ReadOnlyView
+// has already refused every request that changes something.
+func CurrentCharacter(fresh FreshCharacters, viewers Viewers) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
@@ -292,7 +308,13 @@ func CurrentCharacter(fresh FreshCharacters) func(http.Handler) http.Handler {
 				render.Error(ctx, w, authsvc.ErrUnauthenticated)
 				return
 			}
-			id, err := resolveCharacter(r, fresh, p)
+			var id int64
+			var err error
+			if raw := r.Header.Get(ViewedHeader); raw != "" {
+				id, err = resolveViewed(r, viewers, raw)
+			} else {
+				id, err = resolveCharacter(r, fresh, p)
+			}
 			if err != nil {
 				render.Error(ctx, w, err)
 				return
@@ -300,6 +322,50 @@ func CurrentCharacter(fresh FreshCharacters) func(http.Handler) http.Handler {
 			next.ServeHTTP(w, r.WithContext(context.WithValue(ctx, characterKey{}, id)))
 		})
 	}
+}
+
+// resolveViewed is the character r views: a positive id viewers lets be read.
+func resolveViewed(r *http.Request, viewers Viewers, raw string) (int64, error) {
+	id, err := parseViewed(raw)
+	if err != nil {
+		return 0, err
+	}
+	if viewers == nil {
+		return 0, domain.ErrCharacterNotFound
+	}
+	if err := viewers.CanView(r.Context(), id); err != nil {
+		return 0, err
+	}
+	return id, nil
+}
+
+func parseViewed(raw string) (int64, error) {
+	id, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || id <= 0 {
+		return 0, domain.FieldErrorf(ViewedHeader, "%q is not a character id", raw)
+	}
+	return id, nil
+}
+
+// logoutPath is the one write a viewing page may still make.
+const logoutPath = "/api/auth/logout"
+
+// ReadOnlyView refuses, before anything else runs, every request that names
+// a viewed character and is not a GET or a HEAD, with
+// charactersvc.ErrReadOnly (403 read_only; ADR 0029 step 11.3). It sits on the
+// whole router, behind the gate, so that a page showing another user's
+// character cannot change anything at all, not only that character: no route
+// decides this for itself. The one exemption is the logout: it ends
+// the session and touches no character.
+func ReadOnlyView(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get(ViewedHeader) != "" && r.Method != http.MethodGet && r.Method != http.MethodHead &&
+			r.URL.Path != logoutPath {
+			render.Error(r.Context(), w, charactersvc.ErrReadOnly)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 // resolveCharacter is the character r acts on.

@@ -4,7 +4,7 @@
 
 Critical is a hosted AD&D 2.5 character sheet engine for a gaming group. Invited players log in with Google and each keeps several characters of five classes (bard, fighter, mage, cleric, thief). It automates mechanical computation (attack resolution, damage calculation, buff expiry, spell slot tracking) and presents a persistent dashboard. The player sends intent; the app returns fully-explained results.
 
-**It is a multi-user game tool for one table, not a SaaS product.** Access is by invitation only, and nothing but the login page is visible without a session ([ADR 0029](adr/0029-users-login-and-access.md)). A character has one owner and only the owner sees it. The class rules arrive with the classes ADR; the Bard is the first class implemented. A DM role and a shared table are a later epic.
+**It is a multi-user game tool for one table, not a SaaS product.** Access is by invitation only, and nothing but the login page is visible without a session ([ADR 0029](adr/0029-users-login-and-access.md)). A character has one owner and only the owner plays it; any logged-in user can read it, read-only ([ADR 0029](adr/0029-users-login-and-access.md) step 11). The class rules arrive with the classes ADR; the Bard is the first class implemented. A DM role and a shared table are a later epic.
 
 ## Monorepo Layout
 

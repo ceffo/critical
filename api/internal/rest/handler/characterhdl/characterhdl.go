@@ -55,6 +55,7 @@ func RegisterRoutes(r Router, charID CharacterIDFunc, svc charactersvc.SVC, roun
 func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 	r.Get("/api/characters", render.Handle(List(svc)))
 	r.Put("/api/characters/current", render.Handle(SetCurrent(svc)))
+	r.Get("/api/characters/others", render.Handle(Others(svc)))
 	r.Get("/api/characters/options", render.Handle(Options(svc)))
 	r.Post("/api/characters", render.Handle(Create(svc)))
 	r.Post("/api/characters/draft", render.Handle(Draft(svc)))
@@ -63,6 +64,10 @@ func RegisterUserRoutes(r Router, svc charactersvc.SVC) {
 
 type ownedLister interface {
 	List(ctx context.Context, owner uuid.UUID) ([]charactersvc.Summary, error)
+}
+
+type othersLister interface {
+	ListOthers(ctx context.Context, viewer uuid.UUID) ([]charactersvc.Shared, error)
 }
 
 type currentSetter interface {
@@ -559,3 +564,48 @@ func toDTO(c *charactersvc.Character) CharacterDTO {
 }
 
 func warningsDTO(ws []charactersvc.Warning) []WarningDTO { return wire.WarningsDTO(ws) }
+
+// OwnerDTO is the user who owns a character another user reads. Name is
+// their display name, "" when none is known; no email is ever given.
+type OwnerDTO struct {
+	ID   uuid.UUID `json:"id"`
+	Name string    `json:"name"`
+}
+
+// SharedDTO is a character of another user in the list any user reads.
+type SharedDTO struct {
+	SummaryDTO
+	Owner OwnerDTO `json:"owner"`
+}
+
+// OthersDTO is GET /api/characters/others: by owner name then id.
+type OthersDTO struct {
+	Characters []SharedDTO `json:"characters"`
+}
+
+// Others is GET /api/characters/others: the characters other users own that
+// the caller may read (ADR 0029 step 11.2), each with its owner.
+func Others(svc othersLister) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		u, err := user(r)
+		if err != nil {
+			return err
+		}
+		list, err := svc.ListOthers(r.Context(), u.ID)
+		if err != nil {
+			return err
+		}
+		out := OthersDTO{Characters: make([]SharedDTO, 0, len(list))}
+		for _, c := range list {
+			out.Characters = append(out.Characters, SharedDTO{
+				SummaryDTO: SummaryDTO{
+					ID: c.ID, Name: c.Name, Classes: classEntriesDTO(c.Classes), Race: c.Race, Alignment: c.Alignment,
+					Sex: c.Sex, Missing: c.Missing, CurrentHP: c.CurrentHP, MaxHP: c.MaxHP,
+				},
+				Owner: OwnerDTO{ID: c.OwnerID, Name: c.OwnerName},
+			})
+		}
+		render.OK(r.Context(), w, out)
+		return nil
+	}
+}

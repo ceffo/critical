@@ -400,6 +400,9 @@ _Code_: ProficiencySlots, NonweaponPool, Spending
 One proficiency the character has, with the slots spent on it. [ADR 0037](docs/adr/0037-proficiencies.md) steps 2, 6, 7 and 12.
 _Code_: Picks, PickFigures, WeaponPick, WeaponPickFigures, WeaponFigure
 
+**Free proficiency** (fr: compétence offerte):
+A non-weapon proficiency a class grants at no slot cost (the `free_proficiencies` feature kind: the bard's reading and writing, local history, singing and musical instrument). Held, it is a pick of cost 0 whose slots are all extra slots; not held, it is **offered** (a reminder, never a pick written for the player). [ADR 0037](docs/adr/0037-proficiencies.md) step 22.
+
 **Language** (fr: langue):
 A language a character speaks: its race's native one, then picked ones, each past the race's list costing a non-weapon slot; the catalogue (format 8) lists them. [ADR 0032](docs/adr/0032-character-identity-and-creation-rolls.md) step 4, [ADR 0037](docs/adr/0037-proficiencies.md) step 6. Not the invite's mail language (`authsvc.Language`: `en` or `fr`, [ADR 0029](docs/adr/0029-users-login-and-access.md) step 2.5).
 _Code_: Languages

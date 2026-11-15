@@ -64,7 +64,8 @@ holds the inputs, and every figure is derived from them, never entered
 - **Possessions and knowledge**: items, the spellbook, the proficiency picks (a weapon pick names a
   catalogue weapon by code, a weapon piece is proficient when a pick names its catalogue code, and the
   type picks left to redo after migration 042 are kept with them, [ADR 0037](adr/0037-proficiencies.md)
-  step 21), the skill points (per
+  step 21; a non-weapon id a class entry's `free_proficiencies` feature grants costs 0, and one not held
+  is offered, never written for the player, step 22), the skill points (per
   skill set: one set for each `rogue_skills` feature the classes grant, each with its own budget,
   [ADR 0040](adr/0040-classes-are-data.md) step 3.5).
 

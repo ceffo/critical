@@ -231,6 +231,15 @@ writes `Test<name>` and adds the prefix here in the same PR.
 
    _(Amended 2026-11-13 by [ADR 0050](0050-specialist-wizards.md) step 2, as built 2026-11-13 (the eight specialists creatable; the saves of steps 12 and 13 not implemented): a new kind, `school_specialization` (params `schools`, `opposition_schools`, `races`, optional `multiclass_races`; the specialist's spells, slots, saves, race warning and multi-class limit of ADR 0050 steps 5 to 14); the eight specialist wizards list it beside the mage's `spellbook`.)_
 
+   _(Amended 2026-11-15 by [ADR 0037](0037-proficiencies.md) step 22, decided, on implementation: a new kind,
+   `free_proficiencies` (param `nonweapon`: the non-weapon catalogue ids the class gets at cost 0 from the
+   feature's `from_level`; computed by ADR 0037 steps 22.2 to 22.7: the cost, the offer, several class entries,
+   the data step). The bard lists it at level 1 with `reading_writing`, `local_history`, `singing` and
+   `musical_instrument` (PHB p.41-42, `14-bard.md`); a later class's grant is a catalogue change. Step 8's
+   start-up check refuses an id the non-weapon catalogue does not hold, `languages_modern`, an id twice and an
+   empty list (`Import_Step22_1_RefusesABrokenFreeList`). The kind needs a catalogue format bump (step 14's way:
+   the builder first).)_
+
 4. **The closed list of race trait kinds:**
 
    | Kind | Params | Computed by | Races |

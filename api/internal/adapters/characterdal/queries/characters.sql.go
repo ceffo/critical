@@ -438,6 +438,50 @@ func (q *Queries) LockUser(ctx context.Context, id uuid.UUID) (uuid.UUID, error)
 	return id_2, err
 }
 
+const othersCharacters = `-- name: OthersCharacters :many
+SELECT c.id, c.name, u.id AS owner_id, u.display_name AS owner_name FROM characters c
+JOIN users u ON u.id = c.owner_user_id
+WHERE u.id <> $1 AND NOT u.disabled AND NOT c.retired
+ORDER BY u.display_name NULLS LAST, u.id, c.id
+`
+
+type OthersCharactersRow struct {
+	ID        int64
+	Name      string
+	OwnerID   uuid.UUID
+	OwnerName sql.NullString
+}
+
+// Every character not retired of an enabled user but the viewer's (ADR 0029 step 11.2), by owner
+// then id (the service derives each level). The owner's display name is NULL when unknown.
+func (q *Queries) OthersCharacters(ctx context.Context, id uuid.UUID) ([]OthersCharactersRow, error) {
+	rows, err := q.db.QueryContext(ctx, othersCharacters, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []OthersCharactersRow{}
+	for rows.Next() {
+		var i OthersCharactersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.OwnerID,
+			&i.OwnerName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const renameCharacter = `-- name: RenameCharacter :execrows
 UPDATE characters SET name = $1
 WHERE id = $2 AND owner_user_id = $3 AND NOT retired
@@ -781,4 +825,19 @@ func (q *Queries) UpdateCharacterDetails(ctx context.Context, arg UpdateCharacte
 		return 0, err
 	}
 	return result.RowsAffected()
+}
+
+const viewableCharacter = `-- name: ViewableCharacter :one
+SELECT c.id FROM characters c
+JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
+WHERE c.id = $1 AND NOT c.retired
+`
+
+// The character's id when it is not retired and its owner is enabled (ADR 0029 step 11.1): no row
+// for an unknown, retired or disabled-owner's character, or one nobody owns.
+func (q *Queries) ViewableCharacter(ctx context.Context, id int64) (int64, error) {
+	row := q.db.QueryRowContext(ctx, viewableCharacter, id)
+	var id_2 int64
+	err := row.Scan(&id_2)
+	return id_2, err
 }

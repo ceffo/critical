@@ -3,6 +3,8 @@ package charactersvc
 import (
 	"slices"
 
+	"github.com/google/uuid"
+
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/psionics"
 	"github.com/ceffo/critical/api/internal/domain/saves"
@@ -627,6 +629,15 @@ type Summary struct {
 	// step 6, ADR 0011 step 1), set by the service.
 	MaxHP     int
 	CurrentHP int
+}
+
+// Shared is a character another user owns, as the list of characters any
+// user may read shows it (ADR 0029 step 11.2): the summary and its owner.
+// OwnerName is the owner's display name, "" when none is known.
+type Shared struct {
+	Summary
+	OwnerID   uuid.UUID
+	OwnerName string
 }
 
 // Details are the facts about the character that the player edits. Alignment

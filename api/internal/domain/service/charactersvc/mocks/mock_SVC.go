@@ -30,6 +30,53 @@ func (_m *MockSVC) EXPECT() *MockSVC_Expecter {
 	return &MockSVC_Expecter{mock: &_m.Mock}
 }
 
+// CanView provides a mock function with given fields: ctx, id
+func (_m *MockSVC) CanView(ctx context.Context, id int64) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CanView")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockSVC_CanView_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CanView'
+type MockSVC_CanView_Call struct {
+	*mock.Call
+}
+
+// CanView is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockSVC_Expecter) CanView(ctx interface{}, id interface{}) *MockSVC_CanView_Call {
+	return &MockSVC_CanView_Call{Call: _e.mock.On("CanView", ctx, id)}
+}
+
+func (_c *MockSVC_CanView_Call) Run(run func(ctx context.Context, id int64)) *MockSVC_CanView_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockSVC_CanView_Call) Return(_a0 error) *MockSVC_CanView_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockSVC_CanView_Call) RunAndReturn(run func(context.Context, int64) error) *MockSVC_CanView_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Change provides a mock function with given fields: ctx, owner, id, c
 func (_m *MockSVC) Change(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change) (int64, error) {
 	ret := _m.Called(ctx, owner, id, c)
@@ -528,6 +575,65 @@ func (_c *MockSVC_List_Call) Return(_a0 []charactersvc.Summary, _a1 error) *Mock
 }
 
 func (_c *MockSVC_List_Call) RunAndReturn(run func(context.Context, uuid.UUID) ([]charactersvc.Summary, error)) *MockSVC_List_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListOthers provides a mock function with given fields: ctx, viewer
+func (_m *MockSVC) ListOthers(ctx context.Context, viewer uuid.UUID) ([]charactersvc.Shared, error) {
+	ret := _m.Called(ctx, viewer)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListOthers")
+	}
+
+	var r0 []charactersvc.Shared
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]charactersvc.Shared, error)); ok {
+		return rf(ctx, viewer)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []charactersvc.Shared); ok {
+		r0 = rf(ctx, viewer)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]charactersvc.Shared)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, viewer)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_ListOthers_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListOthers'
+type MockSVC_ListOthers_Call struct {
+	*mock.Call
+}
+
+// ListOthers is a helper method to define mock.On call
+//   - ctx context.Context
+//   - viewer uuid.UUID
+func (_e *MockSVC_Expecter) ListOthers(ctx interface{}, viewer interface{}) *MockSVC_ListOthers_Call {
+	return &MockSVC_ListOthers_Call{Call: _e.mock.On("ListOthers", ctx, viewer)}
+}
+
+func (_c *MockSVC_ListOthers_Call) Run(run func(ctx context.Context, viewer uuid.UUID)) *MockSVC_ListOthers_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockSVC_ListOthers_Call) Return(_a0 []charactersvc.Shared, _a1 error) *MockSVC_ListOthers_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_ListOthers_Call) RunAndReturn(run func(context.Context, uuid.UUID) ([]charactersvc.Shared, error)) *MockSVC_ListOthers_Call {
 	_c.Call.Return(run)
 	return _c
 }

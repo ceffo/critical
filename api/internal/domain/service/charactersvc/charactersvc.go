@@ -35,6 +35,11 @@ var ErrNoCurrentCharacter = fmt.Errorf("no current character: %w", domain.ErrNot
 // show the current character.
 var ErrCharacterChanged = fmt.Errorf("current character changed: %w", domain.ErrConflict)
 
+// ErrReadOnly is a request that changes something while it names a viewed
+// character (ADR 0029 step 11): a character is read by every user and played
+// by its owner alone, so such a request is refused before any service runs.
+var ErrReadOnly = errors.New("a viewed character is read-only")
+
 // SVC is the driver port.
 type SVC interface {
 	domain.Service
@@ -58,6 +63,14 @@ type SVC interface {
 	// List is the owner's characters they have not retired, in creation
 	// order (ADR 0029 steps 7.1 and 7.3).
 	List(ctx context.Context, owner uuid.UUID) ([]Summary, error)
+	// ListOthers is the characters other users own that viewer may read (ADR
+	// 0029 step 11.2): not retired, owned by an enabled user other than
+	// viewer, by owner then id, each with its owner.
+	ListOthers(ctx context.Context, viewer uuid.UUID) ([]Shared, error)
+	// CanView is nil when character id may be read by any user (ADR 0029
+	// step 11.1): it exists, is not retired and its owner is enabled. Anything
+	// else, an unknown id included, is domain.ErrCharacterNotFound.
+	CanView(ctx context.Context, id int64) error
 	// SetCurrent makes the owner's character id their current character
 	// (step 7.2). Another user's character, a retired one and an unknown id
 	// are all domain.ErrCharacterNotFound (step 7.1: a foreign character is
@@ -112,6 +125,13 @@ type HPLedger interface {
 type Owners interface {
 	// CharactersOf is the owner's characters they have not retired, by id.
 	CharactersOf(ctx context.Context, owner uuid.UUID) ([]Summary, error)
+	// OthersCharacters is the characters not retired of every enabled user
+	// but viewer, by owner then id, with the owner's id and display name
+	// ("" when unknown); the Summary holds the id and name only.
+	OthersCharacters(ctx context.Context, viewer uuid.UUID) ([]Shared, error)
+	// ViewableCharacter is nil when character id exists, is not retired and
+	// its owner is enabled, else domain.ErrCharacterNotFound.
+	ViewableCharacter(ctx context.Context, id int64) error
 	// SetCurrentCharacter sets the user's current character when the user
 	// owns it and has not retired it, else returns
 	// domain.ErrCharacterNotFound and changes nothing (one statement: no
@@ -508,23 +528,50 @@ func (s *service) List(ctx context.Context, owner uuid.UUID) ([]Summary, error) 
 		return nil, err
 	}
 	for i := range list {
-		c, err := s.GetCharacter(ctx, list[i].ID)
-		if err != nil {
+		if err := s.fillSummary(ctx, &list[i]); err != nil {
 			return nil, err
 		}
-		total, err := s.hp.HPTotal(ctx, list[i].ID)
-		if err != nil {
-			return nil, fmt.Errorf("character %d HP: %w", list[i].ID, err)
-		}
-		d := c.Details.Coded()
-		list[i].Classes = c.Entries()
-		list[i].Race = c.Race
-		list[i].Alignment, list[i].Sex = d.Alignment, d.Sex
-		list[i].Missing = c.Details.Missing()
-		list[i].MaxHP = c.HPMax
-		list[i].CurrentHP = actionlog.CurrentHP(c.HPMax, total)
 	}
 	return list, nil
+}
+
+// fillSummary derives what a list shows of a character from its id.
+func (s *service) fillSummary(ctx context.Context, sum *Summary) error {
+	c, err := s.GetCharacter(ctx, sum.ID)
+	if err != nil {
+		return err
+	}
+	total, err := s.hp.HPTotal(ctx, sum.ID)
+	if err != nil {
+		return fmt.Errorf("character %d HP: %w", sum.ID, err)
+	}
+	d := c.Details.Coded()
+	sum.Classes = c.Entries()
+	sum.Race = c.Race
+	sum.Alignment, sum.Sex = d.Alignment, d.Sex
+	sum.Missing = c.Details.Missing()
+	sum.MaxHP = c.HPMax
+	sum.CurrentHP = actionlog.CurrentHP(c.HPMax, total)
+	return nil
+}
+
+// ListOthers implements SVC (ADR 0029 step 11.2): a read, it writes nothing.
+func (s *service) ListOthers(ctx context.Context, viewer uuid.UUID) ([]Shared, error) {
+	list, err := s.owners.OthersCharacters(ctx, viewer)
+	if err != nil {
+		return nil, err
+	}
+	for i := range list {
+		if err := s.fillSummary(ctx, &list[i].Summary); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
+}
+
+// CanView implements SVC (ADR 0029 step 11.1).
+func (s *service) CanView(ctx context.Context, id int64) error {
+	return s.owners.ViewableCharacter(ctx, id)
 }
 
 // SetCurrent writes under the writer lock like every mutation (ADR 0025 step

@@ -17,7 +17,7 @@ import (
 // list of the creatable classes. A catalogue with a seventh class, a rogue the
 // code has never seen, offers it after the six, with its group's hit die,
 // its minimums, its alignments and the races the level limits admit.
-func TestOptions_Step8_EveryCatalogueClassIsCreatable(t *testing.T) {
+func TestOptions_Step11_EveryCatalogueClassIsCreatable(t *testing.T) {
 	fixture := cataloguetest.Definitions(t)
 	xp := make([]int, classes.MaxLevel)
 	for i := range xp {

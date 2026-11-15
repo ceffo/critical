@@ -137,7 +137,7 @@ func TestDerive_Step7_EachEntryServesTheFloorOfItsTargetLevel(t *testing.T) {
 // ADR 0042 step 8: "A multi-class character uses the best (lowest) Table 53
 // value among its active entries, each at its realized level." A cleric
 // 7/fighter 6 uses the fighter's 15, not the cleric's 16.
-func TestTHAC0_Step8_BestOfTheActiveEntries(t *testing.T) {
+func TestTHAC0_Step11_BestOfTheActiveEntries(t *testing.T) {
 	c := multi("half_elf", entry("cleric", 7, 55_000), entry("fighter", 6, 32_000))
 	assert.Equal(t, 15, derived(t, c).THAC0)
 }
@@ -389,7 +389,7 @@ func TestDerive_Step5_TargetLevelFromEachEntrysRegistryClass(t *testing.T) {
 // group's Table 53 row in the registry at its realized level; the character
 // takes the best. A mage 9/fighter 9 reads the wizard and the
 // warrior rows, and the fighter's is lower.
-func TestTHAC0_Step8_EachEntryReadsItsGroupInTheRegistry(t *testing.T) {
+func TestTHAC0_Step11_EachEntryReadsItsGroupInTheRegistry(t *testing.T) {
 	defs, err := cataloguetest.Tables(t).Definitions()
 	require.NoError(t, err)
 	mage, err := defs.THAC0("wizard", 9)

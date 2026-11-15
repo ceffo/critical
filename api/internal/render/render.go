@@ -184,6 +184,9 @@ var mappings = []mapping{
 	// A request for a character that is not the current one any more: the
 	// web reloads (step 7.2).
 	{target: charactersvc.ErrCharacterChanged, status: http.StatusConflict, code: "character_changed"},
+	// A request that changes something while it names a viewed character
+	// (ADR 0029 step 11.3): refused before any service runs.
+	{target: charactersvc.ErrReadOnly, status: http.StatusForbidden, code: "read_only"},
 	{target: buffsvc.ErrNoInitiative, status: http.StatusConflict, code: "no_initiative"},
 	{target: buffsvc.ErrInitiativeNotOnTop, status: http.StatusConflict, code: "initiative_not_on_top"},
 	// Learning a spell (ADR 0030 step 20.1 and 20.2): refused before any

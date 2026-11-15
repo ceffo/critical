@@ -353,6 +353,32 @@ func (d *DAL) CharactersOf(ctx context.Context, owner uuid.UUID) ([]charactersvc
 	return out, nil
 }
 
+// OthersCharacters implements charactersvc.Owners (ADR 0029 step 11.2).
+func (d *DAL) OthersCharacters(ctx context.Context, viewer uuid.UUID) ([]charactersvc.Shared, error) {
+	rows, err := d.q.OthersCharacters(ctx, viewer)
+	if err != nil {
+		return nil, fmt.Errorf("characters of other users: %w", err)
+	}
+	out := make([]charactersvc.Shared, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, charactersvc.Shared{
+			Summary: charactersvc.Summary{ID: r.ID, Name: r.Name}, OwnerID: r.OwnerID, OwnerName: r.OwnerName.String,
+		})
+	}
+	return out, nil
+}
+
+// ViewableCharacter implements charactersvc.Owners (ADR 0029 step 11.1).
+func (d *DAL) ViewableCharacter(ctx context.Context, id int64) error {
+	if _, err := d.q.ViewableCharacter(ctx, id); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return domain.ErrCharacterNotFound
+		}
+		return fmt.Errorf("viewable character %d: %w", id, err)
+	}
+	return nil
+}
+
 // SetCurrentCharacter implements charactersvc.Owners: the update matches only
 // a character the user owns and has not retired.
 func (d *DAL) SetCurrentCharacter(ctx context.Context, owner uuid.UUID, id int64) error {

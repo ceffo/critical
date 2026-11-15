@@ -388,6 +388,65 @@ func (_c *MockCharacterStore_GetDetails_Call) RunAndReturn(run func(context.Cont
 	return _c
 }
 
+// OthersCharacters provides a mock function with given fields: ctx, viewer
+func (_m *MockCharacterStore) OthersCharacters(ctx context.Context, viewer uuid.UUID) ([]charactersvc.Shared, error) {
+	ret := _m.Called(ctx, viewer)
+
+	if len(ret) == 0 {
+		panic("no return value specified for OthersCharacters")
+	}
+
+	var r0 []charactersvc.Shared
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) ([]charactersvc.Shared, error)); ok {
+		return rf(ctx, viewer)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID) []charactersvc.Shared); ok {
+		r0 = rf(ctx, viewer)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]charactersvc.Shared)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID) error); ok {
+		r1 = rf(ctx, viewer)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_OthersCharacters_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'OthersCharacters'
+type MockCharacterStore_OthersCharacters_Call struct {
+	*mock.Call
+}
+
+// OthersCharacters is a helper method to define mock.On call
+//   - ctx context.Context
+//   - viewer uuid.UUID
+func (_e *MockCharacterStore_Expecter) OthersCharacters(ctx interface{}, viewer interface{}) *MockCharacterStore_OthersCharacters_Call {
+	return &MockCharacterStore_OthersCharacters_Call{Call: _e.mock.On("OthersCharacters", ctx, viewer)}
+}
+
+func (_c *MockCharacterStore_OthersCharacters_Call) Run(run func(ctx context.Context, viewer uuid.UUID)) *MockCharacterStore_OthersCharacters_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_OthersCharacters_Call) Return(_a0 []charactersvc.Shared, _a1 error) *MockCharacterStore_OthersCharacters_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_OthersCharacters_Call) RunAndReturn(run func(context.Context, uuid.UUID) ([]charactersvc.Shared, error)) *MockCharacterStore_OthersCharacters_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // RenameCharacter provides a mock function with given fields: ctx, owner, id, name
 func (_m *MockCharacterStore) RenameCharacter(ctx context.Context, owner uuid.UUID, id int64, name string) error {
 	ret := _m.Called(ctx, owner, id, name)
@@ -1124,6 +1183,53 @@ func (_c *MockCharacterStore_UpdateDetails_Call) Return(_a0 error) *MockCharacte
 }
 
 func (_c *MockCharacterStore_UpdateDetails_Call) RunAndReturn(run func(context.Context, int64, charactersvc.Details) error) *MockCharacterStore_UpdateDetails_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ViewableCharacter provides a mock function with given fields: ctx, id
+func (_m *MockCharacterStore) ViewableCharacter(ctx context.Context, id int64) error {
+	ret := _m.Called(ctx, id)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ViewableCharacter")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, int64) error); ok {
+		r0 = rf(ctx, id)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockCharacterStore_ViewableCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ViewableCharacter'
+type MockCharacterStore_ViewableCharacter_Call struct {
+	*mock.Call
+}
+
+// ViewableCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - id int64
+func (_e *MockCharacterStore_Expecter) ViewableCharacter(ctx interface{}, id interface{}) *MockCharacterStore_ViewableCharacter_Call {
+	return &MockCharacterStore_ViewableCharacter_Call{Call: _e.mock.On("ViewableCharacter", ctx, id)}
+}
+
+func (_c *MockCharacterStore_ViewableCharacter_Call) Run(run func(ctx context.Context, id int64)) *MockCharacterStore_ViewableCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(int64))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_ViewableCharacter_Call) Return(_a0 error) *MockCharacterStore_ViewableCharacter_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockCharacterStore_ViewableCharacter_Call) RunAndReturn(run func(context.Context, int64) error) *MockCharacterStore_ViewableCharacter_Call {
 	_c.Call.Return(run)
 	return _c
 }

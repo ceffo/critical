@@ -1,6 +1,6 @@
 // Screenshots of the mage school design round (docs/design/mage-school/README.md, CRI-392): every
 // mock-up screen of web/design/mage-school/ in French and English at the two layout viewports
-// (1920x1080 and 2560x1440), light Arcane (the look the user reported with), into
+// (1920x1080 and 2560x1440), dark Arcane (user: "no light theme please"), into
 // shots/<screen>--<lang>-<WxH>.png, and the review gallery shots/index.html.
 // Fails when any element cuts its text (wider or taller than the box that hides it) or the page
 // scrolls: the no-cut rule, checked rather than eyeballed. `--self-test` proves the audit catches

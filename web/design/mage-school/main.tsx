@@ -1,5 +1,5 @@
-// Entry of the mage school mock-ups: `?screen=<id>&lang=fr|en&theme=<id>&dark=1`, painted with the
-// app's own theme code (ADR 0026), light Arcane by default (the look the user reported with).
+// Entry of the mage school mock-ups: `?screen=<id>&lang=fr|en&theme=<id>&light=1`, painted with the
+// app's own theme code (ADR 0026), dark Arcane by default (user: "no light theme please").
 import { createRoot } from "react-dom/client";
 import "./design.css";
 import { applyTheme, isDarkTheme, isLightTheme } from "@/lib/theme";
@@ -8,7 +8,7 @@ import { SCREENS } from "./screens";
 
 const q = new URLSearchParams(location.search);
 const theme = q.get("theme") ?? "arcane";
-const light = q.get("dark") !== "1";
+const light = q.get("light") === "1";
 applyTheme(
   light ? "light" : "dark",
   isDarkTheme(theme) ? theme : "arcane",

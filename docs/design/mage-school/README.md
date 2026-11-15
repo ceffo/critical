@@ -7,10 +7,10 @@ character's name is plain text, its popover's button reads only "Changer", and n
 "école" before the class list opens. User's choice: "Make it easy to find, mockups first".
 
 - **Pages**: `web/design/mage-school/` (React on the app's stylesheet, `Button`, Phosphor icons),
-  `?screen=<id>&lang=fr|en` (`&dark=1` for dark Arcane). Data in `data.ts`: ADR 0050's specialist
+  `?screen=<id>&lang=fr|en` (dark Arcane; `&light=1` for light). Data in `data.ts`: ADR 0050's specialist
   table and the two characters of the developer's screenshots (elf mage 6; elf fighter 6 / mage 1).
 - **Shots**: `just mage-school-shots` writes `shots/<screen>--<fr|en>-<WxH>.png` at 1920x1080 and
-  2560x1440 in light Arcane, and the gallery `shots/index.html`; fails on cut text or a page scroll.
+  2560x1440 in dark Arcane, and the gallery `shots/index.html`; fails on cut text or a page scroll.
 - A dashed magenta outline marks what the round adds or changes; it is not part of the design.
 
 | Screen | Proposal |

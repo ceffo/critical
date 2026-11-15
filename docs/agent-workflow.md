@@ -352,7 +352,9 @@ model actually running.
   supervisor tells the user, in plain lines, what changes for them locally (e.g. run `just catalogue`).
 - Security alerts: the fleet has no equivalent of `.claude/scripts/security-alerts.sh` (files each open Dependabot,
   code-scanning and secret-scanning alert as an Urgent Todo item in CRI / critical-hit, skipping those already filed).
-  The supervisor runs it at the start of a session and about hourly while idle, and handles what it prints (`FILED CRI-n ...`).
+  The supervisor runs it at the start of a session; while idle the fleet runs it at most once a day (`FLEET_IDLE_CMD`,
+  `FLEET_IDLE_INTERVAL=86400` in `.claude/fleet.env`; user decision 2026-11-14), and the supervisor handles what it prints
+  (`FILED CRI-n ...`, surfaced as an `IDLE-CMD` event).
 - Ship gate: `fleet ship` has no pre-push refusal. Before shipping the supervisor runs `scripts/gate-stamp.sh check <worktree>`
   (HEAD must be the tree `just validate` passed on) and checks that the title, body and branch name no tracker id the PR
   does not close (Linear would link and move that item); `fleet ship --verify` repeats the stamp check afterwards.

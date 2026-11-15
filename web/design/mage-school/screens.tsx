@@ -40,7 +40,13 @@ import {
 } from "./data";
 
 /** The review mark around what the round adds or changes. */
-function New({ children, className }: { children: ReactNode; className?: string }) {
+function New({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -75,7 +81,10 @@ function Header() {
             </Button>
           </div>
           <span className="text-label text-ink-muted">
-            {tr("Hors combat · l'initiative sera lancée", "Out of combat · initiative will be rolled")}
+            {tr(
+              "Hors combat · l'initiative sera lancée",
+              "Out of combat · initiative will be rolled",
+            )}
           </span>
         </div>
       </div>
@@ -87,7 +96,9 @@ function Header() {
             {tr("Ajouter", "Add")}
           </Button>
         </span>
-        <span className="text-body text-ink-muted">{tr("Aucun effet actif", "No active effect")}</span>
+        <span className="text-body text-ink-muted">
+          {tr("Aucun effet actif", "No active effect")}
+        </span>
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <div className="flex items-center gap-2">
@@ -97,15 +108,20 @@ function Header() {
           </span>
         </div>
         <div className="group-band flex flex-col items-center rounded-lg px-3 py-1">
-          <span className="section-label">{tr("Dernier résultat", "Last result")}</span>
-          <span className="text-body">{tr("Aucun jet pour l'instant.", "No roll yet.")}</span>
+          <span className="section-label">
+            {tr("Dernier résultat", "Last result")}
+          </span>
+          <span className="text-body">
+            {tr("Aucun jet pour l'instant.", "No roll yet.")}
+          </span>
         </div>
       </div>
     </header>
   );
 }
 
-const entryText = (f: Fixture) => f.entries.map((e) => `${lt(e.name)} ${e.level}`).join(" / ");
+const entryText = (f: Fixture) =>
+  f.entries.map((e) => `${lt(e.name)} ${e.level}`).join(" / ");
 
 /**
  * The character card. `classLine` replaces the class under the name (variant A's tag, variant B's
@@ -127,7 +143,10 @@ function CharacterCard({
 }) {
   const several = who.entries.length > 1;
   const abilities: [string, number][] = [
-    ...(Object.keys(ABILITY_NAMES) as Ability[]).map((k): [string, number] => [lt(ABILITY_NAMES[k]), who.abilities[k]]),
+    ...(Object.keys(ABILITY_NAMES) as Ability[]).map((k): [string, number] => [
+      lt(ABILITY_NAMES[k]),
+      who.abilities[k],
+    ]),
     [tr("TAC0", "THAC0"), who.thac0],
   ];
   return (
@@ -145,7 +164,12 @@ function CharacterCard({
             </span>
           </h1>
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            {classLine ?? (!several && <p className="text-body text-muted-foreground">{cls ?? lt(who.entries[0].name)}</p>)}
+            {classLine ??
+              (!several && (
+                <p className="text-body text-muted-foreground">
+                  {cls ?? lt(who.entries[0].name)}
+                </p>
+              ))}
             <span className="inline-flex h-5 shrink-0 items-center rounded-full bg-selected px-2 text-label font-medium">
               {tr("Assigner", "Assign")}
             </span>
@@ -155,12 +179,19 @@ function CharacterCard({
           {!several && (
             <span className="relative pb-1 text-body text-muted-foreground tabular-nums">
               {tr("Niveau", "Level")} {who.entries[0].level}
-              <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input">
+              <span
+                aria-hidden
+                className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-input"
+              >
                 <span className="absolute inset-y-0 left-0 w-[40%] rounded-full bg-tint" />
               </span>
             </span>
           )}
-          <Button variant="ghost" size="icon-sm" className="shrink-0 shadow-[inset_0_0_0_1.5px_var(--tint)]">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="shrink-0 shadow-[inset_0_0_0_1.5px_var(--tint)]"
+          >
             <ArrowsLeftRight aria-hidden />
           </Button>
         </div>
@@ -173,7 +204,10 @@ function CharacterCard({
       )}
       <div className="grid grid-cols-[repeat(6,minmax(0,1fr))_auto] gap-1">
         {abilities.map(([n, v]) => (
-          <div key={n} className="flex min-w-0 flex-col items-center rounded-md bg-raised px-1 py-1">
+          <div
+            key={n}
+            className="flex min-w-0 flex-col items-center rounded-md bg-raised px-1 py-1"
+          >
             <span className="text-label text-muted-foreground">{n}</span>
             <span className="text-key tabular-nums">{v}</span>
           </div>
@@ -181,25 +215,45 @@ function CharacterCard({
       </div>
       <div className="flex items-stretch gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="section-label">{tr("Points de vie", "Hit points")}</span>
+          <span className="section-label">
+            {tr("Points de vie", "Hit points")}
+          </span>
           <span className="text-body text-ink-muted">
-            <b className="text-hero leading-none text-ink tabular-nums">{who.hp}</b> / {who.hpMax}
+            <b className="text-hero leading-none text-ink tabular-nums">
+              {who.hp}
+            </b>{" "}
+            / {who.hpMax}
           </span>
           <div className="mt-1 flex h-2 overflow-hidden rounded-full bg-input">
             <div className="w-full bg-success" />
           </div>
         </div>
         <span className="relative flex size-16 shrink-0 items-center justify-center self-center">
-          <svg viewBox="0 0 48 56" className="absolute inset-1 size-14" aria-hidden>
-            <path d="M24 2 L44 9 V27 C44 40 35 49 24 54 C13 49 4 40 4 27 V9 Z" fill="var(--amb-800)" stroke="var(--tint)" strokeWidth="2" />
+          <svg
+            viewBox="0 0 48 56"
+            className="absolute inset-1 size-14"
+            aria-hidden
+          >
+            <path
+              d="M24 2 L44 9 V27 C44 40 35 49 24 54 C13 49 4 40 4 27 V9 Z"
+              fill="var(--amb-800)"
+              stroke="var(--tint)"
+              strokeWidth="2"
+            />
           </svg>
-          <span className="relative -mt-1 text-key font-bold tabular-nums">{who.ac}</span>
+          <span className="relative -mt-1 text-key font-bold tabular-nums">
+            {who.ac}
+          </span>
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="section-label">{tr("Modifier les PV", "HP change")}</span>
+        <span className="section-label">
+          {tr("Modifier les PV", "HP change")}
+        </span>
         <div className="flex gap-2">
-          <span className="flex h-7 w-14 items-center rounded-md border border-input px-2 text-body text-ink-muted">{tr("PV", "HP")}</span>
+          <span className="flex h-7 w-14 items-center rounded-md border border-input px-2 text-body text-ink-muted">
+            {tr("PV", "HP")}
+          </span>
           <Button variant="quiet" className="flex-1 border-dashed">
             <Drop aria-hidden />
             {tr("Dégâts", "Damage")}
@@ -211,9 +265,14 @@ function CharacterCard({
         </div>
       </div>
       <div className="flex flex-col gap-1.5">
-        <span className="section-label">{tr("Jets de sauvegarde", "Saving throws")}</span>
+        <span className="section-label">
+          {tr("Jets de sauvegarde", "Saving throws")}
+        </span>
         {who.saves.map(([n, v]) => (
-          <div key={n.en} className="flex items-center justify-between rounded-md bg-raised px-2.5 py-1 text-body">
+          <div
+            key={n.en}
+            className="flex items-center justify-between rounded-md bg-raised px-2.5 py-1 text-body"
+          >
             <span>{lt(n)}</span>
             <span className="font-medium tabular-nums">{v}</span>
           </div>
@@ -267,12 +326,18 @@ function ActStage() {
         <span className="font-medium">{tr("Armes", "Weapons")}</span>
         <span className="text-muted-foreground">{tr("Sorts", "Spells")} 0</span>
         <span className="text-muted-foreground">{tr("Objets", "Items")} 3</span>
-        <span className="text-muted-foreground">{tr("Compétences", "Skills")}</span>
+        <span className="text-muted-foreground">
+          {tr("Compétences", "Skills")}
+        </span>
       </div>
       <div className="selected flex flex-col gap-2 rounded-xl p-4">
-        <span className="section-label">{tr("Arme en main", "Weapon in hand")}</span>
+        <span className="section-label">
+          {tr("Arme en main", "Weapon in hand")}
+        </span>
         <span className="flex items-center justify-between gap-3">
-          <span className="text-key">{tr("Épée bâtarde +2", "Bastard sword +2")}</span>
+          <span className="text-key">
+            {tr("Épée bâtarde +2", "Bastard sword +2")}
+          </span>
           <Button variant="main">
             <Sword aria-hidden />
             {tr("Attaquer", "Attack")}
@@ -287,7 +352,9 @@ function Journal() {
   return (
     <section className="zone-card flex h-[28%] shrink-0 flex-col gap-2 p-4">
       <span className="section-label">{tr("Journal", "Journal")}</span>
-      <span className="text-body text-ink-muted">{tr("Rien d'enregistré pour l'instant.", "Nothing recorded yet.")}</span>
+      <span className="text-body text-ink-muted">
+        {tr("Rien d'enregistré pour l'instant.", "Nothing recorded yet.")}
+      </span>
     </section>
   );
 }
@@ -344,7 +411,9 @@ function ATag() {
           who={MAGE}
           classLine={
             <>
-              <p className="text-body text-muted-foreground">{tr("Magicien", "Mage")}</p>
+              <p className="text-body text-muted-foreground">
+                {tr("Magicien", "Mage")}
+              </p>
               <SchoolTag />
             </>
           }
@@ -413,10 +482,18 @@ function Tip({ top, children }: { top: string; children: ReactNode }) {
 function BClassLink() {
   return (
     <Dashboard
-      card={<CharacterCard who={MAGE} classLine={<ClassLink>{tr("Magicien", "Mage")}</ClassLink>} />}
+      card={
+        <CharacterCard
+          who={MAGE}
+          classLine={<ClassLink>{tr("Magicien", "Mage")}</ClassLink>}
+        />
+      }
       overlay={
         <Tip top="11.9rem">
-          {tr("Généraliste, sans école de magie · choisir une école", "Generalist, no school of magic · pick a school")}
+          {tr(
+            "Généraliste, sans école de magie · choisir une école",
+            "Generalist, no school of magic · pick a school",
+          )}
         </Tip>
       }
     />
@@ -441,7 +518,10 @@ function BClassLinkDual() {
       }
       overlay={
         <Tip top="14rem">
-          {tr("Généraliste, sans école de magie · choisir une école", "Generalist, no school of magic · pick a school")}
+          {tr(
+            "Généraliste, sans école de magie · choisir une école",
+            "Generalist, no school of magic · pick a school",
+          )}
         </Tip>
       }
     />
@@ -474,13 +554,19 @@ function SpellsStage() {
     <section className="zone-card flex min-h-0 flex-1 flex-col gap-3 p-4">
       <div className="flex gap-6 text-body">
         <span className="font-medium">{tr("Grimoire", "Spellbook")}</span>
-        <span className="text-muted-foreground">{tr("Préparés", "Prepared")}</span>
-        <span className="text-muted-foreground">{tr("Catalogue", "Catalogue")}</span>
+        <span className="text-muted-foreground">
+          {tr("Préparés", "Prepared")}
+        </span>
+        <span className="text-muted-foreground">
+          {tr("Catalogue", "Catalogue")}
+        </span>
       </div>
       <New className="block">
         <div className="group-band flex items-center justify-between gap-3 rounded-lg px-3 py-2">
           <span className="flex min-w-0 flex-col">
-            <span className="text-body font-medium">{tr("Magicien généraliste", "Generalist mage")}</span>
+            <span className="text-body font-medium">
+              {tr("Magicien généraliste", "Generalist mage")}
+            </span>
             <span className="text-label text-ink-muted">
               {tr(
                 "Aucune école de magie. Un spécialiste a un sort de plus par niveau de sort dans son école.",
@@ -496,7 +582,10 @@ function SpellsStage() {
       </New>
       <div className="flex min-h-0 flex-col gap-1 overflow-y-auto">
         {BOOK.map(([n, lvl, s]) => (
-          <div key={n.en} className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-raised px-2.5 py-1 text-body">
+          <div
+            key={n.en}
+            className="grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2 rounded-md bg-raised px-2.5 py-1 text-body"
+          >
             <span className="text-ink-muted tabular-nums">{lvl}</span>
             <span>{lt(n)}</span>
             <span className="text-label text-ink-muted">{lt(SCHOOLS[s])}</span>
@@ -537,7 +626,9 @@ function Popover() {
   ];
   return (
     <div className="absolute top-[8.5rem] left-[7.5rem] z-20 flex w-96 flex-col gap-3 rounded-xl bg-popover p-3 text-popover-foreground shadow-float">
-      <span className="section-label">{tr("Détails du personnage", "Character details")}</span>
+      <span className="section-label">
+        {tr("Détails du personnage", "Character details")}
+      </span>
       <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-4 gap-y-1.5 text-body">
         {rows.map(([k, v]) => (
           <div key={k} className="contents">
@@ -547,7 +638,9 @@ function Popover() {
         ))}
       </div>
       <div className="flex flex-wrap justify-end gap-2">
-        <Button variant="ghost">{tr("Prendre une nouvelle classe", "Take a class")}</Button>
+        <Button variant="ghost">
+          {tr("Prendre une nouvelle classe", "Take a class")}
+        </Button>
         <Button variant="ghost">{tr("Renseigner", "Fill in")}</Button>
         <Button variant="quiet">{tr("Modifier", "Edit")}</Button>
       </div>
@@ -556,7 +649,12 @@ function Popover() {
 }
 
 function PopoverScreen() {
-  return <Dashboard card={<CharacterCard who={MAGE} nameHint />} overlay={<Popover />} />;
+  return (
+    <Dashboard
+      card={<CharacterCard who={MAGE} nameHint />}
+      overlay={<Popover />}
+    />
+  );
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -564,18 +662,24 @@ function PopoverScreen() {
 
 function SchoolPicker({ picked }: { picked: string }) {
   const who = MAGE;
-  const names = (s: typeof SPECIALISTS[number]["opposed"]) => s.map((c) => lt(SCHOOLS[c])).join(", ");
+  const names = (s: (typeof SPECIALISTS)[number]["opposed"]) =>
+    s.map((c) => lt(SCHOOLS[c])).join(", ");
   return (
     <div className="absolute inset-0 z-30 flex items-center justify-center bg-ground/70">
       <div className="flex max-h-[calc(100%-4rem)] w-[min(56rem,calc(100%-4rem))] flex-col gap-3 rounded-xl bg-popover p-4 text-popover-foreground shadow-float">
-        <span className="section-label">{tr("Choisir une école de magie", "Pick a school of magic")}</span>
+        <span className="section-label">
+          {tr("Choisir une école de magie", "Pick a school of magic")}
+        </span>
         <p className="text-body text-ink-muted">
           {tr(
             "Magicien devient le spécialiste de l'école choisie. Niveau, PX, points de vie et grimoire restent tels quels ; les sorts des écoles opposées ne peuvent plus être préparés.",
             "Mage becomes the specialist of the school you pick. Level, XP, hit points and spellbook stay as they are; spells of the opposed schools can no longer be prepared.",
           )}
         </p>
-        <div role="radiogroup" className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto">
+        <div
+          role="radiogroup"
+          className="grid min-h-0 grid-cols-2 gap-2 overflow-y-auto"
+        >
           {SPECIALISTS.map((s) => {
             const ok = meets(who, s);
             const on = s.id === picked;
@@ -588,28 +692,52 @@ function SchoolPicker({ picked }: { picked: string }) {
                 aria-disabled={!ok}
                 className={cn(
                   "flex min-w-0 flex-col gap-0.5 rounded-lg border px-3 py-2 text-body",
-                  on ? "selected border-transparent shadow-[inset_0_0_0_1.5px_var(--tint)]" : "border-input",
+                  on
+                    ? "selected border-transparent shadow-[inset_0_0_0_1.5px_var(--tint)]"
+                    : "border-input",
                   !ok && "border-dashed text-ink-muted",
                 )}
               >
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="text-key">{lt(SCHOOLS[s.school])}</span>
-                  <span className={cn("text-label", ok ? "text-ink-muted" : "")}>{lt(s.name)}</span>
+                  <span
+                    className={cn("text-label", ok ? "text-ink-muted" : "")}
+                  >
+                    {lt(s.name)}
+                  </span>
                 </span>
                 <span className="text-label">
-                  <span className="text-ink-muted">{tr("Opposées : ", "Opposed: ")}</span>
+                  <span className="text-ink-muted">
+                    {tr("Opposées : ", "Opposed: ")}
+                  </span>
                   {names(s.opposed)}
                 </span>
                 <span className="flex flex-wrap items-center gap-x-3 text-label">
-                  <span className={cn("inline-flex items-center gap-1 tabular-nums", !ok && "font-semibold text-danger")}>
-                    {ok ? <Check aria-hidden className="size-3.5 text-success" /> : <Warning aria-hidden className="size-3.5" />}
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1 tabular-nums",
+                      !ok && "font-semibold text-danger",
+                    )}
+                  >
+                    {ok ? (
+                      <Check aria-hidden className="size-3.5 text-success" />
+                    ) : (
+                      <Warning aria-hidden className="size-3.5" />
+                    )}
                     {lt(ABILITY_NAMES[ab])} {min}
-                    {!ok && tr(` requis (${who.abilities[ab]})`, ` needed (${who.abilities[ab]})`)}
+                    {!ok &&
+                      tr(
+                        ` requis (${who.abilities[ab]})`,
+                        ` needed (${who.abilities[ab]})`,
+                      )}
                   </span>
                   {ok && !raceListed(who, s) && (
                     <span className="inline-flex items-center gap-1 text-warning">
                       <Warning aria-hidden className="size-3.5" />
-                      {tr(`${lt(RACES[who.race])} hors table 22 : permis`, `${lt(RACES[who.race])} not in Table 22: allowed`)}
+                      {tr(
+                        `${lt(RACES[who.race])} hors table 22 : permis`,
+                        `${lt(RACES[who.race])} not in Table 22: allowed`,
+                      )}
                     </span>
                   )}
                 </span>

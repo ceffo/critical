@@ -62,3 +62,33 @@ func TestSwitch_Step15_EachRefusalIsAConflictWithItsCode(t *testing.T) {
 		assert.Contains(t, rec.Body.String(), `"code":"`+tc.code+`"`)
 	}
 }
+
+func get(h http.HandlerFunc, query string) *httptest.ResponseRecorder {
+	rec := httptest.NewRecorder()
+	h(rec, httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/api/character/class-entry/targets"+query, nil))
+	return rec
+}
+
+// ADR 0050 step 15.6: the picker's list, the refusal as its code and the minimums against the score.
+func TestTargets_Step15_AnswersWhatThePickerShows(t *testing.T) {
+	svc := mocks.NewMockSVC(t)
+	svc.EXPECT().Targets(mock.Anything, int64(3), 0).Return(&classentrysvc.TargetList{Entry: 0, From: "mage", Targets: []classentrysvc.Target{
+		{
+			Class: "abjurer", Schools: []string{"abjuration"}, OpposedSchools: []string{"alteration"}, RaceWarning: true,
+			Minimums: []classentrysvc.Minimum{{Ability: "wis", Min: 15, Score: 8}}, Refusal: classentrysvc.ErrMinimumsNotMet,
+		},
+		{Class: "mage"},
+	}}, nil).Once()
+	rec := get(render.Handle(classentryhdl.Targets(func(*http.Request) int64 { return 3 }, svc)), "?entry=0")
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"entry":0,"from":"mage","targets":[
+	 {"class":"abjurer","schools":["abjuration"],"opposedSchools":["alteration"],"raceWarning":true,"refusal":"class_switch_minimums_not_met","minimums":[{"ability":"wis","min":15,"score":8,"met":false}]},
+	 {"class":"mage","schools":null,"opposedSchools":null,"raceWarning":false,"refusal":"","minimums":[]}]}`, rec.Body.String())
+}
+
+func TestTargets_Step15_RefusesABadEntryBeforeTheService(t *testing.T) {
+	for _, q := range []string{"", "?entry=", "?entry=x"} {
+		rec := get(render.Handle(classentryhdl.Targets(func(*http.Request) int64 { return 3 }, mocks.NewMockSVC(t))), q)
+		assert.Equal(t, http.StatusBadRequest, rec.Code, q)
+	}
+}

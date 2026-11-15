@@ -40,7 +40,10 @@ beforeEach(() => {
 describe("details popover shows only what is set", () => {
   it("hides the unset fields and offers one link to set them", async () => {
     const { user } = await renderApp(
-      <CharacterDetails character={character({ hair: "Chestnut" })} />,
+      <CharacterDetails
+        character={character({ hair: "Chestnut" })}
+        onOpenSchool={() => {}}
+      />,
     );
     await user.click(screen.getByTestId("details-trigger"));
     const pop = screen.getByTestId("details-popover");
@@ -64,7 +67,9 @@ describe("details popover shows only what is set", () => {
       languages: ["elvish"],
       alignment: "",
     });
-    const { user } = await renderApp(<CharacterDetails character={full} />);
+    const { user } = await renderApp(
+      <CharacterDetails character={full} onOpenSchool={() => {}} />,
+    );
     await user.click(screen.getByTestId("details-trigger"));
     const pop = screen.getByTestId("details-popover");
     expect(within(pop).queryByTestId("details-set")).not.toBeInTheDocument();

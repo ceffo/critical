@@ -2349,19 +2349,28 @@
     "confirm": "La classe {{from}} est figée au niveau {{level}} et garde ce qu’elle a : plus de PX ni de nouveau niveau. À partir de maintenant, tous les PX vont à {{to}}, qui commence au niveau 1. Vous pouvez annuler depuis le journal."
   },
   "switchClass": {
-    "open": "Changer",
-    "openTitle": "Changer la classe d'une entrée",
-    "title": "Changer de classe",
-    "entry": "Classe à changer",
-    "pick": "Nouvelle classe",
-    "placeholder": "Choisir une classe",
+    "open": "École",
+    "openTitle": "Choisir ou changer l'école de magie",
+    "title": "Choisir une école de magie",
     "next": "Suivant",
     "back": "Retour",
     "switch": "Changer",
     "confirm": "{{from}} devient {{to}}. Tout reste tel quel : niveau, PX, points de vie, compétences et tout le grimoire. Seule la classe change.",
     "opposed": "Les sorts des écoles opposées de {{to}} restent dans le grimoire mais ne peuvent plus être préparés, et ils quittent les sorts préparés du jour.",
     "race": "Un personnage de race {{race}} ne figure pas parmi les races que le Manuel des joueurs donne pour {{to}} (table 22). C'est permis : la feuille de personnage le signale seulement.",
-    "undo": "Vous pouvez annuler depuis le journal."
+    "undo": "Vous pouvez annuler depuis le journal.",
+    "intro": "{{class}} devient le spécialiste de l'école choisie. Niveau, PX, points de vie et grimoire restent tels quels ; les sorts des écoles opposées ne peuvent plus être préparés.",
+    "noSchool": "Généraliste",
+    "opposedLabel": "Opposées : ",
+    "needed": " requis ({{score}})",
+    "raceShort": "{{race}} hors table 22 : permis",
+    "loadError": "Impossible de lire les écoles. Fermez et rouvrez.",
+    "linkTitleGeneralist": "Généraliste, sans école de magie · choisir une école",
+    "linkTitleSpecialist": "École : {{school}} · changer d’école",
+    "refusals": {
+      "class_switch_alignment_not_allowed": "Alignement non admis",
+      "multiclass_class_not_allowed": "Pas pour un multi-classé"
+    }
   },
   "xp": {
     "heading": "Expérience · niveau {{level}}",

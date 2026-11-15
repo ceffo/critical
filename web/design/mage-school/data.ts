@@ -57,14 +57,70 @@ export interface Specialist {
 
 /** ADR 0050's table, in its order. */
 export const SPECIALISTS: Specialist[] = [
-  { id: "abjurer", name: l("Abjurateur", "Abjurer"), school: "abjuration", races: ["human"], minimum: ["wis", 15], opposed: ["alteration", "illusion"] },
-  { id: "conjurer", name: l("Conjurateur", "Conjurer"), school: "conjuration_summoning", races: ["human", "half_elf"], minimum: ["con", 15], opposed: ["greater_divination", "invocation_evocation"] },
-  { id: "diviner", name: l("Devin", "Diviner"), school: "greater_divination", races: ["human", "half_elf", "elf"], minimum: ["wis", 16], opposed: ["conjuration_summoning"] },
-  { id: "enchanter", name: l("Enchanteur", "Enchanter"), school: "enchantment_charm", races: ["human", "half_elf", "elf"], minimum: ["cha", 16], opposed: ["invocation_evocation", "necromancy"] },
-  { id: "illusionist", name: l("Illusionniste", "Illusionist"), school: "illusion", races: ["human", "gnome"], minimum: ["dex", 16], opposed: ["necromancy", "invocation_evocation", "abjuration"] },
-  { id: "invoker", name: l("Invocateur", "Invoker"), school: "invocation_evocation", races: ["human"], minimum: ["con", 16], opposed: ["enchantment_charm", "conjuration_summoning"] },
-  { id: "necromancer", name: l("Nécromancien", "Necromancer"), school: "necromancy", races: ["human"], minimum: ["wis", 16], opposed: ["illusion", "enchantment_charm"] },
-  { id: "transmuter", name: l("Transmutateur", "Transmuter"), school: "alteration", races: ["human", "half_elf"], minimum: ["dex", 15], opposed: ["abjuration", "necromancy"] },
+  {
+    id: "abjurer",
+    name: l("Abjurateur", "Abjurer"),
+    school: "abjuration",
+    races: ["human"],
+    minimum: ["wis", 15],
+    opposed: ["alteration", "illusion"],
+  },
+  {
+    id: "conjurer",
+    name: l("Conjurateur", "Conjurer"),
+    school: "conjuration_summoning",
+    races: ["human", "half_elf"],
+    minimum: ["con", 15],
+    opposed: ["greater_divination", "invocation_evocation"],
+  },
+  {
+    id: "diviner",
+    name: l("Devin", "Diviner"),
+    school: "greater_divination",
+    races: ["human", "half_elf", "elf"],
+    minimum: ["wis", 16],
+    opposed: ["conjuration_summoning"],
+  },
+  {
+    id: "enchanter",
+    name: l("Enchanteur", "Enchanter"),
+    school: "enchantment_charm",
+    races: ["human", "half_elf", "elf"],
+    minimum: ["cha", 16],
+    opposed: ["invocation_evocation", "necromancy"],
+  },
+  {
+    id: "illusionist",
+    name: l("Illusionniste", "Illusionist"),
+    school: "illusion",
+    races: ["human", "gnome"],
+    minimum: ["dex", 16],
+    opposed: ["necromancy", "invocation_evocation", "abjuration"],
+  },
+  {
+    id: "invoker",
+    name: l("Invocateur", "Invoker"),
+    school: "invocation_evocation",
+    races: ["human"],
+    minimum: ["con", 16],
+    opposed: ["enchantment_charm", "conjuration_summoning"],
+  },
+  {
+    id: "necromancer",
+    name: l("Nécromancien", "Necromancer"),
+    school: "necromancy",
+    races: ["human"],
+    minimum: ["wis", 16],
+    opposed: ["illusion", "enchantment_charm"],
+  },
+  {
+    id: "transmuter",
+    name: l("Transmutateur", "Transmuter"),
+    school: "alteration",
+    races: ["human", "half_elf"],
+    minimum: ["dex", 15],
+    opposed: ["abjuration", "necromancy"],
+  },
 ];
 
 export interface Entry {
@@ -86,7 +142,13 @@ export interface Fixture {
   saves: [L, string][];
 }
 
-const SAVES = (a: string, b: string, c: string, d: string, e: string): [L, string][] => [
+const SAVES = (
+  a: string,
+  b: string,
+  c: string,
+  d: string,
+  e: string,
+): [L, string][] => [
   [l("Paralysie/Poison", "Paralysis/Poison"), a],
   [l("Bâton/Sceptre/Baguette", "Rod/Staff/Wand"), b],
   [l("Pétrification/Métamorphose", "Petrification/Polymorph"), c],
@@ -132,5 +194,7 @@ export const BOOK: [L, number, School][] = [
   [l("Dissipation de la magie", "Dispel Magic"), 3, "abjuration"],
 ];
 
-export const meets = (f: Fixture, s: Specialist) => f.abilities[s.minimum[0]] >= s.minimum[1];
-export const raceListed = (f: Fixture, s: Specialist) => s.races.includes(f.race);
+export const meets = (f: Fixture, s: Specialist) =>
+  f.abilities[s.minimum[0]] >= s.minimum[1];
+export const raceListed = (f: Fixture, s: Specialist) =>
+  s.races.includes(f.race);

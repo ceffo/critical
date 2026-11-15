@@ -1,51 +1,61 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Warning } from "@phosphor-icons/react";
+import { Check, Warning } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { fetchSwitchTargets, type SwitchTarget } from "@/api/character";
 import { useClassName } from "@/lib/useClassName";
-import { useCreationOptions } from "@/lib/useCreationOptions";
 import { useCharacterStore } from "@/stores/character";
-import { switchableEntries, switchTargets } from "@/lib/classSwitch";
+import { cn } from "@/lib/utils";
 import type { Character } from "@/types/character";
 
 /**
- * A class entry switched to another class of its group (ADR 0050 step 15): a mage becomes a
- * specialist, a specialist a mage or another specialist. Pick the entry (only when several can
- * switch) and the class, then a confirmation that names what is kept, what the opposed spells do,
- * and the race warning when the race is not among Table 22's for the class: shown, never a refusal.
- * The server decides whether the switch is allowed and a refusal shows in its wording.
+ * The school picker (ADR 0050 step 15.7): a class entry switched to another class of its group, a
+ * mage becoming a specialist, a specialist a mage or another specialist. Eight-odd cards, one per
+ * class the entry could become, each with the school, the schools it opposes, its ability minimum
+ * against the sheet's score and the race warning; a card the server would refuse is greyed with its
+ * reason and cannot be picked. Then a confirmation that names what is kept, what the opposed spells
+ * do and the race warning (shown, never a refusal). Every figure and verdict is the server's
+ * (`GET /api/character/class-entry/targets`): the web words them, it compares nothing.
  */
 export function SwitchClassDialog({
   character,
+  entry,
   open,
   onOpenChange,
 }: {
   character: Character;
+  /** The class entry (its index in `classes`) the picker switches. */
+  entry: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useTranslation();
   const className = useClassName();
   const doSwitch = useCharacterStore((s) => s.switchEntryClass);
-  const { options } = useCreationOptions();
-  const entries = switchableEntries(character, options);
-  const [picked, setPicked] = useState<number | null>(null);
+  const [targets, setTargets] = useState<SwitchTarget[] | null>(null);
+  const [failed, setFailed] = useState(false);
   const [chosen, setChosen] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
+  const from = character.classes[entry]?.class ?? "";
 
-  const entry =
-    picked !== null && entries.includes(picked) ? picked : entries[0];
-  const from = entry === undefined ? "" : character.classes[entry]?.class;
-  const targets =
-    entry === undefined ? [] : switchTargets(character, options, entry);
-  const specialist = options?.specialistRaces?.[chosen];
-  // PHB Table 22's races for the class; none listed for a mage, which is no specialist.
-  const raceWarning =
-    specialist !== undefined && !specialist.includes(character.raceCode);
+  // The picker is read when it opens: the scores and the entries are the sheet's of this moment.
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    fetchSwitchTargets(entry).then(
+      (r) => live && setTargets(r.targets),
+      () => live && setFailed(true),
+    );
+    return () => {
+      live = false;
+    };
+  }, [open, entry, from]);
+
+  const target = targets?.find((x) => x.class === chosen);
+  const specialist = (target?.schools.length ?? 0) > 0;
   const race = t(`details.races.${character.raceCode}`, {
     defaultValue: character.raceCode,
   });
@@ -53,7 +63,8 @@ export function SwitchClassDialog({
   const close = (next: boolean) => {
     if (busy) return;
     if (!next) {
-      setPicked(null);
+      setTargets(null);
+      setFailed(false);
       setChosen("");
       setConfirming(false);
       setRefusal(null);
@@ -62,7 +73,6 @@ export function SwitchClassDialog({
   };
 
   const confirm = async () => {
-    if (entry === undefined) return;
     setBusy(true);
     const refused = await doSwitch(entry, chosen);
     setBusy(false);
@@ -77,14 +87,14 @@ export function SwitchClassDialog({
   return (
     <Dialog open={open} onOpenChange={close}>
       <DialogContent
-        className="max-w-md gap-3"
+        className={cn("gap-3", confirming ? "max-w-md" : "max-w-4xl")}
         aria-label={t("switchClass.title")}
         data-testid="switch-class-dialog"
       >
         <DialogTitle className="section-label">
           {t("switchClass.title")}
         </DialogTitle>
-        {confirming ? (
+        {confirming && target ? (
           <>
             <div
               className="flex flex-col gap-2 text-body"
@@ -92,16 +102,16 @@ export function SwitchClassDialog({
             >
               <p>
                 {t("switchClass.confirm", {
-                  from: className(from ?? ""),
+                  from: className(from),
                   to: className(chosen),
                 })}
               </p>
-              {specialist !== undefined && (
+              {specialist && (
                 <p data-testid="switch-class-opposed">
                   {t("switchClass.opposed", { to: className(chosen) })}
                 </p>
               )}
-              {raceWarning && (
+              {target.raceWarning && (
                 <p
                   className="flex items-start gap-1 text-warning"
                   data-testid="switch-class-race-warning"
@@ -138,57 +148,36 @@ export function SwitchClassDialog({
           </>
         ) : (
           <>
-            {entries.length > 1 && (
-              <div className="flex min-w-0 flex-col gap-1 text-body">
-                <label
-                  htmlFor="switch-class-entry"
-                  className="text-label text-muted-foreground"
-                >
-                  {t("switchClass.entry")}
-                </label>
-                <select
-                  id="switch-class-entry"
-                  value={entry}
-                  className={fieldClass}
-                  data-testid="switch-class-entry"
-                  onChange={(e) => {
-                    setPicked(Number(e.target.value));
-                    setChosen("");
+            <p className="text-body text-muted-foreground">
+              {t("switchClass.intro", { class: className(from) })}
+            </p>
+            {failed && (
+              <span
+                role="alert"
+                className="text-label text-danger"
+                data-testid="switch-class-load-error"
+              >
+                {t("switchClass.loadError")}
+              </span>
+            )}
+            <div
+              role="radiogroup"
+              aria-label={t("switchClass.title")}
+              className="grid min-h-0 grid-cols-1 gap-2 overflow-y-auto sm:grid-cols-2"
+              data-testid="switch-class-cards"
+            >
+              {targets?.map((x) => (
+                <SchoolCard
+                  key={x.class}
+                  target={x}
+                  on={x.class === chosen}
+                  race={race}
+                  onPick={() => {
+                    setChosen(x.class);
                     setRefusal(null);
                   }}
-                >
-                  {entries.map((i) => (
-                    <option key={i} value={i}>
-                      {className(character.classes[i]?.class ?? "")}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div className="flex min-w-0 flex-col gap-1 text-body">
-              <label
-                htmlFor="switch-class-pick"
-                className="text-label text-muted-foreground"
-              >
-                {t("switchClass.pick")}
-              </label>
-              <select
-                id="switch-class-pick"
-                value={chosen}
-                className={fieldClass}
-                data-testid="switch-class-pick"
-                onChange={(e) => {
-                  setChosen(e.target.value);
-                  setRefusal(null);
-                }}
-              >
-                <option value="">{t("switchClass.placeholder")}</option>
-                {targets.map((c) => (
-                  <option key={c} value={c}>
-                    {className(c)}
-                  </option>
-                ))}
-              </select>
+                />
+              ))}
             </div>
             {refusal && (
               <span
@@ -209,7 +198,7 @@ export function SwitchClassDialog({
               </Button>
               <Button
                 type="button"
-                disabled={chosen === ""}
+                disabled={target === undefined}
                 onClick={() => setConfirming(true)}
                 data-testid="switch-class-next"
               >
@@ -220,5 +209,98 @@ export function SwitchClassDialog({
         )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** One class the entry could become: its school, opposed schools, minimums and race note. */
+function SchoolCard({
+  target: x,
+  on,
+  race,
+  onPick,
+}: {
+  target: SwitchTarget;
+  on: boolean;
+  race: string;
+  onPick: () => void;
+}) {
+  const { t } = useTranslation();
+  const className = useClassName();
+  const school = (code: string) =>
+    t(`lookup.schoolNames.${code}`, { defaultValue: code });
+  const refused = x.refusal !== "";
+  const unmet = x.minimums.filter((m) => !m.met);
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={on}
+      aria-disabled={refused}
+      data-testid={`school-card-${x.class}`}
+      onClick={() => {
+        if (!refused) onPick();
+      }}
+      className={cn(
+        "flex min-w-0 flex-col gap-0.5 rounded-lg border px-3 py-2 text-left text-body",
+        refused
+          ? "cursor-not-allowed border-dashed text-ink-muted"
+          : "cursor-pointer hover:bg-raised-hover",
+        on
+          ? "selected border-transparent shadow-[inset_0_0_0_1.5px_var(--tint)]"
+          : "border-input",
+      )}
+    >
+      <span className="flex items-baseline justify-between gap-2">
+        <span className="min-w-0 break-words text-key">
+          {x.schools.length > 0
+            ? school(x.schools[0] ?? "")
+            : t("switchClass.noSchool")}
+        </span>
+        <span className="shrink-0 text-label text-ink-muted">
+          {className(x.class)}
+        </span>
+      </span>
+      {x.opposedSchools.length > 0 && (
+        <span className="text-label">
+          <span className="text-ink-muted">
+            {t("switchClass.opposedLabel")}
+          </span>
+          {x.opposedSchools.map(school).join(", ")}
+        </span>
+      )}
+      <span className="flex flex-wrap items-center gap-x-3 text-label">
+        {x.minimums.map((m) => (
+          <span
+            key={m.ability}
+            className={cn(
+              "inline-flex items-center gap-1 tabular-nums",
+              !m.met && "font-semibold text-danger",
+            )}
+          >
+            {m.met ? (
+              <Check aria-hidden className="size-3.5 text-success" />
+            ) : (
+              <Warning aria-hidden className="size-3.5" />
+            )}
+            {t(`attr.${m.ability}`)} {m.min}
+            {!m.met && t("switchClass.needed", { score: m.score })}
+          </span>
+        ))}
+        {unmet.length === 0 && x.refusal !== "" && (
+          <span className="inline-flex items-center gap-1 text-danger">
+            <Warning aria-hidden className="size-3.5" />
+            {t(`switchClass.refusals.${x.refusal}`, {
+              defaultValue: x.refusal,
+            })}
+          </span>
+        )}
+        {!refused && x.raceWarning && (
+          <span className="inline-flex items-center gap-1 text-warning">
+            <Warning aria-hidden className="size-3.5" />
+            {t("switchClass.raceShort", { race })}
+          </span>
+        )}
+      </span>
+    </button>
   );
 }

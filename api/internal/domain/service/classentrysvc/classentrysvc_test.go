@@ -53,6 +53,7 @@ func newFixture(t *testing.T, catalogue ...classes.Class) *fixture {
 		f.cat.EXPECT().Get(c.ID).Return(c, nil).Maybe()
 	}
 	f.cat.EXPECT().Get(mock.Anything).Return(classes.Class{}, domain.ErrNotFound).Maybe()
+	f.cat.EXPECT().Classes().Return(catalogue).Maybe()
 	svc, err := classentrysvc.New(classentrysvc.Deps{
 		DAL: f.dal, Characters: f.chars, Slots: f.slots, Book: f.book, Catalogue: f.cat, Log: f.log, Tx: noTx{},
 	})
@@ -277,4 +278,76 @@ func TestSwitch_Step15_UnknownEntryAndClass(t *testing.T) {
 			assert.Empty(t, f.log.got)
 		})
 	}
+}
+
+// Step 15.6: the picker's list. Only classes the entry could become (a specialist on one side, same
+// group, a spellbook) are offered; each carries its schools, the opposed ones, every minimum against
+// the sheet's score, the race warning and the refusal Switch would give; nothing is written.
+func TestTargets_Step15_ListsWhatThePickerShows(t *testing.T) {
+	f := newFixture(t, all...)
+	sheet := mageSheet() // elf, scores 9 16 12 18 12 10
+	f.chars.EXPECT().View(mock.Anything, charID).Return(sheet, nil)
+
+	got, err := f.svc.Targets(context.Background(), charID, 0)
+	require.NoError(t, err)
+	assert.Equal(t, 0, got.Entry)
+	assert.Equal(t, "mage", got.From)
+	byClass := map[string]classentrysvc.Target{}
+	for _, tg := range got.Targets {
+		byClass[tg.Class] = tg
+	}
+	assert.Len(t, byClass, 3, "the specialists only: no fighter, bard, scholar, or sorcerer (no specialist side), not the mage itself")
+	tr := byClass["transmuter"]
+	assert.Equal(t, []string{"alteration"}, tr.Schools)
+	assert.Equal(t, []string{"abjuration", "necromancy"}, tr.OpposedSchools)
+	assert.True(t, tr.RaceWarning, "an elf is not in the school's races")
+	assert.NoError(t, tr.Refusal)
+	assert.True(t, byClass["illusionist"].RaceWarning, "an elf is no gnome")
+}
+
+func TestTargets_Step15_ABackToMageIsOfferedToASpecialist(t *testing.T) {
+	f := newFixture(t, all...)
+	sheet := mageSheet()
+	sheet.Entries[0].Class = "transmuter"
+	f.chars.EXPECT().View(mock.Anything, charID).Return(sheet, nil)
+
+	got, err := f.svc.Targets(context.Background(), charID, 0)
+	require.NoError(t, err)
+	var ids []string
+	for _, tg := range got.Targets {
+		ids = append(ids, tg.Class)
+	}
+	assert.ElementsMatch(t, []string{"mage", "abjurer", "illusionist", "sorcerer"}, ids)
+	for _, tg := range got.Targets {
+		if tg.Class == "mage" {
+			assert.Empty(t, tg.Schools)
+			assert.False(t, tg.RaceWarning)
+		}
+	}
+}
+
+func TestTargets_Step15_AnUnmetMinimumIsTheRefusalSwitchGives(t *testing.T) {
+	strict := transmuter
+	strict.AbilityMinimums = []classes.AbilityMinimum{{Ability: "wis", Min: 15}, {Ability: "dex", Min: 10}}
+	strict.Alignments = every
+	f := newFixture(t, mage, strict)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(mageSheet(), nil)
+
+	got, err := f.svc.Targets(context.Background(), charID, 0)
+	require.NoError(t, err)
+	require.Len(t, got.Targets, 1)
+	assert.ErrorIs(t, got.Targets[0].Refusal, classentrysvc.ErrMinimumsNotMet)
+	assert.Equal(t, []classentrysvc.Minimum{
+		{Ability: "wis", Min: 15, Score: 12, Met: false},
+		{Ability: "dex", Min: 10, Score: 16, Met: true},
+	}, got.Targets[0].Minimums)
+}
+
+func TestTargets_Step15_UnknownEntry(t *testing.T) {
+	f := newFixture(t, all...)
+	f.chars.EXPECT().View(mock.Anything, charID).Return(mageSheet(), nil)
+	_, err := f.svc.Targets(context.Background(), charID, 3)
+	var fe *domain.FieldError
+	require.ErrorAs(t, err, &fe)
+	assert.Equal(t, "entry", fe.Field)
 }

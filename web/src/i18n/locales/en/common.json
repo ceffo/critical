@@ -2349,19 +2349,28 @@
     "confirm": "{{from}} is frozen at level {{level}} and keeps what it has: no more XP and no new level. From now on all XP goes to {{to}}, which starts at level 1. You can undo this from the journal."
   },
   "switchClass": {
-    "open": "Switch",
-    "openTitle": "Switch the class of an entry",
-    "title": "Switch class",
-    "entry": "Class to change",
-    "pick": "New class",
-    "placeholder": "Pick a class",
+    "open": "School",
+    "openTitle": "Pick or change the school of magic",
+    "title": "Pick a school of magic",
     "next": "Next",
     "back": "Back",
     "switch": "Switch",
     "confirm": "{{from}} becomes {{to}}. Kept as they are: level, XP, hit points, proficiencies and the whole spellbook. Only the class changes.",
     "opposed": "The spells of {{to}}'s opposition schools stay in the book but can no longer be prepared, and they leave today's prepared spells.",
     "race": "A {{race}} is not among the races the Player's Handbook lists for a {{to}} (Table 22). That is allowed: the sheet only notes it.",
-    "undo": "You can undo this from the journal."
+    "undo": "You can undo this from the journal.",
+    "intro": "{{class}} becomes the specialist of the school you pick. Level, XP, hit points and spellbook stay as they are; spells of the opposed schools can no longer be prepared.",
+    "noSchool": "Generalist",
+    "opposedLabel": "Opposed: ",
+    "needed": " needed ({{score}})",
+    "raceShort": "{{race}} not in Table 22: allowed",
+    "loadError": "Could not read the schools. Close and reopen.",
+    "linkTitleGeneralist": "Generalist, no school of magic · pick a school",
+    "linkTitleSpecialist": "School: {{school}} · change school",
+    "refusals": {
+      "class_switch_alignment_not_allowed": "Alignment not admitted",
+      "multiclass_class_not_allowed": "Not for a multi-class character"
+    }
   },
   "xp": {
     "heading": "Experience · level {{level}}",

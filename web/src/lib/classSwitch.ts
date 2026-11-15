@@ -30,3 +30,8 @@ export function switchableEntries(
     .map((_, i) => i)
     .filter((i) => switchTargets(character, options, i).length > 0);
 }
+
+/** The school code of a class (a specialist's, ADR 0050 step 1), "" for a mage or any other class. */
+export function schoolOf(options: CreationOptions | null, cls: string): string {
+  return options?.classes.find((c) => c.class === cls)?.schools?.[0] ?? "";
+}

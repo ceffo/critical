@@ -85,7 +85,7 @@ func TestApply_Step2And3_EmptyUnknownAndUntouched(t *testing.T) {
 // ADR 0032 step 8.2 and 8.4: a migrated character lacking a value reads it as missing, and an
 // alignment its class refuses is kept and read as a warning; setting another detail on it is not
 // refused (the check is of a value being set).
-func TestDetails_Step11_MissingAndKeptAlignmentWarning(t *testing.T) {
+func TestDetails_Step8_MissingAndKeptAlignmentWarning(t *testing.T) {
 	assert.Equal(t, []string{"alignment", "sex"}, charactersvc.Details{}.Missing())
 	assert.Equal(t, []string{"sex"}, charactersvc.Details{Alignment: "true_neutral"}.Missing())
 	assert.Empty(t, charactersvc.Details{Alignment: "true_neutral", Sex: "male"}.Missing())
@@ -100,7 +100,7 @@ func TestDetails_Step11_MissingAndKeptAlignmentWarning(t *testing.T) {
 	assert.Equal(t, "lawful_good", got.Alignment)
 }
 
-func TestApply_Step11_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T) {
+func TestApply_Step8_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T) {
 	thief := charactersvc.Details{Alignment: "lawful_good", Sex: "male"}
 	got, err := thief.Apply(aligns(t, "thief"), charactersvc.DetailsPatch{Alignment: str("lawful_good"), Hair: str("red")})
 	require.NoError(t, err, "the unchanged alignment passes")
@@ -111,7 +111,7 @@ func TestApply_Step11_KeptForbiddenAlignmentDoesNotBlockOtherEdits(t *testing.T)
 	require.Error(t, err, "a change to a forbidden alignment stays refused")
 }
 
-func TestDetails_Step11_ANonCodeReadsAsMissing(t *testing.T) {
+func TestDetails_Step8_ANonCodeReadsAsMissing(t *testing.T) {
 	d := charactersvc.Details{Alignment: "Chaotic Good", Sex: "Homme"}
 	assert.Equal(t, []string{"alignment", "sex"}, d.Missing())
 	assert.Empty(t, d.Warnings(aligns(t, "thief")), "no warning for a value that is not a code")

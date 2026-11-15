@@ -189,7 +189,7 @@ func TestDerive_Step6_SavesFromTable60(t *testing.T) {
 // ADR 0030 step 8: a bard's slots are PHB Table 32 at the derived level,
 // a mage's Table 21; fighters and thieves have none; the cleric's is not
 // implemented yet (an error, not an empty list).
-func TestDerive_Step11_SpellSlotsByClass(t *testing.T) {
+func TestDerive_Step8_SpellSlotsByClass(t *testing.T) {
 	t.Run("bard: Table 32", func(t *testing.T) {
 		r := newRules(t)
 		expectKelsenRules(r, 1_293_418, 15)

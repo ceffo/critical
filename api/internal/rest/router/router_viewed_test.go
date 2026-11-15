@@ -48,7 +48,7 @@ func TestViewedCharacter_Step11_3_EveryWriteIsRefused(t *testing.T) {
 	require.True(t, ok)
 	refused := 0
 	require.NoError(t, chi.Walk(routes, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		if !strings.HasPrefix(route, "/api/") || strings.HasPrefix(route, "/api/auth/") || method == http.MethodGet || method == http.MethodHead {
+		if !strings.HasPrefix(route, "/api/") || route == "/api/auth/logout" || method == http.MethodGet || method == http.MethodHead {
 			return nil
 		}
 		refused++
@@ -58,6 +58,22 @@ func TestViewedCharacter_Step11_3_EveryWriteIsRefused(t *testing.T) {
 		return nil
 	}))
 	assert.Greater(t, refused, 40, "the walk found the write routes")
+}
+
+// The logout is the one write a viewing page may still make: it is not
+// refused as read_only. Any other write under /api/auth/ is.
+func TestViewedCharacter_Step11_3_OnlyLogoutIsExempt(t *testing.T) {
+	a := usersAuth(t, map[string]authsvc.User{"ann": {ID: annID, Email: "ann@example.com", Role: authsvc.RolePlayer}})
+	a.EXPECT().Logout(mock.Anything, "ann").Return(nil).Once()
+	h, _ := newRouterWith(t, a)
+
+	rec := asViewing(h, "ann", "8", http.MethodPost, "/api/auth/logout", "")
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// The dev login is under /api/auth/ too: the strict mock expects no call.
+	rec = asViewing(h, "ann", "8", http.MethodPost, "/api/auth/dev", "{}")
+	assert.Equal(t, http.StatusForbidden, rec.Code)
+	assert.Contains(t, rec.Body.String(), "read_only")
 }
 
 // Step 11.1: a viewed character is read whoever owns it, and the read is of

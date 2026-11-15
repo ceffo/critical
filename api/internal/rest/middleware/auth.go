@@ -347,17 +347,20 @@ func parseViewed(raw string) (int64, error) {
 	return id, nil
 }
 
+// logoutPath is the one write a viewing page may still make.
+const logoutPath = "/api/auth/logout"
+
 // ReadOnlyView refuses, before anything else runs, every request that names
 // a viewed character and is not a GET or a HEAD, with
 // charactersvc.ErrReadOnly (403 read_only; ADR 0029 step 11.3). It sits on the
 // whole router, behind the gate, so that a page showing another user's
 // character cannot change anything at all, not only that character: no route
-// decides this for itself. The session's own routes (/api/auth/, a logout)
-// touch no character and stay open.
+// decides this for itself. The one exemption is the logout: it ends
+// the session and touches no character.
 func ReadOnlyView(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get(ViewedHeader) != "" && r.Method != http.MethodGet && r.Method != http.MethodHead &&
-			!strings.HasPrefix(r.URL.Path, "/api/auth/") {
+			r.URL.Path != logoutPath {
 			render.Error(r.Context(), w, charactersvc.ErrReadOnly)
 			return
 		}

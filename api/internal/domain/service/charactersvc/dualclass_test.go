@@ -35,7 +35,7 @@ func elf(mageLevel, mageXP int) *charactersvc.Character {
 // After the crossover, the best of the active entry and each frozen entry at
 // its left_at_level (Q5)." The wizard's Table 53 is 18 at 7 to 9 and 17 at 10;
 // the warrior's at 9 is 12.
-func TestTHAC0_Step11_DualClassNewClassUntilTheCrossover(t *testing.T) {
+func TestTHAC0_Step8_DualClassNewClassUntilTheCrossover(t *testing.T) {
 	assert.Equal(t, 18, derived(t, elf(7, 60_000)).THAC0, "mage 7: the mage's")
 	assert.Equal(t, 18, derived(t, elf(9, 135_000)).THAC0, "mage 9, equal to the fighter's 9: still the mage's")
 	assert.Equal(t, 12, derived(t, elf(10, 250_000)).THAC0, "mage 10: the fighter's 9 is better")

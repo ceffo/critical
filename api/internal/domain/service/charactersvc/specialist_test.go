@@ -39,7 +39,7 @@ func readWizard(t *testing.T, class string) *charactersvc.Character {
 // ADR 0050 step 8: a specialist owes the mage's one free spell per new spell
 // level (Q5), and the grant says ofSchool, pending and owed alike; a mage's
 // does not.
-func TestGetCharacter_Step11_TheGrantSaysOfSchool(t *testing.T) {
+func TestGetCharacter_Step8_TheGrantSaysOfSchool(t *testing.T) {
 	for _, tc := range []struct {
 		class         string
 		pending, owed []spellbook.FreeSpell

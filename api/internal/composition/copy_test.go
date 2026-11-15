@@ -237,3 +237,64 @@ func stripIDs(v any) any {
 	}
 	return v
 }
+
+// Step 12.4 for the PSP ledger: a psionicist's copy has the source's PSPs, an undo on the copy
+// stops at its opening balance, the source is untouched, and a copy of a copy carries it on.
+func TestCopy_Step12_PsionicCopyCarriesItsPSPs(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	party := classesBody("human", psiScores, `[{"class":"thief","xp":0},{"class":"psionicist","xp":0}]`)
+	require.Equal(t, http.StatusCreated, tb.call(bob, "POST", "/api/characters", withPsionics(party, 0, `[]`), nil))
+	var list listView
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters", "", &list))
+	psi := *list.CurrentID
+	require.Equal(t, http.StatusOK, tb.call(bob, "POST", "/api/psp/event", `{"delta":-9,"source":"contact"}`, nil))
+	pspOf := func(token string) int {
+		psp, _ := psionicsOf(t, tb, token)
+		return psp.Current
+	}
+	require.Equal(t, 16, pspOf(bob))
+
+	ann, _ := tb.login("")
+	var got copiedView
+	require.Equal(t, http.StatusCreated, tb.call(ann, "POST", "/api/characters/"+itoa(psi)+"/copy", `{"name":"Psi (copy)"}`, &got))
+	require.Equal(t, http.StatusOK, tb.call(ann, "PUT", "/api/characters/current", `{"id":`+itoa(*got.CopiedID)+`}`, nil))
+	assert.Equal(t, 16, pspOf(ann), "the copy has the source's PSPs")
+
+	require.Equal(t, http.StatusOK, tb.call(ann, "POST", "/api/psp/event", `{"delta":-4,"source":"use"}`, nil))
+	assert.Equal(t, 12, pspOf(ann))
+	assert.Equal(t, 16, pspOf(bob), "the source is untouched")
+	var log copyLogView
+	require.Equal(t, http.StatusOK, tb.call(ann, "GET", "/api/log", "", &log))
+	require.Len(t, log.Entries, 1)
+	require.Equal(t, http.StatusOK, tb.call(ann, "POST", "/api/log/undo", `{"expectedTopId":`+itoa(log.TopID)+`}`, nil))
+	assert.Equal(t, 16, pspOf(ann), "undo stops at the opening balance")
+
+	// A copy of the copy: its total (opening included) is the new opening.
+	require.Equal(t, http.StatusOK, tb.call(ann, "POST", "/api/psp/event", `{"delta":-2,"source":"use"}`, nil))
+	var again copiedView
+	require.Equal(t, http.StatusCreated, tb.call(ann, "POST", "/api/characters/"+itoa(*got.CopiedID)+"/copy", `{"name":"Psi (copy 2)"}`, &again))
+	require.Equal(t, http.StatusOK, tb.call(ann, "PUT", "/api/characters/current", `{"id":`+itoa(*again.CopiedID)+`}`, nil))
+	assert.Equal(t, 14, pspOf(ann), "the copy of a copy carries the opening")
+}
+
+// Step 12.4: a copy made in combat keeps the round and the initiative, and its log is empty: the
+// normal actions work on it (the source's initiative entry is no entry of its log).
+func TestCopy_Step12_CopyMidCombatCanRerollAndAdvance(t *testing.T) {
+	tb, m := newTable(t)
+	bob, bram := playedBram(t, tb, m) // advanced one round: the initiative is rolled
+	ann, _ := tb.login("")
+	var got copiedView
+	require.Equal(t, http.StatusCreated, tb.call(ann, "POST", "/api/characters/"+itoa(bram)+"/copy", `{"name":"Bram (copy)"}`, &got))
+	require.Equal(t, http.StatusOK, tb.call(ann, "PUT", "/api/characters/current", `{"id":`+itoa(*got.CopiedID)+`}`, nil))
+
+	var round map[string]any
+	require.Equal(t, http.StatusOK, tb.call(ann, "GET", "/api/round", "", &round))
+	assert.EqualValues(t, 1, round["round"])
+	require.NotNil(t, round["initiative"], "the copy keeps the initiative")
+
+	require.Equal(t, http.StatusOK, tb.call(ann, "POST", "/api/round/initiative/reroll", "", &round), "reroll on a copy")
+	require.Equal(t, http.StatusOK, tb.call(ann, "POST", "/api/round/advance", "", nil), "next round on a copy")
+	// The source's own reroll refusal rule is unchanged: its newest entry is not the initiative's.
+	assert.Equal(t, http.StatusConflict, tb.call(bob, "POST", "/api/round/initiative/reroll", "", nil))
+}

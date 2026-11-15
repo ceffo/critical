@@ -756,3 +756,57 @@ func TestGetEntry_CreatedAtReadsAsUTCWholeSeconds(t *testing.T) {
 	require.NoError(t, err)
 	assert.JSONEq(t, `"2026-10-16T12:00:00Z"`, string(out))
 }
+
+// ADR 0029 step 12 / ADR 0043 step 5: the PSP total is the opening balance plus the live log.
+func TestPSPTotal(t *testing.T) {
+	ctx := context.Background()
+	deltas := []queries.ListPSPDeltasRow{{ID: 2, PspDelta: -8}, {ID: 4, PspDelta: 3}}
+	cases := []struct {
+		name    string
+		corrs   []queries.ListCorrectionsFromRow
+		opening int64
+		want    int
+	}{
+		{"the log alone", nil, 0, -5},
+		{"opening balance adds to the log", nil, 20, 15},
+		{"opening balance stays when every entry is popped", []queries.ListCorrectionsFromRow{void(10, 2), void(11, 4)}, 20, 20},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			dal, q := mocked(t)
+			q.EXPECT().ListPSPDeltas(ctx, charID).Return(deltas, nil).Once()
+			q.EXPECT().GetPSPOpening(ctx, charID).Return(c.opening, nil).Once()
+			q.EXPECT().ListCorrectionsFrom(ctx, queries.ListCorrectionsFromParams{CharacterID: charID, ActionID: 2}).Return(c.corrs, nil).Once()
+			total, err := dal.PSPTotal(ctx, charID)
+			require.NoError(t, err)
+			assert.Equal(t, c.want, total)
+		})
+	}
+	t.Run("empty log of a copy is its opening balance", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPSPDeltas(ctx, charID).Return(nil, nil).Once()
+		q.EXPECT().GetPSPOpening(ctx, charID).Return(18, nil).Once()
+		total, err := dal.PSPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, 18, total)
+	})
+	t.Run("an unknown character has no opening", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPSPDeltas(ctx, charID).Return(nil, nil).Once()
+		q.EXPECT().GetPSPOpening(ctx, charID).Return(0, sql.ErrNoRows).Once()
+		total, err := dal.PSPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Zero(t, total)
+	})
+	t.Run("errors", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListPSPDeltas(ctx, charID).Return(nil, errBoom).Once()
+		_, err := dal.PSPTotal(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+
+		q.EXPECT().ListPSPDeltas(ctx, charID).Return(deltas, nil).Once()
+		q.EXPECT().GetPSPOpening(ctx, charID).Return(0, errBoom).Once()
+		_, err = dal.PSPTotal(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+	})
+}

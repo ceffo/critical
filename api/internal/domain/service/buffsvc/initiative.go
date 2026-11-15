@@ -325,7 +325,9 @@ func (s *service) RerollInitiative(ctx context.Context, characterID int64) (Init
 		if err != nil {
 			return fmt.Errorf("top of the log: %w", err)
 		}
-		if !ok || top != current.LogEntryID {
+		// An empty log is a copy's (ADR 0029 step 12): its initiative keeps the
+		// source's entry id, which is not in this log, and nothing is newer.
+		if ok && top != current.LogEntryID {
 			return fmt.Errorf("%w: %w: the initiative is #%d, the newest entry #%d",
 				domain.ErrConflict, ErrInitiativeNotOnTop, current.LogEntryID, top)
 		}

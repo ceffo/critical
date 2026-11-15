@@ -403,6 +403,10 @@ sequenceDiagram
        psionic contests' context the log holds starts empty; the migration aids (`item_id_renames`).
        The source is not changed, the rows of one never refer to the other, and the figures the rules
        derive are the same (they are derived from the same rows).
+       The copy's initiative keeps the source's log entry id, which is no entry of the copy's empty
+       log: the initiative reroll (ADR 0013 step 4), which needs the initiative's entry to be the
+       newest one, **accepts an empty log** (nothing is newer), so a copy made in combat rerolls like
+       any character; the new roll is the copy's own entry.
     3. **No `read_only` exception.** The page that shows another user's character sends the copy
        request **without `X-Viewed-Character-Id`**, the source id being in the path (step 11.3's
        reason for the header, "the per-character routes keep their paths", does not apply to a
@@ -427,7 +431,9 @@ sequenceDiagram
     6. **Tests.** `composition` `TestCopy_Step12_AnnCopiesBobsCharacterAsHerOwn` (a played character
        copied by another user: sheet and derived figures, HP, XP, round, items, favourites, empty log,
        not current, source unchanged), `TestCopy_Step12_CopyAndSourceAreIndependent` (play and undo on
-       either side, the opening balance survives an undo), `TestCopy_Step12_RefusalsAndOwnCharacter`
+       either side, the opening balance survives an undo), `TestCopy_Step12_PsionicCopyCarriesItsPSPs`
+       (the PSP ledger, and a copy of a copy), `TestCopy_Step12_CopyMidCombatCanRerollAndAdvance`,
+       `actionlogdal` `TestPSPTotal`, `TestCopy_Step12_RefusalsAndOwnCharacter`
        (404 for unknown, retired and disabled owner, 400 for a name, 403 with the viewed header, a copy
        of one's own); `memory` `TestCopyCharacter_Step12_EveryTableButTheLogIsCopied` (each table by
        name), `TestCopyCharacter_Step12_UnreadableSourceIsNotFound`; `charactersvc`

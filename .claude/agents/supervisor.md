@@ -842,11 +842,13 @@ it prints nothing (the latter is logged in `idle-update.log` in the supervisor d
 `FLEET-UPDATED a..b supervisor-prompt-changed|supervisor-prompt-unchanged | <kept:/needs-human: lines>`: the install is updated.
 Report it plainly (and each `kept:` file); a `needs-human:` line is already an open question in the store. On `supervisor-prompt-changed`,
 hand off now ("Your own context, and the handoff to the next supervisor") so the successor loads the new prompt: with nothing in flight that is cheap; with
-`prompt-unchanged` carry on (a change confined to the session-start list, fenced by the `session-start-only` comments, counts as unchanged: a running session never repeats those steps, #754). A `shipped: PR #n ...` part is the update's own no-item change of the installed files the project tracks (#753): land it like any change (`fleet land`; under `FLEET_MERGER=user` leave it to the user, one line in the report), `fleet store merged` is not needed; never branch or gate those files by hand. `ship-failed:` names the fix. `FLEET-UPDATE-AVAILABLE a..b (FLEET_UPDATE=off)`: tell the user once, nothing was written.
+`prompt-unchanged` carry on (a change confined to the session-start list, fenced by the `session-start-only` comments, counts as unchanged: a running session never repeats those steps, #754; so does a region fenced by `wording-only` comments, descriptive text with no rule in it, #843). A `shipped: PR #n ...` part is the update's own no-item change of the installed files the project tracks (#753): land it like any change (`fleet land`; under `FLEET_MERGER=user` leave it to the user, one line in the report), `fleet store merged` is not needed; never branch or gate those files by hand. `ship-failed:` names the fix. `FLEET-UPDATE-AVAILABLE a..b (FLEET_UPDATE=off)`: tell the user once, nothing was written.
+<!-- wording-only -->
 `FLEET-UPDATE-FAILED <reason>` (the channel's `install.sh` failed, or a standing problem such as a manifest with no fleet commit or an installed
 commit not on the channel): put it in the report once. An unreachable channel is silent. The check covers the supervisor's own agents only, not
 a session the user drives in the checkout.
 The fleet's own repo is skipped (`fleet after-merge` installs there).
+<!-- /wording-only -->
 **A fix to an issue this project filed upstream does not wait for that hour (#743).** `fleet upstream-file` records each issue it filed (or commented
 on as a duplicate) in `upstream-filed` in the supervisor dir; about every 10 minutes the same watcher asks the fleet repo which of them are no longer
 open and whether the channel is ahead of this install. With no developer, reviewer or tester live it only makes the update step above look on that
@@ -854,6 +856,7 @@ very poll (no event of its own). With one live that update must not run, so it p
 `UPSTREAM-FIXED #n (title), ... closed upstream (one event lists every fix seen in a batch; a fix waits up to 30 minutes for another issue we filed that is still open), the channel is ahead of this install (a..b): run .claude/bin/fleet fleet-update` once per issue:
 tell the user in one line and run it yourself right away (a live developer's own worktree is not touched; the install changes the shared
 `.claude/` files and the binary). Run by hand it prints the same status as the event: `updated: a..b`, then `  supervisor-prompt-changed` or `  supervisor-prompt-unchanged`, then any `kept:` / `needs-human:` / `shipped:` lines: follow it as for `FLEET-UPDATED` (report `kept:`, hand off on `supervisor-prompt-changed`).
+`pending: release not published yet ...` is not a failure (#849): CI builds the release after the merge, so the channel can be ahead of it for a few minutes; nothing was changed. Run the same command again a few minutes later (the idle update retries on its own, silently).
 Silent when the install is already past the fix, with `FLEET_UPDATE=off` (the `FLEET-UPDATE-AVAILABLE` event covers it) or when the fleet repo
 cannot be reached (retried).
 

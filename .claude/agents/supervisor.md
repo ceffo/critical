@@ -870,6 +870,7 @@ One path per event (`<change>` is `<project>!<n>`; you push, developers only com
 
 | Line | Who does what |
 |---|---|
+| `<change> behind green (not caught up: ...)` | The change is green, plain (no stack) and only behind because `<db>` moved, and the forge does not make a change mergeable only while up to date: upkeep rebased nothing (a push would rerun its whole CI for nothing). Land it as is. Nothing to push. If landing is refused as BEHIND, catch it up then: `.claude/bin/fleet catch-up <worktree>` and `republish`. |
 | `<change> behind caught-up` (also `caught-up (restacked onto <branch>)`: a chained stack's child restacked on its parent, or onto `<db>` once the parent merged; `caught-up (unpushed)`: the branch was already rebased locally but never pushed, nothing was rebased now, reported once) | `fleet catch-up` rebased the branch in its worktree (commits only; no agent involved; it refuses a dirty tree, and `FLEET_VALIDATE_CMD`, when set, is the gate rerun: its failure comes back as a `failed brief`). Once its developer, if any, is idle, **you** push: `.claude/bin/fleet republish <worktree>` (force-with-lease of that branch only; it refuses the default branch). In a stack, push the lower branch first. |
 | `<change> behind current` | the branch already holds `<db>` and origin has the same head: nothing to do (the forge disagrees, e.g. a stack: look at its base) |
 | `<change> (behind\|conflicting) conflict brief: <path>` or `failed brief: <path>` | judgment: resume the item's developer if its session is alive (`fleet agent-prompt`, "carry out the upkeep brief at `<path>`"), else start a fresh developer on the existing branch and worktree with that brief. It resolves the rebase and reruns the gate, commits, reports; you then push as above. |
@@ -1053,7 +1054,7 @@ user says so, at the next quiet point (no agent mid-commit, no rework half sent)
    there for the user, never ask the successor to relay it. A supervisor started on a stale install runs
    `.claude/bin/fleet fleet-update` itself once at session start, after `resume`. The update runs the channel's `install.sh`
    (docs/upstream.md "Trust"): flag in the report a `fleet-source` in `.claude/.fleet-manifest` that differs from `FLEET_UPSTREAM_URL`.
-3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab after the user's next message, so your last reply stays readable. On `NO ACK`,
+3. On `ACK`, stop: send nothing more and start nothing. The successor closes your tab as soon as it has touched the ack file and your last turn has ended (`fleet close-agent`, once your agent status is idle or done); it does not wait for a user message, since the liaison relays the user. On `NO ACK`,
    read its tab (`herdr agent read`) and tell the user.
 Without herdr there is no successor to start: record the notes in the store and tell the user to start one.
 

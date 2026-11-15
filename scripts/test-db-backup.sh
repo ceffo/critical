@@ -27,6 +27,9 @@ cat > "$stubs/fly" <<STUB
 #!/bin/sh
 echo "fly \$*" >> "$calls"
 # fly proxy <local>:5432 ...: listen on the local port like the real proxy
+echo \$\$ >> "$tmp/proxy-pids"
+# a proxy that loses the port to another program exits at once (once, when the test asks for it)
+[ ! -f "$tmp/proxy-loses-port" ] || { rm -f "$tmp/proxy-loses-port"; exit 1; }
 exec python3 -I -c 'import socket,sys,time; s=socket.socket(); s.bind(("127.0.0.1", int(sys.argv[1].split(":")[0]))); s.listen(); time.sleep(300)' "\$2"
 STUB
 cat > "$stubs/pg_dump" <<STUB
@@ -97,7 +100,19 @@ grep -q -- "--format=custom" "$calls" || fail "backup: not the custom format"
 grep -q "PGPASSWORD=$secret" "$tmp/env" || fail "backup: password not passed to pg_dump through the environment"
 ! grep -q "$secret" "$calls" || fail "backup: password in a command line"
 ! grep -q "$secret" <<<"$out" || fail "backup: password printed"
-pgrep -f "listen().*time.sleep(300)" >/dev/null && fail "backup: the fly proxy was left running" || true
+proxy_left() { local p; for p in $(cat "$tmp/proxy-pids" 2>/dev/null); do ! kill -0 "$p" 2>/dev/null || return 0; done; return 1; }
+[ -s "$tmp/proxy-pids" ] || fail "backup: the fly stub never started (the shutdown check would pass for nothing)"
+! proxy_left || fail "backup: the fly proxy was left running"
+# the check itself can fail: a proxy that is still up is seen
+sleep 300 & sleeper=$!; echo "$sleeper" > "$tmp/proxy-pids"
+proxy_left || fail "backup: the shutdown check does not see a proxy that is still running"
+kill "$sleeper"; wait "$sleeper" 2>/dev/null || true; : > "$tmp/proxy-pids"
+
+# a proxy that loses its port to another program: the script picks another port and still backs up
+reset; rm -rf "$bk"; : > "$tmp/proxy-pids"; touch "$tmp/proxy-loses-port"
+PGPASSWORD="$secret" "$root/scripts/db-backup.sh" staging >/dev/null 2>&1 || fail "backup: a proxy that lost its port was not retried"
+[ "$(count 'fly proxy')" = 2 ] || fail "backup: expected one retry of the proxy, got: $(grep 'fly proxy' "$calls")"
+! proxy_left || fail "backup: a proxy was left running after the retry"
 
 # the operator's password file
 reset; rm -rf "$bk"

@@ -19,7 +19,7 @@ import {
   type CreationDraft,
   type CreationOptions,
 } from "@/types/character";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageFooter, PageHeader } from "@/components/shell/PageHeader";
 import { CardHead, Note, StepDot } from "./kit";
 import {
   EMPTY_DRAFT,
@@ -586,6 +586,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           </div>
         </DialogContent>
       </Dialog>
+      <PageFooter />
     </div>
   );
 }

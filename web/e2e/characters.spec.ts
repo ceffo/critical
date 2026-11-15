@@ -271,6 +271,10 @@ test("create a bard through the creation route, switch to the first and back, re
   const current = roster.locator("[data-current]");
   await expect(current).toContainText("Lyra");
   await expect(current).toContainText("En jeu");
+  await expect(cards.first()).toHaveAttribute("data-current", "true");
+  await expect(
+    current.getByRole("button", { name: "Revenir à la partie" }),
+  ).toBeVisible();
   await expect(current).toContainText("Barde · niveau 3");
   await expect(current.getByRole("button", { name: /^Jouer/ })).toHaveCount(0);
   await snap(page, "roster-fr");

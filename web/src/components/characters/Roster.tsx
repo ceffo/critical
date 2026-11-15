@@ -22,7 +22,7 @@ import {
   switchCharacter,
 } from "@/api/characters";
 import { ApiError } from "@/api/http";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageFooter, PageHeader } from "@/components/shell/PageHeader";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,9 +77,10 @@ function useRosterState(): [
 
 /**
  * "Vos personnages" (ADR 0034 step 7, amending ADR 0029 steps 7.2 and 7.3): a full screen with a card
- * per character, the one in play marked "En jeu", each with Jouer (but the current one), Renommer, and
- * Retirer alone in the card's corner, and a dashed Créer card that opens the creation route. Retour goes back to the game; a
- * user with no current character (theirs retired elsewhere) has no game to go back to, so no Retour.
+ * per character, the one in play first, marked "En jeu" and strongly highlighted, each with Jouer (but
+ * the current one), Renommer, and Retirer alone in the card's corner, and a dashed Créer card that opens
+ * the creation route. The current card's Reprendre goes back to the game; a user with no current
+ * character (theirs retired elsewhere) has no game to go back to, so no Reprendre.
  * Renaming and retiring answer the list, shown as it is; a switch loads the page again on the
  * character, and so does retiring the last one (the intro is the page of a user with none).
  */
@@ -142,22 +143,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
       className="flex h-dvh flex-col gap-3 overflow-hidden p-3"
       data-screen="roster"
     >
-      <PageHeader
-        title={t("roster.title")}
-        action={
-          onBack && (
-            <Button
-              variant="quiet"
-              onClick={onBack}
-              aria-label={t("roster.backHint")}
-              title={t("roster.backHint")}
-            >
-              <ArrowLeft aria-hidden />
-              {t("roster.back")}
-            </Button>
-          )
-        }
-      />
+      <PageHeader title={t("roster.title")} />
       <main
         className="stage-card min-h-0 flex-1 overflow-y-auto p-4"
         data-testid="roster"
@@ -176,12 +162,13 @@ export function Roster({ onBack }: { onBack?: () => void }) {
               </p>
             )}
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(19rem,1fr))] gap-3">
-              {list.characters.map((c) => (
+              {currentFirst(list).map((c) => (
                 <RosterCard
                   key={c.id}
                   character={c}
                   current={c.id === list.currentId}
                   busy={pending !== null}
+                  onBack={c.id === list.currentId ? onBack : undefined}
                   onPlay={() => void play(c)}
                   onRename={() =>
                     apply({ type: "open", kind: "rename", character: c })
@@ -210,6 +197,7 @@ export function Roster({ onBack }: { onBack?: () => void }) {
           </div>
         )}
       </main>
+      <PageFooter />
       <RosterDialog
         opened={opened}
         onClose={() => apply({ type: "close" })}
@@ -219,11 +207,23 @@ export function Roster({ onBack }: { onBack?: () => void }) {
   );
 }
 
+/** The list with the current character first; the others keep their creation order. */
+function currentFirst(list: CharacterList): CharacterSummary[] {
+  const at = list.characters.findIndex((c) => c.id === list.currentId);
+  if (at <= 0) return list.characters;
+  return [
+    list.characters[at]!,
+    ...list.characters.slice(0, at),
+    ...list.characters.slice(at + 1),
+  ];
+}
+
 /** One character's card: name, class and level, race · alignment, HP, the tag of what is still to choose, "En jeu" on the current one, its actions. */
 function RosterCard({
   character: c,
   current,
   busy,
+  onBack,
   onPlay,
   onRename,
   onRetire,
@@ -231,6 +231,8 @@ function RosterCard({
   character: CharacterSummary;
   current: boolean;
   busy: boolean;
+  /** On the current card only: back to the game (absent for a user with no game to go back to). */
+  onBack?: () => void;
   onPlay: () => void;
   onRename: () => void;
   onRetire: () => void;
@@ -243,7 +245,10 @@ function RosterCard({
   const toPick = toPickKey(c.missing);
   return (
     <li
-      className={cn("zone-card flex flex-col", current && "latest")}
+      className={cn(
+        "zone-card flex flex-col",
+        current && "latest bg-selected!",
+      )}
       data-testid="roster-card"
       data-current={current || undefined}
     >
@@ -307,6 +312,18 @@ function RosterCard({
         </div>
       </div>
       <div className="mt-auto flex flex-wrap items-center gap-2 px-4 pt-3 pb-3">
+        {current && onBack && (
+          <Button
+            variant="main"
+            data-testid="roster-resume"
+            aria-label={t("roster.backHint")}
+            title={t("roster.backHint")}
+            onClick={onBack}
+          >
+            <ArrowLeft aria-hidden />
+            {t("roster.back")}
+          </Button>
+        )}
         {!current && (
           <Button
             variant="main"

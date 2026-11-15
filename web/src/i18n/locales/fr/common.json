@@ -2836,7 +2836,7 @@
   "roster": {
     "title": "Vos personnages",
     "open": "Vos personnages : jouer, renommer, retirer ou créer un personnage",
-    "back": "Retour",
+    "back": "Reprendre",
     "backHint": "Revenir à la partie",
     "renameHint": "Renommer {{name}}",
     "createLead": "Ouvre la création en plein écran.",

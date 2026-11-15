@@ -2836,7 +2836,7 @@
   "roster": {
     "title": "Your characters",
     "open": "Your characters: play, rename, retire or create a character",
-    "back": "Back",
+    "back": "Resume",
     "backHint": "Back to the game",
     "renameHint": "Rename {{name}}",
     "createLead": "Opens the full-screen creation.",

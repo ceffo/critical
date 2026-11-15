@@ -90,6 +90,14 @@ workflow doc, outside the repo).
 - Write `rm` paths literally: Claude Code blocks `rm` on a path built from a variable (`rm -f $R/x.png`, and `"${R:?}"` too) with a prompt nobody answers in an unattended session. Spell the path out or `cd` first.
 - Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get): the session transcript keeps it and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`), and say in your report what you could not check without the value.
 - Stay in scope.
+- **Installs and deploys on a live host are committed scripts, never opaque one-liners.** When the item has you install, enable,
+  deploy or prune something on a live machine (ssh, systemd units, system paths), put the steps in a reviewed script in the repo
+  and commit it; never send an inline encoded payload (`base64 -d`, a long `ssh host '...'` string, a here-doc piped to a shell):
+  the auto-mode classifier refuses what it cannot read, and the user will not grant a rule for a string like that. In your report,
+  name the script and the short reusable allow rule it needs (e.g. `Bash(tools/<step>.sh *)`), and the file it goes in
+  (`~/.claude/settings.json`), then stop at "committed": the supervisor settles the rule with the user. Running it is for after the
+  rule exists. After a refusal, never wrap the same command in a script, split it or switch tool to get past the classifier: report
+  the refusal and the rule text instead (supervisor prompt, "Classifier-gated steps").
 
 ## Checks
 

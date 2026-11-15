@@ -521,14 +521,14 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     entered points + race (Table 27) + Dexterity (Table 28, the sheet's Dexterity; skills without a
     column get 0; a Dexterity of 20 or more reads the row of 19, the user's ruling of 2026-11-15: the
     book's table stops at 19, and the catalogue publishes that row as 19 to 25; a Dexterity under 9
-    has no row and adjusts by 0, pending the user's ruling) + armour (Table 29, the column of the body armour worn, [ADR 0033](0033-equipment.md)
-    step 14: none worn is the none column, an armour a thief may not wear the padded or studded
-    one; leather is the table's baseline, 0), capped at 95% (PHB p.39: no skill above
-    95 with every adjustment) and floored at 0. _(proposed: the points are checked against the
-    book's budget (PHB p.39): 60 at level 1 and 30 a level after; at most 30 in one skill at level
-    1 and at most 15 in one skill per level after. The entered points are per skill and per level
-    for this check. A breach is a warning on the skills card (code, skill, points and limit), not
-    a refusal.)_
+    has no row and adjusts by 0, pending the user's ruling) + armour (Table 29, the column of the
+    body armour worn, [ADR 0033](0033-equipment.md) step 14: none worn is the none column, an
+    armour a thief may not wear the padded or studded one; leather is the table's baseline, 0),
+    capped at 95% (PHB p.39: no skill above 95 with every adjustment) and floored at 0.
+    _(proposed: the points are checked against the book's budget (PHB p.39): 60 at level 1 and 30
+    a level after; at most 30 in one skill at level 1 and at most 15 in one skill per level after.
+    The entered points are per skill and per level for this check. A breach is a warning on the
+    skills card (code, skill, points and limit), not a refusal.)_
     _(As built for the thief, 2026-10-18)_ A thief enters its armour (`none`, `leather`,
     `padded_studded_leather`, `elven_chain`; stored in `characters.skill_armor`, none stored reads
     as leather; _superseded by ADR 0033 step 14: the armour is the worn one, not entered_) and its points per skill, 0 to 95 each (more could never count), stored as one
@@ -576,7 +576,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     _(Amended 2026-10-21 by [ADR 0040](0040-classes-are-data.md) step 3, on implementation: the `rogue_skills` feature (set `thief`, its budget and armours as params, no `min_to_use`: the book gives none and Go's floor stays 0) replaces `thiefSkillClasses`, the budget constants and `ThiefArmors`)_
 18. **Bard skills.** The four bard skills (Climb Walls, Detect Noise, Pick Pockets, Read
     Languages) are: base (PHB Table 33) + the entered points + race (Table 27) + Dexterity (Table
-    28: Pick Pockets only) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
+    28: Pick Pockets only, as step 17's: 20 and more read 19's row) + armour (Table 29 on the body armour worn, ADR 0033 step 14; metal armour up to chain mail is the elven chain column plus the extra -5%
     of the table's note, step 1), capped at 95% and floored at 0. The budget is a warning as step
     17's, 20 points at level 1 and 15 a level after (PHB p.42; accepted by the user in triage,
     2026-10-18); the PHB gives the bard no per-skill limit, so none is checked. _(Amended by
@@ -1028,9 +1028,7 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     compared on read (no `sheetDifferences` entry for them).
     Tests: `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck),
     `TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration` (storage/postgres),
-    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition); the audit against the book
-    (Table 33 and Tables 27 to 29, as step 17's): `TestBardSkills_Step18_EveryTermAgainstTheBook`
-    (ruletablesadpt).
+    `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
     _(Retirement as built, 2026-10-19)_ The derived block no longer lists differences. The API keeps
     `sheetDifferences` as an always empty array for one release only, because the previous
     release's web reads its `.length`; the web of this release neither types nor reads it. Drop the

@@ -105,3 +105,13 @@ SELECT id, psp_delta
 FROM action_log
 WHERE character_id = $1
 ORDER BY id;
+
+-- GetHPOpening and GetPSPOpening read a character's ledger opening balances (ADR 0007 step 2, ADR
+-- 0043 step 5): the total the ledger held before the log began, 0 for a character not copied. No
+-- row for an unknown character.
+
+-- name: GetHPOpening :one
+SELECT hp_opening FROM characters WHERE id = $1;
+
+-- name: GetPSPOpening :one
+SELECT psp_opening FROM characters WHERE id = $1;

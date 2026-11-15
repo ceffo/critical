@@ -181,7 +181,7 @@ func (l ActionLog) LatestID(ctx context.Context, characterID int64, kind actionl
 }
 
 // HPTotal is the sum of the effective HP deltas of the character's entries
-// (actionlog.HPTotal, ADR 0007 step 2); 0 when the log is empty.
+// (actionlog.HPTotal, ADR 0007 step 2) plus the character's opening balance; 0 when both are empty.
 func (l ActionLog) HPTotal(ctx context.Context, characterID int64) (int, error) {
 	var total int
 	err := l.s.read(ctx, func(t *tables) error {
@@ -191,14 +191,14 @@ func (l ActionLog) HPTotal(ctx context.Context, characterID int64) (int, error) 
 				entries = append(entries, actionlog.Entry{ID: e.ID, CharacterID: characterID, HPDelta: e.HPDelta})
 			}
 		}
-		total = actionlog.HPTotal(t.withCorrections(characterID, entries))
+		total = t.openings[characterID].HP + actionlog.HPTotal(t.withCorrections(characterID, entries))
 		return nil
 	})
 	return total, err
 }
 
 // PSPTotal is the sum of the effective PSP deltas of the character's entries
-// (actionlog.PSPTotal, ADR 0043 step 5); 0 when the log is empty.
+// (actionlog.PSPTotal, ADR 0043 step 5) plus the character's opening balance; 0 when both are empty.
 func (l ActionLog) PSPTotal(ctx context.Context, characterID int64) (int, error) {
 	var total int
 	err := l.s.read(ctx, func(t *tables) error {
@@ -208,7 +208,7 @@ func (l ActionLog) PSPTotal(ctx context.Context, characterID int64) (int, error)
 				entries = append(entries, actionlog.Entry{ID: e.ID, CharacterID: characterID, PSPDelta: e.PSPDelta})
 			}
 		}
-		total = actionlog.PSPTotal(t.withCorrections(characterID, entries))
+		total = t.openings[characterID].PSP + actionlog.PSPTotal(t.withCorrections(characterID, entries))
 		return nil
 	})
 	return total, err

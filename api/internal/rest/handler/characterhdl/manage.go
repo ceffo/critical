@@ -30,6 +30,11 @@ type changer interface {
 	Change(ctx context.Context, owner uuid.UUID, id int64, c charactersvc.Change) (int64, error)
 }
 
+type copier interface {
+	ownedLister
+	Copy(ctx context.Context, owner uuid.UUID, source int64, name string) (int64, error)
+}
+
 type optionsReader interface {
 	CreationOptions(ctx context.Context) (charactersvc.CreationOptions, error)
 }
@@ -592,6 +597,42 @@ func Change(svc changer) render.HandlerFunc {
 			return err
 		}
 		return renderCharacters(w, r, svc, u.ID, current)
+	}
+}
+
+// CopyBody is the body of POST /api/characters/{id}/copy: the name of the copy, the text the web
+// composed from the source's name (ADR 0023: the backend builds no display text).
+type CopyBody struct {
+	Name string `json:"name"`
+}
+
+// Copy is POST /api/characters/{id}/copy: a copy of a character the user may read, their own or
+// another's, as a new character of theirs (ADR 0029 step 12). The page names the source in the
+// path and sends no X-Viewed-Character-Id (a view refuses every write, step 11.4): the copy writes
+// only the user's own new character. It answers 201 with the list, as GET /api/characters, the
+// current character unchanged and `copiedId` the new one. An unknown, retired or unreadable
+// source is 404.
+func Copy(svc copier) render.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) error {
+		u, err := user(r)
+		if err != nil {
+			return err
+		}
+		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+		if err != nil || id < 1 {
+			return render.BadRequestError("id is not a character id")
+		}
+		var b CopyBody
+		dec := json.NewDecoder(r.Body)
+		dec.DisallowUnknownFields()
+		if err := dec.Decode(&b); err != nil {
+			return render.BadRequestError("invalid JSON body")
+		}
+		copied, err := svc.Copy(r.Context(), u.ID, id, b.Name)
+		if err != nil {
+			return err
+		}
+		return renderCharactersCopied(w, r, svc, u.ID, u.CurrentCharacterID, copied, http.StatusCreated)
 	}
 }
 

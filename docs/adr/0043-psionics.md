@@ -192,6 +192,9 @@ Every warning and refusal is structured data (a code and its numbers), worded by
    signed delta bounded as above, refused with delta 0 or with no PSP maximum (`no_psp_pool`).
    Tests: `PSPTotal_Step5_EveryKindCounts` (domain/actionlog), `Record_Step5_CapsAGainAtTheMax`
    and `Record_Step5_NeverUnderZero` (actionlogsvc), `PSPChange_Step5_UndoRedoExact` (composition).
+   *Amended by [ADR 0029](0029-users-login-and-access.md) step 12.4 (2026-11-14):* the total adds
+   the character's `psp_opening` (0 unless it is a copy of a character whose pool was spent), as
+   ADR 0007 step 2's `hp_opening`; it is no entry and undo never reaches it.
 
 6. **Recovering PSPs** (ch. 1, `08-psionic-strength-points-psps.md`, Recovering Psionic Strength
    Points; Table 6). A `psp_recovery` request names the hours (ADR 0005 step 5's validation) and

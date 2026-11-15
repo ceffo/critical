@@ -194,3 +194,85 @@ SELECT ac_override, ac_override_label FROM characters WHERE id = $1;
 -- name: SetACOverride :execrows
 UPDATE characters SET ac_override = sqlc.narg(ac_override), ac_override_label = sqlc.arg(ac_override_label)
 WHERE id = sqlc.arg(id);
+
+-- ADR 0029 step 12: a copy of a character is its rows but the action log (and what hangs from it:
+-- snapshots, corrections), under a new id. Each statement below copies one table's rows; the
+-- service runs them in the one transaction.
+
+-- name: CopyCharacterRow :one
+-- The copy's own row: the source's sheet and picks, a new name and owner, not retired, with the
+-- ledgers' opening balances. No row when the source is unknown, retired or owned by a disabled
+-- user (the same rule as ViewableCharacter, in the one statement).
+INSERT INTO characters (
+    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_points, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
+)
+SELECT sqlc.arg(name), c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_points, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, sqlc.arg(owner_user_id), FALSE, sqlc.arg(hp_opening), sqlc.arg(psp_opening)
+FROM characters c
+JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
+WHERE c.id = sqlc.arg(source_id) AND NOT c.retired
+RETURNING id;
+
+-- name: CopyClassEntries :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through)
+SELECT sqlc.arg(target_id), position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through
+FROM character_classes s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopySpellSlots :exec
+INSERT INTO spell_slots (character_id, slots) SELECT sqlc.arg(target_id), slots FROM spell_slots s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyActiveBuffs :exec
+INSERT INTO active_buffs (character_id, buffs) SELECT sqlc.arg(target_id), buffs FROM active_buffs s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyRoundState :exec
+INSERT INTO round_state (character_id, round_number, initiative_d10, initiative_entry_id, initiative_modifiers)
+SELECT sqlc.arg(target_id), round_number, initiative_d10, initiative_entry_id, initiative_modifiers
+FROM round_state s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopySavedBuffs :exec
+INSERT INTO saved_buffs (character_id, name, duration, charges, effects, note, created_at)
+SELECT sqlc.arg(target_id), name, duration, charges, effects, note, created_at
+FROM saved_buffs s WHERE s.character_id = sqlc.arg(source_id) ORDER BY s.id;
+
+-- name: CopyAttackForm :exec
+INSERT INTO attack_forms (character_id, weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_size, situational_value, situational_label, target_ac_known)
+SELECT sqlc.arg(target_id), weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_size, situational_value, situational_label, target_ac_known
+FROM attack_forms s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyXPEntries :exec
+INSERT INTO xp_entries (character_id, entry_date, session, reason, base, bonus)
+SELECT sqlc.arg(target_id), entry_date, session, reason, base, bonus
+FROM xp_entries s WHERE s.character_id = sqlc.arg(source_id) ORDER BY s.id;
+
+-- name: CopyDiceFavourites :exec
+INSERT INTO dice_favourites (character_id, formula, position)
+SELECT sqlc.arg(target_id), formula, position FROM dice_favourites s WHERE s.character_id = sqlc.arg(source_id) ORDER BY s.id;
+
+-- name: CopySpellbookEntries :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
+SELECT sqlc.arg(target_id), spell_key, position, origin, grant_level
+FROM spellbook_entries s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyLearnFailures :exec
+INSERT INTO spellbook_learn_failures (character_id, spell_key, level)
+SELECT sqlc.arg(target_id), spell_key, level FROM spellbook_learn_failures s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyEquipmentReview :exec
+INSERT INTO equipment_review (character_id, item_id, reason)
+SELECT sqlc.arg(target_id), item_id, reason FROM equipment_review s WHERE s.character_id = sqlc.arg(source_id);
+
+-- name: CopyItems :exec
+-- Every item keeps its id (they are keyed per character) and gets its own copy of its name: the
+-- name's rows of localized_texts (ADR 0023 step 9) are deleted with the item, so two items never
+-- share a key. The new keys follow the highest one, as the text adapter's NextTextKey does; the
+-- writer lock keeps two copies from taking the same ones.
+WITH src AS (
+    SELECT i.*, row_number() OVER (ORDER BY i.position, i.id) AS n FROM items i WHERE i.character_id = sqlc.arg(source_id)
+), base AS (
+    SELECT COALESCE(MAX(text_id), 0)::bigint AS top FROM localized_texts
+), names AS (
+    INSERT INTO localized_texts (text_id, lang, body)
+    SELECT base.top + src.n, lt.lang, lt.body FROM src CROSS JOIN base JOIN localized_texts lt ON lt.text_id = src.name
+)
+INSERT INTO items (id, name, character_id, position, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities)
+SELECT src.id, base.top + src.n, sqlc.arg(target_id), src.position, src.type, src.behaviour, src.magic_bonus, src.ammo_kind, src.count, src.max_count, src.effect_dice, src.effect_save, src.notes, src.powers, src.category, src.magic_kind, src.catalogue_code, src.component, src.state, src.weapon_type, src.weapon_kind, src.size, src.damage_types, src.speed, src.damage_sm, src.damage_l, src.magic_to_hit, src.magic_damage, src.two_handed, src.fires, src.specialized, src.base_ac, src.skill_column, src.armor_row, src.shield_kind, src.ac_melee, src.ac_missile, src.spell_id, src.strength_rating, src.strength_rating_exceptional, src.abilities
+FROM src CROSS JOIN base;

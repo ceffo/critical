@@ -552,24 +552,29 @@ func TestHPTotal(t *testing.T) {
 	}
 	noteAmend := queries.ListCorrectionsFromRow{ID: 10, ActionID: 2, Kind: "amend", Note: text("DM ruling"), CreatedAt: at}
 	cases := []struct {
-		name  string
-		corrs []queries.ListCorrectionsFromRow
-		want  int
+		name    string
+		corrs   []queries.ListCorrectionsFromRow
+		opening int64
+		want    int
 	}{
-		{"damage and heal", nil, -5},
-		{"delta amended", []queries.ListCorrectionsFromRow{amend(10, 2, -12)}, -9},
-		{"amended entry popped", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2)}, 3},
-		{"popped entry redone, with its amend", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2)}, -9},
-		{"popped again", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2), void(13, 2)}, 3},
-		{"note amend keeps the delta", []queries.ListCorrectionsFromRow{noteAmend}, -5},
-		{"amend of a live correction step", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5)}, 2},
-		{"its correction step popped", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5)}, -5},
-		{"its correction step redone", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5), redo(12, 5)}, 2},
+		{"damage and heal", nil, 0, -5},
+		{"delta amended", []queries.ListCorrectionsFromRow{amend(10, 2, -12)}, 0, -9},
+		{"amended entry popped", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2)}, 0, 3},
+		{"popped entry redone, with its amend", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2)}, 0, -9},
+		{"popped again", []queries.ListCorrectionsFromRow{amend(10, 2, -12), void(11, 2), redo(12, 2), void(13, 2)}, 0, 3},
+		{"note amend keeps the delta", []queries.ListCorrectionsFromRow{noteAmend}, 0, -5},
+		{"amend of a live correction step", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5)}, 0, 2},
+		{"its correction step popped", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5)}, 0, -5},
+		{"its correction step redone", []queries.ListCorrectionsFromRow{stepAmend(10, 2, -1, 5), void(11, 5), redo(12, 5)}, 0, 2},
+		// ADR 0029 step 12: the opening balance of a copy counts, and popping every entry leaves it.
+		{"opening balance adds to the log", nil, -7, -12},
+		{"opening balance stays when every entry is popped", []queries.ListCorrectionsFromRow{void(10, 2), void(11, 4)}, -7, -7},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			dal, q := mocked(t)
 			q.EXPECT().ListHPDeltas(ctx, charID).Return(deltas, nil).Once()
+			q.EXPECT().GetHPOpening(ctx, charID).Return(c.opening, nil).Once()
 			q.EXPECT().ListCorrectionsFrom(ctx, queries.ListCorrectionsFromParams{CharacterID: charID, ActionID: 2}).Return(c.corrs, nil).Once()
 			total, err := dal.HPTotal(ctx, charID)
 			require.NoError(t, err)
@@ -579,6 +584,23 @@ func TestHPTotal(t *testing.T) {
 	t.Run("empty log reads no corrections", func(t *testing.T) {
 		dal, q := mocked(t)
 		q.EXPECT().ListHPDeltas(ctx, charID).Return(nil, nil).Once()
+		q.EXPECT().GetHPOpening(ctx, charID).Return(0, nil).Once()
+		total, err := dal.HPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Zero(t, total)
+	})
+	t.Run("empty log of a copy is its opening balance", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(nil, nil).Once()
+		q.EXPECT().GetHPOpening(ctx, charID).Return(-9, nil).Once()
+		total, err := dal.HPTotal(ctx, charID)
+		require.NoError(t, err)
+		assert.Equal(t, -9, total)
+	})
+	t.Run("an unknown character has no opening", func(t *testing.T) {
+		dal, q := mocked(t)
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(nil, nil).Once()
+		q.EXPECT().GetHPOpening(ctx, charID).Return(0, sql.ErrNoRows).Once()
 		total, err := dal.HPTotal(ctx, charID)
 		require.NoError(t, err)
 		assert.Zero(t, total)
@@ -590,7 +612,13 @@ func TestHPTotal(t *testing.T) {
 		require.ErrorIs(t, err, errBoom)
 
 		q.EXPECT().ListHPDeltas(ctx, charID).Return(deltas, nil).Once()
+		q.EXPECT().GetHPOpening(ctx, charID).Return(0, nil).Once()
 		q.EXPECT().ListCorrectionsFrom(ctx, mock.Anything).Return(nil, errBoom).Once()
+		_, err = dal.HPTotal(ctx, charID)
+		require.ErrorIs(t, err, errBoom)
+
+		q.EXPECT().ListHPDeltas(ctx, charID).Return(deltas, nil).Once()
+		q.EXPECT().GetHPOpening(ctx, charID).Return(0, errBoom).Once()
 		_, err = dal.HPTotal(ctx, charID)
 		require.ErrorIs(t, err, errBoom)
 	})

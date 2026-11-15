@@ -134,6 +134,7 @@ func (t *tables) save() *tables {
 	c.acOverrides = maps.Clone(t.acOverrides)
 	c.skillArmors = maps.Clone(t.skillArmors)
 	c.dice = maps.Clone(t.dice)
+	c.openings = maps.Clone(t.openings)
 	c.users = maps.Clone(t.users)
 	c.invites = maps.Clone(t.invites)
 	c.sessions = maps.Clone(t.sessions)

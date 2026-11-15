@@ -241,6 +241,65 @@ func (_c *MockSVC_Close_Call) RunAndReturn(run func(context.Context) error) *Moc
 	return _c
 }
 
+// Copy provides a mock function with given fields: ctx, owner, source, name
+func (_m *MockSVC) Copy(ctx context.Context, owner uuid.UUID, source int64, name string) (int64, error) {
+	ret := _m.Called(ctx, owner, source, name)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Copy")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) (int64, error)); ok {
+		return rf(ctx, owner, source, name)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string) int64); ok {
+		r0 = rf(ctx, owner, source, name)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int64, string) error); ok {
+		r1 = rf(ctx, owner, source, name)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockSVC_Copy_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Copy'
+type MockSVC_Copy_Call struct {
+	*mock.Call
+}
+
+// Copy is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - source int64
+//   - name string
+func (_e *MockSVC_Expecter) Copy(ctx interface{}, owner interface{}, source interface{}, name interface{}) *MockSVC_Copy_Call {
+	return &MockSVC_Copy_Call{Call: _e.mock.On("Copy", ctx, owner, source, name)}
+}
+
+func (_c *MockSVC_Copy_Call) Run(run func(ctx context.Context, owner uuid.UUID, source int64, name string)) *MockSVC_Copy_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string))
+	})
+	return _c
+}
+
+func (_c *MockSVC_Copy_Call) Return(_a0 int64, _a1 error) *MockSVC_Copy_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockSVC_Copy_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string) (int64, error)) *MockSVC_Copy_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Create provides a mock function with given fields: ctx, owner, n
 func (_m *MockSVC) Create(ctx context.Context, owner uuid.UUID, n charactersvc.NewCharacter) (int64, error) {
 	ret := _m.Called(ctx, owner, n)

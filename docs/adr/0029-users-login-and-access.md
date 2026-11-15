@@ -378,6 +378,63 @@ sequenceDiagram
        `Others.dom.test.tsx`, `ViewBanner.dom.test.tsx`, `session.test.ts` (`startFor`), the e2e
        `view-others.spec.ts` (two users, no write request) and `layout.spec.ts` "read-only banner".
 
+12. **Copy a character** (user, 2026-11-14: _"ability to copy a character"_, any character the user can
+    see, own or another's; a copy contains everything but history). Amends step 7.1 (a character has
+    one owner: a copy is a new character, its own owner's) and step 11.4 (see 12.3).
+    1. **The action.** `POST /api/characters/{id}/copy` with `{"name": "<text>"}`: a user route (a
+       session, no current character needed). The source is any character step 11.1 lets the caller
+       read: their own or another user's; an unknown id, a retired character and a disabled owner's
+       are **404 `character_not_found`** and nothing is made. The name is the text the **web** composed
+       from the source's name ("<name> (copy)", in the user's language, `characters.copyName`): the
+       backend builds no display text (hard rule; the name is stored as sent, trimmed, 1 to 40
+       characters, as a rename: blank or too long is 400 `invalid_input`, field `name`). It answers
+       **201** with the caller's list (as `POST /api/characters`), `currentId` unchanged and
+       `copiedId` the new character: the copy is the caller's, **not made current** until they switch
+       (step 7.2).
+    2. **What a copy is.** One transaction (`charactersvc.Copy`, the port's `CopyCharacter`). The new
+       character has, under a new id and with the source's values: its row (scores, sheet figures,
+       identity, languages, picks, skill points, AC override, hit point and PSP maxima), its class
+       entries, its spell slots and prepared spells, its active buffs and saved buffs, its round and
+       initiative, its attack form, its XP entries, its items (each with its own copy of its name's
+       texts, so deleting one never touches the other, ADR 0023 step 9; the ids stay, they are per
+       character), its equipment review rows, its spellbook with each entry's origin and its learn
+       failures, and its dice favourites. **Not copied, because it is history:** the action log and
+       what hangs from it (action snapshots and corrections), so the copy has nothing to undo and the
+       psionic contests' context the log holds starts empty; the migration aids (`item_id_renames`).
+       The source is not changed, the rows of one never refer to the other, and the figures the rules
+       derive are the same (they are derived from the same rows).
+    3. **No `read_only` exception.** The page that shows another user's character sends the copy
+       request **without `X-Viewed-Character-Id`**, the source id being in the path (step 11.3's
+       reason for the header, "the per-character routes keep their paths", does not apply to a
+       route that names its character): so step 11.4's middleware does not see a view, the route
+       writes only the caller's own new character, and the rule "a view changes nothing" is kept as it
+       was. The web's http layer, which throws before the network on a write of a read-only page, lets
+       this one call through (`copyCharacter`, which also leaves the header off). A request that does
+       carry the header is still 403 `read_only`.
+    4. **The ledgers' opening balance.** HP and PSPs are the ledgers' totals (ADR 0007 step 2, ADR
+       0043 step 5), and the copy has an empty log, so the copy's current HP and PSPs are carried by
+       **`characters.hp_opening` and `characters.psp_opening`** (migration 045, additive, default 0): the
+       total each ledger held before the log began, a deficit or 0. The ledger total every reader
+       gets is the opening plus the sum of the effective deltas (`HPTotal` and `PSPTotal` of the log's
+       adapters add it; the recording path's heal cap, floor and PSP bounds see the total as before).
+       The copy's openings are the **source's totals at the copy** (so the copy has the source's
+       current HP and PSPs), and a character created in the app has 0. An opening is **not an entry**:
+       nothing is appended, nothing pops it, undo reaches the copy's own entries only, and the log
+       stays append-only (ADR 0007 step 1).
+    5. **The web.** A **Copy** action (one word, the detail in its tooltip) on the banner of a read-only
+       character view and on each of the user's own roster cards; it sends the name built by
+       `characters.copyName` and the roster shows the copy, not current.
+    6. **Tests.** `composition` `TestCopy_Step12_AnnCopiesBobsCharacterAsHerOwn` (a played character
+       copied by another user: sheet and derived figures, HP, XP, round, items, favourites, empty log,
+       not current, source unchanged), `TestCopy_Step12_CopyAndSourceAreIndependent` (play and undo on
+       either side, the opening balance survives an undo), `TestCopy_Step12_RefusalsAndOwnCharacter`
+       (404 for unknown, retired and disabled owner, 400 for a name, 403 with the viewed header, a copy
+       of one's own); `memory` `TestCopyCharacter_Step12_EveryTableButTheLogIsCopied` (each table by
+       name), `TestCopyCharacter_Step12_UnreadableSourceIsNotFound`; `charactersvc`
+       `TestCopy_Step12_ReadsTheSourcesTotalsAndStoresTheCopy`, `TestCopy_Step12_NameIsRequiredAndBounded`;
+       `actionlogdal` `TestHPTotal` ("opening balance" cases). The Postgres statements were run against a
+       real database (the copy of the seeded character: HP, items and their name texts, spellbook, log).
+
 ## Amendment 2026-10-18: the static bundle is public
 
 Step 6.1 first listed "the login page and the assets it needs" as public and step 6.2 "the rest of the

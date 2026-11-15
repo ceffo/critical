@@ -57,6 +57,10 @@ holds the inputs, and every figure is derived from them, never entered
   ([ADR 0004](adr/0004-buffs.md) steps 7 to 10).
 - **Ledgers**: HP ([ADR 0007](adr/0007-hp-ledger.md)) and XP ([ADR 0015](adr/0015-experience.md)).
   Current HP is a sum over the action log; the XP total is the starting XP plus its entries.
+  A character may start a ledger with an **opening balance** (`hp_opening`, `psp_opening`, 0 unless it
+  is a **copy**): the total the ledger held before its log began, which the sum adds
+  ([ADR 0029](adr/0029-users-login-and-access.md) step 12.4). A copy has its own rows, a copy of its
+  source's but the action log (the history), and an owner: the caller.
 - **Possessions and knowledge**: items, the spellbook, the proficiency picks (a weapon pick names a
   catalogue weapon by code, a weapon piece is proficient when a pick names its catalogue code, and the
   type picks left to redo after migration 042 are kept with them, [ADR 0037](adr/0037-proficiencies.md)

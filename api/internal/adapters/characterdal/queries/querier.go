@@ -13,6 +13,29 @@ import (
 type Querier interface {
 	// The owner's characters they have not retired, in creation order (the service derives each level).
 	CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) ([]CharactersOfRow, error)
+	CopyActiveBuffs(ctx context.Context, arg CopyActiveBuffsParams) error
+	CopyAttackForm(ctx context.Context, arg CopyAttackFormParams) error
+	// ADR 0029 step 12: a copy of a character is its rows but the action log (and what hangs from it:
+	// snapshots, corrections), under a new id. Each statement below copies one table's rows; the
+	// service runs them in the one transaction.
+	// The copy's own row: the source's sheet and picks, a new name and owner, not retired, with the
+	// ledgers' opening balances. No row when the source is unknown, retired or owned by a disabled
+	// user (the same rule as ViewableCharacter, in the one statement).
+	CopyCharacterRow(ctx context.Context, arg CopyCharacterRowParams) (int64, error)
+	CopyClassEntries(ctx context.Context, arg CopyClassEntriesParams) error
+	CopyDiceFavourites(ctx context.Context, arg CopyDiceFavouritesParams) error
+	CopyEquipmentReview(ctx context.Context, arg CopyEquipmentReviewParams) error
+	// Every item keeps its id (they are keyed per character) and gets its own copy of its name: the
+	// name's rows of localized_texts (ADR 0023 step 9) are deleted with the item, so two items never
+	// share a key. The new keys follow the highest one, as the text adapter's NextTextKey does; the
+	// writer lock keeps two copies from taking the same ones.
+	CopyItems(ctx context.Context, arg CopyItemsParams) error
+	CopyLearnFailures(ctx context.Context, arg CopyLearnFailuresParams) error
+	CopyRoundState(ctx context.Context, arg CopyRoundStateParams) error
+	CopySavedBuffs(ctx context.Context, arg CopySavedBuffsParams) error
+	CopySpellSlots(ctx context.Context, arg CopySpellSlotsParams) error
+	CopySpellbookEntries(ctx context.Context, arg CopySpellbookEntriesParams) error
+	CopyXPEntries(ctx context.Context, arg CopyXPEntriesParams) error
 	CreateActiveBuffs(ctx context.Context, characterID int64) error
 	// A character created in the app (ADR 0029 step 7.2): the entered values, its owner, and as the
 	// sheet's level, THAC0 and saves the values the rules derive at its starting XP (ADR 0030 step

@@ -91,6 +91,66 @@ func (_c *MockCharacterStore_CharactersOf_Call) RunAndReturn(run func(context.Co
 	return _c
 }
 
+// CopyCharacter provides a mock function with given fields: ctx, owner, source, name, opening
+func (_m *MockCharacterStore) CopyCharacter(ctx context.Context, owner uuid.UUID, source int64, name string, opening charactersvc.Openings) (int64, error) {
+	ret := _m.Called(ctx, owner, source, name, opening)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyCharacter")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string, charactersvc.Openings) (int64, error)); ok {
+		return rf(ctx, owner, source, name, opening)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, uuid.UUID, int64, string, charactersvc.Openings) int64); ok {
+		r0 = rf(ctx, owner, source, name, opening)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, uuid.UUID, int64, string, charactersvc.Openings) error); ok {
+		r1 = rf(ctx, owner, source, name, opening)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockCharacterStore_CopyCharacter_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyCharacter'
+type MockCharacterStore_CopyCharacter_Call struct {
+	*mock.Call
+}
+
+// CopyCharacter is a helper method to define mock.On call
+//   - ctx context.Context
+//   - owner uuid.UUID
+//   - source int64
+//   - name string
+//   - opening charactersvc.Openings
+func (_e *MockCharacterStore_Expecter) CopyCharacter(ctx interface{}, owner interface{}, source interface{}, name interface{}, opening interface{}) *MockCharacterStore_CopyCharacter_Call {
+	return &MockCharacterStore_CopyCharacter_Call{Call: _e.mock.On("CopyCharacter", ctx, owner, source, name, opening)}
+}
+
+func (_c *MockCharacterStore_CopyCharacter_Call) Run(run func(ctx context.Context, owner uuid.UUID, source int64, name string, opening charactersvc.Openings)) *MockCharacterStore_CopyCharacter_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(uuid.UUID), args[2].(int64), args[3].(string), args[4].(charactersvc.Openings))
+	})
+	return _c
+}
+
+func (_c *MockCharacterStore_CopyCharacter_Call) Return(_a0 int64, _a1 error) *MockCharacterStore_CopyCharacter_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockCharacterStore_CopyCharacter_Call) RunAndReturn(run func(context.Context, uuid.UUID, int64, string, charactersvc.Openings) (int64, error)) *MockCharacterStore_CopyCharacter_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateCharacter provides a mock function with given fields: ctx, owner, c
 func (_m *MockCharacterStore) CreateCharacter(ctx context.Context, owner uuid.UUID, c charactersvc.Character) (int64, error) {
 	ret := _m.Called(ctx, owner, c)

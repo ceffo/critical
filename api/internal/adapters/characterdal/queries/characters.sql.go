@@ -47,6 +47,242 @@ func (q *Queries) CharactersOf(ctx context.Context, ownerUserID uuid.NullUUID) (
 	return items, nil
 }
 
+const copyActiveBuffs = `-- name: CopyActiveBuffs :exec
+INSERT INTO active_buffs (character_id, buffs) SELECT $1, buffs FROM active_buffs s WHERE s.character_id = $2
+`
+
+type CopyActiveBuffsParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyActiveBuffs(ctx context.Context, arg CopyActiveBuffsParams) error {
+	_, err := q.db.ExecContext(ctx, copyActiveBuffs, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyAttackForm = `-- name: CopyAttackForm :exec
+INSERT INTO attack_forms (character_id, weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_size, situational_value, situational_label, target_ac_known)
+SELECT $1, weapon_id, previous_weapon_id, ammo_item_id, target_ac, target_size, situational_value, situational_label, target_ac_known
+FROM attack_forms s WHERE s.character_id = $2
+`
+
+type CopyAttackFormParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyAttackForm(ctx context.Context, arg CopyAttackFormParams) error {
+	_, err := q.db.ExecContext(ctx, copyAttackForm, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyCharacterRow = `-- name: CopyCharacterRow :one
+
+INSERT INTO characters (
+    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_points, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
+)
+SELECT $1, c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_points, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, $2, FALSE, $3, $4
+FROM characters c
+JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
+WHERE c.id = $5 AND NOT c.retired
+RETURNING id
+`
+
+type CopyCharacterRowParams struct {
+	Name        string
+	OwnerUserID uuid.NullUUID
+	HpOpening   int64
+	PspOpening  int64
+	SourceID    int64
+}
+
+// ADR 0029 step 12: a copy of a character is its rows but the action log (and what hangs from it:
+// snapshots, corrections), under a new id. Each statement below copies one table's rows; the
+// service runs them in the one transaction.
+// The copy's own row: the source's sheet and picks, a new name and owner, not retired, with the
+// ledgers' opening balances. No row when the source is unknown, retired or owned by a disabled
+// user (the same rule as ViewableCharacter, in the one statement).
+func (q *Queries) CopyCharacterRow(ctx context.Context, arg CopyCharacterRowParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, copyCharacterRow,
+		arg.Name,
+		arg.OwnerUserID,
+		arg.HpOpening,
+		arg.PspOpening,
+		arg.SourceID,
+	)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const copyClassEntries = `-- name: CopyClassEntries :exec
+INSERT INTO character_classes (character_id, position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through)
+SELECT $1, position, class, realized_level, starting_xp, state, left_at_level, ignored_awards_through
+FROM character_classes s WHERE s.character_id = $2
+`
+
+type CopyClassEntriesParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyClassEntries(ctx context.Context, arg CopyClassEntriesParams) error {
+	_, err := q.db.ExecContext(ctx, copyClassEntries, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyDiceFavourites = `-- name: CopyDiceFavourites :exec
+INSERT INTO dice_favourites (character_id, formula, position)
+SELECT $1, formula, position FROM dice_favourites s WHERE s.character_id = $2 ORDER BY s.id
+`
+
+type CopyDiceFavouritesParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyDiceFavourites(ctx context.Context, arg CopyDiceFavouritesParams) error {
+	_, err := q.db.ExecContext(ctx, copyDiceFavourites, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyEquipmentReview = `-- name: CopyEquipmentReview :exec
+INSERT INTO equipment_review (character_id, item_id, reason)
+SELECT $1, item_id, reason FROM equipment_review s WHERE s.character_id = $2
+`
+
+type CopyEquipmentReviewParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyEquipmentReview(ctx context.Context, arg CopyEquipmentReviewParams) error {
+	_, err := q.db.ExecContext(ctx, copyEquipmentReview, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyItems = `-- name: CopyItems :exec
+WITH src AS (
+    SELECT i.id, i.position, i.name, i.type, i.behaviour, i.magic_bonus, i.ammo_kind, i.count, i.max_count, i.effect_dice, i.effect_save, i.notes, i.powers, i.character_id, i.category, i.magic_kind, i.catalogue_code, i.component, i.state, i.weapon_type, i.weapon_kind, i.size, i.damage_types, i.speed, i.damage_sm, i.damage_l, i.magic_to_hit, i.magic_damage, i.two_handed, i.fires, i.specialized, i.base_ac, i.skill_column, i.armor_row, i.shield_kind, i.ac_melee, i.ac_missile, i.spell_id, i.strength_rating, i.strength_rating_exceptional, i.abilities, row_number() OVER (ORDER BY i.position, i.id) AS n FROM items i WHERE i.character_id = $2
+), base AS (
+    SELECT COALESCE(MAX(text_id), 0)::bigint AS top FROM localized_texts
+), names AS (
+    INSERT INTO localized_texts (text_id, lang, body)
+    SELECT base.top + src.n, lt.lang, lt.body FROM src CROSS JOIN base JOIN localized_texts lt ON lt.text_id = src.name
+)
+INSERT INTO items (id, name, character_id, position, type, behaviour, magic_bonus, ammo_kind, count, max_count, effect_dice, effect_save, notes, powers, category, magic_kind, catalogue_code, component, state, weapon_type, weapon_kind, size, damage_types, speed, damage_sm, damage_l, magic_to_hit, magic_damage, two_handed, fires, specialized, base_ac, skill_column, armor_row, shield_kind, ac_melee, ac_missile, spell_id, strength_rating, strength_rating_exceptional, abilities)
+SELECT src.id, base.top + src.n, $1, src.position, src.type, src.behaviour, src.magic_bonus, src.ammo_kind, src.count, src.max_count, src.effect_dice, src.effect_save, src.notes, src.powers, src.category, src.magic_kind, src.catalogue_code, src.component, src.state, src.weapon_type, src.weapon_kind, src.size, src.damage_types, src.speed, src.damage_sm, src.damage_l, src.magic_to_hit, src.magic_damage, src.two_handed, src.fires, src.specialized, src.base_ac, src.skill_column, src.armor_row, src.shield_kind, src.ac_melee, src.ac_missile, src.spell_id, src.strength_rating, src.strength_rating_exceptional, src.abilities
+FROM src CROSS JOIN base
+`
+
+type CopyItemsParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+// Every item keeps its id (they are keyed per character) and gets its own copy of its name: the
+// name's rows of localized_texts (ADR 0023 step 9) are deleted with the item, so two items never
+// share a key. The new keys follow the highest one, as the text adapter's NextTextKey does; the
+// writer lock keeps two copies from taking the same ones.
+func (q *Queries) CopyItems(ctx context.Context, arg CopyItemsParams) error {
+	_, err := q.db.ExecContext(ctx, copyItems, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyLearnFailures = `-- name: CopyLearnFailures :exec
+INSERT INTO spellbook_learn_failures (character_id, spell_key, level)
+SELECT $1, spell_key, level FROM spellbook_learn_failures s WHERE s.character_id = $2
+`
+
+type CopyLearnFailuresParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyLearnFailures(ctx context.Context, arg CopyLearnFailuresParams) error {
+	_, err := q.db.ExecContext(ctx, copyLearnFailures, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyRoundState = `-- name: CopyRoundState :exec
+INSERT INTO round_state (character_id, round_number, initiative_d10, initiative_entry_id, initiative_modifiers)
+SELECT $1, round_number, initiative_d10, initiative_entry_id, initiative_modifiers
+FROM round_state s WHERE s.character_id = $2
+`
+
+type CopyRoundStateParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyRoundState(ctx context.Context, arg CopyRoundStateParams) error {
+	_, err := q.db.ExecContext(ctx, copyRoundState, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copySavedBuffs = `-- name: CopySavedBuffs :exec
+INSERT INTO saved_buffs (character_id, name, duration, charges, effects, note, created_at)
+SELECT $1, name, duration, charges, effects, note, created_at
+FROM saved_buffs s WHERE s.character_id = $2 ORDER BY s.id
+`
+
+type CopySavedBuffsParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopySavedBuffs(ctx context.Context, arg CopySavedBuffsParams) error {
+	_, err := q.db.ExecContext(ctx, copySavedBuffs, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copySpellSlots = `-- name: CopySpellSlots :exec
+INSERT INTO spell_slots (character_id, slots) SELECT $1, slots FROM spell_slots s WHERE s.character_id = $2
+`
+
+type CopySpellSlotsParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopySpellSlots(ctx context.Context, arg CopySpellSlotsParams) error {
+	_, err := q.db.ExecContext(ctx, copySpellSlots, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copySpellbookEntries = `-- name: CopySpellbookEntries :exec
+INSERT INTO spellbook_entries (character_id, spell_key, position, origin, grant_level)
+SELECT $1, spell_key, position, origin, grant_level
+FROM spellbook_entries s WHERE s.character_id = $2
+`
+
+type CopySpellbookEntriesParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopySpellbookEntries(ctx context.Context, arg CopySpellbookEntriesParams) error {
+	_, err := q.db.ExecContext(ctx, copySpellbookEntries, arg.TargetID, arg.SourceID)
+	return err
+}
+
+const copyXPEntries = `-- name: CopyXPEntries :exec
+INSERT INTO xp_entries (character_id, entry_date, session, reason, base, bonus)
+SELECT $1, entry_date, session, reason, base, bonus
+FROM xp_entries s WHERE s.character_id = $2 ORDER BY s.id
+`
+
+type CopyXPEntriesParams struct {
+	TargetID int64
+	SourceID int64
+}
+
+func (q *Queries) CopyXPEntries(ctx context.Context, arg CopyXPEntriesParams) error {
+	_, err := q.db.ExecContext(ctx, copyXPEntries, arg.TargetID, arg.SourceID)
+	return err
+}
+
 const createActiveBuffs = `-- name: CreateActiveBuffs :exec
 INSERT INTO active_buffs (character_id, buffs) VALUES ($1, '[]')
 `

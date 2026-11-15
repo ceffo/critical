@@ -83,6 +83,627 @@ func (_c *MockQuerier_CharactersOf_Call) RunAndReturn(run func(context.Context, 
 	return _c
 }
 
+// CopyActiveBuffs provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyActiveBuffs(ctx context.Context, arg queries.CopyActiveBuffsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyActiveBuffs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyActiveBuffsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyActiveBuffs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyActiveBuffs'
+type MockQuerier_CopyActiveBuffs_Call struct {
+	*mock.Call
+}
+
+// CopyActiveBuffs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyActiveBuffsParams
+func (_e *MockQuerier_Expecter) CopyActiveBuffs(ctx interface{}, arg interface{}) *MockQuerier_CopyActiveBuffs_Call {
+	return &MockQuerier_CopyActiveBuffs_Call{Call: _e.mock.On("CopyActiveBuffs", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyActiveBuffs_Call) Run(run func(ctx context.Context, arg queries.CopyActiveBuffsParams)) *MockQuerier_CopyActiveBuffs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyActiveBuffsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyActiveBuffs_Call) Return(_a0 error) *MockQuerier_CopyActiveBuffs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyActiveBuffs_Call) RunAndReturn(run func(context.Context, queries.CopyActiveBuffsParams) error) *MockQuerier_CopyActiveBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyAttackForm provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyAttackForm(ctx context.Context, arg queries.CopyAttackFormParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyAttackForm")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyAttackFormParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyAttackForm_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyAttackForm'
+type MockQuerier_CopyAttackForm_Call struct {
+	*mock.Call
+}
+
+// CopyAttackForm is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyAttackFormParams
+func (_e *MockQuerier_Expecter) CopyAttackForm(ctx interface{}, arg interface{}) *MockQuerier_CopyAttackForm_Call {
+	return &MockQuerier_CopyAttackForm_Call{Call: _e.mock.On("CopyAttackForm", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyAttackForm_Call) Run(run func(ctx context.Context, arg queries.CopyAttackFormParams)) *MockQuerier_CopyAttackForm_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyAttackFormParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyAttackForm_Call) Return(_a0 error) *MockQuerier_CopyAttackForm_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyAttackForm_Call) RunAndReturn(run func(context.Context, queries.CopyAttackFormParams) error) *MockQuerier_CopyAttackForm_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyCharacterRow provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyCharacterRow(ctx context.Context, arg queries.CopyCharacterRowParams) (int64, error) {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyCharacterRow")
+	}
+
+	var r0 int64
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyCharacterRowParams) (int64, error)); ok {
+		return rf(ctx, arg)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyCharacterRowParams) int64); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Get(0).(int64)
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, queries.CopyCharacterRowParams) error); ok {
+		r1 = rf(ctx, arg)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockQuerier_CopyCharacterRow_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyCharacterRow'
+type MockQuerier_CopyCharacterRow_Call struct {
+	*mock.Call
+}
+
+// CopyCharacterRow is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyCharacterRowParams
+func (_e *MockQuerier_Expecter) CopyCharacterRow(ctx interface{}, arg interface{}) *MockQuerier_CopyCharacterRow_Call {
+	return &MockQuerier_CopyCharacterRow_Call{Call: _e.mock.On("CopyCharacterRow", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyCharacterRow_Call) Run(run func(ctx context.Context, arg queries.CopyCharacterRowParams)) *MockQuerier_CopyCharacterRow_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyCharacterRowParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyCharacterRow_Call) Return(_a0 int64, _a1 error) *MockQuerier_CopyCharacterRow_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockQuerier_CopyCharacterRow_Call) RunAndReturn(run func(context.Context, queries.CopyCharacterRowParams) (int64, error)) *MockQuerier_CopyCharacterRow_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyClassEntries provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyClassEntries(ctx context.Context, arg queries.CopyClassEntriesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyClassEntries")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyClassEntriesParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyClassEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyClassEntries'
+type MockQuerier_CopyClassEntries_Call struct {
+	*mock.Call
+}
+
+// CopyClassEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyClassEntriesParams
+func (_e *MockQuerier_Expecter) CopyClassEntries(ctx interface{}, arg interface{}) *MockQuerier_CopyClassEntries_Call {
+	return &MockQuerier_CopyClassEntries_Call{Call: _e.mock.On("CopyClassEntries", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyClassEntries_Call) Run(run func(ctx context.Context, arg queries.CopyClassEntriesParams)) *MockQuerier_CopyClassEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyClassEntriesParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyClassEntries_Call) Return(_a0 error) *MockQuerier_CopyClassEntries_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyClassEntries_Call) RunAndReturn(run func(context.Context, queries.CopyClassEntriesParams) error) *MockQuerier_CopyClassEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyDiceFavourites provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyDiceFavourites(ctx context.Context, arg queries.CopyDiceFavouritesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyDiceFavourites")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyDiceFavouritesParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyDiceFavourites_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyDiceFavourites'
+type MockQuerier_CopyDiceFavourites_Call struct {
+	*mock.Call
+}
+
+// CopyDiceFavourites is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyDiceFavouritesParams
+func (_e *MockQuerier_Expecter) CopyDiceFavourites(ctx interface{}, arg interface{}) *MockQuerier_CopyDiceFavourites_Call {
+	return &MockQuerier_CopyDiceFavourites_Call{Call: _e.mock.On("CopyDiceFavourites", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyDiceFavourites_Call) Run(run func(ctx context.Context, arg queries.CopyDiceFavouritesParams)) *MockQuerier_CopyDiceFavourites_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyDiceFavouritesParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyDiceFavourites_Call) Return(_a0 error) *MockQuerier_CopyDiceFavourites_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyDiceFavourites_Call) RunAndReturn(run func(context.Context, queries.CopyDiceFavouritesParams) error) *MockQuerier_CopyDiceFavourites_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyEquipmentReview provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyEquipmentReview(ctx context.Context, arg queries.CopyEquipmentReviewParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyEquipmentReview")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyEquipmentReviewParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyEquipmentReview_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyEquipmentReview'
+type MockQuerier_CopyEquipmentReview_Call struct {
+	*mock.Call
+}
+
+// CopyEquipmentReview is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyEquipmentReviewParams
+func (_e *MockQuerier_Expecter) CopyEquipmentReview(ctx interface{}, arg interface{}) *MockQuerier_CopyEquipmentReview_Call {
+	return &MockQuerier_CopyEquipmentReview_Call{Call: _e.mock.On("CopyEquipmentReview", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyEquipmentReview_Call) Run(run func(ctx context.Context, arg queries.CopyEquipmentReviewParams)) *MockQuerier_CopyEquipmentReview_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyEquipmentReviewParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyEquipmentReview_Call) Return(_a0 error) *MockQuerier_CopyEquipmentReview_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyEquipmentReview_Call) RunAndReturn(run func(context.Context, queries.CopyEquipmentReviewParams) error) *MockQuerier_CopyEquipmentReview_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyItems provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyItems(ctx context.Context, arg queries.CopyItemsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyItems")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyItemsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyItems_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyItems'
+type MockQuerier_CopyItems_Call struct {
+	*mock.Call
+}
+
+// CopyItems is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyItemsParams
+func (_e *MockQuerier_Expecter) CopyItems(ctx interface{}, arg interface{}) *MockQuerier_CopyItems_Call {
+	return &MockQuerier_CopyItems_Call{Call: _e.mock.On("CopyItems", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyItems_Call) Run(run func(ctx context.Context, arg queries.CopyItemsParams)) *MockQuerier_CopyItems_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyItemsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyItems_Call) Return(_a0 error) *MockQuerier_CopyItems_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyItems_Call) RunAndReturn(run func(context.Context, queries.CopyItemsParams) error) *MockQuerier_CopyItems_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyLearnFailures provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyLearnFailures(ctx context.Context, arg queries.CopyLearnFailuresParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyLearnFailures")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyLearnFailuresParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyLearnFailures_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyLearnFailures'
+type MockQuerier_CopyLearnFailures_Call struct {
+	*mock.Call
+}
+
+// CopyLearnFailures is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyLearnFailuresParams
+func (_e *MockQuerier_Expecter) CopyLearnFailures(ctx interface{}, arg interface{}) *MockQuerier_CopyLearnFailures_Call {
+	return &MockQuerier_CopyLearnFailures_Call{Call: _e.mock.On("CopyLearnFailures", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyLearnFailures_Call) Run(run func(ctx context.Context, arg queries.CopyLearnFailuresParams)) *MockQuerier_CopyLearnFailures_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyLearnFailuresParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyLearnFailures_Call) Return(_a0 error) *MockQuerier_CopyLearnFailures_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyLearnFailures_Call) RunAndReturn(run func(context.Context, queries.CopyLearnFailuresParams) error) *MockQuerier_CopyLearnFailures_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyRoundState provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyRoundState(ctx context.Context, arg queries.CopyRoundStateParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyRoundState")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyRoundStateParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyRoundState_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyRoundState'
+type MockQuerier_CopyRoundState_Call struct {
+	*mock.Call
+}
+
+// CopyRoundState is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyRoundStateParams
+func (_e *MockQuerier_Expecter) CopyRoundState(ctx interface{}, arg interface{}) *MockQuerier_CopyRoundState_Call {
+	return &MockQuerier_CopyRoundState_Call{Call: _e.mock.On("CopyRoundState", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyRoundState_Call) Run(run func(ctx context.Context, arg queries.CopyRoundStateParams)) *MockQuerier_CopyRoundState_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyRoundStateParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyRoundState_Call) Return(_a0 error) *MockQuerier_CopyRoundState_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyRoundState_Call) RunAndReturn(run func(context.Context, queries.CopyRoundStateParams) error) *MockQuerier_CopyRoundState_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopySavedBuffs provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopySavedBuffs(ctx context.Context, arg queries.CopySavedBuffsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopySavedBuffs")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopySavedBuffsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopySavedBuffs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopySavedBuffs'
+type MockQuerier_CopySavedBuffs_Call struct {
+	*mock.Call
+}
+
+// CopySavedBuffs is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopySavedBuffsParams
+func (_e *MockQuerier_Expecter) CopySavedBuffs(ctx interface{}, arg interface{}) *MockQuerier_CopySavedBuffs_Call {
+	return &MockQuerier_CopySavedBuffs_Call{Call: _e.mock.On("CopySavedBuffs", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopySavedBuffs_Call) Run(run func(ctx context.Context, arg queries.CopySavedBuffsParams)) *MockQuerier_CopySavedBuffs_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopySavedBuffsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopySavedBuffs_Call) Return(_a0 error) *MockQuerier_CopySavedBuffs_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopySavedBuffs_Call) RunAndReturn(run func(context.Context, queries.CopySavedBuffsParams) error) *MockQuerier_CopySavedBuffs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopySpellSlots provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopySpellSlots(ctx context.Context, arg queries.CopySpellSlotsParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopySpellSlots")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopySpellSlotsParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopySpellSlots_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopySpellSlots'
+type MockQuerier_CopySpellSlots_Call struct {
+	*mock.Call
+}
+
+// CopySpellSlots is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopySpellSlotsParams
+func (_e *MockQuerier_Expecter) CopySpellSlots(ctx interface{}, arg interface{}) *MockQuerier_CopySpellSlots_Call {
+	return &MockQuerier_CopySpellSlots_Call{Call: _e.mock.On("CopySpellSlots", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopySpellSlots_Call) Run(run func(ctx context.Context, arg queries.CopySpellSlotsParams)) *MockQuerier_CopySpellSlots_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopySpellSlotsParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopySpellSlots_Call) Return(_a0 error) *MockQuerier_CopySpellSlots_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopySpellSlots_Call) RunAndReturn(run func(context.Context, queries.CopySpellSlotsParams) error) *MockQuerier_CopySpellSlots_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopySpellbookEntries provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopySpellbookEntries(ctx context.Context, arg queries.CopySpellbookEntriesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopySpellbookEntries")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopySpellbookEntriesParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopySpellbookEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopySpellbookEntries'
+type MockQuerier_CopySpellbookEntries_Call struct {
+	*mock.Call
+}
+
+// CopySpellbookEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopySpellbookEntriesParams
+func (_e *MockQuerier_Expecter) CopySpellbookEntries(ctx interface{}, arg interface{}) *MockQuerier_CopySpellbookEntries_Call {
+	return &MockQuerier_CopySpellbookEntries_Call{Call: _e.mock.On("CopySpellbookEntries", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopySpellbookEntries_Call) Run(run func(ctx context.Context, arg queries.CopySpellbookEntriesParams)) *MockQuerier_CopySpellbookEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopySpellbookEntriesParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopySpellbookEntries_Call) Return(_a0 error) *MockQuerier_CopySpellbookEntries_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopySpellbookEntries_Call) RunAndReturn(run func(context.Context, queries.CopySpellbookEntriesParams) error) *MockQuerier_CopySpellbookEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CopyXPEntries provides a mock function with given fields: ctx, arg
+func (_m *MockQuerier) CopyXPEntries(ctx context.Context, arg queries.CopyXPEntriesParams) error {
+	ret := _m.Called(ctx, arg)
+
+	if len(ret) == 0 {
+		panic("no return value specified for CopyXPEntries")
+	}
+
+	var r0 error
+	if rf, ok := ret.Get(0).(func(context.Context, queries.CopyXPEntriesParams) error); ok {
+		r0 = rf(ctx, arg)
+	} else {
+		r0 = ret.Error(0)
+	}
+
+	return r0
+}
+
+// MockQuerier_CopyXPEntries_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CopyXPEntries'
+type MockQuerier_CopyXPEntries_Call struct {
+	*mock.Call
+}
+
+// CopyXPEntries is a helper method to define mock.On call
+//   - ctx context.Context
+//   - arg queries.CopyXPEntriesParams
+func (_e *MockQuerier_Expecter) CopyXPEntries(ctx interface{}, arg interface{}) *MockQuerier_CopyXPEntries_Call {
+	return &MockQuerier_CopyXPEntries_Call{Call: _e.mock.On("CopyXPEntries", ctx, arg)}
+}
+
+func (_c *MockQuerier_CopyXPEntries_Call) Run(run func(ctx context.Context, arg queries.CopyXPEntriesParams)) *MockQuerier_CopyXPEntries_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context), args[1].(queries.CopyXPEntriesParams))
+	})
+	return _c
+}
+
+func (_c *MockQuerier_CopyXPEntries_Call) Return(_a0 error) *MockQuerier_CopyXPEntries_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockQuerier_CopyXPEntries_Call) RunAndReturn(run func(context.Context, queries.CopyXPEntriesParams) error) *MockQuerier_CopyXPEntries_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // CreateActiveBuffs provides a mock function with given fields: ctx, characterID
 func (_m *MockQuerier) CreateActiveBuffs(ctx context.Context, characterID int64) error {
 	ret := _m.Called(ctx, characterID)

@@ -10,7 +10,7 @@ import {
 } from "@/api/ruleset";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageFooter, PageHeader } from "@/components/shell/PageHeader";
 import { APP_NAME } from "@/lib/brand";
 import { useSessionStore } from "@/stores/session";
 import type { Ruleset } from "@/types/ruleset";
@@ -205,6 +205,7 @@ export function RulesetPage() {
           </main>
         </>
       )}
+      <PageFooter />
     </div>
   );
 }

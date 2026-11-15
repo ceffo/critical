@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { PageHeader } from "@/components/shell/PageHeader";
+import { PageFooter, PageHeader } from "@/components/shell/PageHeader";
 import { useTranslation } from "react-i18next";
 import {
   ArrowLeft,
@@ -619,6 +619,7 @@ export function AdminPage() {
           />
         </main>
       )}
+      <PageFooter />
     </div>
   );
 }

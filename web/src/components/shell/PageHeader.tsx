@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 /**
  * The header card every full-screen page shares (Roster, character creation, Admin, Ruleset): the
  * brand (mark and wordmark, in full at every width, ADR 0027 step 4.6) at the left, the page's
- * title, then the running version and the page's way out (`action`, a Back or Leave button) at the
- * right. The mark is `BrandMark`, never redrawn (ADR 0020). The game shell's header is its own
+ * title, then the page's way out (`action`, a Back or Leave button) at the right. The version is
+ * not here: `PageFooter` carries it, at the page's bottom right. The mark is `BrandMark`, never redrawn (ADR 0020). The game shell's header is its own
  * band and does not use this.
  */
 export function PageHeader({
@@ -33,8 +33,20 @@ export function PageHeader({
         {title}
       </h1>
       <span className="flex-1" />
-      <VersionBadge />
       {action}
     </header>
+  );
+}
+
+/**
+ * The last row of a full-screen page: the running version, small and muted, at the bottom right
+ * (never in the header, where it drew the eye). It is its own 24 px row, so it covers no content and
+ * adds no page scroll to a page that fits.
+ */
+export function PageFooter() {
+  return (
+    <footer className="mt-auto flex shrink-0 justify-end px-1">
+      <VersionBadge />
+    </footer>
   );
 }

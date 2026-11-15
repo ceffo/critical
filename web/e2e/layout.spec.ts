@@ -4028,6 +4028,37 @@ async function rosterStep(page: Page, size: Viewport) {
       await expect(roster.getByTestId("roster-missing")).toHaveText(
         tr("Alignement et sexe à choisir", "Alignment and sex to pick"),
       );
+      // The current character (the last one made) is listed first, strongly marked (a tint outline
+      // and the selected fill the other card lacks), and carries the way back to the game; the
+      // header has no Back and no version.
+      const cards = roster.getByTestId("roster-card");
+      await expect(cards.first()).toHaveAttribute("data-current", "true");
+      await expect(cards.first()).toContainText("Aldéric");
+      await expect(roster.getByTestId("roster-resume")).toHaveCount(1);
+      await expect(cards.first().getByTestId("roster-resume")).toHaveText(
+        tr("Reprendre", "Resume"),
+      );
+      const header = page.getByTestId("page-header");
+      await expect(header.getByRole("button")).toHaveCount(0);
+      await expect(header.getByTestId("version-badge")).toHaveCount(0);
+      const look = (c: Locator) =>
+        c.evaluate((el) => {
+          const cs = getComputedStyle(el);
+          return {
+            outline: cs.outlineStyle === "none" ? "0px" : cs.outlineWidth,
+            fill: cs.backgroundColor,
+          };
+        });
+      const [mine, other] = [
+        await look(cards.first()),
+        await look(cards.nth(1)),
+      ];
+      expect(
+        parseFloat(mine.outline),
+        `current outline, ${where}`,
+      ).toBeGreaterThanOrEqual(2);
+      expect(parseFloat(other.outline), `other outline, ${where}`).toBe(0);
+      expect(mine.fill, `current fill differs, ${where}`).not.toBe(other.fill);
       await expectNoClippedText(page.locator("body"), `roster, ${where}`);
       await expectNoPageScroll(page);
       await snap(page, `roster-${lang}-${vp.width}x${vp.height}`);
@@ -5650,8 +5681,8 @@ async function thiefStep(page: Page, size: Viewport) {
 }
 
 // The version badge (ADR 0024 step 1.4): it sits inside a box the screen already has, never in a band
-// of its own: the dashboard's dice footer (right end), a header card (roster, creation), the login
-// card. No page scroll or cut text at 1920x1080 and 2560x1440. The e2e API is a local build, so the
+// of its own: the dashboard's dice footer (right end), a full-screen page's last row at the bottom
+// right (roster, creation; never its header), the login card. No page scroll or cut text at 1920x1080 and 2560x1440. The e2e API is a local build, so the
 // real answer shows the dev pill and a version with its commit; staging and production are the
 // health answers given here. Screenshots in French.
 async function versionBadgeStep(
@@ -5726,6 +5757,7 @@ async function versionBadgeStep(
   };
   const footer = page.getByTestId("dice-footer");
   const header = page.locator("[data-screen] > header").first();
+  const pageFooter = page.locator("[data-screen] > footer");
 
   // The real answer of this local build: the dev pill and 0.0.0+<sha> (or the last tag).
   await openDashboard(page);
@@ -5746,14 +5778,16 @@ async function versionBadgeStep(
   await expect(page.getByTestId("roster")).toBeVisible();
   for (const vp of sizes) {
     await page.setViewportSize(vp);
-    await expectBadgeIn(header, `roster ${vp.width}`);
+    await expectBadgeIn(pageFooter, `roster ${vp.width}`, "right-end");
+    await expect(header.getByTestId("version-badge")).toHaveCount(0);
     await snap(page, `version-roster-${vp.width}x${vp.height}`);
   }
   await page.goto("/create");
   await expect(page.getByTestId("creation-step")).toBeVisible();
   for (const vp of sizes) {
     await page.setViewportSize(vp);
-    await expectBadgeIn(header, `creation ${vp.width}`);
+    await expectBadgeIn(pageFooter, `creation ${vp.width}`, "right-end");
+    await expect(header.getByTestId("version-badge")).toHaveCount(0);
     await snap(page, `version-creation-${vp.width}x${vp.height}`);
   }
 
@@ -5899,17 +5933,17 @@ async function newVersionStep(page: Page) {
     await snap(page, `new-version-dashboard-${vp.width}x${vp.height}`);
   }
 
-  // It follows to another screen without a reset (the roster's header card).
+  // It follows to another screen without a reset (the roster's footer row).
   await page.setViewportSize(sizes[0]!);
   await page.getByTestId("roster-open").click();
   await expect(page.getByTestId("roster")).toBeVisible();
   await expect(toast).toBeVisible();
-  const header = (await page
-    .locator("[data-screen] > header")
-    .first()
+  const footerRow = (await page
+    .locator("[data-screen] > footer")
     .boundingBox())!;
   const tr = (await toast.boundingBox())!;
-  expect(tr.y + tr.height).toBeLessThanOrEqual(header.y + header.height);
+  expect(tr.y).toBeGreaterThanOrEqual(footerRow.y);
+  expect(tr.y + tr.height).toBeLessThanOrEqual(footerRow.y + footerRow.height);
   await expectNoPageScroll(page);
   await snap(page, "new-version-roster-1920x1080");
 
@@ -6405,6 +6439,8 @@ async function pageHeaderStep(page: Page, size: Viewport) {
         await expect(header.getByTestId("wordmark")).toHaveText("Critical!");
         await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
         await expectNoClippedText(header, `page header, ${where}`);
+        // The version lives in the page's footer, never in the header.
+        await expect(header.getByTestId("version-badge")).toHaveCount(0);
         const m = await header.evaluate((el) => {
           const r = el.getBoundingClientRect();
           const brand = el

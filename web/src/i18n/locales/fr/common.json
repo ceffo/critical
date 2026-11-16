@@ -3618,6 +3618,7 @@
     "noMatch": "Aucune compétence ne correspond.",
     "ownGroups": "Groupes de votre classe : {{groups}}",
     "otherGroups": "Autres groupes : un emplacement de plus",
+    "offered": "Offertes par votre classe : à prendre à 0 emplacement",
     "groups": {
       "general": "général",
       "priest": "prêtre",
@@ -3627,6 +3628,7 @@
     },
     "cost_one": "coût {{count}}",
     "cost_other": "coût {{count}}",
+    "free": "gratuite (classe)",
     "extra_one": "+{{count}} au jet",
     "extra_other": "+{{count}} au jet",
     "target": "cible {{ability}} {{target}}",
@@ -3646,6 +3648,7 @@
     },
     "slotsShort_one": "{{count}} empl.",
     "slotsShort_other": "{{count}} empl.",
+    "freeShort": "gratuite",
     "slotsOf_one": "{{name}} : {{count}} emplacement",
     "slotsOf_other": "{{name}} : {{count}} emplacements",
     "fewer": "Un emplacement de moins sur {{name}}",
@@ -3653,6 +3656,7 @@
     "remove": "Retirer {{name}}",
     "add_one": "Ajouter {{name}} (coût {{count}} emplacement)",
     "add_other": "Ajouter {{name}} (coût {{count}} emplacements)",
+    "addFree": "Prendre {{name}} gratuitement (votre classe l’accorde)",
     "alreadyPicked": "{{name}} : déjà choisie",
     "errors": {
       "out_of_range": "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",

@@ -229,7 +229,8 @@ export interface NonweaponPool {
 
 /** One non-weapon pick (ADR 0037 steps 4 and 5): `cost` for the class, `extraSlots` beyond it (+1
  * each to the check), `target` null for a pick with no check; `known` false for an id the
- * catalogue no longer holds. */
+ * catalogue no longer holds; `free` true for an id a class entry grants at no slot cost (step
+ * 22.2: `cost` 0, every slot an extra slot). */
 export interface PickFigures {
   id: string;
   slots: number;
@@ -238,6 +239,7 @@ export interface PickFigures {
   ability: string;
   modifier: number;
   known: boolean;
+  free: boolean;
   target: number | null;
 }
 
@@ -504,6 +506,9 @@ export interface Character {
      * left to redo and the slots it spent. */
     type?: string;
     slots?: number;
+    /** ADR 0037 step 22.4: `free_proficiency_to_take` (field `nonweapon.<id>`) names the id a class
+     * entry grants free that the character does not hold: offered, never picked for him. */
+    id?: string;
   }[];
 }
 

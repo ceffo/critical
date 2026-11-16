@@ -107,6 +107,23 @@ describe("mergeDraft (a late reply never rebuilds the details from an older copy
     });
   });
 
+  // ADR 0037 step 22.4: the free proficiencies are put in the picks once per class; another class
+  // clears the mark with the picks, so its own free ids are put in in turn.
+  it("forgets which class's free proficiencies were put in when the class changes", () => {
+    let d: FlowDraft = { ...EMPTY_DRAFT, cls: "bard" };
+    d = mergeDraft(d, {
+      picks: [{ id: "singing", slots: 0 }],
+      freeSeeded: "bard",
+    });
+    d = mergeDraft(d, { level: 3 });
+    expect(d.freeSeeded).toBe("bard");
+    d = mergeDraft(d, { picks: [] }); // the player removed it: still put in once
+    expect(d.freeSeeded).toBe("bard");
+    d = mergeDraft(d, { cls: "fighter" });
+    expect(d.freeSeeded).toBeUndefined();
+    expect(d.picks).toEqual([]);
+  });
+
   it("clears the picks when the class changes (each was spent at the old class's cost)", () => {
     let d: FlowDraft = { ...EMPTY_DRAFT, cls: "fighter" };
     d = mergeDraft(d, {

@@ -36,7 +36,10 @@ export type PickerOptions = Pick<
  * slots and check target, and the catalogue (the class's groups first, a search). Every number is
  * the server's: the pool and each pick's figures come from its preview or checks (`figures`), a
  * catalogue row's cost from `proficiencyCosts`; the web only words them. A pick added spends its
- * cost; the stepper changes the slots spent and the server says whether it takes them.
+ * cost; the stepper changes the slots spent and the server says whether it takes them. A
+ * proficiency the class grants free (ADR 0037 step 22) is marked free on its pick and in the
+ * catalogue; one the server offers (`offered`: its `free_proficiency_to_take` reminders) is listed
+ * first, added at 0 slots in one click.
  */
 export function ProficiencyPicker({
   options,
@@ -46,6 +49,7 @@ export function ProficiencyPicker({
   figures,
   stale = false,
   errorFor,
+  offered = [],
 }: {
   options: PickerOptions;
   cls: string;
@@ -57,6 +61,8 @@ export function ProficiencyPicker({
   stale?: boolean;
   /** A refusal's words for a field (`nonweapon.<id>`, or `nonweapon` for the budget), or null. */
   errorFor: (field: string) => string | null;
+  /** The ids the server offers free and the picks do not hold (ADR 0037 step 22.4), in its order. */
+  offered?: string[];
 }) {
   const { t, i18n } = useTranslation();
   const [query, setQuery] = useState("");
@@ -70,6 +76,16 @@ export function ProficiencyPicker({
     i18n.language,
   );
   const picked = new Set(picks.map((p) => p.id));
+  // ADR 0037 step 22.4: the offered ids first, out of the groups below; one already picked (the
+  // preview not yet back) is no offer.
+  const offer = new Set(offered.filter((id) => !picked.has(id)));
+  const offeredRows = offered
+    .map((id) => [...own, ...other].find((r) => r.option.id === id))
+    .filter(
+      (r): r is CatalogueRow => r !== undefined && offer.has(r.option.id),
+    );
+  const ownRows = own.filter((r) => !offer.has(r.option.id));
+  const otherRows = other.filter((r) => !offer.has(r.option.id));
   const figureOf = (id: string) => figures?.picks.find((f) => f.id === id);
   const budgetError = errorFor("nonweapon");
 
@@ -150,28 +166,37 @@ export function ProficiencyPicker({
             />
           </div>
           <CatalogueGroup
+            title={t("proficiencies.offered")}
+            rows={offeredRows}
+            picked={picked}
+            testId="proficiency-offered"
+            onAdd={(r) => onChange(addPick(picks, r.option.id, 0))}
+          />
+          <CatalogueGroup
             title={t("proficiencies.ownGroups", {
               groups: groups
                 .map((g) => t(`proficiencies.groups.${g}`, { defaultValue: g }))
                 .join(", "),
             })}
-            rows={own}
+            rows={ownRows}
             picked={picked}
             testId="proficiency-own"
             onAdd={(r) => onChange(addPick(picks, r.option.id, r.cost))}
           />
           <CatalogueGroup
             title={t("proficiencies.otherGroups")}
-            rows={other}
+            rows={otherRows}
             picked={picked}
             testId="proficiency-other"
             onAdd={(r) => onChange(addPick(picks, r.option.id, r.cost))}
           />
-          {own.length === 0 && other.length === 0 && (
-            <p className="px-2.5 text-body break-words text-ink-muted">
-              {t("proficiencies.noMatch")}
-            </p>
-          )}
+          {own.length === 0 &&
+            other.length === 0 &&
+            offeredRows.length === 0 && (
+              <p className="px-2.5 text-body break-words text-ink-muted">
+                {t("proficiencies.noMatch")}
+              </p>
+            )}
         </section>
       </div>
     </div>
@@ -342,7 +367,10 @@ function PickTerms({
   const { t } = useTranslation();
   if (figure && !figure.known) return <>{t("proficiencies.unknown")}</>;
   const parts: string[] = [];
-  if (cost !== undefined) parts.push(t("proficiencies.cost", { count: cost }));
+  // ADR 0037 step 22.2: a free pick's cost is 0, every slot on it an extra slot.
+  if (figure?.free) parts.push(t("proficiencies.free"));
+  else if (cost !== undefined)
+    parts.push(t("proficiencies.cost", { count: cost }));
   if (figure && figure.extraSlots > 0)
     parts.push(t("proficiencies.extra", { count: figure.extraSlots }));
   if (figure)
@@ -386,7 +414,9 @@ function CatalogueGroup({
           const has = picked.has(id);
           const label = has
             ? t("proficiencies.alreadyPicked", { name: r.name })
-            : t("proficiencies.add", { name: r.name, count: r.cost });
+            : r.cost === 0
+              ? t("proficiencies.addFree", { name: r.name })
+              : t("proficiencies.add", { name: r.name, count: r.cost });
           return (
             <li
               key={id}
@@ -428,7 +458,10 @@ function CatalogueGroup({
                     className="chip px-1.5 text-center font-semibold"
                     data-testid="proficiency-cost"
                   >
-                    {t("proficiencies.slotsShort", { count: r.cost })}
+                    {/* The server's cost 0: a proficiency the class grants free (step 22.2). */}
+                    {r.cost === 0
+                      ? t("proficiencies.freeShort")
+                      : t("proficiencies.slotsShort", { count: r.cost })}
                   </span>
                 </span>
               </button>

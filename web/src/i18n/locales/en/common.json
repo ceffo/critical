@@ -3618,6 +3618,7 @@
     "noMatch": "No proficiency matches.",
     "ownGroups": "Your class's groups: {{groups}}",
     "otherGroups": "Other groups: one slot more",
+    "offered": "Free from your class: take them at 0 slots",
     "groups": {
       "general": "general",
       "priest": "priest",
@@ -3627,6 +3628,7 @@
     },
     "cost_one": "cost {{count}}",
     "cost_other": "cost {{count}}",
+    "free": "free (class)",
     "extra_one": "+{{count}} to the check",
     "extra_other": "+{{count}} to the check",
     "target": "target {{ability}} {{target}}",
@@ -3646,6 +3648,7 @@
     },
     "slotsShort_one": "{{count}} slot",
     "slotsShort_other": "{{count}} slots",
+    "freeShort": "free",
     "slotsOf_one": "{{name}}: {{count}} slot",
     "slotsOf_other": "{{name}}: {{count}} slots",
     "fewer": "One slot fewer on {{name}}",
@@ -3653,6 +3656,7 @@
     "remove": "Remove {{name}}",
     "add_one": "Add {{name}} (costs {{count}} slot)",
     "add_other": "Add {{name}} (costs {{count}} slots)",
+    "addFree": "Take {{name}} free (your class grants it)",
     "alreadyPicked": "{{name}}: already chosen",
     "errors": {
       "out_of_range": "Fewer slots than its cost, or too many: enter from its cost to 99.",

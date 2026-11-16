@@ -130,6 +130,7 @@ function SkillCard({
                 c.ability ?? "",
                 c.abilityScore ?? 0,
                 c.modifier ?? 0,
+                c.sheetScore,
               ),
             })
           : t(

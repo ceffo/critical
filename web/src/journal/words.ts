@@ -15,17 +15,20 @@ export function undeadName(t: TFunction, code: string): string {
   return t(`turning.undead.${code}`, { defaultValue: code });
 }
 
-/** "DEX 17 −1" (the modifier left out when 0). */
+/** "DEX 17 −1" (the modifier left out when 0); "DEX 19 (sheet 17) −1" when the server sends the
+ * sheet's score beside the score in effect (ADR 0014 step 1 as amended). */
 export function abilityText(
   t: TFunction,
   ability: string,
   score: number,
   modifier: number,
+  sheet?: number,
 ): string {
   const name = t(`attr.${ability}`, { defaultValue: ability });
-  return modifier === 0
-    ? `${name} ${score}`
-    : `${name} ${score} ${formatSigned(modifier)}`;
+  const scored = sheet
+    ? `${name} ${score} ${t("skills.sheetScore", { score: sheet })}`
+    : `${name} ${score}`;
+  return modifier === 0 ? scored : `${scored} ${formatSigned(modifier)}`;
 }
 
 /** "5 rd, 3 ch", or "until dismissed" when the buff has neither counter. */

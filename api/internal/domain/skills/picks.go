@@ -91,8 +91,9 @@ type PickFigures struct {
 	Modifier int
 	Known    bool
 	// Target is the check's target (ADR 0014 step 1 as amended by ADR 0037
-	// step 5): the sheet's score in Ability + Modifier + Extra; 0 when the
-	// pick has no check (HasCheck false: no ability, or unknown) or the
+	// step 5): the score in Ability + Modifier + Extra, the score being the one
+	// Sheet.Score gives (the sheet's in the character's read, the score in effect
+	// in skillsvc's, ADR 0014 step 1 as amended); 0 when the pick has no check (HasCheck false: no ability, or unknown) or the
 	// score is not known yet (a creation draft).
 	Target   int
 	HasCheck bool
@@ -108,8 +109,8 @@ func ProficiencyTarget(score, modifier, extra int) int {
 	return score + modifier + extra
 }
 
-// SetTargets fills each pick's check target from score (the sheet's score in
-// an ability, ok false when not known): ADR 0037 step 5.
+// SetTargets fills each pick's check target from score (the score in an
+// ability, ok false when not known): ADR 0037 step 5.
 func (s *ProficiencySlots) SetTargets(score func(ability string) (int, bool)) {
 	for i := range s.Picks {
 		p := &s.Picks[i]

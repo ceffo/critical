@@ -1,20 +1,5 @@
 package skillsvc
 
-import (
-	"fmt"
-
-	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
-)
-
-// abilityScore is the sheet's score for an ability key.
-func abilityScore(c charactersvc.View, a Ability) (int, error) {
-	score, ok := c.Score(a)
-	if !ok {
-		return 0, fmt.Errorf("unknown ability %q", a)
-	}
-	return score, nil
-}
-
 // ProficiencySuccess reports a d20 at or under the target (ADR 0014 step
 // 1), except a natural 20, which always fails (step 2).
 func ProficiencySuccess(roll, target int) bool {

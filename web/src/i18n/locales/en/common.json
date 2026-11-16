@@ -2433,6 +2433,7 @@
     "headingMulti": "Experience"
   },
   "skills": {
+    "sheetScore": "(sheet {{score}})",
     "empty": "Nothing to roll here yet. Choose proficiencies, or spend skill points, in the Skills activity.",
     "proficiencies": "Proficiencies",
     "percent": "{{value}}%",

@@ -246,3 +246,33 @@ func TestSkills_PreviewPointsWireShape(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, rec.Code, body)
 	}
 }
+
+// ADR 0014 step 1 as amended: a proficiency's abilityScore and target are on
+// the score in effect; sheetScore is served beside them only when an active
+// effect makes the sheet's score differ (the list and the roll alike).
+func TestSkills_SheetScoreBesideTheScoreInEffect(t *testing.T) {
+	h, m := newRouter(t)
+	m.skills.EXPECT().List(mock.Anything, int64(1)).Return(&skillsvc.Skills{
+		Proficiencies: []skillsvc.Proficiency{
+			{ID: "musical_instrument", Ability: skillsvc.AbilityDex, AbilityScore: 19, SheetScore: 17, Modifier: -1, Target: 18},
+			{ID: "riding_land", Ability: skillsvc.AbilityWis, AbilityScore: 8, Modifier: 3, Target: 11},
+		},
+	}, nil)
+	m.skills.EXPECT().RollInSet(mock.Anything, int64(1), "", "tumbling", skillsvc.Adjustment{}).Return(&skillsvc.CheckResult{
+		ID: "tumbling", Kind: skillsvc.KindProficiency, Die: 20, Roll: 18, Target: 19, AdjustedTarget: 19, Success: true, RolledSuccess: true,
+		Ability: skillsvc.AbilityDex, AbilityScore: 19, SheetScore: 17, LogEntryID: 12,
+	}, nil)
+
+	rec := do(h, "GET", "/api/skills", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"proficiencies":[
+		{"id":"musical_instrument","ability":"dex","abilityScore":19,"sheetScore":17,"modifier":-1,"extraSlots":0,"target":18,"last":null},
+		{"id":"riding_land","ability":"wis","abilityScore":8,"modifier":3,"extraSlots":0,"target":11,"last":null}],
+		"skillSets":[]}`, rec.Body.String())
+
+	rec = do(h, "POST", "/api/roll/skill/tumbling", "")
+	require.Equal(t, http.StatusOK, rec.Code)
+	assert.JSONEq(t, `{"id":"tumbling","kind":"proficiency","die":20,"roll":18,"target":19,
+		"adjustment":0,"adjustedTarget":19,"success":true,"rolledSuccess":true,
+		"ability":"dex","abilityScore":19,"sheetScore":17,"modifier":0,"extraSlots":0,"logEntryId":12}`, rec.Body.String())
+}

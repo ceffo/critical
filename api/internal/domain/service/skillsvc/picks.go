@@ -146,14 +146,31 @@ func (s *service) edited(c charactersvc.View, e Edit, lift ruleset.WeaponLift) (
 }
 
 // proficiencies reads the pools of c with picks and languages (skills.Read, the sheet's own
-// assembly) under the ruleset's weapon lift.
-func (s *service) proficiencies(c charactersvc.View, picks skills.Picks, languages []string, lift ruleset.WeaponLift) *Proficiencies {
+// assembly) under the ruleset's weapon lift. Each pick's check target is built from the score in
+// effect (ADR 0014 step 1 as amended), as the Skills tab and the roll build it, so the editor shows
+// the target the check rolls against.
+func (s *service) proficiencies(ctx context.Context, characterID int64, c charactersvc.View, picks skills.Picks, languages []string, lift ruleset.WeaponLift) (*Proficiencies, error) {
+	scores := s.scoresInEffect(ctx, characterID)
+	var failed error
 	f, ws := skills.Read(s.book, skills.Sheet{
 		Class: c.Primary().Class, Level: c.Primary().RealizedLevel, Classes: c.SkillClasses(), Intelligence: c.Int, Picks: picks,
 		Languages: languages, Native: s.languages.Native(c.Race), MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
-		Score: func(a string) (int, bool) { return c.Score(charactersvc.Ability(a)) },
+		Score: func(a string) (int, bool) {
+			if _, ok := c.Score(charactersvc.Ability(a)); !ok || failed != nil {
+				return 0, false
+			}
+			got, err := scores(Ability(a))
+			if err != nil {
+				failed = fmt.Errorf("proficiency target, ability %q: %w", a, err)
+				return 0, false
+			}
+			return got.Effective, true
+		},
 	})
-	return &Proficiencies{Slots: f, Warnings: ws}
+	if failed != nil {
+		return nil, failed
+	}
+	return &Proficiencies{Slots: f, Warnings: ws}, nil
 }
 
 // PreviewProficiencies is the pools as they would read after the edit (ADR 0037 step 12): each
@@ -174,8 +191,8 @@ func (s *service) PreviewProficiencies(ctx context.Context, characterID int64, e
 		if err != nil {
 			return err
 		}
-		out = s.proficiencies(c, next, langs, rs.WeaponLift)
-		return nil
+		out, err = s.proficiencies(ctx, characterID, c, next, langs, rs.WeaponLift)
+		return err
 	})
 	return out, err
 }
@@ -232,8 +249,8 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 				return fmt.Errorf("record proficiencies: %w", err)
 			}
 		}
-		out = s.proficiencies(c, next, langs, rs.WeaponLift)
-		return nil
+		out, err = s.proficiencies(ctx, characterID, c, next, langs, rs.WeaponLift)
+		return err
 	})
 	if err != nil {
 		return nil, err

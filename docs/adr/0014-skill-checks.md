@@ -6,6 +6,7 @@ step 5's adjustment before the roll, every check is adjusted on the result card 
 API is unchanged. Step 3 amended by [ADR 0030](0030-classes-and-races.md) (bard skill percentages computed), implemented 2026-10-18 (step 18).
 Step 1 and the Consequences amended by [ADR 0037](0037-proficiencies.md) (proficiencies, proposed 2026-10-20), implemented 2026-10-20: the proficiencies are the character's picks from the Table 37 catalogue, and each slot beyond a pick's cost adds +1 to its target.
 Step 4 amended by ADR 0037 step 20 (decided 2026-10-20, as built 2026-10-20): a successful Tumbling check puts a buff on, in the check's one entry.
+Step 1 and the Consequences amended 2026-11-15 (user triage), implemented 2026-11-16: the proficiency's score is the score in effect, with the active effects, the one [ADR 0028](0028-ability-checks.md) step 2's ability check reads, through the same port.
 
 ## Context
 
@@ -35,6 +36,30 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    roll is at or under the target. _(Amended by ADR 0037 step 5, implemented 2026-10-20: the
    modifier is the catalogue's, and the target also counts the pick's slots beyond its cost, +1
    each; `TestSkillCheck_Step5_TargetCountsExtraSlots`.)_
+   _(Amended 2026-11-15, user triage: the score is the one **in effect**, with the active
+   effects, as [ADR 0028](0028-ability-checks.md) step 2 reads it for an ability check (`buffsvc`
+   `GetAbilityScore`), no longer the sheet's; a Strength spell raises a Strength proficiency's
+   target as it raises a Strength check's. The score is read at the roll and stored in the payload
+   (`abilityScore`), so a buff dropped later does not change a logged check, and `GET /api/skills`
+   serves the target on the score in effect. A natural 20 still fails (step 2). Thief and bard
+   percentages are not changed by this amendment.
+   The sheet's score is served beside it as `sheetScore`, only when an active effect makes the two
+   differ (the skills list, the roll response and the `skill_check` payload; added, so an older
+   entry reads as no effect); the Skills tab row, the result card and the journal word it
+   ("DEX 19 (sheet 17)"). **Naming differs from ADR 0028 on purpose:** an ability check's
+   `abilityScore` is the sheet's score and its `target` the score in effect, while a proficiency's
+   `abilityScore` stays the score in effect, because it is a term of `target = abilityScore +
+   modifier + extraSlots` that the web and the journal word, and logged entries keep that sum.
+   `router` `TestSkills_SheetScoreBesideTheScoreInEffect`.
+   `TestSkillCheck_Step1_TargetIsTheScoreInEffect` (a DEX buff on, then ended; a natural 20 under a
+   buff; an unreadable score refused before the roll; the list reads each ability once).
+   The proficiency editor shows the same target: the picks' `target` in the answers of
+   `PUT /api/proficiencies` and `POST /api/proficiencies/preview` is built from the score in
+   effect through the same port (`TestPicks_Step1_EditorTargetIsTheScoreInEffect`: a buff, a
+   debuff, an unreadable score). The editor shows no ability score, so no sheet score beside it.
+   The character's `derived.proficiencySlots` keeps its target on the sheet's score: the character
+   service derives the sheet and cannot read the effects (`buffsvc` reads it). The editor holds that
+   figure only until its first preview, asked when it opens, replaces it.)_
    Test: `TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget` (at the target, one over, a
    positive and a negative modifier; exactly one d20, no d100).
 2. **A natural 20 always fails** a proficiency check, whatever the target.
@@ -109,8 +134,8 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
   percentage is a seed change, never code. Editing them in the app is not covered. _(Amended
   2026-10-18, ADR 0030 step 18: the `bard_skills` percentages are the imported sheet's figures,
   no longer read; the bard spends points instead.)_
-- The ability score is the sheet's. Spells that raise an ability (Strength) do not change a
-  proficiency's target.
+- ~~The ability score is the sheet's. Spells that raise an ability (Strength) do not change a
+  proficiency's target.~~ _(Amended 2026-11-15, step 1: the score in effect, as ADR 0028.)_
 - A skill check is one of the roll kinds (`actionlog.RollKinds`): it replaces the result card,
   so a check rolled after a save or an attack ends the correction of that roll
   ([ADR 0006](0006-saving-throws.md) step 6). Its own adjustment moves the target, never the

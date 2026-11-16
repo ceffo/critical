@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -49,7 +50,11 @@ type checkRecord struct {
 	// Set for a proficiency only.
 	Ability      Ability `json:"ability,omitempty"`
 	AbilityScore int     `json:"abilityScore,omitempty"`
-	Modifier     int     `json:"modifier"`
+	// SheetScore is the sheet's score when an effect makes AbilityScore (the
+	// score in effect) differ from it; absent otherwise and in entries logged
+	// before (ADR 0014 step 1 as amended).
+	SheetScore int `json:"sheetScore,omitempty"`
+	Modifier   int `json:"modifier"`
 	// ExtraSlots are the slots spent beyond the cost, each +1 to Target (ADR
 	// 0037 step 5); absent when 0 (and in entries logged before).
 	ExtraSlots int `json:"extraSlots,omitempty"`
@@ -107,7 +112,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		ID: r.ID, Kind: r.Kind, Set: setOf(r), Die: r.Die, Roll: r.Roll, Target: r.Target,
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
-		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
+		Ability: r.Ability, AbilityScore: r.AbilityScore, SheetScore: r.SheetScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
 		Buff: r.Buff.applied(r.Renewed), Warnings: r.Warnings,
 	}
 }
@@ -284,6 +289,38 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	return rec, nil
 }
 
+// scoresInEffect reads the score of an ability with the active effects (ADR 0014 step 1 as
+// amended: the score ADR 0028 step 2's ability check reads, through the same port, buffsvc
+// GetAbilityScore), each ability once per call of the returned reader: a read of every pick
+// (the Skills tab, the proficiency editor) asks the port at most six times, not once a pick.
+func (s *service) scoresInEffect(ctx context.Context, characterID int64) func(a Ability) (buffsvc.AbilityScore, error) {
+	got := map[Ability]buffsvc.AbilityScore{}
+	return func(a Ability) (buffsvc.AbilityScore, error) {
+		if v, ok := got[a]; ok {
+			return v, nil
+		}
+		v, err := s.abils.GetAbilityScore(ctx, characterID, a)
+		if err != nil {
+			return buffsvc.AbilityScore{}, err
+		}
+		got[a] = v
+		return v, nil
+	}
+}
+
+// scoreInEffect is the score of proficiency p's ability in effect (scores, scoresInEffect's
+// reader), and the sheet's score when an effect makes them differ (0 when they are the same).
+func scoreInEffect(scores func(Ability) (buffsvc.AbilityScore, error), p skills.PickFigures) (score, sheet int, err error) {
+	got, err := scores(Ability(p.Ability))
+	if err != nil {
+		return 0, 0, fmt.Errorf("proficiency %q: %w", p.ID, err)
+	}
+	if got.Base != got.Effective {
+		sheet = got.Base
+	}
+	return got.Effective, sheet, nil
+}
+
 // checkable are the character's picks with a check (ADR 0037 steps 2 and 5):
 // a catalogue proficiency with an ability, its target derived on the
 // character. A pick with no check (Blind-fighting, an id the catalogue does
@@ -307,20 +344,20 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("get character: %w", err)
 	}
-	// ADR 0014 step 1 as amended by ADR 0037 step 5: the ability score plus
-	// the catalogue's modifier plus the extra slots, derived on the
-	// character.
+	// ADR 0014 step 1 as amended by ADR 0037 step 5: the ability score in
+	// effect (amended to ADR 0028 step 2's score) plus the catalogue's
+	// modifier plus the extra slots.
 	for _, p := range checkable(char) {
 		if p.ID != id {
 			continue
 		}
-		score, err := abilityScore(char, Ability(p.Ability))
+		score, sheet, err := scoreInEffect(s.scoresInEffect(ctx, characterID), p)
 		if err != nil {
-			return checkRecord{}, fmt.Errorf("proficiency %q: %w", p.ID, err)
+			return checkRecord{}, err
 		}
 		return checkRecord{
-			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: p.Target,
-			Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra),
+			Ability: Ability(p.Ability), AbilityScore: score, SheetScore: sheet, Modifier: p.Modifier, ExtraSlots: p.Extra,
 		}, nil
 	}
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
@@ -409,6 +446,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			return err
 		}
 		profs := checkable(char)
+		scores := s.scoresInEffect(ctx, characterID)
 		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.SkillSets))}
 		for _, ss := range char.SkillSets {
 			set := SkillSet{Set: ss.Set, Name: ss.Name, MinPercent: ss.MinPercent, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
@@ -418,13 +456,13 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			out.SkillSets = append(out.SkillSets, set)
 		}
 		for _, p := range profs {
-			score, err := abilityScore(char, Ability(p.Ability))
+			score, sheet, err := scoreInEffect(scores, p)
 			if err != nil {
-				return fmt.Errorf("proficiency %q: %w", p.ID, err)
+				return err
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
-				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
-				Target: p.Target, Last: last[lastKey(KindProficiency, "", p.ID)],
+				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, SheetScore: sheet, Modifier: p.Modifier, ExtraSlots: p.Extra,
+				Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra), Last: last[lastKey(KindProficiency, "", p.ID)],
 			})
 		}
 		return nil

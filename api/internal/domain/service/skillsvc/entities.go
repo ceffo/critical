@@ -53,16 +53,20 @@ type LastCheck struct {
 }
 
 // Proficiency is a picked proficiency with a check and its target: ability
-// score + the catalogue's modifier + the slots spent beyond the cost (ADR
-// 0014 step 1 as amended by ADR 0037 step 5).
+// score in effect (AbilityScore, with the active effects) + the catalogue's
+// modifier + the slots spent beyond the cost (ADR 0014 step 1 as amended by
+// ADR 0037 step 5 and to ADR 0028 step 2's score).
 type Proficiency struct {
 	ID           string
 	Ability      Ability
 	AbilityScore int
-	Modifier     int
-	ExtraSlots   int
-	Target       int
-	Last         *LastCheck
+	// SheetScore is the sheet's score when an effect makes AbilityScore
+	// differ from it, 0 otherwise.
+	SheetScore int
+	Modifier   int
+	ExtraSlots int
+	Target     int
+	Last       *LastCheck
 }
 
 // SetSkill is a skill of a skill set (ADR 0030 steps 17 and 18): its percentage, derived by the
@@ -121,7 +125,11 @@ type CheckResult struct {
 	RolledSuccess    bool
 	Ability          Ability
 	AbilityScore     int
-	Modifier         int
+	// SheetScore is the sheet's score when an effect made AbilityScore (the
+	// score in effect at the roll) differ from it, 0 otherwise and in older
+	// entries.
+	SheetScore int
+	Modifier   int
 	// ExtraSlots are a proficiency's slots beyond its cost, each +1 to the
 	// target (ADR 0037 step 5); 0 for a skill and in older entries.
 	ExtraSlots int

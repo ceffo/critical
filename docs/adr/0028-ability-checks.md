@@ -32,7 +32,8 @@ Where the project differs from the book:
   adjustment`), since a save succeeds at or *above* its target.
 - The target is the ability score **in effect** (with the effects the app applies), where a
   proficiency check uses the sheet's score ([ADR 0014](0014-skill-checks.md) Consequences). Triage
-  asked for the score in effect: the stat the player clicks is the one the card shows.
+  asked for the score in effect: the stat the player clicks is the one the card shows. _(Since
+  ADR 0014 step 1's amendment of 2026-11-15, a proficiency check reads the same score.)_
 
 ## Decision
 
@@ -126,8 +127,10 @@ Every test cited here exists (`just check-adr-tests`); `TestAmendLatest` and
   the roll does not change a logged check, and adjusting it later uses the stored target.
 - A check used "in lieu of a saving throw" (PHB p.102) is an ability check like any other: the app
   does not link it to a save category, and it has no save bonus from buffs.
-- Proficiency checks keep the sheet's score ([ADR 0014](0014-skill-checks.md) Consequences); making
-  them use the score in effect too would be an amendment of ADR 0014, not covered here.
+- ~~Proficiency checks keep the sheet's score ([ADR 0014](0014-skill-checks.md) Consequences); making
+  them use the score in effect too would be an amendment of ADR 0014, not covered here.~~ _(ADR 0014
+  step 1 amended 2026-11-15: a proficiency check reads the same score in effect, through the same
+  port.)_
 - Not covered: an adjustment before the roll (the API takes no body; adding one later would follow
   ADR 0014 step 5), the last check per ability on the character card, checks by anyone but the
   Bard, exceptional Strength (18/xx) as a target, and the effect of a failed check (the DM's call).

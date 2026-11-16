@@ -5,7 +5,7 @@ import i18next from "i18next";
 import { resources } from "@/i18n";
 import { damageFormula } from "./kinds/attack";
 import { itemRollText } from "./kinds/itemUse";
-import { modLabel } from "./words";
+import { abilityText, modLabel } from "./words";
 
 const hit = (over: Partial<RollResult>): RollResult =>
   ({
@@ -270,4 +270,23 @@ describe("modLabel", () => {
     ).toBe("power_gem_dispel");
     expect(modLabel(en, gem)).toBe("Power Gem: weapon +5");
   });
+});
+
+// ADR 0014 step 1 as amended: a proficiency's score is the one in effect; the sheet's is worded
+// beside it only when the server sends it.
+describe("abilityText", () => {
+  it("shows the score alone when the server sends no sheet score", async () => {
+    const t = await makeT("en");
+    expect(abilityText(t, "dex", 17, -1)).toBe("DEX 17 −1");
+  });
+  it.each([
+    ["en", "DEX 19 (sheet 17) −1"],
+    ["fr", "DEX 19 (feuille 17) −1"],
+  ])(
+    "puts the sheet score beside the score in effect (%s)",
+    async (lng, want) => {
+      const t = await makeT(lng);
+      expect(abilityText(t, "dex", 19, -1, 17)).toBe(want);
+    },
+  );
 });

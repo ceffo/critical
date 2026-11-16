@@ -16,6 +16,8 @@ import (
 // to 5); ruletablesvc.Proficiencies satisfies it, the empty one included.
 type Book interface {
 	Get(id string) (ruletablesvc.Proficiency, bool)
+	// All are the non-weapon catalogue's proficiencies, in the file's order.
+	All() []ruletablesvc.Proficiency
 	GroupsOf(class string) []string
 	SlotRowOf(class string) (slots.Row, bool)
 	// ClassDef is the class's definition (ADR 0040 step 5: its features), false for a class the

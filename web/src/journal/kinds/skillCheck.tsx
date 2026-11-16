@@ -17,6 +17,7 @@ import type { KindView } from "../kindView";
 import { buffName, englishSpellName } from "@/i18n/spellName";
 import { abilityText, counters, skillName } from "../words";
 import { AdjustCheck, CheckView } from "../parts";
+import { ClassWarningTag } from "@/components/ClassWarning";
 
 /** The skill check's payload in effect, with its entry id. */
 export function decodeSkillCheck(e: LogEntry): SkillCheck | null {
@@ -39,6 +40,18 @@ export function decodeSkillCheck(e: LogEntry): SkillCheck | null {
  * 12 vs 17, success; Tumbling on: AC −4, 1 rd". An entry logged before has no buff.
  */
 function skillText(c: SkillCheck, t: TFunction): string {
+  const line = buffText(c, t);
+  // ADR 0042 step 13: a dual-class's old-class skill before the crossover warns; the DM may take
+  // experience, so the row says it as the card does.
+  const warnings = (c.warnings ?? []).map((code) =>
+    t(`equipment.warnings.${code}`),
+  );
+  return warnings.length === 0
+    ? line
+    : t("log.skill.withWarning", { check: line, warning: warnings.join("; ") });
+}
+
+function buffText(c: SkillCheck, t: TFunction): string {
   const check = checkText(c, t);
   const b = c.buff;
   if (!b) return check;
@@ -111,46 +124,51 @@ function SkillCard({
   const { t } = useTranslation();
   const proficiency = c.kind === "proficiency";
   return (
-    <CheckView
-      testId="skill-result"
-      die={c.die}
-      roll={c.roll}
-      target={c.target}
-      adjustment={c.adjustment ?? 0}
-      adjustmentReason={c.adjustmentReason}
-      adjustedTarget={checkAdjustedTarget(c)}
-      success={c.success}
-      percent={!proficiency}
-      heading={
-        proficiency
-          ? t("result.skill.proficiency", {
-              die: c.die,
-              stat: abilityText(
-                t,
-                c.ability ?? "",
-                c.abilityScore ?? 0,
-                c.modifier ?? 0,
-                c.sheetScore,
-              ),
-            })
-          : t(
-              // Entries stored before the single kind keep their own wording (ADR 0040 step 15).
-              c.kind === "thiefSkill"
-                ? "result.skill.thiefSkill"
-                : c.kind === "bardSkill"
-                  ? "result.skill.bardSkill"
-                  : "result.skill.rogueSkill",
-              { die: c.die, percent: c.target },
-            )
-      }
-      adjust={
-        interactive &&
-        c.logEntryId !== undefined && (
-          // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
-          <AdjustSkill key={c.logEntryId} check={c} entryId={c.logEntryId} />
-        )
-      }
-    />
+    <div className="flex flex-col gap-3">
+      <CheckView
+        testId="skill-result"
+        die={c.die}
+        roll={c.roll}
+        target={c.target}
+        adjustment={c.adjustment ?? 0}
+        adjustmentReason={c.adjustmentReason}
+        adjustedTarget={checkAdjustedTarget(c)}
+        success={c.success}
+        percent={!proficiency}
+        heading={
+          proficiency
+            ? t("result.skill.proficiency", {
+                die: c.die,
+                stat: abilityText(
+                  t,
+                  c.ability ?? "",
+                  c.abilityScore ?? 0,
+                  c.modifier ?? 0,
+                  c.sheetScore,
+                ),
+              })
+            : t(
+                // Entries stored before the single kind keep their own wording (ADR 0040 step 15).
+                c.kind === "thiefSkill"
+                  ? "result.skill.thiefSkill"
+                  : c.kind === "bardSkill"
+                    ? "result.skill.bardSkill"
+                    : "result.skill.rogueSkill",
+                { die: c.die, percent: c.target },
+              )
+        }
+        adjust={
+          interactive &&
+          c.logEntryId !== undefined && (
+            // Keyed by entry: a new check starts its fold afresh (AdjustCheck).
+            <AdjustSkill key={c.logEntryId} check={c} entryId={c.logEntryId} />
+          )
+        }
+      />
+      {(c.warnings ?? []).map((code) => (
+        <ClassWarningTag key={code} code={code} />
+      ))}
+    </div>
   );
 }
 

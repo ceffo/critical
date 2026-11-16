@@ -50,7 +50,7 @@ export function LevelUpPrompt({
     cls?: string,
   ) => Promise<ApiError | null>;
   /** Focuses the Skills activity on an editor (ADR 0037 step 15's links). */
-  onOpenEditor: (editor: SkillsEditor) => void;
+  onOpenEditor: (editor: SkillsEditor, set?: string) => void;
   /** Opens the spell lookup on a level's free spell (ADR 0030 step 20.8). */
   onOpenFreeSpell: (fs: FreeSpell) => void;
 }) {

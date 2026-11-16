@@ -34,6 +34,8 @@
         "nonWeaponSlots_other": "{{count}} emplacements de compétence",
         "skillPoints_one": "{{count}} point de talent",
         "skillPoints_other": "{{count}} points de talent",
+        "skillPointsOfSet_one": "{{count}} point de talent · {{set}}",
+        "skillPointsOfSet_other": "{{count}} points de talent · {{set}}",
         "freeSpell": "1 sort gratuit, niv. {{spellLevel}}",
         "freeSpellSchool": "1 sort gratuit de son école, niv. {{spellLevel}}"
       },
@@ -1884,6 +1886,7 @@
       "failureAdjusted": "{{name}} : d{{die}} {{roll}} contre {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), échec",
       "buffOn": "{{check}} ; {{buff}} actif : {{effects}}",
       "buffRenewed": "{{check}} ; {{buff}} renouvelé : {{effects}}",
+      "withWarning": "{{check}}. Attention : {{warning}}",
       "buffAc": "CA {{value}}"
     },
     "dice": "Dés {{formula}} = {{total}}",

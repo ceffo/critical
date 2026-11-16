@@ -297,7 +297,273 @@
           "specializationSlots": 0
         }
       ],
-      "weaponRedo": []
+      "weaponRedo": [],
+      "groups": [
+        "rogue",
+        "general"
+      ],
+      "catalogue": [
+        {
+          "id": "agriculture",
+          "cost": 1
+        },
+        {
+          "id": "animal_handling",
+          "cost": 1
+        },
+        {
+          "id": "animal_training",
+          "cost": 1
+        },
+        {
+          "id": "artistic_ability",
+          "cost": 1
+        },
+        {
+          "id": "blacksmithing",
+          "cost": 1
+        },
+        {
+          "id": "brewing",
+          "cost": 1
+        },
+        {
+          "id": "carpentry",
+          "cost": 1
+        },
+        {
+          "id": "cobbling",
+          "cost": 1
+        },
+        {
+          "id": "cooking",
+          "cost": 1
+        },
+        {
+          "id": "dancing",
+          "cost": 1
+        },
+        {
+          "id": "direction_sense",
+          "cost": 1
+        },
+        {
+          "id": "etiquette",
+          "cost": 1
+        },
+        {
+          "id": "fire_building",
+          "cost": 1
+        },
+        {
+          "id": "fishing",
+          "cost": 1
+        },
+        {
+          "id": "heraldry",
+          "cost": 1
+        },
+        {
+          "id": "leatherworking",
+          "cost": 1
+        },
+        {
+          "id": "mining",
+          "cost": 2
+        },
+        {
+          "id": "pottery",
+          "cost": 1
+        },
+        {
+          "id": "riding_airborne",
+          "cost": 2
+        },
+        {
+          "id": "riding_land",
+          "cost": 1
+        },
+        {
+          "id": "rope_use",
+          "cost": 1
+        },
+        {
+          "id": "seamanship",
+          "cost": 1
+        },
+        {
+          "id": "seamstress_tailor",
+          "cost": 1
+        },
+        {
+          "id": "singing",
+          "cost": 1
+        },
+        {
+          "id": "stonemasonry",
+          "cost": 1
+        },
+        {
+          "id": "swimming",
+          "cost": 1
+        },
+        {
+          "id": "weather_sense",
+          "cost": 1
+        },
+        {
+          "id": "weaving",
+          "cost": 1
+        },
+        {
+          "id": "ancient_history",
+          "cost": 1
+        },
+        {
+          "id": "astrology",
+          "cost": 3
+        },
+        {
+          "id": "engineering",
+          "cost": 3
+        },
+        {
+          "id": "healing",
+          "cost": 3
+        },
+        {
+          "id": "herbalism",
+          "cost": 3
+        },
+        {
+          "id": "languages_ancient",
+          "cost": 2
+        },
+        {
+          "id": "local_history",
+          "cost": 1
+        },
+        {
+          "id": "musical_instrument",
+          "cost": 1
+        },
+        {
+          "id": "navigation",
+          "cost": 2
+        },
+        {
+          "id": "reading_writing",
+          "cost": 2
+        },
+        {
+          "id": "religion",
+          "cost": 2
+        },
+        {
+          "id": "spellcraft",
+          "cost": 2
+        },
+        {
+          "id": "appraising",
+          "cost": 1
+        },
+        {
+          "id": "blind_fighting",
+          "cost": 2
+        },
+        {
+          "id": "disguise",
+          "cost": 1
+        },
+        {
+          "id": "forgery",
+          "cost": 1
+        },
+        {
+          "id": "gaming",
+          "cost": 1
+        },
+        {
+          "id": "gem_cutting",
+          "cost": 2
+        },
+        {
+          "id": "juggling",
+          "cost": 1
+        },
+        {
+          "id": "jumping",
+          "cost": 1
+        },
+        {
+          "id": "reading_lips",
+          "cost": 2
+        },
+        {
+          "id": "set_snares",
+          "cost": 1
+        },
+        {
+          "id": "tightrope_walking",
+          "cost": 1
+        },
+        {
+          "id": "tumbling",
+          "cost": 1
+        },
+        {
+          "id": "ventriloquism",
+          "cost": 1
+        },
+        {
+          "id": "animal_lore",
+          "cost": 2
+        },
+        {
+          "id": "armorer",
+          "cost": 3
+        },
+        {
+          "id": "bowyer_fletcher",
+          "cost": 2
+        },
+        {
+          "id": "charioteering",
+          "cost": 2
+        },
+        {
+          "id": "endurance",
+          "cost": 3
+        },
+        {
+          "id": "hunting",
+          "cost": 2
+        },
+        {
+          "id": "mountaineering",
+          "cost": 2
+        },
+        {
+          "id": "running",
+          "cost": 2
+        },
+        {
+          "id": "survival",
+          "cost": 3
+        },
+        {
+          "id": "tracking",
+          "cost": 3
+        },
+        {
+          "id": "weaponsmithing",
+          "cost": 4
+        },
+        {
+          "id": "rejuvenation",
+          "cost": 2
+        }
+      ]
     }
   },
   "missing": [

@@ -35,6 +35,20 @@ func derivedOf(t *testing.T, bs *composition.BackingServices, id int64) (charact
 	// the multi-class tests'; these compare the single-class figures.
 	d := c.Derived
 	d.Classes, d.Features = nil, nil
+	// The catalogue's costs for the character (ADR 0042 step 15) are the skills package's table
+	// (TestCatalogue_Step15_TheCharactersCostsAndGroups) and the golden files'; the bard's are
+	// spot-checked here, free ids at 0.
+	if d.Proficiencies != nil {
+		cost := map[string]int{}
+		for _, f := range d.Proficiencies.Catalogue {
+			cost[f.ID] = f.Cost
+		}
+		require.Equal(t, 0, cost["singing"], "the bard's free proficiency")
+		require.Equal(t, 1, cost["tumbling"], "a rogue group proficiency")
+		cp := *d.Proficiencies
+		cp.Catalogue = nil
+		d.Proficiencies = &cp
+	}
 	return d, l.Level, info.Limits
 }
 
@@ -64,7 +78,7 @@ func kelsenPicks(t *testing.T, level int) *skills.ProficiencySlots {
 		return skills.WeaponPickFigures{Code: code, Slots: 1, Allowed: true}
 	}
 	// ADR 0037 step 8: Table 34's penalty for the rogue group.
-	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, Picks: []skills.PickFigures{
+	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, Groups: []string{"rogue", "warrior", "wizard", "general"}, Picks: []skills.PickFigures{
 		free("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
 		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), free("singing", "cha", 0, 16),
 		free("reading_writing", "int", 1, 15), free("local_history", "cha", 0, 16),

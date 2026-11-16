@@ -6,6 +6,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { ProficienciesInput, ProficiencySlots } from "@/types/character";
+import { optionsForCharacter } from "./catalogue";
 import { LanguagesPool } from "./LanguagesPool";
 import {
   offeredIds,
@@ -228,7 +229,7 @@ export function PickEditor({
             onChange={(languages) => change({ languages })}
           />
           <ProficiencyPicker
-            options={options}
+            options={optionsForCharacter(options, cls, figures)}
             cls={cls}
             picks={draft.nonweapon ?? []}
             onChange={(nonweapon) => change({ nonweapon })}

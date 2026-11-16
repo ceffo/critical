@@ -119,6 +119,10 @@ func assertTextIntegrity(t *testing.T, f *fakeStore) {
 		used[key] = true
 		assert.NotEmpty(t, f.t.Texts[key], "proficiency %s: key %d has no row", id, key)
 	}
+	for pair, key := range f.t.SkillDescs {
+		used[key] = true
+		assert.NotEmpty(t, f.t.Texts[key], "skill %s: key %d has no row", pair, key)
+	}
 	for id, text := range f.t.Texts {
 		assert.True(t, used[id], "text %d is keyed by no column", id)
 		for lang, body := range text {

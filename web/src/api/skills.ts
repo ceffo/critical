@@ -1,3 +1,4 @@
+import type { LocalizedText } from "@/types/localized";
 import type {
   Ability,
   AbilityCheck,
@@ -9,6 +10,37 @@ import { post, put, request } from "./http";
 
 export function fetchSkills(): Promise<Skills> {
   return request<Skills>("/api/skills");
+}
+
+/** What `GET /api/skill-sets/{set}/skills/{skill}/description` answers (ADR 0037 step 19.6). */
+export interface SkillDescription {
+  set: string;
+  skill: string;
+  description: LocalizedText;
+}
+
+const descriptions = new Map<string, Promise<SkillDescription>>();
+
+/**
+ * The description of a skill of a skill set in every language, read when its pop-up opens and kept
+ * for the page's life: the books' text never changes under a running page. A set has its own text
+ * for a skill, so the key is the pair. A failed read is not kept, so reopening the pop-up asks
+ * again.
+ */
+export function getSkillDescription(
+  set: string,
+  skill: string,
+): Promise<SkillDescription> {
+  const key = `${set}/${skill}`;
+  let held = descriptions.get(key);
+  if (!held) {
+    held = request<SkillDescription>(
+      `/api/skill-sets/${encodeURIComponent(set)}/skills/${encodeURIComponent(skill)}/description`,
+    );
+    descriptions.set(key, held);
+    held.catch(() => descriptions.delete(key));
+  }
+  return held;
 }
 
 /** Sets the total points per skill of the skill set `set` (ADR 0030 step 17, ADR 0040 step 3.5);

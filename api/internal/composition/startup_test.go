@@ -283,7 +283,7 @@ func TestStartup_Step9_6_3_TheTablesAreTheArtifactsAndFormat1IsRefused(t *testin
 		})
 
 		err = refusedStart(t, composition.Config{SeedsDir: seeds, Catalogue: artifact})
-		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 24")
+		require.ErrorContains(t, err, "spell catalogue "+artifact+": unknown format 1: this API reads format 25")
 		require.ErrorContains(t, err, "just catalogue")
 	})
 }
@@ -466,7 +466,7 @@ func TestStartup_Step16_RefusesFormat8AndNamesJustCatalogue(t *testing.T) {
 			delete(d, "proficiency_descriptions")
 		})
 		err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
-		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 24", artifact, format))
+		require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format %d: this API reads format 25", artifact, format))
 		require.ErrorContains(t, err, "run `just catalogue`")
 	}
 }
@@ -483,6 +483,33 @@ func TestStartup_Step16_RefusesADescriptionIdMismatch(t *testing.T) {
 	require.ErrorContains(t, err, "proficiency descriptions: the catalogue and seeds/proficiencies.json disagree")
 	require.ErrorContains(t, err, "proficiency swordplay: no such proficiency in seeds/proficiencies.json")
 	require.ErrorContains(t, err, "proficiency artistic_ability: no description in the catalogue")
+}
+
+// ADR 0021 step 33.3: the catalogue's skill descriptions and its skill sets must agree, or the
+// start is refused before anything is seeded or imported, naming each (set, skill): here the
+// bard's Pick Pockets text is filed under a skill the bard lacks, so one skill has none and one
+// description has no skill.
+func TestStartup_Step33_RefusesASkillDescriptionPairMismatch(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		rows := d["skill_descriptions"].([]any)
+		rows[len(rows)-2].(map[string]any)["skill"] = "open_locks"
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, "skill descriptions: the catalogue and its skill sets disagree")
+	require.ErrorContains(t, err, "skill bard/open_locks: no such skill in the artifact's skill sets")
+	require.ErrorContains(t, err, "skill bard/pick_pockets: no description in the catalogue")
+}
+
+// ADR 0021 step 33.5: an artifact of format 24 (without the skill descriptions) is refused at
+// start as an unknown format that names the one this API reads and `just catalogue`.
+func TestStartup_Step33_RefusesFormat24AndNamesJustCatalogue(t *testing.T) {
+	artifact := writeArtifact(t, func(d map[string]any) {
+		d["format"] = 24
+		delete(d, "skill_descriptions")
+	})
+	err := refusedStart(t, composition.Config{SeedsDir: fixtureSeeds, Catalogue: artifact})
+	require.ErrorContains(t, err, fmt.Sprintf("spell catalogue %s: unknown format 24: this API reads format 25", artifact))
+	require.ErrorContains(t, err, "run `just catalogue`")
 }
 
 // ADR 0047 item 6: a Table 6 row gated by a proficiency that seeds/proficiencies.json lacks refuses

@@ -2760,6 +2760,42 @@ async function profPopupStep(page: Page, size: Viewport) {
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
   }
+  // The skill-set rows and their pop-up (ADR 0037 step 19.6), in French first.
+  const skillDialog = page.getByTestId("skill-details");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expect(
+      panel.getByTestId("skill-name-bard-climb_walls"),
+    ).toBeVisible();
+    await expectNoClippedText(panel, `skill-set rows, ${where}`);
+    await expectWholeWords(panel, `skill-set rows, ${where}`);
+    await snap(page, `skill-rows-fr-${where}`);
+    await panel.getByTestId("skill-name-bard-climb_walls").click();
+    await expect(skillDialog.getByTestId("skill-description")).toBeVisible();
+    await expectNoClippedText(skillDialog, `skill pop-up, ${where}`);
+    await expectWholeWords(skillDialog, `skill pop-up, ${where}`);
+    await snap(page, `skill-popup-fr-${where}`);
+    await page.keyboard.press("Escape");
+    await expect(skillDialog).toHaveCount(0);
+  }
+  await openSpend(page, "skillPoints");
+  const points = page.getByTestId("thief-points-editor");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expectNoClippedText(points, `skill points editor, ${where}`);
+    await expectWholeWords(points, `skill points editor, ${where}`);
+    await snap(page, `skill-points-fr-${where}`);
+  }
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");
   for (const vp of sizesAt(size, [

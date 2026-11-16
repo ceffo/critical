@@ -374,6 +374,9 @@ attack mode's check against a defence mode's. The **opponent** is the request's 
 - **Skill set vs kind of skill.** A **skill set** is a `rogue_skills` feature's list and the
   points entered for it; `skillsvc.Kind` (`proficiency`, `bardSkill`, `thiefSkill`) is the **check
   kind**, what a roll is judged as. They are not synonyms.
+- **A skill's description belongs to the pair (set, skill).** The catalogue's `SkillDescription` rows are
+  keyed by `SkillPair`: a character with two sets that share a skill (the thief/bard's Pick Pockets)
+  reads each set's own text. Nothing in game state refers to a description (ADR 0037 step 19.6).
 - **Same name, other thing.** `authsvc.Identity` (a login claim) is no **race identity**;
   `authsvc.Language` (the mail language of an invite) is no **language**; `ruletablesvc.Crossover`
   (Table 38) is no dual-class **crossover**; `prepsvc.LevelLimit` and `spellbook.Limits` are no

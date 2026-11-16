@@ -38,6 +38,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/powersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/profdescsvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skilldescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/rulesetsvc"
@@ -86,6 +87,8 @@ type BackingServices struct {
 	Psionics psionicsvc.SVC
 	// ProficiencyDescriptions serves each non-weapon proficiency's description (ADR 0037 step 19.4).
 	ProficiencyDescriptions profdescsvc.SVC
+	// SkillDescriptions serves each skill of a skill set's description (ADR 0037 step 19.6).
+	SkillDescriptions skilldescsvc.SVC
 	Learn                   learnsvc.SVC
 	Turn                    turnsvc.SVC
 	Details                 detailssvc.SVC
@@ -255,6 +258,10 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	if err := checkProficiencyDescriptions(cat, proficiencies); err != nil {
 		return nil, err
 	}
+	// The skill descriptions and the artifact's skill sets must agree too (ADR 0021 step 33.3).
+	if err := catalogue.CheckSkillDescriptions(cat.SkillDescriptions, artifact.SkillSets); err != nil {
+		return nil, err
+	}
 	// A Table 6 row gated by a proficiency (ADR 0047 item 6) names one of that file.
 	if err := ruleTables.CheckRecoveryGates(func(id string) bool { _, ok := proficiencies.Get(id); return ok }); err != nil {
 		return nil, err
@@ -289,6 +296,16 @@ func Build(ctx context.Context, st Storage, cfg Config) (_ *BackingServices, err
 	}
 	bs.ProficiencyDescriptions, err = profdescsvc.New(descriptions)
 	if err := bs.add(bs.ProficiencyDescriptions, err); err != nil {
+		return nil, err
+	}
+
+	// The skill descriptions are read once after the import too (ADR 0037 step 19.6).
+	skillDescriptions, err := db.SkillDescriptions(ctx)
+	if err != nil {
+		return nil, err
+	}
+	bs.SkillDescriptions, err = skilldescsvc.New(skillDescriptions)
+	if err := bs.add(bs.SkillDescriptions, err); err != nil {
 		return nil, err
 	}
 

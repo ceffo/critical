@@ -47,6 +47,7 @@ type Querier interface {
 	CountUnowned(ctx context.Context) (int64, error)
 	DeleteCharacterItems(ctx context.Context, characterID int64) error
 	DeleteProficiencyDescription(ctx context.Context, proficiencyID string) error
+	DeleteSkillDescription(ctx context.Context, arg DeleteSkillDescriptionParams) error
 	DeleteSpell(ctx context.Context, key sql.NullString) error
 	DeleteText(ctx context.Context, textID int64) error
 	DeleteTextLanguage(ctx context.Context, arg DeleteTextLanguageParams) error
@@ -154,6 +155,8 @@ type Querier interface {
 	// item, armour or not: an added piece goes after the last position), and a carried piece put on. Delete them with their step once every environment is past 020 (ADR 0025
 	// step 2.1.1); the seed keeps CharacterSkillArmour, CarryOverItems and WearItem.
 	SkillArmourCharacters(ctx context.Context) ([]SkillArmourCharactersRow, error)
+	SkillDescriptionKeys(ctx context.Context) ([]SkillDescription, error)
+	SkillDescriptionTexts(ctx context.Context) ([]SkillDescriptionTextsRow, error)
 	SnapshotsOf(ctx context.Context, stateKey string) ([]SnapshotsOfRow, error)
 	// The snapshots stored before the codec's envelopes (migration 019), with their character, for the
 	// re-encoding (reencodeSnapshots, ADR 0018 step 9).
@@ -183,6 +186,7 @@ type Querier interface {
 	UpsertBardSkill(ctx context.Context, arg UpsertBardSkillParams) error
 	UpsertProficiency(ctx context.Context, arg UpsertProficiencyParams) error
 	UpsertProficiencyDescription(ctx context.Context, arg UpsertProficiencyDescriptionParams) error
+	UpsertSkillDescription(ctx context.Context, arg UpsertSkillDescriptionParams) error
 	UpsertSpell(ctx context.Context, arg UpsertSpellParams) error
 	UpsertText(ctx context.Context, arg UpsertTextParams) error
 	WearItem(ctx context.Context, arg WearItemParams) error

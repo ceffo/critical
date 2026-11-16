@@ -87,6 +87,8 @@ type tables struct {
 	Texts         map[int64]localized.Text
 	// ProfDescs are proficiency_descriptions rows: the proficiency id to its text key.
 	ProfDescs map[string]int64
+	// SkillDescs are skill_descriptions rows: the (set, skill) pair to its text key.
+	SkillDescs map[string]int64
 	Meta      *storeq.CatalogueVersionRow
 	Spells    []spellRow
 	// Game state that refers to spells.
@@ -157,7 +159,7 @@ func newFakeStore() *fakeStore {
 		Weapons: map[string]weaponRow{}, Items: map[string]storeq.InsertItemParams{}, Abilities: map[string]string{}, ScrollSpells: map[string]string{},
 		Reviews: map[string]bool{}, Renames: map[string]string{}, SnapshotKeys: map[int64][]string{}, AttackAmmo: map[int64]string{},
 		Offers: map[string]bool{}, Profs: map[string]storeq.UpsertProficiencyParams{},
-		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{},
+		Bard: map[string]storeq.UpsertBardSkillParams{}, Texts: map[int64]localized.Text{}, ProfDescs: map[string]int64{}, SkillDescs: map[string]int64{},
 		Names: map[int64]string{}, Races: map[int64]string{}, Alignments: map[int64]string{}, Sexes: map[int64]string{}, Languages: map[int64]string{}, SkillPoints: map[int64]string{}, SkillSets: map[int64]string{}, Picks: map[int64]string{}, Classes: map[int64]string{}, SkillArmors: map[int64]string{}, Spellbook: map[string]storeq.InsertSpellbookEntryParams{},
 	}}
 }
@@ -1184,6 +1186,45 @@ func (f *fakeStore) WearItem(_ context.Context, arg storeq.WearItemParams) error
 	it.State = "worn"
 	f.t.Items[key] = it
 	return nil
+}
+
+func (f *fakeStore) SkillDescriptionKeys(context.Context) ([]storeq.SkillDescription, error) {
+	out := []storeq.SkillDescription{}
+	for pair, key := range f.t.SkillDescs {
+		set, skill, _ := strings.Cut(pair, "/")
+		out = append(out, storeq.SkillDescription{SkillSet: set, Skill: skill, Description: key})
+	}
+	return out, nil
+}
+
+func (f *fakeStore) UpsertSkillDescription(_ context.Context, arg storeq.UpsertSkillDescriptionParams) error {
+	f.t.SkillDescs[arg.SkillSet+"/"+arg.Skill] = arg.Description
+	return nil
+}
+
+func (f *fakeStore) DeleteSkillDescription(_ context.Context, arg storeq.DeleteSkillDescriptionParams) error {
+	delete(f.t.SkillDescs, arg.SkillSet+"/"+arg.Skill)
+	return nil
+}
+
+func (f *fakeStore) SkillDescriptionTexts(context.Context) ([]storeq.SkillDescriptionTextsRow, error) {
+	out := []storeq.SkillDescriptionTextsRow{}
+	for pair, key := range f.t.SkillDescs {
+		set, skill, _ := strings.Cut(pair, "/")
+		for _, lang := range f.t.Texts[key].Languages() {
+			out = append(out, storeq.SkillDescriptionTextsRow{SkillSet: set, Skill: skill, Lang: lang, Body: f.t.Texts[key][lang]})
+		}
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].SkillSet != out[j].SkillSet {
+			return out[i].SkillSet < out[j].SkillSet
+		}
+		if out[i].Skill != out[j].Skill {
+			return out[i].Skill < out[j].Skill
+		}
+		return out[i].Lang < out[j].Lang
+	})
+	return out, nil
 }
 
 func (f *fakeStore) ProficiencyDescriptionKeys(context.Context) ([]storeq.ProficiencyDescription, error) {

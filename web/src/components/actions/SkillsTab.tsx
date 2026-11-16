@@ -12,6 +12,8 @@ import {
   ProficiencyNameButton,
   type ProficiencyFacts,
 } from "@/components/proficiencies/ProficiencyDialog";
+import { SkillNameButton } from "@/components/skills/SkillDialog";
+import type { RogueSkill } from "@/types/skills";
 import { SkillTerms } from "./SkillBreakdown";
 import { useCharacterStore } from "@/stores/character";
 import { skillName } from "@/journal/words";
@@ -69,6 +71,9 @@ export function SkillsTab() {
       blocked?: boolean;
       /** A proficiency: its name opens the description, apart from the roll. */
       facts?: ProficiencyFacts;
+      /** A skill of a skill set: its name opens the set's description of it, apart from the
+       * roll (ADR 0037 step 19.6). */
+      rogue?: RogueSkill;
     }[],
     after?: ReactNode,
   ) => {
@@ -97,70 +102,114 @@ export function SkillsTab() {
           />
         )}
         <ul aria-label={label} className="flex flex-col gap-1">
-          {list.map(({ id: skill, value, terms, unusable, blocked, facts }) => {
-            const name = skillName(t, skill);
-            // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
-            const label = blocked
-              ? t("skills.blocked", { name })
-              : unusable
-                ? t("skills.unusable", { name })
-                : t("skills.rollLabel", { name });
-            if (facts)
+          {list.map(
+            ({ id: skill, value, terms, unusable, blocked, facts, rogue }) => {
+              const name = skillName(t, skill);
+              // ADR 0030 step 17 (PHB p.39): a thieving skill under 1% waits for points.
+              const label = blocked
+                ? t("skills.blocked", { name })
+                : unusable
+                  ? t("skills.unusable", { name })
+                  : t("skills.rollLabel", { name });
+              if (facts)
+                return (
+                  <li key={skill}>
+                    {/* Two targets in one raised stripe: the name opens the description, the ability
+                      and target part rolls the check. */}
+                    <div
+                      className="flex min-h-7 w-full items-stretch gap-1 rounded-md bg-raised text-body"
+                      data-testid={`skill-row-${skill}`}
+                    >
+                      <ProficiencyNameButton
+                        facts={facts}
+                        className="min-w-0 flex-1 rounded-md px-2.5 py-0.5 text-left transition-colors hover:bg-raised-hover"
+                      />
+                      <button
+                        type="button"
+                        className="flex items-center rounded-md px-2.5 py-0.5 transition-colors hover:bg-raised-hover disabled:text-ink-muted"
+                        disabled={rolling || unusable}
+                        aria-label={label}
+                        title={label}
+                        data-testid={`skill-${skill}`}
+                        onClick={() => void rollIn(skill, skillSet)}
+                      >
+                        {value}
+                      </button>
+                    </div>
+                  </li>
+                );
+              if (rogue && skillSet)
+                return (
+                  <li key={skill}>
+                    {/* Two targets in one raised stripe, as a proficiency's: the name opens the set's
+                      description, the percentage part rolls the check. The terms and the armour tag
+                      stay under the name. */}
+                    <div
+                      className="flex min-h-7 w-full items-stretch gap-1 rounded-md bg-raised text-body"
+                      data-testid={`skill-row-${skillSet}-${skill}`}
+                    >
+                      <div className="flex min-w-0 flex-1 flex-col">
+                        <SkillNameButton
+                          set={skillSet}
+                          skill={rogue}
+                          className="min-w-0 rounded-md px-2.5 py-0.5 text-left transition-colors hover:bg-raised-hover"
+                        />
+                        <span className="flex min-w-0 flex-col px-2.5 pb-0.5">
+                          {terms}
+                          {blocked && (
+                            <span
+                              className="text-label text-warning"
+                              data-testid={`skill-blocked-${skill}`}
+                            >
+                              {t("skills.blockedTag")}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="flex items-center rounded-md px-2.5 py-0.5 transition-colors hover:bg-raised-hover disabled:text-ink-muted"
+                        disabled={rolling || unusable}
+                        aria-label={label}
+                        title={label}
+                        data-testid={`skill-${skill}`}
+                        onClick={() => void rollIn(skill, skillSet)}
+                      >
+                        {value}
+                      </button>
+                    </div>
+                  </li>
+                );
               return (
                 <li key={skill}>
-                  {/* Two targets in one raised stripe: the name opens the description, the ability
-                      and target part rolls the check. */}
-                  <div
-                    className="flex min-h-7 w-full items-stretch gap-1 rounded-md bg-raised text-body"
-                    data-testid={`skill-row-${skill}`}
+                  {/* The shared clickable row (the saves' rows): a raised stripe, hover and focus. */}
+                  <button
+                    type="button"
+                    className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors hover:bg-raised-hover disabled:text-ink-muted"
+                    disabled={rolling || unusable}
+                    aria-label={label}
+                    title={label}
+                    data-testid={`skill-${skill}`}
+                    onClick={() => void rollIn(skill, skillSet)}
                   >
-                    <ProficiencyNameButton
-                      facts={facts}
-                      className="min-w-0 flex-1 rounded-md px-2.5 py-0.5 text-left transition-colors hover:bg-raised-hover"
-                    />
-                    <button
-                      type="button"
-                      className="flex items-center rounded-md px-2.5 py-0.5 transition-colors hover:bg-raised-hover disabled:text-ink-muted"
-                      disabled={rolling || unusable}
-                      aria-label={label}
-                      title={label}
-                      data-testid={`skill-${skill}`}
-                      onClick={() => void rollIn(skill, skillSet)}
-                    >
-                      {value}
-                    </button>
-                  </div>
+                    <span className="flex min-w-0 flex-col">
+                      <span className="break-words">{name}</span>
+                      {terms}
+                      {blocked && (
+                        <span
+                          className="text-label text-warning"
+                          data-testid={`skill-blocked-${skill}`}
+                        >
+                          {t("skills.blockedTag")}
+                        </span>
+                      )}
+                    </span>
+                    {value}
+                  </button>
                 </li>
               );
-            return (
-              <li key={skill}>
-                {/* The shared clickable row (the saves' rows): a raised stripe, hover and focus. */}
-                <button
-                  type="button"
-                  className="grid min-h-7 w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-md bg-raised px-2.5 py-0.5 text-left text-body transition-colors hover:bg-raised-hover disabled:text-ink-muted"
-                  disabled={rolling || unusable}
-                  aria-label={label}
-                  title={label}
-                  data-testid={`skill-${skill}`}
-                  onClick={() => void rollIn(skill, skillSet)}
-                >
-                  <span className="flex min-w-0 flex-col">
-                    <span className="break-words">{name}</span>
-                    {terms}
-                    {blocked && (
-                      <span
-                        className="text-label text-warning"
-                        data-testid={`skill-blocked-${skill}`}
-                      >
-                        {t("skills.blockedTag")}
-                      </span>
-                    )}
-                  </span>
-                  {value}
-                </button>
-              </li>
-            );
-          })}
+            },
+          )}
         </ul>
         {after}
       </section>
@@ -223,6 +272,7 @@ export function SkillsTab() {
               // server says which skill cannot be rolled yet.
               skillSet.skills.map((s) => ({
                 id: s.id,
+                rogue: s,
                 unusable: !s.usable,
                 blocked: s.blocked,
                 terms: (

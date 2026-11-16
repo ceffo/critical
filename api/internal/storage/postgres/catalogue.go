@@ -31,6 +31,7 @@ import (
 //     rolls the import back.
 //   - 16.3: the proficiency descriptions are upserted as localized_texts in the same transaction
 //     (importProficiencyDescriptions), so a failure anywhere rolls them back with the spells.
+//   - 33.3: the skill descriptions are upserted the same way (importSkillDescriptions).
 //   - 5.5: format and version are recorded in the same transaction.
 //   - 5.6: the typed stats are parsed from the six raw texts on upsert, and on every start
 //     (retypeStats): a parser change re-types the stored stats without a new artifact version or
@@ -67,6 +68,9 @@ func importCatalogue(ctx context.Context, tx domain.TxRunner, q storeq.Querier, 
 			return err
 		}
 		if err := importProficiencyDescriptions(ctx, q, cat); err != nil {
+			return err
+		}
+		if err := importSkillDescriptions(ctx, q, cat); err != nil {
 			return err
 		}
 		if err := q.RecordCatalogueVersion(ctx, storeq.RecordCatalogueVersionParams{
@@ -134,6 +138,89 @@ func importProficiencyDescriptions(ctx context.Context, q storeq.Querier, cat ca
 		}
 	}
 	return nil
+}
+
+// importSkillDescriptions is ADR 0021 step 33.3, as importProficiencyDescriptions is step 16.3:
+// each skill description becomes localized_texts rows (one per language, ADR 0023) keyed from the
+// (skill set, skill) pair in skill_descriptions. Rows are upserted by pair, keeping a row's text
+// key across imports and writing only changed rows; a row the artifact no longer lists is deleted
+// with its texts (nothing in game state refers to a description). The pairs agree with the
+// artifact's skill sets, and both languages are present, before the import is called
+// (catalogue.CheckSkillDescriptions).
+func importSkillDescriptions(ctx context.Context, q storeq.Querier, cat catalogue.Catalogue) error {
+	w, err := newTextWriter(ctx, q)
+	if err != nil {
+		return err
+	}
+	rows, err := q.SkillDescriptionKeys(ctx)
+	if err != nil {
+		return fmt.Errorf("read skill descriptions: %w", err)
+	}
+	stored := make(map[catalogue.SkillPair]int64, len(rows))
+	for _, r := range rows {
+		stored[catalogue.SkillPair{Set: r.SkillSet, Skill: r.Skill}] = r.Description
+	}
+	listed := make(map[catalogue.SkillPair]bool, len(cat.SkillDescriptions))
+	for _, d := range cat.SkillDescriptions {
+		pair := catalogue.SkillPair{Set: d.Set, Skill: d.Skill}
+		listed[pair] = true
+		prev := sql.NullInt64{}
+		if k, ok := stored[pair]; ok {
+			prev = sql.NullInt64{Int64: k, Valid: true}
+		}
+		key, err := w.write(ctx, q, prev, d.Description)
+		if err != nil {
+			return fmt.Errorf("skill %s/%s: %w", d.Set, d.Skill, err)
+		}
+		if !key.Valid {
+			return fmt.Errorf("skill %s/%s: the description has no text", d.Set, d.Skill)
+		}
+		if err := q.UpsertSkillDescription(ctx, storeq.UpsertSkillDescriptionParams{
+			SkillSet: d.Set, Skill: d.Skill, Description: key.Int64,
+		}); err != nil {
+			return fmt.Errorf("upsert skill description %s/%s: %w", d.Set, d.Skill, err)
+		}
+	}
+	gone := make([]catalogue.SkillPair, 0)
+	for pair := range stored {
+		if !listed[pair] {
+			gone = append(gone, pair)
+		}
+	}
+	sort.Slice(gone, func(i, j int) bool {
+		if gone[i].Set != gone[j].Set {
+			return gone[i].Set < gone[j].Set
+		}
+		return gone[i].Skill < gone[j].Skill
+	})
+	for _, pair := range gone {
+		// The row first, then the texts it keyed: nothing is left pointing at a deleted text.
+		if err := q.DeleteSkillDescription(ctx, storeq.DeleteSkillDescriptionParams{SkillSet: pair.Set, Skill: pair.Skill}); err != nil {
+			return fmt.Errorf("delete skill description %s/%s: %w", pair.Set, pair.Skill, err)
+		}
+		if err := q.DeleteText(ctx, stored[pair]); err != nil {
+			return fmt.Errorf("delete texts of skill %s/%s: %w", pair.Set, pair.Skill, err)
+		}
+	}
+	return nil
+}
+
+// SkillDescriptions reads every stored skill description (ADR 0021 step 33.6, ADR 0037 step
+// 19.6) as a language map, in the order of the pairs. The server reads them once after its
+// import, as it does the proficiency descriptions.
+func (d *DB) SkillDescriptions(ctx context.Context) ([]catalogue.SkillDescription, error) {
+	rows, err := d.q.SkillDescriptionTexts(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read skill descriptions: %w", err)
+	}
+	var out []catalogue.SkillDescription
+	for _, r := range rows {
+		if n := len(out); n == 0 || out[n-1].Set != r.SkillSet || out[n-1].Skill != r.Skill {
+			out = append(out, catalogue.SkillDescription{Set: r.SkillSet, Skill: r.Skill, Description: localized.Text{}})
+		}
+		out[len(out)-1].Description[r.Lang] = r.Body
+	}
+	return out, nil
 }
 
 // ProficiencyDescriptions reads every stored proficiency description (ADR 0021 step 16.6, ADR

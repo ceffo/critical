@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { OVER_BUDGET } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
+import { SkillNameButton } from "@/components/skills/SkillDialog";
 import { skillName } from "@/journal/words";
 import { cn } from "@/lib/utils";
 import { useSkillsStore } from "@/stores/skills";
@@ -165,12 +166,16 @@ export function ThiefPointsEditor({
           const preview = shown.skills.find((p) => p.id === s.id);
           return (
             <div key={s.id} className="flex min-w-0 flex-col justify-end gap-1">
-              <label
-                htmlFor={`thief-points-${s.id}`}
-                className={cn(labelClass, "break-words")}
-              >
-                {name}
-              </label>
+              {/* The name opens the set's description of the skill (ADR 0037 step 19.6); the field
+                  keeps its own accessible name. */}
+              <SkillNameButton
+                set={set}
+                skill={s}
+                className={cn(
+                  labelClass,
+                  "w-fit max-w-full rounded-md text-left break-words underline-offset-2 hover:underline",
+                )}
+              />
               <input
                 id={`thief-points-${s.id}`}
                 className={fieldClass}

@@ -198,13 +198,13 @@ func refuseEach(t *testing.T, changes map[string]func(a map[string]any)) {
 }
 
 // TestSchema_Step14_OnlyTheNextFormatIsValid (ADR 0040 step 14, ADR 0021 steps 16.5, 17.3, 18.3, 19.3, 20.3 21.2,
-// 22.2, 23.2, 24.2, 25.5, 27.5, 30.3, 31.3 and 32.3): the schema accepts format 24 only; every earlier format, retired, is refused
-// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 24
+// 22.2, 23.2, 24.2, 25.5, 27.5, 30.3, 31.3, 32.3 and 33.3): the schema accepts format 25 only; every earlier format, retired, is refused
+// whatever it carries (the API refuses it as an unknown format), and so is an artifact without a part format 25
 // requires, or with a table or a shape of an earlier format.
 func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 24")
-	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23} {
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 25")
+	for _, f := range []int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24} {
 		a := fixtureDoc(t)
 		a["format"] = f
 		assert.Error(t, sch.Validate(a), "format %d", f)
@@ -212,20 +212,20 @@ func TestSchema_Step14_OnlyTheNextFormatIsValid(t *testing.T) {
 	for _, part := range []string{"skill_sets", "equipment", "languages", "proficiency_descriptions", "rule_tables", "classes", "groups", "races", "disciplines", "powers"} {
 		a := fixtureDoc(t)
 		delete(a, part)
-		assert.Error(t, sch.Validate(a), "format 24 requires %s", part)
+		assert.Error(t, sch.Validate(a), "format 25 requires %s", part)
 	}
 	for _, table := range []string{"psionicist_powers", "inherent_potential", "psp_recovery", "attack_versus_defence", "contact_cost", "contact_modifiers"} {
 		a := fixtureDoc(t)
 		delete(tables(a), table)
-		assert.Error(t, sch.Validate(a), "format 24 requires the table %s", table)
+		assert.Error(t, sch.Validate(a), "format 25 requires the table %s", table)
 	}
 	a := fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "magic_defence")
-	assert.Error(t, sch.Validate(a), "format 24 requires the magical defence adjustment")
+	assert.Error(t, sch.Validate(a), "format 25 requires the magical defence adjustment")
 	// ADR 0021 step 19.1: every wisdom row carries its spell immunities, ids only.
 	a = fixtureDoc(t)
 	delete(row(tables(a), "wisdom", 7), "spell_immunities")
-	assert.Error(t, sch.Validate(a), "format 24 requires the spell immunities")
+	assert.Error(t, sch.Validate(a), "format 25 requires the spell immunities")
 	// ADR 0040 steps 12 to 14: the skill sets, Table 28 by skill and the specialization params.
 	refuseEach(t, map[string]func(a map[string]any){
 		"the thief skill base table back":   func(a map[string]any) { tables(a)["thief_skill_base"] = tables(a)["skill_race"] },
@@ -624,6 +624,41 @@ func TestFixture_Step16_ProficiencyDescriptionsAreInventedForEveryId(t *testing.
 	assert.Positive(t, tables, "one description with a table")
 }
 
+// TestFixture_Step33_SkillDescriptionsAreInventedForEveryPair (ADR 0021 steps 33.4 and 7): the
+// fixture holds a description in English and French for each skill of each of its skill sets,
+// invented placeholder text and never book text, the rows in the sets' order.
+func TestFixture_Step33_SkillDescriptionsAreInventedForEveryPair(t *testing.T) {
+	raw, err := os.ReadFile("../../testdata/catalogue.json")
+	require.NoError(t, err)
+	var cat struct {
+		Sets []struct {
+			ID     string `json:"id"`
+			Skills []struct {
+				ID string `json:"id"`
+			} `json:"skills"`
+		} `json:"skill_sets"`
+		Rows []struct {
+			Set         string            `json:"set"`
+			Skill       string            `json:"skill"`
+			Description map[string]string `json:"description"`
+		} `json:"skill_descriptions"`
+	}
+	require.NoError(t, json.Unmarshal(raw, &cat))
+	var want [][2]string
+	for _, set := range cat.Sets {
+		for _, k := range set.Skills {
+			want = append(want, [2]string{set.ID, k.ID})
+		}
+	}
+	require.Len(t, cat.Rows, len(want))
+	require.Len(t, want, 12, "the thief's eight skills and the bard's four")
+	for i, r := range cat.Rows {
+		assert.Equal(t, want[i], [2]string{r.Set, r.Skill}, "the rows follow the sets' order")
+		assert.True(t, strings.HasPrefix(r.Description["en"], "Invented fixture text for "), "%s/%s: invented English only", r.Set, r.Skill)
+		assert.True(t, strings.HasPrefix(r.Description["fr"], "Texte inventé pour "), "%s/%s: invented French only", r.Set, r.Skill)
+	}
+}
+
 // weaponToHit is the params of the first race's weapon_to_hit trait in a, for a test to edit.
 func weaponToHit(t *testing.T, a map[string]any) map[string]any {
 	t.Helper()
@@ -687,7 +722,7 @@ func classByID(t *testing.T, a map[string]any, id string) map[string]any {
 // the eight specialists' included (70 rows); and the format-22 shapes are refused.
 func TestSchema_Step4_SchoolsAndTheSpecializationKind(t *testing.T) {
 	sch := compile(t)
-	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 24")
+	assert.NoError(t, sch.Validate(fixtureDoc(t)), "the fixture is format 25")
 
 	wizard := func(a map[string]any) map[string]any { return a["spells"].([]any)[0].(map[string]any) }
 	priest := func(a map[string]any) map[string]any {

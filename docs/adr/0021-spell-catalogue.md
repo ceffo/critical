@@ -10,6 +10,7 @@ user; the API reads formats 5 and 6, the builder publishing format 6 is a separa
 Step 13 (the equipment, format 7) is **decided as built**, 2026-10-18 (CRI-33; the API reads formats 6 and 7).
 Step 14 (the languages, format 8) is **decided as built**, 2026-10-18 (the API reads formats 7 and 8).
 Step 15 (the gameplay values of a spell text, marked by the API, no format change) is **decided as built**, 2026-10-19.
+Step 33 (the skill descriptions, format 25; the API reads format 25 only) is **decided as built**, 2026-11-16 (user triage of 2026-11-15, CRI-119).
 Step 16 (the proficiency descriptions, format 9; the API reads format 9 only) is **decided as built**, 2026-10-20 (user triage of 2026-10-20).
 Step 18 (the class, group and race definitions, format 11; the API reads format 11 only) is **decided as built**, 2026-10-22: the data
 of [ADR 0040](0040-classes-are-data.md) step 11.1, which decided the shape.
@@ -855,6 +856,41 @@ is only ever appended to by play.
 32. **Format 24: the free proficiencies kind** (**decided as built** 2026-11-15; [ADR 0037](0037-proficiencies.md) step 22.1).
     1. The class feature kind `free_proficiencies` (`$defs/feature_params_free_proficiencies`: `nonweapon`, the non-weapon proficiency ids the class gets at no slot cost from the feature's `from_level`, at least one, each once, no other key). That each id is a non-weapon catalogue id (`seeds/proficiencies.json`) other than `languages_modern` is the start-up's check (`ruletablesvc.NewProficiencies`), which the schema cannot say. The bard lists it at level 1 with `reading_writing`, `local_history`, `singing` and `musical_instrument`; no other class does.
     2. **Rollout, as step 18.6.** The API reads **format 24 only** (formats 1 to 23 are refused); the builder publishes format 24 first (`scripts/format24.py` lifts the pinned format 23 schema until the re-pin). Tests: `TestParse_Step4_ReadsTheNewFormatAndRefusesTheOld` (catalogueadpt, since format 24: format 23 refused), `TestSchema_Step14_OnlyTheNextFormatIsValid` (cataloguecheck), `TestImport_Step22_1_RefusesABrokenFreeList` (ruletablesadpt), `TestFreeProficiencies_Step22_1_TheBardListsItsFour` (seedcheck, on the real artifact).
+
+33. **Format 25: the skill descriptions** (**decided** 2026-11-16; user triage of 2026-11-15: each thief skill shows the thief chapter's
+    explanation, the bard his own paragraph for his four; [ADR 0037](0037-proficiencies.md) step 19.6 shows them). Format 25 is format 24
+    plus one top-level list, as format 9 was for the proficiencies (step 16), one text per skill of a skill set. Backstab and scroll use
+    have no percentage and are no skill of a set: they have no row.
+    1. **`skill_descriptions`**, required, exactly 12 rows `{set, skill, description}` (the thief's eight, the bard's four): `set` a skill
+       set id and `skill` one of its skills' ids (`^[a-z0-9]+(_[a-z0-9]+)*$`), the pair once; `description` a language map with **both**
+       `en` and `fr`, each in step 1's Markdown subset (no leading or trailing whitespace). The key is the **pair**: a set has its own
+       text for a skill (the bard's Pick Pockets is the bard's paragraph, not the thief's), so nothing in the code names a class: the
+       data per skill set decides. No other property: the name stays an i18n key by skill id, the figures stay in `skill_sets`.
+    2. **Extraction and the builder** (`critical-rulebooks`; no agent reads pages). A committed script (`scripts/skill_descriptions.py`)
+       reads the PHB OCR and the *Manuel des Joueurs* OCR, as step 16.2; hand fixes go in `catalogue-inputs/SKILL_DESCRIPTION_OVERRIDES`,
+       keyed by `set/skill` and language, applied after the extraction and listed by the builder. The builder refuses to publish, naming
+       the set, the skill and the language, when a skill of a set has no row, a row names no skill of a set, a pair repeats, a language is
+       missing or empty, or a text breaks step 1's lint.
+    3. **Import and the check.** In the same transaction as the spells (step 5.4) each description becomes `localized_texts` rows, `en` and
+       `fr` (ADR 0023), keyed by the pair in `skill_descriptions (skill_set, skill, description)` (migration 047, no foreign key: the
+       skill sets are read from the artifact at every start, not stored); rows are upserted by pair, a row the artifact no longer lists is
+       deleted with its texts, a second import of the same artifact changes nothing and a failed import changes nothing. The start
+       refuses, before anything is seeded or imported and naming the set, the skill and the language, what the builder refuses
+       (`catalogue.CheckSkillDescriptions` against the artifact's skill sets).
+    4. **The fixture is format 25** (`api/testdata/catalogue.json`): the 12 rows with **invented** `en` and `fr` text, never book text
+       (step 7), and no description in `seeds/` or the locale files.
+    5. **Rollout, as step 18.6.** The API reads **format 25 only** (formats 1 to 24 are refused with the advice to run `just catalogue`);
+       the builder publishes format 25 first.
+    6. **Served by the API, never by the seeds** (ADR 0037 step 19.6): the server reads the texts back from `localized_texts` once after the
+       import and serves them from memory (`skilldescsvc`, `skilldeschdl`).
+    Tests: `TestSchema_Step14_OnlyTheNextFormatIsValid` (format 25 only), `TestFixture_Step33_SkillDescriptionsAreInventedForEveryPair`
+    (cataloguecheck), `TestParse_Step33_ReadsAndRefusesSkillDescriptions`, `TestParse_Step4_ReadsTheNewFormatAndRefusesTheOld`
+    (catalogueadpt), `TestCheckSkillDescriptions_Step33_RefusesAMissingLanguageOrPairMismatch` (domain/catalogue),
+    `TestImportCatalogue_Step33_SkillDescriptionsInLocalizedTexts`, `TestImportCatalogue_Step33_ReimportChangesNothing`,
+    `TestImportCatalogue_Step33_FailedImportChangesNothing` (storage/postgres), `TestStore_Step33_KeepsTheSkillDescriptions` (memory),
+    `TestStartup_Step33_RefusesASkillDescriptionPairMismatch`, `TestStartup_Step33_RefusesFormat24AndNamesJustCatalogue` (composition),
+    `TestFixture_Step33_SkillDescriptionsAgreeWithTheSkillSets`, `TestRealCatalogue_Step33_EverySkillDescribedInBothLanguages` (seedcheck;
+    the real one skipped without a format-25 `.catalogue/catalogue.json`).
 
 26. **The six spell stats are typed once, by the importer; the rest reads the typed value** (accepted 2026-10-23, design only; no code and no format change in this
     step; user triage 2026-10-22, "file 7"). The amendment of step 8 (typed stats) and step 5.6 (import rules). What it fixes is a

@@ -1,5 +1,5 @@
 {
-  "format": 24,
+  "format": 25,
   "version": "1970-01-01",
   "spells": [
     {
@@ -1946,6 +1946,20 @@
   "skill_sets": [
     {"id": "thief", "name": {"en": "Thief skills", "fr": "Talents de voleur"}, "min_percent": 1, "skills": [{"id": "pick_pockets", "base": 15}, {"id": "open_locks", "base": 10, "armour_free": true}, {"id": "find_remove_traps", "base": 5}, {"id": "move_silently", "base": 10}, {"id": "hide_in_shadows", "base": 5}, {"id": "detect_noise", "base": 15, "armour_free": true}, {"id": "climb_walls", "base": 60}, {"id": "read_languages", "base": 0}]},
     {"id": "bard", "name": {"en": "Bard skills", "fr": "Talents de barde"}, "min_percent": 0, "skills": [{"id": "climb_walls", "base": 50}, {"id": "detect_noise", "base": 20}, {"id": "pick_pockets", "base": 10}, {"id": "read_languages", "base": 5}]}
+  ],
+  "skill_descriptions": [
+    {"set": "thief", "skill": "pick_pockets", "description": {"en": "Invented fixture text for pick_pockets of the thief set. It stands in for the book's description.\n\nIt has a list:\n\n- first invented item\n- second invented item", "fr": "Texte inventé pour pick_pockets du jeu thief. Il remplace la description du livre.\n\nIl contient une liste:\n\n- premier élément inventé\n- second élément inventé"}},
+    {"set": "thief", "skill": "open_locks", "description": {"en": "Invented fixture text for open_locks of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour open_locks du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "find_remove_traps", "description": {"en": "Invented fixture text for find_remove_traps of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour find_remove_traps du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "move_silently", "description": {"en": "Invented fixture text for move_silently of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour move_silently du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "hide_in_shadows", "description": {"en": "Invented fixture text for hide_in_shadows of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour hide_in_shadows du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "detect_noise", "description": {"en": "Invented fixture text for detect_noise of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour detect_noise du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "climb_walls", "description": {"en": "Invented fixture text for climb_walls of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour climb_walls du jeu thief. Il remplace la description du livre."}},
+    {"set": "thief", "skill": "read_languages", "description": {"en": "Invented fixture text for read_languages of the thief set. It stands in for the book's description.", "fr": "Texte inventé pour read_languages du jeu thief. Il remplace la description du livre."}},
+    {"set": "bard", "skill": "climb_walls", "description": {"en": "Invented fixture text for climb_walls of the bard set. It stands in for the book's description.", "fr": "Texte inventé pour climb_walls du jeu bard. Il remplace la description du livre."}},
+    {"set": "bard", "skill": "detect_noise", "description": {"en": "Invented fixture text for detect_noise of the bard set. It stands in for the book's description.", "fr": "Texte inventé pour detect_noise du jeu bard. Il remplace la description du livre."}},
+    {"set": "bard", "skill": "pick_pockets", "description": {"en": "Invented fixture text for pick_pockets of the bard set. It stands in for the book's description.", "fr": "Texte inventé pour pick_pockets du jeu bard. Il remplace la description du livre."}},
+    {"set": "bard", "skill": "read_languages", "description": {"en": "Invented fixture text for read_languages of the bard set. It stands in for the book's description.", "fr": "Texte inventé pour read_languages du jeu bard. Il remplace la description du livre."}}
   ],
   "disciplines": [
     {"id": "clairsentience", "name": {"en": "Clairsentience", "fr": "Clairsentience"}},

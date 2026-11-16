@@ -2514,6 +2514,18 @@
       "weaponsmithing": "Forge d’armes",
       "rejuvenation": "Régénérescence"
     },
+    "details": {
+      "open": "Description de {{name}}",
+      "close": "Fermer",
+      "base": "Base",
+      "points": "Points",
+      "race": "Race",
+      "dexterity": "Dextérité",
+      "armor": "Armure",
+      "total": "Total",
+      "failed": "La description n'a pas pu être lue.",
+      "empty": "Aucune description."
+    },
     "thiefTerms": "Base {{base}} + points {{points}}, race {{race}}, Dextérité {{dexterity}}, armure {{armor}} ({{max}} % au plus)",
     "budget": {
       "skill_points_total": "Points de talent : {{points}} au total, {{limit}} au plus à ce niveau",

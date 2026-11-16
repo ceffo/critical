@@ -704,6 +704,18 @@ func TestStore_Step16_KeepsTheProficiencyDescriptions(t *testing.T) {
 	assert.Equal(t, artifact.Catalogue.ProficiencyDescriptions, got)
 }
 
+// ADR 0021 step 33: the in-memory store keeps the catalogue's skill descriptions, as language
+// maps, and gives them back in the artifact's order (what the e2e suite's server serves).
+func TestStore_Step33_KeepsTheSkillDescriptions(t *testing.T) {
+	s, _ := seeded(t)
+	artifact, err := catalogueadpt.LoadArtifact(catalogueFile)
+	require.NoError(t, err)
+	got, err := s.SkillDescriptions(context.Background())
+	require.NoError(t, err)
+	require.Len(t, got, 12)
+	assert.Equal(t, artifact.Catalogue.SkillDescriptions, got)
+}
+
 // ADR 0043 step 4: a seed character file may carry psp_max, so the e2e stack can seed a
 // psionicist (the class is not creatable yet); without it the maximum is 0.
 func TestSeed_Step4_ThePSPMaxOfTheSeedFileIsStored(t *testing.T) {

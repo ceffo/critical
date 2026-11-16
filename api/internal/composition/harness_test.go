@@ -86,6 +86,7 @@ func newHarness(t *testing.T) *harness {
 	h.Rulesets.EXPECT().SetCatalogueVersion(mock.Anything, int64(1), mock.Anything).Return(nil).Maybe()
 	// The proficiency descriptions are read back after the import (ADR 0021 step 16.6).
 	h.Store.EXPECT().ProficiencyDescriptions(mock.Anything).Return(nil, nil).Maybe()
+	h.Store.EXPECT().SkillDescriptions(mock.Anything).Return(nil, nil).Maybe()
 	return h
 }
 

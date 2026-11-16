@@ -984,6 +984,22 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
         await bg(row),
       );
     }
+    // The situational controls open on both blocks, with a modifier and a reason set.
+    for (const toggle of await skills
+      .getByTestId("skill-modifier-toggle")
+      .all())
+      await toggle.click();
+    for (const raise of await skills
+      .getByRole("button", { name: "Monter le modificateur" })
+      .all())
+      await raise.click();
+    for (const reason of await skills
+      .getByPlaceholder("ex. attaque de dos")
+      .all())
+      await reason.fill("à la lueur des torches");
+    await expectNoClippedText(skills, `skills modifier, ${where}`);
+    await expectWholeWords(skills, `skills modifier, ${where}`);
+    await expectNoPageScroll(page);
     if (SHOTS.has(`${vp.width}x${vp.height}`))
       await snap(page, `act-skills-fr-${vp.width}x${vp.height}`);
     await actions.getByRole("tab", { name: "Armes" }).click();

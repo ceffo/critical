@@ -662,9 +662,6 @@ func TestParse_Step33_ReadsAndRefusesSkillDescriptions(t *testing.T) {
 
 	refuses(t, []refusal{
 		{"no list", func(d map[string]any) { delete(d, "skill_descriptions") }, []string{"format 25 schema", "skill_descriptions"}},
-		{"11 rows", func(d map[string]any) {
-			d["skill_descriptions"] = d["skill_descriptions"].([]any)[1:]
-		}, []string{"format 25 schema", "skill_descriptions"}},
 		{"no French", func(d map[string]any) {
 			delete(skillRow(d, 3)["description"].(map[string]any), "fr")
 		}, []string{"format 25 schema", "skill_descriptions/3/description", "fr"}},

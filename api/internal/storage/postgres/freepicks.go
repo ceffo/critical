@@ -23,7 +23,7 @@ const nonweaponKey = "nonweapon"
 // returnFreeSlots is ADR 0037 step 22.7, the data step after migration 046: for each character
 // and each stored non-weapon pick whose id one of its class entries grants free (an active entry
 // at its realized level, a frozen one at its left-at level; step 22.5), the slots become the
-// stored slots minus the cost the pick paid before (step 4 on the active entries' groups, ADR 0042
+// stored slots minus the cost the pick paid before (step 4 on every entry's groups, a frozen one's included, ADR 0042
 // step 15), never below 0 (skills.ReturnFreeSlots). Every other key of the column, and every other
 // pick, is written back as stored. A character who holds none of them is not written; each
 // converted one is logged with the ids and the slots returned. Nothing is refused. It runs once,

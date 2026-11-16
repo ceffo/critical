@@ -52,8 +52,8 @@ func returnFree(t *testing.T, f *fakeStore) error {
 // A fighter's singing (no grant) and a bard who holds none of the four are unchanged (the latter not
 // written at all). Step 22.5 on several entries: a fighter left at 5 now bard 1 gets them free,
 // paying before at the active bard's groups (reading_writing 1, so 2 slots become 1); a bard left at
-// 5 now fighter 2 keeps them free, paying before at the fighter's groups (reading_writing 2 outside
-// them, so 2 slots become 0; singing, general, 1).
+// 5 now fighter 2 keeps them free, paying before on every entry's groups, the frozen bard's
+// included (reading_writing 1 there, so 2 slots become 1; singing, general, 1).
 func TestMigrate_Step22_7_AFreePickStopsPaying(t *testing.T) {
 	f := newFakeStore()
 	bard := entriesCharacter(t, f, `{"nonweapon":[{"id":"reading_writing","slots":1},{"id":"local_history","slots":1},
@@ -73,8 +73,8 @@ func TestMigrate_Step22_7_AFreePickStopsPaying(t *testing.T) {
 	assert.JSONEq(t, `{"nonweapon":[{"id":"singing","slots":1}]}`, f.picks(fighter), "no grant: unchanged")
 	assert.Equal(t, without, f.t.Picks[other], "none of the four: not written")
 	assert.JSONEq(t, `{"nonweapon":[{"id":"reading_writing","slots":1}]}`, f.picks(toBard), "the active bard grants it")
-	assert.JSONEq(t, `{"nonweapon":[{"id":"reading_writing","slots":0},{"id":"singing","slots":0}]}`, f.picks(toFighter),
-		"the frozen bard grants it, at the fighter's cost")
+	assert.JSONEq(t, `{"nonweapon":[{"id":"reading_writing","slots":1},{"id":"singing","slots":0}]}`, f.picks(toFighter),
+		"the frozen bard grants it, at the cost it paid as a bard")
 }
 
 // ADR 0037 step 22.7 and ADR 0025 step 3: the data step runs once, with migration 046; a later run

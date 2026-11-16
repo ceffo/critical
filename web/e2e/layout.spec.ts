@@ -2792,9 +2792,14 @@ async function profPopupStep(page: Page, size: Viewport) {
   ])) {
     await page.setViewportSize(vp);
     const where = `${vp.width}x${vp.height}`;
+    await points.scrollIntoViewIfNeeded();
     await expectNoClippedText(points, `skill points editor, ${where}`);
     await expectWholeWords(points, `skill points editor, ${where}`);
     await snap(page, `skill-points-fr-${where}`);
+    await points.screenshot({
+      path: `e2e-results/screens/layout/skill-points-block-fr-${where}.png`,
+      animations: "disabled",
+    });
   }
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");

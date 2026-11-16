@@ -1,5 +1,10 @@
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { SlidersHorizontal } from "@phosphor-icons/react";
+import { Button } from "@/components/ui/button";
+import { Stepper } from "@/components/actions/Stepper";
+import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { maxSkillAdjustment, skillAdjustmentStep } from "@/lib/skillAdjust";
 import { useTableStore } from "@/stores/table";
 import { useRollStore } from "@/stores/roll";
 import { useSkillsStore } from "@/stores/skills";
@@ -30,6 +35,21 @@ export function SkillsTab() {
   const refresh = useTableStore((s) => s.refresh);
   const { rollSkill, rolling } = useRollStore();
   const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
+  // The situational modifier and its reason, one per block (a percentage's steps and bound are not
+  // a proficiency's); it applies to the next roll of that block and resets after it.
+  const [mods, setMods] = useState<Record<string, Modifier>>({});
+  const modOf = (key: string): Modifier => mods[key] ?? NO_MODIFIER;
+  const setMod = (key: string, m: Partial<Modifier>) =>
+    setMods((all) => ({
+      ...all,
+      [key]: { ...(all[key] ?? NO_MODIFIER), ...m },
+    }));
+  const rollIn = async (skill: string, skillSet: string | undefined) => {
+    const key = skillSet ?? "proficiency";
+    const { value, reason } = modOf(key);
+    const rolled = await rollSkill(skill, value, skillSet, reason.trim());
+    if (rolled) setMod(key, { value: 0, reason: "" });
+  };
   // Read once shown; then the action module reads them again when a write names what they follow
   // (an effect, an item, the points, the level).
   useEffect(() => {
@@ -53,12 +73,29 @@ export function SkillsTab() {
     after?: ReactNode,
   ) => {
     const label = heading;
-    const id = `skills-${skillSet ?? "proficiency"}`;
+    const key = skillSet ?? "proficiency";
+    const id = `skills-${key}`;
+    const panelId = `${id}-modifier`;
     return (
       <section aria-labelledby={id} className="flex min-w-0 flex-col gap-2">
-        <h3 id={id} className="group-heading section-label px-2.5">
-          {label}
+        <h3 className="group-heading section-label flex items-center gap-2 px-2.5">
+          <span id={id} className="min-w-0 flex-1">
+            {label}
+          </span>
+          <ModifierToggle
+            mod={modOf(key)}
+            panelId={panelId}
+            onChange={(m) => setMod(key, m)}
+          />
         </h3>
+        {modOf(key).open && (
+          <ModifierPanel
+            id={panelId}
+            percent={skillSet !== undefined}
+            mod={modOf(key)}
+            onChange={(m) => setMod(key, m)}
+          />
+        )}
         <ul aria-label={label} className="flex flex-col gap-1">
           {list.map(({ id: skill, value, terms, unusable, blocked, facts }) => {
             const name = skillName(t, skill);
@@ -88,7 +125,7 @@ export function SkillsTab() {
                       aria-label={label}
                       title={label}
                       data-testid={`skill-${skill}`}
-                      onClick={() => void rollSkill(skill, undefined, skillSet)}
+                      onClick={() => void rollIn(skill, skillSet)}
                     >
                       {value}
                     </button>
@@ -105,7 +142,7 @@ export function SkillsTab() {
                   aria-label={label}
                   title={label}
                   data-testid={`skill-${skill}`}
-                  onClick={() => void rollSkill(skill, undefined, skillSet)}
+                  onClick={() => void rollIn(skill, skillSet)}
                 >
                   <span className="flex min-w-0 flex-col">
                     <span className="break-words">{name}</span>
@@ -262,5 +299,111 @@ function Ability({
         </span>
       )}
     </span>
+  );
+}
+
+interface Modifier {
+  open: boolean;
+  value: number;
+  reason: string;
+}
+const NO_MODIFIER: Modifier = { open: false, value: 0, reason: "" };
+/** The server's limit on the reason (skillsvc). */
+const REASON_MAX = 80;
+
+/**
+ * The situational toggle of a block, as the attack panel's target bar has it (ADR 0027 step 1.5):
+ * the control is one click away, and a set modifier shows as a tag on the heading line.
+ */
+function ModifierToggle({
+  mod,
+  panelId,
+  onChange,
+}: {
+  mod: Modifier;
+  panelId: string;
+  onChange: (m: Partial<Modifier>) => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <>
+      {mod.value !== 0 && !mod.open && (
+        <span
+          className="chip px-1.5 font-semibold tabular-nums"
+          title={mod.reason.trim() || undefined}
+          data-testid="skill-situational-tag"
+        >
+          {t("attack.tags.situational", { value: formatSigned(mod.value) })}
+        </span>
+      )}
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon-sm"
+        aria-expanded={mod.open}
+        aria-controls={panelId}
+        aria-label={t("attack.modifiers")}
+        title={t("attack.modifiers")}
+        data-testid="skill-modifier-toggle"
+        onClick={() => onChange({ open: !mod.open })}
+      >
+        <SlidersHorizontal />
+      </Button>
+    </>
+  );
+}
+
+/**
+ * The attack panel's situational stepper and reason (same words), with the skill's own steps: 1 and
+ * ±20 for a proficiency, 5 and ±100 points for a percentage (what the server accepts). The reason
+ * appears once the modifier is not 0.
+ */
+function ModifierPanel({
+  id,
+  percent,
+  mod,
+  onChange,
+}: {
+  id: string;
+  percent: boolean;
+  mod: Modifier;
+  onChange: (m: Partial<Modifier>) => void;
+}) {
+  const { t } = useTranslation();
+  const kind = percent ? "rogueSkill" : "proficiency";
+  const max = maxSkillAdjustment(kind);
+  return (
+    <div
+      id={id}
+      className="flex flex-wrap items-center gap-x-4 gap-y-2 px-2.5"
+      data-testid="skill-modifier-panel"
+    >
+      <Stepper
+        label={t("attack.situational")}
+        lower={t("attack.lowerSituational")}
+        raise={t("attack.raiseSituational")}
+        value={mod.value}
+        signed
+        min={-max}
+        max={max}
+        step={skillAdjustmentStep(kind)}
+        onChange={(value) => onChange({ value })}
+      />
+      {mod.value !== 0 && (
+        <label className="flex min-w-40 flex-1 items-center gap-2">
+          <span className="text-body text-muted-foreground">
+            {t("attack.situationalLabel")}
+          </span>
+          <input
+            className={fieldClass}
+            type="text"
+            maxLength={REASON_MAX}
+            placeholder={t("attack.situationalPlaceholder")}
+            value={mod.reason}
+            onChange={(e) => onChange({ reason: e.target.value })}
+          />
+        </label>
+      )}
+    </div>
   );
 }

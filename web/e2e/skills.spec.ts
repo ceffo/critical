@@ -70,13 +70,36 @@ test("skills: roll a proficiency, adjust it on the card, roll a bard skill, undo
     `Climb walls: d100 ${d100} vs 85`,
   );
 
+  // A modifier before the roll (steps of 5 on a percentage) with its reason: on the card and the
+  // journal row, then reset.
+  const bard = panel.getByTestId("skill-set-bard");
+  await bard.getByTestId("skill-modifier-toggle").click();
+  for (let i = 0; i < 2; i++)
+    await bard.getByRole("button", { name: "Raise the modifier" }).click();
+  await bard.getByPlaceholder("e.g. rear attack").fill("rope to hold");
+  await expect(bard.getByRole("textbox", { name: "Situational" })).toHaveValue(
+    "+10",
+  );
+  await climb.click();
+  await expect(result.getByTestId("skill-vs")).toHaveText(/^\d+ vs 95%$/);
+  await expect(result.getByTestId("skill-adjustment-line")).toContainText(
+    "rope to hold",
+  );
+  await expect(combatLog(page)).toContainText("(85 +10 rope to hold)");
+  const d100Modified =
+    (await result.getByTestId("hex-die").textContent()) ?? "";
+  await expect(bard.getByRole("textbox", { name: "Situational" })).toHaveValue(
+    "0",
+  );
+  await snap(page, "skills-modifier-before-roll");
+
   // Undo pops the bard skill check: its journal row is cancelled, the proficiency's is not.
   const undo = page.getByTestId("undo");
   await expect(undo).toHaveAttribute("title", /Climb walls/);
   await undo.click();
   const voided = combatLog(page).locator('[data-status="voided"]');
   await expect(voided).toHaveCount(1);
-  await expect(voided).toContainText(`Climb walls: d100 ${d100}`);
+  await expect(voided).toContainText(`Climb walls: d100 ${d100Modified}`);
 
   // Another skill after the undo; the journal's Rolls filter keeps the skill checks.
   const noise = panel.getByTestId("skill-detect_noise");

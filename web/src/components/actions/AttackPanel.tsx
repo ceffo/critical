@@ -12,8 +12,6 @@ import { localized } from "@/i18n/localized";
 import {
   ArrowsLeftRight,
   CaretDown,
-  Minus,
-  Plus,
   SlidersHorizontal,
   Sword,
 } from "@phosphor-icons/react";
@@ -32,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { fieldClass } from "@/components/dashboard/fieldStyles";
+import { Stepper } from "@/components/actions/Stepper";
 import { SizeChips } from "@/components/actions/SizeChips";
 import { formatSigned } from "@/lib/format";
 import { UNKNOWN_AC_STEP_BASE } from "@/lib/attackAdjust";
@@ -44,8 +43,6 @@ import type {
   Weapon,
 } from "@/types/combat";
 
-/** Same bound as the server's (combatsvc MaxTargetAC / MaxSituational); the server checks it. */
-const BOUND = 20;
 /** From this count down, an ammunition chip turns amber. */
 const LOW_AMMO = 3;
 /** Up to this many other weapons show as chips; more go in a menu. */
@@ -397,103 +394,6 @@ function TargetBar({ view }: { view: AttackFormView }) {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * − / + around a whole number in ±BOUND; typing is kept as text until it is a number. A null value
- * shows an empty field with the placeholder, − / + then start from emptyBase; clearing the field
- * calls onClear when given.
- */
-function Stepper({
-  label,
-  shortLabel,
-  lower,
-  raise,
-  value: current,
-  signed = false,
-  placeholder,
-  emptyBase = 0,
-  max = BOUND,
-  onChange,
-  onClear,
-}: {
-  label: string;
-  /** Shown beside the field instead of `label`, which stays the field's accessible name. */
-  shortLabel?: string;
-  lower: string;
-  raise: string;
-  value: number | null;
-  signed?: boolean;
-  placeholder?: string;
-  emptyBase?: number;
-  /** Upper bound, when below BOUND (the target AC stops at the highest real AC). */
-  max?: number;
-  onChange: (v: number) => void;
-  onClear?: () => void;
-}) {
-  const id = useId();
-  const [draft, setDraft] = useState<string | null>(null);
-  const value = current ?? emptyBase;
-  const shown =
-    draft ??
-    (current === null
-      ? ""
-      : signed && current > 0
-        ? `+${current}`
-        : String(current));
-  const set = (v: number) => {
-    setDraft(null);
-    onChange(Math.max(-BOUND, Math.min(max, v)));
-  };
-  return (
-    <div className="flex items-center gap-2">
-      <label
-        htmlFor={id}
-        className="text-body whitespace-nowrap text-muted-foreground"
-      >
-        {shortLabel ?? label}
-      </label>
-      <span className="flex items-center gap-0.5">
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={lower}
-          disabled={value <= -BOUND}
-          onClick={() => set(value - 1)}
-        >
-          <Minus />
-        </Button>
-        <input
-          id={id}
-          aria-label={label}
-          className={cn(fieldClass, "w-12 text-center")}
-          inputMode="numeric"
-          value={shown}
-          placeholder={placeholder}
-          onChange={(e) => {
-            const text = e.target.value;
-            setDraft(text);
-            const n = Number(text.trim());
-            if (/^[+-]?\d+$/.test(text.trim()) && n >= -BOUND && n <= max)
-              onChange(n);
-            else if (text.trim() === "" && onClear) onClear();
-          }}
-          onBlur={() => setDraft(null)}
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          aria-label={raise}
-          disabled={value >= max}
-          onClick={() => set(value + 1)}
-        >
-          <Plus />
-        </Button>
-      </span>
     </div>
   );
 }

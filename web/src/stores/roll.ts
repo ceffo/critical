@@ -69,6 +69,7 @@ interface RollStore {
     id: string,
     adjustment?: number,
     set?: string,
+    reason?: string,
   ) => Promise<boolean>;
   /** Sets the adjustment of the latest skill check (log entry id; the server refuses any other). */
   adjustLastSkill: (
@@ -113,12 +114,12 @@ export const useRollStore = create<RollStore>((set) => {
         kind: "item_use",
         result: loggedAbilityUse(await postUseAbility(itemId, abilityId, body)),
       })),
-    rollSkill: (id, adjustment, set) =>
+    rollSkill: (id, adjustment, set, reason) =>
       roll(async () => ({
         kind: "skill_check",
         result: await rollSkill(
           id,
-          adjustment ? { adjustment } : undefined,
+          adjustment ? { adjustment, reason: reason || undefined } : undefined,
           set,
         ),
       })),

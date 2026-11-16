@@ -89,8 +89,8 @@ type tables struct {
 	ProfDescs map[string]int64
 	// SkillDescs are skill_descriptions rows: the (set, skill) pair to its text key.
 	SkillDescs map[string]int64
-	Meta      *storeq.CatalogueVersionRow
-	Spells    []spellRow
+	Meta       *storeq.CatalogueVersionRow
+	Spells     []spellRow
 	// Game state that refers to spells.
 	Snapshots   []snapshotRow
 	Log         []logRow

@@ -352,6 +352,9 @@ model actually running.
 
 ### Supervisor
 
+- No liaison mode (user decision, 2026-11-16): the user talks to the supervisor in its own tab. The supervisor does not run
+  `fleet liaison ensure` and starts no liaison; it reports to the user in its own tab (status lines, pending questions).
+  Calls to action are still recorded with `fleet store ask`.
 - Merges: every PR merges on green CI through `fleet land`, including one that changes a decision record, an API or data
   contract, or the user's local workflow; none waits for the user's OK (user decision, 2026-11-13). After such a merge the
   supervisor tells the user, in plain lines, what changes for them locally (e.g. run `just catalogue`).

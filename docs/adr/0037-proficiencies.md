@@ -16,7 +16,7 @@ Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (u
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 Steps 3, 7 and 8 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 15 and 16 (multi-class and dual-class), on implementation.
 Step 21 (a weapon pick names a weapon, not a weapon type; amends steps 7, 8, 9 and 16, ADR 0042 step 16.1 and ADR 0040 steps 1.6 and 13) decided 2026-11-13 (user triage), its _(proposed)_ readings awaiting the user's OK; built 2026-11-13 but 21.1's `proficiency_code` (see "As built" at the end of step 21).
-Step 22 (proficiencies a class gets free: the bard's four as the `free_proficiencies` feature kind at cost 0, offered when not held, the paid slots given back by a data step; amends steps 4, 11 and 16 and ADR 0040 step 3) decided 2026-11-15 (user triage), its _(proposed)_ readings awaiting the user's OK; not implemented.
+Step 22 (proficiencies a class gets free: the bard's four as the `free_proficiencies` feature kind at cost 0, offered when not held, the paid slots given back by a data step; amends steps 4, 11 and 16 and ADR 0040 step 3) decided 2026-11-15 (user triage; the user kept every _(proposed)_ reading's default, 2026-11-15); as built 2026-11-15 (catalogue format 24, migration 046; see "As built" at the end of step 22).
 
 ## Context
 
@@ -140,7 +140,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
    exists (`TestProficiencies_Step2_OptionsWireShape`: a fighter pays 2 for Tumbling, a bard 1).
    `languages_modern` has no cost there (step 6: never picked on its own), and the editor offers
    only the rows that have one.)_
-   _(Amended 2026-11-15 by step 22.2, on implementation: an id one of the character's class entries gets
+   _(Amended 2026-11-15 by step 22.2, as built 2026-11-15: an id one of the character's class entries gets
    free (the `free_proficiencies` kind) costs 0; its slots are all extra slots.)_
 5. **Extra slots improve the check.** A non-weapon pick spends at least its cost; each slot spent
    beyond it adds +1 to its check target (PHB p.56). Amends [ADR 0014](0014-skill-checks.md)
@@ -336,7 +336,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     `nonweapon.<id>` (step 16). `skill_points_to_spend` is not built. The weapon pool's warnings,
     2026-10-20, are the same codes with `field` and `pool` `weapon`, after the non-weapon ones
     (`TestWarnings_Step11_WeaponPool`).)_
-    _(Amended 2026-11-15 by step 22.4, on implementation: the reminder `free_proficiency_to_take` `{id}`
+    _(Amended 2026-11-15 by step 22.4, as built 2026-11-15: the reminder `free_proficiency_to_take` `{id}`
     for a free id the character does not hold.)_
 
 ### Picks, the editor and the action log
@@ -507,7 +507,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
     left as it is, so a rerun changes nothing. The flags stay in the column, read by nothing,
     until a later item drops it.)_
     _(Amended 2026-11-13 by step 21.8, on implementation: a second data step turns each type pick into picks of the owned weapons of that type, the specialization onto the first of them, and lists a type with no owned weapon for the player to redo)_
-    _(Amended 2026-11-15 by step 22.7, on implementation: a third data step gives a character the slots he paid for a proficiency his class now grants free)_
+    _(Amended 2026-11-15 by step 22.7, as built 2026-11-15: a third data step gives a character the slots he paid for a proficiency his class now grants free)_
 
 ## Consequences
 
@@ -515,7 +515,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
   non-weapon slots: his eight proficiencies cost 1 each (all in his groups), and Elvish, Orcish
   and Dwarvish are three language picks (a half-elf's native language is Common, ADR 0032 step
   4.1). He sees `slots_over_budget` and may only reduce.
-  _(Amended 2026-11-15 by step 22.7, on implementation: his reading and writing, local history,
+  _(Amended 2026-11-15 by step 22.7, as built 2026-11-15: his reading and writing, local history,
   singing and musical instrument are free, so he holds 7 of 10, 3 to spend.)_ His weapons give five types
   (`other_melee` for the bastard sword and the mace, `long_sword`, `short_bow`, `dagger`, `dart`):
   5 of 5 weapon slots.
@@ -973,15 +973,15 @@ proposed:_
   his bastard sword has no code and is non-proficient, as his mace is
   (`TestKelsen_Step8_OwnWeaponsTakeNoPenalty`)._
 
-## Amendment 2026-11-15: proficiencies a class gets free (decided; not implemented)
+## Amendment 2026-11-15: proficiencies a class gets free (decided; as built 2026-11-15)
 
 User, triage of 2026-11-15: the bard gets four proficiencies at no slot cost (reading and writing, local
 history, singing, and one musical instrument of his choice); a bard who already paid for them gets
 those slots back to spend; the grant is class data ("this class gets these proficiencies free"), so a
 later class's grant (a ranger's Tracking) is a data change. It covers the Consequences' "proficiencies
 granted free by a class". Parts marked _(proposed)_ are readings this amendment adds where the book
-leaves the point open; they await the user's OK in the PR. The test names follow the rule of
-"Decision" (no `Test` prefix until the test exists).
+leaves the point open; the user kept every one of their defaults (2026-11-15). The tests exist, with
+their `Test` prefix.
 
 The book (read in `critical-rulebooks`, paraphrased, no text copied): the bard
 (`phb/ch03-player-character-classes/14-bard.md`, PHB p.41) is a proficient singer and plays one
@@ -1011,10 +1011,10 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          an id listed twice and an empty list. The kind is a catalogue change, published by the
          builder in `critical-rulebooks` first ([ADR 0021](0021-spell-catalogue.md)'s format steps);
          until it ships nothing is free.
-         Tests: `Features_Step22_1_FreeProficienciesFromTheKind` (charactersvc: the fixture bard
+         Tests: `TestFeatures_Step22_1_FreeProficienciesFromTheKind` (charactersvc: the fixture bard
          with the kind struck pays for the four; a test class of another group listing the kind
-         gets them free), `Import_Step22_1_RefusesABrokenFreeList` (ruletablesadpt: an unknown id,
-         `languages_modern`, an id twice, an empty list), `FreeProficiencies_Step22_1_TheBardListsItsFour`
+         gets them free), `TestImport_Step22_1_RefusesABrokenFreeList` (ruletablesadpt: an unknown id,
+         `languages_modern`, an id twice, an empty list), `TestFreeProficiencies_Step22_1_TheBardListsItsFour`
          (seedcheck: the real artifact's bard lists exactly the four ids at level 1, and no other
          class lists the kind).
     22.2 **A free pick costs 0; extra slots still cost and still count** (amends step 4). An id a
@@ -1024,11 +1024,11 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          rolls at the ability score plus the catalogue's modifier. The creation options' cost of the
          id for that class is 0, and the sheet's figures say which picks are free (the shape is the
          implementation's).
-         Tests: `NonweaponCost_Step22_2_AGrantedIdCostsNothing` (skills: the bard's four at 0, his
-         Tumbling at 1, a fighter's singing at 1), `NonweaponPick_Step22_2_ExtraSlotsOnAFreePickCostAndCount`
+         Tests: `TestNonweaponCost_Step22_2_AGrantedIdCostsNothing` (skills: the bard's four at 0, his
+         Tumbling at 1, a fighter's singing at 1), `TestNonweaponPick_Step22_2_ExtraSlotsOnAFreePickCostAndCount`
          (skills: a free pick at 0 slots spends 0 with no extra; at 2, spends 2 and raises the target
          by 2; over the budget at 2 and growing is refused, step 10),
-         `Proficiencies_Step22_2_OptionsCostTheGrantedIdsAtZero` (composition: `proficiencyCosts` of
+         `TestProficiencies_Step22_2_OptionsCostTheGrantedIdsAtZero` (composition: `proficiencyCosts` of
          the bard).
     22.3 **The instrument is one free Musical Instrument pick.** The bard's free instrument is the
          one `musical_instrument` pick (a second pick of the id stays `duplicate`, step 12).
@@ -1038,7 +1038,7 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          (step 5), the house rule this ADR already applies.)_ _(proposed: `reading_writing` is
          granted whatever the native language; the catalogue does not say which languages are
          written.)_
-         Test: `FreePicks_Step22_3_TheInstrumentIsOnePick` (skills: the free `musical_instrument`
+         Test: `TestFreePicks_Step22_3_TheInstrumentIsOnePick` (skills: the free `musical_instrument`
          at 0 slots, a second pick of it refused `duplicate`).
     22.4 **Held, or offered.** A granted id the character holds is a free pick. One he does not
          hold is **offered**: the reminder `free_proficiency_to_take` `{id}` on field
@@ -1047,9 +1047,9 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          him. _(proposed: the non-weapon editor lists the offered ids first, each added at 0 slots in
          one click; at creation the editor starts with the class's free ids at 0 slots, which the
          player may remove; removing a free pick later is allowed, and the offer comes back.)_
-         Tests: `Warnings_Step22_4_AGrantNotHeldIsOffered` (skills: the bard holding two of the four
+         Tests: `TestWarnings_Step22_4_AGrantNotHeldIsOffered` (skills: the bard holding two of the four
          is offered the other two, none once he holds all four, a fighter none),
-         `Draft_Step22_4_TheCreationOffersTheFreeIds` (charactersvc: a bard draft is offered the four;
+         `TestDraft_Step22_4_TheCreationOffersTheFreeIds` (charactersvc: a bard draft is offered the four;
          a bard created with them at 0 slots spends nothing on them).
     22.5 **Several class entries** (reads [ADR 0042](0042-multi-class-and-dual-class.md) steps 12,
          13 and 15). An id is free when **any** class entry grants it at that entry's level: an
@@ -1062,7 +1062,7 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          (PHB p.45: he keeps his old class's proficiencies). _(proposed: before the crossover too:
          a pick is not a use of an old ability (ADR 0042 step 13 reads the weapon picks the same way),
          so nothing is warned.)_
-         Test: `FreePicks_Step22_5_AnyEntryGrants` (skills: fighter left at 5 now bard 1 gets the four
+         Test: `TestFreePicks_Step22_5_AnyEntryGrants` (skills: fighter left at 5 now bard 1 gets the four
          free; bard left at 5 now fighter 2 (before the crossover) and fighter 6 (after) keeps them
          free; a fighter/thief pays).
     22.6 **A grant that goes.** When no entry grants an id any more (an undone level-up past a
@@ -1071,7 +1071,7 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          extra slot, and a pool left over budget is warned (step 11), never refused on read; a save
          that leaves that pick unchanged is not refused for it (as a kept pick of step 7), and
          raising it to the cost or removing it clears it.)_
-         Test: `FreePicks_Step22_6_ALostGrantChargesTheCostAgain` (skills: a free pick at 0 slots
+         Test: `TestFreePicks_Step22_6_ALostGrantChargesTheCostAgain` (skills: a free pick at 0 slots
          spends 1 once the grant is gone; at 2 slots, 2 with 1 extra).
     22.7 **Existing characters** (amends step 16). A data step after a migration that only comments
          the column (as 026 and 027), run once with it: for each character and each stored non-weapon
@@ -1086,14 +1086,37 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
          is undone or redone, so undoing an older save never charges the bard again; the journal
          words it as logged. As for step 21.8, a pick the release before writes during a rolling
          deploy is read as extra slots; the user is the only writer, accepted.)_
-         Tests: `Migrate_Step22_7_AFreePickStopsPaying` (storage/postgres: a bard's four at 1 become 0,
+         Tests: `TestMigrate_Step22_7_AFreePickStopsPaying` (storage/postgres: a bard's four at 1 become 0,
          a musical instrument at 3 becomes 2, his Tumbling and a fighter's singing unchanged, a bard
-         without them unchanged), `Migrate_Step22_7_RunsOnceWithTheMigration` (storage/postgres),
-         `Kelsen_Step22_7_FourFreePicksAndThreeToSpend` (seedcheck: 7 of 10, no `slots_over_budget`),
-         `SetPicks_Step22_7_AnEntryLoggedBeforeIsConverted` (skillsvc: undoing a save logged before
+         without them unchanged), `TestMigrate_Step22_7_RunsOnceWithTheMigration` (storage/postgres),
+         `TestKelsen_Step22_7_FourFreePicksAndThreeToSpend` (seedcheck: 7 of 10, no `slots_over_budget`),
+         `TestSetPicks_Step22_7_AnEntryLoggedBeforeIsConverted` (skillsvc: undoing a save logged before
          the change writes the four at 0).
 
     Not covered: a class granting a **weapon** proficiency free (the kind's list is non-weapon ids;
     a weapon grant is a later amendment); a choice among several proficiencies (a grant names fixed
     ids); the bard's other abilities of p.42 (the magic item lore and the reading of scrolls are not
     proficiencies).
+
+    _(As built 2026-11-15. **22.1**: catalogue format 24 ([ADR 0021](0021-spell-catalogue.md) step 32);
+    `classes.KindFreeProficiencies` with `Feature.FreeProficiencies` (the param `nonweapon`) and
+    `Class.FreeProficienciesAt(level)`; `classes.New` refuses an empty list and an id twice,
+    `ruletablesvc.NewProficiencies` an id the seed's catalogue does not hold and `languages_modern`
+    (`ruletablesvc.LanguagesModernID`), naming the class; without a catalogue (no seed) nothing is
+    checked, as the crossovers. **22.2**: the shape is a `free` boolean on each served pick
+    (`derived.proficiencySlots.picks[]`, the editor's preview and save answers), true with `cost` 0;
+    `skills.NonweaponCostOf` is the rule, `proficiencyCosts` serves 0 for an id the class grants at
+    level 1 (the creation's first level; the draft's figures read the realized level).
+    `skills.ValidPicks` takes the realized level, since a grant reads it. **22.4**: the reminder is a
+    warning `{code: free_proficiency_to_take, field: nonweapon.<id>, id}` after `proficiency_unknown`,
+    in the grant's order (`ProficiencySlots.Offered`). **22.6**: a known pick spends `max(slots,
+    cost)`, so any pick stored under its cost (not only a lost grant's) spends its cost; a save that
+    leaves such a pick as stored is accepted, a new one under the cost is `out_of_range`. **22.7**:
+    migration 046 (a column comment) and its data step `returnFreeSlots` (`skills.ReturnFreeSlots`,
+    on every class entry of `character_classes`); the seed file reader accepts a pick at 0 slots. A
+    `proficiencies` snapshot or payload logged since carries `freeGrants: true`; one without it is
+    converted by `skills.ReturnFreeSlots` on the character's class entries when undone or redone.
+    `TestKelsen_Step16_PicksAndPools` keeps the picks and targets, the pools moved to
+    `TestKelsen_Step22_7_FourFreePicksAndThreeToSpend` (the test fixture's Kelsen: 4 of 10, 6 to
+    spend); the conversion rule alone is `TestReturnFreeSlots_Step22_7_TheCostPaidGoesBack`. The web
+    marks a free pick and words the offer in the editor and the Skills activity, en and fr.)_

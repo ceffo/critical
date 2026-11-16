@@ -55,7 +55,7 @@ func TestKelsen_Step21_8_WeaponPicksAreHisWeapons(t *testing.T) {
 			}
 			assert.ElementsMatch(t, []string{"bastard_sword_two_handed", "long_sword", "short_bow", "dagger", "dart"}, picked)
 
-			_, err = skills.ValidPicks(book, c.Class, picks, skills.Picks{})
+			_, err = skills.ValidPicks(book, c.Class, c.Level, picks, skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
 			f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, skills.Spending{Picks: picks})
 			require.True(t, ok)

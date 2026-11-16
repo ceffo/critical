@@ -130,6 +130,9 @@ type PickDTO struct {
 	Ability    string `json:"ability"`
 	Modifier   int    `json:"modifier"`
 	Known      bool   `json:"known"`
+	// Free is true when a class entry grants the id at no slot cost (ADR 0037
+	// step 22.2): cost 0, every slot an extra slot.
+	Free bool `json:"free"`
 	// Target is the check's target (ability score + modifier + extraSlots,
 	// ADR 0037 step 5); null for a pick with no check.
 	Target *int `json:"target"`
@@ -158,6 +161,7 @@ func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 	for _, f := range p.Picks {
 		d := PickDTO{
 			ID: f.ID, Slots: f.Slots, Cost: f.Cost, ExtraSlots: f.Extra, Ability: f.Ability, Modifier: f.Modifier, Known: f.Known,
+			Free: f.Free,
 		}
 		if f.HasCheck {
 			target := f.Target

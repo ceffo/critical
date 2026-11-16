@@ -15,7 +15,8 @@ import (
 
 // profBook is a catalogue with PHB Table 34 and Table 38 as the seed holds them and a few Table 37
 // rows: Tumbling (rogue, 1 slot, Dex), Tracking (warrior, 2, Wis), Healing (priest, 2, Wis -2),
-// Cooking (general, 1, Int), Blind-fighting (rogue and warrior, 2, no check), Languages, Modern.
+// Cooking (general, 1, Int), Blind-fighting (rogue and warrior, 2, no check), Languages, Modern,
+// and the four the bard gets free (ADR 0037 step 22.1) as the seed holds them.
 func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 	t.Helper()
 	b, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
@@ -25,6 +26,10 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{ID: "cooking", Ability: "int", Slots: 1, Groups: []string{"general"}},
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
+		{ID: "reading_writing", Ability: "int", Modifier: 1, Slots: 1, Groups: []string{"priest", "wizard"}},
+		{ID: "local_history", Ability: "cha", Slots: 1, Groups: []string{"priest", "rogue"}},
+		{ID: "singing", Ability: "cha", Slots: 1, Groups: []string{"general"}},
+		{ID: "musical_instrument", Ability: "dex", Modifier: -1, Slots: 1, Groups: []string{"priest", "rogue"}},
 	}, []ruletablesvc.Crossover{
 		{Class: "fighter", Groups: []string{"warrior", "general"}},
 		{Class: "mage", Groups: []string{"wizard", "general"}},
@@ -106,7 +111,7 @@ func TestValidPicks_Step12_Refusals(t *testing.T) {
 		{"an unknown stored pick needs a slot", "bard", picks(p("old_skill", 0)), old, &domain.FieldError{Field: "nonweapon.old_skill", Message: "out_of_range"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := skills.ValidPicks(book, tc.class, tc.picks, tc.before)
+			got, err := skills.ValidPicks(book, tc.class, 1, tc.picks, tc.before)
 			if tc.want == nil {
 				require.NoError(t, err)
 				assert.Equal(t, tc.picks, got)
@@ -165,6 +170,7 @@ func TestWarnings_Step11_OverBudgetAndToSpend(t *testing.T) {
 		ps.Weapon = weapons("dagger", "dart").Weapon
 		f, ok := skills.ProficiencyFigures(book, "bard", 1, 9, skills.Spending{Picks: ps}) // 5 slots
 		require.True(t, ok)
+		f.Offered = nil // the bard's free ids offered: step 22.4's test
 		return skills.SlotWarnings(f)
 	}
 	seven, five, two, three := 7, 5, 2, 3

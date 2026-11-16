@@ -165,6 +165,50 @@ func (q *Queries) CatalogueVersion(ctx context.Context) (CatalogueVersionRow, er
 	return i, err
 }
 
+const characterClassEntries = `-- name: CharacterClassEntries :many
+SELECT character_id, class, realized_level, state, left_at_level FROM character_classes
+ORDER BY character_id, position
+`
+
+type CharacterClassEntriesRow struct {
+	CharacterID   int64
+	Class         string
+	RealizedLevel int64
+	State         string
+	LeftAtLevel   int64
+}
+
+// The free proficiencies data step after migration 046 (ADR 0037 step 22.7): every class entry, by
+// character in position order.
+func (q *Queries) CharacterClassEntries(ctx context.Context) ([]CharacterClassEntriesRow, error) {
+	rows, err := q.db.QueryContext(ctx, characterClassEntries)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterClassEntriesRow{}
+	for rows.Next() {
+		var i CharacterClassEntriesRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.Class,
+			&i.RealizedLevel,
+			&i.State,
+			&i.LeftAtLevel,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterClasses = `-- name: CharacterClasses :many
 SELECT id, class FROM characters ORDER BY id
 `

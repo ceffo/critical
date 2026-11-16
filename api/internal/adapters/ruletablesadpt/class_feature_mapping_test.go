@@ -1,11 +1,13 @@
 package ruletablesadpt_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/ceffo/critical/api/internal/adapters/ruletablesadpt"
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 )
@@ -84,6 +86,7 @@ func TestDefinitions_Step3_TheFeatureListsMapWithTheirParams(t *testing.T) {
 				Name:   localized.Text{"en": "Bard skills", "fr": "Talents de barde"},
 			}},
 			{Kind: classes.KindSpellbook, FromLevel: 1, Spellbook: &classes.Spellbook{MaxSpellLevel: 6}},
+			{Kind: classes.KindFreeProficiencies, FromLevel: 1, FreeProficiencies: []string{"reading_writing", "local_history", "singing", "musical_instrument"}},
 		}},
 		"psionicist": {"", []classes.Feature{
 			{Kind: classes.KindPsionics, FromLevel: 1, Psionics: &classes.Psionics{
@@ -146,4 +149,52 @@ func TestImport_Step8_RefusesABrokenFeature(t *testing.T) {
 			require.ErrorContains(t, err, tc.want)
 		})
 	}
+}
+
+// ADR 0037 step 22.1 (ADR 0040 step 8 as amended): a broken free_proficiencies list stops the
+// start. An empty list and an id listed twice are the class registry's refusals (the definitions
+// alone); an id the non-weapon catalogue does not hold and languages_modern (never picked on its
+// own, step 6) are the proficiency catalogue's, which reads the definitions beside the seed.
+func TestImport_Step22_1_RefusesABrokenFreeList(t *testing.T) {
+	free := func(list ...any) func(map[string]any) {
+		return func(d map[string]any) {
+			for _, c := range d["classes"].([]any) {
+				if m := c.(map[string]any); m["id"] == "bard" {
+					for _, f := range m["features"].([]any) {
+						if f := f.(map[string]any); f["kind"] == "free_proficiencies" {
+							f["params"] = map[string]any{"nonweapon": list}
+							return
+						}
+					}
+				}
+			}
+			t.Fatal("the fixture bard lists no free_proficiencies")
+		}
+	}
+	for _, tc := range []struct {
+		name   string
+		mutate func(map[string]any)
+		want   string
+	}{
+		{"an empty list", free(), `class "bard": feature free_proficiencies: an empty list`},
+		{"an id twice", free("singing", "singing"), `"singing" twice`},
+		{"an unknown id", free("singing", "test_juggling"), `class "bard": free_proficiencies: unknown proficiency "test_juggling"`},
+		{"languages_modern", free("languages_modern"), `"languages_modern" is never picked on its own`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tables, err := definitionsOf(t, tc.mutate)
+			if err == nil {
+				defs, derr := tables.Definitions()
+				require.NoError(t, derr)
+				_, err = ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "testdata", "seeds"), defs)
+			}
+			require.ErrorContains(t, err, tc.want)
+		})
+	}
+	tables, err := definitionsOf(t, func(map[string]any) {})
+	require.NoError(t, err)
+	defs, err := tables.Definitions()
+	require.NoError(t, err)
+	_, err = ruletablesadpt.ReadProficiencies(filepath.Join("..", "..", "..", "testdata", "seeds"), defs)
+	require.NoError(t, err, "the fixture's four are catalogue ids")
 }

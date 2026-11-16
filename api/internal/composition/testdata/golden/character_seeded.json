@@ -67,7 +67,7 @@
       "realizedAboveTarget": false,
       "toSpend": {
         "weaponSlots": 0,
-        "nonWeaponSlots": 2,
+        "nonWeaponSlots": 6,
         "skillPoints": 30,
         "freeSpells": []
       }
@@ -159,8 +159,8 @@
         "levelGained": 3,
         "intelligence": 4,
         "available": 10,
-        "spent": 8,
-        "left": 2,
+        "spent": 4,
+        "left": 6,
         "languages": 0
       },
       "weapon": {
@@ -174,12 +174,13 @@
       "picks": [
         {
           "id": "musical_instrument",
-          "slots": 1,
-          "cost": 1,
+          "slots": 0,
+          "cost": 0,
           "extraSlots": 0,
           "ability": "dex",
           "modifier": -1,
           "known": true,
+          "free": true,
           "target": 16
         },
         {
@@ -190,6 +191,7 @@
           "ability": "dex",
           "modifier": 0,
           "known": true,
+          "free": false,
           "target": 17
         },
         {
@@ -200,6 +202,7 @@
           "ability": "int",
           "modifier": -2,
           "known": true,
+          "free": false,
           "target": 12
         },
         {
@@ -210,6 +213,7 @@
           "ability": "wis",
           "modifier": 3,
           "known": true,
+          "free": false,
           "target": 11
         },
         {
@@ -220,36 +224,40 @@
           "ability": "int",
           "modifier": 0,
           "known": true,
+          "free": false,
           "target": 14
         },
         {
           "id": "singing",
-          "slots": 1,
-          "cost": 1,
+          "slots": 0,
+          "cost": 0,
           "extraSlots": 0,
           "ability": "cha",
           "modifier": 0,
           "known": true,
+          "free": true,
           "target": 16
         },
         {
           "id": "reading_writing",
-          "slots": 1,
-          "cost": 1,
+          "slots": 0,
+          "cost": 0,
           "extraSlots": 0,
           "ability": "int",
           "modifier": 1,
           "known": true,
+          "free": true,
           "target": 15
         },
         {
           "id": "local_history",
-          "slots": 1,
-          "cost": 1,
+          "slots": 0,
+          "cost": 0,
           "extraSlots": 0,
           "ability": "cha",
           "modifier": 0,
           "known": true,
+          "free": true,
           "target": 16
         }
       ],
@@ -543,7 +551,7 @@
       "code": "slots_to_spend",
       "field": "nonweapon",
       "pool": "nonweapon",
-      "left": 2
+      "left": 6
     }
   ],
   "alignment": "neutral_good",

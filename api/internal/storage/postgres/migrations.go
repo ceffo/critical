@@ -135,6 +135,9 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		weaponCodesMigration: func(ctx context.Context, q storeq.Querier) error {
 			return pickOwnedWeapons(ctx, q, equipment.Weapons)
 		},
+		freePicksMigration: func(ctx context.Context, q storeq.Querier) error {
+			return returnFreeSlotsFrom(ctx, q, seedsDir, defs)
+		},
 	}
 	return before, after
 }

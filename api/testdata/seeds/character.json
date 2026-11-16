@@ -21,14 +21,14 @@
  "save_spell": 9,
  "skill_points": { "bard": { "climb_walls": 35, "detect_noise": 70, "pick_pockets": 25, "read_languages": 70 } },
  "proficiencies": [
-  { "id": "musical_instrument", "slots": 1 },
+  { "id": "musical_instrument", "slots": 0 },
   { "id": "tumbling", "slots": 1 },
   { "id": "ventriloquism", "slots": 1 },
   { "id": "riding_land", "slots": 1 },
   { "id": "appraising", "slots": 1 },
-  { "id": "singing", "slots": 1 },
-  { "id": "reading_writing", "slots": 1 },
-  { "id": "local_history", "slots": 1 }
+  { "id": "singing", "slots": 0 },
+  { "id": "reading_writing", "slots": 0 },
+  { "id": "local_history", "slots": 0 }
  ],
  "weapon_proficiencies": [
   { "code": "short_bow", "slots": 1 },

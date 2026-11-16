@@ -93,6 +93,10 @@ func testBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{ID: "tracking", Ability: "wis", Slots: 2, Groups: []string{"warrior"}},
 		{ID: "healing", Ability: "wis", Modifier: -2, Slots: 2, Groups: []string{"priest"}},
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
+		{ID: "reading_writing", Ability: "int", Modifier: 1, Slots: 1, Groups: []string{"priest", "wizard"}},
+		{ID: "local_history", Ability: "cha", Slots: 1, Groups: []string{"priest", "rogue"}},
+		{ID: "singing", Ability: "cha", Slots: 1, Groups: []string{"general"}},
+		{ID: "musical_instrument", Ability: "dex", Modifier: -1, Slots: 1, Groups: []string{"priest", "rogue"}},
 	}, cross, rows, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	eq, ok := cataloguetest.Tables(t).Equipment()

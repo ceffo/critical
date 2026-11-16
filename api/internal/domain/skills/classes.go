@@ -45,6 +45,27 @@ func (cls Classes) crossed() bool {
 	return act > left
 }
 
+// free is ADR 0037 step 22.5: the non-weapon ids any class entry of cls grants free (its class's
+// free_proficiencies feature, classes.Class.FreeProficienciesAt), an active entry at its realized
+// level and a frozen one at its left-at level (before the crossover too: a pick is not a use).
+// Two entries granting the same id give it once; entry then list order. A class the book does not
+// define grants nothing.
+func (cls Classes) free(book Book) []string {
+	var out []string
+	for _, c := range cls {
+		def, ok := book.ClassDef(c.Class)
+		if !ok {
+			continue
+		}
+		for _, id := range def.FreeProficienciesAt(c.Level) {
+			if !slices.Contains(out, id) {
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
 // One is the single class entry of class at level.
 func One(class string, level int) Classes { return Classes{{Class: class, Level: level}} }
 

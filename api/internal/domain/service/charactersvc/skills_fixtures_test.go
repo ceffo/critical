@@ -7,6 +7,7 @@ import (
 
 	"github.com/ceffo/critical/api/internal/adapters/catalogueadpt/cataloguetest"
 	"github.com/ceffo/critical/api/internal/domain"
+	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/localized"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
@@ -17,8 +18,16 @@ import (
 
 // profBook is a catalogue with PHB Table 34 and Table 38 as the seed holds them and a few Table 37
 // rows: Tumbling (rogue, 1 slot, Dex), Tracking (warrior, 2, Wis), Healing (priest, 2, Wis -2),
-// Cooking (general, 1, Int), Blind-fighting (rogue and warrior, 2, no check), Languages, Modern.
+// Cooking (general, 1, Int), Blind-fighting (rogue and warrior, 2, no check), Languages, Modern,
+// and the four the bard gets free (ADR 0037 step 22.1) as the seed holds them.
 func profBook(t *testing.T) *ruletablesvc.Proficiencies {
+	t.Helper()
+	return profBookOver(t, cataloguetest.Definitions(t))
+}
+
+// profBookOver is profBook over the class definitions defs: a class Table 38 does not list (a test
+// class) learns its own group and the general one.
+func profBookOver(t *testing.T, defs *classes.Registry) *ruletablesvc.Proficiencies {
 	t.Helper()
 	b, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
 		{ID: "tumbling", Ability: "dex", Slots: 1, Groups: []string{"rogue"}},
@@ -27,7 +36,11 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{ID: "cooking", Ability: "int", Slots: 1, Groups: []string{"general"}},
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
 		{ID: "languages_modern", Ability: "int", Slots: 1, Groups: []string{"general"}},
-	}, []ruletablesvc.Crossover{
+		{ID: "reading_writing", Ability: "int", Modifier: 1, Slots: 1, Groups: []string{"priest", "wizard"}},
+		{ID: "local_history", Ability: "cha", Slots: 1, Groups: []string{"priest", "rogue"}},
+		{ID: "singing", Ability: "cha", Slots: 1, Groups: []string{"general"}},
+		{ID: "musical_instrument", Ability: "dex", Modifier: -1, Slots: 1, Groups: []string{"priest", "rogue"}},
+	}, crossoversOver(defs, []ruletablesvc.Crossover{
 		{Class: "fighter", Groups: []string{"warrior", "general"}},
 		{Class: "mage", Groups: []string{"wizard", "general"}},
 		{Class: "cleric", Groups: []string{"priest", "general"}},
@@ -42,19 +55,35 @@ func profBook(t *testing.T) *ruletablesvc.Proficiencies {
 		{Class: "invoker", Groups: []string{"wizard", "general"}},
 		{Class: "necromancer", Groups: []string{"wizard", "general"}},
 		{Class: "transmuter", Groups: []string{"wizard", "general"}},
-	}, []slots.Row{
+	}), []slots.Row{
 		{Group: "warrior", WeaponInitial: 4, WeaponLevels: 3, Penalty: -2, NonweaponInitial: 3, NonweaponLevels: 3},
 		{Group: "wizard", WeaponInitial: 1, WeaponLevels: 6, Penalty: -5, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "priest", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 4, NonweaponLevels: 3},
 		{Group: "rogue", WeaponInitial: 2, WeaponLevels: 4, Penalty: -3, NonweaponInitial: 3, NonweaponLevels: 4},
 		{Group: "psionicist", WeaponInitial: 2, WeaponLevels: 5, Penalty: -4, NonweaponInitial: 3, NonweaponLevels: 3},
-	}, cataloguetest.Definitions(t))
+	}, defs)
 	require.NoError(t, err)
 	eq, ok := cataloguetest.Tables(t).Equipment()
 	require.True(t, ok)
 	b, err = b.WithWeapons(eq.PickWeapons())
 	require.NoError(t, err)
 	return b
+}
+
+// crossoversOver are Table 38's rows book for every class of defs, each other class (a test
+// class) learning its own group and the general one.
+func crossoversOver(defs *classes.Registry, book []ruletablesvc.Crossover) []ruletablesvc.Crossover {
+	var out []ruletablesvc.Crossover
+	for _, c := range defs.Classes() {
+		row := ruletablesvc.Crossover{Class: c.ID, Groups: []string{c.Group, "general"}}
+		for _, b := range book {
+			if b.Class == c.ID {
+				row = b
+			}
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 func picks(ps ...skills.Pick) skills.Picks {

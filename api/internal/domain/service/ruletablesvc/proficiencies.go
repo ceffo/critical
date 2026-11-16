@@ -176,7 +176,34 @@ func NewProficiencies(list []Proficiency, crossovers []Crossover, rows []slots.R
 			return nil, fmt.Errorf("proficiency crossovers: class %q is missing", class)
 		}
 	}
+	if err := checkFreeProficiencies(defs, seen); len(list) > 0 && err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// LanguagesModernID is "Languages, Modern": a language is a pick of the language list (ADR 0037
+// step 6), never picked on its own, so never granted free either (step 22.1).
+const LanguagesModernID = "languages_modern"
+
+// checkFreeProficiencies is ADR 0037 step 22.1's catalogue check: every id a class's
+// free_proficiencies feature lists is a non-weapon catalogue id (known) other than
+// LanguagesModernID. The empty list and an id twice are classes.New's refusals. Without a
+// catalogue (no seed, as the crossovers' check) nothing is checked: nothing can be picked.
+func checkFreeProficiencies(defs *classes.Registry, known map[string]bool) error {
+	for _, c := range defs.Classes() {
+		for _, f := range c.ListsAll(classes.KindFreeProficiencies) {
+			for _, id := range f.FreeProficiencies {
+				switch {
+				case id == LanguagesModernID:
+					return fmt.Errorf("class %q: %s: %q is never picked on its own", c.ID, classes.KindFreeProficiencies, id)
+				case !known[id]:
+					return fmt.Errorf("class %q: %s: unknown proficiency %q", c.ID, classes.KindFreeProficiencies, id)
+				}
+			}
+		}
+	}
+	return nil
 }
 
 func checkSlotRows(rows []slots.Row, groups []string) error {

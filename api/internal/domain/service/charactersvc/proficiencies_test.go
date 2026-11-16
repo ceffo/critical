@@ -141,3 +141,55 @@ func TestCreate_Step14_PicksCheckedAsTheEditor(t *testing.T) {
 		assert.Equal(t, 16, pools.Picks[0].Target, "Dex 15 + 1 extra slot")
 	})
 }
+
+// ADR 0037 step 22.4 at creation: a bard's draft is offered the four ids his class grants free
+// (free_proficiency_to_take {id} on field nonweapon.<id>, never a pick written for him), and a bard
+// created holding them at 0 slots spends nothing on them: Lyra (Intelligence 14: 3 + 0 + 4 = 7
+// slots) with the four at 0 and Tumbling at 1 spends 1, is offered nothing, and is stored with them.
+func TestDraft_Step22_4_TheCreationOffersTheFreeIds(t *testing.T) {
+	offers := func(ws []charactersvc.Warning) []string {
+		var out []string
+		for _, w := range ws {
+			if w.Code == skills.CodeFreeProficiencyToTake {
+				assert.Equal(t, "nonweapon."+w.ID, w.Field)
+				out = append(out, w.ID)
+			}
+		}
+		return out
+	}
+	e := newEnvWithBook(t, profBook(t))
+	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+	expectLevel1Bard(e)
+	expectLevel1Bard(e) // the draft derives twice, as TestDraft_Step6_TheDraftLanguagesSpendThePool
+	got, err := e.svc.Draft(context.Background(), lyra(), nil)
+	require.NoError(t, err)
+	require.NotNil(t, got.Character)
+	assert.Equal(t, []string{"reading_writing", "local_history", "singing", "musical_instrument"}, offers(got.Character.Warnings))
+	assert.Empty(t, got.Character.Proficiencies.Nonweapon, "nothing written for him")
+
+	want := picks(p("reading_writing", 0), p("local_history", 0), p("singing", 0), p("musical_instrument", 0), p("tumbling", 1))
+	n := lyra()
+	n.Proficiencies = want
+	e = newEnvWithBook(t, profBook(t))
+	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+	expectLevel1Bard(e)
+	expectLevel1Bard(e)
+	got, err = e.svc.Draft(context.Background(), n, nil)
+	require.NoError(t, err)
+	assert.Empty(t, got.Refusals)
+	require.NotNil(t, got.Character)
+	assert.Equal(t, 1, got.Character.Derived.Proficiencies.Nonweapon.Spent, "only Tumbling spends")
+	assert.Equal(t, 7, got.Character.Derived.Proficiencies.Nonweapon.Available)
+	assert.Empty(t, offers(got.Character.Warnings))
+
+	e = newEnvWithBook(t, profBook(t))
+	e.rules.EXPECT().RaceAllows("half_elf", "bard").Return(true, nil).Once()
+	expectLevel1Bard(e)
+	e.owners.EXPECT().CreateCharacter(mock.Anything, ownerID, mock.MatchedBy(func(c charactersvc.Character) bool {
+		return c.Proficiencies.Equal(want)
+	})).Return(12, nil).Once()
+	e.owners.EXPECT().SetCurrentCharacter(mock.Anything, ownerID, int64(12)).Return(nil).Once()
+	e.sessions.EXPECT().ForgetUser(ownerID).Once()
+	_, err = e.svc.Create(context.Background(), ownerID, n)
+	require.NoError(t, err)
+}

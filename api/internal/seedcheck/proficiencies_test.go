@@ -84,56 +84,79 @@ func TestNonweaponCatalogue_Step2_SeedBardIdsKeepTheirFigures(t *testing.T) {
 }
 
 // ADR 0037 step 16 on the seeds (the campaign's and the test fixture's): the seed bard's picks are
-// his eight proficiencies at their cost (1 each, all in a bard's groups), accepted by the editor's
-// checks; each check target is the one his sheet gave (no extra slot); his non-weapon pool at
-// level 15 with Intelligence 14 is 3 + 3 + 4 = 10, and his eight picks with Elvish, Orcish and
-// Dwarvish (step 6: a half-elf's native language is Common) spend 11: over budget, a warning he
-// loads with, and a save that keeps or shrinks it is stored (ADR 0037 Consequences). The test
-// fixture's Kelsen knows no language but Common: 8 of 10, 2 to spend.
+// his eight proficiencies at their cost (1 each, all in a bard's groups; since step 22.7 the four a
+// bard gets free at 0, cost 0), accepted by the editor's checks; each check target is the one his
+// sheet gave (no extra slot). His pools are TestKelsen_Step22_7_FourFreePicksAndThreeToSpend's.
 func TestKelsen_Step16_PicksAndPools(t *testing.T) {
-	for name, tc := range map[string]struct {
-		dir   string
-		langs int
-		code  string
-	}{
-		"campaign seeds": {seedsDir, 3, skills.CodeSlotsOverBudget},
-		"test fixture":   {fixtureSeedsDir, 0, skills.CodeSlotsToSpend},
-	} {
-		dir := tc.dir
+	for name, dir := range map[string]string{"campaign seeds": seedsDir, "test fixture": fixtureSeedsDir} {
 		t.Run(name, func(t *testing.T) {
-			book := weaponBook(t, dir)
-			c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
-			require.NoError(t, err)
-			require.True(t, ok)
-			picks := c.Picks()
-			require.Len(t, picks.Nonweapon, len(kelsenSheet))
-			_, err = skills.ValidPicks(book, c.Class, picks, skills.Picks{})
+			book, c, f, _ := kelsenFigures(t, dir)
+			_, err := skills.ValidPicks(book, c.Class, c.Level, c.Picks(), skills.Picks{})
 			require.NoError(t, err, "the editor accepts the seed's picks")
-
-			catalogue, ok := parseTables(t, fixtureCatalogue).Languages()
-			require.True(t, ok)
-			langs := skills.LanguageSlots(c.Languages, catalogue.Native(c.Race))
-			assert.Equal(t, tc.langs, langs, "the campaign's Elvish, Orcish and Dwarvish; Common is a half-elf's own")
-			spend := skills.Spending{Picks: picks, Languages: langs}
-			sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
-			f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, spend)
-			require.True(t, ok)
-			f.SetTargets(func(a string) (int, bool) { return sheet.Score(charactersvc.Ability(a)) })
 			for i, s := range kelsenSheet {
 				got := f.Picks[i]
 				assert.Equal(t, s.id, got.ID)
-				assert.Equal(t, 1, got.Cost, s.id)
+				assert.Equal(t, freeOfTheBard[s.id], got.Free, s.id)
+				assert.Equal(t, got.Slots, got.Cost, "%s: at its cost", s.id)
 				assert.Zero(t, got.Extra, s.id)
 				assert.Equal(t, s.target, got.Target, "%s: the target his sheet gave", s.id)
 			}
+		})
+	}
+}
+
+// freeOfTheBard are the ids a bard gets free (ADR 0037 step 22.1), as the seeds' Kelsen holds them.
+var freeOfTheBard = map[string]bool{"reading_writing": true, "local_history": true, "singing": true, "musical_instrument": true}
+
+// kelsenFigures reads the seed bard of dir and his proficiency figures at his level, the check
+// targets set, with the language slots he spends.
+func kelsenFigures(t *testing.T, dir string) (skills.Book, seedfile.Character, skills.ProficiencySlots, int) {
+	t.Helper()
+	book := weaponBook(t, dir)
+	c, ok, err := seedfile.ReadCharacter(filepath.Join(dir, seedfile.CharacterFile))
+	require.NoError(t, err)
+	require.True(t, ok)
+	picks := c.Picks()
+	require.Len(t, picks.Nonweapon, len(kelsenSheet))
+	catalogue, ok := parseTables(t, fixtureCatalogue).Languages()
+	require.True(t, ok)
+	langs := skills.LanguageSlots(c.Languages, catalogue.Native(c.Race))
+	sheet := &charactersvc.Character{Str: c.Str, Dex: c.Dex, Con: c.Con, Int: c.Int, Wis: c.Wis, Cha: c.Cha}
+	f, ok := skills.ProficiencyFigures(book, c.Class, c.Level, c.Int, skills.Spending{Picks: picks, Languages: langs})
+	require.True(t, ok)
+	f.SetTargets(func(a string) (int, bool) { return sheet.Score(charactersvc.Ability(a)) })
+	return book, c, f, langs
+}
+
+// ADR 0037 step 22.7 (Consequences, as amended) on the seeds: the seed bard holds the four a bard
+// gets free at 0 slots, so his non-weapon pool at level 15 with Intelligence 14 (3 + 3 + 4 = 10)
+// is spent by his four other picks and Elvish, Orcish and Dwarvish (step 6: a half-elf's native
+// language is Common): 7 of 10, 3 to spend and no slots_over_budget (it was 11 of 10). Nothing is
+// offered: he holds the four. The test fixture's Kelsen knows no language but Common: 4 of 10. A
+// save that keeps the picks or drops a language is stored.
+func TestKelsen_Step22_7_FourFreePicksAndThreeToSpend(t *testing.T) {
+	for name, tc := range map[string]struct {
+		dir         string
+		langs, left int
+	}{
+		"campaign seeds": {seedsDir, 3, 3},
+		"test fixture":   {fixtureSeedsDir, 0, 6},
+	} {
+		t.Run(name, func(t *testing.T) {
+			book, c, f, langs := kelsenFigures(t, tc.dir)
+			assert.Equal(t, tc.langs, langs, "the campaign's Elvish, Orcish and Dwarvish; Common is a half-elf's own")
 			assert.Equal(t, slots.NonweaponPool{
-				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 8 + tc.langs, Left: 2 - tc.langs, Languages: tc.langs,
+				Initial: 3, PerLevels: 4, LevelGained: 3, Intelligence: 4, Available: 10, Spent: 4 + tc.langs, Left: tc.left, Languages: tc.langs,
 			}, f.Nonweapon)
-			w := skills.SlotWarnings(f)
-			require.NotEmpty(t, w)
-			assert.Equal(t, tc.code, w[0].Code, "a warning, never an error")
+			left := tc.left
+			assert.Contains(t, skills.SlotWarnings(f), skills.Warning{Code: skills.CodeSlotsToSpend, Field: "nonweapon", Pool: "nonweapon", Left: &left})
+			for _, w := range skills.SlotWarnings(f) {
+				assert.NotEqual(t, skills.CodeSlotsOverBudget, w.Code, "%+v", w)
+				assert.NotEqual(t, skills.CodeFreeProficiencyToTake, w.Code, "he holds the four: %+v", w)
+			}
+			spend := skills.Spending{Picks: c.Picks(), Languages: langs}
 			require.NoError(t, skills.PicksWithinBudget(book, c.Class, c.Level, c.Int, spend, spend), "kept as is")
-			fewer := skills.Spending{Picks: picks, Languages: max(langs-1, 0)}
+			fewer := skills.Spending{Picks: c.Picks(), Languages: max(langs-1, 0)}
 			require.NoError(t, skills.PicksWithinBudget(book, c.Class, c.Level, c.Int, spend, fewer), "a language dropped")
 		})
 	}

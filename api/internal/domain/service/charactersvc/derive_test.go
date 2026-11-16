@@ -55,7 +55,9 @@ func kelsenDerived() charactersvc.Derived {
 			NextLevelXP: &next, CurrentFloor: &floor, SpellSlots: level15Slots, Casts: true, LevelUp: charactersvc.LevelUp{Pending: []charactersvc.PendingLevel{}},
 		}},
 		Features: []charactersvc.FeatureGrant{
-			{Kind: classes.KindRogueSkills, Class: "bard", Level: 15}, {Kind: classes.KindSpellbook, Class: "bard", Level: 15},
+			{Kind: classes.KindRogueSkills, Class: "bard", Level: 15},
+			{Kind: classes.KindSpellbook, Class: "bard", Level: 15},
+			{Kind: classes.KindFreeProficiencies, Class: "bard", Level: 15},
 		},
 		XPTotal: 1_293_418, Group: "rogue", TargetLevel: 15, RealizedLevel: 15, NextLevelXP: &next, THAC0: 13, Saves: kelsenSaves,
 		SpellSlots: level15Slots,

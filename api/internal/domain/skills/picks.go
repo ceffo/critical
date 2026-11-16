@@ -96,6 +96,9 @@ type PickFigures struct {
 	// score is not known yet (a creation draft).
 	Target   int
 	HasCheck bool
+	// Free is ADR 0037 step 22.2: a class entry grants the id free (the free_proficiencies kind),
+	// so its cost is 0 and every slot it spends is an extra slot.
+	Free bool
 }
 
 // ProficiencyTarget is ADR 0014 step 1 as amended by ADR 0037 step 5: the
@@ -152,6 +155,9 @@ type ProficiencySlots struct {
 	// Penalty is Table 34's non-proficiency penalty for the class group (ADR 0037 step 8), 0 or
 	// less: what an attack with a weapon without a pick takes to hit.
 	Penalty int
+	// Offered are the ids a class entry grants free that no non-weapon pick holds (step 22.4),
+	// each warned free_proficiency_to_take, in the grants' order.
+	Offered []string
 }
 
 // NonproficientPenalty is ADR 0037 step 21.3 (amending step 8) for an attack with a weapon piece
@@ -316,21 +322,70 @@ const (
 	WeaponPickSlots = 1
 	// LanguagesModernID is "Languages, Modern": a language is a pick of the
 	// language list (ADR 0037 step 6), never picked on its own.
-	LanguagesModernID = "languages_modern"
+	LanguagesModernID = ruletablesvc.LanguagesModernID
 )
 
-// pickFigures reads one pick for a class learning groups at Table 37's cost.
-func pickFigures(book Book, groups []string, p Pick) PickFigures {
+// pickFigures reads one pick for a class learning groups at Table 37's cost, the ids in free
+// at 0 (ADR 0037 step 22.2).
+func pickFigures(book Book, groups, free []string, p Pick) PickFigures {
 	row, ok := book.Get(p.ID)
 	if !ok {
 		// Unknown to the catalogue: it costs what it spends and has no check.
 		return PickFigures{ID: p.ID, Slots: p.Slots, Cost: p.Slots}
 	}
-	cost := ruletablesvc.NonweaponCost(row, groups)
+	cost, granted := nonweaponCost(row, groups, free)
 	return PickFigures{
 		ID: p.ID, Slots: p.Slots, Cost: cost, Extra: slots.Extra(p.Slots, cost),
-		Ability: row.Ability, Modifier: row.Modifier, Known: true,
+		Ability: row.Ability, Modifier: row.Modifier, Known: true, Free: granted,
 	}
+}
+
+// nonweaponCost is ADR 0037 step 4 as amended by step 22.2: 0 for an id in free (granted true),
+// else Table 37's slots, one more outside groups (ruletablesvc.NonweaponCost).
+func nonweaponCost(row ruletablesvc.Proficiency, groups, free []string) (cost int, granted bool) {
+	if slices.Contains(free, row.ID) {
+		return 0, true
+	}
+	return ruletablesvc.NonweaponCost(row, groups), false
+}
+
+// cost is nonweaponCost's cost alone.
+func cost(row ruletablesvc.Proficiency, groups, free []string) int {
+	c, _ := nonweaponCost(row, groups, free)
+	return c
+}
+
+// NonweaponCostOf is nonweaponCost for the class entries cls (step 22.2 read through step 22.5):
+// what a pick of row costs the character, 0 when an entry grants it free.
+func NonweaponCostOf(book Book, cls Classes, row ruletablesvc.Proficiency) (cost int, granted bool) {
+	return nonweaponCost(row, cls.groups(book), cls.free(book))
+}
+
+// ReturnFreeSlots is ADR 0037 step 22.7 on the stored non-weapon picks of a character of the class
+// entries cls (the data step of existing characters, and an action-log entry logged before it):
+// each pick of a catalogue id an entry grants free (step 22.5) spends the cost it paid before (step
+// 4 on the active entries' groups, ADR 0042 step 15) less, never below 0, so its extra slots and
+// its check target stay and the slots it paid go back to spend. returned names each converted id
+// with the slots given back (none: nil); the picks come back in their order, never nil.
+func ReturnFreeSlots(book Book, cls Classes, picks []Pick) (out []Pick, returned map[string]int) {
+	free, groups := cls.free(book), cls.groups(book)
+	out = make([]Pick, 0, len(picks))
+	for _, p := range picks {
+		row, known := book.Get(p.ID)
+		if known && slices.Contains(free, p.ID) {
+			paid := ruletablesvc.NonweaponCost(row, groups)
+			back := min(paid, max(p.Slots, 0))
+			if back > 0 {
+				if returned == nil {
+					returned = map[string]int{}
+				}
+				returned[p.ID] = back
+				p.Slots -= back
+			}
+		}
+		out = append(out, p)
+	}
+	return out, returned
 }
 
 // Spending is what a character spends from its proficiency pools: the picks and the languages
@@ -364,11 +419,20 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		return ProficiencySlots{}, false
 	}
 	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: b.row.Penalty}
+	free := cls.free(book)
 	spent := 0
 	for _, p := range picks.Nonweapon {
-		f := pickFigures(book, b.groups, p)
+		f := pickFigures(book, b.groups, free, p)
 		out.Picks = append(out.Picks, f)
-		spent += p.Slots
+		// Step 22.6: a pick stored under its cost (a free pick whose grant went) spends the cost,
+		// with no extra slot.
+		spent += max(p.Slots, f.Cost)
+	}
+	// Step 22.4: a granted id no pick holds is offered.
+	for _, id := range free {
+		if !slices.ContainsFunc(picks.Nonweapon, func(p Pick) bool { return p.ID == id }) {
+			out.Offered = append(out.Offered, id)
+		}
 	}
 	out.Nonweapon = slots.Nonweapon(b.row, b.nonweaponLevel, ruletablesvc.LanguageLimit(intelligence), spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages
@@ -418,9 +482,10 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 // MaxPickSlots (CodeOutOfRange). An id the catalogue does not hold that before already has is
 // kept (step 16: older data is never dropped) when it spends 1 to MaxPickSlots. A refusal is a
 // *domain.FieldError on field nonweapon.<id>. Weapon picks: validWeaponPicks. The picks come
-// back in their order, never nil.
-func ValidPicks(book Book, class string, picks, before Picks) (Picks, error) {
-	return validPicksOf(book, One(class, 0), false, picks, before)
+// back in their order, never nil. level is the class's realized level, which the ids it grants
+// free read (step 22.5).
+func ValidPicks(book Book, class string, level int, picks, before Picks) (Picks, error) {
+	return validPicksOf(book, One(class, level), false, picks, before)
 }
 
 // validPicksOf is ValidPicks for the active class entries cls: a non-weapon pick costs Table
@@ -442,7 +507,7 @@ func validPicksOf(book Book, cls Classes, lifted bool, picks, before Picks) (Pic
 	if picks.Nonweapon == nil {
 		return Picks{Nonweapon: kept.Nonweapon, Weapon: weapon, WeaponRedo: redo}, nil
 	}
-	groups := cls.groups(book)
+	groups, free := cls.groups(book), cls.free(book)
 	had := map[string]bool{}
 	for _, p := range before.Nonweapon {
 		had[p.ID] = true
@@ -466,7 +531,11 @@ func validPicksOf(book Book, cls Classes, lifted bool, picks, before Picks) (Pic
 			return Picks{}, &domain.FieldError{Field: field, Message: CodeUnknown}
 		case !known && (p.Slots < 1 || p.Slots > MaxPickSlots):
 			return Picks{}, &domain.FieldError{Field: field, Message: CodeOutOfRange}
-		case known && (p.Slots < ruletablesvc.NonweaponCost(row, groups) || p.Slots > MaxPickSlots):
+		case known && p.Slots > MaxPickSlots:
+			return Picks{}, &domain.FieldError{Field: field, Message: CodeOutOfRange}
+		case known && p.Slots < cost(row, groups, free) && !slices.Contains(before.Nonweapon, p):
+			// Step 5 (step 22.2: a free id from 0). Step 22.6: a pick stored under its cost (its
+			// grant gone) is kept when the save leaves it unchanged.
 			return Picks{}, &domain.FieldError{Field: field, Message: CodeOutOfRange}
 		}
 		out.Nonweapon = append(out.Nonweapon, p)
@@ -575,6 +644,9 @@ func SlotWarnings(s ProficiencySlots) []Warning {
 		if !p.Known {
 			out = append(out, Warning{Code: CodeProficiencyUnknown, Field: FieldNonweapon + "." + p.ID})
 		}
+	}
+	for _, id := range s.Offered {
+		out = append(out, Warning{Code: CodeFreeProficiencyToTake, Field: FieldNonweapon + "." + id, ID: id})
 	}
 	for _, r := range s.WeaponRedo {
 		n := r.Slots

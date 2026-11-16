@@ -532,7 +532,7 @@ func SpecialistRaceWarnings(race string, entries []EntryDerived, defs *classes.R
 func fromSkills(ws []skills.Warning) []Warning {
 	out := make([]Warning, 0, len(ws))
 	for _, w := range ws {
-		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots})
+		out = append(out, Warning{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots, ID: w.ID})
 	}
 	return out
 }

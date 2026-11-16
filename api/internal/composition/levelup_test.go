@@ -85,8 +85,8 @@ func TestLevelUp_TheRollRaisesTheMaxHPAndUndoMakesItPendingAgain(t *testing.T) {
 		{Class: "bard", Classes: 1, Level: 16, FixedGain: 2, Grants: grants16},
 		{Class: "bard", Classes: 1, Level: 17, FixedGain: 2, Grants: skills.LevelGrants{SkillPoints: 15}},
 	}
-	at15 := skills.LevelGrants{NonweaponSlots: 2, SkillPoints: 30}
-	at16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 3, SkillPoints: 45}
+	at15 := skills.LevelGrants{NonweaponSlots: 6, SkillPoints: 30}
+	at16 := skills.LevelGrants{WeaponSlots: 1, NonweaponSlots: 7, SkillPoints: 45}
 	lu, maxHP, current := levelUpOf(t, bs, id)
 	assert.Equal(t, charactersvc.LevelUp{Pending: owed, ToSpend: at15}, lu)
 	assert.Equal(t, 85, maxHP)

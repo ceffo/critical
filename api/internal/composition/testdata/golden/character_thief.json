@@ -220,6 +220,7 @@
           "ability": "dex",
           "modifier": 0,
           "known": true,
+          "free": false,
           "target": 18
         },
         {
@@ -230,6 +231,7 @@
           "ability": "int",
           "modifier": 0,
           "known": true,
+          "free": false,
           "target": 9
         }
       ],

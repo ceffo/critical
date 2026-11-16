@@ -170,21 +170,21 @@ func TestSetPicks_Step13_LanguagesInTheOneMove(t *testing.T) {
 	assert.Equal(t, 1, f.tx.calls, "one transaction")
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":2}],"weapons":[],"weaponRedo":[],"languages":["elvish","common","gnomish"]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"],"freeGrants":true},
+		"after":{"nonweapon":[{"id":"tumbling","slots":2}],"weapons":[],"weaponRedo":[],"languages":["elvish","common","gnomish"],"freeGrants":true}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"]}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":["elvish","common"],"freeGrants":true}`, snaptest.State(t, e.Snapshots[0].Before))
 
 	r := f.svc.Module().Restorer(skillsvc.PicksStateKey)
 	require.NotNil(t, r)
 	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(pk("tumbling", 1))).Return(nil).Once()
 	f.picks.EXPECT().SetLanguages(mock.Anything, charID, []string{"elvish", "common", "gnomish"}).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["elvish","common","gnomish"]}`)))
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["elvish","common","gnomish"],"freeGrants":true}`)))
 
 	// A picks-only entry (the same languages as stored on both sides): the column is not
 	// rewritten, so a hidden free-text word (ADR 0032 step 8.1) survives the undo (no SetLanguages).
 	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(pk("tumbling", 1))).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["common","elvish"]}`)))
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapon":[],"languages":["common","elvish"],"freeGrants":true}`)))
 
 	// An entry logged before: the picks only, the languages left as stored (no SetLanguages).
 	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(pk("tumbling", 1))).Return(nil).Once()

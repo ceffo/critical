@@ -40,6 +40,7 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		classes.KindPsionics:             {Kind: classes.KindPsionics, Psionics: psionics()},
 		classes.KindSaveBonus:            {Kind: classes.KindSaveBonus, SaveBonus: saveBonus()},
 		classes.KindSchoolSpecialization: {Kind: classes.KindSchoolSpecialization, SchoolSpecialization: schoolSpecialization()},
+		classes.KindFreeProficiencies:    {Kind: classes.KindFreeProficiencies, FreeProficiencies: []string{"singing", "local_history"}},
 	}
 	require.Len(t, valid, len(classes.FeatureKinds), "one case per kind of the closed list")
 	for _, kind := range classes.FeatureKinds {
@@ -83,6 +84,10 @@ func TestFeatures_Step3_EveryKindParsesItsParams(t *testing.T) {
 		{"psionics' params on another kind", []classes.Feature{{Kind: classes.KindExceptionalStrength, Psionics: psionics()}}},
 		{"save_bonus with a param of another kind", []classes.Feature{{Kind: classes.KindSaveBonus, SaveBonus: saveBonus(), Ability: "wis"}}},
 		{"save_bonus without params", []classes.Feature{{Kind: classes.KindSaveBonus}}},
+		{"free_proficiencies without its list", []classes.Feature{{Kind: classes.KindFreeProficiencies}}},
+		{"free_proficiencies with an empty list", []classes.Feature{{Kind: classes.KindFreeProficiencies, FreeProficiencies: []string{}}}},
+		{"free_proficiencies with an id twice", []classes.Feature{{Kind: classes.KindFreeProficiencies, FreeProficiencies: []string{"singing", "singing"}}}},
+		{"free_proficiencies' list on another kind", []classes.Feature{{Kind: classes.KindExceptionalStrength, FreeProficiencies: []string{"singing"}}}},
 		{"save_bonus against an unknown tag", []classes.Feature{{Kind: classes.KindSaveBonus, SaveBonus: &classes.SaveBonus{Against: "fire", Bonus: 2}}}},
 		{"save_bonus of 0", []classes.Feature{{Kind: classes.KindSaveBonus, SaveBonus: &classes.SaveBonus{Against: classes.SaveAgainstMindAffecting}}}},
 		{"save_bonus above the maximum", []classes.Feature{{Kind: classes.KindSaveBonus, SaveBonus: &classes.SaveBonus{Against: classes.SaveAgainstMindAffecting, Bonus: classes.MaxSaveBonus + 1}}}},

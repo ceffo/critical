@@ -2,11 +2,17 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { useCreationOptions } from "@/lib/useCreationOptions";
+import { useCharacterStore } from "@/stores/character";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { ProficienciesInput, ProficiencySlots } from "@/types/character";
 import { LanguagesPool } from "./LanguagesPool";
-import { refusalOf, schedulePreview, type PickPool } from "./pickEditor";
+import {
+  offeredIds,
+  refusalOf,
+  schedulePreview,
+  type PickPool,
+} from "./pickEditor";
 import { ProficiencyPicker } from "./ProficiencyPicker";
 import { usePickRefusal, type Refusal } from "./refusal";
 import { WeaponPicker } from "./WeaponPicker";
@@ -95,6 +101,11 @@ export function PickEditor({
     startingPicks(pool, slots, stored),
   );
   const [figures, setFigures] = useState<ProficiencySlots>(slots);
+  // ADR 0037 step 22.4: what the server offers free, from the character as read, then each preview.
+  const storedWarnings = useCharacterStore((s) => s.character?.warnings);
+  const [offered, setOffered] = useState<string[]>(() =>
+    offeredIds(storedWarnings),
+  );
   const [stale, setStale] = useState(false);
   const [previewError, setPreviewError] = useState<Refusal | null>(null);
   const [error, setError] = useState<Refusal | null>(null);
@@ -105,8 +116,9 @@ export function PickEditor({
   useEffect(
     () =>
       schedulePreview(JSON.parse(key) as ProficienciesInput, pool, {
-        figures: (a) => {
+        figures: (a, warnings) => {
           if (a) setFigures(a);
+          setOffered(offeredIds(warnings));
           setStale(false);
           setPreviewError(null);
         },
@@ -223,6 +235,7 @@ export function PickEditor({
             figures={figures}
             stale={stale}
             errorFor={errorFor}
+            offered={offered}
           />
         </>
       )}

@@ -60,6 +60,10 @@ func TestNewProficiencies_RefusesWhatTheSchemaCannotSay(t *testing.T) {
 func TestProficiencies_NoCheckRowAndEmptyCatalogue(t *testing.T) {
 	p, err := ruletablesvc.NewProficiencies([]ruletablesvc.Proficiency{
 		{ID: "blind_fighting", Slots: 2, Groups: []string{"rogue", "warrior"}},
+		{ID: "reading_writing", Ability: "int", Modifier: 1, Slots: 1, Groups: []string{"priest", "wizard"}},
+		{ID: "local_history", Ability: "cha", Slots: 1, Groups: []string{"priest", "rogue"}},
+		{ID: "singing", Ability: "cha", Slots: 1, Groups: []string{"general"}},
+		{ID: "musical_instrument", Ability: "dex", Modifier: -1, Slots: 1, Groups: []string{"priest", "rogue"}},
 	}, okCrossovers(t), nil, cataloguetest.Definitions(t))
 	require.NoError(t, err)
 	assert.Equal(t, "blind_fighting", p.All()[0].ID)

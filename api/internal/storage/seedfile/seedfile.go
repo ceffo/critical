@@ -155,8 +155,9 @@ func ReadCharacter(path string) (c Character, ok bool, err error) {
 			return Character{}, false, fmt.Errorf("character.json: proficiency %d: id is required", i)
 		case seen[p.ID]:
 			return Character{}, false, fmt.Errorf("character.json: proficiency %q twice", p.ID)
-		case p.Slots < 1:
-			return Character{}, false, fmt.Errorf("character.json: proficiency %q: at least 1 slot", p.ID)
+		case p.Slots < 0:
+			// 0 is a pick a class gets free (ADR 0037 step 22.2).
+			return Character{}, false, fmt.Errorf("character.json: proficiency %q: negative slots", p.ID)
 		}
 		seen[p.ID] = true
 	}

@@ -448,3 +448,67 @@ func TestSkillSets_Step15_TheDerivedBlockNamesEachSet(t *testing.T) {
 		}},
 	})
 }
+
+// registryOf is the fixture's definitions with edit applied to the class list.
+func registryOf(t *testing.T, edit func([]classes.Class) []classes.Class) *classes.Registry {
+	t.Helper()
+	defs, err := cataloguetest.Tables(t).Definitions()
+	require.NoError(t, err)
+	reg, err := classes.New(edit(defs.Classes()), defs.GroupDefs(), defs.Races())
+	require.NoError(t, err)
+	return reg
+}
+
+// ADR 0037 step 22.1 (ADR 0040 step 3 as amended): a proficiency is free only through the
+// free_proficiencies kind a class entry lists, never a class id. The fixture bard holds singing and
+// local history at 0 slots, cost 0, and is offered reading and writing and musical instrument; the
+// bard with the kind struck pays for them (cost 1 each, a pick at 0 refused out_of_range, nothing
+// offered); a warrior-group test class listing the kind with singing and local history (the latter
+// outside its groups: 2 otherwise) gets both free.
+func TestFeatures_Step22_1_FreeProficienciesFromTheKind(t *testing.T) {
+	sheet := func(class string) domainskills.Sheet {
+		return domainskills.Sheet{Class: class, Level: 1, Intelligence: 9, Picks: picks(p("singing", 0), p("local_history", 0))}
+	}
+	offers := func(ws []domainskills.Warning) []string {
+		var out []string
+		for _, w := range ws {
+			if w.Code == domainskills.CodeFreeProficiencyToTake {
+				out = append(out, w.ID)
+			}
+		}
+		return out
+	}
+	costs := func(f *domainskills.ProficiencySlots) map[string]int {
+		out := map[string]int{}
+		for _, p := range f.Picks {
+			out[p.ID] = p.Cost
+			if p.Free {
+				out[p.ID+" free"] = 1
+			}
+		}
+		return out
+	}
+
+	bard := profBookOver(t, registryOf(t, keep))
+	f, ws := domainskills.Read(bard, sheet("bard"))
+	assert.Equal(t, map[string]int{"singing": 0, "singing free": 1, "local_history": 0, "local_history free": 1}, costs(f))
+	assert.Equal(t, []string{"reading_writing", "musical_instrument"}, offers(ws))
+	_, err := domainskills.Apply(bard, nil, "", sheet("bard"), domainskills.Edit{Picks: picks(p("singing", 0), p("local_history", 0))})
+	require.NoError(t, err)
+
+	struck := profBookOver(t, registryOf(t, strike("bard", classes.KindFreeProficiencies)))
+	f, ws = domainskills.Read(struck, domainskills.Sheet{Class: "bard", Level: 1, Intelligence: 9, Picks: picks(p("singing", 1), p("local_history", 1))})
+	assert.Equal(t, map[string]int{"singing": 1, "local_history": 1}, costs(f), "the bard without the kind pays")
+	assert.Empty(t, offers(ws))
+	_, err = domainskills.Apply(struck, nil, "", domainskills.Sheet{Class: "bard", Level: 1, Intelligence: 9},
+		domainskills.Edit{Picks: picks(p("singing", 0))})
+	var fe *domain.FieldError
+	require.True(t, errors.As(err, &fe), "%v", err)
+	assert.Equal(t, domain.FieldError{Field: "nonweapon.singing", Message: domainskills.CodeOutOfRange}, *fe)
+
+	minstrel := profBookOver(t, registryOf(t, add("test_minstrel", "fighter", "",
+		classes.Feature{Kind: classes.KindFreeProficiencies, FreeProficiencies: []string{"singing", "local_history"}})))
+	f, ws = domainskills.Read(minstrel, sheet("test_minstrel"))
+	assert.Equal(t, map[string]int{"singing": 0, "singing free": 1, "local_history": 0, "local_history free": 1}, costs(f))
+	assert.Empty(t, offers(ws), "it holds both")
+}

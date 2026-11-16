@@ -116,7 +116,8 @@ type CreationOptions struct {
 	ProficiencyGroups map[string][]string
 	// ProficiencyCosts is each pickable catalogue proficiency's cost by class
 	// (ADR 0037 step 4: Table 37's slots, one more outside the class's Table 38
-	// groups), so the editor shows and sends the server's cost. A proficiency
+	// groups; 0 for an id the class grants free at level 1, step 22.2), so the
+	// editor shows and sends the server's cost. A proficiency
 	// never picked on its own (skills.LanguagesModernID, step 6) has no cost: the
 	// editor offers only what has one. Empty without the seed.
 	ProficiencyCosts map[string]map[string]int
@@ -309,7 +310,9 @@ func (s *service) CreationOptions(ctx context.Context) (CreationOptions, error) 
 			if p.ID == skills.LanguagesModernID {
 				continue // step 6: a language is a pick of the language list
 			}
-			costs[p.ID] = ruletablesvc.NonweaponCost(p, c.Groups)
+			// ADR 0037 step 22.2: an id the class grants free at level 1 (the creation's
+			// first level) costs 0; the draft's figures read the realized level.
+			costs[p.ID], _ = skills.NonweaponCostOf(s.profs, skills.One(c.Class, 1), p)
 		}
 		if out.ProficiencyCosts == nil {
 			out.ProficiencyCosts = map[string]map[string]int{}

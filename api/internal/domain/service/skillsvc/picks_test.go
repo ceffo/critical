@@ -87,12 +87,12 @@ func TestSetPicks_Step13_LogsOneMoveWithASnapshot(t *testing.T) {
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":[]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapons":[],"weaponRedo":[],"languages":[]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":[],"freeGrants":true},
+		"after":{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapons":[],"weaponRedo":[],"languages":[],"freeGrants":true}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
 	assert.Equal(t, skillsvc.PicksStateKey, e.Snapshots[0].Key)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":[]}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapons":[],"weaponRedo":[],"languages":[]}`, snaptest.State(t, e.Snapshots[0].After))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[],"weaponRedo":[],"languages":[],"freeGrants":true}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":2},{"id":"tracking","slots":2}],"weapons":[],"weaponRedo":[],"languages":[],"freeGrants":true}`, snaptest.State(t, e.Snapshots[0].After))
 }
 
 // ADR 0037 step 21.7 (amending steps 12 and 13): a save of the weapon picks alone (no non-weapon
@@ -111,11 +111,11 @@ func TestSetPicks_Step21_7_WeaponSaveLogsCodes(t *testing.T) {
 	require.Len(t, f.entries, 1, "one log entry")
 	e := f.entries[0]
 	assert.Equal(t, actionlog.KindProficiencies, e.Kind)
-	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[],"languages":[]},
-		"after":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1},{"code":"short_bow","slots":1}],"weaponRedo":[],"languages":[]}}`, string(e.Payload))
+	assert.JSONEq(t, `{"before":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[],"languages":[],"freeGrants":true},
+		"after":{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1},{"code":"short_bow","slots":1}],"weaponRedo":[],"languages":[],"freeGrants":true}}`, string(e.Payload))
 	require.Len(t, e.Snapshots, 1)
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[],"languages":[]}`, snaptest.State(t, e.Snapshots[0].Before))
-	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1},{"code":"short_bow","slots":1}],"weaponRedo":[],"languages":[]}`,
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[],"languages":[],"freeGrants":true}`, snaptest.State(t, e.Snapshots[0].Before))
+	assert.JSONEq(t, `{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[{"code":"dagger","slots":1},{"code":"short_bow","slots":1}],"weaponRedo":[],"languages":[],"freeGrants":true}`,
 		snaptest.State(t, e.Snapshots[0].After))
 }
 
@@ -136,6 +136,28 @@ func TestSetPicks_Step21_7_AnEntryOfTypesLeavesTheWeaponPicks(t *testing.T) {
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"tumbling","slots":1}],"weapons":[]}`)))
 }
 
+// ADR 0037 step 22.7 (proposed reading, kept): an action-log entry logged before a class's free
+// proficiencies cost 0 (no freeGrants mark) stores the bard's four at the cost they paid then; its
+// undo or redo writes them converted as the data step converted the stored picks (the four at 0, a
+// musical instrument at 3 at 2, Tumbling as logged), so undoing an older save never charges the
+// bard again. An entry logged since (freeGrants) is written as logged, a free pick at 1 slot kept
+// at 1 (its extra slot).
+func TestSetPicks_Step22_7_AnEntryLoggedBeforeIsConverted(t *testing.T) {
+	f := newPicksFixture(t, nonweapon(pk("tumbling", 1)))
+	r := f.svc.Module().Restorer(skillsvc.PicksStateKey)
+	require.NotNil(t, r)
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(
+		pk("reading_writing", 0), pk("local_history", 0), pk("singing", 0), pk("musical_instrument", 2), pk("tumbling", 1),
+	)).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"reading_writing","slots":1},
+		{"id":"local_history","slots":1},{"id":"singing","slots":1},{"id":"musical_instrument","slots":3},{"id":"tumbling","slots":1}],
+		"weapons":[]}`)))
+
+	f.picks.EXPECT().SetProficiencyPicks(mock.Anything, charID, nonweapon(pk("singing", 1), pk("tumbling", 1))).Return(nil).Once()
+	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"nonweapon":[{"id":"singing","slots":1},
+		{"id":"tumbling","slots":1}],"weapons":[],"freeGrants":true}`)))
+}
+
 // ADR 0037 step 21.8.3: a weapon save clears the type picks left to redo, and the list is part of
 // the snapshot, so undoing that save brings it back and redoing it clears it again.
 func TestSetPicks_Step21_8_3_UndoingTheWeaponSaveBringsTheRedoListBack(t *testing.T) {
@@ -149,7 +171,7 @@ func TestSetPicks_Step21_8_3_UndoingTheWeaponSaveBringsTheRedoListBack(t *testin
 	require.NoError(t, err)
 	require.Len(t, f.entries, 1)
 	e := f.entries[0]
-	assert.JSONEq(t, `{"nonweapon":[],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[{"type":"other_melee","slots":1}],"languages":[]}`,
+	assert.JSONEq(t, `{"nonweapon":[],"weapons":[{"code":"dagger","slots":1}],"weaponRedo":[{"type":"other_melee","slots":1}],"languages":[],"freeGrants":true}`,
 		snaptest.State(t, e.Snapshots[0].Before))
 
 	r := f.svc.Module().Restorer(skillsvc.PicksStateKey)

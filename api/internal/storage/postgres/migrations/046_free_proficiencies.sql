@@ -1,0 +1,20 @@
+-- A non-weapon proficiency a class grants free costs 0 slots (ADR 0037 step 22, the catalogue's
+-- free_proficiencies feature kind): a pick of it stores its slots as any pick does, every one of
+-- them an extra slot.
+--
+-- A data step run just after this file (returnFreeSlots, ADR 0037 step 22.7) gives each character
+-- the slots it paid for such a pick: for each stored non-weapon pick {"id", "slots"} of
+-- characters.proficiency_picks whose id one of its class entries grants free (an active entry at
+-- its realized level, a frozen one at its left-at level), the slots become the stored slots minus
+-- the cost the pick paid before (ADR 0037 step 4 on the active entries' groups), never below 0.
+-- The check target of every pick is unchanged; the slots it paid go back to spend. A character who
+-- holds none of them is not written. It runs once, with this file, as every data step (ADR 0025
+-- step 3): a second run would take the cost again. The action log is not rewritten: an entry
+-- logged before is converted the same way when it is undone or redone.
+--
+-- Additive for a rolling deploy (ADR 0024 step 5.2): in the minutes both releases run, the older
+-- one reads a converted pick at its cost (the slots are back to spend, which it shows as fewer
+-- spent) and a non-weapon save of its own refuses a pick under its cost, so the player saves from
+-- the newer release; a pick the older one writes meanwhile is read as extra slots (the user is the
+-- only writer, accepted). Schema only (ADR 0025 step 2.2): this file only documents the column.
+COMMENT ON COLUMN characters.proficiency_picks IS 'proficiency picks by pool (ADR 0037 steps 12, 21 and 22): {"nonweapon": [{"id", "slots"}], "weapon": [{"code", "slots"}], "weapon_redo": [{"type", "slots"}]}; a non-weapon id a class grants free costs 0, its slots all extra slots';

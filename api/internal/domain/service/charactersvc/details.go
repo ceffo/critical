@@ -199,6 +199,9 @@ type Warning struct {
 	// slots it spent (ADR 0037 step 21.8.3); "" and nil for the others.
 	Type  string
 	Slots *int
+	// ID is a free_proficiency_to_take reminder's non-weapon id (ADR 0037 step
+	// 22.4); "" for the others.
+	ID string
 }
 
 // WithNative is d with the race's native language among its languages, first

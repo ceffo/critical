@@ -400,6 +400,7 @@ export function mergeDraft(d: FlowDraft, patch: DraftPatch): FlowDraft {
   const next = { ...d, ...patch, details: { ...d.details, ...patch.details } };
   const moved = classKey(next) !== classKey(d);
   if (moved && patch.picks === undefined) next.picks = [];
+  if (moved && patch.freeSeeded === undefined) next.freeSeeded = undefined;
   if (moved && patch.weaponPicks === undefined) next.weaponPicks = [];
   if (moved && patch.spellbook === undefined) next.spellbook = null;
   // The known powers are counted against the class's allowance (ADR 0043 step 9), and the PSP
@@ -461,6 +462,9 @@ export interface FlowDraft {
   skillPoints: Record<string, Record<string, string>>;
   /** The non-weapon picks (ADR 0037 step 14), each at the slots the player gave it. */
   picks: PickInput[];
+  /** The classes (`classKey`) whose free proficiencies were put in the picks at 0 slots (ADR 0037
+   * step 22.4), once: one the player removes is offered, not put back. Absent: none yet. */
+  freeSeeded?: string;
   /** The weapon picks and the specialization (ADR 0037 steps 7, 9 and 14), each type at its
    * slots. */
   weaponPicks: WeaponPickInput[];

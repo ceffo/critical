@@ -29,6 +29,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -169,6 +175,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -309,6 +321,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -455,6 +473,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -601,6 +625,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -745,6 +775,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": [
+          "reading_writing",
+          "local_history",
+          "singing",
+          "musical_instrument"
+        ],
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -889,6 +925,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -1079,6 +1116,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -1269,6 +1307,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -1463,6 +1502,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -1658,6 +1698,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -1851,6 +1892,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -2048,6 +2090,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2122,6 +2165,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2196,6 +2240,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2270,6 +2315,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2344,6 +2390,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2418,6 +2465,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -2,
         "Picks": [],
         "Weapon": {
@@ -2488,6 +2536,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2566,6 +2615,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2644,6 +2694,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2727,6 +2778,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2810,6 +2862,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2891,6 +2944,7 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -5,
         "Picks": [],
         "Weapon": {
@@ -2972,6 +3026,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -3146,6 +3201,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -3320,6 +3376,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -3494,6 +3551,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -3668,6 +3726,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {
@@ -3842,6 +3901,7 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "Offered": null,
         "Penalty": -3,
         "Picks": [],
         "Weapon": {

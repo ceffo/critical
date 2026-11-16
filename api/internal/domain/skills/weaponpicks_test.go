@@ -47,7 +47,7 @@ func TestWeaponPick_Step21_1_OnePickPerCatalogueCode(t *testing.T) {
 		{"three slots for a dagger (not its specialization's 2)", skills.Picks{Weapon: []skills.WeaponPick{{Code: "dagger", Slots: 3}}}, weapons(), refused("weapon.dagger", "out_of_range")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := skills.ValidPicks(book, "fighter", tc.picks, tc.before)
+			got, err := skills.ValidPicks(book, "fighter", 1, tc.picks, tc.before)
 			if tc.want == nil {
 				require.NoError(t, err)
 				assert.Equal(t, tc.picks.Weapon, got.Weapon)
@@ -97,7 +97,7 @@ func TestWeaponPick_Step21_2_TheClassEquipmentDecides(t *testing.T) {
 		{"a stored code outside the list is kept", "mage", weapons("dagger", "long_sword"), weapons("long_sword"), nil},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := skills.ValidPicks(book, tc.class, tc.picks, tc.before)
+			got, err := skills.ValidPicks(book, tc.class, 1, tc.picks, tc.before)
 			if tc.want == nil {
 				require.NoError(t, err)
 				assert.Equal(t, tc.picks.Weapon, got.Weapon)
@@ -160,7 +160,7 @@ func TestSpecialization_Step21_5_OneWeaponAtItsTypesCost(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := skills.ValidPicks(book, tc.class, tc.picks, weapons())
+			got, err := skills.ValidPicks(book, tc.class, 1, tc.picks, weapons())
 			if tc.want == nil {
 				require.NoError(t, err)
 				assert.Equal(t, tc.picks.Weapon, got.Weapon)
@@ -197,15 +197,15 @@ func TestValidPicks_Step12_AnAbsentPoolKeepsTheStoredOne(t *testing.T) {
 		Nonweapon: []skills.Pick{p("tumbling", 1)},
 		Weapon:    []skills.WeaponPick{{Code: "dagger", Slots: 1}},
 	}
-	got, err := skills.ValidPicks(book, "bard", skills.Picks{Nonweapon: []skills.Pick{p("cooking", 1)}}, stored)
+	got, err := skills.ValidPicks(book, "bard", 1, skills.Picks{Nonweapon: []skills.Pick{p("cooking", 1)}}, stored)
 	require.NoError(t, err)
 	assert.Equal(t, skills.Picks{Nonweapon: []skills.Pick{p("cooking", 1)}, Weapon: stored.Weapon}, got)
 
-	got, err = skills.ValidPicks(book, "bard", skills.Picks{Weapon: []skills.WeaponPick{{Code: "dart", Slots: 1}}}, stored)
+	got, err = skills.ValidPicks(book, "bard", 1, skills.Picks{Weapon: []skills.WeaponPick{{Code: "dart", Slots: 1}}}, stored)
 	require.NoError(t, err)
 	assert.Equal(t, skills.Picks{Nonweapon: stored.Nonweapon, Weapon: []skills.WeaponPick{{Code: "dart", Slots: 1}}}, got)
 
-	got, err = skills.ValidPicks(book, "bard", skills.Picks{Weapon: []skills.WeaponPick{}}, stored)
+	got, err = skills.ValidPicks(book, "bard", 1, skills.Picks{Weapon: []skills.WeaponPick{}}, stored)
 	require.NoError(t, err)
 	assert.Empty(t, got.Weapon, "an empty list removes every weapon pick")
 	assert.Equal(t, stored.Nonweapon, got.Nonweapon)
@@ -268,6 +268,7 @@ func TestWarnings_Step11_WeaponPool(t *testing.T) {
 		ps.Nonweapon = []skills.Pick{p("tumbling", 5)}
 		f, ok := skills.ProficiencyFigures(book, "bard", 1, 9, skills.Spending{Picks: ps})
 		require.True(t, ok)
+		f.Offered = nil // the bard's free ids offered: step 22.4's test
 		return skills.SlotWarnings(f)
 	}
 	three, two, one := 3, 2, 1

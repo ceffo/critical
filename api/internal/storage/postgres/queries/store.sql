@@ -374,6 +374,12 @@ WHERE category = 'weapon' AND weapon_type <> '' ORDER BY character_id, weapon_ty
 -- name: CharacterPicks :many
 SELECT id, proficiency_picks FROM characters ORDER BY id;
 
+-- The free proficiencies data step after migration 046 (ADR 0037 step 22.7): every class entry, by
+-- character in position order.
+-- name: CharacterClassEntries :many
+SELECT character_id, class, realized_level, state, left_at_level FROM character_classes
+ORDER BY character_id, position;
+
 -- The weapon picks data step after migration 042 (ADR 0037 step 21.8): the catalogue codes of each
 -- character's weapons, in any state, in list order.
 -- name: CharacterWeaponCodes :many

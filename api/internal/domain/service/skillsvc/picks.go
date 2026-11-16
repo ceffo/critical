@@ -73,6 +73,10 @@ type picksState struct {
 	Weapons    *[]weaponPickState `json:"weapons,omitempty"`
 	WeaponRedo *[]typePickState   `json:"weaponRedo,omitempty"`
 	Languages  *[]string          `json:"languages,omitempty"`
+	// FreeGrants is true on every entry logged since a class's free proficiencies cost 0 (ADR
+	// 0037 step 22.7): an entry without it stores a free pick at the cost it paid then, which its
+	// undo or redo gives back (skills.ReturnFreeSlots), as the data step did for the stored picks.
+	FreeGrants bool `json:"freeGrants,omitempty"`
 }
 
 // picksRecord is the payload of a proficiencies entry, the picks and the languages before and
@@ -99,6 +103,7 @@ func toState(p skills.Picks, languages []string) picksState {
 	out.WeaponRedo = &redo
 	langs := append([]string{}, languages...)
 	out.Languages = &langs
+	out.FreeGrants = true
 	return out
 }
 
@@ -239,7 +244,9 @@ func (s *service) SetProficiencies(ctx context.Context, characterID int64, e Edi
 // restorePicks writes a snapshot's picks and languages back: undo the save's "before", redo its
 // "after" (ADR 0019), inside the undo's transaction. A snapshot logged before a pick named a
 // weapon (ADR 0037 step 21.7) carries no weapon codes, one logged before the languages moved to
-// the Skills tab no languages: the stored ones stay (the weapon picks with their redo list).
+// the Skills tab no languages: the stored ones stay (the weapon picks with their redo list). One
+// logged before a class's free proficiencies cost 0 has their picks converted as the data step
+// converted the stored ones (ADR 0037 step 22.7), on the character's class entries now.
 func (s *service) restorePicks(ctx context.Context, characterID int64, _ string, st picksState) error {
 	var stored charactersvc.View
 	loaded := false
@@ -258,6 +265,13 @@ func (s *service) restorePicks(ctx context.Context, characterID int64, _ string,
 		}
 		kept := stored.ProficiencyPicks.Clone()
 		picks.Weapon, picks.WeaponRedo = kept.Weapon, kept.WeaponRedo
+	}
+	if !st.FreeGrants {
+		// ADR 0037 step 22.7: an entry logged before a free pick cost 0 never charges it again.
+		if err := load(); err != nil {
+			return err
+		}
+		picks.Nonweapon, _ = skills.ReturnFreeSlots(s.book, stored.SkillClasses(), picks.Nonweapon)
 	}
 	if err := s.picks.SetProficiencyPicks(ctx, characterID, picks); err != nil {
 		return fmt.Errorf("restore proficiency picks: %w", err)

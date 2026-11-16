@@ -64,6 +64,27 @@ func TestProficiencies_Step2_OptionsWireShape(t *testing.T) {
 	assert.Len(t, costs, 14, "the six classes and the eight specialist wizards")
 }
 
+// ADR 0037 step 22.2: the creation options' cost of an id a class grants free (the fixture bard's
+// free_proficiencies at level 1) is 0 for that class, so the editor shows and sends 0; another
+// class pays Table 37's (singing 1, general; reading and writing 2 for a fighter, outside his
+// groups), and the bard's other picks keep step 4's cost.
+func TestProficiencies_Step22_2_OptionsCostTheGrantedIdsAtZero(t *testing.T) {
+	tb, _ := newTable(t)
+	bob, _ := tb.login("bob@example.com")
+	var raw map[string]json.RawMessage
+	require.Equal(t, http.StatusOK, tb.call(bob, "GET", "/api/characters/options", "", &raw))
+	var costs map[string]map[string]int
+	require.NoError(t, json.Unmarshal(raw["proficiencyCosts"], &costs))
+	for _, id := range []string{"reading_writing", "local_history", "singing", "musical_instrument"} {
+		assert.Equal(t, 0, costs["bard"][id], "the bard gets %s free", id)
+		assert.Contains(t, costs["fighter"], id)
+		assert.Positive(t, costs["fighter"][id], "a fighter pays for %s", id)
+	}
+	assert.Equal(t, 1, costs["fighter"]["singing"])
+	assert.Equal(t, 2, costs["fighter"]["reading_writing"])
+	assert.Equal(t, 1, costs["bard"]["tumbling"], "his other picks keep their cost")
+}
+
 // ADR 0037 steps 21.2, 21.5 and 21.6: each class option of GET /api/characters/options carries
 // the catalogue weapons the class may pick (weapons, in place of weaponTypes), in offer order, with
 // the specialization's slots for a class that specializes (its type's: a bow 3, the composite long

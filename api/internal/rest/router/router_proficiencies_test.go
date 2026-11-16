@@ -52,8 +52,8 @@ const pickedAnswer = `{
 		"weapons":[{"code":"long_sword","specializationSlots":0},{"code":"dagger","specializationSlots":3}],
 		"weaponRedo":[{"type":"other_melee","slots":1}],
 		"picks":[
-			{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"target":18},
-			{"id":"old_skill","slots":1,"cost":1,"extraSlots":0,"ability":"","modifier":0,"known":false,"target":null}
+			{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"free":false,"target":18},
+			{"id":"old_skill","slots":1,"cost":1,"extraSlots":0,"ability":"","modifier":0,"known":false,"free":false,"target":null}
 		]},
 	"warnings":[
 		{"code":"slots_to_spend","field":"nonweapon","pool":"nonweapon","left":7},

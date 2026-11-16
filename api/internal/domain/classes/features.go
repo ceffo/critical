@@ -50,6 +50,10 @@ const (
 	// and the races that may be one (ADR 0050 step 2, PHB Table 22). Param
 	// SchoolSpecialization.
 	KindSchoolSpecialization = "school_specialization"
+	// KindFreeProficiencies: the non-weapon proficiencies the class gets at
+	// no slot cost from the feature's from_level (ADR 0037 step 22). Param
+	// FreeProficiencies.
+	KindFreeProficiencies = "free_proficiencies"
 )
 
 // The school codes of a spell (ADR 0050 step 1): the PHB's nine schools,
@@ -91,6 +95,7 @@ var FeatureKinds = []string{
 	KindExceptionalStrength, KindMeleeAttacksPerRound, KindWeaponSpecialization,
 	KindWisdomBonusSpells, KindSpellFailure, KindSphereAccess, KindTurnUndead,
 	KindRogueSkills, KindBackstab, KindSpellbook, KindPsionics, KindSaveBonus, KindSchoolSpecialization,
+	KindFreeProficiencies,
 }
 
 // notImplemented are the kinds of the closed list the code does not compute
@@ -141,6 +146,9 @@ type Feature struct {
 	// Specialization is weapon_specialization's params (ADR 0040 step 13):
 	// what a specialization costs and which Table 35 column it reads.
 	Specialization *WeaponSpecialization
+	// FreeProficiencies is free_proficiencies' param nonweapon (ADR 0037
+	// step 22.1): the non-weapon catalogue ids granted at no slot cost.
+	FreeProficiencies []string
 }
 
 // WeaponSpecialization are the params of weapon_specialization (ADR 0040
@@ -458,7 +466,19 @@ func (f Feature) clone() Feature {
 		s := f.SchoolSpecialization.clone()
 		f.SchoolSpecialization = &s
 	}
+	f.FreeProficiencies = slices.Clone(f.FreeProficiencies)
 	return f
+}
+
+// FreeProficienciesAt are the non-weapon ids the class grants free at level
+// (ADR 0037 steps 22.1 and 22.5: its free_proficiencies feature when listed
+// at a from_level at or under level), nil for none.
+func (c Class) FreeProficienciesAt(level int) []string {
+	f, ok := c.Feature(KindFreeProficiencies, level)
+	if !ok {
+		return nil
+	}
+	return f.FreeProficiencies
 }
 
 // checkFeatures validates a class's feature list (ADR 0040 step 8): known
@@ -507,7 +527,8 @@ func checkParams(f Feature) error {
 	table, ability, spheres, rogue, book := f.Table != "", f.Ability != "", f.Spheres != nil, f.RogueSkills != nil, f.Spellbook != nil
 	if (f.Kind != KindPsionics && f.Psionics != nil) || (f.Kind != KindSaveBonus && f.SaveBonus != nil) ||
 		(f.Kind != KindWeaponSpecialization && f.Specialization != nil) ||
-		(f.Kind != KindSchoolSpecialization && f.SchoolSpecialization != nil) {
+		(f.Kind != KindSchoolSpecialization && f.SchoolSpecialization != nil) ||
+		(f.Kind != KindFreeProficiencies && f.FreeProficiencies != nil) {
 		return errors.New("a missing or unexpected parameter")
 	}
 	want := func(t, a, s, r, b bool) error {
@@ -535,6 +556,17 @@ func checkParams(f Feature) error {
 			return errors.New("a missing or unexpected parameter")
 		}
 		return f.SchoolSpecialization.check()
+	case KindFreeProficiencies:
+		if err := want(false, false, false, false, false); err != nil {
+			return err
+		}
+		// ADR 0037 step 22.1: a list, each id once; that each is a non-weapon
+		// catalogue id is the proficiency catalogue's check
+		// (ruletablesvc.NewProficiencies).
+		if len(f.FreeProficiencies) == 0 {
+			return errors.New("an empty list")
+		}
+		return unique(f.FreeProficiencies, func(id string) string { return id })
 	case KindPsionics:
 		if err := want(false, false, false, false, false); err != nil {
 			return err

@@ -18,6 +18,9 @@ type Querier interface {
 	AllTexts(ctx context.Context) ([]LocalizedText, error)
 	CarryOverItems(ctx context.Context, characterID int64) ([]CarryOverItemsRow, error)
 	CatalogueVersion(ctx context.Context) (CatalogueVersionRow, error)
+	// The free proficiencies data step after migration 046 (ADR 0037 step 22.7): every class entry, by
+	// character in position order.
+	CharacterClassEntries(ctx context.Context) ([]CharacterClassEntriesRow, error)
 	CharacterClasses(ctx context.Context) ([]CharacterClassesRow, error)
 	CharacterPicks(ctx context.Context) ([]CharacterPicksRow, error)
 	CharacterSkillArmour(ctx context.Context, id int64) (CharacterSkillArmourRow, error)

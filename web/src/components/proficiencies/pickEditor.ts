@@ -1,6 +1,10 @@
 import { ApiError } from "@/api/http";
 import { previewProficiencies } from "@/api/proficiencies";
-import type { ProficienciesInput, ProficiencySlots } from "@/types/character";
+import type {
+  CharacterWarning,
+  ProficienciesInput,
+  ProficiencySlots,
+} from "@/types/character";
 import type { Refusal } from "./refusal";
 
 /** A pool of picks the one editor edits (ADR 0037 steps 12 and 13): the weapon picks, or the
@@ -9,6 +13,16 @@ export type PickPool = "weapon" | "nonWeapon";
 
 /** The rest, in ms, before the preview asks the server (the picks change fast). */
 export const PREVIEW_DELAY = 150;
+
+/** The ids the server offers free (ADR 0037 step 22.4: its `free_proficiency_to_take` reminders),
+ * in its order. */
+export function offeredIds(
+  warnings: readonly CharacterWarning[] | undefined,
+): string[] {
+  return (warnings ?? [])
+    .filter((w) => w.code === "free_proficiency_to_take" && w.id)
+    .map((w) => w.id as string);
+}
 
 /** A refusal of the server as the editor shows it: the field and code it named, its message; a
  * failure that is not the server's refusal is named on the pool's own field. */
@@ -29,7 +43,10 @@ export function schedulePreview(
   input: ProficienciesInput,
   pool: PickPool,
   on: {
-    figures: (slots: ProficiencySlots | null) => void;
+    figures: (
+      slots: ProficiencySlots | null,
+      warnings: CharacterWarning[],
+    ) => void;
     refused: (r: Refusal) => void;
   },
   ask: typeof previewProficiencies = previewProficiencies,
@@ -37,7 +54,7 @@ export function schedulePreview(
   let current = true;
   const timer = setTimeout(() => {
     ask(input).then(
-      (a) => current && on.figures(a.proficiencySlots),
+      (a) => current && on.figures(a.proficiencySlots, a.warnings ?? []),
       (e: unknown) => current && on.refused(refusalOf(e, pool)),
     );
   }, PREVIEW_DELAY);

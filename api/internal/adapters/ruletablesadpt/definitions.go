@@ -120,6 +120,8 @@ type featureParamsDTO struct {
 	OppositionSchools []string `json:"opposition_schools"`
 	Races             []string `json:"races"`
 	MulticlassRaces   []string `json:"multiclass_races"`
+	// The free_proficiencies param (format 24, ADR 0037 step 22.1).
+	Nonweapon []string `json:"nonweapon"`
 	// The weapon_specialization params (format 19, ADR 0040 step 13).
 	DefaultSlots  int                `json:"default_slots"`
 	MeleeColumn   string             `json:"melee_column"`
@@ -207,6 +209,11 @@ func (f featureDTO) feature() (classes.Feature, error) {
 	case classes.KindSchoolSpecialization:
 		out.SchoolSpecialization = &classes.SchoolSpecialization{
 			Schools: p.Schools, OppositionSchools: p.OppositionSchools, Races: p.Races, MulticlassRaces: p.MulticlassRaces,
+		}
+	case classes.KindFreeProficiencies:
+		out.FreeProficiencies = p.Nonweapon
+		if out.FreeProficiencies == nil {
+			out.FreeProficiencies = []string{}
 		}
 	}
 	return out, nil

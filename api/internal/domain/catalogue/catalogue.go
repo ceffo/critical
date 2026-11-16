@@ -81,12 +81,16 @@ const FormatStaffSling = 22
 // FormatSchools is format 23 (ADR 0021 step 31, ADR 0050 steps 1 to 4):
 // format 22 plus each spell's school codes, the school_specialization
 // feature kind and the eight specialist wizards with their level limits.
-// It is the only format the API reads (step 31.3): the formats 1 to 22 are
-// refused like any unknown format, with the advice to run `just catalogue`.
 const FormatSchools = 23
 
-// Formats lists the formats this API reads: format 23 only (step 31.3).
-var Formats = []int{FormatSchools}
+// FormatFreeProficiencies is format 24 (ADR 0021 step 32, ADR 0037 step
+// 22.1): format 23 plus the free_proficiencies feature kind, which the bard
+// lists. It is the only format the API reads (step 32.3): the formats 1 to 23
+// are refused like any unknown format, with the advice to run `just catalogue`.
+const FormatFreeProficiencies = 24
+
+// Formats lists the formats this API reads: format 24 only (step 32.3).
+var Formats = []int{FormatFreeProficiencies}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:

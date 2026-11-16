@@ -64,6 +64,9 @@ const (
 	// CodeWeaponPickToRedo is a weapon type pick the migration to weapon codes found no owned
 	// weapon for (ADR 0037 step 21.8.3): listed for the player to redo, its slots back to spend.
 	CodeWeaponPickToRedo = "weapon_pick_to_redo"
+	// CodeFreeProficiencyToTake is a non-weapon id a class entry grants free that the character
+	// does not hold (ADR 0037 step 22.4): offered, never a pick written for him.
+	CodeFreeProficiencyToTake = "free_proficiency_to_take"
 )
 
 // Wire names of the skills' fields and pools.
@@ -93,7 +96,8 @@ const (
 // Warning is a skills rule the stored character breaks without being refused (ADR 0037 step
 // 11): a code, the field it is about and, for a slot warning, the pool and its figures
 // (slots_over_budget spent and available, slots_to_spend left; nil for the others); for
-// weapon_pick_to_redo (step 21.8.3) the weapon type and the slots it spent.
+// weapon_pick_to_redo (step 21.8.3) the weapon type and the slots it spent; for
+// free_proficiency_to_take (step 22.4) the id offered.
 type Warning struct {
 	Code                   string
 	Field                  string
@@ -101,4 +105,5 @@ type Warning struct {
 	Spent, Available, Left *int
 	Type                   string
 	Slots                  *int
+	ID                     string
 }

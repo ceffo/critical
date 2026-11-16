@@ -15,9 +15,10 @@ type warningView struct {
 	Left      *int     `json:"left"`
 }
 
-// slotCodes are the slot warnings of ADR 0037 step 11: a character created without picks always
-// has slots to spend, which the tests about other warnings leave out.
-var slotCodes = map[string]bool{"slots_to_spend": true, "slots_over_budget": true}
+// slotCodes are the slot warnings of ADR 0037 step 11 and the free proficiencies offered (step
+// 22.4): a character created without picks always has slots to spend, and a bard the four ids
+// his class grants free to take, which the tests about other warnings leave out.
+var slotCodes = map[string]bool{"slots_to_spend": true, "slots_over_budget": true, "free_proficiency_to_take": true}
 
 // withoutSlots is ws without the slot warnings.
 func withoutSlots(ws []warningView) []warningView {

@@ -35,6 +35,9 @@ type WarningDTO struct {
 	// slots it spent (ADR 0037 step 21.8.3).
 	Type  string `json:"type,omitempty"`
 	Slots *int   `json:"slots,omitempty"`
+	// ID is a free_proficiency_to_take reminder's non-weapon id (ADR 0037
+	// step 22.4).
+	ID string `json:"id,omitempty"`
 }
 
 // WarningsDTO maps the character's warnings, never nil.
@@ -51,7 +54,7 @@ func WarningsDTO(ws []charactersvc.Warning) []WarningDTO {
 func SkillWarningsDTO(ws []skills.Warning) []WarningDTO {
 	out := make([]WarningDTO, 0, len(ws))
 	for _, w := range ws {
-		out = append(out, WarningDTO{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots})
+		out = append(out, WarningDTO{Code: w.Code, Field: w.Field, Pool: w.Pool, Spent: w.Spent, Available: w.Available, Left: w.Left, Type: w.Type, Slots: w.Slots, ID: w.ID})
 	}
 	return out
 }

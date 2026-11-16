@@ -923,7 +923,8 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
     await expectWholeWords(pointsEditor, `bard points editor, ${where}`);
     await pointsEditor.getByTestId("thief-points-cancel").click();
     // ADR 0037 step 12: the proficiency editor in place of the lists, Kelsen's eight picks with an
-    // extra slot on Tumbling (the server's figures), the catalogue split by the bard's groups.
+    // extra slot on Tumbling (the server's figures; his four free ones spend nothing, step 22), the
+    // catalogue split by the bard's groups.
     await openSpend(page, "nonWeapon");
     const picksEditor = page.getByTestId("proficiency-editor");
     await picksEditor
@@ -931,7 +932,7 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
       .getByTestId("proficiency-more")
       .click();
     await expect(picksEditor.getByTestId("proficiency-pool-spent")).toHaveText(
-      "Dépensés 9, restants 1",
+      "Dépensés 5, restants 5",
     );
     await expect(
       picksEditor
@@ -1472,7 +1473,14 @@ async function skillsEditorStep(page: Page, size: Viewport) {
   await page.getByRole("tab", { name: "Compétences" }).click();
   const panel = await openSpend(page, "nonWeapon");
   const pool = panel.getByTestId("proficiency-languages");
-  // Test Bard spends 8 of 10 slots: three languages are one too many.
+  // Test Bard spends 4 of 10 slots (his four free proficiencies spend nothing, ADR 0037 step 22):
+  // four extra slots on Tumbling make 8, and three languages are one too many.
+  const tumbling = panel.getByTestId("proficiency-pick-tumbling");
+  for (let i = 0; i < 4; i++)
+    await tumbling.getByTestId("proficiency-more").click();
+  await expect(panel.getByTestId("proficiency-pool-spent")).toHaveText(
+    "Dépensés 8, restants 2",
+  );
   for (const name of ["Elfe", "Gnome", "Orque"])
     await pool.getByRole("checkbox", { name, exact: true }).check();
   await expect(pool.getByRole("alert")).toContainText("Budget dépassé");

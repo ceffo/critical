@@ -578,7 +578,7 @@ bard 15 never).)_
     class's gained slots. Tests: `TestProficiencySlots_Step15_DualClassKeepsAndGains` (skills: the
     elf, fighter left at 9, has 7 weapon and 6 non-weapon slots at mage 1, 8 and 9 at mage 10, the
     mage's -5), `TestProficiencyClasses_Step15_TheOldClassKeptAtItsLeftAtLevel` (charactersvc).)_
-    _(Read 2026-11-15 by [ADR 0037](0037-proficiencies.md) step 22.5, on implementation: a proficiency a class
+    _(Read 2026-11-15 by [ADR 0037](0037-proficiencies.md) step 22.5, as built 2026-11-15 (`TestFreePicks_Step22_5_AnyEntryGrants`): a proficiency a class
     gets free is free when any entry grants it, an active one at its realized level or a frozen one at its
     `left_at_level` (before the crossover too: a pick is not a use); the bard never multi-classes (step 2.1), so
     today only a dual-class reaches it.)_

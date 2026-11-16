@@ -195,9 +195,9 @@ func TestSeed_PicksAndSkillsLoadAndAreIdempotent(t *testing.T) {
 
 	assert.Empty(t, f.t.Profs, "the proficiencies are picks, not rows")
 	assert.JSONEq(t, `{"nonweapon":[
-		{"id":"musical_instrument","slots":1},{"id":"tumbling","slots":1},{"id":"ventriloquism","slots":1},
-		{"id":"riding_land","slots":1},{"id":"appraising","slots":1},{"id":"singing","slots":1},
-		{"id":"reading_writing","slots":1},{"id":"local_history","slots":1}],
+		{"id":"musical_instrument","slots":0},{"id":"tumbling","slots":1},{"id":"ventriloquism","slots":1},
+		{"id":"riding_land","slots":1},{"id":"appraising","slots":1},{"id":"singing","slots":0},
+		{"id":"reading_writing","slots":0},{"id":"local_history","slots":0}],
 		"weapon":[{"code":"short_bow","slots":1},{"code":"dagger","slots":1},{"code":"dart","slots":1},
 		{"code":"long_sword","slots":1},{"code":"bastard_sword_two_handed","slots":1}]}`, f.picks(id))
 	assert.Len(t, f.t.Bard, 4)

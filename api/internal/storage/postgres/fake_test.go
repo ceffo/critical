@@ -1040,6 +1040,18 @@ func (f *fakeStore) CharacterClasses(context.Context) ([]storeq.CharacterClasses
 	return rows, nil
 }
 
+func (f *fakeStore) CharacterClassEntries(context.Context) ([]storeq.CharacterClassEntriesRow, error) {
+	rows := []storeq.CharacterClassEntriesRow{}
+	for _, id := range f.t.Characters {
+		for _, e := range f.t.Entries[id] {
+			rows = append(rows, storeq.CharacterClassEntriesRow{
+				CharacterID: id, Class: e.Class, RealizedLevel: e.RealizedLevel, State: e.State, LeftAtLevel: e.LeftAtLevel,
+			})
+		}
+	}
+	return rows, nil
+}
+
 func (f *fakeStore) SetCharacterPicks(_ context.Context, arg storeq.SetCharacterPicksParams) error {
 	if slices.Contains(f.t.Characters, arg.ID) {
 		f.t.Picks[arg.ID] = arg.ProficiencyPicks

@@ -19,13 +19,19 @@ test("skills activity: with nothing left to spend, swap a proficiency, save, und
   // Something is left (the bard's slots and points): the rail's pill shows.
   await expect(page.getByTestId("skills-pill")).toBeVisible();
 
-  // The bard has two slots left: spend them on Tumbling (an extra slot each) and save.
+  // The bard's four free proficiencies spend nothing (ADR 0037 step 22): six slots left. Spend
+  // them on Tumbling (an extra slot each) and save.
   const editor = await openSpend(page, "nonWeapon");
   const spent = editor.getByTestId("proficiency-pool-spent");
-  await expect(spent).toHaveText("Spent 8, left 2");
+  await expect(spent).toHaveText("Spent 4, left 6");
+  await expect(
+    editor
+      .getByTestId("proficiency-pick-singing")
+      .getByTestId("proficiency-pick-terms"),
+  ).toContainText("free (class)");
   const tumbling = editor.getByTestId("proficiency-pick-tumbling");
-  await tumbling.getByTestId("proficiency-more").click();
-  await tumbling.getByTestId("proficiency-more").click();
+  for (let i = 0; i < 6; i++)
+    await tumbling.getByTestId("proficiency-more").click();
   await expect(spent).toHaveText("Spent 10, left 0");
   await editor.getByTestId("proficiency-save").click();
   await expect(spent).toHaveText("Spent 10, left 0");

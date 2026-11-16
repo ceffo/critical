@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import type { Locator } from "@playwright/test";
 import { test, expect } from "./fixtures";
 import { chooseLanguage, openDashboard, openSpend } from "./helpers";
 
@@ -21,7 +21,7 @@ async function target(pick: Locator): Promise<number> {
   return Number(m![1]);
 }
 
-async function chooseClass(page: Page, step: Locator, name: string) {
+async function chooseClass(step: Locator, name: string) {
   await step.getByRole("radio", { name, exact: true }).click();
 }
 
@@ -37,7 +37,7 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   const back = page.getByRole("button", {
     name: "Back to the previous step, the values stay",
   });
-  await chooseClass(page, step, "Bard");
+  await chooseClass(step, "Bard");
   await next.click();
   await step.getByRole("radio", { name: "Half-elf", exact: true }).click();
   await next.click();
@@ -83,14 +83,14 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   // A thief is granted none: nothing offered. Back to bard: the four are seeded again.
   for (let i = 0; i < 4; i++) await back.click();
   await expect(step).toHaveAttribute("data-step", "class");
-  await chooseClass(page, step, "Thief");
+  await chooseClass(step, "Thief");
   for (let i = 0; i < 4; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await expect(offered).toHaveCount(0);
   for (const id of free)
     await expect(picks.getByTestId(`proficiency-pick-${id}`)).toHaveCount(0);
   for (let i = 0; i < 4; i++) await back.click();
-  await chooseClass(page, step, "Bard");
+  await chooseClass(step, "Bard");
   for (let i = 0; i < 4; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   for (const id of free)

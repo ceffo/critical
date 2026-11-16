@@ -289,6 +289,11 @@ export interface ProficiencySlots {
   weapons?: WeaponOption[];
   /** The weapon type picks left to redo (ADR 0037 step 21.8.3). */
   weaponRedo?: WeaponRedo[];
+  /** The character's Table 38 groups: every active class entry's (ADR 0042 step 15). */
+  groups?: string[];
+  /** Each pickable catalogue proficiency's cost for the character, what a preview and a save
+   * charge (ADR 0042 step 15; 0 for one a class entry grants free). Absent from an older server. */
+  catalogue?: { id: string; cost: number }[];
 }
 
 /** One weapon pick as sent: the catalogue weapon code and its slots. */

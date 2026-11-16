@@ -34,6 +34,8 @@
         "nonWeaponSlots_other": "{{count}} proficiency slots",
         "skillPoints_one": "{{count}} skill point",
         "skillPoints_other": "{{count}} skill points",
+        "skillPointsOfSet_one": "{{count}} skill point · {{set}}",
+        "skillPointsOfSet_other": "{{count}} skill points · {{set}}",
         "freeSpell": "1 free level {{spellLevel}} spell",
         "freeSpellSchool": "1 free level {{spellLevel}} spell of his school"
       },
@@ -1884,6 +1886,7 @@
       "failureAdjusted": "{{name}}: d{{die}} {{roll}} vs {{adjustedTarget}} ({{target}} {{adjustment}}{{reason}}), failure",
       "buffOn": "{{check}}; {{buff}} on: {{effects}}",
       "buffRenewed": "{{check}}; {{buff}} renewed: {{effects}}",
+      "withWarning": "{{check}}. Warning: {{warning}}",
       "buffAc": "AC {{value}}"
     },
     "dice": "Dice {{formula}} = {{total}}",

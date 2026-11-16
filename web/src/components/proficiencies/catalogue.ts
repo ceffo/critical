@@ -2,6 +2,7 @@ import type {
   CreationOptions,
   PicksInput,
   ProficiencyOption,
+  ProficiencySlots,
 } from "@/types/character";
 
 /** One pick as the editor holds and sends it: the catalogue id and the slots spent. */
@@ -13,6 +14,34 @@ export interface CatalogueRow {
   option: ProficiencyOption;
   name: string;
   cost: number;
+}
+
+/**
+ * The options the editor lists the catalogue from, for a character (ADR 0042 step 15): the
+ * catalogue is the creation options', but the costs and the groups are the server's for this
+ * character (`proficiencySlots.catalogue` and `.groups`: every active class entry's, the figures a
+ * preview and a save charge), filed under `cls` for the picker. A server that serves none leaves
+ * the creation options' figures for the class.
+ */
+export function optionsForCharacter(
+  options: Pick<
+    CreationOptions,
+    "proficiencies" | "proficiencyGroups" | "proficiencyCosts"
+  >,
+  cls: string,
+  figures: Pick<ProficiencySlots, "groups" | "catalogue"> | null | undefined,
+): Pick<
+  CreationOptions,
+  "proficiencies" | "proficiencyGroups" | "proficiencyCosts"
+> {
+  if (!figures?.catalogue || !figures.groups) return options;
+  return {
+    proficiencies: options.proficiencies,
+    proficiencyGroups: { [cls]: figures.groups },
+    proficiencyCosts: {
+      [cls]: Object.fromEntries(figures.catalogue.map((c) => [c.id, c.cost])),
+    },
+  };
 }
 
 /** Folds a text for the search: lower case, accents off ("Équitation" finds "equi"). */

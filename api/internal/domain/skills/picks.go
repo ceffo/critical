@@ -159,6 +159,19 @@ type ProficiencySlots struct {
 	// Offered are the ids a class entry grants free that no non-weapon pick holds (step 22.4),
 	// each warned free_proficiency_to_take, in the grants' order.
 	Offered []string
+	// Groups are the Table 38 groups of the character: those of every active entry, each once
+	// (ADR 0042 step 15, Q13), what the catalogue lists as the character's own.
+	Groups []string
+	// Catalogue is each pickable catalogue proficiency's cost for the character, read on the same
+	// rule a save charges (NonweaponCostOf: ADR 0037 step 4 on the active entries' groups, 0 for
+	// an id any entry grants free, step 22.5), in the catalogue's order.
+	Catalogue []CatalogueFigure
+}
+
+// CatalogueFigure is a catalogue proficiency's cost for the character (ADR 0042 step 15).
+type CatalogueFigure struct {
+	ID   string
+	Cost int
 }
 
 // NonproficientPenalty is ADR 0037 step 21.3 (amending step 8) for an attack with a weapon piece
@@ -445,6 +458,16 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		if !slices.ContainsFunc(picks.Nonweapon, func(p Pick) bool { return p.ID == id }) {
 			out.Offered = append(out.Offered, id)
 		}
+	}
+	// ADR 0042 step 15: the catalogue's costs and groups are the character's, the rule a save
+	// charges, never the first class's. A language is a pick of the language list (step 6).
+	out.Groups = slices.Clone(b.groups)
+	for _, row := range book.All() {
+		if row.ID == LanguagesModernID {
+			continue
+		}
+		c, _ := nonweaponCost(row, b.groups, free)
+		out.Catalogue = append(out.Catalogue, CatalogueFigure{ID: row.ID, Cost: c})
 	}
 	out.Nonweapon = slots.Nonweapon(b.row, b.nonweaponLevel, ruletablesvc.LanguageLimit(intelligence), spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages

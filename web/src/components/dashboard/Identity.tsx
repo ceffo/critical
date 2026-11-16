@@ -83,8 +83,8 @@ export function Identity({
   const levelUpBusy = useTableStore((s) => s.busy);
   // ADR 0037 step 15's links: the editor, in the Skills activity.
   const askSkillsEditor = useSkillsEditor((s) => s.open);
-  const openSkillsEditor = (editor: SkillsEditor) => {
-    askSkillsEditor(editor);
+  const openSkillsEditor = (editor: SkillsEditor, set?: string) => {
+    askSkillsEditor(editor, set);
     onOpenSkills();
   };
   // ADR 0030 step 20.8's link: the lookup on the free spell's spell level, Ajouter claiming it.

@@ -120,6 +120,10 @@ func withoutNewFields(t *testing.T, d charactersvc.Derived) map[string]any {
 	if p, ok := m["Proficiencies"].(map[string]any); ok {
 		delete(p, "Weapons")
 		delete(p, "WeaponRedo")
+		// The character's catalogue costs and groups (ADR 0042 step 15) are new; the skills
+		// package's table and character_golden's JSON cover them.
+		delete(p, "Groups")
+		delete(p, "Catalogue")
 	}
 	// A specialist's school and learn adjustments (ADR 0050 steps 5 and 7) are new; the specialist
 	// tests cover them.

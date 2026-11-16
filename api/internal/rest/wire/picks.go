@@ -64,6 +64,19 @@ type ProficiencySlotsDTO struct {
 	// WeaponRedo are the weapon type picks left to redo (step 21.8.3), each also warned
 	// weapon_pick_to_redo.
 	WeaponRedo []WeaponRedoDTO `json:"weaponRedo"`
+	// Groups are the character's Table 38 groups (every active class entry's, ADR 0042 step 15)
+	// and Catalogue each pickable catalogue proficiency's cost for the character, what a preview
+	// and a save charge: the editor lists and prices the catalogue from these, never from the
+	// first class's creation options. Additive.
+	Groups    []string       `json:"groups"`
+	Catalogue []CatalogueDTO `json:"catalogue"`
+}
+
+// CatalogueDTO is one catalogue proficiency's cost for the character, 0 for an id a class entry
+// grants free (ADR 0037 step 22.2).
+type CatalogueDTO struct {
+	ID   string `json:"id"`
+	Cost int    `json:"cost"`
 }
 
 // WeaponDTO is one pickable catalogue weapon and its specialization cost.
@@ -150,6 +163,11 @@ func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 	out.Weapons = make([]WeaponDTO, 0, len(p.Weapons))
 	for _, w := range p.Weapons {
 		out.Weapons = append(out.Weapons, WeaponDTO(w))
+	}
+	out.Groups = append([]string{}, p.Groups...)
+	out.Catalogue = make([]CatalogueDTO, 0, len(p.Catalogue))
+	for _, c := range p.Catalogue {
+		out.Catalogue = append(out.Catalogue, CatalogueDTO(c))
 	}
 	out.WeaponRedo = make([]WeaponRedoDTO, 0, len(p.WeaponRedo))
 	for _, r := range p.WeaponRedo {

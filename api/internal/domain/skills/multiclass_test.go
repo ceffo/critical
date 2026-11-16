@@ -192,3 +192,73 @@ func TestWeaponProficiency_Step13_AKeptSpecializationCountsPastTheCrossover(t *t
 	_, err := skills.Apply(book, nil, "elf", before, skills.Edit{Picks: skills.Picks{Weapon: spec.Weapon}})
 	assert.Equal(t, domain.FieldError{Field: "weapon.long_sword", Message: "not_allowed"}, fieldErr(t, err))
 }
+
+// ADR 0042 step 15 (Q13): "A non-weapon proficiency costs Table 37's slots when one of its groups is
+// among any active entry's Table 38 groups"; a frozen entry's groups count for nothing. The catalogue
+// the editor lists is the character's: its costs and groups are the ones a save charges, not the
+// first class's. Explicit table on the fixture: Reading/Writing is a priest/wizard proficiency at 1,
+// Tracking a warrior one at 2, Healing a priest one at 2, each one more outside the groups.
+func TestCatalogue_Step15_TheCharactersCostsAndGroups(t *testing.T) {
+	book := profBook(t)
+	cost := func(f skills.ProficiencySlots, id string) int {
+		for _, c := range f.Catalogue {
+			if c.ID == id {
+				return c.Cost
+			}
+		}
+		t.Fatalf("%s is not in the served catalogue", id)
+		return -1
+	}
+	for _, tc := range []struct {
+		name                     string
+		cls                      skills.Classes
+		groups                   []string
+		reading, tracking, heals int
+	}{
+		{"a fighter alone", skills.One("fighter", 5), []string{"warrior", "general"}, 2, 2, 3},
+		{"a mage alone", skills.One("mage", 5), []string{"wizard", "general"}, 1, 3, 3},
+		{
+			"a fighter/mage: the mage's group counts, the first class's no longer alone",
+			skills.Classes{{Class: "fighter", Level: 5}, {Class: "mage", Level: 5}},
+			[]string{"warrior", "general", "wizard"},
+			1, 2, 3,
+		},
+		{
+			"a fighter/cleric",
+			skills.Classes{{Class: "fighter", Level: 5}, {Class: "cleric", Level: 5}},
+			[]string{"warrior", "general", "priest"},
+			1, 2, 2,
+		},
+		{
+			"a dual-class, the fighter frozen: only the active mage's groups",
+			skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: 3}},
+			[]string{"wizard", "general"},
+			1, 3, 3,
+		},
+		{
+			"a dual-class, the mage frozen: only the active fighter's groups",
+			skills.Classes{{Class: "mage", Level: 4, Frozen: true}, {Class: "fighter", Level: 6}},
+			[]string{"warrior", "general"},
+			2, 2, 3,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, ok := skills.FiguresOf(book, tc.cls, 0, skills.Spending{})
+			require.True(t, ok)
+			assert.Equal(t, tc.groups, got.Groups)
+			assert.Equal(t, tc.reading, cost(got, "reading_writing"))
+			assert.Equal(t, tc.tracking, cost(got, "tracking"))
+			assert.Equal(t, tc.heals, cost(got, "healing"))
+			// What the editor shows is what the save charges (the same pick's cost).
+			f, ok := skills.FiguresOf(book, tc.cls, 0, skills.Spending{Picks: picks(p("reading_writing", tc.reading))})
+			require.True(t, ok)
+			assert.Equal(t, tc.reading, f.Picks[0].Cost)
+		})
+	}
+	t.Run("a language is no pick of the catalogue", func(t *testing.T) {
+		got, _ := skills.FiguresOf(book, skills.One("fighter", 1), 0, skills.Spending{})
+		for _, c := range got.Catalogue {
+			assert.NotEqual(t, skills.LanguagesModernID, c.ID)
+		}
+	})
+}

@@ -165,6 +165,7 @@ export function SkillsTab() {
               <Ability
                 ability={p.ability}
                 score={p.abilityScore}
+                sheet={p.sheetScore}
                 modifier={p.modifier}
               />
             ),
@@ -227,14 +228,17 @@ export function SkillsTab() {
     </div>
   );
 }
-/** "DEX 17" and, when the proficiency has one, its modifier as a pill ("DEX 17 [−1]"). */
+/** "DEX 17" and, when the proficiency has one, its modifier as a pill ("DEX 17 [−1]"); the score is
+ * the one in effect, the sheet's beside it when the server sends it ("DEX 19 (sheet 17)"). */
 function Ability({
   ability,
   score,
+  sheet,
   modifier,
 }: {
   ability: string;
   score: number;
+  sheet?: number;
   modifier: number;
 }) {
   const { t } = useTranslation();
@@ -242,6 +246,12 @@ function Ability({
     <span className="flex items-center justify-end gap-1.5 whitespace-nowrap tabular-nums">
       <span className="text-muted-foreground">
         {t(`attr.${ability}`, { defaultValue: ability })} {score}
+        {sheet !== undefined && (
+          <span data-testid="skill-sheet-score">
+            {" "}
+            {t("skills.sheetScore", { score: sheet })}
+          </span>
+        )}
       </span>{" "}
       {modifier !== 0 && (
         <span

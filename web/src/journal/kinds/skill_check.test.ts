@@ -22,6 +22,23 @@ describeKind("skill_check", fixtures, {
     },
     rolled: true,
   },
+  // ADR 0014 step 1 as amended: the score in effect, the sheet's beside it.
+  proficiencyUnderEffect: {
+    en: {
+      text: "Musical instrument: d20 18 vs 18, success",
+      short: "Musical instrument · success",
+      subtitle: "Musical instrument",
+      card: ["d20 under DEX 19 (sheet 17) −1", "18 vs 18"],
+    },
+    fr: {
+      text: "Instrument de musique : d20 18 contre 18, réussi",
+      short: "Instrument de musique · réussi",
+      subtitle: "Instrument de musique",
+      card: ["DEX 19 (feuille 17) −1"],
+    },
+    value: { text: "18", tone: "pass" },
+    rolled: true,
+  },
   bardAdjusted: {
     en: {
       text: "Climb walls: d100 42 vs 50 (40 +10 rope), success",

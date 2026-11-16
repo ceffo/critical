@@ -49,7 +49,11 @@ type checkRecord struct {
 	// Set for a proficiency only.
 	Ability      Ability `json:"ability,omitempty"`
 	AbilityScore int     `json:"abilityScore,omitempty"`
-	Modifier     int     `json:"modifier"`
+	// SheetScore is the sheet's score when an effect makes AbilityScore (the
+	// score in effect) differ from it; absent otherwise and in entries logged
+	// before (ADR 0014 step 1 as amended).
+	SheetScore int `json:"sheetScore,omitempty"`
+	Modifier   int `json:"modifier"`
 	// ExtraSlots are the slots spent beyond the cost, each +1 to Target (ADR
 	// 0037 step 5); absent when 0 (and in entries logged before).
 	ExtraSlots int `json:"extraSlots,omitempty"`
@@ -107,7 +111,7 @@ func (r checkRecord) result(entryID int64) *CheckResult {
 		ID: r.ID, Kind: r.Kind, Set: setOf(r), Die: r.Die, Roll: r.Roll, Target: r.Target,
 		Adjustment: r.Adjustment, AdjustmentReason: r.AdjustmentReason, AdjustedTarget: r.AdjustedTarget,
 		Success: r.Success, RolledSuccess: rolled,
-		Ability: r.Ability, AbilityScore: r.AbilityScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
+		Ability: r.Ability, AbilityScore: r.AbilityScore, SheetScore: r.SheetScore, Modifier: r.Modifier, ExtraSlots: r.ExtraSlots, LogEntryID: entryID,
 		Buff: r.Buff.applied(r.Renewed), Warnings: r.Warnings,
 	}
 }
@@ -286,13 +290,17 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 
 // scoreInEffect is the score of proficiency p's ability with the active
 // effects (ADR 0014 step 1 as amended: the score ADR 0028 step 2's ability
-// check reads, through the same port, buffsvc GetAbilityScore).
-func (s *service) scoreInEffect(ctx context.Context, characterID int64, p skills.PickFigures) (int, error) {
-	score, err := s.abils.GetAbilityScore(ctx, characterID, Ability(p.Ability))
+// check reads, through the same port, buffsvc GetAbilityScore), and the sheet's score when an effect
+// makes them differ (0 when they are the same).
+func (s *service) scoreInEffect(ctx context.Context, characterID int64, p skills.PickFigures) (score, sheet int, err error) {
+	got, err := s.abils.GetAbilityScore(ctx, characterID, Ability(p.Ability))
 	if err != nil {
-		return 0, fmt.Errorf("proficiency %q: %w", p.ID, err)
+		return 0, 0, fmt.Errorf("proficiency %q: %w", p.ID, err)
 	}
-	return score.Effective, nil
+	if got.Base != got.Effective {
+		sheet = got.Base
+	}
+	return got.Effective, sheet, nil
 }
 
 // checkable are the character's picks with a check (ADR 0037 steps 2 and 5):
@@ -325,13 +333,13 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		if p.ID != id {
 			continue
 		}
-		score, err := s.scoreInEffect(ctx, characterID, p)
+		score, sheet, err := s.scoreInEffect(ctx, characterID, p)
 		if err != nil {
 			return checkRecord{}, err
 		}
 		return checkRecord{
 			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra),
-			Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+			Ability: Ability(p.Ability), AbilityScore: score, SheetScore: sheet, Modifier: p.Modifier, ExtraSlots: p.Extra,
 		}, nil
 	}
 	// ADR 0030 steps 17 and 18 (ADR 0014 step 3 as amended): a thieving or
@@ -429,12 +437,12 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			out.SkillSets = append(out.SkillSets, set)
 		}
 		for _, p := range profs {
-			score, err := s.scoreInEffect(ctx, characterID, p)
+			score, sheet, err := s.scoreInEffect(ctx, characterID, p)
 			if err != nil {
 				return err
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
-				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
+				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, SheetScore: sheet, Modifier: p.Modifier, ExtraSlots: p.Extra,
 				Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra), Last: last[lastKey(KindProficiency, "", p.ID)],
 			})
 		}

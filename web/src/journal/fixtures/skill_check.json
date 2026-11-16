@@ -63,6 +63,24 @@
     },
     "roll": true
   },
+  "proficiencyUnderEffect": {
+    "payload": {
+      "id": "musical_instrument",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 18,
+      "target": 18,
+      "adjustment": 0,
+      "adjustedTarget": 18,
+      "success": true,
+      "rolledSuccess": true,
+      "ability": "dex",
+      "abilityScore": 19,
+      "sheetScore": 17,
+      "modifier": -1
+    },
+    "roll": true
+  },
   "tumblingBuff": {
     "payload": {
       "id": "tumbling",

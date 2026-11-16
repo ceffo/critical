@@ -239,3 +239,28 @@ describe("SkillsTab with nothing to roll", () => {
     expect(html).not.toContain("skills-blocks");
   });
 });
+
+// ADR 0014 step 1 as amended: the row shows the server's score in effect, the sheet's beside it
+// only when the server sends it.
+describe("SkillsTab proficiency score", () => {
+  it("shows the sheet score beside the score in effect when the server sends it", async () => {
+    const html = await render({
+      ...base,
+      proficiencies: [
+        {
+          ...base.proficiencies[0],
+          abilityScore: 14,
+          sheetScore: 12,
+          target: 14,
+        },
+      ],
+    });
+    expect(html).toContain("14");
+    expect(html).toContain("(sheet 12)");
+  });
+  it("shows no sheet score when there is none", async () => {
+    const html = await render(base);
+    expect(html).not.toContain("skill-sheet-score");
+    expect(html).not.toContain("(sheet");
+  });
+});

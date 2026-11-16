@@ -2433,6 +2433,7 @@
     "headingMulti": "Expérience"
   },
   "skills": {
+    "sheetScore": "(feuille {{score}})",
     "empty": "Rien à lancer ici pour l’instant. Choisissez des compétences ou dépensez des points de talent dans l’activité Compétences.",
     "proficiencies": "Compétences diverses",
     "percent": "{{value}} %",

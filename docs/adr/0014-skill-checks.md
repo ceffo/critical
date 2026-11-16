@@ -43,6 +43,14 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    (`abilityScore`), so a buff dropped later does not change a logged check, and `GET /api/skills`
    serves the target on the score in effect. A natural 20 still fails (step 2). Thief and bard
    percentages are not changed by this amendment.
+   The sheet's score is served beside it as `sheetScore`, only when an active effect makes the two
+   differ (the skills list, the roll response and the `skill_check` payload; added, so an older
+   entry reads as no effect); the Skills tab row, the result card and the journal word it
+   ("DEX 19 (sheet 17)"). **Naming differs from ADR 0028 on purpose:** an ability check's
+   `abilityScore` is the sheet's score and its `target` the score in effect, while a proficiency's
+   `abilityScore` stays the score in effect, because it is a term of `target = abilityScore +
+   modifier + extraSlots` that the web and the journal word, and logged entries keep that sum.
+   `router` `TestSkills_SheetScoreBesideTheScoreInEffect`.
    `TestSkillCheck_Step1_TargetIsTheScoreInEffect` (a DEX buff on, then ended; a natural 20 under a
    buff; an unreadable score refused before the roll).)_
    Test: `TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget` (at the target, one over, a

@@ -385,13 +385,14 @@ func TestSkillCheck_Step1_TargetIsTheScoreInEffect(t *testing.T) {
 		boost        int
 		d20          int
 		score        int
+		sheet        int // 0: no effect, no sheet score beside
 		target       int
 		success      bool
 		listedTarget int
 	}{
-		{"under a +2 DEX buff, a roll over the sheet's target succeeds", 2, 18, 19, 18, true, 18},
-		{"the buff ended: the same roll against the sheet's score fails", 0, 17, 17, 16, false, 16},
-		{"a natural 20 fails under a buff that puts the target above 20", 6, 20, 23, 22, false, 22},
+		{"under a +2 DEX buff, a roll over the sheet's target succeeds", 2, 18, 19, 17, 18, true, 18},
+		{"the buff ended: the same roll against the sheet's score fails", 0, 17, 17, 0, 16, false, 16},
+		{"a natural 20 fails under a buff that puts the target above 20", 6, 20, 23, 17, 22, false, 22},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -403,9 +404,14 @@ func TestSkillCheck_Step1_TargetIsTheScoreInEffect(t *testing.T) {
 			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
 			assert.Equal(t, &skillsvc.CheckResult{
 				ID: "musical_instrument", Kind: skillsvc.KindProficiency, Die: 20, Roll: c.d20, Target: c.target, AdjustedTarget: c.target,
-				Success: c.success, RolledSuccess: c.success, Ability: skillsvc.AbilityDex, AbilityScore: c.score, Modifier: -1, LogEntryID: 100,
+				Success: c.success, RolledSuccess: c.success, Ability: skillsvc.AbilityDex, AbilityScore: c.score, SheetScore: c.sheet, Modifier: -1, LogEntryID: 100,
 			}, r)
 			assert.Contains(t, string(f.entries[0].Payload), `"abilityScore":`+itoa(c.score)+`,`)
+			if c.sheet == 0 {
+				assert.NotContains(t, string(f.entries[0].Payload), `sheetScore`)
+			} else {
+				assert.Contains(t, string(f.entries[0].Payload), `"sheetScore":`+itoa(c.sheet)+`,`)
+			}
 
 			f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return(nil, nil).Once()
 			list, err := f.svc.List(context.Background(), charID)
@@ -418,6 +424,7 @@ func TestSkillCheck_Step1_TargetIsTheScoreInEffect(t *testing.T) {
 			}
 			require.NotNil(t, got)
 			assert.Equal(t, c.score, got.AbilityScore)
+			assert.Equal(t, c.sheet, got.SheetScore)
 			assert.Equal(t, c.listedTarget, got.Target)
 		})
 	}

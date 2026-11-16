@@ -90,13 +90,16 @@ type LastDTO struct {
 // abilityScore + modifier + extraSlots (the slots spent beyond the cost, ADR
 // 0037 step 5), computed by the server. last is null before the first check.
 type ProficiencyDTO struct {
-	ID           string   `json:"id"`
-	Ability      string   `json:"ability"`
-	AbilityScore int      `json:"abilityScore"`
-	Modifier     int      `json:"modifier"`
-	ExtraSlots   int      `json:"extraSlots"`
-	Target       int      `json:"target"`
-	Last         *LastDTO `json:"last"`
+	ID           string `json:"id"`
+	Ability      string `json:"ability"`
+	AbilityScore int    `json:"abilityScore"`
+	// SheetScore is the sheet's score, set only when an active effect makes
+	// abilityScore (the score in effect, ADR 0014 step 1 as amended) differ.
+	SheetScore int      `json:"sheetScore,omitempty"`
+	Modifier   int      `json:"modifier"`
+	ExtraSlots int      `json:"extraSlots"`
+	Target     int      `json:"target"`
+	Last       *LastDTO `json:"last"`
 }
 
 // RogueSkillDTO is one thieving skill (ADR 0030 step 17) or bard skill
@@ -170,7 +173,10 @@ type CheckDTO struct {
 	RolledSuccess    bool   `json:"rolledSuccess"`
 	Ability          string `json:"ability,omitempty"`
 	AbilityScore     *int   `json:"abilityScore,omitempty"`
-	Modifier         *int   `json:"modifier,omitempty"`
+	// SheetScore is the sheet's score when an active effect made abilityScore
+	// (the score in effect at the roll) differ; omitted otherwise.
+	SheetScore int  `json:"sheetScore,omitempty"`
+	Modifier   *int `json:"modifier,omitempty"`
 	// ExtraSlots is a proficiency's slots beyond its cost (ADR 0037 step 5),
 	// in target; set for a proficiency only.
 	ExtraSlots *int  `json:"extraSlots,omitempty"`
@@ -215,7 +221,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	}
 	for _, p := range s.Proficiencies {
 		out.Proficiencies = append(out.Proficiencies, ProficiencyDTO{
-			ID: p.ID, Ability: string(p.Ability), AbilityScore: p.AbilityScore, Modifier: p.Modifier, ExtraSlots: p.ExtraSlots,
+			ID: p.ID, Ability: string(p.Ability), AbilityScore: p.AbilityScore, SheetScore: p.SheetScore, Modifier: p.Modifier, ExtraSlots: p.ExtraSlots,
 			Target: p.Target, Last: lastDTO(p.Last),
 		})
 	}
@@ -250,6 +256,7 @@ func CheckToDTO(c *skillsvc.CheckResult) CheckDTO {
 	if c.Kind == skillsvc.KindProficiency {
 		score, mod, extra := c.AbilityScore, c.Modifier, c.ExtraSlots
 		out.Ability, out.AbilityScore, out.Modifier, out.ExtraSlots = string(c.Ability), &score, &mod, &extra
+		out.SheetScore = c.SheetScore
 	}
 	if c.Buff != nil {
 		b := c.Buff.Buff

@@ -28,7 +28,10 @@ export interface LastCheck {
 export interface Proficiency {
   id: string;
   ability: Ability;
+  /** The score in effect, with the active effects (ADR 0014 step 1 as amended). */
   abilityScore: number;
+  /** The sheet's score, sent only when an active effect makes abilityScore differ from it. */
+  sheetScore?: number;
   modifier: number;
   /** abilityScore + modifier, computed by the server. */
   target: number;
@@ -123,7 +126,10 @@ export interface SkillCheck {
   previousSuccess?: boolean;
   previousAdjustment?: number;
   ability?: Ability;
+  /** A proficiency's score in effect at the roll (ADR 0014 step 1 as amended). */
   abilityScore?: number;
+  /** The sheet's score, present only when an active effect made abilityScore differ. */
+  sheetScore?: number;
   modifier?: number;
   logEntryId?: number;
   /** The buff the verdict in effect put on (ADR 0037 step 20); absent when none, and in entries

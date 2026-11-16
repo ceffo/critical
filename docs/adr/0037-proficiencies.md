@@ -1136,12 +1136,15 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
     `skills.ValidPicks` takes the realized level, since a grant reads it. **22.4**: the reminder is a
     warning `{code: free_proficiency_to_take, field: nonweapon.<id>, id}` after `proficiency_unknown`,
     in the grant's order (`ProficiencySlots.Offered`). **22.6**: a known pick spends `max(slots,
-    cost)`, so any pick stored under its cost (not only a lost grant's) spends its cost; a save that
+    floor)`, the floor being its cost on every class entry's groups, a frozen one's included (0 when
+    granted): a lost grant's pick spends its cost, a dual-class's old-class pick what it paid (ADR
+    0042 step 15), while the served `cost` stays the active entries'; a save that
     leaves such a pick as stored is accepted, a new one under the cost is `out_of_range`. **22.7**:
     migration 046 (a column comment) and its data step `returnFreeSlots` (`skills.ReturnFreeSlots`,
     on every class entry of `character_classes`); the seed file reader accepts a pick at 0 slots. A
     `proficiencies` snapshot or payload logged since carries `freeGrants: true`; one without it is
-    converted by `skills.ReturnFreeSlots` on the character's class entries when undone or redone.
+    converted by `skills.ReturnFreeSlots` on the character's class entries (the cost paid read on
+    every entry's groups, as the floor) when undone or redone.
     `TestKelsen_Step16_PicksAndPools` keeps the picks and targets, the pools moved to
     `TestKelsen_Step22_7_FourFreePicksAndThreeToSpend` (the test fixture's Kelsen: 4 of 10, 6 to
     spend); the conversion rule alone is `TestReturnFreeSlots_Step22_7_TheCostPaidGoesBack`. The web

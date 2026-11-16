@@ -83,8 +83,15 @@ func (cls Classes) specialist() string {
 // groups are the Table 38 groups of every class, each once (ADR 0042 step 15, Q13: a
 // non-weapon proficiency is in-group when it is in any active class's groups).
 func (cls Classes) groups(book Book) []string {
+	return cls.active().everyGroup(book)
+}
+
+// everyGroup is the proficiency groups of every entry of cls, a frozen one included, in entry then
+// group order: what a pick cost when its entry was active (ADR 0042 step 15), the floor a stored
+// pick spends (ADR 0037 step 22.6) and the cost it paid (step 22.7).
+func (cls Classes) everyGroup(book Book) []string {
 	var out []string
-	for _, c := range cls.active() {
+	for _, c := range cls {
 		for _, g := range book.GroupsOf(c.Class) {
 			if !slices.Contains(out, g) {
 				out = append(out, g)

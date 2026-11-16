@@ -340,6 +340,16 @@ func pickFigures(book Book, groups, free []string, p Pick) PickFigures {
 	}
 }
 
+// spendFloor is the least a stored non-weapon pick spends (ADR 0037 step 22.6): its cost on
+// groups (every entry's), 0 when granted; an id unknown to the catalogue spends what it stores.
+func spendFloor(book Book, groups, free []string, p Pick, f PickFigures) int {
+	if !f.Known {
+		return f.Cost
+	}
+	row, _ := book.Get(p.ID)
+	return cost(row, groups, free)
+}
+
 // nonweaponCost is ADR 0037 step 4 as amended by step 22.2: 0 for an id in free (granted true),
 // else Table 37's slots, one more outside groups (ruletablesvc.NonweaponCost).
 func nonweaponCost(row ruletablesvc.Proficiency, groups, free []string) (cost int, granted bool) {
@@ -364,11 +374,11 @@ func NonweaponCostOf(book Book, cls Classes, row ruletablesvc.Proficiency) (cost
 // ReturnFreeSlots is ADR 0037 step 22.7 on the stored non-weapon picks of a character of the class
 // entries cls (the data step of existing characters, and an action-log entry logged before it):
 // each pick of a catalogue id an entry grants free (step 22.5) spends the cost it paid before (step
-// 4 on the active entries' groups, ADR 0042 step 15) less, never below 0, so its extra slots and
+// 4 on every entry's groups, a frozen one's included: what it cost when that entry was active) less, never below 0, so its extra slots and
 // its check target stay and the slots it paid go back to spend. returned names each converted id
 // with the slots given back (none: nil); the picks come back in their order, never nil.
 func ReturnFreeSlots(book Book, cls Classes, picks []Pick) (out []Pick, returned map[string]int) {
-	free, groups := cls.free(book), cls.groups(book)
+	free, groups := cls.free(book), cls.everyGroup(book)
 	out = make([]Pick, 0, len(picks))
 	for _, p := range picks {
 		row, known := book.Get(p.ID)
@@ -419,14 +429,15 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 		return ProficiencySlots{}, false
 	}
 	out := ProficiencySlots{Picks: make([]PickFigures, 0, len(picks.Nonweapon)), Penalty: b.row.Penalty}
-	free := cls.free(book)
+	free, every := cls.free(book), cls.everyGroup(book)
 	spent := 0
 	for _, p := range picks.Nonweapon {
 		f := pickFigures(book, b.groups, free, p)
 		out.Picks = append(out.Picks, f)
 		// Step 22.6: a pick stored under its cost (a free pick whose grant went) spends the cost,
-		// with no extra slot.
-		spent += max(p.Slots, f.Cost)
+		// with no extra slot. The floor is the cost on every entry's groups, a frozen one's
+		// included (0 when granted): a dual-class's old pick spends what it paid (ADR 0042 step 15).
+		spent += max(p.Slots, spendFloor(book, every, free, p, f))
 	}
 	// Step 22.4: a granted id no pick holds is offered.
 	for _, id := range free {

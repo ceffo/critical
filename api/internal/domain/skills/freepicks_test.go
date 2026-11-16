@@ -211,6 +211,17 @@ func TestFreePicks_Step22_6_ALostGrantChargesTheCostAgain(t *testing.T) {
 	require.NoError(t, err, "removed")
 	_, err = skills.ValidPicks(book, "fighter", 1, picks(p("singing", 0)), skills.Picks{})
 	assert.Equal(t, domain.FieldError{Field: "nonweapon.singing", Message: skills.CodeOutOfRange}, fieldErr(t, err), "a new pick under the cost")
+
+	// A dual-class (ADR 0042 step 15): a fighter left at 5, now a thief, holds Tracking (warrior,
+	// 2) at the 2 he paid. Under thief it costs 3, but the floor is the cost on every entry's
+	// groups, the frozen fighter's included: it spends the 2 it paid, as before step 22.
+	dual := skills.Classes{{Class: "fighter", Level: 5, Frozen: true}, {Class: "thief", Level: 6}}
+	old := figuresOf(t, dual, p("tracking", 2))
+	assert.Equal(t, 3, figure(t, old, "tracking").Cost, "shown at the active class's cost")
+	assert.Equal(t, 2, old.Nonweapon.Spent, "an old-class pick spends what it paid")
+	for _, w := range skills.SlotWarnings(old) {
+		assert.NotEqual(t, skills.CodeSlotsOverBudget, w.Code)
+	}
 }
 
 // ADR 0037 step 22.7 on the rule the data step and an older action-log entry use: each pick of an
@@ -226,8 +237,9 @@ func TestReturnFreeSlots_Step22_7_TheCostPaidGoesBack(t *testing.T) {
 	assert.Equal(t, []skills.Pick{p("singing", 1)}, out)
 	assert.Nil(t, returned)
 
-	// The bard left at 5 now fighter 2 paid the fighter's cost: reading_writing is outside his groups.
+	// The bard left at 5 now fighter 2 paid the bard's cost: reading_writing is outside the
+	// fighter's groups (2) but in the frozen bard's (1), and he took it as a bard.
 	out, _ = skills.ReturnFreeSlots(book, skills.Classes{{Class: "bard", Level: 5, Frozen: true}, {Class: "fighter", Level: 2}},
 		[]skills.Pick{p("reading_writing", 3)})
-	assert.Equal(t, []skills.Pick{p("reading_writing", 1)}, out)
+	assert.Equal(t, []skills.Pick{p("reading_writing", 2)}, out)
 }

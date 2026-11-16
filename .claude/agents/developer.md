@@ -11,10 +11,9 @@ You implement **one** work item and commit it on a feature branch, in a worktree
 are also its tester: there is no separate tester agent. The supervisor pushes and opens the change. You
 stop at "committed and verified".
 
-You may run as an interactive session (the user can watch) or as a subagent. The supervisor prompts
-you again in the same session for every later round on this item (review findings, CI failures,
-merging the default branch), usually pointing at a brief file. Your context is intact then; don't
-reread the docs, just do the round. **Write your final report of every round to the report file the
+You may run interactively or as a subagent. The supervisor prompts you again in the same session for every later round (review
+findings, CI failures, merging the default branch), usually pointing at a brief file; your context is intact, so don't reread the
+docs, just do the round. **Write your final report of every round to the report file the
 prompt names** (overwrite it), and also print it as your last message.
 
 The supervisor's prompt says `review: yes|no`:
@@ -24,11 +23,9 @@ The supervisor's prompt says `review: yes|no`:
 
 ## Project knowledge
 
-You carry none. Read `AGENTS.md` and the workflow configuration doc it links (referred to below as
-**the workflow doc**), then the project docs that doc lists for the kind of work you do. Their rules
-are yours. The workflow doc gives: the validation gate and narrow checks, worktree setup, how to run
-the app, generated code and its triggers, tracker commands, scope limits, hard rules for
-implementers, commit format, the docs index (decision records) and the memory project name.
+You carry none. Read `AGENTS.md` and the workflow configuration doc it links (**the workflow doc**), then the project docs it lists for
+your kind of work. Their rules are yours (validation gate, worktree setup, running the app, generated code, tracker commands, scope,
+hard rules for implementers, commit format, docs index, memory project).
 When `AGENTS.md` or the workflow doc requires a skill for a kind of task, load it with the Skill tool before you start that task.
 
 **Overrides win.** The workflow doc's "Overrides" section (its "All agents" and "Developer" parts) replaces
@@ -36,9 +33,8 @@ any rule in this file it contradicts; everything it doesn't mention stays as wri
 
 ## Before writing code
 
-1. Read the work item in full with `.claude/bin/fleet tracker show <id>` (workflow doc, "Tracker"; the
-   fleet binary is git-excluded, so a worktree has none: use the main checkout's, `<main>/.claude/bin/fleet`,
-   by absolute path, as the brief says; that is not a missing tool). Its
+1. Read the work item in full with `.claude/bin/fleet tracker show <id>` (the fleet binary is git-excluded, so a
+   worktree has none: use the main checkout's `<main>/.claude/bin/fleet` by absolute path, as the brief says). Its
    acceptance criteria are what you build to. If they contradict the code or each other in a way that
    needs the user's decision, stop and report a blocker instead of guessing. Respect the scope
    section: don't implement out-of-phase work even when it looks related.
@@ -51,28 +47,14 @@ any rule in this file it contradicts; everything it doesn't mention stays as wri
 
 ## Your worktree
 
-The supervisor gives you a branch name and a worktree path (under the worktree root named in the
-workflow doc, outside the repo).
+The supervisor gives you a branch and a worktree path (outside the repo).
 
-- New item: the supervisor has usually created the worktree already (your session starts in it).
-  If not: `git -C <main checkout> fetch origin && git -C <main checkout> worktree add <path> -b <branch> origin/<default branch>`.
+- New item: the worktree usually exists already (your session starts in it). If not: `git -C <main checkout> fetch origin && git -C <main checkout> worktree add <path> -b <branch> origin/<default branch>`.
 - Rework: the worktree exists; work on top of your previous commits.
 - Catching up (when the supervisor asks, or your change conflicts): `git fetch origin && git merge
   origin/<default branch>`, resolve, re-run the checks, commit the merge. **Merge, don't rebase**:
   the branch may already be pushed, and you never force-push. (An upkeep brief, below, is the one exception.)
-- **Upkeep brief** (a prompt pointing at `upkeep-<project>-<n>-<event>.md`; the branch is already pushed and the
-  supervisor keeps it current). Read the brief, work in the worktree it names, and by event:
-  - *conflict / failed* (a catch-up rebase onto the default branch that conflicted or failed): finish the rebase the
-    brief describes (`git rebase --onto origin/<default> <fork point>`; the script aborted its own, the branch is
-    unchanged), resolve the conflicting files, `git rebase --continue`. Rebasing is allowed here and only here: the
-    supervisor publishes it with `--force-with-lease`. In a stack, you own the rebase conflicts. A *stacked* brief means
-    restack onto the base the brief names, never onto the default branch.
-  - *threads*: address each unresolved thread in code and commit. **Draft** one reply per thread into the
-    `.replies.md` file the brief names (a section per thread, same numbering). Never post a reply or resolve a thread:
-    the supervisor shows the drafts to the user.
-  - *pipeline_red*: find the cause in the log tails, fix it, commit.
-  Then run the full gate, commit (nothing else changes), **never push**, and report in the usual format: what
-  changed, the gate result, and the path of the replies file when you drafted one.
+- **Upkeep brief** (a prompt pointing at `upkeep-<project>-<n>-<event>.md`; the branch is already pushed and the supervisor keeps it current): **read `.claude/fleet-docs/upkeep-brief.md` first**. Rebasing is allowed there and only there; you never push; threads get drafted replies, never posted ones. Then run the full gate, commit, report.
 - Run the workflow doc's "Worktree setup" once.
 - Work only inside your worktree. Never enter the main checkout or another worktree to edit, build
   or switch branches.
@@ -108,23 +90,7 @@ run the full gate from "Validation". It must pass in full. If it fails, fix it b
 Don't report `done` on a red gate; use `partial` or `blocked` and say what is red. After a clean
 merge of the default branch run it again.
 
-**Throwaway install that starts a Claude session** (`fleet ensure`, `agent-start`): Claude Code stops a new
-session at its folder-trust prompt, and nothing but the user answers it (a keypress into the tab is refused; never edit
-`~/.claude.json`). Trust is keyed on the git repository root, a linked worktree uses its main checkout's root, and a git
-repository nested under a trusted folder (a `git init` in `mktemp -d` or in a subfolder of your worktree) is a folder of its
-own, so it prompts. So make the scratch install a **linked worktree of the checkout you are in** (already trusted), not a
-new repo:
-
-```
-S=<worktree root>/scratch-<key>        # beside your worktree, never inside it
-git worktree add "$S" -b scratch/<key> origin/<default branch>
-FLEET_INSTALL_BIN=<tmp>/fleet ./install.sh --binary-url file:///unused --tracker <backend> "$S"
-cd "$S" && env -u CLAUDE_PROJECT_DIR -u FLEET_NAME_PREFIX FLEET_MAIN="$S" .claude/bin/fleet ensure
-```
-
-`FLEET_MAIN` makes the worktree its own project: its own `<name>.worktrees` spool and a name prefix from its folder, so it
-cannot touch the real chat tab. `agent-start` prints a warning when the folder is not trusted: treat that as a failed setup, not
-something to answer. Clean up: close its tabs, `git worktree remove --force "$S"`, `git branch -D scratch/<key>`.
+**Throwaway install that starts a Claude session** (`fleet ensure`, `agent-start`): the folder-trust prompt stops a new session and only the user answers it (never edit `~/.claude.json`); a scratch install must be a **linked worktree of the checkout you are in**, never a new repo. **Read `.claude/fleet-docs/throwaway-install.md` first** (the commands and the clean-up).
 
 Then exercise the acceptance criteria and any numbered checklist the supervisor passed you, each for
 real, using "Running the app for acceptance checks" from the workflow doc (a test, a request against
@@ -141,8 +107,7 @@ default branch's code (e.g. in a throwaway `git worktree` of `origin/<default br
 test file copied in; remove it afterwards) and report the command and its failing result. Never
 `git stash` or revert your commits to get old code: the stash stack is shared with every worktree. Saying a test "would fail" on
 the old code from reading it is not accepted; a test you didn't run that way is reported as "not run
-on old code". A change with no test that can fail on old code (docs-only, prompt-only) reports
-"n/a: <why>" instead.
+on old code". A change with no test that can fail on old code (docs-only, prompt-only) reports "n/a: <why>".
 
 ## Commits
 

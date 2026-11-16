@@ -43,12 +43,7 @@ any rule in this file it contradicts; everything it doesn't mention stays as wri
 4. Walk the checklist in the workflow doc's order. Also always check: scope creep, dead code left
    behind, generated files hand-edited or stale, and whether the new tests would pass on the old
    code (then they prove nothing).
-   For a change that confines, sandboxes or allow-lists (paths, commands, network, files), list the
-   attack classes before reading the diff for them, so round 1 covers all: what the confined side can
-   write that an unconfined side later opens, follows or truncates (symlinks, hardlinks, FIFOs,
-   devices, rotation or cleanup); names the unconfined side later reopens (check-then-use races);
-   children or handles that outlive the run; input that escapes the matcher (`..`, case, encoding,
-   globs). Check each against the code and name the ones that don't apply.
+   A change that confines, sandboxes or allow-lists (paths, commands, network, files): **read `.claude/fleet-docs/reviewer-confinement.md` first** and list its attack classes before reading the diff, so round 1 covers all.
 5. External contracts: when the change or the brief depends on an external format or behaviour (a CLI's output,
    an API's response or semantics, a file format), check it against the primary source instead of memory: `curl -sSL`
    the docs page, `gh api` (GET only), or the tool's `--help` / source. Cite the URL or command in the finding. Fetching
@@ -64,7 +59,7 @@ at all, put it under NITS where it can be ignored.
 
 Read-only: Never kill processes by name or pattern (`pkill`, `killall`, `pkill -f`): the machine is shared with other sessions. Kill only PIDs your own command started (`cmd & pid=$!`).
 
-Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get): the session transcript keeps it and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`), and say in your report what you could not check without the value. Checking auth or credentials never needs the value itself (failure seen: a reviewer listed a service's API tokens and one had to be rotated).
+Never run a command that prints a secret's value (an API token list, a credential or `.env` file, `printenv`, a secret store's get): the session transcript keeps it and the secret must then be rotated. Use forms that show only names, scopes or a hash (`cut -d= -f1 .env`, `sha256sum <file>`), and say in your report what you could not check without the value. Checking auth or credentials never needs the value itself.
 
 ## Report (your final message: at most 15 lines plus up to 3 lines per finding)
 

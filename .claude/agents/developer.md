@@ -108,7 +108,7 @@ run the full gate from "Validation". It must pass in full. If it fails, fix it b
 Don't report `done` on a red gate; use `partial` or `blocked` and say what is red. After a clean
 merge of the default branch run it again.
 
-**Throwaway install that starts a Claude session** (`fleet liaison ensure`, `agent-start`): Claude Code stops a new
+**Throwaway install that starts a Claude session** (`fleet ensure`, `agent-start`): Claude Code stops a new
 session at its folder-trust prompt, and nothing but the user answers it (a keypress into the tab is refused; never edit
 `~/.claude.json`). Trust is keyed on the git repository root, a linked worktree uses its main checkout's root, and a git
 repository nested under a trusted folder (a `git init` in `mktemp -d` or in a subfolder of your worktree) is a folder of its
@@ -119,11 +119,11 @@ new repo:
 S=<worktree root>/scratch-<key>        # beside your worktree, never inside it
 git worktree add "$S" -b scratch/<key> origin/<default branch>
 FLEET_INSTALL_BIN=<tmp>/fleet ./install.sh --binary-url file:///unused --tracker <backend> "$S"
-cd "$S" && env -u CLAUDE_PROJECT_DIR -u FLEET_NAME_PREFIX FLEET_MAIN="$S" .claude/bin/fleet liaison ensure
+cd "$S" && env -u CLAUDE_PROJECT_DIR -u FLEET_NAME_PREFIX FLEET_MAIN="$S" .claude/bin/fleet ensure
 ```
 
 `FLEET_MAIN` makes the worktree its own project: its own `<name>.worktrees` spool and a name prefix from its folder, so it
-cannot touch the real liaison. `agent-start` prints a warning when the folder is not trusted: treat that as a failed setup, not
+cannot touch the real chat tab. `agent-start` prints a warning when the folder is not trusted: treat that as a failed setup, not
 something to answer. Clean up: close its tabs, `git worktree remove --force "$S"`, `git branch -D scratch/<key>`.
 
 Then exercise the acceptance criteria and any numbered checklist the supervisor passed you, each for

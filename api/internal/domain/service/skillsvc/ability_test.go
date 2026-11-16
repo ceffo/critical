@@ -22,6 +22,7 @@ import (
 // scores makes the abilities port answer score for ability a (once per
 // check rolled).
 func (f *fixture) scores(a charactersvc.Ability, score buffsvc.AbilityScore) {
+	f.unsetScores()
 	f.abils.EXPECT().GetAbilityScore(mock.Anything, charID, a).Return(score, nil)
 }
 
@@ -116,6 +117,7 @@ func TestAbilityCheck_Step2_TargetIsTheScoreInEffect(t *testing.T) {
 	t.Run("the port's error fails the check before the roll", func(t *testing.T) {
 		f := newFixture(t)
 		boom := errors.New("boom")
+		f.unsetScores()
 		f.abils.EXPECT().GetAbilityScore(mock.Anything, charID, charactersvc.AbilityWis).Return(buffsvc.AbilityScore{}, boom)
 		_, err := f.svc.RollAbility(context.Background(), charID, "wis")
 		require.ErrorIs(t, err, boom)

@@ -17,6 +17,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/classes"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
@@ -50,6 +51,11 @@ type fixture struct {
 	// view is the character a thief test reads by reference, to change it between rolls.
 	view    *charactersvc.View
 	entries []actionlog.NewEntry
+	// effects raise an ability's score in effect above the sheet's, as an
+	// active buff does; sheetScores answers with them.
+	effects map[charactersvc.Ability]int
+	// defaultScores is sheetScores' expectation, unset by scores.
+	defaultScores *mock.Call
 }
 
 // The sheet's scores (STR 12, DEX 17, CON 16, INT 14, WIS 8, CHA 16) and
@@ -145,7 +151,31 @@ func newFixture(t *testing.T) *fixture {
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().View(mock.Anything, charID).Return(bard(), nil).Maybe()
+	f.sheetScores()
 	return f
+}
+
+// sheetScores makes the abilities port answer each ability as buffsvc
+// GetAbilityScore does: the sheet's score of the character the chars mock
+// answers, in effect raised by f.effects (ADR 0028 step 2).
+func (f *fixture) sheetScores() {
+	f.defaultScores = f.abils.EXPECT().GetAbilityScore(mock.Anything, charID, mock.Anything).RunAndReturn(
+		func(ctx context.Context, id int64, a charactersvc.Ability) (buffsvc.AbilityScore, error) {
+			c, err := f.chars.View(ctx, id)
+			if err != nil {
+				return buffsvc.AbilityScore{}, err
+			}
+			base, _ := c.Score(a)
+			return buffsvc.AbilityScore{Base: base, Effective: base + f.effects[a]}, nil
+		}).Maybe()
+}
+
+// unsetScores drops sheetScores' answer, for a test that sets the port's own.
+func (f *fixture) unsetScores() {
+	if f.defaultScores != nil {
+		f.defaultScores.Unset()
+		f.defaultScores = nil
+	}
 }
 
 // records makes the log accept entries (ids 100, 101, …) and keeps them.
@@ -342,4 +372,62 @@ func TestList_TargetsAndLastCheckPerSkill(t *testing.T) {
 			},
 		}},
 	}, got)
+}
+
+// ADR 0014 step 1 as amended (the score ADR 0028 step 2's ability check
+// reads): a proficiency's target is built on the score in effect. Under a
+// DEX buff the roll and the list read the buffed score; once the buff ends,
+// the sheet's. A natural 20 still fails (step 2), whatever the buff.
+func TestSkillCheck_Step1_TargetIsTheScoreInEffect(t *testing.T) {
+	// musical_instrument: DEX 17 on the sheet, modifier -1.
+	cases := []struct {
+		name         string
+		boost        int
+		d20          int
+		score        int
+		target       int
+		success      bool
+		listedTarget int
+	}{
+		{"under a +2 DEX buff, a roll over the sheet's target succeeds", 2, 18, 19, 18, true, 18},
+		{"the buff ended: the same roll against the sheet's score fails", 0, 17, 17, 16, false, 16},
+		{"a natural 20 fails under a buff that puts the target above 20", 6, 20, 23, 22, false, 22},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			f := newFixture(t)
+			f.effects = map[charactersvc.Ability]int{charactersvc.AbilityDex: c.boost}
+			f.records()
+			f.dice.EXPECT().RollDie(20).Return(c.d20).Once()
+			r := f.roll(t, "musical_instrument")
+			f.dice.AssertNumberOfCalls(t, "RollDie", 1)
+			assert.Equal(t, &skillsvc.CheckResult{
+				ID: "musical_instrument", Kind: skillsvc.KindProficiency, Die: 20, Roll: c.d20, Target: c.target, AdjustedTarget: c.target,
+				Success: c.success, RolledSuccess: c.success, Ability: skillsvc.AbilityDex, AbilityScore: c.score, Modifier: -1, LogEntryID: 100,
+			}, r)
+			assert.Contains(t, string(f.entries[0].Payload), `"abilityScore":`+itoa(c.score)+`,`)
+
+			f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return(nil, nil).Once()
+			list, err := f.svc.List(context.Background(), charID)
+			require.NoError(t, err)
+			var got *skillsvc.Proficiency
+			for i := range list.Proficiencies {
+				if list.Proficiencies[i].ID == "musical_instrument" {
+					got = &list.Proficiencies[i]
+				}
+			}
+			require.NotNil(t, got)
+			assert.Equal(t, c.score, got.AbilityScore)
+			assert.Equal(t, c.listedTarget, got.Target)
+		})
+	}
+	t.Run("an unreadable score refuses the check before the roll", func(t *testing.T) {
+		f := newFixture(t)
+		f.unsetScores()
+		boom := errors.New("boom")
+		f.abils.EXPECT().GetAbilityScore(mock.Anything, charID, charactersvc.AbilityDex).Return(buffsvc.AbilityScore{}, boom).Once()
+		_, err := f.svc.Roll(context.Background(), charID, "musical_instrument", skillsvc.Adjustment{})
+		require.ErrorIs(t, err, boom)
+		f.dice.AssertNotCalled(t, "RollDie", mock.Anything)
+	})
 }

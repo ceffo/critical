@@ -54,6 +54,7 @@ func newSheetFixture(t *testing.T, c charactersvc.View, languages skills.Languag
 	require.NoError(t, err)
 	f.svc = svc
 	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Maybe()
+	f.sheetScores()
 	return f
 }
 

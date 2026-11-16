@@ -284,6 +284,17 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	return rec, nil
 }
 
+// scoreInEffect is the score of proficiency p's ability with the active
+// effects (ADR 0014 step 1 as amended: the score ADR 0028 step 2's ability
+// check reads, through the same port, buffsvc GetAbilityScore).
+func (s *service) scoreInEffect(ctx context.Context, characterID int64, p skills.PickFigures) (int, error) {
+	score, err := s.abils.GetAbilityScore(ctx, characterID, Ability(p.Ability))
+	if err != nil {
+		return 0, fmt.Errorf("proficiency %q: %w", p.ID, err)
+	}
+	return score.Effective, nil
+}
+
 // checkable are the character's picks with a check (ADR 0037 steps 2 and 5):
 // a catalogue proficiency with an ability, its target derived on the
 // character. A pick with no check (Blind-fighting, an id the catalogue does
@@ -307,19 +318,19 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 	if err != nil {
 		return checkRecord{}, fmt.Errorf("get character: %w", err)
 	}
-	// ADR 0014 step 1 as amended by ADR 0037 step 5: the ability score plus
-	// the catalogue's modifier plus the extra slots, derived on the
-	// character.
+	// ADR 0014 step 1 as amended by ADR 0037 step 5: the ability score in
+	// effect (amended to ADR 0028 step 2's score) plus the catalogue's
+	// modifier plus the extra slots.
 	for _, p := range checkable(char) {
 		if p.ID != id {
 			continue
 		}
-		score, err := abilityScore(char, Ability(p.Ability))
+		score, err := s.scoreInEffect(ctx, characterID, p)
 		if err != nil {
-			return checkRecord{}, fmt.Errorf("proficiency %q: %w", p.ID, err)
+			return checkRecord{}, err
 		}
 		return checkRecord{
-			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: p.Target,
+			ID: p.ID, Kind: KindProficiency, Die: ProficiencyDie, Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra),
 			Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
 		}, nil
 	}
@@ -418,13 +429,13 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			out.SkillSets = append(out.SkillSets, set)
 		}
 		for _, p := range profs {
-			score, err := abilityScore(char, Ability(p.Ability))
+			score, err := s.scoreInEffect(ctx, characterID, p)
 			if err != nil {
-				return fmt.Errorf("proficiency %q: %w", p.ID, err)
+				return err
 			}
 			out.Proficiencies = append(out.Proficiencies, Proficiency{
 				ID: p.ID, Ability: Ability(p.Ability), AbilityScore: score, Modifier: p.Modifier, ExtraSlots: p.Extra,
-				Target: p.Target, Last: last[lastKey(KindProficiency, "", p.ID)],
+				Target: skills.ProficiencyTarget(score, p.Modifier, p.Extra), Last: last[lastKey(KindProficiency, "", p.ID)],
 			})
 		}
 		return nil

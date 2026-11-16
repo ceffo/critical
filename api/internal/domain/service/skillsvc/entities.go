@@ -53,8 +53,9 @@ type LastCheck struct {
 }
 
 // Proficiency is a picked proficiency with a check and its target: ability
-// score + the catalogue's modifier + the slots spent beyond the cost (ADR
-// 0014 step 1 as amended by ADR 0037 step 5).
+// score in effect (AbilityScore, with the active effects) + the catalogue's
+// modifier + the slots spent beyond the cost (ADR 0014 step 1 as amended by
+// ADR 0037 step 5 and to ADR 0028 step 2's score).
 type Proficiency struct {
 	ID           string
 	Ability      Ability

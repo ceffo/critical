@@ -458,6 +458,32 @@ writes `Test<name>` and adds the prefix here in the same PR.
     and "words an over-budget pool: what to remove, and the
     figures", `level-up-grants.spec` "an editor opened from the card is a dialog over any tab and
     any activity".)_
+    _(Amended 2026-11-15, user triage of the skills overhaul: the card's tag and the dialog
+    are replaced by a **Skills activity**, a fifth entry of the rail after Inventory (ADR 0022
+    step 2.4), open at any time for every character. It hosts today's editors unchanged, one block
+    each: the weapon proficiencies (when the character has a weapon pool), the proficiencies with
+    the languages, and the skill points of **each** skill set the character has (a character with
+    none has no points editor). They are usable with nothing left to spend: a pick removed and
+    another added, a language changed, points moved; a save is still one undoable move of the
+    action log, the server's previews and refusals unchanged, and each block starts again from
+    what the server stores after a save, a cancel, an undo or a redo. A **red pill** on the rail
+    entry shows while anything is left to spend or a pool is over budget: any of
+    `derived.levelUp.toSpend`'s weapon, non-weapon or skill-point counts above 0, or a pool's
+    `left` (the weapon and non-weapon pools, each skill set's budget) other than 0. The web reads
+    the server's figures and computes nothing; the pill has a text alternative for screen readers
+    ("Something is left to spend in Skills"). A free spell owed is spent in the Spells activity
+    and does not light the pill; its link stays in the level-up box. The "Assigner" / "Slots to
+    spend" tag and the spend dialog leave the character card. "Level N grants" keeps its Choisir
+    / Dépenser links: each focuses the Skills activity and scrolls to the editor it names (the
+    first skill set with points left for the points editor). The not-proficient weapon hint
+    points at the Skills activity. This is a first step: a design round reshapes what is inside.
+    Tests: `skillsPending` "Skills pill" cases (`web/src/lib/skillsPending.test.ts`),
+    `Rail.dom.test.tsx` (the entry after Inventory in en and fr, the pill shown, kept over
+    budget and hidden, its text alternative), `SkillsPanel.dom.test.tsx` (the editors with
+    nothing to spend, no points editor without a skill set, two skill sets each reachable, the
+    link's request scrolls and focuses), `level-up-grants.spec` "the level-up box's link by
+    keyboard focuses Skills on the points editor, under a red pill", `skills-activity.spec`
+    (with nothing left to spend, swap a proficiency, save, undo).)_
 
 ### Existing data
 

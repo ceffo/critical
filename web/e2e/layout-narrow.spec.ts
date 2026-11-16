@@ -70,7 +70,8 @@ async function sweep(page: Page, rest: boolean, prefix: string) {
     for (const [i, what] of [
       [1, "spells"],
       [2, "inventory"],
-      [3, "experience"],
+      [3, "skills"],
+      [4, "experience"],
     ] as const) {
       await rail.nth(i).click();
       await check(what);

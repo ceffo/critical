@@ -951,6 +951,8 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
       await page.emulateMedia({ colorScheme: "light" });
     }
     await picksEditor.getByTestId("proficiency-cancel").click();
+    // Back to the Act activity's Skills tab (the editors are in the Skills activity).
+    await openWorkspace(page, "Act");
     await skills.evaluate((el) => el.scrollTo(0, 0));
     if (vp.width === 1440) {
       // The bard's budget and terms (ADR 0027 step 12.3) make the tab scroll inside
@@ -1026,7 +1028,7 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
     }
     // ADR 0027 step 14.4: the ledger card is as tall as its rows (two entries and the opening row),
     // not the rest of the stage.
-    await rail.nth(3).click();
+    await rail.nth(4).click();
     const ledger = stage.getByTestId("xp-ledger");
     await expect(ledger.getByTestId("xp-row")).toHaveCount(2);
     await expectNoClippedText(stage, `experience, ${where}`);
@@ -1490,7 +1492,6 @@ async function skillsEditorStep(page: Page, size: Viewport) {
     "2 emplacements de compétence",
   );
   await panel.getByTestId("proficiency-save").click();
-  await expect(page.getByTestId("proficiency-editor")).toHaveCount(0);
   await page.getByTestId("details-trigger").click();
   const pop = page.getByTestId("details-popover");
   await expect(pop.getByTestId("details-language-slots")).toHaveText(
@@ -1505,6 +1506,37 @@ async function skillsEditorStep(page: Page, size: Viewport) {
     const where = `${vp.width}x${vp.height}`;
     await expectNoClippedText(pop, `details card languages view, ${where}`);
     await snap(page, `details-languages-view-fr-${where}`);
+  }
+}
+
+// ADR 0037 step 15 (amended 2026-11-15), ADR 0022 step 2.4: the Skills activity and its rail entry
+// with the red pill, judged in French first (ADR 0027 step 2), then English: no cut text in the
+// rail, the pill or the editors, nothing past the window, at every layout viewport. Test Bard
+// has two slots left, so the pill shows.
+async function skillsActivityStep(page: Page, size: Viewport) {
+  await openDashboard(page);
+  const rail = page.getByTestId("rail");
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await openWorkspace(page, "Skills");
+    const panel = page.getByTestId("skills-panel");
+    await expect(panel.getByTestId("proficiency-editor")).toBeVisible();
+    await expect(page.getByTestId("skills-pill")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(rail, `rail with the Skills pill, ${where}`);
+      await expectWholeWords(rail, `rail with the Skills pill, ${where}`);
+      await expectMinTarget(
+        rail.getByRole("button", { name: /^(Skills|Compétences)/ }),
+        `Skills rail entry, ${where}`,
+      );
+      await expectNoClippedText(panel, `skills activity, ${where}`);
+      await expectWholeWords(panel, `skills activity, ${where}`);
+      await expectNoPageScroll(page);
+      if (lang === "fr" || vp.width >= 1920)
+        await snap(page, `skills-activity-${lang}-${vp.width}x${vp.height}`);
+    }
   }
 }
 
@@ -2627,7 +2659,8 @@ async function weaponProfEditorStep(page: Page, size: Viewport) {
     }
     if (lang === "fr") await editor.getByTestId("weapon-save").click();
     else await editor.getByTestId("weapon-cancel").click();
-    await expect(editor).toBeHidden();
+    // The editor stays open in the Skills activity: back to Act for the next language.
+    await openWorkspace(page, "Act");
   }
 }
 
@@ -3011,6 +3044,7 @@ async function textFloorStep(page: Page, size: Viewport) {
       "Act",
       "Spells",
       "Inventory",
+      "Skills",
       "Experience",
     ].entries()) {
       await rail.nth(i).click();
@@ -3146,6 +3180,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["piece editor powers", piecePowersStep],
   ["Ajouter", ajouterStep],
   ["skills editor", skillsEditorStep],
+  ["skills activity", skillsActivityStep],
   ["card details", cardDetailsStep],
   ["dice bar", diceBarStep],
   ["proficiency pop-up", profPopupStep],
@@ -3204,6 +3239,7 @@ async function runWalk(
 // languages the skills editor step sets): 1280 and 1920 cover them at both ends of the width range.
 const WIDTH_STEPS = new Set([
   "shell",
+  "skills activity",
   "text floor",
   "act panel",
   "French and long names",
@@ -4707,31 +4743,24 @@ async function levelUpGrantsStep(page: Page, size: Viewport) {
   const grants = page.getByTestId("level-up-grants");
   await expect(grants).toContainText("Le niveau 2 apporte");
   await expect(grants).toContainText("+15 points de talent");
-  const tag = page.getByTestId("to-spend-tag");
-  const popover = page.getByTestId("level-up-to-spend");
+  const rail = page.getByTestId("rail");
   for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
     const where = `fr, ${vp.width}x${vp.height}`;
     await expectNoClippedText(grants, `level-up grants, ${where}`);
     await expectWholeWords(grants, `level-up grants, ${where}`);
-    await expectNoClippedText(tag, `to-spend tag, ${where}`);
-    await expectMinTarget(tag, `to-spend tag, ${where}`);
+    // What is left to spend is the rail's red pill, not a tag on the card.
+    await expect(rail.getByTestId("skills-pill")).toBeVisible();
+    await expectNoClippedText(rail, `rail with the Skills pill, ${where}`);
     await snap(page, `level-up-grants-fr-${vp.width}x${vp.height}`);
-    await tag.click();
-    await expect(popover).toContainText("35 points de talent");
-    await expectNoClippedText(popover, `to-spend popover, ${where}`);
-    await expectWholeWords(popover, `to-spend popover, ${where}`);
-    await snap(page, `level-up-to-spend-fr-${vp.width}x${vp.height}`);
-    await page.keyboard.press("Escape");
-    await expect(popover).toHaveCount(0);
   }
+  await expect(page.getByTestId("to-spend-tag")).toHaveCount(0);
 }
 
 // ADR 0030 step 20.8 and ADR 0022 step 1, judged in French (ADR 0027 step 2): once a mage takes
-// level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link) and the
-// to-spend popover listing the free spell, never cut from 1280 to 2560; the character
-// card does not scroll for them from 1440x900 up (ADR 0022 step 2.8), with a three-line name.
-// Screenshots of both at every viewport.
+// level 3, its grants (a non-weapon slot and the free 2nd-level spell, each with its link), never
+// cut from 1280 to 2560; the character card does not scroll for them from 1440x900 up (ADR 0022
+// step 2.8), with a three-line name. A screenshot at every viewport.
 async function levelUpFreeSpellStep(page: Page, size: Viewport) {
   await openDashboard(page);
   const call = (method: string, url: string, body: unknown) =>
@@ -4767,8 +4796,6 @@ async function levelUpFreeSpellStep(page: Page, size: Viewport) {
   const grants = page.getByTestId("level-up-grants");
   await expect(grants).toContainText("Le niveau 3 apporte");
   await expect(grants).toContainText("+1 sort gratuit, niv. 2");
-  const tag = page.getByTestId("to-spend-tag");
-  const popover = page.getByTestId("level-up-to-spend");
   const character = page.getByTestId("character");
   for (const vp of sizesAt(size, VIEWPORTS)) {
     await page.setViewportSize(vp);
@@ -4781,16 +4808,6 @@ async function levelUpFreeSpellStep(page: Page, size: Viewport) {
         character,
         `character card with the free spell, ${where}`,
       );
-    await tag.click();
-    await expect(popover).toContainText("1 sort gratuit, niv. 2");
-    await expectNoClippedText(popover, `free spell to-spend, ${where}`);
-    await expectWholeWords(popover, `free spell to-spend, ${where}`);
-    await snap(
-      page,
-      `level-up-free-spell-to-spend-fr-${vp.width}x${vp.height}`,
-    );
-    await page.keyboard.press("Escape");
-    await expect(popover).toHaveCount(0);
   }
 }
 
@@ -5741,6 +5758,7 @@ async function thiefStep(page: Page, size: Viewport) {
   await page.unroute("**/api/skills/points/preview");
 
   await page.setViewportSize(size);
+  await openWorkspace(page, "Act");
   await page.getByRole("tab", { name: "Armes" }).click();
   const f = page.getByRole("form", { name: "Attaque" });
   await f.getByTestId("backstab").check();

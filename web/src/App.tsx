@@ -23,6 +23,7 @@ import { DatabaseBanner } from "@/components/shell/DatabaseBanner";
 import { Rail } from "@/components/shell/Rail";
 import { SettingsPopover } from "@/components/shell/SettingsPopover";
 import { XpPanel } from "@/components/xp/XpPanel";
+import { SkillsPanel } from "@/components/skills/SkillsPanel";
 import type { Activity } from "@/lib/activities";
 import { lookupLabelKey, useActFeatures } from "@/lib/actFeatures";
 import { cn } from "@/lib/utils";
@@ -170,6 +171,7 @@ function App() {
           <Identity
             onOpenXp={() => focus("xp")}
             onOpenSpells={() => focus("spells")}
+            onOpenSkills={() => focus("skills")}
           />
           <div className="flex flex-col gap-3">
             {/* The AC beside the HP (ADR 0035 item 4): smaller, no label, opening its breakdown. */}
@@ -207,6 +209,14 @@ function App() {
             label={t(`shell.activity.${lookupKey}`)}
           >
             <LookupPanel />
+          </Pane>
+          <Pane
+            id="skills"
+            active={activity}
+            visited={visited}
+            label={t("shell.activity.skills")}
+          >
+            <SkillsPanel />
           </Pane>
           <Pane
             id="xp"

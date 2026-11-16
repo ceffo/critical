@@ -52,7 +52,7 @@ export function NonproficientTag({
 }: {
   penalty: number;
   /** Whether the piece has a catalogue code: the weapon pick names a catalogue weapon, so a piece
-   * without one is fixed on the item, not in the Skills tab (ADR 0037 step 21.4). */
+   * without one is fixed on the item, not in the Skills activity (ADR 0037 step 21.4). */
   hasCode: boolean;
 }) {
   const { t } = useTranslation();

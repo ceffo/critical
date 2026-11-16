@@ -52,7 +52,14 @@ Tests live in `api/internal/domain/service/skillsvc/skillsvc_test.go` unless nam
    modifier + extraSlots` that the web and the journal word, and logged entries keep that sum.
    `router` `TestSkills_SheetScoreBesideTheScoreInEffect`.
    `TestSkillCheck_Step1_TargetIsTheScoreInEffect` (a DEX buff on, then ended; a natural 20 under a
-   buff; an unreadable score refused before the roll).)_
+   buff; an unreadable score refused before the roll; the list reads each ability once).
+   The proficiency editor shows the same target: the picks' `target` in the answers of
+   `PUT /api/proficiencies` and `POST /api/proficiencies/preview` is built from the score in
+   effect through the same port (`TestPicks_Step1_EditorTargetIsTheScoreInEffect`: a buff, a
+   debuff, an unreadable score). The editor shows no ability score, so no sheet score beside it.
+   The character's `derived.proficiencySlots` keeps its target on the sheet's score: the character
+   service derives the sheet and cannot read the effects (`buffsvc` reads it). The editor holds that
+   figure only until its first preview, asked when it opens, replaces it.)_
    Test: `TestSkillCheck_Step1_ProficiencyD20AtOrUnderTarget` (at the target, one over, a
    positive and a negative modifier; exactly one d20, no d100).
 2. **A natural 20 always fails** a proficiency check, whatever the target.

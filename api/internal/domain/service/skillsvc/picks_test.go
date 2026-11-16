@@ -3,6 +3,7 @@ package skillsvc_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,6 +15,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/actionlog/snaptest"
 	"github.com/ceffo/critical/api/internal/domain/ruleset"
 	rulesetmocks "github.com/ceffo/critical/api/internal/domain/ruleset/mocks"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc/viewtest"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
@@ -298,6 +300,40 @@ func TestPreviewPicks_Step12_SameRefusalsAsTheSave(t *testing.T) {
 		var fe *domain.FieldError
 		require.ErrorAs(t, err, &fe)
 		assert.Equal(t, domain.FieldError{Field: "nonweapon.juggling", Message: "unknown"}, *fe)
+	})
+}
+
+// ADR 0014 step 1 as amended: the editor's served target (the preview's and the save's) is built
+// from the score in effect, the one the Skills tab and the roll use, not the sheet's.
+func TestPicks_Step1_EditorTargetIsTheScoreInEffect(t *testing.T) {
+	edit := skillsvc.Edit{Picks: nonweapon(pk("tumbling", 3))}
+	for _, tc := range []struct {
+		name   string
+		boost  int
+		target int
+	}{
+		{"no effect: the sheet's Dex 15 + 2 extra slots", 0, 17},
+		{"a +2 Dex buff", 2, 19},
+		{"a -3 Dex debuff", -3, 14},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := newPicksFixture(t, nonweapon(pk("tumbling", 3)))
+			f.effects = map[charactersvc.Ability]int{charactersvc.AbilityDex: tc.boost}
+			preview, err := f.svc.PreviewProficiencies(context.Background(), charID, edit)
+			require.NoError(t, err)
+			assert.Equal(t, tc.target, preview.Slots.Picks[0].Target, "preview")
+			saved, err := f.svc.SetProficiencies(context.Background(), charID, edit)
+			require.NoError(t, err)
+			assert.Equal(t, tc.target, saved.Slots.Picks[0].Target, "save")
+		})
+	}
+	t.Run("an unreadable score refuses the preview", func(t *testing.T) {
+		f := newPicksFixture(t, nonweapon())
+		f.unsetScores()
+		boom := errors.New("boom")
+		f.abils.EXPECT().GetAbilityScore(mock.Anything, charID, charactersvc.AbilityDex).Return(buffsvc.AbilityScore{}, boom).Once()
+		_, err := f.svc.PreviewProficiencies(context.Background(), charID, edit)
+		require.ErrorIs(t, err, boom)
 	})
 }
 

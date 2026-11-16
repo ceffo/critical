@@ -10,6 +10,7 @@ import (
 	"github.com/ceffo/critical/api/internal/domain"
 	"github.com/ceffo/critical/api/internal/domain/actionlog"
 	"github.com/ceffo/critical/api/internal/domain/classes"
+	"github.com/ceffo/critical/api/internal/domain/service/buffsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/charactersvc"
 	"github.com/ceffo/critical/api/internal/domain/skills"
 )
@@ -288,12 +289,29 @@ func (s *service) check(ctx context.Context, characterID int64, set, id string, 
 	return rec, nil
 }
 
-// scoreInEffect is the score of proficiency p's ability with the active
-// effects (ADR 0014 step 1 as amended: the score ADR 0028 step 2's ability
-// check reads, through the same port, buffsvc GetAbilityScore), and the sheet's score when an effect
-// makes them differ (0 when they are the same).
-func (s *service) scoreInEffect(ctx context.Context, characterID int64, p skills.PickFigures) (score, sheet int, err error) {
-	got, err := s.abils.GetAbilityScore(ctx, characterID, Ability(p.Ability))
+// scoresInEffect reads the score of an ability with the active effects (ADR 0014 step 1 as
+// amended: the score ADR 0028 step 2's ability check reads, through the same port, buffsvc
+// GetAbilityScore), each ability once per call of the returned reader: a read of every pick
+// (the Skills tab, the proficiency editor) asks the port at most six times, not once a pick.
+func (s *service) scoresInEffect(ctx context.Context, characterID int64) func(a Ability) (buffsvc.AbilityScore, error) {
+	got := map[Ability]buffsvc.AbilityScore{}
+	return func(a Ability) (buffsvc.AbilityScore, error) {
+		if v, ok := got[a]; ok {
+			return v, nil
+		}
+		v, err := s.abils.GetAbilityScore(ctx, characterID, a)
+		if err != nil {
+			return buffsvc.AbilityScore{}, err
+		}
+		got[a] = v
+		return v, nil
+	}
+}
+
+// scoreInEffect is the score of proficiency p's ability in effect (scores, scoresInEffect's
+// reader), and the sheet's score when an effect makes them differ (0 when they are the same).
+func scoreInEffect(scores func(Ability) (buffsvc.AbilityScore, error), p skills.PickFigures) (score, sheet int, err error) {
+	got, err := scores(Ability(p.Ability))
 	if err != nil {
 		return 0, 0, fmt.Errorf("proficiency %q: %w", p.ID, err)
 	}
@@ -333,7 +351,7 @@ func (s *service) find(ctx context.Context, characterID int64, set, id string) (
 		if p.ID != id {
 			continue
 		}
-		score, sheet, err := s.scoreInEffect(ctx, characterID, p)
+		score, sheet, err := scoreInEffect(s.scoresInEffect(ctx, characterID), p)
 		if err != nil {
 			return checkRecord{}, err
 		}
@@ -428,6 +446,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			return err
 		}
 		profs := checkable(char)
+		scores := s.scoresInEffect(ctx, characterID)
 		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.SkillSets))}
 		for _, ss := range char.SkillSets {
 			set := SkillSet{Set: ss.Set, Name: ss.Name, MinPercent: ss.MinPercent, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
@@ -437,7 +456,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 			out.SkillSets = append(out.SkillSets, set)
 		}
 		for _, p := range profs {
-			score, sheet, err := s.scoreInEffect(ctx, characterID, p)
+			score, sheet, err := scoreInEffect(scores, p)
 			if err != nil {
 				return err
 			}

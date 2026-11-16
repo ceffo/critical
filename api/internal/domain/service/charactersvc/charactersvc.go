@@ -469,6 +469,8 @@ func (s *service) readWarnings(c *Character, defs *classes.Registry, lift rulese
 	c.Derived.Proficiencies, slotWarnings = skills.Read(s.profs, skills.Sheet{
 		Class: c.Class, Level: c.Derived.RealizedLevel, Classes: c.ProficiencyClasses(), Intelligence: c.Int,
 		Picks: c.Proficiencies, Languages: c.Details.Languages, Native: native, MulticlassAnyWeapon: lift.MulticlassAnyWeapon,
+		// The sheet's score: the effects are buffsvc's, which reads this service. The served
+		// target in effect is skillsvc's (ADR 0014 step 1 as amended).
 		Score: func(a string) (int, bool) { return c.Score(Ability(a)) },
 	})
 	c.Warnings = c.Details.Warnings(alignmentsOfEntries(defs, c.Entries()))

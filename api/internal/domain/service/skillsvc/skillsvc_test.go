@@ -428,6 +428,13 @@ func TestSkillCheck_Step1_TargetIsTheScoreInEffect(t *testing.T) {
 			assert.Equal(t, c.listedTarget, got.Target)
 		})
 	}
+	t.Run("the list reads each ability's score once, not once a pick", func(t *testing.T) {
+		f := newFixture(t) // two Dex picks and one Wis pick with a check
+		f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return(nil, nil).Once()
+		_, err := f.svc.List(context.Background(), charID)
+		require.NoError(t, err)
+		f.abils.AssertNumberOfCalls(t, "GetAbilityScore", 2)
+	})
 	t.Run("an unreadable score refuses the check before the roll", func(t *testing.T) {
 		f := newFixture(t)
 		f.unsetScores()

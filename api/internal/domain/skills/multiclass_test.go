@@ -220,22 +220,26 @@ func TestCatalogue_Step15_TheCharactersCostsAndGroups(t *testing.T) {
 		{
 			"a fighter/mage: the mage's group counts, the first class's no longer alone",
 			skills.Classes{{Class: "fighter", Level: 5}, {Class: "mage", Level: 5}},
-			[]string{"warrior", "general", "wizard"}, 1, 2, 3,
+			[]string{"warrior", "general", "wizard"},
+			1, 2, 3,
 		},
 		{
 			"a fighter/cleric",
 			skills.Classes{{Class: "fighter", Level: 5}, {Class: "cleric", Level: 5}},
-			[]string{"warrior", "general", "priest"}, 1, 2, 2,
+			[]string{"warrior", "general", "priest"},
+			1, 2, 2,
 		},
 		{
 			"a dual-class, the fighter frozen: only the active mage's groups",
 			skills.Classes{{Class: "fighter", Level: 9, Frozen: true}, {Class: "mage", Level: 3}},
-			[]string{"wizard", "general"}, 1, 3, 3,
+			[]string{"wizard", "general"},
+			1, 3, 3,
 		},
 		{
 			"a dual-class, the mage frozen: only the active fighter's groups",
 			skills.Classes{{Class: "mage", Level: 4, Frozen: true}, {Class: "fighter", Level: 6}},
-			[]string{"warrior", "general"}, 2, 2, 3,
+			[]string{"warrior", "general"},
+			2, 2, 3,
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

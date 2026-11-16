@@ -861,7 +861,7 @@ is only ever appended to by play.
     explanation, the bard his own paragraph for his four; [ADR 0037](0037-proficiencies.md) step 19.6 shows them). Format 25 is format 24
     plus one top-level list, as format 9 was for the proficiencies (step 16), one text per skill of a skill set. Backstab and scroll use
     have no percentage and are no skill of a set: they have no row.
-    1. **`skill_descriptions`**, required, exactly 12 rows `{set, skill, description}` (the thief's eight, the bard's four): `set` a skill
+    1. **`skill_descriptions`**, required, one row `{set, skill, description}` per skill of a skill set (today the thief's eight and the bard's four, 12; the build and the importer check that the rows are exactly the pairs of `skill_sets`, so the schema fixes no count): `set` a skill
        set id and `skill` one of its skills' ids (`^[a-z0-9]+(_[a-z0-9]+)*$`), the pair once; `description` a language map with **both**
        `en` and `fr`, each in step 1's Markdown subset (no leading or trailing whitespace). The key is the **pair**: a set has its own
        text for a skill (the bard's Pick Pockets is the bard's paragraph, not the thief's), so nothing in the code names a class: the

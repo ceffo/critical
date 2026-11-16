@@ -170,7 +170,7 @@ export function ThiefPointsEditor({
                   keeps its own accessible name. */}
               <SkillNameButton
                 set={set}
-                skill={s}
+                skill={preview ?? s}
                 className={cn(
                   labelClass,
                   "w-fit max-w-full rounded-md text-left break-words underline-offset-2 hover:underline",

@@ -1709,10 +1709,8 @@
       }
     },
     "skill_descriptions": {
-      "description": "Format 25: the description of each skill of the skill sets (ADR 0021 step 33, ADR 0037 step 19.6): exactly 12 rows, the thief's eight skills and the bard's four, one per (set, skill) pair, in English and French, each in step 1's Markdown subset. A set has its own text for a skill (the bard's Pick Pockets is not the thief's). The name stays an i18n key by id and the figures stay in skill_sets, so a row carries nothing else. That the rows are exactly the pairs of skill_sets is the builder's and the importer's check.",
+      "description": "Format 25: the description of each skill of the skill sets (ADR 0021 step 33, ADR 0037 step 19.6): one row per (set, skill) pair, in English and French, each in step 1's Markdown subset. A set has its own text for a skill (the bard's Pick Pockets is not the thief's). The name stays an i18n key by id and the figures stay in skill_sets, so a row carries nothing else. That the rows are exactly the pairs of skill_sets is the builder's and the importer's check.",
       "type": "array",
-      "minItems": 12,
-      "maxItems": 12,
       "uniqueItems": true,
       "items": {
         "$ref": "#/$defs/skill_description_row"

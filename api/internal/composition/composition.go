@@ -38,11 +38,11 @@ import (
 	"github.com/ceffo/critical/api/internal/domain/service/powersvc"
 	"github.com/ceffo/critical/api/internal/domain/service/prepsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/profdescsvc"
-	"github.com/ceffo/critical/api/internal/domain/service/skilldescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/psionicsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/restsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/rulesetsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/ruletablesvc"
+	"github.com/ceffo/critical/api/internal/domain/service/skilldescsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/skillsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spellsvc"
 	"github.com/ceffo/critical/api/internal/domain/service/spheresvc"
@@ -89,10 +89,10 @@ type BackingServices struct {
 	ProficiencyDescriptions profdescsvc.SVC
 	// SkillDescriptions serves each skill of a skill set's description (ADR 0037 step 19.6).
 	SkillDescriptions skilldescsvc.SVC
-	Learn                   learnsvc.SVC
-	Turn                    turnsvc.SVC
-	Details                 detailssvc.SVC
-	Skills                  skillsvc.SVC
+	Learn             learnsvc.SVC
+	Turn              turnsvc.SVC
+	Details           detailssvc.SVC
+	Skills            skillsvc.SVC
 	// AC is the character's derived armour class and its override (ADR
 	// 0033 steps 10 to 13).
 	AC   acsvc.SVC

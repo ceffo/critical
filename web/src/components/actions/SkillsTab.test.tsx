@@ -140,7 +140,7 @@ describe("SkillsTab sections follow the served sets", () => {
       ...base,
       skillSets: [skillSet("scout", [rogueSkill], { name: {} })],
     });
-    expect(html).toContain(">scout</h3>");
+    expect(html).toContain(">scout</span>");
   });
 });
 

@@ -15,3 +15,9 @@ type ProficiencyDescription struct {
 	ProficiencyID string
 	Description   int64
 }
+
+type SkillDescription struct {
+	SkillSet    string
+	Skill       string
+	Description int64
+}

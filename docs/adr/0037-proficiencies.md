@@ -16,6 +16,7 @@ Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (u
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 Steps 3, 7 and 8 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 15 and 16 (multi-class and dual-class), on implementation.
 Step 21 (a weapon pick names a weapon, not a weapon type; amends steps 7, 8, 9 and 16, ADR 0042 step 16.1 and ADR 0040 steps 1.6 and 13) decided 2026-11-13 (user triage), its _(proposed)_ readings awaiting the user's OK; built 2026-11-13 but 21.1's `proficiency_code` (see "As built" at the end of step 21).
+Step 19.6 (the same pop-up for the skills of the thief and bard skill sets, catalogue format 25) decided 2026-11-15 (user triage), as built 2026-11-16.
 Step 22 (proficiencies a class gets free: the bard's four as the `free_proficiencies` feature kind at cost 0, offered when not held, the paid slots given back by a data step; amends steps 4, 11 and 16 and ADR 0040 step 3) decided 2026-11-15 (user triage; the user kept every _(proposed)_ reading's default, 2026-11-15); as built 2026-11-15 (catalogue format 24, migration 046; see "As built" at the end of step 22).
 
 ## Context
@@ -669,6 +670,23 @@ descriptions and the effects of other proficiencies are separate, deferred items
     key in `seeds/proficiencies.json`, nor in the locale files), `SkillRow_Step19_NameOpensThePopupAbilityRolls`,
     `ProficiencyPopup_Step19_ShowsNameDescriptionThenFigures`,
     `ProficiencyPicker_Step19_NameOpensThePopupAndShowsTheClassCost` (web).
+    19.6 **The same pop-up for a skill of a skill set** (user triage of 2026-11-15; ADR 0021 step 33, catalogue format 25, built
+         2026-11-16). Each of the thief's eight skills shows the thief chapter's explanation of it; a bard sees the bard's own
+         paragraph for his four (Climb Walls, Detect Noise, Pick Pockets, Read Languages): the text is the **set's** for the skill, so a
+         character with two sets (a thief and a bard) reads each set's own. Backstab and scroll use have no percentage and no pop-up.
+         *Two click targets, as step 19.1:* a skill-set row of the Skills tab has the **name**, which opens the pop-up, and the
+         **percentage** part, which still rolls the check (the terms and the armour tag stay under the name); the Skills activity's
+         points editor opens the same pop-up from each field's name (the field keeps its own accessible name).
+         *What it shows, in order:* the name, the description (step 19.3's renderer), then the terms of the percentage, all the
+         server's figures: base, points, race, Dexterity, armour and the total (`percent`). The pop-up computes none.
+         *Served by the API, never in the seeds:* `GET /api/skill-sets/{set}/skills/{skill}/description` answers
+         `{set, skill, description: {en, fr}}` from `localized_texts` (read once after the import, `skilldescsvc`, `skilldeschdl`),
+         404 `not_found` for a pair the catalogue does not hold; a session, no current character. A catalogue without format 25 does
+         not start (ADR 0021 step 33.5); no description is in `seeds/` or the i18n files.
+         Tests: `TestSkillDescription_Step19_6_ServedAsALanguageMapPerSet` (router: the thief's and the bard's text of one skill, an
+         unknown pair), `TestDescription_Step19_6_ServedPerSetAsALanguageMap` (skilldescsvc), `TestSkillDescriptions_Step19_6_NotInTheSeeds`
+         (seedcheck), `SkillRow_Step19_6_NameOpensThePopupPercentageRolls`, `PointsEditor_Step19_6_NameOpensThePopup`,
+         `SkillPopup_Step19_6_ShowsDescriptionThenTerms` (web)
 
 20. **A successful Tumbling check adds a buff (a house rule).** The check of step 5 and
     [ADR 0014](0014-skill-checks.md) step 1 for `tumbling`:

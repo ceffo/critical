@@ -200,7 +200,7 @@ describe("SkillsTab budget and terms", () => {
 });
 
 // A proficiency row is two sibling targets, never one inside the other: the name opens the
-// description, the ability part rolls the check (class skills stay one roll button).
+// description, the ability part rolls the check.
 describe("SkillsTab proficiency row", () => {
   it("has a name button and a roll button side by side", async () => {
     const html = await render({
@@ -225,9 +225,45 @@ describe("SkillsTab proficiency row", () => {
     expect(roll).not.toContain("proficiency-name");
     // No button inside the other.
     expect(row?.match(/<button/g)).toHaveLength(2);
-    // The class skill stays one roll button.
+    // The class skill is a row of its own kind (step 19.6), never a proficiency's name button.
     expect(html).toContain('data-testid="skill-hide_in_shadows"');
     expect(html).not.toContain("proficiency-name-hide_in_shadows");
+  });
+});
+
+// ADR 0037 step 19.6: a skill of a skill set is the same two sibling targets: the name opens the
+// set's description, the percentage part still rolls the check.
+describe("SkillRow_Step19_6_NameOpensThePopupPercentageRolls", () => {
+  it("has a name button and a roll button side by side, in each set", async () => {
+    const html = await render({
+      ...base,
+      skillSets: [
+        skillSet("thief", [rogueSkill]),
+        skillSet("bard", [rogueSkill]),
+      ],
+    });
+    for (const set of ["thief", "bard"]) {
+      const row = new RegExp(
+        `data-testid="skill-row-${set}-hide_in_shadows">(.*?)</li>`,
+      ).exec(html)?.[1];
+      expect(row).toBeDefined();
+      const name = new RegExp(
+        `<button[^>]*data-testid="skill-name-${set}-hide_in_shadows"[^>]*>.*?</button>`,
+      ).exec(row ?? "")?.[0];
+      const roll =
+        /<button[^>]*data-testid="skill-hide_in_shadows"[^>]*>.*?<\/button>/.exec(
+          row ?? "",
+        )?.[0];
+      expect(name).toContain("Hide in Shadows");
+      expect(name).toContain('aria-label="Description of Hide in Shadows"');
+      expect(name).not.toContain("15%");
+      expect(roll).toContain("15%");
+      expect(roll).toContain('aria-label="Roll Hide in Shadows"');
+      expect(roll).not.toContain("skill-name");
+      // No button inside the other, and the terms stay on the row, outside both.
+      expect(row?.match(/<button/g)).toHaveLength(2);
+      expect(row).toContain('data-testid="skill-terms-hide_in_shadows"');
+    }
   });
 });
 

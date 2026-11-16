@@ -41,6 +41,7 @@ import (
 	"github.com/ceffo/critical/api/internal/rest/handler/psphdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/resthdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/rulesethdl"
+	"github.com/ceffo/critical/api/internal/rest/handler/skilldeschdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/skillhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellhdl"
 	"github.com/ceffo/critical/api/internal/rest/handler/spellprephdl"
@@ -163,6 +164,10 @@ func New(log *slog.Logger, bs *composition.BackingServices, opts Options) http.H
 	// A proficiency's description (ADR 0037 step 19.4) is a catalogue read, no character's.
 	if bs.ProficiencyDescriptions != nil {
 		profdeschdl.RegisterRoutes(r, bs.ProficiencyDescriptions)
+	}
+	// A skill's description (ADR 0037 step 19.6) is a catalogue read, no character's.
+	if bs.SkillDescriptions != nil {
+		skilldeschdl.RegisterRoutes(r, bs.SkillDescriptions)
 	}
 	// The user's characters: a session, no current character needed.
 	characterhdl.RegisterUserRoutes(r, bs.Character)

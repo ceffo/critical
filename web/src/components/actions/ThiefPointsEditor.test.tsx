@@ -73,6 +73,38 @@ describe("ThiefPointsEditor", () => {
     );
     expect(html).toContain("0 of 30 points");
   });
+
+  // ADR 0037 step 19.6: each field's name is the button that opens the set's description of the
+  // skill; the field keeps its own accessible name.
+  it("PointsEditor_Step19_6_NameOpensThePopup: a name button beside each field", async () => {
+    const inst = i18next.createInstance();
+    await inst.init({
+      lng: "en",
+      fallbackLng: "en",
+      defaultNS: "common",
+      resources,
+      interpolation: { escapeValue: false },
+    });
+    const html = renderToStaticMarkup(
+      <I18nextProvider i18n={inst}>
+        <ThiefPointsEditor
+          set="bard"
+          skills={skills}
+          budget={budget}
+          onDone={() => {}}
+        />
+      </I18nextProvider>,
+    );
+    for (const id of ["open_locks", "pick_pockets"]) {
+      const name = new RegExp(
+        `<button[^>]*data-testid="skill-name-bard-${id}"[^>]*>.*?</button>`,
+      ).exec(html)?.[0];
+      expect(name).toBeDefined();
+      expect(name).toContain("Description of");
+      expect(html).toContain(`data-testid="thief-points-${id}"`);
+    }
+    expect(html).toContain('aria-label="Points in Open Locks"');
+  });
 });
 
 describe("previewDraft", () => {

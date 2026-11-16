@@ -52,6 +52,8 @@ type tables struct {
 	catalogue *catalogueVersion
 	// profDescs are the catalogue's proficiency descriptions (ADR 0021 step 16), in the artifact's order.
 	profDescs []catalogue.ProficiencyDescription
+	// skillDescs are the catalogue's skill descriptions (ADR 0021 step 33), in the artifact's order.
+	skillDescs []catalogue.SkillDescription
 
 	// items (every piece of equipment, ADR 0033) belong to a character:
 	// keyed by the character and the id, so two characters may hold the same

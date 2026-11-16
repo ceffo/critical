@@ -156,6 +156,8 @@ type artifactDTO struct {
 	Powers      []powerDTO      `json:"powers"`
 	// SkillSets (format 19, ADR 0040 step 12) are the skill sets rogue_skills names.
 	SkillSets []skillSetDTO `json:"skill_sets"`
+	// SkillDescriptions (format 25, step 33) are the skills' texts, one per (set, skill) pair.
+	SkillDescriptions []skillDescriptionDTO `json:"skill_descriptions"`
 }
 
 type skillSetDTO struct {
@@ -273,6 +275,12 @@ type proficiencyDescriptionDTO struct {
 	Description localized.Text `json:"description"`
 }
 
+type skillDescriptionDTO struct {
+	Set         string         `json:"set"`
+	Skill       string         `json:"skill"`
+	Description localized.Text `json:"description"`
+}
+
 // Parse validates artifact bytes and returns the spells (see ParseArtifact).
 func Parse(raw []byte) (catalogue.Catalogue, error) {
 	a, err := ParseArtifact(raw)
@@ -350,6 +358,21 @@ func ParseArtifact(raw []byte) (Artifact, error) {
 	}
 	if len(dups) > 0 {
 		return Artifact{}, fmt.Errorf("duplicate proficiency description ids: %s", strings.Join(first(dups), ", "))
+	}
+	seenSkill := make(map[catalogue.SkillPair]bool, len(a.SkillDescriptions))
+	out.SkillDescriptions = make([]catalogue.SkillDescription, 0, len(a.SkillDescriptions))
+	for _, d := range a.SkillDescriptions {
+		pair := catalogue.SkillPair{Set: d.Set, Skill: d.Skill}
+		if seenSkill[pair] {
+			dups = append(dups, d.Set+"/"+d.Skill)
+			continue
+		}
+		seenSkill[pair] = true
+		out.SkillDescriptions = append(out.SkillDescriptions,
+			catalogue.SkillDescription{Set: d.Set, Skill: d.Skill, Description: d.Description.Clean()})
+	}
+	if len(dups) > 0 {
+		return Artifact{}, fmt.Errorf("duplicate skill description pairs: %s", strings.Join(first(dups), ", "))
 	}
 	sets := make([]catalogue.SkillSet, 0, len(a.SkillSets))
 	for _, s := range a.SkillSets {

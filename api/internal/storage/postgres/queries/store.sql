@@ -421,6 +421,21 @@ SELECT d.proficiency_id, t.lang, t.body
 FROM proficiency_descriptions d JOIN localized_texts t ON t.text_id = d.description
 ORDER BY d.proficiency_id, t.lang;
 
+-- name: SkillDescriptionKeys :many
+SELECT skill_set, skill, description FROM skill_descriptions;
+
+-- name: UpsertSkillDescription :exec
+INSERT INTO skill_descriptions (skill_set, skill, description) VALUES ($1, $2, $3)
+ON CONFLICT (skill_set, skill) DO UPDATE SET description = excluded.description;
+
+-- name: DeleteSkillDescription :exec
+DELETE FROM skill_descriptions WHERE skill_set = $1 AND skill = $2;
+
+-- name: SkillDescriptionTexts :many
+SELECT d.skill_set, d.skill, t.lang, t.body
+FROM skill_descriptions d JOIN localized_texts t ON t.text_id = d.description
+ORDER BY d.skill_set, d.skill, t.lang;
+
 -- The default ruleset's data step (ADR 0041 step 10, defaultRuleset).
 
 -- name: CountLegacyCritRows :one

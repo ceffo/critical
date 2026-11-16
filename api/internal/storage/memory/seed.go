@@ -190,6 +190,10 @@ func (s *Store) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, _ 
 		for _, d := range cat.ProficiencyDescriptions {
 			t.profDescs = append(t.profDescs, catalogue.ProficiencyDescription{ID: d.ID, Description: stored(d.Description)})
 		}
+		t.skillDescs = nil
+		for _, d := range cat.SkillDescriptions {
+			t.skillDescs = append(t.skillDescs, catalogue.SkillDescription{Set: d.Set, Skill: d.Skill, Description: stored(d.Description)})
+		}
 		t.catalogue = &catalogueVersion{format: cat.Format, version: cat.Version}
 		return nil
 	})
@@ -200,6 +204,14 @@ func (s *Store) ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, _ 
 func (s *Store) ProficiencyDescriptions(context.Context) ([]catalogue.ProficiencyDescription, error) {
 	out := make([]catalogue.ProficiencyDescription, len(s.t.profDescs))
 	copy(out, s.t.profDescs)
+	return out, nil
+}
+
+// SkillDescriptions returns the imported skill descriptions as language maps (ADR 0021 step
+// 33), in the artifact's order: what the database's read gives after its import.
+func (s *Store) SkillDescriptions(context.Context) ([]catalogue.SkillDescription, error) {
+	out := make([]catalogue.SkillDescription, len(s.t.skillDescs))
+	copy(out, s.t.skillDescs)
 	return out, nil
 }
 

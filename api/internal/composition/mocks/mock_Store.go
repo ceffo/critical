@@ -383,6 +383,64 @@ func (_c *MockStore_Seed_Call) RunAndReturn(run func(context.Context, string, []
 	return _c
 }
 
+// SkillDescriptions provides a mock function with given fields: ctx
+func (_m *MockStore) SkillDescriptions(ctx context.Context) ([]catalogue.SkillDescription, error) {
+	ret := _m.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for SkillDescriptions")
+	}
+
+	var r0 []catalogue.SkillDescription
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context) ([]catalogue.SkillDescription, error)); ok {
+		return rf(ctx)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context) []catalogue.SkillDescription); ok {
+		r0 = rf(ctx)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]catalogue.SkillDescription)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context) error); ok {
+		r1 = rf(ctx)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockStore_SkillDescriptions_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SkillDescriptions'
+type MockStore_SkillDescriptions_Call struct {
+	*mock.Call
+}
+
+// SkillDescriptions is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *MockStore_Expecter) SkillDescriptions(ctx interface{}) *MockStore_SkillDescriptions_Call {
+	return &MockStore_SkillDescriptions_Call{Call: _e.mock.On("SkillDescriptions", ctx)}
+}
+
+func (_c *MockStore_SkillDescriptions_Call) Run(run func(ctx context.Context)) *MockStore_SkillDescriptions_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run(args[0].(context.Context))
+	})
+	return _c
+}
+
+func (_c *MockStore_SkillDescriptions_Call) Return(_a0 []catalogue.SkillDescription, _a1 error) *MockStore_SkillDescriptions_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockStore_SkillDescriptions_Call) RunAndReturn(run func(context.Context) ([]catalogue.SkillDescription, error)) *MockStore_SkillDescriptions_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockStore creates a new instance of MockStore. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockStore(t interface {

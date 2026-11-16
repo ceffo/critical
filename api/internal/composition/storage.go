@@ -81,6 +81,8 @@ type Store interface {
 	ImportCatalogue(ctx context.Context, cat catalogue.Catalogue, seedRefs []catalogue.Ref) error
 	// ProficiencyDescriptions reads back the descriptions the import stored (ADR 0021 step 16.6).
 	ProficiencyDescriptions(ctx context.Context) ([]catalogue.ProficiencyDescription, error)
+	// SkillDescriptions reads back the skill descriptions the import stored (ADR 0021 step 33.6).
+	SkillDescriptions(ctx context.Context) ([]catalogue.SkillDescription, error)
 	Close() error
 }
 

@@ -389,6 +389,8 @@ _Code_: RogueSkills, SkillBudget, SkillPointsBudget, BudgetWarning, SkillPercent
 **Skill set** (fr: jeu de talents):
 One `rogue_skills` feature a class grants and what comes of it on a character: its skill list, its own budget, skill armour and stored points, apart from any other set the character has (a thief/bard has two, and both list pick pockets). The client renders the list of sets, never a class; a creation enters points and reads a budget per set. [ADR 0040](docs/adr/0040-classes-are-data.md) step 3.5.
 _Code_: SkillSet, SetPoints, SetSkill, SkillSetSkill, DraftSkillSet
+A skill of a set has its own description (the set's text, in English and French, shown in the same pop-up as a proficiency's): the bard's Pick Pockets is not the thief's. [ADR 0037](docs/adr/0037-proficiencies.md) step 19.6.
+_Code_: SkillDescription, SkillPair
 _Avoid_: "kind of thief / bard skill" for a set (that is the **check kind**).
 
 **Proficiency slot** (fr: emplacement de compétence):

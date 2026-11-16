@@ -83,14 +83,20 @@ const FormatStaffSling = 22
 // feature kind and the eight specialist wizards with their level limits.
 const FormatSchools = 23
 
-// FormatFreeProficiencies is format 24 (ADR 0021 step 32, ADR 0037 step
+// FormatFreeProficiencies was format 24 (ADR 0021 step 32, ADR 0037 step
 // 22.1): format 23 plus the free_proficiencies feature kind, which the bard
-// lists. It is the only format the API reads (step 32.3): the formats 1 to 23
-// are refused like any unknown format, with the advice to run `just catalogue`.
+// lists.
 const FormatFreeProficiencies = 24
 
-// Formats lists the formats this API reads: format 24 only (step 32.3).
-var Formats = []int{FormatFreeProficiencies}
+// FormatSkillDescriptions is format 25 (ADR 0021 step 33, ADR 0037 step
+// 19.6): format 24 plus the description of each skill of the skill sets, in
+// English and French. It is the only format the API reads (step 33.3): the
+// formats 1 to 24 are refused like any unknown format, with the advice to run
+// `just catalogue`.
+const FormatSkillDescriptions = 25
+
+// Formats lists the formats this API reads: format 25 only (step 33.3).
+var Formats = []int{FormatSkillDescriptions}
 
 // Catalogue is one artifact's spells and proficiency descriptions: a version
 // compared for equality only. The artifact's PHB rule tables are not part of it:
@@ -103,6 +109,9 @@ type Catalogue struct {
 	// ProficiencyDescriptions are the descriptions (format 9 on) of the non-weapon
 	// proficiencies (ADR 0021 step 16): one row per proficiency id.
 	ProficiencyDescriptions []ProficiencyDescription
+	// SkillDescriptions are the descriptions (format 25 on) of the skills of
+	// the skill sets (ADR 0021 step 33): one row per (set, skill) pair.
+	SkillDescriptions []SkillDescription
 }
 
 // SkillSet is one skill set of the artifact (format 19, ADR 0040 step 12): the
@@ -154,6 +163,16 @@ func CheckSkillSets(sets []SkillSet) error {
 // artifact carries English and French for every row (step 16.1).
 type ProficiencyDescription struct {
 	ID          string
+	Description localized.Text
+}
+
+// SkillDescription is one skill of a skill set's description, a language map
+// (ADR 0023) in the Markdown subset of ADR 0021 step 1. The key is the pair:
+// a set has its own text for a skill (the bard's Pick Pockets is not the
+// thief's). The artifact carries English and French for every row (step 33.1).
+type SkillDescription struct {
+	Set         string
+	Skill       string
 	Description localized.Text
 }
 
@@ -243,3 +262,53 @@ func CheckProficiencyDescriptions(descs []ProficiencyDescription, ids []string) 
 
 // RequiredProficiencyLanguages are the languages every proficiency description has (step 16.1).
 var RequiredProficiencyLanguages = []string{"en", "fr"}
+
+// SkillPair names a skill of a skill set.
+type SkillPair struct {
+	Set   string
+	Skill string
+}
+
+// CheckSkillDescriptions is the import's check of ADR 0021 step 33.3: the descriptions and the
+// skills of the artifact's skill sets agree. Each refusal names the set, the skill and the
+// language when it is one. It refuses a skill with no description, a description for a skill no
+// set has, a pair twice, and a description lacking English or French (both are required).
+func CheckSkillDescriptions(descs []SkillDescription, sets []SkillSet) error {
+	known := make(map[SkillPair]bool)
+	var order []SkillPair
+	for _, s := range sets {
+		for _, k := range s.Skills {
+			p := SkillPair{Set: s.ID, Skill: k.ID}
+			known[p] = true
+			order = append(order, p)
+		}
+	}
+	seen := make(map[SkillPair]bool, len(descs))
+	var problems []string
+	for _, d := range descs {
+		p := SkillPair{Set: d.Set, Skill: d.Skill}
+		w := "skill " + d.Set + "/" + d.Skill
+		switch {
+		case seen[p]:
+			problems = append(problems, w+": the description repeats")
+			continue
+		case !known[p]:
+			problems = append(problems, w+": no such skill in the artifact's skill sets")
+		}
+		seen[p] = true
+		for _, lang := range RequiredProficiencyLanguages {
+			if d.Description[lang] == "" {
+				problems = append(problems, w+": the "+lang+" description is missing or empty")
+			}
+		}
+	}
+	for _, p := range order {
+		if !seen[p] {
+			problems = append(problems, "skill "+p.Set+"/"+p.Skill+": no description in the catalogue")
+		}
+	}
+	if len(problems) > 0 {
+		return fmt.Errorf("skill descriptions: the catalogue and its skill sets disagree: %s", strings.Join(problems, "; "))
+	}
+	return nil
+}

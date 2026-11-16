@@ -476,6 +476,20 @@ func (q *Queries) DeleteProficiencyDescription(ctx context.Context, proficiencyI
 	return err
 }
 
+const deleteSkillDescription = `-- name: DeleteSkillDescription :exec
+DELETE FROM skill_descriptions WHERE skill_set = $1 AND skill = $2
+`
+
+type DeleteSkillDescriptionParams struct {
+	SkillSet string
+	Skill    string
+}
+
+func (q *Queries) DeleteSkillDescription(ctx context.Context, arg DeleteSkillDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSkillDescription, arg.SkillSet, arg.Skill)
+	return err
+}
+
 const deleteSpell = `-- name: DeleteSpell :exec
 DELETE FROM spells WHERE key = $1
 `
@@ -1888,6 +1902,74 @@ func (q *Queries) SkillArmourCharacters(ctx context.Context) ([]SkillArmourChara
 	return items, nil
 }
 
+const skillDescriptionKeys = `-- name: SkillDescriptionKeys :many
+SELECT skill_set, skill, description FROM skill_descriptions
+`
+
+func (q *Queries) SkillDescriptionKeys(ctx context.Context) ([]SkillDescription, error) {
+	rows, err := q.db.QueryContext(ctx, skillDescriptionKeys)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SkillDescription{}
+	for rows.Next() {
+		var i SkillDescription
+		if err := rows.Scan(&i.SkillSet, &i.Skill, &i.Description); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const skillDescriptionTexts = `-- name: SkillDescriptionTexts :many
+SELECT d.skill_set, d.skill, t.lang, t.body
+FROM skill_descriptions d JOIN localized_texts t ON t.text_id = d.description
+ORDER BY d.skill_set, d.skill, t.lang
+`
+
+type SkillDescriptionTextsRow struct {
+	SkillSet string
+	Skill    string
+	Lang     string
+	Body     string
+}
+
+func (q *Queries) SkillDescriptionTexts(ctx context.Context) ([]SkillDescriptionTextsRow, error) {
+	rows, err := q.db.QueryContext(ctx, skillDescriptionTexts)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SkillDescriptionTextsRow{}
+	for rows.Next() {
+		var i SkillDescriptionTextsRow
+		if err := rows.Scan(
+			&i.SkillSet,
+			&i.Skill,
+			&i.Lang,
+			&i.Body,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const snapshotsOf = `-- name: SnapshotsOf :many
 SELECT id, before_envelope, after_envelope FROM action_snapshots WHERE state_key = $1 ORDER BY id
 `
@@ -2503,6 +2585,22 @@ type UpsertProficiencyDescriptionParams struct {
 
 func (q *Queries) UpsertProficiencyDescription(ctx context.Context, arg UpsertProficiencyDescriptionParams) error {
 	_, err := q.db.ExecContext(ctx, upsertProficiencyDescription, arg.ProficiencyID, arg.Description)
+	return err
+}
+
+const upsertSkillDescription = `-- name: UpsertSkillDescription :exec
+INSERT INTO skill_descriptions (skill_set, skill, description) VALUES ($1, $2, $3)
+ON CONFLICT (skill_set, skill) DO UPDATE SET description = excluded.description
+`
+
+type UpsertSkillDescriptionParams struct {
+	SkillSet    string
+	Skill       string
+	Description int64
+}
+
+func (q *Queries) UpsertSkillDescription(ctx context.Context, arg UpsertSkillDescriptionParams) error {
+	_, err := q.db.ExecContext(ctx, upsertSkillDescription, arg.SkillSet, arg.Skill, arg.Description)
 	return err
 }
 

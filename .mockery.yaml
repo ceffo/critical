@@ -80,6 +80,12 @@ packages:
       outpkg: "mocks"
     interfaces:
       SVC:
+  github.com/ceffo/critical/api/internal/domain/service/skilldescsvc:
+    config:
+      dir: "internal/domain/service/skilldescsvc/mocks"
+      outpkg: "mocks"
+    interfaces:
+      SVC:
   github.com/ceffo/critical/api/internal/domain/service/creationrollsvc:
     config:
       dir: "internal/domain/service/creationrollsvc/mocks"

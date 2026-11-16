@@ -36,6 +36,7 @@ import {
   type BrowserContext,
   type Locator,
   type Page,
+  type Route,
 } from "@playwright/test";
 import { asMultiClass, openClassDetail } from "./multiclass";
 import { psionicist } from "./psionicist";
@@ -2672,6 +2673,50 @@ async function weaponProfEditorStep(page: Page, size: Viewport) {
   }
 }
 
+// ADR 0014 step 1 as amended: under an effect on its ability, a proficiency row shows the score in
+// effect with the sheet's beside it ("DEX 19 (feuille 17)"). No fixture proficiency reads an
+// ability an effect raises today, so the served answer is reshaped: the figures stay the server's
+// shape, the row is what is checked.
+async function sheetScoreStep(page: Page, size: Viewport) {
+  const reshape = async (route: Route) => {
+    const res = await route.fetch();
+    const body = (await res.json()) as {
+      proficiencies: {
+        abilityScore: number;
+        sheetScore?: number;
+        target: number;
+      }[];
+    };
+    const [first] = body.proficiencies;
+    if (first) {
+      first.sheetScore = first.abilityScore;
+      first.abilityScore += 2;
+      first.target += 2;
+    }
+    await route.fulfill({ response: res, json: body });
+  };
+  await page.route("**/api/skills", reshape);
+  await openDashboard(page);
+  await chooseLanguage(page, "fr");
+  await page.getByRole("tab", { name: "Compétences" }).click();
+  const panel = page.getByRole("tabpanel", { name: "Compétences" });
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 1920, height: 1080 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    await expect(panel.getByTestId("skill-sheet-score")).toHaveText(
+      / \(feuille \d+\)/,
+    );
+    await expectNoClippedText(panel, `sheet score row, ${where}`);
+    await expectWholeWords(panel, `sheet score row, ${where}`);
+    await snap(page, `proficiency-sheet-score-fr-${where}`);
+  }
+  await page.unroute("**/api/skills", reshape);
+}
+
 async function profPopupStep(page: Page, size: Viewport) {
   await openDashboard(page);
   await chooseLanguage(page, "fr");
@@ -3192,6 +3237,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["card details", cardDetailsStep],
   ["dice bar", diceBarStep],
   ["proficiency pop-up", profPopupStep],
+  ["proficiency sheet score", sheetScoreStep],
   ["effects timeline", effectsTimelineStep],
   ["long rest", longRestStep],
   ["settings popover", settingsPopoverStep],

@@ -5798,6 +5798,33 @@ async function thiefStep(page: Page, size: Viewport) {
     await snap(page, `thief-skills-fr-${where}`);
   }
 
+  // a dual-class's old-class skill before the crossover answers with the warning
+  // `dual_class_old_ability` (a Go test); the result card shows it, uncut in French. The thief here
+  // is single-class, so the roll's answer is given the warning the server gives that character.
+  const warn = async (route: import("@playwright/test").Route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    body.warnings = ["dual_class_old_ability"];
+    await route.fulfill({ response: res, json: body });
+  };
+  await page.route("**/api/roll/skill/**", warn);
+  await skills.getByTestId("skill-open_locks").click();
+  await expect(
+    page.getByRole("region", { name: "Détail", exact: true }),
+  ).toContainText("De votre ancienne classe");
+  for (const vp of sizesAt(size, [
+    { width: 1280, height: 800 },
+    { width: 2560, height: 1440 },
+  ])) {
+    await page.setViewportSize(vp);
+    const where = `${vp.width}x${vp.height}`;
+    const card = page.getByRole("region", { name: "Détail", exact: true });
+    await expectNoClippedText(card, `skill check warning card, fr, ${where}`);
+    await expectWholeWords(card, `skill check warning card, fr, ${where}`);
+    await snap(page, `thief-skill-warning-card-fr-${where}`);
+  }
+  await page.unroute("**/api/roll/skill/**", warn);
+
   // The budget, each skill's terms and the Spend editor with its live preview, uncut in French
   // (ADR 0027 step 2): the server's figures, nothing computed here.
   await openSpend(page, "skillPoints");

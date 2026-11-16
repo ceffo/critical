@@ -22,6 +22,23 @@ describeKind("skill_check", fixtures, {
     },
     rolled: true,
   },
+  // ADR 0042 step 13: a dual-class's old-class skill before the crossover; the row and the card say it.
+  proficiencyOldClass: {
+    en: {
+      text: "Musical instrument: d20 17 vs 16, failure. Warning: Your old class’s: the DM may cost you experience",
+      short: "Musical instrument · failed",
+      subtitle: "Musical instrument",
+      card: ["Your old class’s: the DM may cost you experience"],
+    },
+    fr: {
+      text: "Instrument de musique : d20 17 contre 16, échec. Attention : De votre ancienne classe : le MJ peut vous retirer de l’expérience",
+      short: "Instrument de musique · échec",
+      subtitle: "Instrument de musique",
+      card: ["De votre ancienne classe"],
+    },
+    value: { text: "17", tone: "fail" },
+    rolled: true,
+  },
   // ADR 0014 step 1 as amended: the score in effect, the sheet's beside it.
   proficiencyUnderEffect: {
     en: {

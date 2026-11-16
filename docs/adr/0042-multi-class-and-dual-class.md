@@ -569,6 +569,14 @@ bard 15 never).)_
     (`skills.WeaponProficiencyOf`, read from the stored row's active entries) is the same smallest
     one: `WeaponProficiency_Step15_SmallestPenaltyOfTheActiveClasses` (a mage/fighter takes -2, a
     mage/thief -3). The dual-class slots are not built.)_
+    _(As built, 2026-11-16: the costs and the groups are served for the character, not
+    looked up per class by the web. `derived.proficiencySlots` (and the proficiencies PUT and preview
+    answers) carry `groups` (the active entries' Table 38 groups) and `catalogue` (`[{id, cost}]`: each
+    pickable proficiency's cost, by the same `nonweaponCost` a save charges, 0 for one an active entry
+    grants free; a frozen entry counts for nothing). The editor lists the catalogue from them
+    (`optionsForCharacter`), so a fighter/mage sees a Wizard-group proficiency at the normal cost.
+    Test: `TestCatalogue_Step15_TheCharactersCostsAndGroups` (skills: fighter, mage, fighter/mage,
+    fighter/cleric, a dual-class both ways).)_
     _(As built, 2026-10-22, the dual-class slots (Q14): `skills.ClassLevel.Frozen` marks a frozen
     entry, passed at its left-at level (`Character.ProficiencyClasses`); the rate, penalty, in-group
     cost, weapon picks and specialization read the active entries only. `FiguresOf` then sets the

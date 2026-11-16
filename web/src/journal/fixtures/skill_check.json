@@ -201,5 +201,23 @@
     },
     "roll": true,
     "status": "amended"
+  },
+  "proficiencyOldClass": {
+    "payload": {
+      "id": "musical_instrument",
+      "kind": "proficiency",
+      "die": 20,
+      "roll": 17,
+      "target": 16,
+      "adjustment": 0,
+      "adjustedTarget": 16,
+      "success": false,
+      "rolledSuccess": false,
+      "ability": "dex",
+      "abilityScore": 17,
+      "modifier": -1,
+      "warnings": ["dual_class_old_ability"]
+    },
+    "roll": true
   }
 }

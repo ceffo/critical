@@ -3,6 +3,7 @@ import type { ProficiencyOption } from "@/types/character";
 import {
   addPick,
   fold,
+  optionsForCharacter,
   removePick,
   setSlots,
   splitCatalogue,
@@ -96,5 +97,31 @@ describe("picks", () => {
     expect(removePick(picks, "tumbling")).toEqual([
       { id: "cooking", slots: 1 },
     ]);
+  });
+});
+
+// ADR 0042 step 15: the costs and the groups are the server's for the character, not the creation
+// options' table of the first class.
+describe("optionsForCharacter", () => {
+  const creation = {
+    proficiencies: [opt("spellcraft", ["Wizard"])],
+    proficiencyGroups: { fighter: ["Warrior"] },
+    proficiencyCosts: { fighter: { spellcraft: 2 } },
+  };
+
+  it("files the server's groups and costs under the class the picker reads", () => {
+    const o = optionsForCharacter(creation, "fighter", {
+      groups: ["Warrior", "Wizard"],
+      catalogue: [{ id: "spellcraft", cost: 1 }],
+    });
+    expect(o.proficiencyGroups).toEqual({ fighter: ["Warrior", "Wizard"] });
+    expect(o.proficiencyCosts).toEqual({ fighter: { spellcraft: 1 } });
+    const { own } = splitCatalogue(o, "fighter", (id) => id, "", "fr");
+    expect(own.map((r) => [r.option.id, r.cost])).toEqual([["spellcraft", 1]]);
+  });
+
+  it("keeps the creation options when the server serves no figures", () => {
+    expect(optionsForCharacter(creation, "fighter", undefined)).toBe(creation);
+    expect(optionsForCharacter(creation, "fighter", {})).toBe(creation);
   });
 });

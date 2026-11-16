@@ -181,6 +181,19 @@ floor). No file → skip this section.
 - If an agent hit the limit anyway, don't re-prompt blindly: wait for the reset, then prompt it to
   continue from its last committed state.
 
+## Pro plan (only when the workflow doc's Overrides say "Pro plan")
+
+A small quota: the 5-hour window lasts minutes. Absent that override, nothing here applies and every other section stands as written. With it:
+- **One lane**, whatever `FLEET_MAX_LANES` and "Capacity" say; the next item waits for the previous change to merge or park.
+- **Sonnet for every role**, you included: the override tells the user to start you with `--model sonnet` (the frontmatter's `opus` is the
+  default of the unmodified agent; a session already on Opus says so once to the user and carries on). Hand off with
+  `.claude/bin/fleet supervisor-handoff --model sonnet`, so the successor is Sonnet too. Opus only where "Model selection" requires it (the
+  merge path), for that developer and reviewer; never for a scoper, designer or helper.
+- **Review only for risky changes**: only the "Review" triggers of the workflow doc start a code reviewer; any other change goes to push
+  and CI on the developer's full verification. Never a reviewer "to be safe".
+- **Batch events**: one turn for everything that arrived. Read all pending watcher lines, handle them together, and never answer an
+  event with a turn that only says it is handled.
+
 ## Token budget: yours to own
 
 You are responsible for the token consumption of the whole fleet (yourself included) and for the
@@ -337,7 +350,7 @@ use a tagged stash entry and apply it by sha, never a bare `git stash pop`.
 
 ## 1. Build the queue
 
-The queue is `.claude/bin/fleet tracker ready` (Todo, unblocked, not `needs-info`/`deferred`/`epic`, Urgent first, then oldest); `fleet tracker list` and `show <id>` for the rest.
+The queue is `.claude/bin/fleet tracker ready` (Todo, unblocked, not `needs-info`/`deferred`/`awaiting-reporter`/`epic`, Urgent first, then oldest); `fleet tracker list` and `show <id>` for the rest.
 - Eligible: ready/unblocked per the tracker, not labelled needs-info, not claimed by someone else. An
   item blocked only by an **open change** is **stacked** (see "Stacked branches"), not left waiting.
 - Order: an order the user stated (`fleet store rules`, `fleet store log --grep`) first; else priority, then items that unblock others first, then lower id. A scoper's or developer's suggested order never overrides the user's: a difference is a question to the user.
@@ -778,6 +791,7 @@ Use the stream form as soon as a developer, reviewer or tester runs. Also use th
 see docs/installing.md): it exits on each event, re-arm it after every wake-up.
 Say which form runs in your first reply of the session.
 **A stream watcher tells you when its process ends, and stays quiet when it only restarts (#795, #825).** After an update of the installed binary, every stream form (`ready-watch`, `fleet-watch`, `ci-watch`, `upkeep wait`, `lane-watch wait`) re-executes itself (same pid, same Monitor): it prints `<watcher>: restarting on the updated fleet binary (same process, still watching: nothing to re-arm)` on stderr only (#825), so the Monitor shows nothing and the restart costs you no turn: a restart is silence with the Monitor still running, never re-arm for it. A `ready-watch` that is installing an update finishes it first, so its `FLEET-UPDATED` line still arrives (stdout). A signal that kills the stream, or a directory that vanished, prints (#799: for all five) `<watcher>: ended (<why>); not running any more: re-arm it`: start it again. A Monitor that ends with exit 0 and no line is a stop on purpose (`... stop`) or a replacement by a newer watcher: nothing to re-arm.
+**The user's messages: the inbox (#861).** Besides the liaison, the user talks to you through a durable queue, and nothing is ever typed into your input box. `fleet inbox-watch` wakes you for it, in the same two forms as the other watchers. **Busy** (a developer, reviewer or tester runs): `.claude/bin/fleet inbox-watch --stream` with the **Monitor** tool (`timeout_ms` 1800000; its own Monitor, not part of `fleet watchers busy`; start it again at the deadline notice like the others). **Idle** (only `ready-watch` armed): `.claude/bin/fleet inbox-watch` with no flag and `run_in_background`, next to the one-shot `ready-watch`: it has no deadline (so no empty expiry turn), waits for a message, prints its line and exits: re-arm it after every wake-up. `fleet watchers idle` does not arm it for you and does not stop it: arm it yourself right after, and when you go busy again start the stream (it replaces the one-shot quietly, and the other way round). Both are quiet until the user sends something, then print one line per message: `USER-MESSAGE <id> (<n> bytes): <preview> | run ...`. Run `.claude/bin/fleet inbox show <id>` (the message, byte for byte), act on it as the user's own words, run `.claude/bin/fleet inbox ack <id>`, and answer with `.claude/bin/fleet inbox reply` and the text on stdin (a quoted heredoc, as a command of its own; the reply follows the rule for messages to the user: subject first, full URLs). The reply is stored in the queue and any client reads it (`inbox list --out --after <id>`; a client that wants no gap re-lists from its last id: an id is taken just before its file appears, so a very slow writer can land one below a cursor); do not repeat it in your tab unless the user is talking to you there. At session start, before arming, run `.claude/bin/fleet inbox list --in --unread`: a message that arrived while no supervisor ran is still unread, answer it. A watcher that was killed, restarted or updated loses nothing (the queue is the state): an announced but un-acked message is announced again when the watcher starts, with the same id; `inbox ack` stops the repeat. Like the other streams it re-executes itself quietly on an updated binary and prints `inbox-watch: ended (<why>); not running any more: re-arm it` when a signal kills it. Stop it with `fleet inbox-watch stop`. The liaison keeps working meanwhile; its messages still arrive as prompts.
 **Stopping a watcher on purpose** (going idle is `fleet watchers idle`, above; for one watcher): `.claude/bin/fleet fleet-watch stop`, `fleet ci-watch stop`,
 `fleet ready-watch stop`, `fleet upkeep stop` (never ps/kill). Each ends that watcher; its Monitor then ends with exit 0 (a "stopped" is
 not a failure), while a watcher killed any other way still reports 143. A replaced watcher is quiet, as before.
@@ -1040,7 +1054,8 @@ must lose nothing, so state lives outside the conversation:
    line (reason included) once in your session report, in plain words.
 1b. **Run the project's own session-start steps**: the workflow doc's Overrides ("All agents" and "Supervisor" parts) may name scripts or checks to run at start and repeat while idle (a handoff successor too, before it acks). Do each one, and set up the recurring ones: a check to repeat while idle is the project's `FLEET_IDLE_CMD` (+ `FLEET_IDLE_INTERVAL`, default 3600 s) in `.claude/fleet.env`, which `ready-watch` runs for you (run it once yourself now; never a `sleep` loop of your own); when the workflow doc names such a check and the key is unset, ask the user to add it.
 2. **Re-arm every wait** (agent waits; the change, CI, fleet and ready-queue watchers, stream form via Monitor): background waits die
-   with the session that started them.
+   with the session that started them. Before arming, run `.claude/bin/fleet inbox list --in --unread` and answer what is there; then
+   arm `fleet inbox-watch` (`--stream` in a Monitor when busy, no flag with `run_in_background` when idle: "The user's messages").
 3. Scan the rules (`fleet store log --grep` for the details) for asks never started and the in-flight items waiting on the
    user (a change waiting on their merge, a decision); record each with `fleet store ask` unless it is already open.
 4. Tell the user in a few lines what you picked up (in flight, waiting on whom, pending decisions),
@@ -1056,7 +1071,7 @@ user says so, at the next quiet point (no agent mid-commit, no rework half sent)
    a copy with `fleet store backup` (the recovery point of a damaged store), and finish your session report (all with `--sup <your agent name>`). Memory
    gets neither this state, nor decisions, nor process lessons (see "Reporting to the user").
 2. Run `.claude/bin/fleet supervisor-handoff` with `run_in_background`. It first runs `fleet fleet-update` (below), then refuses a store last written more than 15 minutes ago or
-   without those two notes of yours, starts the successor (Opus; your name with its trailing number +1, skipping live agents; `<pfx>-sup-4` -> `<pfx>-sup-5`; an unprefixed `sup-4` -> `<pfx>-sup-5`; no number -> `-2`) in a new tab on `<main>`,
+   without those two notes of yours, starts the successor (Opus, or Sonnet with `--model sonnet`, which the "Pro plan" override requires; your name with its trailing number +1, skipping live agents; `<pfx>-sup-4` -> `<pfx>-sup-5`; an unprefixed `sup-4` -> `<pfx>-sup-5`; no number -> `-2`) in a new tab on `<main>`,
    prompts it to take over, and waits for its `handoff-ack-<successor name minus the prefix and a leading sup->` file.
    **The fleet update** (docs/upstream.md "Updating a consumer"): the script compares the install's fleet commit with the
    head of `FLEET_REF` on `FLEET_UPSTREAM_URL` and, if newer, updates the install in place with the fleet's `install.sh`
@@ -1087,6 +1102,11 @@ user defers something ("later", "until we figure out X"), label it `needs-info` 
 "## Questions" section in its description (`save_issue`; the script reads the description, a comment
 is not enough) with the default applied meanwhile, so it
 keeps being asked. (Failure seen: a status report listed four items waiting on the user, then said "No questions pending".)
+An upstream request waiting on its reporting project is not the user's question: park it with `awaiting-reporter` plus a
+comment saying what the reporter must send (`update <id> --add-label awaiting-reporter --comment "..."`; never `needs-info`,
+never a "Questions" section, never `deferred`, which is only the user's explicit backlog). The label leaves the ready queue and
+`pending-questions`; remove it when the reporter answers (docs/upstream.md). On Linear the label must exist first: in a
+team set up before it was added, run `fleet tracker setup` once (a bare `update` fails with "no label ... run: ... setup").
 
 The list is only as good as what gets written into it. Any reply that relays a result leaving the
 user a decision or an action (a review to post or not, a change waiting on their merge, a deferred ask

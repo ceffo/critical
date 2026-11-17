@@ -18,6 +18,9 @@ export interface MultiClassOptions {
   longClass?: string;
   /** The first class is a specialist and the character's race is one the book does not list for it. */
   specialistRace?: boolean;
+  /** Serve the pools' class refs, the non-proficiency penalty and the skill sets' class (ADR 0037
+   * step 23), as the server does for such a character. */
+  poolClasses?: boolean;
 }
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -134,6 +137,16 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
                     },
                   ]),
             ];
+            if (opts.poolClasses) {
+              const refs = entries
+                .filter((e) => e.state === "active")
+                .map((e) => ({ class: e.class, level: e.level }));
+              Object.assign(c.derived.proficiencySlots, {
+                weaponClasses: [refs[0]],
+                nonWeaponClasses: refs,
+                nonProficientPenalty: -2,
+              });
+            }
             if (opts.pending)
               c.derived.levelUp.pending = entries
                 .filter((e) => e.state === "active")
@@ -152,6 +165,15 @@ export async function asMultiClass(page: Page, opts: MultiClassOptions = {}) {
                 }));
           }),
   );
+  if (opts.poolClasses)
+    await page.route(
+      (url) => url.pathname === "/api/skills",
+      (route) =>
+        patched(route, (b) => {
+          for (const set of b.skillSets ?? [])
+            set.class = { class: "thief", level: 9 };
+        }),
+    );
   if (opts.dual) return;
   await page.route(
     (url) => url.pathname === "/api/xp/preview",

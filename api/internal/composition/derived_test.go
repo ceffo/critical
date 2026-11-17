@@ -78,21 +78,22 @@ func kelsenPicks(t *testing.T, level int) *skills.ProficiencySlots {
 		return skills.WeaponPickFigures{Code: code, Slots: 1, Allowed: true}
 	}
 	// ADR 0037 step 8: Table 34's penalty for the rogue group.
-	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, Groups: []string{"rogue", "warrior", "wizard", "general"}, Picks: []skills.PickFigures{
-		free("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
-		pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), free("singing", "cha", 0, 16),
-		free("reading_writing", "int", 1, 15), free("local_history", "cha", 0, 16),
-	}, WeaponPicks: []skills.WeaponPickFigures{
-		wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("bastard_sword_two_handed"),
-	}, Weapons: func() (out []skills.WeaponFigure) {
-		// The bard may pick every catalogue weapon (ADR 0037 step 21.2), none specialized.
-		eq, ok := cataloguetest.Tables(t).Equipment()
-		require.True(t, ok)
-		for _, w := range eq.PickWeapons() {
-			out = append(out, skills.WeaponFigure{Code: w.Code})
-		}
-		return out
-	}()}
+	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, WeaponClasses: []skills.ClassRef{{Class: "bard", Level: level}}, NonweaponClasses: []skills.ClassRef{{Class: "bard", Level: level}},
+		LanguageCosts: []skills.LanguageCost{{Code: "common"}}, Groups: []string{"rogue", "warrior", "wizard", "general"}, Picks: []skills.PickFigures{
+			free("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
+			pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), free("singing", "cha", 0, 16),
+			free("reading_writing", "int", 1, 15), free("local_history", "cha", 0, 16),
+		}, WeaponPicks: []skills.WeaponPickFigures{
+			wpick("short_bow"), wpick("dagger"), wpick("dart"), wpick("long_sword"), wpick("bastard_sword_two_handed"),
+		}, Weapons: func() (out []skills.WeaponFigure) {
+			// The bard may pick every catalogue weapon (ADR 0037 step 21.2), none specialized.
+			eq, ok := cataloguetest.Tables(t).Equipment()
+			require.True(t, ok)
+			for _, w := range eq.PickWeapons() {
+				out = append(out, skills.WeaponFigure{Code: w.Code})
+			}
+			return out
+		}()}
 }
 
 // ADR 0030 steps 3, 5, 6, 7 and 8 over the fixture's tables (the books'
@@ -134,7 +135,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		// The seed bard wears the Leather armour none entered gave (ADR 0033 step 14).
 		SkillColumn: ruletablesvc.ColumnLeather,
 		SkillSets: []skills.SkillSet{{
-			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Class: "bard", Level: 15, Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Spent: 200, Left: 30},
 		}},
 		Proficiencies: kelsenPicks(t, 15),
@@ -177,7 +178,7 @@ func TestDerived_BenefitsFollowTheRealizedLevelNotTheXP(t *testing.T) {
 		Spellbook:   at15.Spellbook,
 		SkillColumn: ruletablesvc.ColumnLeather,
 		SkillSets: []skills.SkillSet{{
-			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Class: "bard", Level: 17, Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Skills: kelsenBardSkills, Armor: ruletablesvc.ArmorLeather, Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 17, First: 20, PerLevel: 15, Total: 260, Spent: 200, Left: 60},
 		}},
 		Proficiencies: kelsenPicks(t, 17),

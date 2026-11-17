@@ -26,7 +26,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 			},
 		},
 		SkillSets: []skillsvc.SkillSet{{
-			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Armor: ruletablesvc.ArmorMetal,
+			Set: "bard", Class: "bard", Level: 2, Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Armor: ruletablesvc.ArmorMetal,
 			Budget: &ruletablesvc.SkillPointsBudget{Level: 2, First: 20, PerLevel: 15, Total: 35, Spent: 35},
 			Skills: []skillsvc.SetSkill{{SkillPercent: ruletablesvc.SkillPercent{
 				Skill: "climb_walls", Base: 50, Points: 35, Race: 0, Dexterity: 0, Armor: -5, Raw: 80, Percent: 80,
@@ -38,7 +38,7 @@ func TestSkills_ListWireShape(t *testing.T) {
 	assert.JSONEq(t, `{
 		"proficiencies":[{"id":"musical_instrument","ability":"dex","abilityScore":17,"modifier":-1,"extraSlots":0,"target":16,
 			"last":{"entryId":7,"roll":18,"target":16,"adjustment":3,"adjustmentReason":"rope","adjustedTarget":19,"success":true}}],
-		"skillSets":[{"set":"bard","name":{"en":"Bard skills","fr":"Talents de barde"},"skillArmor":"metal",
+		"skillSets":[{"set":"bard","class":{"class":"bard","level":2},"name":{"en":"Bard skills","fr":"Talents de barde"},"skillArmor":"metal",
 			"budget":{"level":2,"first":20,"perLevel":15,"available":35,"spent":35,"left":0,
 				"perSkillFirst":0,"perSkillPerLevel":0,"perSkillCap":0},
 			"skills":[{"id":"climb_walls","base":50,"points":35,"race":0,"dexterity":0,"armor":-5,"percent":80,
@@ -215,7 +215,7 @@ func TestSkills_PreviewPointsWireShape(t *testing.T) {
 	h, m := newRouter(t)
 	m.skills.EXPECT().PreviewPoints(mock.Anything, int64(1), "thief", map[string]int{"open_locks": 45}).Return(&skillsvc.Skills{
 		SkillSets: []skillsvc.SkillSet{{
-			Set: "thief", MinPercent: 1, Armor: "leather",
+			Set: "thief", Class: "thief", Level: 5, MinPercent: 1, Armor: "leather",
 			Budget: &ruletablesvc.SkillPointsBudget{
 				Level: 2, First: 60, PerLevel: 30, Total: 90, Spent: 45, Left: 45,
 				PerSkillFirst: 30, PerSkillPerLevel: 15, PerSkill: 45,
@@ -231,7 +231,7 @@ func TestSkills_PreviewPointsWireShape(t *testing.T) {
 	rec := do(h, "POST", "/api/skills/points/preview", `{"set":"thief","points":{"open_locks":45}}`)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
 	assert.JSONEq(t, `{"proficiencies":[],
-		"skillSets":[{"set":"thief","name":null,"skillArmor":"leather",
+		"skillSets":[{"set":"thief","class":{"class":"thief","level":5},"name":null,"skillArmor":"leather",
 			"budget":{"level":2,"first":60,"perLevel":30,"available":90,"spent":45,"left":45,
 				"perSkillFirst":30,"perSkillPerLevel":15,"perSkillCap":45},
 			"skills":[{"id":"open_locks","base":10,"points":45,"race":5,"dexterity":15,"armor":0,"percent":75,

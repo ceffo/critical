@@ -14,16 +14,33 @@ import (
 // each language other than the race's native one and Common. Without a catalogue (native "")
 // no language is known to be free, so none is counted.
 func LanguageSlots(languages []string, native string) int {
-	if native == "" {
-		return 0
-	}
 	n := 0
-	for _, l := range languages {
-		if l != native && l != ruletablesvc.CommonLanguage {
-			n++
-		}
+	for _, c := range LanguageCosts(languages, native) {
+		n += c.Slots
 	}
 	return n
+}
+
+// LanguageCost is the non-weapon slots one language spends (ADR 0037 step 23.3): 1, or 0 for the
+// race's native language and Common. Without a catalogue (native "") none is known to be free,
+// and none is counted (step 6).
+type LanguageCost struct {
+	Code  string
+	Slots int
+}
+
+// LanguageCosts is each language of languages with the slots it spends, in order; LanguageSlots
+// is their sum, so the per-language costs always add up to the pool's languages term.
+func LanguageCosts(languages []string, native string) []LanguageCost {
+	out := make([]LanguageCost, 0, len(languages))
+	for _, l := range languages {
+		c := LanguageCost{Code: l}
+		if native != "" && l != native && l != ruletablesvc.CommonLanguage {
+			c.Slots = 1
+		}
+		out = append(out, c)
+	}
+	return out
 }
 
 // KnownLanguages is languages with the codes the book does not hold left out, in a new slice:

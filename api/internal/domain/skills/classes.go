@@ -106,6 +106,9 @@ type basis struct {
 	row                         slots.Row
 	weaponLevel, nonweaponLevel int
 	groups                      []string
+	// weaponClasses are the entries whose weapon rate is the one used (several on a tie) and
+	// nonweaponClasses every active entry with a Table 34 row (ADR 0037 step 23.1).
+	weaponClasses, nonweaponClasses []ClassRef
 }
 
 // basis is ADR 0042 step 15 (amending ADR 0037 step 3), each column of Table 34 on its own: the
@@ -136,6 +139,17 @@ func (cls Classes) basis(book Book) (basis, bool) {
 		return basis{}, false
 	}
 	b.groups = cls.groups(book)
+	for _, c := range cls.active() {
+		row, ok := book.SlotRowOf(c.Class)
+		if !ok {
+			continue
+		}
+		ref := ClassRef{Class: c.Class, Level: c.Level}
+		b.nonweaponClasses = append(b.nonweaponClasses, ref)
+		if row.WeaponLevels == b.row.WeaponLevels {
+			b.weaponClasses = append(b.weaponClasses, ref)
+		}
+	}
 	return b, true
 }
 

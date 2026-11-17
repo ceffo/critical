@@ -137,17 +137,19 @@ type SkillsDTO struct {
 	SkillSets []SkillSetDTO `json:"skillSets"`
 }
 
-// SkillSetDTO is one skill set of the tab: set the rogue_skills set code, name its heading (a
+// SkillSetDTO is one skill set of the tab: set the rogue_skills set code, class the entry that
+// grants it (ADR 0037 step 23.1), name its heading (a
 // language map, ADR 0040 step 15; its rolls are logged as rogueSkill with the set), skillArmor the skill
 // armour it reads (ADR 0033 step 14, from the worn body armour: none, leather,
 // padded_studded_leather, elven_chain or metal), budget its skill point budget with the terms of
 // its formula (null before the level its points start) and skills its skills.
 type SkillSetDTO struct {
-	Set        string          `json:"set"`
-	Name       localized.Text  `json:"name"`
-	SkillArmor string          `json:"skillArmor"`
-	Budget     *BudgetDTO      `json:"budget"`
-	Skills     []RogueSkillDTO `json:"skills"`
+	Set        string           `json:"set"`
+	Class      wire.ClassRefDTO `json:"class"`
+	Name       localized.Text   `json:"name"`
+	SkillArmor string           `json:"skillArmor"`
+	Budget     *BudgetDTO       `json:"budget"`
+	Skills     []RogueSkillDTO  `json:"skills"`
 }
 
 // BudgetDTO is a thief's or a bard's skill point budget (wire.SkillPointsBudgetDTO, shared with
@@ -227,7 +229,7 @@ func ToDTO(s *skillsvc.Skills) SkillsDTO {
 	}
 	for _, set := range s.SkillSets {
 		dto := SkillSetDTO{
-			Set: set.Set, Name: set.Name, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Budget),
+			Set: set.Set, Class: wire.ClassRefDTO{Class: set.Class, Level: set.Level}, Name: set.Name, SkillArmor: set.Armor, Budget: wire.SkillPointsBudgetToDTO(set.Budget),
 			Skills: make([]RogueSkillDTO, 0, len(set.Skills)),
 		}
 		for _, sk := range set.Skills {

@@ -32,7 +32,13 @@ func picked() *skillsvc.Proficiencies {
 			Weapons:     []skills.WeaponFigure{{Code: "long_sword"}, {Code: "dagger", SpecializationSlots: 3}},
 			WeaponRedo:  []skills.WeaponRedo{{Type: "other_melee", Slots: 1}},
 			Groups:      []string{"warrior", "wizard"},
-			Catalogue:   []skills.CatalogueFigure{{ID: "tumbling", Cost: 1}, {ID: "singing", Cost: 0}},
+			Catalogue: []skills.CatalogueFigure{
+				{ID: "tumbling", Cost: 1, Ability: "dex", Target: 17, HasCheck: true}, {ID: "singing", Cost: 0, Ability: "cha", Modifier: -1},
+			},
+			Penalty:          -2,
+			WeaponClasses:    []skills.ClassRef{{Class: "fighter", Level: 4}},
+			NonweaponClasses: []skills.ClassRef{{Class: "fighter", Level: 4}, {Class: "thief", Level: 5}},
+			LanguageCosts:    []skills.LanguageCost{{Code: "common"}, {Code: "elvish", Slots: 1}},
 		},
 		Warnings: []skills.Warning{
 			{Code: "slots_to_spend", Field: "nonweapon", Pool: "nonweapon", Left: &seven},
@@ -54,7 +60,11 @@ const pickedAnswer = `{
 		"weapons":[{"code":"long_sword","specializationSlots":0},{"code":"dagger","specializationSlots":3}],
 		"weaponRedo":[{"type":"other_melee","slots":1}],
 		"groups":["warrior","wizard"],
-		"catalogue":[{"id":"tumbling","cost":1},{"id":"singing","cost":0}],
+		"catalogue":[{"id":"tumbling","cost":1,"ability":"dex","modifier":0,"target":17},{"id":"singing","cost":0,"ability":"cha","modifier":-1,"target":null}],
+		"weaponClasses":[{"class":"fighter","level":4}],
+		"nonWeaponClasses":[{"class":"fighter","level":4},{"class":"thief","level":5}],
+		"nonProficientPenalty":-2,
+		"languageCosts":[{"code":"common","slots":0},{"code":"elvish","slots":1}],
 		"picks":[
 			{"id":"tumbling","slots":2,"cost":1,"extraSlots":1,"ability":"dex","modifier":0,"known":true,"free":false,"target":18},
 			{"id":"old_skill","slots":1,"cost":1,"extraSlots":0,"ability":"","modifier":0,"known":false,"free":false,"target":null}

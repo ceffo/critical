@@ -19,6 +19,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -29,6 +35,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 1
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -45,6 +57,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -67,6 +85,8 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "Class": "bard",
+          "Level": 1,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -165,6 +185,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -175,6 +201,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 1
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -191,6 +223,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -213,6 +251,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "bard",
+          "Level": 1,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -311,6 +351,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 3,
@@ -321,6 +367,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 13
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -337,6 +389,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -359,6 +417,8 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "Class": "bard",
+          "Level": 13,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -463,6 +523,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 3,
@@ -473,6 +539,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 13
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -489,6 +561,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -511,6 +589,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "bard",
+          "Level": 13,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -615,6 +695,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 3,
@@ -625,6 +711,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 7
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -641,6 +733,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -663,6 +761,8 @@
         {
           "Armor": "metal",
           "Budget": [],
+          "Class": "bard",
+          "Level": 7,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -765,6 +865,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 3,
@@ -775,6 +881,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 7
+          }
+        ],
         "Offered": [
           "reading_writing",
           "local_history",
@@ -791,6 +903,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "bard",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -813,6 +931,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "bard",
+          "Level": 7,
           "MinPercent": 0,
           "Name": {
             "en": "Bard skills",
@@ -915,6 +1035,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 4,
@@ -925,6 +1051,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -936,6 +1068,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -1106,6 +1244,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 4,
@@ -1116,6 +1260,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -1127,6 +1277,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -1297,6 +1453,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 14,
           "Initial": 4,
@@ -1307,6 +1469,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -1318,6 +1486,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -1492,6 +1666,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 14,
           "Initial": 4,
@@ -1502,6 +1682,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -1513,6 +1699,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -1688,6 +1880,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 4,
@@ -1698,6 +1896,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -1709,6 +1913,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -1882,6 +2092,12 @@
       "NextLevelXP": 1500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 4,
@@ -1892,6 +2108,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -1903,6 +2125,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "cleric",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2080,6 +2308,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -2090,6 +2324,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2101,6 +2341,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2155,6 +2401,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -2165,6 +2417,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2176,6 +2434,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2230,6 +2494,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 13,
           "Initial": 3,
@@ -2240,6 +2510,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2251,6 +2527,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2305,6 +2587,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 13,
           "Initial": 3,
@@ -2315,6 +2603,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2326,6 +2620,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2380,6 +2680,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 11,
           "Initial": 3,
@@ -2390,6 +2696,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2401,6 +2713,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2455,6 +2773,12 @@
       "NextLevelXP": 2000,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 11,
           "Initial": 3,
@@ -2465,6 +2789,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -2,
         "Picks": [],
@@ -2476,6 +2806,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "fighter",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2526,6 +2862,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 4,
@@ -2536,6 +2878,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2547,6 +2895,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2605,6 +2959,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 4,
@@ -2615,6 +2975,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2626,6 +2992,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2684,6 +3056,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 14,
           "Initial": 4,
@@ -2694,6 +3072,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2705,6 +3089,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2768,6 +3158,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 14,
           "Initial": 4,
@@ -2778,6 +3174,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2789,6 +3191,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2852,6 +3260,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 4,
@@ -2862,6 +3276,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2873,6 +3293,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -2934,6 +3360,12 @@
       "NextLevelXP": 2500,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 4,
@@ -2944,6 +3376,12 @@
           "PerLevels": 3,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -5,
         "Picks": [],
@@ -2955,6 +3393,12 @@
           "PerLevels": 6,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "mage",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3016,6 +3460,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -3026,6 +3476,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3037,6 +3493,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3059,6 +3521,8 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "Class": "thief",
+          "Level": 1,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",
@@ -3191,6 +3655,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 9,
           "Initial": 3,
@@ -3201,6 +3671,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 1
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3212,6 +3688,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 1
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3234,6 +3716,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "thief",
+          "Level": 1,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",
@@ -3366,6 +3850,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 3,
@@ -3376,6 +3866,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3387,6 +3883,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3409,6 +3911,8 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "Class": "thief",
+          "Level": 13,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",
@@ -3541,6 +4045,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 12,
           "Initial": 3,
@@ -3551,6 +4061,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 13
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3562,6 +4078,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 13
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3584,6 +4106,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "thief",
+          "Level": 13,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",
@@ -3716,6 +4240,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 3,
@@ -3726,6 +4256,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3737,6 +4273,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3759,6 +4301,8 @@
         {
           "Armor": "padded_studded_leather",
           "Budget": [],
+          "Class": "thief",
+          "Level": 7,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",
@@ -3891,6 +4435,12 @@
       "NextLevelXP": 1250,
       "Powers": null,
       "Proficiencies": {
+        "LanguageCosts": [
+          {
+            "Code": "common",
+            "Slots": 0
+          }
+        ],
         "Nonweapon": {
           "Available": 10,
           "Initial": 3,
@@ -3901,6 +4451,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "NonweaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 7
+          }
+        ],
         "Offered": null,
         "Penalty": -3,
         "Picks": [],
@@ -3912,6 +4468,12 @@
           "PerLevels": 4,
           "Spent": 0
         },
+        "WeaponClasses": [
+          {
+            "Class": "thief",
+            "Level": 7
+          }
+        ],
         "WeaponPicks": []
       },
       "RaceSaveBonus": {
@@ -3934,6 +4496,8 @@
         {
           "Armor": "none",
           "Budget": [],
+          "Class": "thief",
+          "Level": 7,
           "MinPercent": 1,
           "Name": {
             "en": "Thief skills",

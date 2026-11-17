@@ -112,6 +112,15 @@ func ProficiencyTarget(score, modifier, extra int) int {
 // SetTargets fills each pick's check target from score (the score in an
 // ability, ok false when not known): ADR 0037 step 5.
 func (s *ProficiencySlots) SetTargets(score func(ability string) (int, bool)) {
+	for i := range s.Catalogue {
+		c := &s.Catalogue[i]
+		if c.Ability == "" {
+			continue
+		}
+		if v, ok := score(c.Ability); ok {
+			c.Target, c.HasCheck = ProficiencyTarget(v, c.Modifier, 0), true
+		}
+	}
 	for i := range s.Picks {
 		p := &s.Picks[i]
 		if !p.Known || p.Ability == "" {
@@ -166,12 +175,32 @@ type ProficiencySlots struct {
 	// rule a save charges (NonweaponCostOf: ADR 0037 step 4 on the active entries' groups, 0 for
 	// an id any entry grants free, step 22.5), in the catalogue's order.
 	Catalogue []CatalogueFigure
+	// WeaponClasses are the entries Table 34's weapon column is counted on (the entries whose
+	// rate is used, several on a tie), NonweaponClasses every active entry, whose groups the
+	// non-weapon pool reads (ADR 0037 step 23.1, ADR 0042 step 15).
+	WeaponClasses, NonweaponClasses []ClassRef
+	// LanguageCosts are the held languages with their slot costs (step 23.3).
+	LanguageCosts []LanguageCost
 }
 
 // CatalogueFigure is a catalogue proficiency's cost for the character (ADR 0042 step 15).
 type CatalogueFigure struct {
 	ID   string
 	Cost int
+	// Ability and Modifier are the check's (Ability "" for a proficiency with no check). Target
+	// is ProficiencyTarget at no extra slot, a new pick's (ADR 0037 step 23.4); HasCheck is false
+	// when there is no check or the score is not known (a creation draft).
+	Ability  string
+	Modifier int
+	Target   int
+	HasCheck bool
+}
+
+// ClassRef is a class entry as a pool's or a skill set's source (ADR 0037 step 23.1): the class
+// code and the level the entry has.
+type ClassRef struct {
+	Class string
+	Level int
 }
 
 // NonproficientPenalty is ADR 0037 step 21.3 (amending step 8) for an attack with a weapon piece
@@ -417,6 +446,9 @@ func ReturnFreeSlots(book Book, cls Classes, picks []Pick) (out []Pick, returned
 type Spending struct {
 	Picks     Picks
 	Languages int
+	// LanguageCosts are the languages with the slots each spends (step 23.3), served as figures;
+	// Languages is their sum. Empty where only the total is known.
+	LanguageCosts []LanguageCost
 }
 
 // ProficiencyFigures is ADR 0037 steps 3 to 7 on what a character of class spends at the
@@ -467,10 +499,12 @@ func figuresOf(book Book, cls Classes, lifted bool, intelligence int, spend Spen
 			continue
 		}
 		c, _ := nonweaponCost(row, b.groups, free)
-		out.Catalogue = append(out.Catalogue, CatalogueFigure{ID: row.ID, Cost: c})
+		out.Catalogue = append(out.Catalogue, CatalogueFigure{ID: row.ID, Cost: c, Ability: row.Ability, Modifier: row.Modifier})
 	}
 	out.Nonweapon = slots.Nonweapon(b.row, b.nonweaponLevel, ruletablesvc.LanguageLimit(intelligence), spent+spend.Languages)
 	out.Nonweapon.Languages = spend.Languages
+	out.LanguageCosts = slices.Clone(spend.LanguageCosts)
+	out.WeaponClasses, out.NonweaponClasses = b.weaponClasses, b.nonweaponClasses
 	out.WeaponPicks = make([]WeaponPickFigures, 0, len(picks.Weapon))
 	spent = 0
 	for _, p := range picks.Weapon {

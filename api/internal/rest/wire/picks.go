@@ -70,6 +70,15 @@ type ProficiencySlotsDTO struct {
 	// first class's creation options. Additive.
 	Groups    []string       `json:"groups"`
 	Catalogue []CatalogueDTO `json:"catalogue"`
+	// WeaponClasses are the class entries the weapon pool is counted on (several on a tie) and
+	// NonWeaponClasses the entries the non-weapon pool reads, every active one (ADR 0037 step
+	// 23.1); NonProficientPenalty is Table 34's penalty to hit with a weapon the character has
+	// no pick of, 0 or less (step 23.2); LanguageCosts the held languages with their slots
+	// (step 23.3). Additive.
+	WeaponClasses        []ClassRefDTO     `json:"weaponClasses"`
+	NonWeaponClasses     []ClassRefDTO     `json:"nonWeaponClasses"`
+	NonProficientPenalty int               `json:"nonProficientPenalty"`
+	LanguageCosts        []LanguageCostDTO `json:"languageCosts"`
 }
 
 // CatalogueDTO is one catalogue proficiency's cost for the character, 0 for an id a class entry
@@ -77,6 +86,34 @@ type ProficiencySlotsDTO struct {
 type CatalogueDTO struct {
 	ID   string `json:"id"`
 	Cost int    `json:"cost"`
+	// Ability and Modifier are the check's (Ability "" for none); Target is the check's target
+	// for a new pick, at no extra slot (ADR 0037 step 23.4), null without a check.
+	Ability  string `json:"ability"`
+	Modifier int    `json:"modifier"`
+	Target   *int   `json:"target"`
+}
+
+// ClassRefDTO is a class entry as the source of a pool or a skill set (ADR 0037 step 23.1): the
+// class code and its level; the client words the name.
+type ClassRefDTO struct {
+	Class string `json:"class"`
+	Level int    `json:"level"`
+}
+
+// ClassRefsToDTO maps class refs; never nil.
+func ClassRefsToDTO(in []skills.ClassRef) []ClassRefDTO {
+	out := make([]ClassRefDTO, 0, len(in))
+	for _, r := range in {
+		out = append(out, ClassRefDTO(r))
+	}
+	return out
+}
+
+// LanguageCostDTO is one held language and the non-weapon slots it spends (ADR 0037 step 23.3):
+// 1, or 0 for the race's native language and Common.
+type LanguageCostDTO struct {
+	Code  string `json:"code"`
+	Slots int    `json:"slots"`
 }
 
 // WeaponDTO is one pickable catalogue weapon and its specialization cost.
@@ -167,7 +204,18 @@ func ProficiencySlotsToDTO(p *skills.ProficiencySlots) *ProficiencySlotsDTO {
 	out.Groups = append([]string{}, p.Groups...)
 	out.Catalogue = make([]CatalogueDTO, 0, len(p.Catalogue))
 	for _, c := range p.Catalogue {
-		out.Catalogue = append(out.Catalogue, CatalogueDTO(c))
+		d := CatalogueDTO{ID: c.ID, Cost: c.Cost, Ability: c.Ability, Modifier: c.Modifier}
+		if c.HasCheck {
+			target := c.Target
+			d.Target = &target
+		}
+		out.Catalogue = append(out.Catalogue, d)
+	}
+	out.WeaponClasses, out.NonWeaponClasses = ClassRefsToDTO(p.WeaponClasses), ClassRefsToDTO(p.NonweaponClasses)
+	out.NonProficientPenalty = p.Penalty
+	out.LanguageCosts = make([]LanguageCostDTO, 0, len(p.LanguageCosts))
+	for _, l := range p.LanguageCosts {
+		out.LanguageCosts = append(out.LanguageCosts, LanguageCostDTO(l))
 	}
 	out.WeaponRedo = make([]WeaponRedoDTO, 0, len(p.WeaponRedo))
 	for _, r := range p.WeaponRedo {

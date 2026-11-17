@@ -1185,41 +1185,6 @@ func (q *Queries) ListLegacyItems(ctx context.Context, characterID int64) ([]Lis
 	return items, nil
 }
 
-const listLegacySkillPoints = `-- name: ListLegacySkillPoints :many
-SELECT id, class, skill_points FROM characters WHERE skill_points <> '{}' AND skill_sets = '{}' ORDER BY id
-`
-
-type ListLegacySkillPointsRow struct {
-	ID          int64
-	Class       string
-	SkillPoints string
-}
-
-// The skill sets migration (034): every character's legacy flat skill points, to copy under the
-// skill set its class grants. Only the characters that have points and no skill sets yet.
-func (q *Queries) ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error) {
-	rows, err := q.db.QueryContext(ctx, listLegacySkillPoints)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListLegacySkillPointsRow{}
-	for rows.Next() {
-		var i ListLegacySkillPointsRow
-		if err := rows.Scan(&i.ID, &i.Class, &i.SkillPoints); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listLegacyWeapons = `-- name: ListLegacyWeapons :many
 SELECT id, position, name, damage_sm, damage_l, magic_to_hit, magic_damage, kind, two_handed, ammo_kind,
        weapon_type, specialized
@@ -1771,37 +1736,6 @@ func (q *Queries) SetScrollAbilities(ctx context.Context, arg SetScrollAbilities
 		arg.ID,
 		arg.Was,
 	)
-	return err
-}
-
-const setSkillPointsIfUnset = `-- name: SetSkillPointsIfUnset :exec
-UPDATE characters SET skill_points = $1 WHERE id = $2 AND skill_points = '{}'
-`
-
-type SetSkillPointsIfUnsetParams struct {
-	SkillPoints string
-	ID          int64
-}
-
-// The skill points of a character stored before bards entered them (migration 012): only while it
-// has none, so a rerun changes nothing and points spent since are kept.
-func (q *Queries) SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error {
-	_, err := q.db.ExecContext(ctx, setSkillPointsIfUnset, arg.SkillPoints, arg.ID)
-	return err
-}
-
-const setSkillSets = `-- name: SetSkillSets :exec
-UPDATE characters SET skill_sets = $1 WHERE id = $2
-`
-
-type SetSkillSetsParams struct {
-	SkillSets string
-	ID        int64
-}
-
-// The skill points of a character per skill set (a JSON object from set code to points).
-func (q *Queries) SetSkillSets(ctx context.Context, arg SetSkillSetsParams) error {
-	_, err := q.db.ExecContext(ctx, setSkillSets, arg.SkillSets, arg.ID)
 	return err
 }
 

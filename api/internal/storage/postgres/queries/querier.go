@@ -91,9 +91,6 @@ type Querier interface {
 	// such an ability (the list is JSON text), and write the count; a rerun finds none.
 	ListCountedItemAbilities(ctx context.Context) ([]ListCountedItemAbilitiesRow, error)
 	ListLegacyItems(ctx context.Context, characterID int64) ([]ListLegacyItemsRow, error)
-	// The skill sets migration (034): every character's legacy flat skill points, to copy under the
-	// skill set its class grants. Only the characters that have points and no skill sets yet.
-	ListLegacySkillPoints(ctx context.Context) ([]ListLegacySkillPointsRow, error)
 	ListLegacyWeapons(ctx context.Context, characterID int64) ([]ListLegacyWeaponsRow, error)
 	// The spell of a scroll folded into its ability (ADR 0049 step 9): the converted scrolls that name a
 	// spell, and the write of the list with the spell effect (guarded by the list it was read as, so a
@@ -141,11 +138,6 @@ type Querier interface {
 	// so a rerun changes nothing and a race set since is kept.
 	SetRaceIfUnset(ctx context.Context, arg SetRaceIfUnsetParams) error
 	SetScrollAbilities(ctx context.Context, arg SetScrollAbilitiesParams) error
-	// The skill points of a character stored before bards entered them (migration 012): only while it
-	// has none, so a rerun changes nothing and points spent since are kept.
-	SetSkillPointsIfUnset(ctx context.Context, arg SetSkillPointsIfUnsetParams) error
-	// The skill points of a character per skill set (a JSON object from set code to points).
-	SetSkillSets(ctx context.Context, arg SetSkillSetsParams) error
 	SetSnapshotEnvelopes(ctx context.Context, arg SetSnapshotEnvelopesParams) error
 	SetSpellKey(ctx context.Context, arg SetSpellKeyParams) error
 	SetSpellStats(ctx context.Context, arg SetSpellStatsParams) error

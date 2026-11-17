@@ -6,7 +6,7 @@
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks, psionic_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, proficiency_picks, psionic_picks
 FROM characters WHERE id = $1;
 
 -- A character's class entries in the order the classes were taken (ADR 0042 step 1).
@@ -63,7 +63,7 @@ UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);
 -- name: GetSkillSets :one
 SELECT COALESCE((SELECT e.class FROM character_classes e
                  WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
-       skill_sets, skill_points
+       skill_sets
 FROM characters WHERE id = sqlc.arg(id);
 
 -- The proficiency picks saved by the editor and their undo (ADR 0037 steps 12 and 13).
@@ -204,9 +204,9 @@ WHERE id = sqlc.arg(id);
 -- ledgers' opening balances. No row when the source is unknown, retired or owned by a disabled
 -- user (the same rule as ViewableCharacter, in the one statement).
 INSERT INTO characters (
-    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_points, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
+    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
 )
-SELECT sqlc.arg(name), c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_points, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, sqlc.arg(owner_user_id), FALSE, sqlc.arg(hp_opening), sqlc.arg(psp_opening)
+SELECT sqlc.arg(name), c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, sqlc.arg(owner_user_id), FALSE, sqlc.arg(hp_opening), sqlc.arg(psp_opening)
 FROM characters c
 JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
 WHERE c.id = sqlc.arg(source_id) AND NOT c.retired

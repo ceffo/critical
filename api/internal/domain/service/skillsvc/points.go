@@ -17,7 +17,7 @@ import (
 // points.
 const PointsStateKey = "skill_points"
 
-// Points writes the skill points of every skill set of a character (characters.skill_points,
+// Points writes the skill points of every skill set of a character (characters.skill_sets,
 // per set code). It joins the ctx transaction.
 type Points interface {
 	SetSkillPoints(ctx context.Context, characterID int64, points skills.SetPoints) error
@@ -139,7 +139,6 @@ func (s *service) SetPoints(ctx context.Context, characterID int64, set string, 
 			return err
 		}
 		set = own.set
-		c.SkillPoints = c.SkillPoints.Resolve(own.first)
 		next, err := skills.ValidSkillPoints(own.def, set, points)
 		if err != nil {
 			return err
@@ -212,7 +211,7 @@ func (s *service) restorePoints(ctx context.Context, characterID int64, st point
 	if set == "" {
 		return nil
 	}
-	if err := s.points.SetSkillPoints(ctx, characterID, stored.Resolve(def).With(set, st.Points)); err != nil {
+	if err := s.points.SetSkillPoints(ctx, characterID, stored.With(set, st.Points)); err != nil {
 		return fmt.Errorf("restore skill points: %w", err)
 	}
 	return nil

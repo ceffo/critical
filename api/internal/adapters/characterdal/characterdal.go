@@ -53,7 +53,7 @@ func (d *DAL) GetCharacter(ctx context.Context, id int64) (*charactersvc.Charact
 	if err != nil {
 		return nil, err
 	}
-	points, err := decodeSkillPoints(row.SkillSets, row.SkillPoints)
+	points, err := decodeSkillPoints(row.SkillSets)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +248,7 @@ func (d *DAL) SkillPoints(ctx context.Context, id int64) (string, skills.SetPoin
 	if err != nil {
 		return "", nil, fmt.Errorf("get skill points: %w", err)
 	}
-	points, err := decodeSkillPoints(row.SkillSets, row.SkillPoints)
+	points, err := decodeSkillPoints(row.SkillSets)
 	if err != nil {
 		return "", nil, err
 	}
@@ -539,29 +539,16 @@ func (d *DAL) CurrentCharacter(ctx context.Context, owner uuid.UUID) (int64, err
 }
 
 // decodeSkillPoints reads characters.skill_sets (a JSON object from skill set code to an object
-// from skill code to points); '{}' is none (nil). While it is '{}' the legacy flat
-// characters.skill_points still counts: a release from before skill sets, running during a
-// rolling deploy, keeps writing only that column. Its points come back under skills.LegacySet,
-// for the services to file under the class's first set (SetPoints.Resolve).
-func decodeSkillPoints(raw, legacy string) (skills.SetPoints, error) {
+// from skill code to points); '{}' is none (nil).
+func decodeSkillPoints(raw string) (skills.SetPoints, error) {
 	var out skills.SetPoints
 	if err := json.Unmarshal([]byte(raw), &out); err != nil {
 		return nil, fmt.Errorf("decode skill points: %w", err)
 	}
-	if len(out) > 0 {
-		return out, nil
-	}
-	if legacy == "" {
+	if len(out) == 0 {
 		return nil, nil
 	}
-	var flat map[string]int
-	if err := json.Unmarshal([]byte(legacy), &flat); err != nil {
-		return nil, fmt.Errorf("decode legacy skill points: %w", err)
-	}
-	if len(flat) == 0 {
-		return nil, nil
-	}
-	return skills.SetPoints{skills.LegacySet: flat}, nil
+	return out, nil
 }
 
 // encodeSkillPoints writes characters.skill_sets; nil is '{}'.

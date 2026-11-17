@@ -86,9 +86,9 @@ test("thief 1 to 3: the level-up box's link by keyboard focuses Skills on the po
 
 async function expectPointsLeft(page: Page, left: number) {
   await openWorkspace(page, "Skills");
-  await expect(
-    page.getByTestId("skills-points-thief").getByTestId("skill-points-left"),
-  ).toHaveText(`Spent 0, left ${left}`);
+  await expect(page.getByTestId("skills-points-thief-budget")).toContainText(
+    `0 / ${left} points`,
+  );
 }
 
 test("thief 1 to 3: roll 2 then 3, the panel switches; undo takes it, redo brings it back", async ({

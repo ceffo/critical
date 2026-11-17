@@ -2,15 +2,25 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { ThiefPointsEditor } from "@/components/actions/ThiefPointsEditor";
 import { PickEditor } from "@/components/proficiencies/PickEditor";
+import {
+  ProficienciesRead,
+  SkillSetRead,
+  WeaponsRead,
+} from "@/components/skills/SkillsRead";
+import { classTag } from "@/lib/classTag";
 import { localized } from "@/i18n/localized";
 import { primaryEntry } from "@/lib/classEntries";
+import { sectionPending } from "@/lib/skillsPending";
 import { useCharacterStore } from "@/stores/character";
 import { useSkillsEditor } from "@/stores/skillsEditor";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { SkillSet } from "@/types/skills";
 
-/** One editor's block; `anchor` is what the level-up's links scroll to and focus. */
+/** The section being edited: a pool of picks, or `set:<code>` for a skill set's points. */
+type Editing = "weapon" | "nonWeapon" | `set:${string}`;
+
+/** One editor's block; `anchor` is what the level-up's links ask for and focus. */
 function Block({
   id,
   anchor,
@@ -36,68 +46,132 @@ function Block({
 }
 
 /**
- * The Skills activity (ADR 0037 step 15, amended): the weapon proficiencies, the proficiencies
- * with the languages and each skill set's points, the editors as they are, open at any time and
- * not only while something is left to spend. Each block follows what the server last derived
- * (it remounts when the stored picks or points change, so an undo or a redo shows), and a Save or
- * a Cancel starts it again from what is stored. The level-up's links ask for an editor through
- * the skills-editor store: it scrolls there and takes focus.
+ * The Skills activity (ADR 0037 step 15, amended): everything the character has, read at once: the
+ * proficiencies with the languages, the weapon proficiencies and each skill set, every section
+ * with its budget. A section's Edit turns the stage into that section's editor (the pick editor or
+ * the points editor, with its own Cancel and Save), at any time and not only while something is
+ * left to spend; a Save or a Cancel returns to the reading, from what is stored. An editor follows
+ * what the server last derived (it remounts when the stored picks or points change, so an undo or
+ * a redo shows). The level-up's links ask for an editor through the skills-editor store: the stage
+ * opens it and takes focus.
  */
 export function SkillsPanel() {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const refresh = useTableStore((s) => s.refresh);
   const skills = useSkillsStore((s) => s.skills);
-  const cls = useCharacterStore(
-    (s) => primaryEntry(s.character?.classes)?.class ?? "",
-  );
-  const slots = useCharacterStore((s) => s.character?.derived.proficiencySlots);
-  const race = useCharacterStore((s) => s.character?.raceCode);
-  const languages = useCharacterStore((s) => s.character?.languages);
+  const character = useCharacterStore((s) => s.character);
+  const cls = primaryEntry(character?.classes)?.class ?? "";
+  const slots = character?.derived.proficiencySlots;
+  const race = character?.raceCode;
+  const languages = character?.languages;
   const asked = useSkillsEditor((s) => s.editor);
   const askedSet = useSkillsEditor((s) => s.set);
   const clearAsk = useSkillsEditor((s) => s.close);
+  const [editing, setEditing] = useState<Editing | null>(null);
   // Bumped by an editor's Save and Cancel: it starts again from what is stored.
   const [fresh, setFresh] = useState<Record<string, number>>({});
-  const restart = (key: string) =>
+  const done = (key: Editing) => {
     setFresh((f) => ({ ...f, [key]: (f[key] ?? 0) + 1 }));
+    setEditing(null);
+  };
   const panel = useRef<HTMLDivElement>(null);
 
   // The points editors read the skill sets as the server derived them, read again whenever the
   // sheet changes (a level, an undo, a redo, a pick).
-  const character = useCharacterStore((s) => s.character);
   useEffect(() => {
     void refresh(["skills"]);
   }, [refresh, character]);
 
   const sets: SkillSet[] = skills?.skillSets ?? [];
-  // A request names the points editor of a set; without one, the first set with points left.
-  const askedKey =
-    asked === "skillPoints"
-      ? `set:${
-          (askedSet
-            ? sets.find((x) => x.set === askedSet)
-            : (sets.find((x) => (x.budget?.left ?? 0) > 0) ?? sets[0])
-          )?.set ?? ""
-        }`
-      : asked;
+  const entries = character?.classes;
+  const className = (code: string) =>
+    t(`details.classes.${code}`, { defaultValue: code });
+  const tag = classTag(entries, className, t);
+
+  // A request names an editor; the points editor's names a set or, without one, the first set
+  // with points left. It waits for the sets to arrive. Adjusted while rendering (React's way to
+  // derive state from a changing input); the effect below clears the store's request.
+  const [taken, setTaken] = useState(false);
+  if (!asked && taken) setTaken(false);
+  if (asked && !taken) {
+    if (asked === "skillPoints") {
+      const target = askedSet
+        ? sets.find((x) => x.set === askedSet)
+        : (sets.find((x) => (x.budget?.left ?? 0) > 0) ?? sets[0]);
+      if (target) {
+        setTaken(true);
+        setEditing(`set:${target.set}`);
+      }
+    } else {
+      setTaken(true);
+      setEditing(asked);
+    }
+  }
   useEffect(() => {
-    if (!askedKey) return;
+    if (asked && taken) clearAsk();
+  }, [asked, taken, clearAsk]);
+
+  // The editor that opened takes focus (the level-up's links, a keyboard user's Edit).
+  useEffect(() => {
+    if (!editing) return;
     const el = [
       ...(panel.current?.querySelectorAll<HTMLElement>("[data-anchor]") ?? []),
-    ].find((b) => b.dataset.anchor === askedKey);
-    // The points editors arrive with the skills: keep the request until their block exists.
-    if (!el && asked === "skillPoints") return;
+    ].find((b) => b.dataset.anchor === editing);
     el?.scrollIntoView({ block: "start" });
     el?.focus({ preventScroll: true });
-    clearAsk();
-  }, [askedKey, asked, sets.length, clearAsk]);
+  }, [editing]);
 
-  const pickKey = (pool: string) =>
+  const pickKey = (pool: "weapon" | "nonWeapon") =>
     JSON.stringify([
       pool === "weapon" ? slots?.weaponPicks : slots?.picks,
       pool === "weapon" ? null : languages,
       fresh[pool] ?? 0,
     ]);
+
+  const editor = (() => {
+    if (!editing) return null;
+    if (editing === "weapon" || editing === "nonWeapon") {
+      if (!slots || !cls || (editing === "weapon" && !slots.weapon))
+        return null;
+      return (
+        <Block id={`skills-${editing}`} anchor={editing}>
+          <PickEditor
+            key={pickKey(editing)}
+            pool={editing}
+            cls={cls}
+            race={race ?? ""}
+            languages={languages ?? []}
+            slots={slots}
+            onDone={() => done(editing)}
+          />
+        </Block>
+      );
+    }
+    const set = sets.find((x) => `set:${x.set}` === editing);
+    if (!set) return null;
+    const name = localized(i18n.language, set.name);
+    return (
+      <Block
+        id={`skills-points-${set.set}`}
+        anchor={editing}
+        title={sets.length > 1 ? name : undefined}
+      >
+        {sets.length > 1 && (
+          <h3 className="px-2.5 text-body font-semibold">{name}</h3>
+        )}
+        <ThiefPointsEditor
+          key={JSON.stringify([
+            set.skills.map((s) => [s.id, s.points]),
+            fresh[editing] ?? 0,
+          ])}
+          set={set.set}
+          skills={set.skills}
+          budget={set.budget}
+          onDone={() => done(editing)}
+        />
+      </Block>
+    );
+  })();
 
   return (
     <div
@@ -105,58 +179,40 @@ export function SkillsPanel() {
       className="zone-card flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto"
       data-testid="skills-panel"
     >
-      {slots?.weapon && cls && (
-        <Block id="skills-weapon" anchor={"weapon"}>
-          <PickEditor
-            key={pickKey("weapon")}
-            pool="weapon"
-            cls={cls}
-            race={race ?? ""}
-            languages={languages ?? []}
-            slots={slots}
-            onDone={() => restart("weapon")}
-          />
-        </Block>
-      )}
-      {slots && cls && (
-        <Block id="skills-nonWeapon" anchor={"nonWeapon"}>
-          <PickEditor
-            key={pickKey("nonWeapon")}
-            pool="nonWeapon"
-            cls={cls}
-            race={race ?? ""}
-            languages={languages ?? []}
-            slots={slots}
-            onDone={() => restart("nonWeapon")}
-          />
-        </Block>
-      )}
-      {sets.map((set) => (
-        <Block
-          key={set.set}
-          id={`skills-points-${set.set}`}
-          anchor={`set:${set.set}`}
-          title={
-            sets.length > 1 ? localized(i18n.language, set.name) : undefined
-          }
+      {editor ?? (
+        <div
+          className="grid grid-cols-1 items-start gap-3 min-[1400px]:grid-cols-2"
+          data-testid="skills-read"
         >
-          {sets.length > 1 && (
-            <h3 className="px-2.5 text-body font-semibold">
-              {localized(i18n.language, set.name)}
-            </h3>
+          {slots && (
+            <ProficienciesRead
+              slots={slots}
+              proficiencies={skills?.proficiencies ?? []}
+              languages={languages ?? []}
+              race={race ?? ""}
+              tag={tag}
+              pending={sectionPending(character, "nonWeapon")}
+              onModify={() => setEditing("nonWeapon")}
+            />
           )}
-          <ThiefPointsEditor
-            key={JSON.stringify([
-              set.skills.map((s) => [s.id, s.points]),
-              fresh[`set:${set.set}`] ?? 0,
-            ])}
-            set={set.set}
-            skills={set.skills}
-            budget={set.budget}
-            onDone={() => restart(`set:${set.set}`)}
-          />
-        </Block>
-      ))}
+          {slots?.weapon && (
+            <WeaponsRead
+              slots={slots}
+              tag={tag}
+              pending={sectionPending(character, "weapon")}
+              onModify={() => setEditing("weapon")}
+            />
+          )}
+          {sets.map((set) => (
+            <SkillSetRead
+              key={set.set}
+              set={set}
+              pending={sectionPending(character, { set: set.set })}
+              onModify={() => setEditing(`set:${set.set}`)}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

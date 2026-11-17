@@ -671,16 +671,24 @@ export async function openActPowers(page: Page) {
 }
 
 /**
- * Opens the Skills activity from the rail (the weapon proficiencies, the non-weapon ones and a
- * bard's or thief's skill points, all open at any time) and returns the block of `editor`.
+ * Opens the Skills activity from the rail, clicks the Edit of the section (the weapon proficiencies,
+ * the non-weapon ones or a bard's or thief's skill points) and returns the editor's block.
  */
 export async function openSpend(
   page: Page,
   editor: "weapon" | "nonWeapon" | "skillPoints",
 ): Promise<Locator> {
   await openWorkspace(page, "Skills");
+  // The activity reads every section; a section's Edit turns the stage into its editor.
+  const modify = page.getByTestId(
+    editor === "skillPoints"
+      ? /^skills-modify-skills-points-/
+      : `skills-modify-skills-${editor}`,
+  );
+  await expect(modify.first()).toBeVisible();
+  await modify.first().click();
   const block = page.getByTestId(
-    editor === "skillPoints" ? /^skills-points-/ : `skills-${editor}`,
+    editor === "skillPoints" ? /^skills-points-[^-]+$/ : `skills-${editor}`,
   );
   await expect(block.first()).toBeVisible();
   return block.first();

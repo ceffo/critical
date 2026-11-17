@@ -13,6 +13,9 @@ import { cn } from "@/lib/utils";
  *   flat fill (ΔL >= .07 off the card, ADR 0026 step 2.1) and muted ink (AA, ADR 0026 step 2.3),
  *   no hover. An enabled quiet button has the 3:1 field edge and full ink, a main one the tint, so
  *   the three never read alike. A disabled `ghost` has no fill (it stays transparent).
+ * - `pending` is a quiet button that has something left to spend behind it (a section's Edit, Act's
+ *   Manage): a red edge and, in place of its icon, a red dot (see `PendingButton`). It stays quiet:
+ *   never a second filled button, never a text pill.
  * - The dashed frame belongs to the roster's Create card alone.
  */
 const buttonVariants = cva(
@@ -30,6 +33,10 @@ const buttonVariants = cva(
         // Icon-only buttons in a toolbar or a row: no fill until hovered (disabled: muted, no edge).
         ghost:
           "hover:bg-raised-hover hover:text-foreground aria-expanded:bg-raised-hover aria-expanded:text-foreground disabled:border-transparent disabled:bg-transparent",
+        // A quiet button with something left to spend behind it (ADR 0027 step 3.4, pending state):
+        // the same ink and fill, the edge in the danger tone. Never a fill, never a text pill.
+        pending:
+          "border-danger text-foreground hover:bg-raised-hover aria-expanded:bg-raised-hover",
         // A quiet button whose action removes something.
         destructive: "border-input text-danger hover:bg-raised-hover",
       },

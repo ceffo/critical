@@ -34,10 +34,15 @@ test("skills activity: with nothing left to spend, swap a proficiency, save, und
     await tumbling.getByTestId("proficiency-more").click();
   await expect(spent).toHaveText("Spent 10, left 0");
   await editor.getByTestId("proficiency-save").click();
-  await expect(spent).toHaveText("Spent 10, left 0");
+  // A save returns to the reading, on the stored picks.
+  await expect(page.getByTestId("skills-nonWeapon-budget")).toContainText(
+    "10 / 10 slots",
+  );
+  await expect(page.getByTestId("skill-read-tumbling")).toBeVisible();
   await expectUndoOn(page, "Tumbling");
 
-  // With the pool spent, the editor still works: remove Tumbling and add Agriculture, then save.
+  // With the pool spent, the editor still opens: remove Tumbling and add Agriculture, then save.
+  await page.getByTestId("skills-modify-skills-nonWeapon").click();
   await tumbling.getByTestId("proficiency-remove").click();
   await editor.getByTestId("proficiency-search").fill("agri");
   await editor.getByTestId("proficiency-add-agriculture").click();
@@ -52,6 +57,7 @@ test("skills activity: with nothing left to spend, swap a proficiency, save, und
   // Undo takes the swap back: Tumbling is a pick again in the editor, Agriculture is not.
   await page.getByTestId("undo").click();
   await openWorkspace(page, "Skills");
+  await page.getByTestId("skills-modify-skills-nonWeapon").click();
   await expect(
     page
       .getByTestId("proficiency-editor")

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { screen } from "@testing-library/react";
 import { act } from "react";
+import userEvent from "@testing-library/user-event";
 import { renderApp } from "@/test/render";
 import { useCharacterStore } from "@/stores/character";
 import { useSkillsEditor } from "@/stores/skillsEditor";
@@ -28,6 +29,10 @@ function owner(weapon: boolean): Character {
     languages: [],
     classes: [{ class: "thief", level: 3 }],
     derived: {
+      levelUp: {
+        toSpend: { weaponSlots: 0, nonWeaponSlots: 0, skillPoints: 0 },
+      },
+      skillSets: [],
       proficiencySlots: {
         nonWeapon: { left: 0 },
         picks: [],
@@ -57,20 +62,38 @@ afterEach(() => {
 });
 
 describe("SkillsPanel", () => {
-  it("hosts the weapon and the non-weapon editors with nothing left to spend, and no points editor without a skill set", async () => {
+  it("reads every section at once, with no editor open and no points section without a skill set", async () => {
     useCharacterStore.setState({ character: owner(true) });
     useSkillsStore.setState({ skills: { proficiencies: [], skillSets: [] } });
     await renderApp(<SkillsPanel />);
-    expect(screen.getByTestId("pick-weapon")).toBeInTheDocument();
-    expect(screen.getByTestId("pick-nonWeapon")).toBeInTheDocument();
-    expect(screen.queryByTestId(/^points-/)).toBeNull();
+    expect(screen.getByTestId("skills-read")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("skills-modify-skills-weapon"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByTestId("skills-modify-skills-nonWeapon"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId(/^skills-modify-skills-points-/)).toBeNull();
+    expect(screen.queryByTestId(/^pick-/)).toBeNull();
   });
 
-  it("leaves out the weapon editor for a character with no weapon pool", async () => {
+  it("opens one section's editor from its Modify and leaves the reading", async () => {
+    useCharacterStore.setState({ character: owner(true) });
+    useSkillsStore.setState({ skills: { proficiencies: [], skillSets: [] } });
+    await renderApp(<SkillsPanel />);
+    await userEvent.click(screen.getByTestId("skills-modify-skills-weapon"));
+    expect(screen.getByTestId("pick-weapon")).toBeInTheDocument();
+    expect(screen.queryByTestId("pick-nonWeapon")).toBeNull();
+    expect(screen.queryByTestId("skills-read")).toBeNull();
+  });
+
+  it("leaves out the weapon section for a character with no weapon pool", async () => {
     useCharacterStore.setState({ character: owner(false) });
     await renderApp(<SkillsPanel />);
-    expect(screen.queryByTestId("pick-weapon")).toBeNull();
-    expect(screen.getByTestId("pick-nonWeapon")).toBeInTheDocument();
+    expect(screen.queryByTestId("skills-modify-skills-weapon")).toBeNull();
+    expect(
+      screen.getByTestId("skills-modify-skills-nonWeapon"),
+    ).toBeInTheDocument();
   });
 
   it("reaches each of two skill sets' editors, named", async () => {
@@ -82,13 +105,14 @@ describe("SkillsPanel", () => {
       } as unknown as Skills,
     });
     await renderApp(<SkillsPanel />);
-    expect(screen.getByTestId("points-thief")).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByTestId("skills-modify-skills-points-bard"),
+    );
     expect(screen.getByTestId("points-bard")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "THIEF" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "BARD" })).toBeInTheDocument();
   });
 
-  it("a level-up link's request scrolls to that editor, takes focus and is cleared", async () => {
+  it("a level-up link's request opens that editor, takes focus and is cleared", async () => {
     useCharacterStore.setState({ character: owner(true) });
     useSkillsStore.setState({
       skills: {

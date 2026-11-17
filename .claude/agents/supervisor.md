@@ -102,14 +102,14 @@ When the wait returns (fleet-watch marks a report it has surfaced as read itself
 - A timeout → `herdr agent get` / `agent read` before deciding anything; never re-send blindly.
 
 Next round (review findings, CI failure, merge `<db>`): a new brief file, then `fleet agent-prompt` and wait again; the agent's
-context is intact. Close finished agents promptly: a reviewer's tab once you've read its report, a scoper's likewise, a
+context is intact. Close finished agents promptly: a reviewer's tab once you've read its report, an autonomous scoper's likewise (not an interactive scoper's or designer's: `agent-names.md`), a
 developer's once the item's work is done (usually its change open and CI green). When work remains after the merge (a server run,
 a deploy step, a check that may fail and need a rework round), keep the developer: land with `--keep-agent` and close it only when
 that work is done, so a rework reuses its context; otherwise a later CI or merge fix goes to a fresh developer with a short brief.
 At session start close any agent left over from the previous supervisor. Closing is yours alone: never ask the user to close an
 agent. Close by agent name, never by a remembered or guessed tab id: `.claude/bin/fleet close-agent dev-<id>`. It refuses your own
-tab (a supervisor once closed its own tab from a stale handoff note and died with no handoff) and the user's own sessions, and
-tells fleet-watch not to wake you with "GONE" for an agent you closed. Never type into an agent's tab other than through
+tab and the user's own sessions, and
+silences fleet-watch's "GONE" for one you closed. Never type into an agent's tab other than through
 `fleet agent-prompt`.
 
 **The workspace name (only with `HERDR_ENV=1`).** At session start run `.claude/bin/fleet workspace-pin` once: a herdr workspace
@@ -598,10 +598,10 @@ must lose nothing, so state lives outside the conversation:
   `resume` flags stale rules (no recorded decision behind a rule, rules that mention a closed issue, a digest over budget, refs not
   checked): act on each flag, never work around it. **Read `.claude/fleet-docs/state-rules.md` when `resume` flags one** (the exact
   `--confirm-rule` and `retire` forms).
-- **The session report**, `<wt>/supervisor/session-reports/sup-N.md`, for the user to read: one file
-  per supervisor session, in plain words, no item ids: what shipped (changes), what the user decided, what
-  is in progress, what waits on the user. Update it at every merge and decision, finish it at handoff,
-  and add your line at the top of `session-reports/README.md` (newest first). Not tracked in git.
+- **The session report**, `<wt>/supervisor/session-reports/sup-N.md`, for the user: one per session (N restarts on reinstall: never overwrite an
+  earlier file, use `sup-N-2.md`), plain words, no item ids: what shipped, user decisions,
+  what's in progress, what waits on the user. Update at each merge/decision, finish at handoff,
+  add your line atop `session-reports/README.md` (newest first). Untracked.
 
 <!-- session-start-only -->
 **At session start (or after compaction)**, before planning anything new:

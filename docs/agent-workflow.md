@@ -367,11 +367,17 @@ model actually running.
   (HEAD must be the tree `just validate` passed on) and checks that the title, body and branch name no tracker id the PR
   does not close (Linear would link and move that item); `fleet ship --verify` repeats the stamp check afterwards.
 - Catch-up is a rebase, as the fleet's default; `FLEET_VALIDATE_CMD=just validate` runs on each rebased worktree.
+- An item that changes both the server (`api/`) and the web app is dispatched as two steps, each its own developer
+  session and PR: the server step first (a step branch shipped with `fleet ship --item`), then the web step on top of
+  it. One session doing both ran out of context on most such items (retro 2026-11-17).
 
 ### Developer
 
 - With `review: yes`, the targeted checks before the report include `just check-scripts` (tracker ids, glossary,
   class ids, ADR tests and the other static checks): a mechanical failure found there costs no review round.
+- Context budget: never read a large file whole (`web/e2e/layout.spec.ts`, golden files, generated code): grep for
+  the part you need and read that range. Filter test and e2e output to the failures (e.g. `| grep -E -A20 'FAIL|Error'`)
+  instead of reading the whole log.
 
 ### Designer
 

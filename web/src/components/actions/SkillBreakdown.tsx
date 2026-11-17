@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 const TERMS = ["base", "points", "race", "dexterity", "armor"] as const;
 
 /**
- * The terms a skill's percentage is made of, a one-row table (ADR 0030 steps 17 and 18): base,
+ * The terms a skill's percentage is made of, a row of label-over-figure pairs that wraps on a narrow card (ADR 0030 steps 17 and 18): base,
  * points, race, Dexterity and armour, one column each, and when the 95 cap or the 0 floor moved the
  * percentage, which one, and a thief's points against the cap per skill ("20 of 30"). The figures are
  * the server's.
@@ -34,26 +34,14 @@ export function SkillTerms({
       className={cn("flex min-w-0 flex-col", className)}
       data-testid={`skill-terms-${skill.id}`}
     >
-      <table className="w-fit text-label text-muted-foreground">
-        <thead>
-          <tr>
-            {TERMS.map((k) => (
-              <th key={k} className="pr-3 text-left font-medium last:pr-0">
-                {t(`skillsActivity.terms.${k}`)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          <tr className="tabular-nums">
-            {TERMS.map((k) => (
-              <td key={k} className="pr-3 last:pr-0">
-                {value[k]}
-              </td>
-            ))}
-          </tr>
-        </tbody>
-      </table>
+      <dl className="flex flex-wrap gap-x-3 text-label text-muted-foreground">
+        {TERMS.map((k) => (
+          <div key={k} className="flex flex-col">
+            <dt className="font-medium">{t(`skillsActivity.terms.${k}`)}</dt>
+            <dd className="tabular-nums">{value[k]}</dd>
+          </div>
+        ))}
+      </dl>
       <LimitNote row={skill} />
       {cap > 0 && (
         <span

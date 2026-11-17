@@ -142,17 +142,27 @@ test("create a bard through the creation route, switch to the first and back, re
   await expect(step.getByLabel("PV max")).toHaveValue(/^\d+$/);
   await snap(page, "creation-hp-rolled-fr");
   await step.getByLabel("PV max").fill("6");
-  // ADR 0030 step 18: a bard enters its points; its skills read the armour it wears (ADR 0033
-  // step 14), none at creation.
+  await next.click();
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await next.click();
+  // ADR 0030 step 18: a bard enters its points on a step of its own (ADR 0034); its skills read the
+  // armour it wears (ADR 0033 step 14), none at creation.
+  await expect(step).toHaveAttribute("data-step", "skillPoints");
   await expect(step.getByLabel("Armure portée")).toHaveCount(0);
-  await step.getByLabel("Escalade").fill("15");
+  await step.getByLabel("Points en Escalade", { exact: true }).fill("15");
   // Back and forward keep the values.
+  await back.click();
+  await back.click();
   await back.click();
   await expect(step.getByLabel("Force", { exact: true })).toHaveValue("10");
   await next.click();
   await expect(step.getByLabel("PV max")).toHaveValue("6");
-  await expect(step.getByLabel("Escalade")).toHaveValue("15");
   await next.click();
+  await next.click();
+  await expect(
+    step.getByLabel("Points en Escalade", { exact: true }),
+  ).toHaveValue("15");
+  await back.click();
   // The proficiency step (ADR 0037 step 14): no pick, the slots wait to be spent. The languages
   // are picked here (ADR 0034 step 3.5 as amended by ADR 0037 step 18): ADR 0032 step 4, the
   // half-elf's own language (Commun) is locked; ADR 0037 step 6, five more spend five of the level 3
@@ -167,6 +177,8 @@ test("create a bard through the creation route, switch to the first and back, re
     "5 emplacements · 5 sur 7 au total",
   );
   await snap(page, "creation-proficiencies-languages-fr");
+  await next.click();
+  await expect(step).toHaveAttribute("data-step", "skillPoints");
   await next.click();
   // The bard's starting spellbook (ADR 0030 step 20.7): left empty, it never blocks Suivant.
   await expect(step).toHaveAttribute("data-step", "spellbook");

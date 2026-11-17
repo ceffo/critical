@@ -62,6 +62,7 @@ test("use a known power, keep it up across Next Round, stop it", async ({
   await step.getByLabel("PV max").fill("2");
   await next();
   await next();
+  await next();
   await expect(step).toHaveAttribute("data-step", "psionics");
   const panel = step.getByTestId("known-powers");
   await panel.getByRole("button", { name: /^Ajouter Métapsionisme/ }).click();

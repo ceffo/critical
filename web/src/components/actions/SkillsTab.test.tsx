@@ -191,20 +191,19 @@ describe("SkillsTab budget and terms", () => {
         ]),
       ],
     });
-    // One column per term, in a table; the total is the roll button's.
-    const terms =
-      /data-testid="skill-terms-hide_in_shadows">(.*?)<\/table>/.exec(
-        html,
-      )?.[1];
+    // One column per term, as a label over its figure; the total is the roll button's.
+    const terms = /data-testid="skill-terms-hide_in_shadows">(.*?)<\/dl>/.exec(
+      html,
+    )?.[1];
     expect(terms).toBeDefined();
     expect(
       terms
-        ?.match(/<th[^>]*>([^<]*)<\/th>/g)
+        ?.match(/<dt[^>]*>([^<]*)<\/dt>/g)
         ?.map((h) => h.replace(/<[^>]*>/g, "")),
     ).toEqual(["Base", "Points", "Race", "Dexterity", "Armour"]);
     expect(
       terms
-        ?.match(/<td[^>]*>([^<]*)<\/td>/g)
+        ?.match(/<dd[^>]*>([^<]*)<\/dd>/g)
         ?.map((h) => h.replace(/<[^>]*>/g, "")),
     ).toEqual(["10", "5", "+5", "−5", "0"]);
     expect(html).toMatch(/skill-limit-climb_walls">capped at 95%/);

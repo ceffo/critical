@@ -61,6 +61,8 @@ test("create a thief/psionicist with Telepathy and Contact, the step at 1920 and
   await next();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await next();
+  await expect(step).toHaveAttribute("data-step", "skillPoints");
+  await next();
   await expect(step).toHaveAttribute("data-step", "psionics");
 
   const psionics = step.getByTestId("psionics-step");

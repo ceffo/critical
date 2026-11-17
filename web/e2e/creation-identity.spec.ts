@@ -72,9 +72,7 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
 }) => {
   page.on("dialog", (d) => void d.accept());
   const { step, next } = await toIdentity(page, "fr", async (points) => {
-    await points
-      .getByLabel("Points en Escalade", { exact: true })
-      .fill("15");
+    await points.getByLabel("Points en Escalade", { exact: true }).fill("15");
   });
   const details = step.getByTestId("new-character-details");
   await details.getByLabel("Nom", { exact: true }).fill("Lyra");

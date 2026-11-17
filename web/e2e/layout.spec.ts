@@ -4545,7 +4545,9 @@ async function creationStep(page: Page, size: Viewport) {
       [tr("Détection des bruits", "Detect noise"), "20"],
     ] as const)
       await step
-        .getByLabel(tr(`Points en ${label}`, `Points in ${label}`), { exact: true })
+        .getByLabel(tr(`Points en ${label}`, `Points in ${label}`), {
+          exact: true,
+        })
         .fill(points);
     await expect(step.getByTestId("skill-points-left")).toBeVisible();
     await audit("4c-skill-points");
@@ -5763,9 +5765,7 @@ async function thiefStep(page: Page, size: Viewport) {
   await step.getByRole("radio", { name: "Guerrier", exact: true }).click();
   for (let i = 0; i < 4; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
-  await expect(page.getByTestId("creation-steps")).not.toContainText(
-    "Talents",
-  );
+  await expect(page.getByTestId("creation-steps")).not.toContainText("Talents");
   for (let i = 0; i < 4; i++) await back.click();
   await step.getByRole("radio", { name: "Voleur", exact: true }).click();
   for (let i = 0; i < 5; i++) await next.click();

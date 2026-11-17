@@ -132,9 +132,9 @@ changing. A message that begins `Re call to action "<title>":` is the user's ans
 
 If `~/.claude/state/rate-limits.json` exists, read it with `jq -c .` (older than ~10 minutes is stale: treat the numbers as a floor); no file → skip this section. Judge by **velocity, not a fixed threshold**: projected = used + points-per-hour since your previous reading × hours to `resets_at`. Projected under 100%: dispatch as usual. Projected over 100%: keep going cheaper (Sonnet where "Model selection" allows, one developer at a time, no optional rounds), tell the user once and record it with `fleet store pace "..."` (`--clear` when lifted). At the stop line or more (`.claude/bin/fleet get FLEET_QUOTA_STOP`, empty means 95): send no new brief and no rework round, finish what is in flight, tell the user which agents are mid-run, resume after `resets_at`. **Read `.claude/fleet-docs/quota-gate.md` at the first projected-over or stop-line reading**: it covers the handoff deferral (`HANDOFF-DEFERRED`, exit 3) and an agent that hit the limit.
 
-## Pro plan (only when the workflow doc's Overrides say "Pro plan")
+## Lean mode (only on the "Lean mode" override, old name "Pro plan")
 
-Only when the workflow doc's Overrides say "Pro plan": **read `.claude/fleet-docs/pro-plan.md`** (one lane, Sonnet for every role, review only for risky changes, batched events). Absent that override nothing applies.
+Only when the workflow doc's Overrides say "Lean mode": **read `.claude/fleet-docs/lean-mode.md`** (one lane, Sonnet for every role, review only for risky changes, batched events).
 
 ## Token budget: yours to own
 
@@ -474,8 +474,8 @@ or your own tab.
 
 **Watchers.** Whenever any agent is live or something is in flight, a fleet watcher must run (the `Stop` hook blocks your turn
 otherwise and names the form that fits). Busy (a developer, reviewer or tester runs): `.claude/bin/fleet watchers busy` (one
-Monitor, `timeout_ms` 1800000; runs fleet-watch, ready-watch and upkeep as streams), `fleet ci-watch --stream` and
-`fleet inbox-watch --stream` each in a Monitor. Idle: `.claude/bin/fleet watchers idle` (with `run_in_background`), then the
+Monitor, `timeout_ms` 1800000; runs fleet-watch, ready-watch, upkeep and, when the project has CI, ci-watch as streams) and
+`fleet inbox-watch --stream` in its own Monitor. Idle: `.claude/bin/fleet watchers idle` (with `run_in_background`), then the
 one-shot `fleet inbox-watch` (`run_in_background`). Say which form runs in your first reply. Stop one with `fleet <watcher> stop`,
 never ps/kill. A user message arrives as `USER-MESSAGE <id> ...`: `fleet inbox show <id>`, act, `fleet inbox ack <id>`, answer with
 `fleet inbox reply`. Before every reply run `.claude/bin/fleet user-waiting` and list each line. **Read

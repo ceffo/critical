@@ -3,10 +3,11 @@ import type { ProficiencyOption } from "@/types/character";
 import {
   addPick,
   fold,
-  optionsForCharacter,
+  catalogueRows,
+  groupBands,
+  servedCatalogue,
   removePick,
   setSlots,
-  splitCatalogue,
 } from "./catalogue";
 
 const opt = (id: string, groups: string[], slots = 1): ProficiencyOption => ({
@@ -41,39 +42,60 @@ const options = {
 };
 const nameOf = (id: string) => NAMES[id] ?? id;
 
-describe("splitCatalogue", () => {
-  it("lists the class's groups first, each part by name, with the server's cost", () => {
-    const { own, other } = splitCatalogue(options, "thief", nameOf, "", "fr");
-    expect(own.map((r) => [r.option.id, r.cost])).toEqual([
+const served = (
+  cls = "thief",
+  figures?: Parameters<typeof servedCatalogue>[2],
+) => servedCatalogue(options, cls, figures);
+
+describe("catalogueRows", () => {
+  it("lists every row by name with the server's cost", () => {
+    const rows = catalogueRows(served(), nameOf, "", "fr");
+    expect(rows.map((r) => [r.option.id, r.cost])).toEqual([
       ["tumbling", 7],
       ["cooking", 5],
       ["riding_land", 4],
+      ["tracking", 9],
     ]);
-    expect(other.map((r) => [r.option.id, r.cost])).toEqual([["tracking", 9]]);
   });
 
   it("offers only what the server gives a cost for (it gives Languages, Modern none)", () => {
-    const { own, other } = splitCatalogue(options, "thief", nameOf, "", "fr");
-    expect([...own, ...other].map((r) => r.option.id)).not.toContain(
-      "languages_modern",
+    const ids = catalogueRows(served(), nameOf, "", "fr").map(
+      (r) => r.option.id,
     );
+    expect(ids).not.toContain("languages_modern");
   });
 
   it("searches the name, accents and case ignored", () => {
-    const { own, other } = splitCatalogue(
-      options,
-      "thief",
-      nameOf,
-      " EQUI",
-      "fr",
-    );
-    expect([...own, ...other].map((r) => r.option.id)).toEqual(["riding_land"]);
+    const rows = catalogueRows(served(), nameOf, " EQUI", "fr");
+    expect(rows.map((r) => r.option.id)).toEqual(["riding_land"]);
     expect(fold("Équitation")).toBe("equitation");
   });
 
   it("offers nothing for a class the server sent no costs for", () => {
-    const { own, other } = splitCatalogue(options, "mage", nameOf, "", "fr");
-    expect([...own, ...other]).toEqual([]);
+    expect(catalogueRows(served("mage"), nameOf, "", "fr")).toEqual([]);
+  });
+});
+
+describe("groupBands", () => {
+  it("puts the character's groups first, then the others by name, a row under each of its groups", () => {
+    const rows = catalogueRows(served(), nameOf, "", "fr");
+    const bands = groupBands(rows, ["rogue", "general"], (g) => g, "fr");
+    expect(
+      bands.map((b) => [b.group, b.own, b.rows.map((r) => r.option.id)]),
+    ).toEqual([
+      ["rogue", true, ["tumbling"]],
+      ["general", true, ["cooking", "riding_land"]],
+      ["warrior", false, ["tracking"]],
+    ]);
+  });
+
+  it("leaves out a group the search emptied", () => {
+    const rows = catalogueRows(served(), nameOf, "pist", "fr");
+    expect(
+      groupBands(rows, ["rogue", "general"], (g) => g, "fr").map(
+        (b) => b.group,
+      ),
+    ).toEqual(["warrior"]);
   });
 });
 
@@ -100,28 +122,27 @@ describe("picks", () => {
   });
 });
 
-// ADR 0042 step 15: the costs and the groups are the server's for the character, not the creation
-// options' table of the first class.
-describe("optionsForCharacter", () => {
+// ADR 0042 step 15 and CRI-416 point 2: the costs and the groups are the server's for the
+// character (every class entry judged together), read as served, not the first class's table.
+describe("servedCatalogue", () => {
   const creation = {
     proficiencies: [opt("spellcraft", ["Wizard"])],
     proficiencyGroups: { fighter: ["Warrior"] },
     proficiencyCosts: { fighter: { spellcraft: 2 } },
   };
 
-  it("files the server's groups and costs under the class the picker reads", () => {
-    const o = optionsForCharacter(creation, "fighter", {
+  it("reads the server's groups and costs directly", () => {
+    const c = servedCatalogue(creation, "fighter", {
       groups: ["Warrior", "Wizard"],
       catalogue: [{ id: "spellcraft", cost: 1 }],
     });
-    expect(o.proficiencyGroups).toEqual({ fighter: ["Warrior", "Wizard"] });
-    expect(o.proficiencyCosts).toEqual({ fighter: { spellcraft: 1 } });
-    const { own } = splitCatalogue(o, "fighter", (id) => id, "", "fr");
-    expect(own.map((r) => [r.option.id, r.cost])).toEqual([["spellcraft", 1]]);
+    expect(c.groups).toEqual(["Warrior", "Wizard"]);
+    expect(c.costs).toEqual({ spellcraft: 1 });
   });
 
-  it("keeps the creation options when the server serves no figures", () => {
-    expect(optionsForCharacter(creation, "fighter", undefined)).toBe(creation);
-    expect(optionsForCharacter(creation, "fighter", {})).toBe(creation);
+  it("falls back to the creation options' figures when the server serves none", () => {
+    const c = servedCatalogue(creation, "fighter", undefined);
+    expect(c.groups).toEqual(["Warrior"]);
+    expect(c.costs).toEqual({ spellcraft: 2 });
   });
 });

@@ -59,7 +59,7 @@ describe("ProficiencyDetail (the pop-up's body)", () => {
     expect(figure("cost")).toContain(">1<");
     expect(figure("slots")).toContain(">3<");
     expect(figure("extra")).toContain(">2<");
-    expect(figure("groups")).toContain("rogue, general");
+    expect(figure("groups")).toContain("Rogue, General");
   });
 
   it("leaves out a figure the caller does not have, and the modifier of a proficiency with no check", async () => {

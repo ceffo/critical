@@ -73,10 +73,8 @@ describe("PickEditor's specialization lead", () => {
         onDone={() => {}}
       />,
     );
-    if (shown) {
-      expect(screen.getByText(new RegExp(LEAD))).toBeInTheDocument();
-    } else {
-      expect(screen.queryByText(new RegExp(LEAD))).toBeNull();
-    }
+    // The lead is a sentence of the pool's note, among others.
+    const text = screen.getByTestId("weapon-editor").textContent ?? "";
+    expect(text.includes(LEAD)).toBe(shown);
   });
 });

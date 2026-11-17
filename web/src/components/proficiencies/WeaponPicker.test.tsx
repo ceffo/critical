@@ -67,7 +67,7 @@ async function render(
         picks={picks}
         onChange={() => {}}
         figures={f}
-        errorFor={(field) => (field === "weapon.long_bow" ? error : null)}
+        errorFor={(field) => (field === "weapon.dagger" ? error : null)}
       />
     </I18nextProvider>,
   );
@@ -85,22 +85,24 @@ describe("WeaponPicker", () => {
     expect(html).toContain(
       "Slots: 7 to start + 9 for the levels (one every 5) = 17",
     );
-    expect(html).toContain("Spent 14, left 3");
-    expect(html).toContain("3 slots to spend");
-    expect(html).toContain("Specialization · 6 slots");
-    // The dagger's specialization cost, as the options give it.
+    expect(html).toContain("slots left of 17");
+    // The specialization held on the held row, its cost on the button; the dagger's cost is the
+    // options' figure.
+    expect(html).toContain('data-testid="weapon-held-long_sword"');
     expect(html).toContain(
-      "Proficient · 1 slot · specialization: 4 slots in all",
+      "Remove the specialization in Long sword (back to 1 slot)",
     );
     expect(html).toContain("Specialize in Dagger: 4 slots in all");
+    expect(html).toContain("Specialize +3 slots");
     // An unpicked type is added first; its specialization comes with the pick.
     expect(html).not.toContain("Specialize in Long bow");
     // A kept type outside the class's list is shown, marked, removable.
-    expect(html).toContain('data-testid="weapon-row-heavy_crossbow"');
+    expect(html).toContain('data-testid="weapon-held-heavy_crossbow"');
     expect(html).toContain(
       "Outside your class’s weapons: kept, you may remove it",
     );
     expect(html).toContain("Remove Heavy crossbow");
+    expect(html).toContain("Become proficient with Long bow (1 slot)");
   });
 
   it("warns of an overspend in French and shows a row's refusal", async () => {
@@ -114,7 +116,6 @@ describe("WeaponPicker", () => {
     expect(html).toContain(
       "Budget dépassé : 19 emplacements pour 17 disponibles. Vous pouvez en retirer, pas en ajouter.",
     );
-    expect(html).toContain("Spécialisation · 6 emplacements");
     expect(html).toContain("Spécialisée");
     expect(html).toContain(
       "Une seule spécialisation, et seulement pour un combattant.",
@@ -133,6 +134,6 @@ describe("WeaponPicker", () => {
     );
     expect(html).not.toContain("weapon-specialize");
     expect(html).not.toContain("specialization");
-    expect(html).toContain("Become proficient with Dart (1 slot)");
+    expect(html).toContain("Dart: no slot left");
   });
 });

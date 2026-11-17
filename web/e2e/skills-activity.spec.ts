@@ -22,8 +22,8 @@ test("skills activity: with nothing left to spend, swap a proficiency, save, und
   // The bard's four free proficiencies spend nothing (ADR 0037 step 22): six slots left. Spend
   // them on Tumbling (an extra slot each) and save.
   const editor = await openSpend(page, "nonWeapon");
-  const spent = editor.getByTestId("proficiency-pool-spent");
-  await expect(spent).toHaveText("Spent 4, left 6");
+  const spent = editor.getByTestId("proficiency-pool-left");
+  await expect(spent).toHaveText("6");
   await expect(
     editor
       .getByTestId("proficiency-pick-singing")
@@ -32,7 +32,7 @@ test("skills activity: with nothing left to spend, swap a proficiency, save, und
   const tumbling = editor.getByTestId("proficiency-pick-tumbling");
   for (let i = 0; i < 6; i++)
     await tumbling.getByTestId("proficiency-more").click();
-  await expect(spent).toHaveText("Spent 10, left 0");
+  await expect(spent).toHaveText("0");
   await editor.getByTestId("proficiency-save").click();
   // A save returns to the reading, on the stored picks.
   await expect(page.getByTestId("skills-nonWeapon-budget")).toContainText(

@@ -255,3 +255,21 @@ endpoint refuses a spell by field and code and the create request stores the ent
   `TestCharacters_DraftWireShape`, `TestCharacters_DraftNeverRefusesContent`; web `flow.test.ts`
   (`buildBody`, `stepOfField`); e2e `layout.spec` (thief: a Strength of 2 keeps the budget on the
   extras step).
+
+## Amendment 2026-11-17: a skill points step after the proficiencies (as built, CRI-410)
+
+Skill points leave the extras step and get a step of their own, so the balancing control of
+[ADR 0027](0027-space-follows-frequency-of-use.md) step 1 (a slider and a typed box per skill, the
+points left in a bar that sticks to the top) is the same in creation and in the editor
+(`SkillPointsBoard`).
+
+1. **Step order.** Class, race, scores, identity, extras, proficiencies, then **one step per skill
+   set the class grants**, then the spellbook (when there is one) and the review. A class without a
+   skill set has no such step (`stepsFor`). A step the draft lacks falls back to the review.
+2. **Naming.** The step is named after the set ("Talents de voleur"; `creation.skillPoints.name` is
+   the class's own set name). The extras step keeps the hit points and the 18/xx Strength roll and is
+   titled "Points de vie".
+3. **Summary.** The right-hand summary gains an "À dépenser" block: weapon and non-weapon slots left,
+   and each set's points left. The review shows the skill points in a block of their own.
+4. **Limits.** The slider stops at the skill's limit and at what the points left allow; this is display
+   arithmetic only. The server's refusals are unchanged and are worded beside the skill.

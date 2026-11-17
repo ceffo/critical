@@ -17,6 +17,7 @@ function Harness({
   return (
     <PointsSlider
       id="pick_pockets"
+      scope="set"
       name="Pick pockets"
       value={v}
       limit={limit}

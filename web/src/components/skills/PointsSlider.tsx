@@ -17,7 +17,7 @@ const at = (ratio: number) =>
  */
 export function PointsSlider({
   id,
-  scope = "thief",
+  scope,
   name,
   value,
   limit,

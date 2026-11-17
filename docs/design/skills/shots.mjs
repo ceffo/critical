@@ -16,13 +16,12 @@ const web = path.join(root, "web");
 const { chromium } = createRequire(path.join(web, "package.json"))("@playwright/test");
 const { createServer } = await import(pathToFileURL(path.join(web, "node_modules/vite/dist/node/index.js")).href);
 
-// Each screen with the line the review gallery (shots/index.html) shows above it.
+// Each screen with the line the review gallery (shots/gallery.html; not index.html, which the tailnet file server turns into a 404) shows above it.
 const GALLERY = [
-  ["a-overview-bard", "1 · Variante A : tout se lit d'un coup d'œil, un bouton Modifier par section"],
-  ["a-edit-proficiencies-bard", "1 · Variante A, après Modifier : l'éditeur des compétences prend la scène"],
-  ["b-tabs-proficiencies-bard", "1 · Variante B : un onglet par section, chaque onglet est son éditeur, toujours modifiable"],
-  ["points-steppers-bard", "2 · Points de talent avec − et + (par 5), dans le tableau du détail"],
-  ["points-slider-bard", "2 · Points de talent avec un curseur, sa limite et ce que les points restants permettent"],
+  ["a-overview-bard-dot", "1 · A (choisie) — à dépenser : un point rouge après le titre, sans texte"],
+  ["a-overview-bard-button", "1 · A (choisie) — à dépenser : le bouton Modifier bordé de rouge, avec un point"],
+  ["a-edit-proficiencies-bard", "1 · A, après Modifier : l'éditeur des compétences prend la scène"],
+  ["points-slider-bard", "2 · Curseur (choisi) : points de talent avec un curseur, sa limite et ce que les points restants permettent"],
 ];
 const SCREENS = GALLERY.map(([id]) => id);
 // `--fr` shoots French only (the quick loop while iterating); the default shoots both.
@@ -119,7 +118,7 @@ if (failed) {
   process.exit(1);
 }
 
-/** shots/index.html: every screen's French 1440x900 shot under its line, with links to the other
+/** shots/gallery.html: every screen's French 1440x900 shot under its line, with links to the other
  * language and size, and the "before" shots of baseline.mjs, for review from another machine. The
  * frame takes the fleet's theme (`fleet theme-css`); the shots keep the app's own colours. */
 function writeGallery() {
@@ -146,7 +145,7 @@ function writeGallery() {
     .join(" · ");
   const toc = GALLERY.map(([id]) => `<a href="#${id}">${id}</a>`).join(" ");
   writeFileSync(
-    path.join(outDir, "index.html"),
+    path.join(outDir, "gallery.html"),
     `<!doctype html><meta charset="utf-8"><title>Skills design round (CRI-407)</title>
 <style>${theme}
 body{max-width:1500px}img{width:100%;border:1px solid var(--border);border-radius:6px}
@@ -154,5 +153,5 @@ nav{position:sticky;top:0;background:var(--bg);padding:8px 0;font-size:13px}nav 
 <h1>Skills design round (CRI-407)</h1>
 <p class="small">Today's app, for comparison: ${before}</p><nav>${toc}</nav>\n${sections}\n`,
   );
-  console.log(`     ${path.relative(root, path.join(outDir, "index.html"))} (review gallery)`);
+  console.log(`     ${path.relative(root, path.join(outDir, "gallery.html"))} (review gallery)`);
 }

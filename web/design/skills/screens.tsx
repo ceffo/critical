@@ -5,7 +5,6 @@ import {
   CaretDown,
   Check,
   MagnifyingGlass,
-  Minus,
   PencilSimple,
   Plus,
   Prohibit,
@@ -56,19 +55,20 @@ function Target({ who, p }: { who: Fixture; p: NonWeapon }) {
   );
 }
 
-/** What is left: a quiet "8 / 8" when all is spent, a red "1 à dépenser" when some is left. */
-function Left({ left, unit }: { left: number; unit: [string, string] }) {
-  if (left <= 0)
-    return (
-      <span className="flex items-center gap-1 text-label text-ink-muted">
-        <Check aria-hidden className="size-3.5" />
-        {tr("tout est dépensé", "all spent")}
-      </span>
-    );
+/** How a section says it has something to spend (round 2: the user found the "1 emplacements à
+ * dépenser" pill too wordy, since the budget line already counts). Two proposals:
+ * - "dot": a small red dot after the title, no text; nothing once all is spent.
+ * - "button": no mark by the title; the section's Modifier button itself turns red-edged with a dot. */
+type Signal = "dot" | "button";
+
+function Left({ left, signal }: { left: number; signal: Signal }) {
+  if (left <= 0 || signal !== "dot") return null;
   return (
-    <span className="rounded-full bg-danger px-2 py-0.5 text-label font-semibold text-on-accent">
-      {left} {l2(unit)} {tr("à dépenser", "to spend")}
-    </span>
+    <span
+      role="img"
+      aria-label={tr("à dépenser", "to spend")}
+      className="size-2.5 shrink-0 rounded-full bg-danger"
+    />
   );
 }
 
@@ -98,12 +98,18 @@ function Card({
   );
 }
 
-const Edit = () => (
-  <Button size="sm">
-    <PencilSimple aria-hidden />
-    {tr("Modifier", "Edit")}
-  </Button>
-);
+function Edit({ pending = false }: { pending?: boolean }) {
+  return (
+    <Button size="sm" className={cn(pending && "border-danger")}>
+      {pending ? (
+        <span aria-hidden className="size-2 rounded-full bg-danger" />
+      ) : (
+        <PencilSimple aria-hidden />
+      )}
+      {tr("Modifier", "Edit")}
+    </Button>
+  );
+}
 
 /** The slot line: "Emplacements 7 / 8 · 3 au départ + …". */
 function Budget({
@@ -133,12 +139,12 @@ const POINTS: [string, string] = ["points", "points"];
 
 // ---------- read views ----------
 
-function WeaponsRead({ who, action }: { who: Fixture; action?: ReactNode }) {
+function WeaponsRead({ who, action, signal }: { who: Fixture; action?: ReactNode; signal: Signal }) {
   const left = who.weaponSlots.available - spentWeapon(who);
   return (
     <Card
       title={tr("Maîtrises d'armes", "Weapon proficiencies")}
-      aside={<Left left={left} unit={SLOTS} />}
+      aside={<Left left={left} signal={signal} />}
       action={action}
     >
       <Budget
@@ -176,16 +182,18 @@ function ProficienciesRead({
   who,
   action,
   className,
+  signal,
 }: {
   who: Fixture;
   action?: ReactNode;
   className?: string;
+  signal: Signal;
 }) {
   const left = who.nonWeaponSlots.available - spentNonWeapon(who);
   return (
     <Card
       title={tr("Compétences et langues", "Proficiencies and languages")}
-      aside={<Left left={left} unit={SLOTS} />}
+      aside={<Left left={left} signal={signal} />}
       action={action}
       className={className}
     >
@@ -237,10 +245,9 @@ function SkillTable({
   className,
 }: {
   set: SkillSet;
-  edit?: "steppers" | "slider";
+  edit?: "slider";
   className?: string;
 }) {
-  const left = set.available - spentPoints(set);
   const th = "px-2 py-1 text-right font-medium text-label text-ink-muted";
   const td = "px-2 py-1.5 text-right tabular-nums";
   return (
@@ -266,9 +273,7 @@ function SkillTable({
             </td>
             <td className={td}>{s.base}</td>
             <td className={cn(td, edit && "w-[1%] text-center")}>
-              {edit === "steppers" ? (
-                <Stepper value={s.points} canAdd={left > 0} />
-              ) : edit === "slider" ? (
+              {edit === "slider" ? (
                 <Slider skill={s} set={set} />
               ) : (
                 s.points
@@ -287,12 +292,12 @@ function SkillTable({
   );
 }
 
-function SkillsRead({ set, action }: { set: SkillSet; action?: ReactNode }) {
+function SkillsRead({ set, action, signal }: { set: SkillSet; action?: ReactNode; signal: Signal }) {
   const left = set.available - spentPoints(set);
   return (
     <Card
       title={l2(set.name)}
-      aside={<Left left={left} unit={POINTS} />}
+      aside={<Left left={left} signal={signal} />}
       action={action}
     >
       <Budget
@@ -318,24 +323,6 @@ function SkillsRead({ set, action }: { set: SkillSet; action?: ReactNode }) {
 
 // ---------- controls ----------
 
-function Stepper({ value, canAdd }: { value: number; canAdd: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <Button size="icon" variant="quiet" aria-label="−5" disabled={value === 0}>
-        <Minus aria-hidden />
-      </Button>
-      <span className="flex h-7 w-11 items-center justify-center rounded-md border border-input text-body tabular-nums">
-        {value}
-      </span>
-      <Button size="icon" variant="quiet" aria-label="+5" disabled={!canAdd}>
-        <Plus aria-hidden />
-      </Button>
-    </span>
-  );
-}
-
-/** A slider over the points a skill may take: 0 to its limit (the per-skill cap, or what reaches
- * 95 %, never more than what is left). The filled part is the points; the tick is the limit. */
 function Slider({ skill, set }: { skill: RogueSkill; set: SkillSet }) {
   const left = set.available - spentPoints(set);
   const to95 = 95 - (percent(skill) - skill.points);
@@ -567,7 +554,7 @@ function ProficiencyEditor({ who, open }: { who: Fixture; open: Group[] }) {
   );
 }
 
-function PointsEditor({ set, control }: { set: SkillSet; control: "steppers" | "slider" }) {
+function PointsEditor({ set, control }: { set: SkillSet; control: "slider" }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <EditorBar
@@ -603,60 +590,26 @@ function Stage({ children }: { children: ReactNode }) {
   );
 }
 
-/** Variant A: everything read at a glance; one Edit per section turns the stage into its editor. */
-function OverviewA({ who }: { who: Fixture }) {
+/** Variant A (chosen by the user, round 2): everything read at a glance; one Edit per section turns
+ * the stage into its editor. `signal`: how a section with something to spend says so. */
+function OverviewA({ who, signal }: { who: Fixture; signal: Signal }) {
+  const edit = (left: number) => <Edit pending={signal === "button" && left > 0} />;
   return (
     <Dashboard activity="skills" who={who}>
       <Stage>
         <div className="grid grid-cols-2 items-start gap-3">
-          <ProficienciesRead who={who} action={<Edit />} className="row-span-2" />
-          <WeaponsRead who={who} action={<Edit />} />
+          <ProficienciesRead
+            who={who}
+            signal={signal}
+            action={edit(who.nonWeaponSlots.available - spentNonWeapon(who))}
+            className="row-span-2"
+          />
+          <WeaponsRead who={who} signal={signal} action={edit(who.weaponSlots.available - spentWeapon(who))} />
           {who.sets.map((s) => (
-            <SkillsRead key={s.id} set={s} action={<Edit />} />
+            <SkillsRead key={s.id} set={s} signal={signal} action={edit(s.available - spentPoints(s))} />
           ))}
         </div>
       </Stage>
-    </Dashboard>
-  );
-}
-
-/** Variant B: one tab per section, each tab its editor, always editable. */
-function TabsB({ who, tab }: { who: Fixture; tab: "proficiencies" | "points" }) {
-  const set = who.sets[0];
-  const tabs: [string, string, number, string][] = [
-    ["weapons", tr("Maîtrises d'armes", "Weapon proficiencies"), who.weaponSlots.available - spentWeapon(who), ""],
-    ["proficiencies", tr("Compétences et langues", "Proficiencies and languages"), who.nonWeaponSlots.available - spentNonWeapon(who), ""],
-    ...(set ? [["points", l2(set.name), set.available - spentPoints(set), ""] as [string, string, number, string]] : []),
-  ];
-  return (
-    <Dashboard activity="skills" who={who}>
-      <div className="zone-card flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-        <div className="flex shrink-0 gap-1 border-b border-border px-3 pt-2">
-          {tabs.map(([id, label, left]) => (
-            <span
-              key={id}
-              className={cn(
-                "flex items-center gap-2 rounded-t-md px-3 py-2 text-body",
-                id === tab ? "border-b-2 border-tint font-medium text-ink" : "text-ink-muted",
-              )}
-            >
-              {label}
-              {left > 0 && (
-                <span className="rounded-full bg-danger px-1.5 text-label font-semibold text-on-accent tabular-nums">
-                  {left}
-                </span>
-              )}
-            </span>
-          ))}
-        </div>
-        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
-          {tab === "proficiencies" ? (
-            <ProficiencyEditor who={who} open={["rogue"]} />
-          ) : (
-            <PointsEditor set={set} control="steppers" />
-          )}
-        </div>
-      </div>
     </Dashboard>
   );
 }
@@ -670,16 +623,11 @@ function EditorScreen({ who, children, lit }: { who: Fixture; children: ReactNod
 }
 
 export const SCREENS: Record<string, () => ReactNode> = {
-  "a-overview-bard": () => <OverviewA who={BARD} />,
+  "a-overview-bard-dot": () => <OverviewA who={BARD} signal="dot" />,
+  "a-overview-bard-button": () => <OverviewA who={BARD} signal="button" />,
   "a-edit-proficiencies-bard": () => (
     <EditorScreen who={BARD}>
       <ProficiencyEditor who={BARD} open={["rogue", "priest"]} />
-    </EditorScreen>
-  ),
-  "b-tabs-proficiencies-bard": () => <TabsB who={BARD} tab="proficiencies" />,
-  "points-steppers-bard": () => (
-    <EditorScreen who={BARD} lit={["dex"]}>
-      <PointsEditor set={BARD.sets[0]} control="steppers" />
     </EditorScreen>
   ),
   "points-slider-bard": () => (

@@ -108,6 +108,23 @@ describe("ProficiencyPicker", () => {
     expect(html).toContain("Tumbling: already chosen");
   });
 
+  // ADR 0037 step 23.4: the catalogue row's target is the server's; a creation draft with no score
+  // yet serves null and the row shows no target (no arithmetic here).
+  it("shows a catalogue row's served target, and none when the server serves null", async () => {
+    const row = (target: number | null): ProficiencySlots => ({
+      ...figures(7, 34),
+      catalogue: [
+        { id: "tumbling", cost: 5, ability: "dex", modifier: 0, target },
+        { id: "tracking", cost: 8, ability: "wis", modifier: 0, target },
+      ],
+    });
+    const served = await render(row(14), "en", { picks: [] });
+    expect(served).toContain('<b class="font-semibold">14</b>');
+    const draft = await render(row(null), "en", { picks: [] });
+    expect(draft).not.toContain('<b class="font-semibold">');
+    expect(draft).not.toContain("→");
+  });
+
   it("warns of an overspend with the server's figures, in French", async () => {
     const html = await render(figures(-2, 43), "fr");
     expect(html).toContain(

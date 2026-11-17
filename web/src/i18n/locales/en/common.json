@@ -2455,7 +2455,7 @@
     "noLanguages": "No language.",
     "pending": "Something is left to spend",
     "classTag": "{{class}} {{level}}",
-    "nonProficient": "Not proficient: {{penalty}} to hit.",
+    "nonProficient": "Not proficient: {{penalty}} to hit",
     "talent": "Skill",
     "terms": {
       "base": "Base",

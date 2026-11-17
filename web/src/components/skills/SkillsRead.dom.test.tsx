@@ -184,9 +184,8 @@ describe("served details (ADR 0037 step 23)", () => {
     expect(screen.getByTestId("language-cost-elvish")).toHaveTextContent(
       "1 slot",
     );
-    expect(screen.getByTestId("language-cost-common")).toHaveTextContent(
-      "0 slots",
-    );
+    // A language that costs nothing shows no cost (the mock-up: native, or its slots).
+    expect(screen.queryByTestId("language-cost-common")).toBeNull();
   });
   it("tags a skill set with its class", async () => {
     await renderApp(

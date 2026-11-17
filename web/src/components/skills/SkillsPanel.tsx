@@ -86,9 +86,10 @@ export function SkillsPanel() {
   const entries = character?.classes;
   const className = (code: string) =>
     t(`details.classes.${code}`, { defaultValue: code });
-  // The tag names the entries the server counted each pool on; shown only for a multi-class
-  // character (a display choice, no rule: the server decides which entries).
-  const multi = (entries ?? []).filter((e) => e.state === "active").length >= 2;
+  // The tag names the entries the server counted each pool on (a frozen entry is not one); shown
+  // only for a character with several class entries, a multi-class or a dual-class one (a display
+  // choice, no rule: the server decides which entries).
+  const multi = (entries ?? []).length >= 2;
   const tagOf = (refs: ClassRef[] | undefined) =>
     multi && refs && refs.length > 0
       ? refs

@@ -2455,7 +2455,7 @@
     "noLanguages": "Aucune langue.",
     "pending": "Il reste à dépenser",
     "classTag": "{{class}} {{level}}",
-    "nonProficient": "Sans maîtrise : {{penalty}} au toucher.",
+    "nonProficient": "Sans maîtrise {{penalty}} au toucher",
     "talent": "Talent",
     "terms": {
       "base": "Base",

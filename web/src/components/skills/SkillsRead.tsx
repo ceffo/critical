@@ -247,7 +247,7 @@ export function ProficienciesRead({
                     {t("skillsActivity.native")}
                   </span>
                 ) : (
-                  cost[code] !== undefined && (
+                  cost[code] > 0 && (
                     <span
                       className="ml-1.5 text-label text-ink-muted"
                       data-testid={`language-cost-${code}`}

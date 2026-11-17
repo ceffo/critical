@@ -111,6 +111,37 @@ describe("SkillsPanel", () => {
     );
   });
 
+  it("tags a dual-class character's active pool entries only, and the set of a frozen grant", async () => {
+    const c = owner(true);
+    c.classes = [
+      { class: "fighter", level: 7, state: "frozen" },
+      { class: "mage", level: 5, state: "active" },
+    ] as never;
+    Object.assign(c.derived!.proficiencySlots!, {
+      weaponClasses: [{ class: "mage", level: 5 }],
+      nonWeaponClasses: [{ class: "mage", level: 5 }],
+    });
+    useCharacterStore.setState({ character: c });
+    useSkillsStore.setState({
+      skills: {
+        proficiencies: [],
+        skillSets: [
+          { ...set("fighter_set", 1), class: { class: "fighter", level: 7 } },
+        ],
+      } as unknown as Skills,
+    });
+    await renderApp(<SkillsPanel />);
+    expect(screen.getByTestId("skills-weapon-tag")).toHaveTextContent(
+      /^mage 5$/i,
+    );
+    expect(screen.getByTestId("skills-nonWeapon-tag")).toHaveTextContent(
+      /^mage 5$/i,
+    );
+    expect(
+      screen.getByTestId("skills-points-fighter_set-tag"),
+    ).toHaveTextContent(/fighter 7$/i);
+  });
+
   it("leaves the tags out for a single class", async () => {
     const c = owner(true);
     Object.assign(c.derived!.proficiencySlots!, {

@@ -78,7 +78,8 @@ func kelsenPicks(t *testing.T, level int) *skills.ProficiencySlots {
 		return skills.WeaponPickFigures{Code: code, Slots: 1, Allowed: true}
 	}
 	// ADR 0037 step 8: Table 34's penalty for the rogue group.
-	return &skills.ProficiencySlots{Nonweapon: pool, Weapon: weapon, Penalty: -3, WeaponClasses: []skills.ClassRef{{Class: "bard", Level: level}}, NonweaponClasses: []skills.ClassRef{{Class: "bard", Level: level}},
+	return &skills.ProficiencySlots{
+		Nonweapon: pool, Weapon: weapon, Penalty: -3, WeaponClasses: []skills.ClassRef{{Class: "bard", Level: level}}, NonweaponClasses: []skills.ClassRef{{Class: "bard", Level: level}},
 		LanguageCosts: []skills.LanguageCost{{Code: "common"}}, Groups: []string{"rogue", "warrior", "wizard", "general"}, Picks: []skills.PickFigures{
 			free("musical_instrument", "dex", -1, 16), pick("tumbling", "dex", 0, 17), pick("ventriloquism", "int", -2, 12),
 			pick("riding_land", "wis", 3, 11), pick("appraising", "int", 0, 14), free("singing", "cha", 0, 16),
@@ -93,7 +94,8 @@ func kelsenPicks(t *testing.T, level int) *skills.ProficiencySlots {
 				out = append(out, skills.WeaponFigure{Code: w.Code})
 			}
 			return out
-		}()}
+		}(),
+	}
 }
 
 // ADR 0030 steps 3, 5, 6, 7 and 8 over the fixture's tables (the books'

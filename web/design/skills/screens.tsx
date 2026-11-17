@@ -120,7 +120,8 @@ function Budget({
       <b className="text-ink tabular-nums">
         {spent} / {available}
       </b>{" "}
-      {l2(unit)} · {l2(formula)}
+      {l2(unit)}
+      {l2(formula) && ` · ${l2(formula)}`}
     </p>
   );
 }
@@ -131,10 +132,11 @@ const POINTS: [string, string] = ["points", "points"];
 
 // ---------- read views ----------
 
-function WeaponsRead({ who, action }: { who: Fixture; action?: ReactNode }) {
+function WeaponsRead({ who, action, aside }: { who: Fixture; action?: ReactNode; aside?: ReactNode }) {
   return (
     <Card
       title={tr("Maîtrises d'armes", "Weapon proficiencies")}
+      aside={aside}
       action={action}
     >
       <Budget
@@ -171,15 +173,18 @@ function WeaponsRead({ who, action }: { who: Fixture; action?: ReactNode }) {
 function ProficienciesRead({
   who,
   action,
+  aside,
   className,
 }: {
   who: Fixture;
   action?: ReactNode;
+  aside?: ReactNode;
   className?: string;
 }) {
   return (
     <Card
       title={tr("Compétences et langues", "Proficiencies and languages")}
+      aside={aside}
       action={action}
       className={className}
     >
@@ -278,10 +283,11 @@ function SkillTable({
   );
 }
 
-function SkillsRead({ set, action }: { set: SkillSet; action?: ReactNode }) {
+function SkillsRead({ set, action, aside }: { set: SkillSet; action?: ReactNode; aside?: ReactNode }) {
   return (
     <Card
       title={l2(set.name)}
+      aside={aside}
       action={action}
     >
       <Budget
@@ -748,6 +754,69 @@ function OverviewA({ who }: { who: Fixture }) {
   );
 }
 
+/** Multi-class, variant "tag" (decision 8): a short class tag by each title; the budget line keeps
+ * the total and the detailed formula moves to the editor. */
+const MULTI_TAGGED: Fixture = {
+  ...MULTI,
+  weaponSlots: { ...MULTI.weaponSlots, formula: ["", ""] },
+  nonWeaponSlots: { ...MULTI.nonWeaponSlots, formula: ["", ""] },
+  sets: MULTI.sets.map((s) => ({ ...s, formula: ["", ""] as [string, string] })),
+};
+
+function ClassTag({ children }: { children: ReactNode }) {
+  return <span className="chip px-2 py-0.5 text-label text-ink-muted">{children}</span>;
+}
+
+function MultiTagged() {
+  const who = MULTI_TAGGED;
+  const tag = (fr: string, en: string) => <ClassTag>{tr(fr, en)}</ClassTag>;
+  return (
+    <Dashboard activity="skills" who={who}>
+      <Stage>
+        <div className="grid grid-cols-2 items-start gap-3">
+          <ProficienciesRead
+            who={who}
+            aside={tag("Guerrier 4 + Voleur 5", "Fighter 4 + Thief 5")}
+            action={<Edit pending />}
+            className="row-span-2"
+          />
+          <WeaponsRead who={who} aside={tag("Guerrier 4", "Fighter 4")} action={<Edit pending />} />
+          {who.sets.map((s) => (
+            <SkillsRead key={s.id} set={s} aside={tag("Voleur 5", "Thief 5")} action={<Edit pending />} />
+          ))}
+        </div>
+      </Stage>
+    </Dashboard>
+  );
+}
+
+/** Multi-class, variant "by class" (decision 8): one heading per class over what it gives; what both
+ * give together (proficiencies) under a shared heading. */
+function MultiByClass() {
+  const who = MULTI;
+  const head = (t: string) => <h3 className="text-title px-1">{t}</h3>;
+  return (
+    <Dashboard activity="skills" who={who}>
+      <Stage>
+        <div className="grid grid-cols-2 items-start gap-3">
+          <div className="flex flex-col gap-2">
+            {head(tr("Guerrier 4 et Voleur 5", "Fighter 4 and Thief 5"))}
+            <ProficienciesRead who={who} action={<Edit pending />} />
+          </div>
+          <div className="flex flex-col gap-2">
+            {head(tr("Guerrier 4", "Fighter 4"))}
+            <WeaponsRead who={who} action={<Edit pending />} />
+            {head(tr("Voleur 5", "Thief 5"))}
+            {who.sets.map((s) => (
+              <SkillsRead key={s.id} set={s} action={<Edit pending />} />
+            ))}
+          </div>
+        </div>
+      </Stage>
+    </Dashboard>
+  );
+}
+
 function EditorScreen({ who, children, lit }: { who: Fixture; children: ReactNode; lit?: Parameters<typeof Dashboard>[0]["lit"] }) {
   return (
     <Dashboard activity="skills" who={who} lit={lit}>
@@ -761,6 +830,8 @@ export const SCREENS: Record<string, () => ReactNode> = {
   "a-overview-thief": () => <OverviewA who={THIEF} />,
   "a-overview-fighter": () => <OverviewA who={FIGHTER} />,
   "a-overview-multi": () => <OverviewA who={MULTI} />,
+  "a-overview-multi-tag": () => <MultiTagged />,
+  "a-overview-multi-byclass": () => <MultiByClass />,
   "a-edit-proficiencies-bard": () => (
     <EditorScreen who={BARD}>
       <ProficiencyEditor who={BARD} open={["rogue", "priest"]} />

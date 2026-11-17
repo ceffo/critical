@@ -197,14 +197,10 @@ describe("SkillsTab budget and terms", () => {
     )?.[1];
     expect(terms).toBeDefined();
     expect(
-      terms
-        ?.match(/<dt[^>]*>([^<]*)<\/dt>/g)
-        ?.map((h) => h.replace(/<[^>]*>/g, "")),
+      [...(terms ?? "").matchAll(/<dt[^>]*>([^<]*)<\/dt>/g)].map((m) => m[1]),
     ).toEqual(["Base", "Points", "Race", "Dexterity", "Armour"]);
     expect(
-      terms
-        ?.match(/<dd[^>]*>([^<]*)<\/dd>/g)
-        ?.map((h) => h.replace(/<[^>]*>/g, "")),
+      [...(terms ?? "").matchAll(/<dd[^>]*>([^<]*)<\/dd>/g)].map((m) => m[1]),
     ).toEqual(["10", "5", "+5", "−5", "0"]);
     expect(html).toMatch(/skill-limit-climb_walls">capped at 95%/);
     expect(html).toMatch(/skill-limit-read_languages">floored at 0%/);

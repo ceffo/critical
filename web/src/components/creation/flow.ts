@@ -36,6 +36,7 @@ export const STEPS = [
   "scores",
   "extras",
   "proficiencies",
+  "skillPoints",
   "spellbook",
   "psionics",
   "identity",
@@ -55,12 +56,14 @@ export function hasPsionics(answer: CreationDraft | null): boolean {
   return Boolean(answer?.psionicsClass);
 }
 
-/** The steps the draft goes through, in order: the spellbook step only when the draft's answer has a
+/** The steps the draft goes through, in order: the skill points step only when the draft's answer
+ * lists a skill set (ADR 0040 step 3.5), the spellbook step only when the draft's answer has a
  * class carrying a spellbook (ADR 0030 step 20.7), the psionics step only when it has one listing
  * psionics (ADR 0043); before the answer, the steps without them. */
 export function stepsFor(answer: CreationDraft | null): StepId[] {
   return STEPS.filter(
     (s) =>
+      (s !== "skillPoints" || skillSetsOf(answer).length > 0) &&
       (s !== "spellbook" || hasSpellbook(answer)) &&
       (s !== "psionics" || hasPsionics(answer)),
   );
@@ -107,13 +110,9 @@ export function stepOfField(field: string): StepId {
   if (field.startsWith("classes.")) return "class";
   if (field === "race") return "race";
   if ((ABILITIES as readonly string[]).includes(field)) return "scores";
-  if (
-    field === "hpMax" ||
-    field === "strExceptional" ||
-    field === "skillPoints" ||
-    field.startsWith("skillPoints.")
-  )
-    return "extras";
+  if (field === "hpMax" || field === "strExceptional") return "extras";
+  if (field === "skillPoints" || field.startsWith("skillPoints."))
+    return "skillPoints";
   // The languages are the proficiency step's (ADR 0037 step 18), though the body still carries them
   // under the details.
   if (

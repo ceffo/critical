@@ -17,6 +17,7 @@ import {
   type StepId,
   type StepProps,
 } from "./flow";
+import { localized } from "@/i18n/localized";
 import { useSpellName } from "@/i18n/spellName";
 import { heightField, unitsFor, weightField } from "@/lib/measures";
 import { replyGate } from "@/lib/replyGate";
@@ -541,7 +542,7 @@ function Dl({ rows }: { rows: [string, ReactNode, string?][] }) {
  */
 export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
   const { options, draft, answer, refusals, body, go, xp, wording } = props;
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const name = useLanguageNames(options);
   const show = useShow();
   const warnings = useReviewWarnings(props);
@@ -557,6 +558,9 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
   const details = body?.details;
   // A new character enters points in each skill set its classes grant.
   const skillSets = d?.skillSets ?? [];
+  const setNames = skillSets
+    .map((set) => localized(i18n.language, set.name) || set.set)
+    .join(" / ");
   const warnedField = (f: string) => read?.warnings.some((w) => w.field === f);
   const fromRoll =
     draft.hpRoll && draft.hpMax.trim() === String(draft.hpRoll.total)
@@ -656,19 +660,6 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
                   : (body?.hpMax ?? dash),
                 "review-hp",
               ],
-              ...skillSets.flatMap((set) =>
-                set.skills.map(
-                  (s) =>
-                    [
-                      skillName(t, s.skill),
-                      t("creation.review.skillWithPoints", {
-                        percent: s.percent,
-                        count: body?.skillPoints?.[set.set]?.[s.skill] ?? 0,
-                      }),
-                      `review-skill-${set.set}-${s.skill}`,
-                    ] as [string, ReactNode, string],
-                ),
-              ),
             ]}
           />
         </ReviewBlock>
@@ -694,6 +685,29 @@ export function ReviewStep(props: StepProps & { go: (s: StepId) => void }) {
             ]}
           />
         </ReviewBlock>
+        {skillSets.length > 0 && (
+          <ReviewBlock
+            title={t("creation.skillPoints.name", { className: setNames })}
+            step="skillPoints"
+            go={go}
+          >
+            <Dl
+              rows={skillSets.flatMap((set) =>
+                set.skills.map(
+                  (s) =>
+                    [
+                      skillName(t, s.skill),
+                      t("creation.review.skillWithPoints", {
+                        percent: s.percent,
+                        count: body?.skillPoints?.[set.set]?.[s.skill] ?? 0,
+                      }),
+                      `review-skill-${set.set}-${s.skill}`,
+                    ] as [string, ReactNode, string],
+                ),
+              )}
+            />
+          </ReviewBlock>
+        )}
         {hasSpellbook(answer.latest) && (
           <ReviewBlock
             title={t("creation.spellbook.name")}

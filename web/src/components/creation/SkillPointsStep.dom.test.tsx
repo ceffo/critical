@@ -3,7 +3,7 @@ import { screen, within } from "@testing-library/react";
 import { renderApp } from "@/test/render";
 import type { CreationDraft, CreationOptions } from "@/types/character";
 import { EMPTY_DRAFT, type StepProps } from "./flow";
-import { ExtrasStep } from "./steps";
+import { SkillPointsStep } from "./skillPoints";
 
 // No fixture class grants two skill sets, so the draft answer is built here (ADR 0040 step 3.5).
 const set = (code: string, skills: string[]) => ({
@@ -22,7 +22,7 @@ const answer = {
 function props(over: Partial<StepProps> = {}): StepProps {
   return {
     options: {
-      hpMax: { min: 1, max: 100 },
+      skillPoints: { min: 0, max: 95 },
     } as unknown as CreationOptions,
     draft: { ...EMPTY_DRAFT, cls: "thief" },
     update: vi.fn(),
@@ -39,58 +39,53 @@ function props(over: Partial<StepProps> = {}): StepProps {
   };
 }
 
-describe("ExtrasStep with two skill sets", () => {
-  it("shows one block per set, the shared skill in each under its own field", async () => {
-    await renderApp(<ExtrasStep {...props()} />);
+describe("SkillPointsStep with two skill sets", () => {
+  it("shows one board per set, the shared skill in each under its own slider", async () => {
+    await renderApp(<SkillPointsStep {...props()} />);
     const thief = screen.getByTestId("thief-skills-entry");
     const bard = screen.getByTestId("bard-skills-entry");
-    expect(within(thief).getAllByRole("textbox")).toHaveLength(2);
+    // One slider and one typed box per skill.
+    expect(within(thief).getAllByRole("slider")).toHaveLength(2);
     expect(within(bard).getAllByRole("textbox")).toHaveLength(2);
-    expect(
-      thief.querySelector("#new-character-skillPoints\\.thief\\.pick_pockets"),
-    ).not.toBeNull();
-    expect(
-      bard.querySelector("#new-character-skillPoints\\.bard\\.pick_pockets"),
-    ).not.toBeNull();
+    expect(thief.querySelector("#thief-points-pick_pockets")).not.toBeNull();
+    expect(bard.querySelector("#bard-points-pick_pockets")).not.toBeNull();
   });
 
-  it("types into the set it belongs to and shows a refusal in that set's block only", async () => {
+  it("types into the set it belongs to and shows a refusal beside its skill only", async () => {
     const update = vi.fn();
     const { user } = await renderApp(
-      <ExtrasStep
+      <SkillPointsStep
         {...props({
           update,
           errorFor: (f) =>
-            f === "skillPoints.bard" ? "over the bard budget" : null,
+            f === "skillPoints.bard.pick_pockets" ? "over the limit" : null,
         })}
       />,
     );
     const bard = screen.getByTestId("bard-skills-entry");
-    expect(within(bard).getByRole("alert")).toHaveTextContent(
-      "over the bard budget",
-    );
+    expect(within(bard).getByRole("alert")).toHaveTextContent("over the limit");
     expect(
       within(screen.getByTestId("thief-skills-entry")).queryByRole("alert"),
     ).toBeNull();
-    await user.type(
-      bard.querySelector<HTMLInputElement>(
-        "#new-character-skillPoints\\.bard\\.pick_pockets",
-      )!,
-      "5",
-    );
+    await user.type(within(bard).getAllByRole("textbox")[0]!, "5");
     expect(update).toHaveBeenLastCalledWith({
       skillPoints: { bard: { pick_pockets: "5" } },
     });
   });
 
-  it("shows a refusal on a set the draft does not list on the step", async () => {
+  it("shows a refusal of the set itself under its board", async () => {
     await renderApp(
-      <ExtrasStep
+      <SkillPointsStep
         {...props({
-          refusals: [{ field: "skillPoints.fence", code: "not_allowed" }],
+          errorFor: (f) =>
+            f === "skillPoints.bard" ? "over the bard budget" : null,
         })}
       />,
     );
-    expect(screen.getByText("worded skillPoints.fence")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("bard-skills-entry")).getByText(
+        "over the bard budget",
+      ),
+    ).toBeInTheDocument();
   });
 });

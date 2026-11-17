@@ -914,11 +914,11 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
     // A level 15 bard's budget (20 + 15 × 14 = 230) and its editor wrap uncut in French.
     await openSpend(page, "skillPoints");
     const pointsEditor = page.getByTestId("thief-points-editor");
-    await expect(
-      pointsEditor.getByTestId("skill-points-available"),
-    ).toContainText("Disponibles : 20 + 15 × 14 = 230 (niveau 15)");
+    await expect(pointsEditor.getByTestId("skill-points-terms")).toContainText(
+      "20 + 15 × 14 = 230 (niveau 15)",
+    );
     await expectNoClippedText(
-      pointsEditor.getByTestId("skill-points-budget"),
+      pointsEditor.getByTestId("pool-bar"),
       `bard budget, ${where}`,
     );
     await expectNoClippedText(pointsEditor, `bard points editor, ${where}`);
@@ -4489,12 +4489,7 @@ async function creationStep(page: Page, size: Viewport) {
     await expect(step.getByTestId("hp-roll").locator("tbody tr")).toHaveCount(
       6,
     );
-    for (const [label, points] of [
-      [tr("Escalade", "Climb walls"), "25"],
-      [tr("Détection des bruits", "Detect noise"), "20"],
-    ] as const)
-      await step.getByLabel(label).fill(points);
-    await audit("4-hp-skills");
+    await audit("4-hp");
     await next.click();
     // ADR 0037 step 14: a pick of the bard's groups with an extra slot, and Healing outside them
     // (priest only: the server's cost of 3), within any rolled Intelligence's budget.
@@ -4543,6 +4538,20 @@ async function creationStep(page: Page, size: Viewport) {
       await page.setViewportSize(sizes[0]!);
     }
     await next.click();
+    // The skill points step (ADR 0034): the bard's skills with a slider and a typed box each.
+    await expect(step).toHaveAttribute("data-step", "skillPoints");
+    for (const [label, points] of [
+      [tr("Escalade", "Climb walls"), "25"],
+      [tr("Détection des bruits", "Detect noise"), "20"],
+    ] as const)
+      await step
+        .getByLabel(tr(`Points en ${label}`, `Points in ${label}`), {
+          exact: true,
+        })
+        .fill(points);
+    await expect(step.getByTestId("skill-points-left")).toBeVisible();
+    await audit("4c-skill-points");
+    await next.click();
     // ADR 0030 step 20.7: the bard's starting spellbook at level 5 (PHB Table 32: 1st and 2nd
     // level), nothing pre-ticked; a spell of each level, the counts per level against Table 4.
     await expect(step).toHaveAttribute("data-step", "spellbook");
@@ -4558,7 +4567,7 @@ async function creationStep(page: Page, size: Viewport) {
         .getByTestId("spellbook-level-2")
         .getByTestId("spellbook-level-count"),
     ).toHaveText(/^1 /);
-    await audit("4c-spellbook");
+    await audit("4d-spellbook");
     await next.click();
     await step
       .getByLabel(tr("Nom", "Name"), { exact: true })
@@ -4589,6 +4598,14 @@ async function creationStep(page: Page, size: Viewport) {
         ),
       })
       .click();
+    await expect(step).toHaveAttribute("data-step", "skillPoints");
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
     await expect(step).toHaveAttribute("data-step", "proficiencies");
     await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
     const chips = step.getByTestId("language-chips").getByRole("checkbox");
@@ -4612,6 +4629,8 @@ async function creationStep(page: Page, size: Viewport) {
         );
       }
     await page.setViewportSize(sizes[0]!);
+    await next.click();
+    await expect(step).toHaveAttribute("data-step", "skillPoints");
     await next.click();
     await expect(step).toHaveAttribute("data-step", "spellbook");
     await next.click();
@@ -4647,12 +4666,17 @@ async function creationStep(page: Page, size: Viewport) {
         ),
       })
       .click();
+    await step
+      .getByRole("button", {
+        name: new RegExp(
+          `^${tr("Revenir à l'étape précédente", "Back to the previous step")}`,
+        ),
+      })
+      .click();
     await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     await expect(languagesError).toHaveCount(0);
-    await next.click();
-    await next.click();
-    await next.click();
+    for (let i = 0; i < 4; i++) await next.click();
     await expect(step.getByTestId("review-thac0")).toHaveText(/^\d+$/);
     // The review lists the proficiencies the step picked and the summary beside it is gone: no
     // fact shows twice.
@@ -4671,11 +4695,11 @@ async function creationStep(page: Page, size: Viewport) {
     await audit("6-review");
 
     if (lang === "fr") {
-      // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie et talents".
-      for (let i = 0; i < 4; i++)
+      // A refusal opens its step: max HP 0 is out of range, shown on "Points de vie".
+      for (let i = 0; i < 5; i++)
         await step.getByRole("button", { name: /^Revenir/ }).click();
       await step.getByLabel("PV max").fill("0");
-      for (let i = 0; i < 4; i++) await next.click();
+      for (let i = 0; i < 5; i++) await next.click();
       await step
         .getByRole("button", { name: "Créer ce personnage et le jouer" })
         .click();
@@ -5617,7 +5641,7 @@ async function thiefStep(page: Page, size: Viewport) {
   await page.setViewportSize(size);
   await openDashboard(page);
   await chooseLanguage(page, "fr");
-  // The creation route's "Points de vie et talents" step of a thief; leaving it accepts the
+  // The creation route's "Talents de voleur" step of a thief; leaving it accepts the
   // browser's beforeunload question.
   page.on("dialog", (d) => void d.accept());
   await page.goto("/create");
@@ -5662,13 +5686,24 @@ async function thiefStep(page: Page, size: Viewport) {
   await next.click();
   await next.click();
   await next.click();
-  // 1st level: 60 points in all, 30 in one skill; the budget shows what is left as points are entered.
+  // The skill points are their own step after the proficiencies (ADR 0034): the hit points first.
+  await step.getByLabel("PV max").fill("5");
+  await next.click();
+  await next.click();
+  await expect(step).toHaveAttribute("data-step", "skillPoints");
+  // 1st level: 60 points in all, 30 in one skill; the bar shows what is left as points are entered.
   const entry = step.getByTestId("thief-skills-entry");
-  const budget = entry.getByTestId("skill-budget");
-  await expect(budget).toContainText("Budget du niveau 1 : 60 points");
-  await expect(budget).toContainText("Restants : 60");
+  const left = entry.getByTestId("skill-points-left");
+  const points = (skill: string) =>
+    entry.getByLabel(`Points en ${skill}`, { exact: true });
+  await expect(left).toHaveText("60");
+  await expect(entry.getByTestId("skill-points-terms")).toContainText(
+    "(niveau 1)",
+  );
   // The budget reads the class and level only: a Strength of 2, which the scores step lets
   // through, leaves it shown.
+  await back.click();
+  await back.click();
   await back.click();
   const badScore = page.waitForResponse(
     (r) =>
@@ -5677,57 +5712,64 @@ async function thiefStep(page: Page, size: Viewport) {
   );
   await step.getByLabel("FOR", { exact: true }).fill("2");
   await next.click();
+  await next.click();
+  await next.click();
   await badScore;
-  await expect(budget).toContainText("Budget du niveau 1 : 60 points");
+  await expect(left).toHaveText("60");
+  await back.click();
+  await back.click();
   await back.click();
   await step.getByLabel("FOR", { exact: true }).fill("12");
-  await next.click();
-  await entry.getByLabel("Crochetage").fill("25");
-  await expect(budget).toContainText("Restants : 35");
-  await entry.getByLabel("Crochetage").fill("");
-  await expect(budget).toContainText("Restants : 60");
-  // Over budget: 90 points in a 60-point level shows a negative balance in red.
-  for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
-    await entry.getByLabel(skill).fill("30");
-  await expect(budget).toContainText("Restants : -30");
-  await expect(budget.locator("[data-over]")).toHaveCount(1);
-  await snap(page, "thief-form-over-budget-fr");
-  // The server refuses to create a thief over the budget (ADR 0037 step 10): the draft's answer
-  // lists the refusal, shown once the draft is seen past the proficiency step, and back on this
-  // step the message shows under the points.
-  await step.getByLabel("PV max").fill("5");
+  for (let i = 0; i < 3; i++) await next.click();
+  await points("Crochetage").fill("25");
+  await expect(left).toHaveText("35");
+  await points("Crochetage").fill("");
+  await expect(left).toHaveText("60");
+  // The slider moves the same points: End goes to the skill's limit, the arrows by 1.
+  const slider = entry.getByRole("slider", { name: /Crochetage/ });
+  await slider.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect(points("Crochetage")).toHaveValue("1");
+  await page.keyboard.press("PageUp");
+  await expect(points("Crochetage")).toHaveValue("6");
+  await page.keyboard.press("End");
+  await expect(points("Crochetage")).toHaveValue("30");
+  await expect(left).toHaveText("30");
+  await points("Crochetage").fill("");
+  // Over budget: 90 points in a 60-point level shows a negative balance in red; the server
+  // refuses the draft (ADR 0037 step 10), the message shows under the points.
   const refused = page.waitForResponse(
     async (r) =>
       r.url().endsWith("/api/characters/draft") &&
       (await r.text()).includes('"over_budget"'),
   );
-  await next.click();
-  await next.click();
+  for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
+    await points(skill).fill("30");
+  await expect(left).toHaveText("-30");
+  await expect(entry.locator("[data-over]")).toHaveCount(1);
+  await snap(page, "thief-form-over-budget-fr");
   await refused;
-  await back.click();
-  await back.click();
   const overBudget = step.getByText("Budget dépassé : 90 pour 60 disponibles.");
   await expect(overBudget).toBeVisible();
   await expectNoClippedText(entry, "thief creation over budget, fr, 1280x800");
   await snap(page, "thief-form-refused-over-budget-fr");
   for (const skill of ["Crochetage", "Escalade", "Vol à la tire"])
-    await entry.getByLabel(skill).fill("");
-  await expect(budget).toContainText("Restants : 60");
-  // The figures follow the draft's class: a fighter has no budget, back to the thief it is again 60.
+    await points(skill).fill("");
+  await expect(left).toHaveText("60");
+  // The figures follow the draft's class: a fighter has no skill points step, back to the thief it
+  // is again 60.
   const goBack = async () => {
-    for (let i = 0; i < 3; i++) await back.click();
-  };
-  const goOn = async () => {
-    for (let i = 0; i < 3; i++) await next.click();
+    for (let i = 0; i < 5; i++) await back.click();
   };
   await goBack();
   await step.getByRole("radio", { name: "Guerrier", exact: true }).click();
-  await goOn();
-  await expect(step.getByTestId("skill-budget")).toHaveCount(0);
-  await goBack();
+  for (let i = 0; i < 4; i++) await next.click();
+  await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await expect(page.getByTestId("creation-steps")).not.toContainText("Talents");
+  for (let i = 0; i < 4; i++) await back.click();
   await step.getByRole("radio", { name: "Voleur", exact: true }).click();
-  await goOn();
-  await expect(step.getByTestId("skill-budget")).toContainText("Restants : 60");
+  for (let i = 0; i < 5; i++) await next.click();
+  await expect(step.getByTestId("skill-points-left")).toHaveText("60");
   for (const vp of sizesAt(size, [
     { width: 1280, height: 800 },
     { width: 1920, height: 1080 },
@@ -5872,11 +5914,12 @@ async function thiefStep(page: Page, size: Viewport) {
   // (ADR 0027 step 2): the server's figures, nothing computed here.
   await openSpend(page, "skillPoints");
   const editor = page.getByTestId("thief-points-editor");
-  await expect(editor.getByTestId("skill-points-available")).toContainText(
-    "Disponibles : 60 + 30 × 0 = 60",
+  await expect(editor.getByTestId("skill-points-terms")).toContainText(
+    "60 + 30 × 0 = 60",
   );
   // Over budget (70 of 60): left is negative, in the warning colour, no refusal.
-  await expect(editor.getByTestId("skill-points-left")).toHaveAttribute(
+  await expect(editor.getByTestId("skill-points-left")).toHaveText("-10");
+  await expect(editor.getByTestId("skill-points-over")).toHaveAttribute(
     "data-over",
     "true",
   );

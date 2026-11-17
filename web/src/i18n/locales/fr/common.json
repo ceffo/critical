@@ -2587,7 +2587,13 @@
     "pointsRefused": "Ces points ont été refusés.",
     "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser",
     "blocked": "{{name}} : bloquée par l’armure portée",
-    "blockedTag": "Bloquée"
+    "blockedTag": "Bloquée",
+    "leftOf_one": "point restant sur {{available}}",
+    "leftOf_other": "points restants sur {{available}}",
+    "budgetTerms": "{{formula}} (niveau {{level}}) · dépensés {{spent}}",
+    "overBudget": "Le budget est dépassé.",
+    "pointsSlider": "Curseur : {{name}}",
+    "sliderHint": "La partie pleine : les points du talent. La partie claire : jusqu’où les points restants le mènent. « / N » : sa limite. Les flèches avancent de 1, Page précédente et Page suivante de 5."
   },
   "dice": {
     "title": "Dés",
@@ -3431,9 +3437,9 @@
       "not_creatable": "Cette classe ne peut pas encore être créée."
     },
     "extras": {
-      "name": "Points de vie et talents",
-      "title": "Points de vie et talents",
-      "lead": "Ce que la classe demande en plus : les PV de chaque niveau jusqu'au niveau de départ, et les choix du {{className}}.",
+      "name": "Points de vie",
+      "title": "Points de vie",
+      "lead": "Les PV de chaque niveau jusqu'au niveau de départ.",
       "hp": "Points de vie",
       "rollHint": "Tirer les dés de vie, du niveau 1 au niveau de départ",
       "level": "Niveau",
@@ -3447,16 +3453,7 @@
       "hpNeedsCon": "Saisissez la Constitution et les XP pour tirer, ou saisissez les PV max.",
       "hpEditable": "Le tirage remplit la case ; vous pouvez la changer.",
       "hpOutdated": "La classe, le niveau ou la Constitution ont changé depuis le tirage : tirez à nouveau les points de vie.",
-      "skills": "Talents de {{className}}",
-      "budget": "Budget du niveau {{level}} : {{total}} points",
-      "budgetLeft": "Restants : {{left}}",
-      "budgetPerSkill": "Au plus {{max}} par talent",
-      "budgetFormula": "Disponibles : {{formula}}",
-      "budgetPerSkillFormula": "Par talent : {{formula}}",
-      "skill": "Talent",
-      "points": "Points",
       "percentile": "Pourcentage (18/xx)",
-      "nothingElse": "Rien d'autre à choisir pour un {{className}} : seulement ses points de vie.",
       "hpN": "PV {{hp}}"
     },
     "identity": {
@@ -3510,6 +3507,13 @@
       "tabs": "Types de compétences",
       "weaponsNone": "Ce serveur n’a pas les types d’armes de la classe : vous les choisirez plus tard dans l’onglet Compétences."
     },
+    "skillPoints": {
+      "name": "{{className}}",
+      "title": "{{className}}",
+      "lead": "Répartissez les points de talent du niveau de départ : chaque pourcentage montre ses termes, tous calculés par le serveur.",
+      "spentN_one": "{{count}} point dépensé",
+      "spentN_other": "{{count}} points dépensés"
+    },
     "spellbook": {
       "name": "Grimoire",
       "title": "Grimoire",
@@ -3560,6 +3564,16 @@
       "errors": {
         "out_of_range": "Ce maximum de PFP est refusé : saisissez un nombre entier, ou laissez la case vide pour le calcul."
       }
+    },
+    "toSpend": {
+      "title": "À dépenser",
+      "weapons_one": "{{count}} emplacement d’arme",
+      "weapons_other": "{{count}} emplacements d’armes",
+      "nonWeapons_one": "{{count}} emplacement de compétence",
+      "nonWeapons_other": "{{count}} emplacements de compétences",
+      "points_one": "{{count}} point de {{name}}",
+      "points_other": "{{count}} points de {{name}}",
+      "nothing": "Rien."
     }
   },
   "ac": {

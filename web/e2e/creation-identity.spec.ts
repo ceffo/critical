@@ -28,7 +28,7 @@ const scores = [
 async function toIdentity(
   page: Page,
   lang: "fr" | "en" = "fr",
-  extras?: (step: Locator) => Promise<void>,
+  skillPoints?: (step: Locator) => Promise<void>,
   proficiencies?: (step: Locator) => Promise<void>,
 ) {
   await openDashboard(page);
@@ -52,10 +52,13 @@ async function toIdentity(
     await step.getByLabel(tr(fr, en), { exact: true }).fill(score);
   await next.click();
   await step.getByLabel(tr("PV max", "Max HP")).fill("6");
-  await extras?.(step);
   await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await proficiencies?.(step);
+  await next.click();
+  // The bard's skill points step (ADR 0034).
+  await expect(step).toHaveAttribute("data-step", "skillPoints");
+  await skillPoints?.(step);
   await next.click();
   // The bard's starting spellbook (ADR 0030 step 20.7): left empty.
   await expect(step).toHaveAttribute("data-step", "spellbook");
@@ -68,8 +71,8 @@ test("identity and review: arrows choose, an unreadable weight blocks at its fie
   page,
 }) => {
   page.on("dialog", (d) => void d.accept());
-  const { step, next } = await toIdentity(page, "fr", async (extras) => {
-    await extras.getByLabel("Escalade").fill("15");
+  const { step, next } = await toIdentity(page, "fr", async (points) => {
+    await points.getByLabel("Points en Escalade", { exact: true }).fill("15");
   });
   const details = step.getByTestId("new-character-details");
   await details.getByLabel("Nom", { exact: true }).fill("Lyra");

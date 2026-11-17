@@ -470,13 +470,13 @@ skill-armour-rehearsal ref="":
 class-entries-rehearsal ref="":
     scripts/class-entries-rehearsal.sh {{ref}}
 
-# Local only: the skill sets migration (034, ADR 0040 step 3.5) on a database written by the release before (old
-# ref, default the parent of the commit that added 034), in a throwaway compose PostgreSQL (own project and
-# port, never `just dev`'s): the points move under their set, sheets compared, restarts, an old-release write
-# after 034 still shown, a fresh database seeded. Removes the compose project. Needs docker, psql, jq, go.
-# Rehearse the skill sets upgrade
-skill-sets-rehearsal ref="":
-    scripts/skill-sets-rehearsal.sh {{ref}}
+# Local only: the skill points drop (048, ADR 0040 step 3.5) on a database written by the release before (old
+# ref, default the parent of the commit that added 048), in a throwaway compose PostgreSQL (own project and
+# port, never `just dev`'s): the guard refuses flat points no skill set holds, then the column is dropped,
+# sheets compared, restarts, a fresh database seeded. Removes the compose project. Needs docker, psql, jq, go.
+# Rehearse the skill points drop
+skill-leftovers-rehearsal ref="":
+    scripts/skill-leftovers-rehearsal.sh {{ref}}
 
 # The AC override migration (017) on a copy of a real database: a read-only pg_dump of the source
 # (default: the main checkout's dev database) restored into a throwaway compose PostgreSQL, upgraded

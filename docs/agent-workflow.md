@@ -376,6 +376,7 @@ model actually running.
 ### Designer
 
 - Runs on Opus (see "Model selection"); building the approved design is UI work and stays on Sonnet.
+- Before the approval report, runs the full `just validate` on its committed mock-ups (they live in `web/design/` and pass the same lint and tracker-id checks as app code), so the design change ships without a fix round.
 
 ## Memory
 

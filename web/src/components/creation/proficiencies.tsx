@@ -13,7 +13,7 @@ import { classKey, draftClasses, type StepProps } from "./flow";
 
 /**
  * The creation's proficiency step (ADR 0037 step 14, ADR 0034): the weapon editor and the
- * non-weapon editor of the Skills tab on the
+ * non-weapon editor of the Skills activity on the
  * draft. The slots and each pick's figures are the draft's derived block (`POST
  * /api/characters/draft`), asked again as the picks change; Créer sends the picks and the server
  * checks them as the editor's save does (nothing picked before: a draft over budget is refused).

@@ -432,3 +432,39 @@ export const hasPending = (f: Fixture) =>
   spentWeapon(f) < f.weaponSlots.available ||
   spentNonWeapon(f) < f.nonWeaponSlots.available ||
   f.sets.some((s) => spentPoints(s) < s.available);
+
+/** A level 1 thief in creation: something left in every part. */
+export const THIEF_NEW: Fixture = {
+  ...THIEF,
+  name: "Pipin Bruyère-des-Combes",
+  classes: [{ name: ["Voleur", "Thief"], level: 1 }],
+  hp: 6,
+  hpMax: 6,
+  thac0: 20,
+  weaponSlots: { available: 2, formula: ["2 au départ (voleur)", "2 at start (thief)"], penalty: -3 },
+  weaponPicks: [{ code: "short_sword", slots: 1 }],
+  nonWeaponSlots: { available: 6, formula: ["3 au départ + 3 (INT 13)", "3 at start + 3 (INT 13)"] },
+  picks: [
+    { id: "tightrope_walking", spent: 1 },
+    { id: "disguise", spent: 1 },
+  ],
+  languages: [
+    { code: ["Commun", "Common"], native: true },
+    { code: ["Halfelin", "Halfling"], native: true },
+  ],
+  sets: [
+    {
+      ...THIEF.sets[0],
+      available: 60,
+      formula: ["60 au niveau 1", "60 at level 1"],
+      perSkillCap: 30,
+      capFormula: ["30 au niveau 1", "30 at level 1"],
+      skills: thiefSkills(
+        [15, 10, 0, 10, 5, 0, 0, 0],
+        [5, 5, 5, 10, 15, 5, -15, -5],
+        [10, 15, 5, 10, 10, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+      ),
+    },
+  ],
+};

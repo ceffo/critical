@@ -21,12 +21,15 @@ const GALLERY = [
   ["a-overview-bard", "1 · Barde : tout se lit d'un coup d'œil ; Modifier bordé de rouge là où il reste à dépenser"],
   ["a-overview-thief", "1 · Voleur : compétences, maîtrises d'armes, talents de voleur avec leur plafond par talent"],
   ["a-overview-fighter", "1 · Guerrière : pas de talents ; tout est dépensé, aucun bouton rouge"],
-  ["a-overview-multi", "8 · Multi-classé, version 1 : la formule de chaque budget détaillée par classe"],
-  ["a-overview-multi-tag", "8 · Multi-classé, version 2 : une étiquette de classe à côté du titre, la formule détaillée seulement dans l'éditeur"],
-  ["a-overview-multi-byclass", "8 · Multi-classé, version 3 : un titre par classe au-dessus de ce qu'elle donne"],
+  ["a-overview-multi", "8 · Multi-classé (choisi) : une étiquette de classe à côté du titre, la formule détaillée dans l'éditeur"],
   ["a-edit-proficiencies-bard", "1 · A, après Modifier : l'éditeur des compétences prend la scène"],
   ["a-edit-weapons-thief", "5 · Armes du voleur : recherche, familles ; dans chaque famille celles du voleur d'abord, puis les autres grisées avec la raison"],
   ["a-edit-weapons-fighter", "5 · Armes de la guerrière : toutes permises ; la spécialisation se règle sur la ligne"],
+  ["creation-separate-proficiencies-thief", "6 · Création, version « étapes séparées » : l'étape Compétences (armes, compétences en onglets)"],
+  ["creation-separate-points-thief", "6 · Création, version « étapes séparées » : l'étape Talents de voleur à part"],
+  ["creation-joined-points-thief", "6 · Création, version « étape jointe » : une étape, trois onglets (armes, compétences, talents)"],
+  ["act-skills-thief", "Agir · Compétences : les jets seulement, un bouton Gérer (bordé de rouge s'il reste à dépenser)"],
+  ["act-skills-fighter", "Agir · Compétences : rien à dépenser, Gérer normal"],
   ["points-slider-bard", "2 · Curseur (choisi) : points de talent avec un curseur, sa limite et ce que les points restants permettent"],
 ];
 const SCREENS = GALLERY.map(([id]) => id);
@@ -116,6 +119,60 @@ for (const screen of SCREENS.filter((s) => !only || only.includes(s)))
       }
       await page.close();
     }
+
+// Decision 7: the to-spend marks (the rail's dot, the red-edged Edit) in every theme and mode, with
+// their contrast against what they sit on (ADR 0026: 3:1 for a mark that carries meaning).
+const signals = [];
+if (!only || only.includes("signals")) {
+  const { DARK_THEMES, LIGHT_THEMES } = await server.ssrLoadModule("@/lib/theme");
+  const modes = [...DARK_THEMES.map((t) => [t, false]), ...LIGHT_THEMES.map((t) => [t, true])];
+  mkdirSync(path.join(outDir, "signals"), { recursive: true });
+  for (const [theme, light] of modes) {
+    const page = await browser.newPage({ viewport: VIEWPORTS[0], deviceScaleFactor: 2 });
+    await page.goto(`${base}?screen=a-overview-thief&lang=fr&theme=${theme}${light ? "&light=1" : ""}`);
+    await page.waitForSelector("body[data-ready] #root *");
+    await page.evaluate(() => document.fonts.ready);
+    const m = await page.evaluate(() => {
+      const ctx = Object.assign(document.createElement("canvas"), { width: 1, height: 1 }).getContext("2d");
+      const rgb = (c) => {
+        ctx.clearRect(0, 0, 1, 1);
+        ctx.fillStyle = "#000";
+        ctx.fillStyle = c;
+        ctx.fillRect(0, 0, 1, 1);
+        return [...ctx.getImageData(0, 0, 1, 1).data.slice(0, 3)];
+      };
+      const bgOf = (el) => {
+        for (let e = el; e; e = e.parentElement) {
+          const c = getComputedStyle(e).backgroundColor;
+          if (c && c !== "transparent" && !/rgba\(.*,\s*0\)$/.test(c)) return c;
+        }
+        return getComputedStyle(document.body).backgroundColor;
+      };
+      const lum = ([r, g, b]) => {
+        const f = (v) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+        return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+      };
+      const ratio = (a, b) => {
+        const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((p, q) => q - p);
+        return Math.round(((x + 0.05) / (y + 0.05)) * 100) / 100;
+      };
+      const dot = document.querySelector("[data-signal=rail-dot]");
+      const edit = document.querySelector("[data-signal=edit]");
+      const r1 = dot.parentElement.closest("nav").getBoundingClientRect();
+      const r2 = edit.getBoundingClientRect();
+      return {
+        dot: ratio(getComputedStyle(dot).backgroundColor, bgOf(dot.parentElement)),
+        edge: ratio(getComputedStyle(edit).borderTopColor, bgOf(edit.parentElement)),
+        clip: { x: r1.left - 8, y: r1.top - 8, width: r2.right - r1.left + 16, height: Math.max(r1.height, r2.bottom - r1.top) / 2 + 16 },
+      };
+    });
+    const file = `signals/${theme}-${light ? "light" : "dark"}.png`;
+    await page.screenshot({ path: path.join(outDir, file), clip: m.clip });
+    signals.push({ theme, light, file, dot: m.dot, edge: m.edge });
+    console.log(`ok   ${theme} ${light ? "light" : "dark"}: dot ${m.dot}:1, edge ${m.edge}:1`);
+    await page.close();
+  }
+}
 await browser.close();
 await server.close();
 writeGallery();
@@ -149,7 +206,13 @@ function writeGallery() {
   const before = ["skills", "skills-full", "act-skills"]
     .map((b) => `<a href="../baseline/${b}--fr.png">${b}</a>`)
     .join(" · ");
-  const toc = GALLERY.map(([id]) => `<a href="#${id}">${id}</a>`).join(" ");
+  const toc = GALLERY.map(([id]) => `<a href="#${id}">${id}</a>`).join(" ") + (signals.length ? ` <a href="#signals">signals</a>` : "");
+  const sheet = signals.length
+    ? `<section id="signals"><h2><a href="#signals">signals</a> — 7 · Les marques « à dépenser » dans chaque thème (point du rail, bord rouge de Modifier ; contraste visé 3:1)</h2>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px">${signals
+        .map((g) => `<figure style="margin:0"><img src="${g.file}?v=${v}" alt="${g.theme}"><figcaption class="small">${g.theme} ${g.light ? "clair" : "sombre"} · point ${g.dot}:1${g.dot < 3 ? " ⚠" : ""} · bord ${g.edge}:1${g.edge < 3 ? " ⚠" : ""}</figcaption></figure>`)
+        .join("")}</div></section>`
+    : "";
   writeFileSync(
     path.join(outDir, "gallery.html"),
     `<!doctype html><meta charset="utf-8"><title>Skills design round (CRI-407)</title>
@@ -157,7 +220,7 @@ function writeGallery() {
 body{max-width:1500px}img{width:100%;border:1px solid var(--border);border-radius:6px}
 nav{position:sticky;top:0;background:var(--bg);padding:8px 0;font-size:13px}nav a{margin-right:10px}</style>
 <h1>Skills design round (CRI-407)</h1>
-<p class="small">Today's app, for comparison: ${before}</p><nav>${toc}</nav>\n${sections}\n`,
+<p class="small">Today's app, for comparison: ${before}</p><nav>${toc}</nav>\n${sections}\n${sheet}\n`,
   );
   console.log(`     ${path.relative(root, path.join(outDir, "gallery.html"))} (review gallery)`);
 }

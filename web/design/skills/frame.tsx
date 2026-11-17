@@ -227,7 +227,7 @@ export function Rail({
           <Icon weight={a === active ? "fill" : "regular"} aria-hidden />
           <span className="max-w-full tracking-tight">{tr(fr, en)}</span>
           {a === "skills" && pill && look === "dot" && (
-            <span className="absolute top-1.5 right-2 size-2.5 rounded-full bg-danger ring-2 ring-background" />
+            <span data-signal="rail-dot" className="absolute top-1.5 right-2 size-2.5 rounded-full bg-danger ring-2 ring-background" />
           )}
           {a === "skills" && pill && look === "count" && (
             <span className="absolute top-1 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.6875rem] leading-none font-semibold text-on-accent tabular-nums ring-2 ring-background">

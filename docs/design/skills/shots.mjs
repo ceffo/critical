@@ -23,7 +23,7 @@ const GALLERY = [
   ["a-overview-fighter", "1 · Guerrière : pas de talents ; tout est dépensé, aucun bouton rouge"],
   ["a-overview-multi", "8 · Multi-classé guerrier/voleur : les budgets disent de quelle classe vient chaque part"],
   ["a-edit-proficiencies-bard", "1 · A, après Modifier : l'éditeur des compétences prend la scène"],
-  ["a-edit-weapons-thief", "5 · Armes du voleur : recherche, familles, celles de la classe d'abord, les autres non autorisées avec la raison"],
+  ["a-edit-weapons-thief", "5 · Armes du voleur : recherche, familles ; dans chaque famille celles du voleur d'abord, puis les autres grisées avec la raison"],
   ["a-edit-weapons-fighter", "5 · Armes de la guerrière : toutes permises ; la spécialisation se règle sur la ligne"],
   ["points-slider-bard", "2 · Curseur (choisi) : points de talent avec un curseur, sa limite et ce que les points restants permettent"],
 ];

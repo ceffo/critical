@@ -545,13 +545,14 @@ const mayUse = (who: Fixture) => (w: Weapon) =>
 const canSpecialize = (who: Fixture) => who.classIds.length === 1 && who.classIds[0] === "fighter";
 
 /** The weapons editor (decision 5): held weapons on the left; on the right a search and the weapons
- * by family, the class's first, then the ones the class may not take, with the reason. */
-function WeaponEditor({ who, open }: { who: Fixture; open: (Weapon["family"] | "forbidden")[] }) {
+ * by family. Within a family the class's weapons come first, then the ones it may not take, greyed
+ * with the reason (the user's choice, round 2, over one "not allowed" group at the end). A family
+ * with none of the class's weapons is a quiet band. */
+function WeaponEditor({ who, open }: { who: Fixture; open: Weapon["family"][] }) {
   const left = who.weaponSlots.available - spentWeapon(who);
   const ok = mayUse(who);
   const held = new Set(who.weaponPicks.map((p) => p.code));
   const families = Object.keys(FAMILY) as Weapon["family"][];
-  const forbidden = WEAPONS.filter((w) => !ok(w));
   const cls = l2(who.classes[0].name).toLowerCase();
   const row = (w: Weapon, allowed: boolean) => (
     <div
@@ -666,29 +667,21 @@ function WeaponEditor({ who, open }: { who: Fixture; open: (Weapon["family"] | "
           </div>
           <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1">
             {families.map((f) => {
-              const rows = WEAPONS.filter((w) => w.family === f && ok(w));
-              if (!rows.length) return null;
+              const mine = WEAPONS.filter((w) => w.family === f && ok(w));
+              const not = WEAPONS.filter((w) => w.family === f && !ok(w));
               const isOpen = open.includes(f);
+              const note = !not.length
+                ? ""
+                : !mine.length
+                  ? tr(`aucune sur la liste du ${cls}`, `none on the ${cls}'s list`)
+                  : tr(`${not.length} hors de la liste du ${cls}`, `${not.length} not on the ${cls}'s list`);
               return (
                 <section key={f} className="flex flex-col gap-1">
-                  {band(f, l2(FAMILY[f]), "", rows.length, isOpen, true)}
-                  {isOpen && rows.map((w) => row(w, true))}
+                  {band(f, l2(FAMILY[f]), note, mine.length + not.length, isOpen, mine.length > 0)}
+                  {isOpen && [...mine.map((w) => row(w, true)), ...not.map((w) => row(w, false))]}
                 </section>
               );
             })}
-            {forbidden.length > 0 && (
-              <section className="flex flex-col gap-1">
-                {band(
-                  "forbidden",
-                  tr("Non autorisées", "Not allowed"),
-                  tr(`hors de la liste du ${cls}`, `not on the ${cls}'s list`),
-                  forbidden.length,
-                  open.includes("forbidden"),
-                  false,
-                )}
-                {open.includes("forbidden") && forbidden.map((w) => row(w, false))}
-              </section>
-            )}
           </div>
         </div>
       </div>
@@ -775,7 +768,7 @@ export const SCREENS: Record<string, () => ReactNode> = {
   ),
   "a-edit-weapons-thief": () => (
     <EditorScreen who={THIEF}>
-      <WeaponEditor who={THIEF} open={["sword", "forbidden"]} />
+      <WeaponEditor who={THIEF} open={["sword", "blunt"]} />
     </EditorScreen>
   ),
   "a-edit-weapons-fighter": () => (

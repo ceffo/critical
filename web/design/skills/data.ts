@@ -9,12 +9,7 @@ import { LANG } from "./lang";
 
 export type Ability = "str" | "dex" | "con" | "int" | "wis" | "cha";
 export type Group =
-  | "general"
-  | "warrior"
-  | "priest"
-  | "rogue"
-  | "wizard"
-  | "psionicist";
+  "general" | "warrior" | "priest" | "rogue" | "wizard" | "psionicist";
 export const GROUPS: Group[] = [
   "general",
   "warrior",
@@ -66,7 +61,15 @@ export interface Weapon {
   code: string;
   fr: string;
   en: string;
-  family: "sword" | "axe" | "blunt" | "polearm" | "bow" | "crossbow" | "thrown" | "other";
+  family:
+    | "sword"
+    | "axe"
+    | "blunt"
+    | "polearm"
+    | "bow"
+    | "crossbow"
+    | "thrown"
+    | "other";
   type: string;
 }
 const W = (
@@ -77,8 +80,18 @@ const W = (
   type = "other",
 ): Weapon => ({ code, fr, en, family, type });
 export const WEAPONS: Weapon[] = [
-  W("bastard_sword_one_handed", "Épée bâtarde à une main", "Bastard sword, one-handed", "sword"),
-  W("bastard_sword_two_handed", "Épée bâtarde à deux mains", "Bastard sword, two-handed", "sword"),
+  W(
+    "bastard_sword_one_handed",
+    "Épée bâtarde à une main",
+    "Bastard sword, one-handed",
+    "sword",
+  ),
+  W(
+    "bastard_sword_two_handed",
+    "Épée bâtarde à deux mains",
+    "Bastard sword, two-handed",
+    "sword",
+  ),
   W("broad_sword", "Épée large", "Broad sword", "sword"),
   W("khopesh", "Khopesh", "Khopesh", "sword"),
   W("long_sword", "Épée longue", "Long sword", "sword", "long_sword"),
@@ -107,8 +120,20 @@ export const WEAPONS: Weapon[] = [
   W("long_bow", "Arc long", "Long bow", "bow"),
   W("short_bow", "Arc court", "Short bow", "bow", "short_bow"),
   W("composite_long_bow", "Arc long composite", "Composite long bow", "bow"),
-  W("composite_short_bow", "Arc court composite", "Composite short bow", "bow", "short_bow"),
-  W("hand_crossbow", "Arbalète de poing", "Hand crossbow", "crossbow", "hand_crossbow"),
+  W(
+    "composite_short_bow",
+    "Arc court composite",
+    "Composite short bow",
+    "bow",
+    "short_bow",
+  ),
+  W(
+    "hand_crossbow",
+    "Arbalète de poing",
+    "Hand crossbow",
+    "crossbow",
+    "hand_crossbow",
+  ),
   W("light_crossbow", "Arbalète légère", "Light crossbow", "crossbow"),
   W("heavy_crossbow", "Arbalète lourde", "Heavy crossbow", "crossbow"),
   W("dart", "Dard", "Dart", "thrown", "dart"),
@@ -131,7 +156,15 @@ export const FAMILY: Record<Weapon["family"], [string, string]> = {
 };
 
 /** The thief's weapons (catalogue: types and named weapons). */
-const THIEF_TYPES = ["dagger", "dart", "hand_crossbow", "short_bow", "sling", "short_sword", "long_sword"];
+const THIEF_TYPES = [
+  "dagger",
+  "dart",
+  "hand_crossbow",
+  "short_bow",
+  "sling",
+  "short_sword",
+  "long_sword",
+];
 const THIEF_NAMED = ["club", "knife", "broad_sword", "quarterstaff"];
 export const thiefMay = (w: Weapon) =>
   THIEF_TYPES.includes(w.type) || THIEF_NAMED.includes(w.code);
@@ -176,7 +209,11 @@ export interface Fixture {
   hpMax: number;
   ac: number;
   saves: [[string, string], string][];
-  weaponSlots: { available: number; formula: [string, string]; penalty: number };
+  weaponSlots: {
+    available: number;
+    formula: [string, string];
+    penalty: number;
+  };
   weaponPicks: { code: string; slots: number; spec?: boolean }[];
   nonWeaponSlots: { available: number; formula: [string, string] };
   picks: Pick[];
@@ -184,7 +221,13 @@ export interface Fixture {
   sets: SkillSet[];
 }
 
-const SAVES = (a: string, b: string, c: string, d: string, e: string): Fixture["saves"] => [
+const SAVES = (
+  a: string,
+  b: string,
+  c: string,
+  d: string,
+  e: string,
+): Fixture["saves"] => [
   [["Paralysie/Poison", "Paralysis/Poison"], a],
   [["Bâton/Sceptre/Baguette", "Rod/Staff/Wand"], b],
   [["Pétrification/Métamorphose", "Petrification/Polymorph"], c],
@@ -205,7 +248,10 @@ export const BARD: Fixture = {
   saves: SAVES("12", "13", "11", "15", "14"),
   weaponSlots: {
     available: 3,
-    formula: ["2 au départ + 1 (niveau 5, un tous les 4)", "2 at start + 1 (level 5, one every 4)"],
+    formula: [
+      "2 au départ + 1 (niveau 5, un tous les 4)",
+      "2 at start + 1 (level 5, one every 4)",
+    ],
     penalty: -3,
   },
   weaponPicks: [
@@ -215,7 +261,10 @@ export const BARD: Fixture = {
   ],
   nonWeaponSlots: {
     available: 8,
-    formula: ["3 au départ + 1 (niveau 5) + 4 (INT 14)", "3 at start + 1 (level 5) + 4 (INT 14)"],
+    formula: [
+      "3 au départ + 1 (niveau 5) + 4 (INT 14)",
+      "3 at start + 1 (level 5) + 4 (INT 14)",
+    ],
   },
   picks: [
     { id: "musical_instrument", spent: 0, free: true },
@@ -242,25 +291,58 @@ export const BARD: Fixture = {
       perSkillCap: 0,
       skills: [
         { id: "climb_walls", base: 50, points: 15, race: 0, dex: 0, armour: 0 },
-        { id: "detect_noise", base: 20, points: 20, race: 0, dex: 0, armour: 0 },
-        { id: "pick_pockets", base: 10, points: 20, race: 10, dex: 5, armour: 0 },
-        { id: "read_languages", base: 5, points: 10, race: 0, dex: 0, armour: 0 },
+        {
+          id: "detect_noise",
+          base: 20,
+          points: 20,
+          race: 0,
+          dex: 0,
+          armour: 0,
+        },
+        {
+          id: "pick_pockets",
+          base: 10,
+          points: 20,
+          race: 10,
+          dex: 5,
+          armour: 0,
+        },
+        {
+          id: "read_languages",
+          base: 5,
+          points: 10,
+          race: 0,
+          dex: 0,
+          armour: 0,
+        },
       ],
     },
   ],
 };
 
-const thiefSkills = (pts: number[], race: number[], dex: number[], armour: number[]): RogueSkill[] =>
-  ["pick_pockets", "open_locks", "find_remove_traps", "move_silently", "hide_in_shadows", "detect_noise", "climb_walls", "read_languages"].map(
-    (id, i) => ({
-      id,
-      base: [15, 10, 5, 10, 5, 15, 60, 0][i],
-      points: pts[i],
-      race: race[i],
-      dex: dex[i],
-      armour: armour[i],
-    }),
-  );
+const thiefSkills = (
+  pts: number[],
+  race: number[],
+  dex: number[],
+  armour: number[],
+): RogueSkill[] =>
+  [
+    "pick_pockets",
+    "open_locks",
+    "find_remove_traps",
+    "move_silently",
+    "hide_in_shadows",
+    "detect_noise",
+    "climb_walls",
+    "read_languages",
+  ].map((id, i) => ({
+    id,
+    base: [15, 10, 5, 10, 5, 15, 60, 0][i],
+    points: pts[i],
+    race: race[i],
+    dex: dex[i],
+    armour: armour[i],
+  }));
 
 export const THIEF: Fixture = {
   name: "Pipin Bruyère-des-Combes",
@@ -275,7 +357,10 @@ export const THIEF: Fixture = {
   saves: SAVES("12", "12", "11", "15", "13"),
   weaponSlots: {
     available: 2,
-    formula: ["2 au départ (niveau 4, un tous les 4 dès le 5)", "2 at start (level 4, one every 4 from 5)"],
+    formula: [
+      "2 au départ (niveau 4, un tous les 4 dès le 5)",
+      "2 at start (level 4, one every 4 from 5)",
+    ],
     penalty: -3,
   },
   weaponPicks: [
@@ -284,7 +369,10 @@ export const THIEF: Fixture = {
   ],
   nonWeaponSlots: {
     available: 6,
-    formula: ["3 au départ + 0 (niveau 4) + 3 (INT 13)", "3 at start + 0 (level 4) + 3 (INT 13)"],
+    formula: [
+      "3 au départ + 0 (niveau 4) + 3 (INT 13)",
+      "3 at start + 0 (level 4) + 3 (INT 13)",
+    ],
   },
   picks: [
     { id: "tightrope_walking", spent: 1 },
@@ -329,7 +417,10 @@ export const FIGHTER: Fixture = {
   saves: SAVES("11", "13", "12", "13", "14"),
   weaponSlots: {
     available: 6,
-    formula: ["4 au départ + 2 (niveau 6, un tous les 3)", "4 at start + 2 (level 6, one every 3)"],
+    formula: [
+      "4 au départ + 2 (niveau 6, un tous les 3)",
+      "4 at start + 2 (level 6, one every 3)",
+    ],
     penalty: -2,
   },
   weaponPicks: [
@@ -341,7 +432,10 @@ export const FIGHTER: Fixture = {
   ],
   nonWeaponSlots: {
     available: 7,
-    formula: ["3 au départ + 2 (niveau 6) + 2 (INT 10)", "3 at start + 2 (level 6) + 2 (INT 10)"],
+    formula: [
+      "3 au départ + 2 (niveau 6) + 2 (INT 10)",
+      "3 at start + 2 (level 6) + 2 (INT 10)",
+    ],
   },
   picks: [
     { id: "riding_land", spent: 1 },
@@ -417,10 +511,13 @@ export const MULTI: Fixture = {
   ],
 };
 
-export const spentWeapon = (f: Fixture) => f.weaponPicks.reduce((n, p) => n + p.slots, 0);
+export const spentWeapon = (f: Fixture) =>
+  f.weaponPicks.reduce((n, p) => n + p.slots, 0);
 export const spentNonWeapon = (f: Fixture) =>
-  f.picks.reduce((n, p) => n + p.spent, 0) + f.languages.filter((l) => l.paid).length;
-export const spentPoints = (s: SkillSet) => s.skills.reduce((n, k) => n + k.points, 0);
+  f.picks.reduce((n, p) => n + p.spent, 0) +
+  f.languages.filter((l) => l.paid).length;
+export const spentPoints = (s: SkillSet) =>
+  s.skills.reduce((n, k) => n + k.points, 0);
 /** Cost of a proficiency for the fixture: its slots at class cost, one more outside the class's groups. */
 export const costFor = (f: Fixture, p: NonWeapon) => {
   const own = new Set(f.classIds.flatMap(classGroups));
@@ -441,9 +538,16 @@ export const THIEF_NEW: Fixture = {
   hp: 6,
   hpMax: 6,
   thac0: 20,
-  weaponSlots: { available: 2, formula: ["2 au départ (voleur)", "2 at start (thief)"], penalty: -3 },
+  weaponSlots: {
+    available: 2,
+    formula: ["2 au départ (voleur)", "2 at start (thief)"],
+    penalty: -3,
+  },
   weaponPicks: [{ code: "short_sword", slots: 1 }],
-  nonWeaponSlots: { available: 6, formula: ["3 au départ + 3 (INT 13)", "3 at start + 3 (INT 13)"] },
+  nonWeaponSlots: {
+    available: 6,
+    formula: ["3 au départ + 3 (INT 13)", "3 at start + 3 (INT 13)"],
+  },
   picks: [
     { id: "tightrope_walking", spent: 1 },
     { id: "disguise", spent: 1 },

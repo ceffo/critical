@@ -1,5 +1,5 @@
 // The dashboard around the Skills mock-ups (ADR 0022 step 2): header, character card, rail and dice
-// footer on the app's real classes. The rail carries the Skills entry and its red pill (CRI-400).
+// footer on the app's real classes. The rail carries the Skills entry and its to-spend dot.
 import type { ReactNode } from "react";
 import {
   ArrowRight,
@@ -18,8 +18,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ABILITY, hasPending, type Ability, type Fixture } from "./data";
 import { LANG, tr } from "./lang";
-
-export const l2 = (p: [string, string]) => (LANG === "fr" ? p[0] : p[1]);
 
 export function Header({ last }: { last?: ReactNode }) {
   return (
@@ -92,9 +90,7 @@ export function Abilities({
     <div
       className={cn(
         "grid gap-1",
-        thac0
-          ? "grid-cols-[repeat(6,minmax(0,1fr))_auto]"
-          : "grid-cols-6",
+        thac0 ? "grid-cols-[repeat(6,minmax(0,1fr))_auto]" : "grid-cols-6",
       )}
     >
       {cells.map(([n, v, on]) => (
@@ -144,7 +140,11 @@ export function CharacterCard({ who, lit }: { who: Fixture; lit?: Ability[] }) {
           </div>
         </div>
         <span className="relative flex size-16 shrink-0 items-center justify-center self-center">
-          <svg viewBox="0 0 48 56" className="absolute inset-1 size-14" aria-hidden>
+          <svg
+            viewBox="0 0 48 56"
+            className="absolute inset-1 size-14"
+            aria-hidden
+          >
             <path
               d="M24 2 L44 9 V27 C44 40 35 49 24 54 C13 49 4 40 4 27 V9 Z"
               fill="var(--amb-800)"
@@ -158,7 +158,9 @@ export function CharacterCard({ who, lit }: { who: Fixture; lit?: Ability[] }) {
         </span>
       </div>
       <div className="flex flex-col gap-2">
-        <span className="section-label">{tr("Modifier les PV", "HP change")}</span>
+        <span className="section-label">
+          {tr("Modifier les PV", "HP change")}
+        </span>
         <div className="flex gap-2">
           <span className="flex h-7 w-14 items-center rounded-md border border-input px-2 text-body text-ink-muted">
             {tr("PV", "HP")}
@@ -227,7 +229,10 @@ export function Rail({
           <Icon weight={a === active ? "fill" : "regular"} aria-hidden />
           <span className="max-w-full tracking-tight">{tr(fr, en)}</span>
           {a === "skills" && pill && look === "dot" && (
-            <span data-signal="rail-dot" className="absolute top-1.5 right-2 size-2.5 rounded-full bg-danger ring-2 ring-background" />
+            <span
+              data-signal="rail-dot"
+              className="absolute top-1.5 right-2 size-2.5 rounded-full bg-danger ring-2 ring-background"
+            />
           )}
           {a === "skills" && pill && look === "count" && (
             <span className="absolute top-1 right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[0.6875rem] leading-none font-semibold text-on-accent tabular-nums ring-2 ring-background">

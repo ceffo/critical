@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import "./design.css";
 import { applyTheme, isDarkTheme, isLightTheme } from "@/lib/theme";
 import { LANG } from "./lang";
-import { SCREENS } from "./screens";
+import { SCREENS } from "./scenes";
 
 const q = new URLSearchParams(location.search);
 const theme = q.get("theme") ?? "arcane";

@@ -333,7 +333,8 @@ export const FIGHTER: Fixture = {
     penalty: -2,
   },
   weaponPicks: [
-    { code: "long_sword", slots: 3, spec: true },
+    { code: "long_sword", slots: 2, spec: true },
+    { code: "dagger", slots: 1 },
     { code: "long_bow", slots: 1 },
     { code: "spear", slots: 1 },
     { code: "footmans_mace", slots: 1 },
@@ -346,7 +347,7 @@ export const FIGHTER: Fixture = {
     { id: "riding_land", spent: 1 },
     { id: "blind_fighting", spent: 2 },
     { id: "endurance", spent: 2 },
-    { id: "weaponsmithing", spent: 3 },
+    { id: "armorer", spent: 2 },
   ],
   languages: [{ code: ["Commun", "Common"], native: true }],
   sets: [],
@@ -426,3 +427,8 @@ export const costFor = (f: Fixture, p: NonWeapon) => {
   return p.groups.some((g) => own.has(g)) ? p.slots : p.slots + 1;
 };
 export const prof = (id: string) => CATALOGUE.find((p) => p.id === id)!;
+/** Something left to spend in any section: what lights the rail's mark. */
+export const hasPending = (f: Fixture) =>
+  spentWeapon(f) < f.weaponSlots.available ||
+  spentNonWeapon(f) < f.nonWeaponSlots.available ||
+  f.sets.some((s) => spentPoints(s) < s.available);

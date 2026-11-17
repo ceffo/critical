@@ -16,7 +16,7 @@ import {
 import { BrandIcon } from "@/components/shell/BrandMark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ABILITY, type Ability, type Fixture } from "./data";
+import { ABILITY, hasPending, type Ability, type Fixture } from "./data";
 import { LANG, tr } from "./lang";
 
 export const l2 = (p: [string, string]) => (LANG === "fr" ? p[0] : p[1]);
@@ -252,7 +252,7 @@ export function Footer() {
 export function Dashboard({
   activity,
   who,
-  pill = true,
+  pill,
   look,
   lit,
   children,
@@ -271,7 +271,7 @@ export function Dashboard({
       <Header last={last} />
       <div className="flex min-h-0 flex-1 gap-3">
         <CharacterCard who={who} lit={lit} />
-        <Rail active={activity} pill={pill} look={look} />
+        <Rail active={activity} pill={pill ?? hasPending(who)} look={look} />
         <main className="flex min-h-0 min-w-0 flex-1 flex-col gap-3">
           {children}
         </main>

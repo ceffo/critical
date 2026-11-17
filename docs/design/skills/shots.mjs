@@ -18,9 +18,13 @@ const { createServer } = await import(pathToFileURL(path.join(web, "node_modules
 
 // Each screen with the line the review gallery (shots/gallery.html; not index.html, which the tailnet file server turns into a 404) shows above it.
 const GALLERY = [
-  ["a-overview-bard-dot", "1 · A (choisie) — à dépenser : un point rouge après le titre, sans texte"],
-  ["a-overview-bard-button", "1 · A (choisie) — à dépenser : le bouton Modifier bordé de rouge, avec un point"],
+  ["a-overview-bard", "1 · Barde : tout se lit d'un coup d'œil ; Modifier bordé de rouge là où il reste à dépenser"],
+  ["a-overview-thief", "1 · Voleur : compétences, maîtrises d'armes, talents de voleur avec leur plafond par talent"],
+  ["a-overview-fighter", "1 · Guerrière : pas de talents ; tout est dépensé, aucun bouton rouge"],
+  ["a-overview-multi", "8 · Multi-classé guerrier/voleur : les budgets disent de quelle classe vient chaque part"],
   ["a-edit-proficiencies-bard", "1 · A, après Modifier : l'éditeur des compétences prend la scène"],
+  ["a-edit-weapons-thief", "5 · Armes du voleur : recherche, familles, celles de la classe d'abord, les autres non autorisées avec la raison"],
+  ["a-edit-weapons-fighter", "5 · Armes de la guerrière : toutes permises ; la spécialisation se règle sur la ligne"],
   ["points-slider-bard", "2 · Curseur (choisi) : points de talent avec un curseur, sa limite et ce que les points restants permettent"],
 ];
 const SCREENS = GALLERY.map(([id]) => id);

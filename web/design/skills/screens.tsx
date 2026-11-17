@@ -15,7 +15,13 @@ import { cn } from "@/lib/utils";
 import {
   abil,
   BARD,
+  FIGHTER,
+  MULTI,
+  THIEF,
   CATALOGUE,
+  FAMILY,
+  thiefMay,
+  WEAPONS,
   classGroups,
   costFor,
   GROUPS,
@@ -33,6 +39,7 @@ import {
   type NonWeapon,
   type RogueSkill,
   type SkillSet,
+  type Weapon,
 } from "./data";
 import { Dashboard, l2 } from "./frame";
 import { LANG, tr } from "./lang";
@@ -52,23 +59,6 @@ function Target({ who, p }: { who: Fixture; p: NonWeapon }) {
       </span>
       <b className="font-semibold">{score + p.modifier}</b>
     </span>
-  );
-}
-
-/** How a section says it has something to spend (round 2: the user found the "1 emplacements à
- * dépenser" pill too wordy, since the budget line already counts). Two proposals:
- * - "dot": a small red dot after the title, no text; nothing once all is spent.
- * - "button": no mark by the title; the section's Modifier button itself turns red-edged with a dot. */
-type Signal = "dot" | "button";
-
-function Left({ left, signal }: { left: number; signal: Signal }) {
-  if (left <= 0 || signal !== "dot") return null;
-  return (
-    <span
-      role="img"
-      aria-label={tr("à dépenser", "to spend")}
-      className="size-2.5 shrink-0 rounded-full bg-danger"
-    />
   );
 }
 
@@ -98,6 +88,8 @@ function Card({
   );
 }
 
+/** A section's Edit. With something to spend it takes a red edge and a red dot instead of the
+ * pencil (round 2, the user's choice over a dot by the title: the mark sits on what to click). */
 function Edit({ pending = false }: { pending?: boolean }) {
   return (
     <Button size="sm" className={cn(pending && "border-danger")}>
@@ -139,12 +131,10 @@ const POINTS: [string, string] = ["points", "points"];
 
 // ---------- read views ----------
 
-function WeaponsRead({ who, action, signal }: { who: Fixture; action?: ReactNode; signal: Signal }) {
-  const left = who.weaponSlots.available - spentWeapon(who);
+function WeaponsRead({ who, action }: { who: Fixture; action?: ReactNode }) {
   return (
     <Card
       title={tr("Maîtrises d'armes", "Weapon proficiencies")}
-      aside={<Left left={left} signal={signal} />}
       action={action}
     >
       <Budget
@@ -182,18 +172,14 @@ function ProficienciesRead({
   who,
   action,
   className,
-  signal,
 }: {
   who: Fixture;
   action?: ReactNode;
   className?: string;
-  signal: Signal;
 }) {
-  const left = who.nonWeaponSlots.available - spentNonWeapon(who);
   return (
     <Card
       title={tr("Compétences et langues", "Proficiencies and languages")}
-      aside={<Left left={left} signal={signal} />}
       action={action}
       className={className}
     >
@@ -292,12 +278,10 @@ function SkillTable({
   );
 }
 
-function SkillsRead({ set, action, signal }: { set: SkillSet; action?: ReactNode; signal: Signal }) {
-  const left = set.available - spentPoints(set);
+function SkillsRead({ set, action }: { set: SkillSet; action?: ReactNode }) {
   return (
     <Card
       title={l2(set.name)}
-      aside={<Left left={left} signal={signal} />}
       action={action}
     >
       <Budget
@@ -554,6 +538,164 @@ function ProficiencyEditor({ who, open }: { who: Fixture; open: Group[] }) {
   );
 }
 
+/** Which weapons a fixture's classes may take: a thief's list alone, any weapon with a warrior class. */
+const mayUse = (who: Fixture) => (w: Weapon) =>
+  who.classIds.some((c) => c === "fighter") || who.classIds.every((c) => c !== "thief") || thiefMay(w);
+/** Only a single-class fighter may specialize (PHB). */
+const canSpecialize = (who: Fixture) => who.classIds.length === 1 && who.classIds[0] === "fighter";
+
+/** The weapons editor (decision 5): held weapons on the left; on the right a search and the weapons
+ * by family, the class's first, then the ones the class may not take, with the reason. */
+function WeaponEditor({ who, open }: { who: Fixture; open: (Weapon["family"] | "forbidden")[] }) {
+  const left = who.weaponSlots.available - spentWeapon(who);
+  const ok = mayUse(who);
+  const held = new Set(who.weaponPicks.map((p) => p.code));
+  const families = Object.keys(FAMILY) as Weapon["family"][];
+  const forbidden = WEAPONS.filter((w) => !ok(w));
+  const cls = l2(who.classes[0].name).toLowerCase();
+  const row = (w: Weapon, allowed: boolean) => (
+    <div
+      key={w.code}
+      className={cn(
+        "grid grid-cols-[1fr_auto] items-center gap-3 rounded-md px-2.5 py-0.5 text-body",
+        (!allowed || held.has(w.code)) && "text-ink-muted",
+      )}
+    >
+      <span className="break-words">{weaponName(w)}</span>
+      <span className="flex items-center justify-end gap-1.5">
+        {!allowed ? (
+          <span className="flex items-center gap-1.5 text-label">
+            <Prohibit aria-hidden className="size-3.5" />
+            {tr(`hors de la liste du ${cls}`, `not on the ${cls}'s list`)}
+          </span>
+        ) : (
+          <>
+            <span className="text-label text-ink-muted">1 {l2(SLOT)}</span>
+            {held.has(w.code) ? (
+              <span className="flex size-6 items-center justify-center">
+                <Check aria-label={tr("Déjà prise", "Held")} className="size-4 text-success" />
+              </span>
+            ) : (
+              <Button size="icon-xs" variant="quiet" disabled={left <= 0} aria-label={tr("Ajouter", "Add")}>
+                <Plus aria-hidden />
+              </Button>
+            )}
+          </>
+        )}
+      </span>
+    </div>
+  );
+  const band = (key: string, title: string, note: string, count: number, isOpen: boolean, mine: boolean) => (
+    <div
+      key={key}
+      className={cn(
+        "flex flex-wrap items-center gap-x-2 rounded-md px-2.5 py-1.5",
+        mine ? "bg-selected" : "bg-sub-band",
+      )}
+    >
+      <CaretDown aria-hidden className={cn("size-3.5", !isOpen && "-rotate-90")} />
+      <span className="text-body font-semibold">{title}</span>
+      {note && <span className="text-label text-ink-muted">{note}</span>}
+      <span className="flex-1" />
+      <span className="text-label text-ink-muted">{count}</span>
+    </div>
+  );
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
+      <EditorBar
+        title={tr("Maîtrises d'armes", "Weapon proficiencies")}
+        spent={spentWeapon(who)}
+        available={who.weaponSlots.available}
+        formula={who.weaponSlots.formula}
+        unit={SLOTS}
+      />
+      <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4">
+        <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">
+          <section className="flex flex-col gap-1">
+            <span className="section-label">{tr("Vos maîtrises", "Your proficiencies")}</span>
+            <ul className="flex flex-col gap-1">
+              {who.weaponPicks.map((p) => (
+                <li
+                  key={p.code}
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-md bg-sub-band px-2.5 py-1 text-body"
+                >
+                  <span className="break-words">{weaponName(weapon(p.code))}</span>
+                  {canSpecialize(who) ? (
+                    <Button size="xs" aria-pressed={!!p.spec}>
+                      {p.spec
+                        ? tr("Spécialisée", "Specialized")
+                        : tr("Se spécialiser +1 empl.", "Specialize +1 slot")}
+                    </Button>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="flex w-[5.5rem] items-center justify-end gap-1">
+                    <span className="text-label text-ink-muted">
+                      {p.slots} {l2(SLOT)}
+                    </span>
+                    <Button size="icon-xs" variant="quiet" aria-label={tr("Retirer", "Remove")}>
+                      <X aria-hidden />
+                    </Button>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+          <p className="text-label text-ink-muted">
+            {tr(
+              `Sans maîtrise : ${signed(who.weaponSlots.penalty)} au toucher.`,
+              `Not proficient: ${signed(who.weaponSlots.penalty)} to hit.`,
+            )}{" "}
+            {canSpecialize(who)
+              ? tr(
+                  "Spécialisation : +1 au toucher, +2 aux dégâts, une attaque de plus tous les 2 rounds.",
+                  "Specialization: +1 to hit, +2 damage, one more attack every 2 rounds.",
+                )
+              : who.classIds.length > 1
+                ? tr(
+                    "Multi-classé : pas de spécialisation (guerrier mono-classé seulement).",
+                    "Multi-class: no specialization (single-class fighters only).",
+                  )
+                : null}
+          </p>
+        </div>
+        <div className="flex min-h-0 flex-col gap-2">
+          <div className="flex items-center gap-2 rounded-md border border-input px-2.5 py-1.5 text-body text-ink-muted">
+            <MagnifyingGlass aria-hidden className="size-4" />
+            {tr("Chercher une arme", "Search a weapon")}
+          </div>
+          <div className="flex min-h-0 flex-col gap-2 overflow-y-auto pr-1">
+            {families.map((f) => {
+              const rows = WEAPONS.filter((w) => w.family === f && ok(w));
+              if (!rows.length) return null;
+              const isOpen = open.includes(f);
+              return (
+                <section key={f} className="flex flex-col gap-1">
+                  {band(f, l2(FAMILY[f]), "", rows.length, isOpen, true)}
+                  {isOpen && rows.map((w) => row(w, true))}
+                </section>
+              );
+            })}
+            {forbidden.length > 0 && (
+              <section className="flex flex-col gap-1">
+                {band(
+                  "forbidden",
+                  tr("Non autorisées", "Not allowed"),
+                  tr(`hors de la liste du ${cls}`, `not on the ${cls}'s list`),
+                  forbidden.length,
+                  open.includes("forbidden"),
+                  false,
+                )}
+                {open.includes("forbidden") && forbidden.map((w) => row(w, false))}
+              </section>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PointsEditor({ set, control }: { set: SkillSet; control: "slider" }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -590,23 +732,22 @@ function Stage({ children }: { children: ReactNode }) {
   );
 }
 
-/** Variant A (chosen by the user, round 2): everything read at a glance; one Edit per section turns
- * the stage into its editor. `signal`: how a section with something to spend says so. */
-function OverviewA({ who, signal }: { who: Fixture; signal: Signal }) {
-  const edit = (left: number) => <Edit pending={signal === "button" && left > 0} />;
+/** Layout A (the user's choice, round 2): everything read at a glance; one Edit per section turns
+ * the stage into its editor. Proficiencies on the left; weapons, then each skill set, on the right. */
+function OverviewA({ who }: { who: Fixture }) {
+  const pending = (left: number) => <Edit pending={left > 0} />;
   return (
     <Dashboard activity="skills" who={who}>
       <Stage>
         <div className="grid grid-cols-2 items-start gap-3">
           <ProficienciesRead
             who={who}
-            signal={signal}
-            action={edit(who.nonWeaponSlots.available - spentNonWeapon(who))}
+            action={pending(who.nonWeaponSlots.available - spentNonWeapon(who))}
             className="row-span-2"
           />
-          <WeaponsRead who={who} signal={signal} action={edit(who.weaponSlots.available - spentWeapon(who))} />
+          <WeaponsRead who={who} action={pending(who.weaponSlots.available - spentWeapon(who))} />
           {who.sets.map((s) => (
-            <SkillsRead key={s.id} set={s} signal={signal} action={edit(s.available - spentPoints(s))} />
+            <SkillsRead key={s.id} set={s} action={pending(s.available - spentPoints(s))} />
           ))}
         </div>
       </Stage>
@@ -623,11 +764,23 @@ function EditorScreen({ who, children, lit }: { who: Fixture; children: ReactNod
 }
 
 export const SCREENS: Record<string, () => ReactNode> = {
-  "a-overview-bard-dot": () => <OverviewA who={BARD} signal="dot" />,
-  "a-overview-bard-button": () => <OverviewA who={BARD} signal="button" />,
+  "a-overview-bard": () => <OverviewA who={BARD} />,
+  "a-overview-thief": () => <OverviewA who={THIEF} />,
+  "a-overview-fighter": () => <OverviewA who={FIGHTER} />,
+  "a-overview-multi": () => <OverviewA who={MULTI} />,
   "a-edit-proficiencies-bard": () => (
     <EditorScreen who={BARD}>
       <ProficiencyEditor who={BARD} open={["rogue", "priest"]} />
+    </EditorScreen>
+  ),
+  "a-edit-weapons-thief": () => (
+    <EditorScreen who={THIEF}>
+      <WeaponEditor who={THIEF} open={["sword", "forbidden"]} />
+    </EditorScreen>
+  ),
+  "a-edit-weapons-fighter": () => (
+    <EditorScreen who={FIGHTER}>
+      <WeaponEditor who={FIGHTER} open={["sword", "polearm"]} />
     </EditorScreen>
   ),
   "points-slider-bard": () => (
@@ -638,4 +791,3 @@ export const SCREENS: Record<string, () => ReactNode> = {
 };
 
 void LANG;
-void Prohibit;

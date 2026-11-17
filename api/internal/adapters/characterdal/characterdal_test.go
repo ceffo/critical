@@ -481,22 +481,6 @@ func TestSkillPoints_ReadsTheClassAndEverySkillSet(t *testing.T) {
 	require.ErrorIs(t, err, domain.ErrCharacterNotFound)
 }
 
-// The release from before skill sets keeps writing characters.skill_points during a rolling
-// deploy: while skill_sets is empty the reader still serves those points, filed under no set for
-// the services to give the class's first set (skills.SetPoints.Resolve).
-func TestSkillPoints_FallsBackToTheLegacyColumnWhileNoSetIsStored(t *testing.T) {
-	ctx := context.Background()
-	q := mocks.NewMockQuerier(t)
-	q.EXPECT().GetSkillSets(ctx, int64(8)).Return(queries.GetSkillSetsRow{Class: "thief", SkillSets: `{}`, SkillPoints: `{"open_locks":20}`}, nil).Once()
-	q.EXPECT().GetSkillSets(ctx, int64(9)).Return(queries.GetSkillSetsRow{Class: "thief", SkillSets: `{"thief":{"climb_walls":5}}`, SkillPoints: `{"open_locks":20}`}, nil).Once()
-	_, points, err := characterdal.New(q).SkillPoints(ctx, 8)
-	require.NoError(t, err)
-	assert.Equal(t, skills.SetPoints{skills.LegacySet: {"open_locks": 20}}, points)
-	_, points, err = characterdal.New(q).SkillPoints(ctx, 9)
-	require.NoError(t, err)
-	assert.Equal(t, skills.SetPoints{"thief": {"climb_walls": 5}}, points, "the stored sets win once there are some")
-}
-
 // ADR 0043 step 4.2: a psionicist level-up (and its undo) writes the PSP maximum; no row is
 // ErrCharacterNotFound.
 func TestSetPSPMax_WritesThePSPMaximum(t *testing.T) {

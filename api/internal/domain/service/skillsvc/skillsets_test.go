@@ -175,19 +175,6 @@ func TestSetPoints_Step3_5_ALegacyEntryRestoresTheFirstSetOfATwoSetClass(t *test
 	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":7}}`)))
 }
 
-// A legacy entry whose points are still filed under no set (a release from before skill sets
-// kept writing the flat column) restores into the first set without losing them.
-func TestSetPoints_Step3_5_ALegacyEntryResolvesPointsFiledUnderNoSet(t *testing.T) {
-	f := dualFixture(t)
-	r := f.svc.Module().Restorer(skillsvc.PointsStateKey)
-	require.NotNil(t, r)
-	f.points.EXPECT().SkillPoints(mock.Anything, charID).Return(swashbuckler,
-		skills.SetPoints{skills.LegacySet: {"pick_pockets": 20}}, nil).Once()
-	f.points.EXPECT().SetSkillPoints(mock.Anything, charID,
-		skills.SetPoints{"thief": {"open_locks": 7}}).Return(nil).Once()
-	require.NoError(t, r.Restore(context.Background(), charID, snaptest.Env(`{"points":{"open_locks":7}}`)))
-}
-
 // ADR 0042 step 12 on ADR 0040 step 3.5: a thief 9/bard 4 holds both skill sets, each spent
 // against its own class's budget at its own entry's level. The bard's set takes 65 points
 // (20 + 15 x 3 at the bard's 4, not the thief's 9) and refuses 70; no set named is refused, the

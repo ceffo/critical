@@ -45,20 +45,6 @@ SET alignment = CASE WHEN alignment = '' THEN sqlc.arg(alignment) ELSE alignment
     sex = CASE WHEN sex = '' THEN sqlc.arg(sex) ELSE sex END
 WHERE id = sqlc.arg(id);
 
--- The skill points of a character stored before bards entered them (migration 012): only while it
--- has none, so a rerun changes nothing and points spent since are kept.
--- name: SetSkillPointsIfUnset :exec
-UPDATE characters SET skill_points = sqlc.arg(skill_points) WHERE id = sqlc.arg(id) AND skill_points = '{}';
-
--- The skill sets migration (034): every character's legacy flat skill points, to copy under the
--- skill set its class grants. Only the characters that have points and no skill sets yet.
--- name: ListLegacySkillPoints :many
-SELECT id, class, skill_points FROM characters WHERE skill_points <> '{}' AND skill_sets = '{}' ORDER BY id;
-
--- The skill points of a character per skill set (a JSON object from set code to points).
--- name: SetSkillSets :exec
-UPDATE characters SET skill_sets = sqlc.arg(skill_sets) WHERE id = sqlc.arg(id);
-
 -- name: InsertSpellSlots :exec
 INSERT INTO spell_slots (character_id, slots) VALUES ($1, $2);
 

@@ -2,16 +2,16 @@
 
 **Status**: proposed 2026-10-20 (the decisions are the user's, from the triage of the proficiency
 epic on 2026-10-19; this ADR writes them down as steps). Parts marked _(proposed)_ are readings
-this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Not
-implemented. The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
+this ADR adds where the book leaves a figure open; they await the user's OK in the PR. Built
+(every step, see the notes below and the amendments). The non-weapon steps (1, 3 to 5, 10 to 14 and 16.1, the non-weapon pool) as built
 2026-10-20; the weapon pool (steps 3, 7, 10 to 14 and 16.2 for weapon picks) as built 2026-10-20;
-step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 not implemented; the skills module and the languages' editor (steps 17 and 18) decided and as built 2026-10-20 (architecture review 2, see the amendment). Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
+step 6 (languages as picks) and step 8 as built 2026-10-20; steps 9 and 16.3 as built 2026-10-20; step 15 (the level-up's links to the editors) as built, the editors being the Skills activity's; the skills module and the languages' editor (steps 17 and 18) decided and as built 2026-10-20 (architecture review 2, see the amendment). Amends [ADR 0002](0002-attack-resolution.md) (steps 2 and 12 and the "Not covered"
 proficiency penalties), [ADR 0014](0014-skill-checks.md) (step 1 and the Consequences),
 [ADR 0030](0030-classes-and-races.md) (steps 12, 17 and 18 and the "Not covered" proficiency
 slots) and [ADR 0032](0032-character-identity-and-creation-rolls.md) (step 4.2), each on
 implementation.
 Steps 19 (the description pop-up) and 20 (the Tumbling buff) added 2026-10-20 (user triage of
-2026-10-20), decided; step 19.4 (the API's description lookup, format 9 import) as built 2026-10-20 (CRI-116), the pop-up itself (19.1 to 19.3) not implemented; step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
+2026-10-20), decided; step 19.4 (the API's description lookup, format 9 import) as built 2026-10-20 (CRI-116), the pop-up itself (19.1 to 19.3) as built (`ProficiencyDialog`, shared by the Skills activity and the picker); step 20 as built 2026-10-20 (see 20.9); step 19 reads the descriptions of
 [ADR 0021](0021-spell-catalogue.md) step 16 (format 9); step 20 amends [ADR 0014](0014-skill-checks.md)
 step 4 and [ADR 0004](0004-buffs.md) step 13.
 Steps 3, 7 and 8 amended 2026-10-21 by [ADR 0042](0042-multi-class-and-dual-class.md) steps 15 and 16 (multi-class and dual-class), on implementation.
@@ -566,7 +566,8 @@ writes `Test<name>` and adds the prefix here in the same PR.
   training time and teachers; secondary skills (Table 36); a proficiency's special abilities
   beyond its check (tracking's modifiers, Table 39); ~~proficiencies granted free by a class~~
   (covered by step 22, 2026-11-15); double
-  specialization; multi- and dual-class (Table 34's best line).
+  specialization. ~~Multi- and dual-class (Table 34's best line)~~ are covered: ADR 0042 steps 15 and 16
+  amend steps 3, 7 and 8 (see the amendments above), built.
 
 ## Amendment 2026-10-20: the skills module (decided, as built 2026-10-20)
 

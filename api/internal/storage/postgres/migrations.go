@@ -77,10 +77,6 @@ const weaponTypeMigration = "005_weapon_type.sql"
 // already stored the race its seed names (raceSeedCharacter).
 const raceMigration = "007_character_race.sql"
 
-// bardSkillsMigration lets a bard wear metal armour for its skills. Right after it the run gives
-// the seed character already stored the skill points its seed names (pointSeedCharacter).
-const bardSkillsMigration = "012_bard_skills.sql"
-
 // identityMigration makes alignment and sex codes. Right after it the run maps the stored free text
 // (mapIdentity), then gives the seed character already stored the identity its seed names
 // (identitySeedCharacter).
@@ -105,7 +101,6 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 	after = map[string]dataStep{
 		weaponTypeMigration: func(ctx context.Context, q storeq.Querier) error { return typeSeedWeapons(ctx, q, weaponsPath) },
 		raceMigration:       func(ctx context.Context, q storeq.Querier) error { return raceSeedCharacter(ctx, q, characterPath) },
-		bardSkillsMigration: func(ctx context.Context, q storeq.Querier) error { return pointSeedCharacter(ctx, q, characterPath) },
 		identityMigration: func(ctx context.Context, q storeq.Querier) error {
 			if err := mapIdentity(ctx, q); err != nil {
 				return err
@@ -128,7 +123,6 @@ func migrationDataSteps(seedsDir string, equipment ruletablesvc.Equipment, defs 
 		dardsMigration:           func(ctx context.Context, q storeq.Querier) error { return renameDarts(ctx, q, characterPath) },
 		rulesetsMigration:        defaultRuleset,
 		classEntriesMigration:    fillClassEntries,
-		skillSetsMigration:       func(ctx context.Context, q storeq.Querier) error { return carrySkillSets(ctx, q, defs) },
 		catalogueWeaponTypesMigration: func(ctx context.Context, q storeq.Querier) error {
 			return retypeCatalogueWeapons(ctx, q, equipment.Weapons)
 		},

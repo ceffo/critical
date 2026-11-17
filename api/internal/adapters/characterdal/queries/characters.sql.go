@@ -80,9 +80,9 @@ func (q *Queries) CopyAttackForm(ctx context.Context, arg CopyAttackFormParams) 
 const copyCharacterRow = `-- name: CopyCharacterRow :one
 
 INSERT INTO characters (
-    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_points, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
+    name, str, dex, con, int, wis, cha, hp_max, thac0_base, level, xp_total, save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell, class, alignment, age, sex, hair, eyes, languages, race_code, realized_level, str_exceptional, skill_armor, height_cm, weight_kg, ac_override, ac_override_label, proficiency_picks, skill_sets, psp_max, psionic_picks, owner_user_id, retired, hp_opening, psp_opening
 )
-SELECT $1, c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_points, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, $2, FALSE, $3, $4
+SELECT $1, c.str, c.dex, c.con, c.int, c.wis, c.cha, c.hp_max, c.thac0_base, c.level, c.xp_total, c.save_para_poison, c.save_rod_staff_wand, c.save_petri_poly, c.save_breath, c.save_spell, c.class, c.alignment, c.age, c.sex, c.hair, c.eyes, c.languages, c.race_code, c.realized_level, c.str_exceptional, c.skill_armor, c.height_cm, c.weight_kg, c.ac_override, c.ac_override_label, c.proficiency_picks, c.skill_sets, c.psp_max, c.psionic_picks, $2, FALSE, $3, $4
 FROM characters c
 JOIN users u ON u.id = c.owner_user_id AND NOT u.disabled
 WHERE c.id = $5 AND NOT c.retired
@@ -438,7 +438,7 @@ const getCharacter = `-- name: GetCharacter :one
 SELECT id, name, str, str_exceptional, dex, con, int, wis, cha, hp_max, psp_max, thac0_base, level, xp_total,
        save_para_poison, save_rod_staff_wand, save_petri_poly, save_breath, save_spell,
        class, race_code, alignment, age, sex, height_cm, weight_kg, hair, eyes, languages,
-       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, skill_points, proficiency_picks, psionic_picks
+       COALESCE(realized_level, level)::BIGINT AS realized_level, skill_sets, proficiency_picks, psionic_picks
 FROM characters WHERE id = $1
 `
 
@@ -474,7 +474,6 @@ type GetCharacterRow struct {
 	Languages        string
 	RealizedLevel    int64
 	SkillSets        string
-	SkillPoints      string
 	ProficiencyPicks string
 	PsionicPicks     string
 }
@@ -518,7 +517,6 @@ func (q *Queries) GetCharacter(ctx context.Context, id int64) (GetCharacterRow, 
 		&i.Languages,
 		&i.RealizedLevel,
 		&i.SkillSets,
-		&i.SkillPoints,
 		&i.ProficiencyPicks,
 		&i.PsionicPicks,
 	)
@@ -566,14 +564,13 @@ func (q *Queries) GetCharacterDetails(ctx context.Context, id int64) (GetCharact
 const getSkillSets = `-- name: GetSkillSets :one
 SELECT COALESCE((SELECT e.class FROM character_classes e
                  WHERE e.character_id = characters.id AND e.state = 'active' ORDER BY e.position LIMIT 1), class)::TEXT AS class,
-       skill_sets, skill_points
+       skill_sets
 FROM characters WHERE id = $1
 `
 
 type GetSkillSetsRow struct {
-	Class       string
-	SkillSets   string
-	SkillPoints string
+	Class     string
+	SkillSets string
 }
 
 // A character's class (its first active entry's, ADR 0042 step 1; the column for a character with no
@@ -581,7 +578,7 @@ type GetSkillSetsRow struct {
 func (q *Queries) GetSkillSets(ctx context.Context, id int64) (GetSkillSetsRow, error) {
 	row := q.db.QueryRowContext(ctx, getSkillSets, id)
 	var i GetSkillSetsRow
-	err := row.Scan(&i.Class, &i.SkillSets, &i.SkillPoints)
+	err := row.Scan(&i.Class, &i.SkillSets)
 	return i, err
 }
 

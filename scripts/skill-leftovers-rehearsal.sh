@@ -1,40 +1,41 @@
 #!/usr/bin/env bash
-# The skill sets upgrade rehearsal (ADR 0040 step 3.5, migration 034 and its data step): a database
-# written by the release before is upgraded by this checkout's server, on a throwaway LOCAL compose
+# The skill points drop rehearsal (ADR 0040 step 3.5 amended, migration 048): a database written by
+# the release before is upgraded by this checkout's server, on a throwaway LOCAL compose
 # PostgreSQL, then checked through the API and SQL.
 #
-#   scripts/skill-sets-rehearsal.sh [old ref]   # default: the parent of the commit that added 034
+#   scripts/skill-leftovers-rehearsal.sh [old ref]   # default: the parent of the commit that added 048
 #
-# 1. The old release (built from <old ref>, which must not hold 034_skill_sets.sql) seeds the bard
-#    of the fixture and writes a thief with points, a bard with points and a thief with none; every
-#    character's skills are read.
-# 2. This checkout's server upgrades it: the points sit in skill_sets under the thief and the bard
-#    set, every skill percentage and point is the same as before.
-# 3. Two restarts change nothing.
-# 4. An old-release-style write (skill_points set, skill_sets '{}') still shows on the sheet, for a
-#    thief and a bard; a spend by this release then lands in skill_sets and wins.
-# 5. The fixture seed (character.json) loads on a fresh database too.
+# 1. The old release (built from <old ref>, which must not hold 048_drop_skill_points.sql) seeds the
+#    bard of the fixture and writes a thief with points, a bard with points and a thief with none;
+#    every character's skills are read.
+# 2. A character left with flat skill_points and no skill sets (what a release from before 034 wrote)
+#    is planted: this checkout's server refuses to start, applies nothing (048 not recorded, the
+#    column still there) and its log names the guard.
+# 3. The points are moved into skill_sets with the live remedy the refusal names (what 034's copy did): the server upgrades, the
+#    column is gone, and every skill point and percentage is the same as before.
+# 4. Two restarts change nothing; a spend and its undo still work.
+# 5. The fixture seed (character.json) loads on a fresh database too, without the column.
 #
-# Nothing touches the development database: its own compose project (criticalsets<pid>), free port,
+# Nothing touches the development database: its own compose project (criticalleft<pid>), free port,
 # own volume, removed at the end whatever the outcome. Fixture seeds and catalogue (api/testdata).
 # Exit 0 only when every check passes. Needs docker, psql, jq, curl and go.
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 root="$(dirname "$here")"
-fail() { echo "skill-sets-rehearsal: FAIL: $*" >&2; exit 1; }
-ok() { echo "skill-sets-rehearsal: ok: $*"; }
-note() { echo "skill-sets-rehearsal: observed: $*"; }
+fail() { echo "skill-leftovers-rehearsal: FAIL: $*" >&2; exit 1; }
+ok() { echo "skill-leftovers-rehearsal: ok: $*"; }
 
-added="$(git -C "$root" log --diff-filter=A --format=%H -n1 -- api/internal/storage/postgres/migrations/034_skill_sets.sql)"
+migration=api/internal/storage/postgres/migrations/048_drop_skill_points.sql
+added="$(git -C "$root" log --diff-filter=A --format=%H -n1 -- "$migration")"
 old_ref="${1:-${added:+$added^}}"
-[ -n "$old_ref" ] || fail "no ref given and no commit adds the skill sets migration"
-git -C "$root" cat-file -e "$old_ref:api/internal/storage/postgres/migrations/034_skill_sets.sql" 2>/dev/null &&
-    fail "$old_ref already holds the skill sets migration: pass a ref of before it"
+[ -n "$old_ref" ] || fail "no ref given and no commit adds the skill points drop migration"
+git -C "$root" cat-file -e "$old_ref:$migration" 2>/dev/null &&
+    fail "$old_ref already holds the skill points drop migration: pass a ref of before it"
 
 free_port() { python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1", 0)); print(s.getsockname()[1])'; }
 work="$(mktemp -d)"
-project="criticalsets$$"
+project="criticalleft$$"
 pg_port="$(free_port)"
 api_port="$(free_port)"
 export COMPOSE_PROJECT_NAME="$project" CRITICAL_PG_PORT="$pg_port"
@@ -50,7 +51,7 @@ cleanup() {
     [ -n "$srv_pid" ] && kill "$srv_pid" 2>/dev/null && wait "$srv_pid" 2>/dev/null
     if [ -n "$started" ]; then
         (cd "$root" && docker compose down --volumes --remove-orphans >/dev/null 2>&1)
-        echo "skill-sets-rehearsal: compose project $project removed"
+        echo "skill-leftovers-rehearsal: compose project $project removed"
     fi
     [ "$status" -ne 0 ] && [ -f "$work/server.log" ] && tail -n 30 "$work/server.log" >&2
     rm -rf "$work"
@@ -123,47 +124,65 @@ create() {
     id[$1]="$(jq -r .currentId <<<"$out")"
     [ "${id[$1]}" != null ] || fail "creating $1 set no current character: $out"
 }
-# The current character's skills as the comparison reads them, one line per skill: old shape, then new.
-old_skills() { call GET /api/skills | jq -r '(.thiefSkills + .bardSkills)[] | "\(.id) \(.points) \(.percent)"'; }
+# The current character's skills as the comparison reads them, one line per skill.
 new_skills() { call GET /api/skills | jq -r '.skillSets[].skills[] | "\(.id) \(.points) \(.percent)"'; }
 stored() { sql "SELECT skill_sets FROM characters WHERE id = ${id[$1]}" | jq -cS .; }
 points_of() { call GET /api/skills | jq -r ".skillSets[] | select(.set == \"$1\") | .skills[] | select(.id == \"$2\") | .points"; }
 
 # --- 1. the old release writes the characters ---
 start "$work/old-srv" "$work/old/api/testdata"
-create robin thief human '{"open_locks":20,"climb_walls":15}'
-create lyra bard half_elf '{"pick_pockets":10,"detect_noise":5}'
+create robin thief human '{"thief":{"open_locks":20,"climb_walls":15}}'
+create lyra bard half_elf '{"bard":{"pick_pockets":10,"detect_noise":5}}'
 create blank thief human '{}'
 id[seed]="$(sql "SELECT id FROM characters WHERE name = 'Test Bard'")"
 [ -n "${id[seed]}" ] || fail "the fixture bard is not stored"
 names=(robin lyra blank seed)
 for n in "${names[@]}"; do
     use "$n"
-    old_skills >"$work/before-$n"
+    new_skills >"$work/before-$n"
     [ -s "$work/before-$n" ] || fail "$n has no skills on the old release"
 done
-expect "old release: robin's points are flat" '{"climb_walls":15,"open_locks":20}' "$(sql "SELECT skill_points FROM characters WHERE id = ${id[robin]}" | jq -cS .)"
+expect "old release: robin's points are per skill set" '{"thief":{"climb_walls":15,"open_locks":20}}' "$(stored robin)"
+expect "old release: the column still exists" 1 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"
 stop
-echo "skill-sets-rehearsal: old release wrote its data ($old_ref)"
+echo "skill-leftovers-rehearsal: old release wrote its data ($old_ref)"
 
 new_testdata="$root/api/testdata"
 
-# --- 2. this checkout upgrades it ---
+# --- 2. flat points no skill set holds: the guard refuses, nothing is applied ---
+sql "UPDATE characters SET skill_sets = '{}', skill_points = '{\"open_locks\":20,\"climb_walls\":15}' WHERE id = ${id[robin]}" >/dev/null
+CRITICAL_DSN="postgres://critical:critical@127.0.0.1:$pg_port/critical_fixture?sslmode=disable" \
+    CRITICAL_SEEDS_DIR="$new_testdata/seeds" CRITICAL_CATALOGUE="$new_testdata/catalogue.json" CRITICAL_ENV=dev \
+    CRITICAL_ADDR="127.0.0.1:$api_port" "$work/new-srv" >"$work/refused.log" 2>&1 &
+srv_pid=$!
+refused=""
+for _ in $(seq 1 100); do
+    kill -0 "$srv_pid" 2>/dev/null || { refused=1; break; }
+    sleep 0.1
+done
+[ -n "$refused" ] || fail "the server started over flat points no skill set holds"
+wait "$srv_pid" 2>/dev/null && fail "the server exited 0 on a refused migration"
+srv_pid=""
+grep -q "skill_points still holds points.*(ids: ${id[robin]})" "$work/refused.log" || fail "the refusal does not name the guard: $(tail -n 3 "$work/refused.log")"
+ok "the guard refused the run"
+expect "048 is not recorded" 0 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '048_drop_skill_points.sql'")"
+expect "the column is still there (the run rolled back)" 1 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"
+expect "robin's flat points are untouched" '{"climb_walls":15,"open_locks":20}' "$(sql "SELECT skill_points FROM characters WHERE id = ${id[robin]}" | jq -cS .)"
+
+# --- 3. the points moved into skill_sets (what 034's copy did): the upgrade drops the column ---
+# the live remedy the refusal names, verbatim
+sql "UPDATE characters SET skill_sets = json_build_object('thief', skill_points::json)::text WHERE id = ${id[robin]}" >/dev/null
 start "$work/new-srv" "$new_testdata"
-expect "migration 034 recorded once" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '034_skill_sets.sql'")"
-expect "robin's points sit in the thief set" '{"thief":{"climb_walls":15,"open_locks":20}}' "$(stored robin)"
-expect "lyra's points sit in the bard set" '{"bard":{"detect_noise":5,"pick_pockets":10}}' "$(stored lyra)"
-expect "the character with no points has no set" '{}' "$(stored blank)"
-expect "the fixture bard's points sit in the bard set" '{"bard":{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}}' "$(stored seed)"
+expect "048 recorded once" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '048_drop_skill_points.sql'")"
+expect "characters.skill_points is gone" 0 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"
 for n in "${names[@]}"; do
     use "$n"
     expect "$n: every skill, point and percentage as before" "$(cat "$work/before-$n")" "$(new_skills)"
 done
-expect "the legacy column is left as it was" '{"climb_walls":15,"open_locks":20}' "$(sql "SELECT skill_points FROM characters WHERE id = ${id[robin]}" | jq -cS .)"
 
-# --- 3. two restarts: nothing changes ---
+# --- 4. two restarts change nothing; a spend and its undo work ---
 state() {
-    sql "SELECT id || ' ' || skill_sets || ' ' || skill_points FROM characters ORDER BY id"
+    sql "SELECT id || ' ' || skill_sets FROM characters ORDER BY id"
     sql "SELECT COUNT(*) FROM schema_migrations"
     sql "SELECT COUNT(*) FROM action_log"
 }
@@ -173,20 +192,11 @@ for n in 1 2; do
     start "$work/new-srv" "$new_testdata"
     expect "restart $n leaves the characters, migrations and journal as they were" "$before" "$(state)"
 done
-
-# --- 4. an old-release-style write after 034 still shows ---
-sql "UPDATE characters SET skill_sets = '{}', skill_points = '{\"open_locks\":25}' WHERE id = ${id[robin]}" >/dev/null
-sql "UPDATE characters SET skill_sets = '{}', skill_points = '{\"pick_pockets\":12}' WHERE id = ${id[lyra]}" >/dev/null
-use robin
-expect "robin: the old release's points show on the sheet" 25 "$(points_of thief open_locks)"
-use lyra
-expect "lyra: the old release's points show on the sheet" 12 "$(points_of bard pick_pockets)"
 use robin
 call PUT /api/skills/points '{"points":{"open_locks":30}}' >/dev/null
-expect "a spend by this release lands in skill_sets" '{"thief":{"open_locks":30}}' "$(stored robin)"
-expect "and the sheet reads it" 30 "$(points_of thief open_locks)"
-expect "undo gives back the legacy points" skill_points "$(undo)"
-expect "the sheet shows them again" 25 "$(points_of thief open_locks)"
+expect "a spend lands in skill_sets" '{"thief":{"open_locks":30}}' "$(stored robin)"
+expect "undo gives the points back" skill_points "$(undo)"
+expect "the sheet shows them again" 20 "$(points_of thief open_locks)"
 stop
 
 # --- 5. the fixture seed on a fresh database ---
@@ -204,6 +214,7 @@ curl -fsS "$api/api/health" >/dev/null || fail "the server did not answer on the
 db="host=127.0.0.1 port=$pg_port user=critical dbname=critical_fresh"
 expect "fresh database: the fixture bard's points sit in the bard set" '{"bard":{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}}' \
     "$(sql "SELECT skill_sets FROM characters WHERE name = 'Test Bard'" | jq -cS .)"
+expect "fresh database: no characters.skill_points" 0 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"
 stop
 
-echo "skill-sets-rehearsal: PASS"
+echo "skill-leftovers-rehearsal: PASS"

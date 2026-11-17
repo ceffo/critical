@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 
 	"github.com/ceffo/critical/api/internal/adapters/characterdal"
 	"github.com/ceffo/critical/api/internal/domain"
@@ -158,48 +157,6 @@ func raceSeedCharacter(ctx context.Context, q storeq.Querier, characterPath stri
 		return fmt.Errorf("set the race of character %d: %w", owner, err)
 	}
 	return nil
-}
-
-// pointSeedCharacter gives the seed character stored before bards entered skill points the points
-// its seed names (the ones that give his sheet's percentages, ADR 0030 steps 18 and 24): the data
-// step after bardSkillsMigration. A character that already has points keeps them, so a rerun
-// changes nothing and no spend since is lost; no seed character, or a seed without points, changes
-// nothing.
-func pointSeedCharacter(ctx context.Context, q storeq.Querier, characterPath string) error {
-	c, found, err := seedfile.ReadCharacter(characterPath)
-	if err != nil || !found || len(c.SkillPoints) == 0 {
-		return err
-	}
-	owner, ok, err := seedOwner(ctx, q, characterPath)
-	if err != nil || !ok {
-		return err
-	}
-	// The step runs before the skill sets column exists: it writes the legacy flat column, the one
-	// the carry-over of skillSetsMigration reads (a seed has one skill set).
-	flat := map[string]int{}
-	for _, points := range c.SkillPoints {
-		maps.Copy(flat, points)
-	}
-	points, err := skillPointsJSON(flat)
-	if err != nil {
-		return err
-	}
-	if err := q.SetSkillPointsIfUnset(ctx, storeq.SetSkillPointsIfUnsetParams{ID: owner, SkillPoints: points}); err != nil {
-		return fmt.Errorf("set the skill points of character %d: %w", owner, err)
-	}
-	return nil
-}
-
-// skillPointsJSON is points as the legacy characters.skill_points stores them ("{}" for none).
-func skillPointsJSON(points map[string]int) (string, error) {
-	if len(points) == 0 {
-		return "{}", nil
-	}
-	b, err := json.Marshal(points)
-	if err != nil {
-		return "", fmt.Errorf("marshal skill points: %w", err)
-	}
-	return string(b), nil
 }
 
 // skillSetsJSON is points as characters.skill_sets stores them ("{}" for none).

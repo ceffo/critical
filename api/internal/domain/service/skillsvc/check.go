@@ -411,7 +411,6 @@ func (s *service) withPoints(char *charactersvc.View, d draft) error {
 		return err
 	}
 	set := own.set
-	char.SkillPoints = char.SkillPoints.Resolve(own.first)
 	next, err := skills.ValidSkillPoints(own.def, set, d.points)
 	if err != nil {
 		return err

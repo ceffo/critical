@@ -199,7 +199,7 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 			return fmt.Errorf("derive %s turning: %w", g.Class.ID, err)
 		}
 	}
-	if g, ok := grant(classes.KindRogueSkills); ok {
+	if _, ok := grant(classes.KindRogueSkills); ok {
 		// Steps 17 and 18: the sheet's Dexterity, the entered points and
 		// the worn body armour's Table 29 column (ADR 0033 step 14: none
 		// worn is the none column) for each skill set the class grants (ADR
@@ -209,7 +209,7 @@ func (d *Derived) setFeatures(c *Character, entries []entryCalc, armour string, 
 		if d.SkillColumn == "" {
 			d.SkillColumn = ruletablesvc.ColumnNone
 		}
-		if err := d.SetSkillFigures(rules, def, c, c.SkillPoints.Resolve(g.Class)); err != nil {
+		if err := d.SetSkillFigures(rules, def, c, c.SkillPoints); err != nil {
 			return err
 		}
 	}

@@ -331,51 +331,6 @@ func TestMigrate_TheSeedCharacterGetsItsRaceAfterTheRaceMigration(t *testing.T) 
 	assert.Equal(t, "", store.t.Races[kelsen], "an applied migration runs no step")
 }
 
-// Existing data (ADR 0030 step 18, the bard's points): the seed character stored before bards
-// entered skill points gets the points its seed names right after migration 012, the points that
-// give his sheet's percentages (TestKelsen_TheSheetMatchesTheDerivedValues); another character and
-// points spent since are left as they are; a rerun (the migration applied) runs no step.
-func TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration(t *testing.T) {
-	embedded, err := embeddedMigrations()
-	require.NoError(t, err)
-	store := newFakeStore()
-	require.NoError(t, seedOn(store, repoSeeds()))
-	kelsen := store.t.Characters[0]
-	assert.JSONEq(t, `{"bard":{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}}`, store.t.SkillSets[kelsen],
-		"a new database seeds the points, per skill set, with the character")
-	other := int64(99)
-	store.t.Characters = append(store.t.Characters, other)
-	store.t.SkillPoints[kelsen], store.t.SkillPoints[other] = "{}", "{}" // as the column's default left them
-	var recorded []string
-	for _, m := range embedded {
-		if m.name != bardSkillsMigration {
-			recorded = append(recorded, m.name)
-		}
-	}
-	run := func(recorded []string) {
-		f := &fakeMigrations{recorded: recorded, store: store}
-		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
-			return runMigrations(ctx, f, embedded, before, after)
-		}))
-	}
-
-	run(recorded)
-	assert.JSONEq(t, `{"climb_walls":35,"detect_noise":70,"pick_pockets":25,"read_languages":70}`, store.t.SkillPoints[kelsen],
-		"the seed's points")
-	assert.Equal(t, "{}", store.t.SkillPoints[other], "another character is not the seed's")
-
-	// Points spent since are kept, by a rerun of the step and by an applied migration.
-	store.t.SkillPoints[kelsen] = `{"climb_walls":40}`
-	require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-		return pointSeedCharacter(ctx, store, seedfile.Path(repoSeeds(), seedfile.CharacterFile))
-	}))
-	assert.JSONEq(t, `{"climb_walls":40}`, store.t.SkillPoints[kelsen])
-	store.t.SkillPoints[kelsen] = "{}"
-	run(append(recorded, bardSkillsMigration))
-	assert.Equal(t, "{}", store.t.SkillPoints[kelsen], "an applied migration runs no step")
-}
-
 // ADR 0042 step 1, existing data: right after migration 035 every stored character becomes one
 // active entry with its class (the column's default bard when none was set), its realized level
 // (the sheet's level when none was taken in the app, ADR 0030 step 7.5) and its starting XP; a
@@ -431,51 +386,6 @@ func TestMigrate_Step1_ACharacterBecomesOneActiveEntry(t *testing.T) {
 	assert.Len(t, store.t.Entries[5], 1, "the rerun gives the new character its entry")
 }
 
-// Existing data (ADR 0040 step 3.5, the skill sets): the flat skill points stored before a
-// character could have several skill sets are copied under the first set its class lists right
-// after migration 034; a character with no points, a class without a skill set and a character that
-// already has skill sets are left as they are, and a rerun (the migration applied) runs no step.
-func TestMigrate_TheSkillPointsMoveToTheirSkillSet(t *testing.T) {
-	embedded, err := embeddedMigrations()
-	require.NoError(t, err)
-	store := newFakeStore()
-	bard, thief, fighter, empty, kept := int64(1), int64(2), int64(3), int64(4), int64(5)
-	store.t.Characters = []int64{bard, thief, fighter, empty, kept}
-	store.t.Classes = map[int64]string{bard: "bard", thief: "thief", fighter: "fighter", empty: "thief", kept: "thief"}
-	for _, id := range store.t.Characters {
-		store.t.SkillPoints[id], store.t.SkillSets[id] = "{}", "{}"
-	}
-	store.t.SkillPoints[bard] = `{"climb_walls":35,"pick_pockets":25}`
-	store.t.SkillPoints[thief] = `{"open_locks":20}`
-	store.t.SkillPoints[fighter] = `{"open_locks":20}`
-	store.t.SkillPoints[kept], store.t.SkillSets[kept] = `{"open_locks":20}`, `{"thief":{"open_locks":30}}`
-	var recorded []string
-	for _, m := range embedded {
-		if m.name != skillSetsMigration {
-			recorded = append(recorded, m.name)
-		}
-	}
-	run := func(recorded []string) {
-		f := &fakeMigrations{recorded: recorded, store: store}
-		require.NoError(t, store.InTx(context.Background(), func(ctx context.Context) error {
-			before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
-			return runMigrations(ctx, f, embedded, before, after)
-		}))
-	}
-
-	run(recorded)
-	assert.JSONEq(t, `{"bard":{"climb_walls":35,"pick_pockets":25}}`, store.t.SkillSets[bard], "under the bard's set")
-	assert.JSONEq(t, `{"thief":{"open_locks":20}}`, store.t.SkillSets[thief], "under the thief's set")
-	assert.Equal(t, "{}", store.t.SkillSets[fighter], "a class without a skill set carries nothing")
-	assert.Equal(t, "{}", store.t.SkillSets[empty], "no points, no set")
-	assert.JSONEq(t, `{"thief":{"open_locks":30}}`, store.t.SkillSets[kept], "skill sets already stored are kept")
-	assert.JSONEq(t, `{"open_locks":20}`, store.t.SkillPoints[thief], "the legacy column is left as it is")
-
-	store.t.SkillSets[thief] = "{}"
-	run(append(recorded, skillSetsMigration))
-	assert.Equal(t, "{}", store.t.SkillSets[thief], "an applied migration runs no step")
-}
-
 // pspLedgerMigration adds the PSP pool's columns; schema only, it has no data step.
 const pspLedgerMigration = "037_psp_ledger.sql"
 
@@ -487,4 +397,22 @@ func TestMigrate_ThePSPColumnsRunNoDataStep(t *testing.T) {
 	before, after := migrationDataSteps(repoSeeds(), catalogueEquipment, catalogueDefs)
 	assert.NotContains(t, before, pspLedgerMigration, "no data step before it")
 	assert.NotContains(t, after, pspLedgerMigration, "no data step after it")
+}
+
+// The drop of characters.skill_points proves nothing relies on it first (a migration holds no data,
+// ADR 0025 step 2.1): the guard that refuses a character with flat points and no skill sets comes
+// before the DROP, in the same file, so the run rolls back instead of losing them. The guard's
+// own run is the rehearsal's (scripts/skill-leftovers-rehearsal.sh, which plants the case and runs the
+// remedy the message names): no test here opens a database, so this one checks the text only.
+func TestMigration048_TheGuardPrecedesTheDrop(t *testing.T) {
+	body, err := migrationFiles.ReadFile("migrations/048_drop_skill_points.sql")
+	require.NoError(t, err)
+	code := lineComment.ReplaceAllString(string(body), "")
+	guard := strings.Index(code, "RAISE EXCEPTION")
+	drop := strings.Index(code, "DROP COLUMN skill_points")
+	require.GreaterOrEqual(t, guard, 0, "the guard refuses")
+	require.Greater(t, drop, guard, "the drop comes after the guard")
+	assert.Contains(t, code, "skill_points <> '{}' AND skill_sets = '{}'", "the guard looks for points no skill set holds")
+	assert.Contains(t, code, "set skill_points = ''{}''", "the refusal names the remedy for dead points")
+	assert.Contains(t, code, "set skill_sets = json_build_object(", "the refusal names the remedy for live points")
 }

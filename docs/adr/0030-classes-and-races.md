@@ -1022,12 +1022,12 @@ row per language ([ADR 0023](0023-localized-text.md)), never parsed by the code.
     _(As built for the skills, 2026-10-18)_ The derived points are the seed's (`skill_points` in
     `seeds/character.json`: 35 / 70 / 25 / 70, within the bard's budget at level 15), stored with a
     new seed character and given to the one already stored by migration 012's data step
-    (`pointSeedCharacter`, only while he has none). The seed check proves them: on the fixture's
+    (`pointSeedCharacter`, only while he has none; _removed 2026-11-17 with `characters.skill_points`,
+    migration 048, see ADR 0040 step 3.5_). The seed check proves them: on the fixture's
     tables and the real artifact, each derived percentage equals the sheet's in `seeds/skills.json`
     and each point is that percentage minus the computed terms. The sheet's skill figures are not
     compared on read (no `sheetDifferences` entry for them).
     Tests: `TestKelsen_TheSheetMatchesTheDerivedValues` (seedcheck),
-    `TestMigrate_TheSeedCharacterGetsItsSkillPointsAfterTheBardSkillsMigration` (storage/postgres),
     `TestBard_Step18_TheSeedBardKeepsHisSheetsPercentages` (composition).
     _(Retirement as built, 2026-10-19)_ The derived block no longer lists differences. The API keeps
     `sheetDifferences` as an always empty array for one release only, because the previous

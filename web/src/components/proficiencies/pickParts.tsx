@@ -18,6 +18,7 @@ export function PoolBar({
   terms,
   detail,
   stale = false,
+  leftOf,
   testId,
   className,
   children,
@@ -30,6 +31,8 @@ export function PoolBar({
   /** What else the pool says (the languages' part, the spent count), under the formula. */
   detail?: ReactNode;
   stale?: boolean;
+  /** The words after the count ("slots left of 7"); the slots' by default. */
+  leftOf?: string;
   testId: string;
   /** The tone the bar covers the list with while it scrolls under it. */
   className?: string;
@@ -67,7 +70,7 @@ export function PoolBar({
           className="text-body tabular-nums"
           data-testid={`${testId}-spent`}
         >
-          {t("proficiencies.leftOf", { count: left, available })}
+          {leftOf ?? t("proficiencies.leftOf", { count: left, available })}
         </span>
         <span
           className="min-w-0 text-label break-words text-ink-muted tabular-nums"

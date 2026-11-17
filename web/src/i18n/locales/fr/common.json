@@ -2587,7 +2587,13 @@
     "pointsRefused": "Ces points ont été refusés.",
     "unusable": "{{name}} : dépensez des points pour l’augmenter avant de pouvoir l’utiliser",
     "blocked": "{{name}} : bloquée par l’armure portée",
-    "blockedTag": "Bloquée"
+    "blockedTag": "Bloquée",
+    "leftOf_one": "point restant sur {{available}}",
+    "leftOf_other": "points restants sur {{available}}",
+    "budgetTerms": "{{formula}} (niveau {{level}}) · dépensés {{spent}}",
+    "overBudget": "Le budget est dépassé.",
+    "pointsSlider": "Curseur : {{name}}",
+    "sliderHint": "La partie pleine : les points du talent. La partie claire : jusqu’où les points restants le mènent. « / N » : sa limite. Les flèches avancent de 1, Page précédente et Page suivante de 5."
   },
   "dice": {
     "title": "Dés",

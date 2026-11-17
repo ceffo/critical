@@ -2587,7 +2587,13 @@
     "pointsRefused": "These points were refused.",
     "unusable": "{{name}}: spend points to raise it before you can use it",
     "blocked": "{{name}}: blocked by the worn armour",
-    "blockedTag": "Blocked"
+    "blockedTag": "Blocked",
+    "leftOf_one": "point left of {{available}}",
+    "leftOf_other": "points left of {{available}}",
+    "budgetTerms": "{{formula}} (level {{level}}) · spent {{spent}}",
+    "overBudget": "The budget is exceeded.",
+    "pointsSlider": "Slider: {{name}}",
+    "sliderHint": "The solid part is the skill's points, the light part how far the points left take it, “/ N” its limit. Arrows move by 1, Page up and Page down by 5."
   },
   "dice": {
     "title": "Dice",

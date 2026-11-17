@@ -66,12 +66,14 @@ describe("ThiefPointsEditor", () => {
         />
       </I18nextProvider>,
     );
-    expect(html).toContain("Available: 60 + 30 × 0 = 60 (level 1)");
-    expect(html).toContain("Spent 30, left 30");
-    expect(html).toContain(
-      "Base 10, points 30, race +5, Dex 0, armour 0 = 45%",
-    );
-    expect(html).toContain("0 of 30 points");
+    // The points left are in the bar at the top, with the formula and what is spent.
+    expect(html).toMatch(/skill-points-left">30</);
+    expect(html).toContain("points left of 60");
+    expect(html).toContain("60 + 30 × 0 = 60 (level 1) · spent 30");
+    // One table, a column per term; the percentage is the server's.
+    expect(html).toMatch(/thief-read-percent-open_locks">45%/);
+    expect(html).toContain('aria-valuetext="30 of 30 points"');
+    expect(html).toContain('aria-valuetext="0 of 30 points"');
   });
 
   // ADR 0037 step 19.6: each field's name is the button that opens the set's description of the
@@ -104,6 +106,7 @@ describe("ThiefPointsEditor", () => {
       expect(html).toContain(`data-testid="thief-points-${id}"`);
     }
     expect(html).toContain('aria-label="Points in Open Locks"');
+    expect(html).toContain('aria-label="Slider: Open Locks"');
   });
 });
 

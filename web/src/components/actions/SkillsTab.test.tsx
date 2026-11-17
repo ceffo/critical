@@ -191,11 +191,25 @@ describe("SkillsTab budget and terms", () => {
         ]),
       ],
     });
-    expect(html).toContain(
-      "Base 10, points 5, race +5, Dex −5, armour 0 = 15%",
-    );
-    expect(html).toMatch(/= 112%.{0,80}capped at 95%/);
-    expect(html).toMatch(/= −5%.{0,80}floored at 0%/);
+    // One column per term, in a table; the total is the roll button's.
+    const terms =
+      /data-testid="skill-terms-hide_in_shadows">(.*?)<\/table>/.exec(
+        html,
+      )?.[1];
+    expect(terms).toBeDefined();
+    expect(
+      terms
+        ?.match(/<th[^>]*>([^<]*)<\/th>/g)
+        ?.map((h) => h.replace(/<[^>]*>/g, "")),
+    ).toEqual(["Base", "Points", "Race", "Dexterity", "Armour"]);
+    expect(
+      terms
+        ?.match(/<td[^>]*>([^<]*)<\/td>/g)
+        ?.map((h) => h.replace(/<[^>]*>/g, "")),
+    ).toEqual(["10", "5", "+5", "−5", "0"]);
+    expect(html).toMatch(/skill-limit-climb_walls">capped at 95%/);
+    expect(html).toMatch(/skill-limit-read_languages">floored at 0%/);
+    expect(html).not.toContain('data-testid="skill-limit-hide_in_shadows"');
   });
 });
 

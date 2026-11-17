@@ -2,9 +2,9 @@ import { useEffect, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { PendingButton } from "@/components/skills/PendingButton";
 import { SkillNameButton } from "@/components/skills/SkillDialog";
+import { SkillTermsTable } from "@/components/skills/SkillTermsTable";
 import { ProficiencyNameButton } from "@/components/proficiencies/ProficiencyDialog";
 import { isSpecialization } from "@/components/proficiencies/weapons";
-import { skillName } from "@/journal/words";
 import { localized } from "@/i18n/localized";
 import { formatSigned } from "@/lib/format";
 import { formula } from "@/lib/skillBudget";
@@ -343,8 +343,6 @@ export function SkillSetRead({
   const { t, i18n } = useTranslation();
   const b = set.budget;
   const title = localized(i18n.language, set.name) || set.set;
-  const th = "px-2 py-1 text-right text-label font-medium text-ink-muted";
-  const td = "px-2 py-1.5 text-right tabular-nums";
   return (
     <Section
       id={`skills-points-${set.set}`}
@@ -362,71 +360,17 @@ export function SkillSetRead({
           detail={formula(t, b.first, b.perLevel, b.level, b.available)}
         />
       )}
-      <div className="overflow-x-auto">
-        <table
-          className="w-full border-separate border-spacing-y-1 text-body"
-          data-testid={`skills-points-${set.set}-table`}
-        >
-          <thead>
-            <tr>
-              <th className={cn(th, "text-left")}>
-                {t("skillsActivity.talent")}
-              </th>
-              {(
-                [
-                  "base",
-                  "points",
-                  "race",
-                  "dexterity",
-                  "armor",
-                  "total",
-                ] as const
-              ).map((k) => (
-                <th key={k} className={th}>
-                  {t(`skillsActivity.terms.${k}`)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {set.skills.map((s) => (
-              <tr
-                key={s.id}
-                className={cn("bg-sub-band", s.blocked && "text-warning")}
-                data-testid={`skill-set-read-${set.set}-${s.id}`}
-              >
-                <td className="rounded-l-md px-2.5 py-1.5 text-left">
-                  <SkillNameButton
-                    set={set.set}
-                    skill={s}
-                    className="rounded-md text-left break-words underline-offset-2 hover:underline"
-                  />
-                </td>
-                <td className={td}>{s.base}</td>
-                <td className={td}>{s.points}</td>
-                <td className={td}>{formatSigned(s.race)}</td>
-                <td className={td}>{formatSigned(s.dexterity)}</td>
-                <td className={td}>{formatSigned(s.armor)}</td>
-                <td
-                  className={cn(
-                    td,
-                    "rounded-r-md font-semibold whitespace-nowrap",
-                  )}
-                  title={skillName(t, s.id)}
-                  data-testid={`${set.set}-read-percent-${s.id}`}
-                >
-                  {t("skills.percent", { value: s.percent })}
-                  {s.blocked && (
-                    <span className="block text-label font-normal">
-                      {t("skills.blockedTag")}
-                    </span>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <SkillTermsTable
+        setId={set.set}
+        rows={set.skills}
+        name={(r) => (
+          <SkillNameButton
+            set={set.set}
+            skill={set.skills.find((s) => s.id === r.id) ?? set.skills[0]}
+            className="rounded-md text-left break-words underline-offset-2 hover:underline"
+          />
+        )}
+      />
       {set.skillArmor && (
         <p
           className="text-label break-words text-ink-muted"

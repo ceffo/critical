@@ -1,15 +1,12 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { OVER_BUDGET } from "@/api/http";
-import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Button } from "@/components/ui/button";
 import { SkillNameButton } from "@/components/skills/SkillDialog";
-import { skillName } from "@/journal/words";
-import { cn } from "@/lib/utils";
+import { SkillPointsBoard } from "@/components/skills/SkillPointsBoard";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { RogueSkill, SkillBudget } from "@/types/skills";
-import { SkillBudgetSummary, SkillTerms } from "./SkillBreakdown";
 import { previewDraft, skillSetOf, typedPoints } from "./skillsPreview";
 
 /**
@@ -113,106 +110,24 @@ export function ThiefPointsEditor({
     });
   };
 
-  const errorFor = (field: string) => {
-    const text =
-      error?.field === field
-        ? error.text
-        : previewError?.field === field
-          ? refusalText(previewError)
-          : null;
-    return text ? (
-      <p role="alert" className="text-label break-words text-danger">
-        {text}
-      </p>
-    ) : null;
-  };
+  // The server's refusal of a skill's points, or the one of the save, worded for the skill it
+  // concerns (ADR 0027 step 1: beside the control, not at the foot).
+  const errorFor = (field: string) =>
+    error?.field === field
+      ? error.text
+      : previewError?.field === field
+        ? refusalText(previewError)
+        : null;
+  const general = errorFor("skillPoints");
 
-  return (
-    <form
-      className="flex min-w-0 flex-col gap-3 px-2.5"
-      aria-labelledby="thief-points-title"
-      data-testid="thief-points-editor"
-      onSubmit={(e) => void submit(e)}
-    >
-      <div className="flex flex-col gap-1">
+  const header = (
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-2.5">
+      <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
         <h4 id="thief-points-title" className="text-body font-semibold">
           {t("skills.pointsTitle")}
         </h4>
-        <p className="text-label break-words text-muted-foreground">
-          {t("skills.pointsLead")}
-        </p>
       </div>
-      {shown.budget && (
-        <div
-          className={cn("flex flex-col gap-1", stale && "opacity-60")}
-          data-stale={stale ? "true" : undefined}
-          data-testid="skill-points-preview"
-        >
-          <SkillBudgetSummary budget={shown.budget} className="px-0" />
-          {stale && (
-            <p
-              className="text-label break-words text-muted-foreground"
-              data-testid="skill-preview-stale"
-            >
-              {t("skills.previewStale")}
-            </p>
-          )}
-        </div>
-      )}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(14rem,1fr))] gap-3">
-        {skills.map((s) => {
-          const field = `skillPoints.${s.id}`;
-          const name = skillName(t, s.id);
-          const preview = shown.skills.find((p) => p.id === s.id);
-          return (
-            <div key={s.id} className="flex min-w-0 flex-col justify-end gap-1">
-              {/* The name opens the set's description of the skill (ADR 0037 step 19.6); the field
-                  keeps its own accessible name. */}
-              <SkillNameButton
-                set={set}
-                skill={preview ?? s}
-                className={cn(
-                  labelClass,
-                  "w-fit max-w-full rounded-md text-left break-words underline-offset-2 hover:underline",
-                )}
-              />
-              <input
-                id={`thief-points-${s.id}`}
-                className={fieldClass}
-                inputMode="numeric"
-                aria-label={t("skills.pointsLabel", { name })}
-                aria-invalid={
-                  error?.field === field ||
-                  previewError?.field === field ||
-                  undefined
-                }
-                title={t("characters.range", range)}
-                data-testid={`thief-points-${s.id}`}
-                value={values[s.id] ?? ""}
-                onChange={(e) => {
-                  setValues((v) => ({ ...v, [s.id]: e.target.value }));
-                  setError(null);
-                }}
-              />
-              {errorFor(field)}
-              {preview && (
-                <SkillTerms skill={preview} cap={shown.budget?.perSkillCap} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {errorFor("skillPoints")}
-      <div className="flex flex-wrap gap-2">
-        <Button
-          type="submit"
-          variant="main"
-          size="sm"
-          disabled={saving}
-          data-testid="thief-points-save"
-        >
-          {t("skills.savePoints")}
-        </Button>
+      <div className="flex shrink-0 flex-wrap gap-2">
         <Button
           type="button"
           size="sm"
@@ -222,7 +137,71 @@ export function ThiefPointsEditor({
         >
           {t("skills.cancelPoints")}
         </Button>
+        <Button
+          type="submit"
+          variant="main"
+          size="sm"
+          disabled={saving}
+          data-testid="thief-points-save"
+        >
+          {t("skills.savePoints")}
+        </Button>
       </div>
+    </div>
+  );
+
+  return (
+    <form
+      className="flex min-w-0 flex-col gap-3"
+      aria-labelledby="thief-points-title"
+      data-testid="thief-points-editor"
+      onSubmit={(e) => void submit(e)}
+    >
+      <SkillPointsBoard
+        setId={set}
+        skillIds={skills.map((s) => s.id)}
+        rows={shown.skills}
+        budget={shown.budget}
+        maxPercent={skills[0]?.maxPercent ?? 95}
+        values={values}
+        onChange={(id, v) => {
+          setValues((x) => ({ ...x, [id]: v }));
+          setError(null);
+        }}
+        errorFor={(id) => errorFor(`skillPoints.${id}`)}
+        name={(id, row) => {
+          const text = errorFor(`skillPoints.${id}`);
+          const skill = skills.find((s) => s.id === id);
+          return (
+            <span className="flex min-w-0 flex-col gap-0.5">
+              {/* The name opens the set's description of the skill (ADR 0037 step 19.6). */}
+              {skill && (
+                <SkillNameButton
+                  set={set}
+                  skill={{ ...skill, ...row }}
+                  className="w-fit max-w-full rounded-md text-left break-words underline-offset-2 hover:underline"
+                />
+              )}
+              {text && (
+                <span
+                  id={`skill-error-${set}-${id}`}
+                  role="alert"
+                  className="text-label break-words text-danger"
+                >
+                  {text}
+                </span>
+              )}
+            </span>
+          );
+        }}
+        header={header}
+        stale={stale}
+      />
+      {general && (
+        <p role="alert" className="text-label break-words text-danger">
+          {general}
+        </p>
+      )}
     </form>
   );
 }

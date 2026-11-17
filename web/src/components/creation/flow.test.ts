@@ -529,8 +529,8 @@ describe("stepOfField", () => {
     expect(stepOfField("cha")).toBe("scores");
     expect(stepOfField("hpMax")).toBe("extras");
     expect(stepOfField("strExceptional")).toBe("extras");
-    expect(stepOfField("skillPoints.bard.climb_walls")).toBe("extras");
-    expect(stepOfField("skillPoints.bard")).toBe("extras");
+    expect(stepOfField("skillPoints.bard.climb_walls")).toBe("skillPoints");
+    expect(stepOfField("skillPoints.bard")).toBe("skillPoints");
     expect(stepOfField("nonweapon")).toBe("proficiencies");
     expect(stepOfField("nonweapon.tumbling")).toBe("proficiencies");
     expect(stepOfField("weapon.dagger")).toBe("proficiencies");
@@ -811,6 +811,18 @@ describe("the starting spellbook (ADR 0030 step 20.7)", () => {
     expect(stepsFor(carrying("bard"))).toEqual(withBook);
     for (const answer of [carrying(""), null])
       expect(stepsFor(answer)).not.toContain("spellbook");
+  });
+
+  it("shows the skill points step only when the draft's answer lists a skill set", () => {
+    const thief = {
+      skillSets: [{ set: "thief" }],
+    } as unknown as CreationDraft;
+    expect(stepsFor(thief)).toContain("skillPoints");
+    expect(stepsFor(thief).indexOf("skillPoints")).toBe(
+      stepsFor(thief).indexOf("proficiencies") + 1,
+    );
+    for (const answer of [{ skillSets: [] } as unknown as CreationDraft, null])
+      expect(stepsFor(answer)).not.toContain("skillPoints");
   });
 
   it("says by the draft's answer whether the starting level has a spell level (a bard at level 1 has none)", () => {

@@ -153,6 +153,7 @@ export function SkillPointsBoard({
             return (
               <PointsSlider
                 id={r.id}
+                scope={setId}
                 name={skillName(t, r.id)}
                 value={values[r.id] ?? ""}
                 limit={known.has(r.id) ? limit : maxPercent}

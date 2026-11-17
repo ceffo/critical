@@ -17,6 +17,7 @@ const at = (ratio: number) =>
  */
 export function PointsSlider({
   id,
+  scope = "thief",
   name,
   value,
   limit,
@@ -26,6 +27,8 @@ export function PointsSlider({
   onChange,
 }: {
   id: string;
+  /** The skill set, so two sets sharing a skill keep distinct element ids. */
+  scope?: string;
   /** The skill's name, for the accessible name. */
   name: string;
   /** What the box holds, as typed. */
@@ -87,7 +90,7 @@ export function PointsSlider({
         />
       </span>
       <input
-        id={`thief-points-${id}`}
+        id={`${scope}-points-${id}`}
         inputMode="numeric"
         autoComplete="off"
         className={cn(

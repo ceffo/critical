@@ -13,7 +13,6 @@ import {
   UserCircle,
   Warning,
 } from "@phosphor-icons/react";
-import { localized } from "@/i18n/localized";
 import { rollHp, rollScores } from "@/api/characters";
 import { ApiError } from "@/api/http";
 import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
@@ -27,7 +26,6 @@ import {
   classesFor,
   initialPlacement,
   KINDS,
-  skillSetsOf,
   isPlaced,
   place,
   signed,
@@ -38,7 +36,6 @@ import {
 } from "./flow";
 import { raceLanguages } from "@/lib/languages";
 import { formatNumber } from "@/lib/format";
-import { skillName } from "@/journal/words";
 import { useLanguageNames } from "@/lib/useLanguageNames";
 import { parseWhole } from "@/lib/wholeNumber";
 import { cn } from "@/lib/utils";
@@ -46,7 +43,6 @@ import { ABILITIES, type AbilityCode } from "@/types/character";
 import { arrangeFor, pickRace } from "./arrange";
 import { Choice, Die, Group, Note, Row, Seg } from "./kit";
 import { ClassRows } from "./classes";
-import { budgetFormula, formula } from "@/lib/skillBudget";
 
 const CLASS_ICONS: Record<string, ReactNode> = {
   bard: <MusicNotes aria-hidden />,
@@ -814,24 +810,11 @@ export function ExtrasStep({
   draft,
   update,
   errorFor,
-  error,
-  refusals,
-  wording,
   xp,
   watch,
   answer,
 }: StepProps) {
-  const { t, i18n } = useTranslation();
-  // A refusal on a set the draft does not list has no block to show in: it shows once, on the step.
-  const listed = new Set(skillSetsOf(answer.latest).map((s) => s.set));
-  const strayRefusal = (error ? [error] : refusals).find(
-    (e) =>
-      e.field.startsWith("skillPoints.") &&
-      !listed.has(e.field.split(".")[1] ?? ""),
-  );
-  // One block per skill set, each with the budget at the level the XP gives, the draft's own: it
-  // reads the class and XP only, so a score out of range leaves it shown (ADR 0030 steps 17, 18).
-  const sets = skillSetsOf(answer.latest);
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [rollError, setRollError] = useState<string | null>(null);
   // The hit points roll of ADR 0032 step 7 is for one class: the entries of several are typed.
@@ -847,10 +830,6 @@ export function ExtrasStep({
     xpValue !== null &&
     !Number.isNaN(xpValue);
   const hp = draft.hpRoll;
-  // Inside a sentence: "pour un barde", "Pas barde".
-  const className = t(`details.classes.${draft.cls}`, {
-    defaultValue: draft.cls,
-  }).toLocaleLowerCase();
 
   const doRoll = async () => {
     if (!canRoll) return;
@@ -997,166 +976,31 @@ export function ExtrasStep({
           </p>
         </Group>
 
-        {(sets.length > 0 || offersExceptional) && (
-          <div className="flex min-w-0 flex-col gap-5">
-            {sets.map(({ set, name, skills, budget }) => (
-              <Group
-                key={set}
-                title={t("creation.extras.skills", {
-                  className: localized(i18n.language, name) || set,
-                })}
-                testId={`${set}-skills-entry`}
+        {offersExceptional && (
+          <Group title={t("characters.strExceptional")}>
+            <div className="flex w-40 min-w-0 flex-col gap-1">
+              <label
+                htmlFor="new-character-strExceptional"
+                className={labelClass}
               >
-                <p className="text-label text-ink-muted">
-                  {t("characters.skillPointsLead")}
-                </p>
-                {budget && (
-                  <p
-                    className="flex flex-wrap gap-x-4 gap-y-0.5 text-body tabular-nums"
-                    data-testid="skill-budget"
-                  >
-                    <span>
-                      {t("creation.extras.budget", {
-                        level: budget.level,
-                        total: budget.available,
-                      })}
-                    </span>
-                    <span
-                      data-over={budget.left < 0 ? "true" : undefined}
-                      className={cn(
-                        "font-semibold",
-                        budget.left < 0 && "text-danger",
-                      )}
-                    >
-                      {t("creation.extras.budgetLeft", {
-                        left: budget.left,
-                      })}
-                    </span>
-                    {budget.perSkillCap > 0 && (
-                      <span className="text-ink-muted">
-                        {t("creation.extras.budgetPerSkill", {
-                          max: budget.perSkillCap,
-                        })}
-                      </span>
-                    )}
-                    <span
-                      className="text-ink-muted"
-                      data-testid="skill-budget-formula"
-                    >
-                      {t("creation.extras.budgetFormula", {
-                        formula: budgetFormula(t, budget),
-                      })}
-                    </span>
-                    {budget.perSkillCap > 0 && (
-                      <span
-                        className="text-ink-muted"
-                        data-testid="skill-budget-per-skill-formula"
-                      >
-                        {t("creation.extras.budgetPerSkillFormula", {
-                          formula: formula(
-                            t,
-                            budget.perSkillFirst,
-                            budget.perSkillPerLevel,
-                            budget.level,
-                            budget.perSkillCap,
-                          ),
-                        })}
-                      </span>
-                    )}
-                  </p>
-                )}
-                <table className="w-full text-body">
-                  <thead>
-                    <tr className="text-left text-label text-ink-muted">
-                      <th className="pb-1 font-medium">
-                        {t("creation.extras.skill")}
-                      </th>
-                      <th className="pb-1 font-medium">
-                        {t("creation.extras.points")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {skills.map((skill) => {
-                      const f = `skillPoints.${set}.${skill}`;
-                      const text = errorFor(f);
-                      return (
-                        <tr key={skill} className="border-t border-border">
-                          <td className="py-1.5 pr-2">
-                            <label htmlFor={`new-character-${f}`}>
-                              {skillName(t, skill)}
-                            </label>
-                          </td>
-                          <td className="py-1">
-                            <input
-                              {...fieldProps(f, text, "w-20 tabular-nums")}
-                              inputMode="numeric"
-                              autoComplete="off"
-                              title={t("characters.range", {
-                                ...options.skillPoints,
-                              })}
-                              value={draft.skillPoints[set]?.[skill] ?? ""}
-                              onChange={(e) =>
-                                update({
-                                  skillPoints: {
-                                    ...draft.skillPoints,
-                                    [set]: {
-                                      ...draft.skillPoints[set],
-                                      [skill]: e.target.value,
-                                    },
-                                  },
-                                })
-                              }
-                            />
-                            <FieldError id={`new-character-${f}`} text={text} />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-                <FieldError
-                  id={`new-character-skillPoints.${set}`}
-                  text={errorFor(`skillPoints.${set}`)}
-                />
-              </Group>
-            ))}
-            <FieldError
-              id="new-character-skillPoints"
-              text={strayRefusal ? wording(strayRefusal) : null}
-            />
-            {offersExceptional && (
-              <Group title={t("characters.strExceptional")}>
-                <div className="flex w-40 min-w-0 flex-col gap-1">
-                  <label
-                    htmlFor="new-character-strExceptional"
-                    className={labelClass}
-                  >
-                    {t("creation.extras.percentile")}
-                  </label>
-                  <input
-                    {...fieldProps("strExceptional", strError)}
-                    inputMode="numeric"
-                    autoComplete="off"
-                    title={t("characters.strExceptionalHint", {
-                      min: options.strExceptional.min,
-                      max: options.strExceptional.max,
-                    })}
-                    value={draft.strExceptional}
-                    onChange={(e) => update({ strExceptional: e.target.value })}
-                  />
-                </div>
-                <FieldError id="new-character-strExceptional" text={strError} />
-              </Group>
-            )}
-          </div>
+                {t("creation.extras.percentile")}
+              </label>
+              <input
+                {...fieldProps("strExceptional", strError)}
+                inputMode="numeric"
+                autoComplete="off"
+                title={t("characters.strExceptionalHint", {
+                  min: options.strExceptional.min,
+                  max: options.strExceptional.max,
+                })}
+                value={draft.strExceptional}
+                onChange={(e) => update({ strExceptional: e.target.value })}
+              />
+            </div>
+            <FieldError id="new-character-strExceptional" text={strError} />
+          </Group>
         )}
       </div>
-      {sets.length === 0 && !offersExceptional && (
-        <Note kind="info">
-          {t("creation.extras.nothingElse", { className })}
-        </Note>
-      )}
     </>
   );
 }

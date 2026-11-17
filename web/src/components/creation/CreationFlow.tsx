@@ -34,6 +34,7 @@ import {
   hasSpellbook,
   refusalError,
   settle,
+  skillSetsOf,
   stepOfField,
   stepsFor,
   weaponPickNames,
@@ -45,11 +46,13 @@ import {
   type StepId,
   type StepProps,
 } from "./flow";
+import { SkillPointsStep } from "./skillPoints";
 import { ClassStep, ExtrasStep, RaceStep, ScoresStep } from "./steps";
 import { IdentityStep, ReviewStep } from "./identity";
 import { ProficienciesStep } from "./proficiencies";
 import { SpellbookStep } from "./spellbook";
 import { PsionicsStep } from "./psionics";
+import { localized } from "@/i18n/localized";
 import { useSpellName } from "@/i18n/spellName";
 import { useAbilityFocus } from "@/stores/abilityFocus";
 import { useSpellNamesStore } from "@/stores/spellNames";
@@ -235,6 +238,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // step is the server's refusal at Créer.
   const previewing =
     step === "proficiencies" ||
+    step === "skillPoints" ||
     step === "spellbook" ||
     step === "psionics" ||
     step === "identity" ||
@@ -341,7 +345,10 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
   // so a class picked again keeps what was reached.
   const steps = stepsFor(answer.latest);
   const index = steps.indexOf(step);
-  const go = (to: StepId) => {
+  // A refusal on a step the draft does not go through (a skill set it does not list) is shown on
+  // the review, where Créer is.
+  const go = (target: StepId) => {
+    const to = steps.includes(target) ? target : "review";
     setStep(to);
     setReached((r) => Math.max(r, STEPS.indexOf(to)));
   };
@@ -430,16 +437,16 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
       ? "answering"
       : null);
   const last = index === steps.length - 1;
+  // The skill points step is named after the skill sets it holds ("Talents de voleur").
+  const setNames = skillSetsOf(answer.latest)
+    .map((s) => localized(i18n.language, s.name) || s.set)
+    .join(" / ");
   const lead =
     step === "race" && draft.cls && draft.kind !== "single"
       ? t("creation.race.leadSeveral")
       : step === "race" && draft.cls
         ? t("creation.race.lead", { className: className.toLocaleLowerCase() })
-        : step === "extras" && draft.cls
-          ? t("creation.extras.lead", {
-              className: className.toLocaleLowerCase(),
-            })
-          : t(`creation.${step}.lead`);
+        : t(`creation.${step}.lead`);
 
   return (
     <div
@@ -468,6 +475,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
           reached={reached}
           draft={draft}
           answer={answer.latest}
+          setNames={setNames}
           onGo={go}
         />
         <main
@@ -479,7 +487,9 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             <span className="text-label text-ink-muted">
               {t("creation.stepOf", { n: index + 1, of: steps.length })}
             </span>
-            <h1 className="text-headline">{t(`creation.${step}.title`)}</h1>
+            <h1 className="text-headline">
+              {t(`creation.${step}.title`, { className: setNames })}
+            </h1>
             <p className="text-body text-ink-muted">{lead}</p>
           </div>
           {/* The scroller is its content's containing block (relative): an absolute box inside, such
@@ -490,6 +500,7 @@ export function CreationFlow({ onLeave }: { onLeave: () => void }) {
             {step === "scores" && <ScoresStep {...props} />}
             {step === "extras" && <ExtrasStep {...props} />}
             {step === "proficiencies" && <ProficienciesStep {...props} />}
+            {step === "skillPoints" && <SkillPointsStep {...props} />}
             {step === "spellbook" && <SpellbookStep {...props} />}
             {step === "psionics" && <PsionicsStep {...props} />}
             {step === "identity" && <IdentityStep {...props} />}
@@ -624,6 +635,15 @@ function useStepChoice(
         ].filter(Boolean);
         return parts.length > 0 ? parts.join(" · ") : null;
       }
+      case "skillPoints": {
+        const spent = skillSetsOf(answer).reduce(
+          (n, set) => n + (set.budget?.spent ?? 0),
+          0,
+        );
+        return spent > 0
+          ? t("creation.skillPoints.spentN", { count: spent })
+          : null;
+      }
       case "spellbook": {
         const n = draftSpellbook(options, draft, answer).length;
         return n > 0 ? t("creation.spellbook.spellsN", { count: n }) : null;
@@ -683,6 +703,7 @@ function StepList({
   reached,
   draft,
   answer,
+  setNames,
   onGo,
 }: {
   options: CreationOptions;
@@ -691,6 +712,7 @@ function StepList({
   reached: number;
   draft: FlowDraft;
   answer: CreationDraft | null;
+  setNames: string;
   onGo: (s: StepId) => void;
 }) {
   const { t } = useTranslation();
@@ -731,7 +753,7 @@ function StepList({
                       on ? "font-semibold" : done ? "" : "text-ink-muted",
                     )}
                   >
-                    {t(`creation.${s}.name`)}
+                    {t(`creation.${s}.name`, { className: setNames })}
                   </span>
                   {shown && (
                     <span className="text-label break-words text-ink-muted">
@@ -797,6 +819,25 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
       ? formatWeight(details.weight_kg, units, language)
       : null,
   ].filter(Boolean);
+  // What is left to spend, the server's figures (the draft's derived block): the weapon and the
+  // non-weapon slots, and each skill set's points.
+  const slots = answer.latest?.derived?.proficiencySlots;
+  const toSpend = [
+    slots?.weapon && slots.weapon.left > 0
+      ? t("creation.toSpend.weapons", { count: slots.weapon.left })
+      : null,
+    slots && slots.nonWeapon.left > 0
+      ? t("creation.toSpend.nonWeapons", { count: slots.nonWeapon.left })
+      : null,
+    ...skillSetsOf(answer.latest).map((set) =>
+      set.budget && set.budget.left > 0
+        ? t("creation.toSpend.points", {
+            count: set.budget.left,
+            name: localized(language, set.name) || set.set,
+          })
+        : null,
+    ),
+  ].filter((x): x is string => x !== null);
   const warned = read?.derived
     ? warnedFields(
         t,
@@ -893,6 +934,22 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
               : dash}
           </dd>
         </dl>
+        <div className="flex flex-col gap-0.5" data-testid="building-to-spend">
+          <span className="text-label text-ink-muted">
+            {t("creation.toSpend.title")}
+          </span>
+          {toSpend.length > 0 ? (
+            <ul className="text-body">
+              {toSpend.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : (
+            <span className="text-body text-ink-muted">
+              {t("creation.toSpend.nothing")}
+            </span>
+          )}
+        </div>
         {warned.length > 0 && (
           <Note kind="warning" testId="building-warnings">
             {t("creation.warningsOn", {

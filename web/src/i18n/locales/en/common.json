@@ -3437,9 +3437,9 @@
       "not_creatable": "This class cannot be created yet."
     },
     "extras": {
-      "name": "Hit points and skills",
-      "title": "Hit points and skills",
-      "lead": "What the class adds: the hit points of each level up to the starting one, and the {{className}}'s choices.",
+      "name": "Hit points",
+      "title": "Hit points",
+      "lead": "The hit points of each level up to the starting one.",
       "hp": "Hit points",
       "rollHint": "Roll the hit dice, from level 1 to the starting level",
       "level": "Level",
@@ -3453,16 +3453,7 @@
       "hpNeedsCon": "Type the Constitution and the XP to roll, or type the max HP.",
       "hpEditable": "The roll fills the box; you may change it.",
       "hpOutdated": "The class, the level or the Constitution changed since the roll: roll the hit points again.",
-      "skills": "{{className}} skills",
-      "budget": "Level {{level}} budget: {{total}} points",
-      "budgetLeft": "Left: {{left}}",
-      "budgetPerSkill": "At most {{max}} per skill",
-      "budgetFormula": "Available: {{formula}}",
-      "budgetPerSkillFormula": "Per skill: {{formula}}",
-      "skill": "Skill",
-      "points": "Points",
       "percentile": "Percentile (18/xx)",
-      "nothingElse": "Nothing else to choose for a {{className}}: only the hit points.",
       "hpN": "HP {{hp}}"
     },
     "identity": {
@@ -3516,6 +3507,13 @@
       "tabs": "Proficiency kinds",
       "weaponsNone": "This server has no weapon types for the class: you will choose them later in the Skills tab."
     },
+    "skillPoints": {
+      "name": "{{className}} skills",
+      "title": "{{className}} skills",
+      "lead": "Spend the starting level's skill points: each percentage shows its terms, all worked out by the server.",
+      "spentN_one": "{{count}} point spent",
+      "spentN_other": "{{count}} points spent"
+    },
     "spellbook": {
       "name": "Spellbook",
       "title": "Spellbook",
@@ -3566,6 +3564,16 @@
       "errors": {
         "out_of_range": "This PSP maximum is refused: type a whole number, or leave the box blank for the computed one."
       }
+    },
+    "toSpend": {
+      "title": "To spend",
+      "weapons_one": "{{count}} weapon slot",
+      "weapons_other": "{{count}} weapon slots",
+      "nonWeapons_one": "{{count}} proficiency slot",
+      "nonWeapons_other": "{{count}} proficiency slots",
+      "points_one": "{{count}} {{name}} point",
+      "points_other": "{{count}} {{name}} points",
+      "nothing": "Nothing."
     }
   },
   "ac": {

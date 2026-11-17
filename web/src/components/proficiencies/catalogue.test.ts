@@ -122,7 +122,7 @@ describe("picks", () => {
   });
 });
 
-// ADR 0042 step 15 and CRI-416 point 2: the costs and the groups are the server's for the
+// ADR 0042 step 15: the costs and the groups are the server's for the
 // character (every class entry judged together), read as served, not the first class's table.
 describe("servedCatalogue", () => {
   const creation = {

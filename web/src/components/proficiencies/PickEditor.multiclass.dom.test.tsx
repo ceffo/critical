@@ -49,7 +49,7 @@ vi.mock("./pickEditor", async (orig) => ({
   schedulePreview: () => () => {},
 }));
 
-// CRI-416 point 2: a multi-class character's groups and costs are the server's, read as served.
+// A multi-class character's groups and costs are the server's, read as served.
 const served = {
   nonWeapon: {
     initial: 3,

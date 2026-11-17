@@ -402,7 +402,8 @@ func TestMigrate_ThePSPColumnsRunNoDataStep(t *testing.T) {
 // The drop of characters.skill_points proves nothing relies on it first (a migration holds no data,
 // ADR 0025 step 2.1): the guard that refuses a character with flat points and no skill sets comes
 // before the DROP, in the same file, so the run rolls back instead of losing them. The guard's
-// own run is the rehearsal's (scripts/skill-leftovers-rehearsal.sh), no test opens a database.
+// own run is the rehearsal's (scripts/skill-leftovers-rehearsal.sh, which plants the case and runs the
+// remedy the message names): no test here opens a database, so this one checks the text only.
 func TestMigration048_TheGuardPrecedesTheDrop(t *testing.T) {
 	body, err := migrationFiles.ReadFile("migrations/048_drop_skill_points.sql")
 	require.NoError(t, err)
@@ -412,4 +413,6 @@ func TestMigration048_TheGuardPrecedesTheDrop(t *testing.T) {
 	require.GreaterOrEqual(t, guard, 0, "the guard refuses")
 	require.Greater(t, drop, guard, "the drop comes after the guard")
 	assert.Contains(t, code, "skill_points <> '{}' AND skill_sets = '{}'", "the guard looks for points no skill set holds")
+	assert.Contains(t, code, "set skill_points = ''{}''", "the refusal names the remedy for dead points")
+	assert.Contains(t, code, "set skill_sets = json_build_object(", "the refusal names the remedy for live points")
 }

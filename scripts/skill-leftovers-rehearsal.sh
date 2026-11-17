@@ -11,7 +11,7 @@
 # 2. A character left with flat skill_points and no skill sets (what a release from before 034 wrote)
 #    is planted: this checkout's server refuses to start, applies nothing (048 not recorded, the
 #    column still there) and its log names the guard.
-# 3. The points are moved into skill_sets by hand (what 034's copy did): the server upgrades, the
+# 3. The points are moved into skill_sets with the live remedy the refusal names (what 034's copy did): the server upgrades, the
 #    column is gone, and every skill point and percentage is the same as before.
 # 4. Two restarts change nothing; a spend and its undo still work.
 # 5. The fixture seed (character.json) loads on a fresh database too, without the column.
@@ -163,14 +163,15 @@ done
 [ -n "$refused" ] || fail "the server started over flat points no skill set holds"
 wait "$srv_pid" 2>/dev/null && fail "the server exited 0 on a refused migration"
 srv_pid=""
-grep -q "skill_points still holds points" "$work/refused.log" || fail "the refusal does not name the guard: $(tail -n 3 "$work/refused.log")"
+grep -q "skill_points still holds points.*(ids: ${id[robin]})" "$work/refused.log" || fail "the refusal does not name the guard: $(tail -n 3 "$work/refused.log")"
 ok "the guard refused the run"
 expect "048 is not recorded" 0 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '048_drop_skill_points.sql'")"
 expect "the column is still there (the run rolled back)" 1 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"
 expect "robin's flat points are untouched" '{"climb_walls":15,"open_locks":20}' "$(sql "SELECT skill_points FROM characters WHERE id = ${id[robin]}" | jq -cS .)"
 
 # --- 3. the points moved into skill_sets (what 034's copy did): the upgrade drops the column ---
-sql "UPDATE characters SET skill_sets = '{\"thief\":{\"climb_walls\":15,\"open_locks\":20}}' WHERE id = ${id[robin]}" >/dev/null
+# the live remedy the refusal names, verbatim
+sql "UPDATE characters SET skill_sets = json_build_object('thief', skill_points::json)::text WHERE id = ${id[robin]}" >/dev/null
 start "$work/new-srv" "$new_testdata"
 expect "048 recorded once" 1 "$(sql "SELECT COUNT(*) FROM schema_migrations WHERE name = '048_drop_skill_points.sql'")"
 expect "characters.skill_points is gone" 0 "$(sql "SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'characters' AND column_name = 'skill_points'")"

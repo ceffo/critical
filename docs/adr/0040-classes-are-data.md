@@ -197,7 +197,7 @@ writes `Test<name>` and adds the prefix here in the same PR.
       `characters.skill_sets` (`{"<set>": {"<skill>": points}}`, migration 034, additive; its data
       step copied the flat `skill_points` under the class's first set; _amended 2026-11-17: migration 048
       drops `characters.skill_points` and that data step, its guard refusing the run while a character
-      still has flat points and no skill sets_); a `skill_points`
+      still has flat points and no skill sets, naming its ids and the remedy for dead or live points_); a `skill_points`
       snapshot without a `set`, from before, restores the character's only set. What is left to
       spend (ADR 0037 step 15) adds the sets' left points, a set over budget leaving 0. A new
       character enters its points per set (changed 2026-11-15, was the class's first set only):

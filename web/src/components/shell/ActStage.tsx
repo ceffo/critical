@@ -50,7 +50,13 @@ function useHeight(ref: React.RefObject<HTMLDivElement | null>): number {
  * folds the journal into a one-line bar and back (step 5.4). Height and collapsed state are this device's display
  * preferences (stores/settings.ts), never sent to the API.
  */
-export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
+export function ActStage({
+  onOpenInventory,
+  onOpenSkills,
+}: {
+  onOpenInventory: () => void;
+  onOpenSkills: () => void;
+}) {
   const { t } = useTranslation();
   const journalHeight = useSettingsStore((s) => s.journalHeight);
   const collapsed = useSettingsStore((s) => s.journalCollapsed);
@@ -144,7 +150,10 @@ export function ActStage({ onOpenInventory }: { onOpenInventory: () => void }) {
         style={band}
         data-testid="now-band"
       >
-        <ActionArea onOpenInventory={onOpenInventory} />
+        <ActionArea
+          onOpenInventory={onOpenInventory}
+          onOpenSkills={onOpenSkills}
+        />
         <div className="flex min-h-0 flex-col gap-3 min-[1280px]:overflow-y-auto">
           <ResultCard />
           <MaintainedPanel />

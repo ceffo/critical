@@ -233,8 +233,8 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(figures).toHaveCount(0);
   await expect(spent).toHaveText("Dépensés 2, restants 5");
   await editor.getByTestId("proficiency-save").click();
-  // The editor stays open in the Skills activity, on the stored picks; the Act activity shows the pick.
-  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("1");
+  // A save returns to the reading, on the stored picks; the Act activity shows the pick.
+  await expect(page.getByTestId("skill-read-juggling")).toBeVisible();
   await openWorkspace(page, "Act");
   await expect(panel.getByTestId("skill-juggling")).toBeVisible();
   await expect(combatLog(page)).toContainText(
@@ -247,6 +247,8 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(panel.getByTestId("skill-tumbling")).toBeVisible();
   // The Skills editor follows the undo: the pool is back to what it was.
   await openWorkspace(page, "Skills");
+  await expect(page.getByTestId("skill-read-juggling")).toHaveCount(0);
+  await page.getByTestId("skills-modify-skills-nonWeapon").click();
   await expect(
     page
       .getByTestId("proficiency-editor")

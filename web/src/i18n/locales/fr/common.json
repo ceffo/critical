@@ -2435,6 +2435,36 @@
     },
     "headingMulti": "Expérience"
   },
+  "skillsActivity": {
+    "sections": {
+      "nonWeapon": "Compétences et langues",
+      "weapon": "Maîtrises d’armes"
+    },
+    "modify": "Modifier",
+    "modifyLabel": "Modifier : {{section}}",
+    "manage": "Gérer",
+    "manageLabel": "Gérer les compétences (ouvrir l’activité Compétences)",
+    "slotsLine_one": "{{spent}} / {{available}} emplacement",
+    "slotsLine_other": "{{spent}} / {{available}} emplacements",
+    "pointsLine_one": "{{spent}} / {{available}} point",
+    "pointsLine_other": "{{spent}} / {{available}} points",
+    "slotCount_one": "{{count}} empl.",
+    "slotCount_other": "{{count}} empl.",
+    "native": "de naissance",
+    "noPicks": "Aucune pour l’instant.",
+    "noLanguages": "Aucune langue.",
+    "pending": "Il reste à dépenser",
+    "classTag": "{{class}} {{level}}",
+    "talent": "Talent",
+    "terms": {
+      "base": "Base",
+      "points": "Points",
+      "race": "Race",
+      "dexterity": "Dextérité",
+      "armor": "Armure",
+      "total": "Total"
+    }
+  },
   "skills": {
     "sheetScore": "(feuille {{score}})",
     "empty": "Rien à lancer ici pour l’instant. Choisissez des compétences ou dépensez des points de talent dans l’activité Compétences.",

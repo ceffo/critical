@@ -139,6 +139,11 @@ Per screen, the user's words (the work items of the layout pass carry the full t
       >= .07 off the card, [ADR 0026](0026-contrast-ladder-raised-stage-four-themes.md) step 2.1),
       muted ink (AA, step 2.3), no edge, no hover; `ghost` stays transparent. The dashed frame is
       the roster's Créer card alone. Written in `button.tsx`'s doc comment.
+      *Amended 2026-11-17 (CRI-408, the approved Skills design):* a **pending** state for a quiet
+      button with something left to settle behind it (the Skills activity's section Edit, Act's
+      Manage): the danger edge and a red dot in place of its pencil, no text pill, no second filled
+      button; the dot is decoration and the accessible name says what is left. The `pending`
+      variant of `button.tsx`, used through `PendingButton`.
 4. **Header** (amends ADR 0022 steps 2.2, 3.4 and 7, ADR 0017 step 6, ADR 0026 step 5.9).
    1. **The turn is stacked**: its label ("TOUR") over its number. The number is `text-headline`
       (24 px), no longer `text-hero`.

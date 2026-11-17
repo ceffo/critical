@@ -200,7 +200,10 @@ function App() {
             visited={visited}
             label={t("shell.activity.act")}
           >
-            <ActStage onOpenInventory={() => focus("inventory")} />
+            <ActStage
+              onOpenInventory={() => focus("inventory")}
+              onOpenSkills={() => focus("skills")}
+            />
           </Pane>
           <Pane
             id="spells"

@@ -11,6 +11,8 @@ import {
 } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsList, TabsTab } from "@/components/ui/tabs";
+import { PendingButton } from "@/components/skills/PendingButton";
+import { useSkillsPending } from "@/lib/skillsPending";
 import { useItemsStore } from "@/stores/items";
 import { useSpellStore } from "@/stores/spells";
 import { AttackPanel } from "./AttackPanel";
@@ -51,8 +53,11 @@ const TAB_ICONS: Record<TabId, Icon> = {
 
 export function ActionArea({
   onOpenInventory,
+  onOpenSkills,
 }: {
   onOpenInventory: () => void;
+  /** Focuses the Skills activity, where the proficiencies and the skill points are edited. */
+  onOpenSkills: () => void;
 }) {
   const { t } = useTranslation();
   const [chosen, setActive] = useState<TabId>("weapons");
@@ -68,6 +73,7 @@ export function ActionArea({
   );
   // The tab set can shrink under the active tab (a per-day item sold, a level change): back to Weapons.
   const active: TabId = tabs.includes(chosen) ? chosen : "weapons";
+  const skillsPending = useSkillsPending();
   const spellsLeft = useSpellStore(
     (s) => s.slots.filter((slot) => !slot.used).length,
   );
@@ -88,42 +94,57 @@ export function ActionArea({
       className="stage-card flex min-h-0 min-w-0 flex-col"
       aria-label={t("actions.label")}
     >
-      <TabsList
-        aria-label={t("actions.label")}
-        className="card-band flex shrink-0 flex-wrap items-center gap-1 px-4"
-      >
-        {tabs.map((id) => {
-          const TabIcon = TAB_ICONS[id];
-          return (
-            <TabsTab
-              key={id}
-              value={id}
-              id={`tab-${id}`}
-              aria-controls={`panel-${id}`}
-              className={cn(
-                "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
-                active === id && "border-tint text-foreground",
-              )}
-            >
-              <TabIcon
-                aria-hidden
-                weight={active === id ? "fill" : "regular"}
-                className="size-4"
-              />
-              {t(`actions.tabs.${id}`)}
-              {counts[id] !== undefined && (
-                <span
+      {/* The band: the tabs, and at the right Skills' one Manage, which opens the Skills activity
+          (the Act tab only rolls; ADR 0037 step 15). */}
+      <div className="card-band flex shrink-0 flex-wrap items-center gap-x-3 px-4">
+        <TabsList
+          aria-label={t("actions.label")}
+          className="flex min-w-0 flex-1 flex-wrap items-center gap-1"
+        >
+          {tabs.map((id) => {
+            const TabIcon = TAB_ICONS[id];
+            return (
+              <TabsTab
+                key={id}
+                value={id}
+                id={`tab-${id}`}
+                aria-controls={`panel-${id}`}
+                className={cn(
+                  "flex items-center gap-2 border-b-2 border-transparent px-3 py-2 text-body font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  active === id && "border-tint text-foreground",
+                )}
+              >
+                <TabIcon
                   aria-hidden
-                  className="text-label text-muted-foreground"
-                  data-testid={`tab-count-${id}`}
-                >
-                  {counts[id]}
-                </span>
-              )}
-            </TabsTab>
-          );
-        })}
-      </TabsList>
+                  weight={active === id ? "fill" : "regular"}
+                  className="size-4"
+                />
+                {t(`actions.tabs.${id}`)}
+                {counts[id] !== undefined && (
+                  <span
+                    aria-hidden
+                    className="text-label text-muted-foreground"
+                    data-testid={`tab-count-${id}`}
+                  >
+                    {counts[id]}
+                  </span>
+                )}
+              </TabsTab>
+            );
+          })}
+        </TabsList>
+        {active === "skills" && (
+          <PendingButton
+            pending={skillsPending}
+            label={t("skillsActivity.manageLabel")}
+            pendingLabel={t("skillsActivity.pending")}
+            onClick={onOpenSkills}
+            testId="skills-manage"
+          >
+            {t("skillsActivity.manage")}
+          </PendingButton>
+        )}
+      </div>
       <div
         role="tabpanel"
         id={`panel-${active}`}

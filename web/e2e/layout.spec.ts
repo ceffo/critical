@@ -1545,8 +1545,12 @@ async function skillsActivityStep(page: Page, size: Viewport) {
     await chooseLanguage(page, lang);
     await openWorkspace(page, "Skills");
     const panel = page.getByTestId("skills-panel");
-    await expect(panel.getByTestId("proficiency-editor")).toBeVisible();
+    // Every section is read at once; Test Bard has slots left, so the rail's dot shows and the
+    // Edit of a section with something left takes the red edge.
+    await expect(panel.getByTestId("skills-read")).toBeVisible();
+    await expect(panel.getByTestId("skills-nonWeapon-read")).toBeVisible();
     await expect(page.getByTestId("skills-pill")).toBeVisible();
+    await expect(panel.locator("[data-pending]").first()).toBeVisible();
     for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
       const where = `${lang}, ${vp.width}x${vp.height}`;
@@ -1558,10 +1562,49 @@ async function skillsActivityStep(page: Page, size: Viewport) {
       );
       await expectNoClippedText(panel, `skills activity, ${where}`);
       await expectWholeWords(panel, `skills activity, ${where}`);
+      for (const edit of await panel.getByTestId(/^skills-modify-/).all()) {
+        await edit.scrollIntoViewIfNeeded();
+        await expectMinTarget(edit, `section Edit, ${where}`);
+      }
       await expectNoPageScroll(page);
       if (lang === "fr" || vp.width >= 1920)
         await snap(page, `skills-activity-${lang}-${vp.width}x${vp.height}`);
     }
+    // One section's Edit turns the stage into its editor; Cancel returns to the reading.
+    const edit = panel.getByTestId("skills-modify-skills-nonWeapon");
+    await edit.click();
+    await expect(panel.getByTestId("proficiency-editor")).toBeVisible();
+    await expect(panel.getByTestId("skills-read")).toHaveCount(0);
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(panel, `skills section editor, ${where}`);
+      await expectWholeWords(panel, `skills section editor, ${where}`);
+      await expectNoPageScroll(page);
+      if (lang === "fr" || vp.width >= 1920)
+        await snap(page, `skills-editor-${lang}-${vp.width}x${vp.height}`);
+    }
+    await panel.getByTestId("proficiency-cancel").click();
+    await expect(panel.getByTestId("skills-read")).toBeVisible();
+    // Act · Skills carries Manage, red-edged while something is left, and it opens the activity.
+    await openWorkspace(page, "Act");
+    await page.getByRole("tab", { name: /^(Skills|Compétences)/ }).click();
+    const manage = page.getByTestId("skills-manage");
+    await expect(manage).toHaveAttribute("data-pending", "true");
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(
+        page.getByRole("tabpanel").locator("xpath=.."),
+        `Act skills tab with Manage, ${where}`,
+      );
+      await expectMinTarget(manage, `Manage, ${where}`);
+      await expectNoPageScroll(page);
+      if (lang === "fr" || vp.width >= 1920)
+        await snap(page, `act-manage-${lang}-${vp.width}x${vp.height}`);
+    }
+    await manage.click();
+    await expect(page.getByTestId("skills-read")).toBeVisible();
   }
 }
 
@@ -2801,6 +2844,7 @@ async function profPopupStep(page: Page, size: Viewport) {
       animations: "disabled",
     });
   }
+  await points.getByTestId("thief-points-cancel").click();
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");
   for (const vp of sizesAt(size, [

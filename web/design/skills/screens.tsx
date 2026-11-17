@@ -806,7 +806,9 @@ function EditorScreen({ who, children, lit }: { who: Fixture; children: ReactNod
 
 type Part = "weapons" | "proficiencies" | "points";
 
-/** The parts of a step as tabs, each with what is left in it (a red number while some is left). */
+/** Creation (decision 6, the user's choice in round 2 over one joined step): "Compétences" holds
+ * weapons and proficiencies as two tabs, then "Talents de voleur" is its own step; "Points de vie"
+ * keeps hit points alone. The parts of a step as tabs, each with what is left in it (a red number while some is left). */
 function PartTabs({ who, parts, current }: { who: Fixture; parts: Part[]; current: Part }) {
   const set = who.sets[0];
   const info: Record<Part, [string, number]> = {
@@ -934,12 +936,10 @@ const STEP = {
   hp: ["Points de vie", "Hit points"],
   profs: ["Compétences", "Proficiencies"],
   talents: ["Talents de voleur", "Thief skills"],
-  joined: ["Compétences et talents", "Proficiencies and skills"],
   identity: ["Identité", "Identity"],
   review: ["Récapitulatif", "Review"],
 } satisfies Record<string, [string, string]>;
 const SEPARATE: [string, string][] = [STEP.class, STEP.race, STEP.scores, STEP.hp, STEP.profs, STEP.talents, STEP.identity, STEP.review];
-const JOINED: [string, string][] = [STEP.class, STEP.race, STEP.scores, STEP.hp, STEP.joined, STEP.identity, STEP.review];
 
 // ---------- Act · Skills ----------
 
@@ -1057,18 +1057,6 @@ export const SCREENS: Record<string, () => ReactNode> = {
       lit={["dex"]}
       lead={["Les points de talent, avec les curseurs du jeu.", "The skill points, with the sliders used in play."]}
     >
-      <PointsEditor set={THIEF_NEW.sets[0]} control="slider" actions={false} />
-    </CreationScreen>
-  ),
-  "creation-joined-points-thief": () => (
-    <CreationScreen
-      who={THIEF_NEW}
-      steps={JOINED}
-      current={4}
-      lit={["dex"]}
-      lead={["Armes, compétences et talents dans une seule étape, un onglet chacun.", "Weapons, proficiencies and skills in one step, a tab each."]}
-    >
-      <PartTabs who={THIEF_NEW} parts={["weapons", "proficiencies", "points"]} current="points" />
       <PointsEditor set={THIEF_NEW.sets[0]} control="slider" actions={false} />
     </CreationScreen>
   ),

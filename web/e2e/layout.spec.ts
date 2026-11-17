@@ -1594,6 +1594,35 @@ async function skillsActivityStep(page: Page, size: Viewport) {
   }
 }
 
+// ADR 0037 step 23: a multi-class character's Skills activity with the class tags the server serves
+// on each pool and each skill set (the overlay serves the refs; the rule is Go-tested), the tag
+// chips and the language costs in the cards, French then English: no cut text, nothing past the
+// window.
+async function skillsActivityMultiStep(page: Page, size: Viewport) {
+  await asMultiClass(page, { pending: true, poolClasses: true });
+  await openDashboard(page);
+  for (const lang of ["fr", "en"] as const) {
+    await chooseLanguage(page, lang);
+    await openWorkspace(page, "Skills");
+    const panel = page.getByTestId("skills-panel");
+    await expect(panel.getByTestId("skills-weapon-tag")).toBeVisible();
+    await expect(panel.getByTestId("skills-nonWeapon-tag")).toBeVisible();
+    await expect(panel.getByTestId("skills-weapon-penalty")).toBeVisible();
+    for (const vp of sizesAt(size, VIEWPORTS)) {
+      await page.setViewportSize(vp);
+      const where = `multi-class, ${lang}, ${vp.width}x${vp.height}`;
+      await expectNoClippedText(panel, `skills activity, ${where}`);
+      await expectWholeWords(panel, `skills activity, ${where}`);
+      await expectNoPageScroll(page);
+      if (lang === "fr" || vp.width >= 1920)
+        await snap(
+          page,
+          `skills-activity-multi-${lang}-${vp.width}x${vp.height}`,
+        );
+    }
+  }
+}
+
 // The card's lower half shows the details and languages the popover also shows, inline, set ones
 // only (ADR 0017 step 7 for the fit: it fits at 1920x1080 and up, and scrolls inside the card below).
 // The popover hides the fields not set. French first, the no-cut audit on the card, at every size.
@@ -3325,6 +3354,7 @@ const DASHBOARD_STEPS: [string, Step][] = [
   ["Ajouter", ajouterStep],
   ["skills editor", skillsEditorStep],
   ["skills activity", skillsActivityStep],
+  ["skills activity, multi-class", skillsActivityMultiStep],
   ["card details", cardDetailsStep],
   ["dice bar", diceBarStep],
   ["proficiency pop-up", profPopupStep],
@@ -3385,6 +3415,7 @@ async function runWalk(
 const WIDTH_STEPS = new Set([
   "shell",
   "skills activity",
+  "skills activity, multi-class",
   "text floor",
   "act panel",
   "French and long names",

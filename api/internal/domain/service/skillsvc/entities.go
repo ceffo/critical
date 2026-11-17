@@ -81,7 +81,10 @@ type SetSkill struct {
 // its budget with the terms of its formula (nil below the feature's level of first points, ADR
 // 0030 steps 17 and 18) and its skills.
 type SkillSet struct {
-	Set        string
+	Set string
+	// Class and Level are the class entry that grants the set (ADR 0037 step 23.1).
+	Class      string
+	Level      int
 	Name       localized.Text
 	MinPercent int
 	Armor      string

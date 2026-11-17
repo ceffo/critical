@@ -39,6 +39,7 @@ const skills: Skills = {
       set: "thief",
       name: { en: "Thief skills" },
       skillArmor: "",
+      class: { class: "thief", level: 3 },
       budget: null,
       skills: [climb],
     },

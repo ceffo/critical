@@ -305,263 +305,493 @@
       "catalogue": [
         {
           "id": "agriculture",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "animal_handling",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
         },
         {
           "id": "animal_training",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "artistic_ability",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "blacksmithing",
-          "cost": 1
+          "cost": 1,
+          "ability": "str",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "brewing",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "carpentry",
-          "cost": 1
+          "cost": 1,
+          "ability": "str",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "cobbling",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "target": 17
         },
         {
           "id": "cooking",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "dancing",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "target": 17
         },
         {
           "id": "direction_sense",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": 1,
+          "target": 11
         },
         {
           "id": "etiquette",
-          "cost": 1
+          "cost": 1,
+          "ability": "cha",
+          "modifier": 0,
+          "target": 11
         },
         {
           "id": "fire_building",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
         },
         {
           "id": "fishing",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
         },
         {
           "id": "heraldry",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "leatherworking",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "mining",
-          "cost": 2
+          "cost": 2,
+          "ability": "wis",
+          "modifier": -3,
+          "target": 7
         },
         {
           "id": "pottery",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -2,
+          "target": 15
         },
         {
           "id": "riding_airborne",
-          "cost": 2
+          "cost": 2,
+          "ability": "wis",
+          "modifier": -2,
+          "target": 8
         },
         {
           "id": "riding_land",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": 3,
+          "target": 13
         },
         {
           "id": "rope_use",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "target": 17
         },
         {
           "id": "seamanship",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 1,
+          "target": 18
         },
         {
           "id": "seamstress_tailor",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "singing",
-          "cost": 1
+          "cost": 1,
+          "ability": "cha",
+          "modifier": 0,
+          "target": 11
         },
         {
           "id": "stonemasonry",
-          "cost": 1
+          "cost": 1,
+          "ability": "str",
+          "modifier": -2,
+          "target": 8
         },
         {
           "id": "swimming",
-          "cost": 1
+          "cost": 1,
+          "ability": "str",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "weather_sense",
-          "cost": 1
+          "cost": 1,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
         },
         {
           "id": "weaving",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": -1,
+          "target": 8
         },
         {
           "id": "ancient_history",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": -1,
+          "target": 8
         },
         {
           "id": "astrology",
-          "cost": 3
+          "cost": 3,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "engineering",
-          "cost": 3
+          "cost": 3,
+          "ability": "int",
+          "modifier": -3,
+          "target": 6
         },
         {
           "id": "healing",
-          "cost": 3
+          "cost": 3,
+          "ability": "wis",
+          "modifier": -2,
+          "target": 8
         },
         {
           "id": "herbalism",
-          "cost": 3
+          "cost": 3,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "languages_ancient",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "local_history",
-          "cost": 1
+          "cost": 1,
+          "ability": "cha",
+          "modifier": 0,
+          "target": 11
         },
         {
           "id": "musical_instrument",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "navigation",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "reading_writing",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": 1,
+          "target": 10
         },
         {
           "id": "religion",
-          "cost": 2
+          "cost": 2,
+          "ability": "wis",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "spellcraft",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "appraising",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "blind_fighting",
-          "cost": 2
+          "cost": 2,
+          "ability": "",
+          "modifier": 0,
+          "target": null
         },
         {
           "id": "disguise",
-          "cost": 1
+          "cost": 1,
+          "ability": "cha",
+          "modifier": -1,
+          "target": 10
         },
         {
           "id": "forgery",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "gaming",
-          "cost": 1
+          "cost": 1,
+          "ability": "cha",
+          "modifier": 0,
+          "target": 11
         },
         {
           "id": "gem_cutting",
-          "cost": 2
+          "cost": 2,
+          "ability": "dex",
+          "modifier": -2,
+          "target": 15
         },
         {
           "id": "juggling",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "jumping",
-          "cost": 1
+          "cost": 1,
+          "ability": "str",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "reading_lips",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "set_snares",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "tightrope_walking",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "target": 17
         },
         {
           "id": "tumbling",
-          "cost": 1
+          "cost": 1,
+          "ability": "dex",
+          "modifier": 0,
+          "target": 17
         },
         {
           "id": "ventriloquism",
-          "cost": 1
+          "cost": 1,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "animal_lore",
-          "cost": 2
+          "cost": 2,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "armorer",
-          "cost": 3
+          "cost": 3,
+          "ability": "int",
+          "modifier": -2,
+          "target": 7
         },
         {
           "id": "bowyer_fletcher",
-          "cost": 2
+          "cost": 2,
+          "ability": "dex",
+          "modifier": -1,
+          "target": 16
         },
         {
           "id": "charioteering",
-          "cost": 2
+          "cost": 2,
+          "ability": "dex",
+          "modifier": 2,
+          "target": 19
         },
         {
           "id": "endurance",
-          "cost": 3
+          "cost": 3,
+          "ability": "con",
+          "modifier": 0,
+          "target": 12
         },
         {
           "id": "hunting",
-          "cost": 2
+          "cost": 2,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
         },
         {
           "id": "mountaineering",
-          "cost": 2
+          "cost": 2,
+          "ability": "",
+          "modifier": 0,
+          "target": null
         },
         {
           "id": "running",
-          "cost": 2
+          "cost": 2,
+          "ability": "con",
+          "modifier": -6,
+          "target": 6
         },
         {
           "id": "survival",
-          "cost": 3
+          "cost": 3,
+          "ability": "int",
+          "modifier": 0,
+          "target": 9
         },
         {
           "id": "tracking",
-          "cost": 3
+          "cost": 3,
+          "ability": "wis",
+          "modifier": 0,
+          "target": 10
         },
         {
           "id": "weaponsmithing",
-          "cost": 4
+          "cost": 4,
+          "ability": "int",
+          "modifier": -3,
+          "target": 6
         },
         {
           "id": "rejuvenation",
-          "cost": 2
+          "cost": 2,
+          "ability": "wis",
+          "modifier": -1,
+          "target": 9
+        }
+      ],
+      "weaponClasses": [
+        {
+          "class": "thief",
+          "level": 1
+        }
+      ],
+      "nonWeaponClasses": [
+        {
+          "class": "thief",
+          "level": 1
+        }
+      ],
+      "nonProficientPenalty": -3,
+      "languageCosts": [
+        {
+          "code": "elvish",
+          "slots": 0
+        },
+        {
+          "code": "common",
+          "slots": 0
+        },
+        {
+          "code": "dwarvish",
+          "slots": 1
+        },
+        {
+          "code": "gnomish",
+          "slots": 1
+        },
+        {
+          "code": "orcish",
+          "slots": 1
         }
       ]
     }

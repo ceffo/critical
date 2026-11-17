@@ -585,7 +585,7 @@ flowchart LR
     step 12).
 
 15. **What the web reads.** The server serves each skill set as
-    `skillSets: [{set, name, skillArmor, budget, skills}]` in the derived block and in `GET /api/skills`
+    `skillSets: [{set, name, skillArmor, class, budget, skills}]` (`class` `{class, level}`, the entry that grants the set, [ADR 0037](0037-proficiencies.md) step 23.1) in the derived block and in `GET /api/skills`
     (step 3.5), with `name` the set's language map (step 12) and `skills[].usable` already decided by the
     server (`min_percent`). The client renders one section per set with that name as its heading, a
     test id built from `set`, and rolls with the `set` it was given; it holds no table of heading keys by

@@ -250,6 +250,10 @@ func (s PointsSheet) ArmourBlocks() bool {
 // realized level. Each set has its own budget.
 type SkillSet struct {
 	Set string
+	// Class and Level are the class entry whose rogue_skills feature grants the set (ADR 0037
+	// step 23.1, ADR 0040 step 3.5), from the PointsSheet.
+	Class string
+	Level int
 	// Name is the set's heading and MinPercent the least percentage a skill of it is used at
 	// (ADR 0040 step 15), from its rogue_skills params.
 	Name       localized.Text
@@ -272,7 +276,7 @@ type SkillSet struct {
 func SkillSetsOf(t SkillTables, s PointsSheet) ([]SkillSet, error) {
 	var out []SkillSet
 	for _, rs := range RogueSetsAt(s.Class, s.Level) {
-		set := SkillSet{Set: rs.Set, Name: rs.Name, MinPercent: rs.MinPercent, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
+		set := SkillSet{Set: rs.Set, Class: s.Class.ID, Level: s.Level, Name: rs.Name, MinPercent: rs.MinPercent, Armor: ruletablesvc.SkillArmorFor(&rs, s.ArmorColumn)}
 		points := s.Points.Of(rs.Set)
 		var err error
 		if set.Skills, err = t.RogueSkills(rs, s.Race, s.Dex, set.Armor, points); err != nil {

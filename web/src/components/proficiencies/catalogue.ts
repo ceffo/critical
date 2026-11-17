@@ -14,6 +14,9 @@ export interface CatalogueRow {
   option: ProficiencyOption;
   name: string;
   cost: number;
+  /** The check's target the server serves for a new pick at 0 extra slots (ADR 0037 step 23.4);
+   * undefined before it serves one, null for no check. */
+  target?: number | null;
 }
 
 /** What the picker lists, as the server serves it for the character: the catalogue, the character's
@@ -23,6 +26,9 @@ export interface ServedCatalogue {
   proficiencies: ProficiencyOption[];
   groups: string[];
   costs: Record<string, number>;
+  /** The served target of each proficiency's check for a new pick (step 23.4); empty before the
+   * server serves the catalogue. */
+  targets?: Record<string, number | null>;
 }
 
 /**
@@ -47,6 +53,9 @@ export function servedCatalogue(
     proficiencies: options.proficiencies ?? [],
     groups: figures?.groups ?? options.proficiencyGroups?.[cls] ?? [],
     costs,
+    targets: Object.fromEntries(
+      (figures?.catalogue ?? []).map((c) => [c.id, c.target]),
+    ),
   };
 }
 
@@ -72,7 +81,14 @@ export function catalogueRows(
       const cost = catalogue.costs[p.id];
       return cost === undefined
         ? []
-        : [{ option: p, name: nameOf(p.id), cost }];
+        : [
+            {
+              option: p,
+              name: nameOf(p.id),
+              cost,
+              target: catalogue.targets?.[p.id],
+            },
+          ];
     })
     .filter((r) => q === "" || fold(r.name).includes(q))
     .sort((a, b) => a.name.localeCompare(b.name, locale));

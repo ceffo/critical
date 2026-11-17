@@ -32,7 +32,7 @@ func (s Sheet) classes() Classes {
 // Spending is what s spends from its pools: its picks and the languages beyond the native one
 // and Common (step 6).
 func (s Sheet) Spending() Spending {
-	return Spending{Picks: s.Picks, Languages: LanguageSlots(s.Languages, s.Native)}
+	return Spending{Picks: s.Picks, Languages: LanguageSlots(s.Languages, s.Native), LanguageCosts: LanguageCosts(s.Languages, s.Native)}
 }
 
 // Read is ADR 0037 steps 3 to 6 and 11 on s, the one place the sheet's proficiency figures are

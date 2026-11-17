@@ -141,6 +141,10 @@ export function ProficienciesRead({
   const language = useLanguageNames(options);
   const native = options ? raceLanguages(options, race).native : undefined;
   const pool = slots.nonWeapon;
+  // The slots each held language costs, the server's (ADR 0037 step 23.3).
+  const cost: Record<string, number> = Object.fromEntries(
+    (slots.languageCosts ?? []).map((c) => [c.code, c.slots]),
+  );
   return (
     <Section
       id="skills-nonWeapon"
@@ -238,10 +242,19 @@ export function ProficienciesRead({
             {languages.map((code) => (
               <span key={code} className="chip px-2 py-0.5 text-body">
                 {language(code)}
-                {code === native && (
+                {code === native ? (
                   <span className="ml-1.5 text-label text-ink-muted">
                     {t("skillsActivity.native")}
                   </span>
+                ) : (
+                  cost[code] > 0 && (
+                    <span
+                      className="ml-1.5 text-label text-ink-muted"
+                      data-testid={`language-cost-${code}`}
+                    >
+                      {t("skillsActivity.slotCount", { count: cost[code] })}
+                    </span>
+                  )
                 )}
               </span>
             ))}
@@ -321,6 +334,16 @@ export function WeaponsRead({
           ))}
         </ul>
       )}
+      {(slots.nonProficientPenalty ?? 0) !== 0 && (
+        <p
+          className="text-label text-ink-muted"
+          data-testid="skills-weapon-penalty"
+        >
+          {t("skillsActivity.nonProficient", {
+            penalty: formatSigned(slots.nonProficientPenalty ?? 0),
+          })}
+        </p>
+      )}
     </Section>
   );
 }
@@ -333,10 +356,12 @@ export function WeaponsRead({
  */
 export function SkillSetRead({
   set,
+  tag,
   pending,
   onModify,
 }: {
   set: SkillSet;
+  tag?: string;
   pending: boolean;
   onModify: () => void;
 }) {
@@ -347,6 +372,7 @@ export function SkillSetRead({
     <Section
       id={`skills-points-${set.set}`}
       title={title}
+      tag={tag}
       pending={pending}
       onModify={onModify}
     >

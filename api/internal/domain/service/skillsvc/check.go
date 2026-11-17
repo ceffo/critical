@@ -449,7 +449,7 @@ func (s *service) skills(ctx context.Context, characterID int64, draft *draft) (
 		scores := s.scoresInEffect(ctx, characterID)
 		out = &Skills{Proficiencies: make([]Proficiency, 0, len(profs)), SkillSets: make([]SkillSet, 0, len(char.SkillSets))}
 		for _, ss := range char.SkillSets {
-			set := SkillSet{Set: ss.Set, Name: ss.Name, MinPercent: ss.MinPercent, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
+			set := SkillSet{Set: ss.Set, Class: ss.Class, Level: ss.Level, Name: ss.Name, MinPercent: ss.MinPercent, Armor: ss.Armor, Budget: ss.Points, Skills: make([]SetSkill, 0, len(ss.Skills))}
 			for _, sk := range ss.Skills {
 				set.Skills = append(set.Skills, SetSkill{SkillPercent: sk, Last: last[lastKey("", ss.Set, sk.Skill)]})
 			}

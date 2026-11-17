@@ -66,7 +66,7 @@ func kelsenDerived() charactersvc.Derived {
 		// Nothing worn in these tests: the none column (ADR 0033 step 14).
 		SkillColumn: "none",
 		SkillSets: []domainskills.SkillSet{{
-			Set: "bard", Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Armor: "none", Budget: []ruletablesvc.BudgetWarning{},
+			Set: "bard", Class: "bard", Level: 15, Name: localized.Text{"en": "Bard skills", "fr": "Talents de barde"}, Armor: "none", Budget: []ruletablesvc.BudgetWarning{},
 			Points: &ruletablesvc.SkillPointsBudget{Level: 15, First: 20, PerLevel: 15, Total: 230, Left: 230},
 		}},
 	}

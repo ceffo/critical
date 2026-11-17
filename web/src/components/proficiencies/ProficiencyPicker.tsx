@@ -530,6 +530,7 @@ function CatalogueItem({
           ability={r.option.ability}
           score={r.option.ability ? scores[r.option.ability] : undefined}
           modifier={r.option.modifier}
+          target={r.target}
         />
         <span className="text-label" data-testid="proficiency-cost">
           {/* The server's cost 0: a proficiency the class grants free (step 22.2). */}

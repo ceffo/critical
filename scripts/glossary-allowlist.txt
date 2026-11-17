@@ -146,3 +146,5 @@ CategoryRule  # Technical: whether a category has a quantity the player sets, se
 KindRule  # Technical: the same answer for one magic kind (ADR 0049 step 2)
 Applied  # Technical: what one heal effect did to the HP ledger, on the effect result of a use (ADR 0049 step 12)
 CatalogueFigure  # Technical: one row of the served per-character catalogue costs (a figure of proficiencySlots, ADR 0042 step 15)
+ClassRef  # Technical: a class code and level as the pools and skill sets name their entry on the wire (ADR 0037 step 23.1); no concept of its own
+LanguageCost  # Technical: one held language and its slot cost on the wire (ADR 0037 step 23.3); the rule is the glossary's language slots

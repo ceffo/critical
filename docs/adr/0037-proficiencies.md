@@ -1172,3 +1172,41 @@ Amends step 4 (a granted id costs 0), step 11 (a new reminder) and step 16 (a se
     `TestKelsen_Step22_7_FourFreePicksAndThreeToSpend` (the test fixture's Kelsen: 4 of 10, 6 to
     spend); the conversion rule alone is `TestReturnFreeSlots_Step22_7_TheCostPaidGoesBack`. The web
     marks a free pick and words the offer in the editor and the Skills activity, en and fr.)_
+
+## Amendment 2026-11-17: the Skills activity's served details (decided, as built 2026-11-17, CRI-417)
+
+The Skills activity (step 15) showed a class tag the client picked itself (every active class on both
+pools, none on a skill set), no word on the non-proficiency penalty, the languages as a bare list
+and, in the picker, the catalogue's ability without its target. Each is a figure the server owns
+(ADR 0045: one owner per figure), so this amendment serves them and the client words them; the web
+holds no arithmetic and no rule picking a class. All four are additive fields of
+`derived.proficiencySlots` and `GET /api/proficiencies`; no migration, no catalogue change. The user
+approved the proposal 2026-11-17: the weapon tag is the rate entry only (ties kept), the catalogue's
+target is for a new pick at 0 extra slots. Amends step 3 (the pools' classes), step 6 (the per-language
+cost) and step 8 (the penalty is served); reads [ADR 0042](0042-multi-class-and-dual-class.md)
+step 15 and [ADR 0040](0040-classes-are-data.md) step 3.5.
+
+23. **Served details.**
+    23.1 **Class refs.** `weaponClasses` and `nonWeaponClasses` are lists of `{class, level}` (the code
+         and the entry's level; the UI words the name). The weapon pool's is the active entry whose
+         Table 34 rate sets the levels gained (ADR 0042 step 15; every entry on a tie); the
+         non-weapon pool's is every active entry (its groups are the union, ADR 0042 step 15 Q13).
+         Each `skillSets[]` entry carries `class` `{class, level}` of the grant that builds it (ADR
+         0040 step 3.5). The web shows the tag only for a character with two or more active classes
+         (a display choice); which entries is the server's.
+    23.2 **The non-proficiency penalty.** `nonProficientPenalty` is step 8's penalty (ADR 0042 step 15
+         Q12: the smallest among the active entries' groups), 0 or negative; the web words "Not
+         proficient: -2 to hit" from it and shows nothing at 0.
+    23.3 **Language costs.** `languageCosts` is `[{code, slots}]` for the held languages: 1 slot, 0 for
+         the race's native one and Common (step 6). The rule is one per-language function that the
+         pool's `languages` sums, so the sum equals `nonWeapon.languages` by construction.
+    23.4 **Catalogue targets.** Each `catalogue[]` row (step 4's cost) gains `ability`, `modifier` and
+         `target`: the target the check rolls under for a new pick at 0 extra slots, the score in
+         effect plus the catalogue's modifier (step 5), null for a proficiency with no check. The
+         picker shows it as served and adds no extra slot itself; a pick's own figures (`picks[]`)
+         carry its extra slots as before.
+    Tests: `TestPoolClasses_Step23_1_TheRateEntryAndEveryActiveEntry`, `TestLanguageCosts_Step23_3_PerLanguageAddsUpToThePool`,
+    `TestCatalogueTarget_Step23_4_ScorePlusModifierAtNoExtraSlot` (skills), `TestList_Step23_1_EachSkillSetNamesItsGrantingEntry`
+    (skillsvc), the wire JSON in `router_proficiencies_test.go` and `router_skills_test.go` (23.1 to 23.4);
+    web dom tests `SkillsPanel` (tags, single class none), `SkillsRead` (penalty and hidden at 0,
+    language cost, set tag) and `catalogue.test.ts` (served target).

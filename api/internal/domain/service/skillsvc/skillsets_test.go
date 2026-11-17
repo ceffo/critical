@@ -65,8 +65,8 @@ func dualFixture(t *testing.T) *fixture {
 	c := viewtest.Single(swashbuckler, 5, viewtest.WithIdentity(charID, "Test", ""), viewtest.WithScores(0, 16, 0, 0, 0, 0))
 	c.SkillPoints = skills.SetPoints{"thief": {"pick_pockets": 20}, "bard": {"pick_pockets": 5}}
 	c.SkillSets = []skills.SkillSet{
-		{Set: "thief", MinPercent: 1, Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 15, Points: 20, Percent: 35}}},
-		{Set: "bard", Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 10, Points: 5, Percent: 15}}},
+		{Set: "thief", Class: "thief", Level: 5, MinPercent: 1, Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 15, Points: 20, Percent: 35}}},
+		{Set: "bard", Class: "bard", Level: 3, Skills: []ruletablesvc.SkillPercent{{Skill: "pick_pockets", Base: 10, Points: 5, Percent: 15}}},
 	}
 	f.chars.EXPECT().View(mock.Anything, charID).Return(c, nil).Maybe()
 	return f
@@ -241,4 +241,18 @@ func TestRollSkill_Step15_ALegacyKindStillReads(t *testing.T) {
 	assert.Equal(t, int64(7), got.SkillSets[0].Skills[0].Last.EntryID, "the legacy thief entry")
 	require.NotNil(t, got.SkillSets[1].Skills[0].Last)
 	assert.Equal(t, int64(6), got.SkillSets[1].Skills[0].Last.EntryID, "the new bard entry")
+}
+
+// ADR 0037 step 23.1: each skill set of the Skills read view names the class entry that grants it,
+// at that entry's level, so a multi-class character's sets are tagged by their own class.
+func TestList_Step23_1_EachSkillSetNamesItsGrantingEntry(t *testing.T) {
+	f := dualFixture(t)
+	f.log.EXPECT().ActiveEntries(mock.Anything, charID, actionlog.KindSkillCheck, skillsvc.LastLookup).Return(nil, nil)
+	got, err := f.svc.List(context.Background(), charID)
+	require.NoError(t, err)
+	require.Len(t, got.SkillSets, 2)
+	assert.Equal(t, "thief", got.SkillSets[0].Class)
+	assert.Equal(t, 5, got.SkillSets[0].Level)
+	assert.Equal(t, "bard", got.SkillSets[1].Class)
+	assert.Equal(t, 3, got.SkillSets[1].Level)
 }

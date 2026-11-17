@@ -558,6 +558,8 @@ bard 15 never).)_
     Tests: `ProficiencySlots_Step15_LargestInitialFastestRate` (ruletablesvc: the fighter/cleric
     above at levels 1, 3, 4 and 12), `ProficiencySlots_Step15_DualClassKeepsAndGains`,
     `NonproficientPenalty_Step15_SmallestOfTheGroups` (charactersvc).
+    The entries each pool is counted on, and the penalty, are served by [ADR 0037](0037-proficiencies.md)
+    step 23 (class refs, `nonProficientPenalty`).
     _(As built, 2026-10-22: `skills.Classes` (the active entries at their realized levels) and
     `skills.FiguresOf` combine Table 34 per column, `skills.GrantsOf` the slots a level of one entry
     grants; the penalty and the in-group cost of Q12 and Q13 are on the pools. Tests in the skills package

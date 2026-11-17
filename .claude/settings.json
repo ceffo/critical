@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-cd-into-worktree"
+            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; [ -x \"$f\" ] || f=$(cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)/.claude/bin/fleet; [ -x \"$f\" ] || exit 0; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-cd-into-worktree"
           }
         ]
       },
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-pattern-kill"
+            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; [ -x \"$f\" ] || f=$(cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)/.claude/bin/fleet; [ -x \"$f\" ] || exit 0; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook no-pattern-kill"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook supervisor-context-gauge"
+            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; [ -x \"$f\" ] || f=$(cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)/.claude/bin/fleet; [ -x \"$f\" ] || exit 0; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook supervisor-context-gauge"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook supervisor-ci-guard",
+            "command": "f=\"$CLAUDE_PROJECT_DIR\"/.claude/bin/fleet; [ -x \"$f\" ] || f=$(cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && cd \"$(git rev-parse --git-common-dir 2>/dev/null)/..\" 2>/dev/null && pwd)/.claude/bin/fleet; [ -x \"$f\" ] || exit 0; \"$f\" hook </dev/null >/dev/null 2>&1; [ $? = 1 ] || exit 1; exec \"$f\" hook supervisor-ci-guard",
             "timeout": 90
           }
         ]

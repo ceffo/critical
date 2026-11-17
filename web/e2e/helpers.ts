@@ -547,8 +547,10 @@ export interface FlowCharacter {
   hpMax: string;
   /** Typed as XP; the starting level 1 when absent. */
   xp?: string;
-  /** Fills the class extras on the "Points de vie et talents" step. */
+  /** Fills the class extras on the "Points de vie" step (the 18/xx field). */
   extras?: (step: Locator) => Promise<void>;
+  /** Fills the "Talents de ..." step of a class with skill points (left empty when absent). */
+  skillPoints?: (step: Locator) => Promise<void>;
   /** Ticks the starting spells on a mage's or a bard's "Grimoire" step (left as offered when
    * absent). */
   spellbook?: (step: Locator) => Promise<void>;
@@ -592,6 +594,11 @@ export async function createInFlow(page: Page, c: FlowCharacter) {
   // The proficiency step (ADR 0037 step 14): nothing picked, the slots left for later.
   await expect(step).toHaveAttribute("data-step", "proficiencies");
   await next();
+  // A thief's or a bard's skill points step (ADR 0034, ADR 0040 step 3.5).
+  if ((await step.getAttribute("data-step")) === "skillPoints") {
+    if (c.skillPoints) await c.skillPoints(step);
+    await next();
+  }
   // A mage's or a bard's spellbook step (ADR 0030 step 20.7): the spells as offered, or ticked.
   await expect(step).not.toHaveAttribute("data-step", "proficiencies");
   if ((await step.getAttribute("data-step")) === "spellbook") {

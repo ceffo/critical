@@ -3508,8 +3508,8 @@
       "weaponsNone": "This server has no weapon types for the class: you will choose them later in the Skills tab."
     },
     "skillPoints": {
-      "name": "{{className}} skills",
-      "title": "{{className}} skills",
+      "name": "{{className}}",
+      "title": "{{className}}",
       "lead": "Spend the starting level's skill points: each percentage shows its terms, all worked out by the server.",
       "spentN_one": "{{count}} point spent",
       "spentN_other": "{{count}} points spent"

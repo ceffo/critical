@@ -106,7 +106,7 @@ export function SkillTermsTable({
                 {name(r)}
               </td>
               <td className={td}>{r.base}</td>
-              <td className={cn(td, points && "w-[45%] min-w-64")}>
+              <td className={cn(td, points && "w-[45%] min-w-48")}>
                 {points ? points(r) : r.points}
               </td>
               <td className={td}>{formatSigned(r.race)}</td>

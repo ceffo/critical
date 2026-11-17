@@ -55,7 +55,7 @@ export function PointsSlider({
   return (
     <span className="flex min-w-0 items-center gap-2">
       <span
-        className="relative block h-7 min-w-28 flex-1 rounded-md has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring"
+        className="relative block h-7 min-w-20 flex-1 rounded-md has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-ring"
         data-testid={`points-slider-${id}`}
       >
         <span className="absolute inset-x-0 top-3 h-1.5 rounded-full bg-input" />

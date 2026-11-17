@@ -3508,8 +3508,8 @@
       "weaponsNone": "Ce serveur n’a pas les types d’armes de la classe : vous les choisirez plus tard dans l’onglet Compétences."
     },
     "skillPoints": {
-      "name": "Talents de {{className}}",
-      "title": "Talents de {{className}}",
+      "name": "{{className}}",
+      "title": "{{className}}",
       "lead": "Répartissez les points de talent du niveau de départ : chaque pourcentage montre ses termes, tous calculés par le serveur.",
       "spentN_one": "{{count}} point dépensé",
       "spentN_other": "{{count}} points dépensés"

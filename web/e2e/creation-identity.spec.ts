@@ -123,6 +123,8 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
 }) => {
   page.on("dialog", (d) => void d.accept());
   const { step, next } = await toIdentity(page, "fr", undefined, async (s) => {
+    // The step's non-weapon tab (the weapons' is the first).
+    await s.getByTestId("creation-proficiency-tab-nonWeapon").click();
     // A level 1 bard with Intelligence 14: 3 + 0 + 4 slots, the server's terms.
     await expect(s.getByTestId("proficiency-pool-terms")).toContainText("= 7");
     // The server gives Languages, Modern no cost (a language of the list): not offered.
@@ -140,9 +142,7 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
     await s.getByTestId("proficiency-search").fill("acro");
     await s.getByRole("button", { name: /^Ajouter Acrobatie/ }).click();
     await s.getByTestId("proficiency-search").fill("");
-    await expect(s.getByTestId("proficiency-to-spend")).toHaveText(
-      "6 emplacements à dépenser",
-    );
+    await expect(s.getByTestId("proficiency-pool-left")).toHaveText("6");
     await expect(page.getByTestId("building-proficiencies")).toHaveText(
       "Lecture/écriture, Histoire locale, Chant, Instrument de musique, Acrobatie",
     );
@@ -171,11 +171,11 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(page.getByTestId("skills-pill")).toBeVisible();
   await openSpend(page, "nonWeapon");
   const editor = page.getByTestId("proficiency-editor");
-  const spent = editor.getByTestId("proficiency-pool-spent");
-  await expect(spent).toHaveText("Dépensés 1, restants 6");
+  const spent = editor.getByTestId("proficiency-pool-left");
+  await expect(spent).toHaveText("6");
   await editor.getByTestId("proficiency-search").fill("jongl");
   await editor.getByRole("button", { name: /^Ajouter Jonglerie/ }).click();
-  await expect(spent).toHaveText("Dépensés 2, restants 5");
+  await expect(spent).toHaveText("5");
   const juggling = editor.getByTestId("proficiency-pick-juggling");
   const figures = editor.locator("[data-stale]");
 
@@ -197,10 +197,10 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
     (r) => r.url().endsWith("/preview") && isTwo(r.postDataJSON()),
   );
   await juggling.getByTestId("proficiency-more").click();
-  await expect(spent).toHaveText("Dépensés 4, restants 3");
+  await expect(spent).toHaveText("3");
   await late;
   await page.waitForTimeout(300); // time for a late answer to land, were it applied
-  await expect(spent).toHaveText("Dépensés 4, restants 3");
+  await expect(spent).toHaveText("3");
   await page.unroute(preview);
 
   // Growing past the budget: the server's refusal, the figures marked out of date, and a save
@@ -215,23 +215,15 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(editor.getByRole("alert").first()).toContainText(
     "Budget dépassé",
   );
-  // Below the cost: the refusal lands on Juggling's row, for the preview and the save alike.
-  for (let i = 0; i < 7; i++)
-    await juggling.getByTestId("proficiency-fewer").click();
-  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("0");
-  await expect(juggling.getByRole("alert")).toHaveText(
-    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
-  );
-  await editor.getByTestId("proficiency-save").click();
-  await expect(juggling.getByRole("alert")).toHaveText(
-    "Moins d’emplacements que son coût, ou trop : entrez de son coût à 99.",
-  );
-  await expect(editor).toBeVisible();
-  // Back at its cost: the refusal and the out-of-date mark go with the next answer.
-  await juggling.getByTestId("proficiency-more").click();
+  // Back down: fewer stops at the cost (× removes the pick); the refusal and the out-of-date mark
+  // go with the next answer.
+  const fewer = juggling.getByTestId("proficiency-fewer");
+  while (await fewer.isEnabled()) await fewer.click();
+  await expect(juggling.getByTestId("proficiency-slots")).toHaveText("1");
+  await expect(fewer).toBeDisabled();
   await expect(juggling.getByRole("alert")).toHaveCount(0);
   await expect(figures).toHaveCount(0);
-  await expect(spent).toHaveText("Dépensés 2, restants 5");
+  await expect(spent).toHaveText("5");
   await editor.getByTestId("proficiency-save").click();
   // A save returns to the reading, on the stored picks; the Act activity shows the pick.
   await expect(page.getByTestId("skill-read-juggling")).toBeVisible();
@@ -250,8 +242,6 @@ test("proficiencies: create a bard with picks, add one from the Skills tab, undo
   await expect(page.getByTestId("skill-read-juggling")).toHaveCount(0);
   await page.getByTestId("skills-modify-skills-nonWeapon").click();
   await expect(
-    page
-      .getByTestId("proficiency-editor")
-      .getByTestId("proficiency-pool-spent"),
-  ).toHaveText("Dépensés 1, restants 6");
+    page.getByTestId("proficiency-editor").getByTestId("proficiency-pool-left"),
+  ).toHaveText("6");
 });

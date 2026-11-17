@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Plus, X } from "@phosphor-icons/react";
+import { Check, Plus, X } from "@phosphor-icons/react";
+import { fieldClass, labelClass } from "@/components/dashboard/fieldStyles";
 import { Note } from "@/components/creation/kit";
 import { Button } from "@/components/ui/button";
+import { catalogueRows } from "@/lib/catalogue";
 import { cn } from "@/lib/utils";
 import { weaponName } from "@/lib/weaponNames";
 import { useEquipmentCatalogueStore } from "@/stores/equipmentCatalogue";
@@ -12,25 +14,29 @@ import type {
   WeaponPickInput,
   WeaponPool,
 } from "@/types/character";
+import { fold } from "./catalogue";
+import { Band, PoolBar } from "./pickParts";
 import {
+  PLAIN_WEAPON_SLOTS,
   addWeapon,
+  groupWeaponRows,
   isSpecialization,
   removeWeapon,
   specialize,
-  groupWeaponRows,
   weaponRows,
   type WeaponRow,
 } from "./weapons";
 
 /**
  * The weapon proficiency picker (ADR 0037 steps 3, 12 and 21), shared by the Skills activity's editor
- * and the creation's step: the weapon pool with its terms, the type picks left to redo (step
- * 21.8.3), then one row per catalogue weapon the class may pick (the derived `weapons`, named from
- * the equipment catalogue) and per kept pick it may not (shown as such, removable). A row adds or
- * removes the weapon; for a class that specializes, a picked weapon's toggle makes it the
- * specialization at the cost the options give. Every number is the server's: the pool comes from
- * its preview or checks (`figures`), a specialization's cost from the options; a refusal (a
- * second specialization, an overspend) is the server's, shown on the row or above the list.
+ * and the creation's step: the pool bar that stays at the top of the scroll, the weapons held on the
+ * left (a fighter's Specialize on each) and on the right a search over the catalogue's weapons by
+ * family, each family a band that opens. In a family the weapons the character's classes may pick
+ * come first (the derived `weapons`, named from the equipment catalogue), then the others, greyed
+ * with the reason; a family with none to pick is a quiet closed band. A weapon is added at one slot,
+ * and the add is disabled when the pool has none left. Every number is the server's: the pool from
+ * its preview or checks (`figures`), a specialization's cost from the options; a refusal (a second
+ * specialization, an overspend) is the server's, shown on the row or above the list.
  */
 export function WeaponPicker({
   weapons,
@@ -39,8 +45,11 @@ export function WeaponPicker({
   figures,
   stale = false,
   errorFor,
+  classes = "",
+  header,
+  barClassName,
 }: {
-  /** The class's weapons and their specialization cost (the derived `weapons`). */
+  /** The character's weapons and their specialization cost (the derived `weapons`). */
   weapons: WeaponOption[];
   picks: WeaponPickInput[];
   onChange: (picks: WeaponPickInput[]) => void;
@@ -50,8 +59,14 @@ export function WeaponPicker({
   stale?: boolean;
   /** A refusal's words for a field (`weapon.<code>`, or `weapon` for the budget), or null. */
   errorFor: (field: string) => string | null;
+  /** The names of the character's classes, for the reason a weapon is not allowed. */
+  classes?: string;
+  /** The editor's title and Save / Cancel, kept with the pool bar at the top. */
+  header?: ReactNode;
+  barClassName?: string;
 }) {
   const { t, i18n } = useTranslation();
+  const [query, setQuery] = useState("");
   // The rows are named from the equipment catalogue (ADR 0037 step 21.6), read once.
   const catalogue = useEquipmentCatalogueStore((s) => s.catalogue);
   const load = useEquipmentCatalogueStore((s) => s.load);
@@ -60,29 +75,45 @@ export function WeaponPicker({
   }, [load]);
   const nameOf = (code: string) =>
     weaponName(t, code, catalogue, i18n.language);
-  const groups = groupWeaponRows(
-    weaponRows(weapons, picks, figures?.weaponPicks),
+  const q = fold(query.trim());
+  const all = weaponRows(
+    weapons,
+    picks,
+    figures?.weaponPicks,
+    catalogue
+      ? catalogueRows(catalogue, "weapon", "", i18n.language, t).map(
+          (r) => r.code,
+        )
+      : [],
+  );
+  const families = groupWeaponRows(
+    all.filter((r) => q === "" || fold(nameOf(r.code)).includes(q)),
     catalogue,
     i18n.language,
     t,
   );
+  const firstOpen = families.findIndex((g) => g.rows.some((r) => r.allowed));
   const budgetError = errorFor("weapon");
   const redo = figures?.weaponRedo ?? [];
+  const left = figures?.weapon?.left;
+  const held = picks.flatMap((p) => {
+    const row = all.find((r) => r.code === p.code);
+    return row ? [row] : [];
+  });
+  const offersSpecialization = weapons.some((o) => o.specializationSlots > 0);
+  const bar = figures?.weapon ? (
+    <WeaponPoolSummary
+      pool={figures.weapon}
+      header={header}
+      stale={stale}
+      className={barClassName}
+    />
+  ) : (
+    header && <div className="sticky top-0 z-10">{header}</div>
+  );
   return (
     <div className="flex min-w-0 flex-col gap-3" data-testid="weapon-picker">
-      {figures?.weapon && (
-        <div
-          className={cn("flex flex-col gap-2", stale && "opacity-60")}
-          data-stale={stale ? "true" : undefined}
-        >
-          <WeaponPoolSummary pool={figures.weapon} />
-          {stale && (
-            <p className="text-label break-words text-ink-muted">
-              {t("proficiencies.previewStale")}
-            </p>
-          )}
-        </div>
-      )}
+      {bar}
       {budgetError && <Note kind="refusal">{budgetError}</Note>}
       {redo.length > 0 && (
         <Note kind="warning" testId="weapon-redo">
@@ -98,31 +129,29 @@ export function WeaponPicker({
           })}
         </Note>
       )}
-      <div
-        className="flex flex-col gap-2"
-        role="group"
-        aria-label={t("weaponProficiencies.list")}
-        data-testid="weapon-rows"
-      >
-        {groups.map((g) => (
-          <section
-            key={g.key}
-            className="flex min-w-0 flex-col gap-1"
-            data-testid={g.key ? `weapon-group-${g.key}` : undefined}
+      <div className="grid grid-cols-1 items-start gap-5 min-[1100px]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <section
+          aria-labelledby="weapon-held-title"
+          className="flex min-w-0 flex-col gap-2"
+        >
+          <h4
+            id="weapon-held-title"
+            className="group-heading section-label px-2.5"
           >
-            {g.key && (
-              <h4 className="px-2.5 text-label font-semibold text-tint">
-                {g.label}
-              </h4>
-            )}
-            <ul className="grid grid-cols-[repeat(auto-fill,minmax(20rem,1fr))] gap-x-4 gap-y-1">
-              {g.rows.map((r) => (
-                <WeaponRowItem
+            {t("weaponProficiencies.heldTitle")}
+          </h4>
+          {held.length === 0 ? (
+            <p className="px-2.5 text-body break-words text-ink-muted">
+              {t("weaponProficiencies.none")}
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-1" data-testid="weapon-held">
+              {held.map((r) => (
+                <HeldRow
                   key={r.code}
                   row={r}
                   name={nameOf(r.code)}
                   error={errorFor(`weapon.${r.code}`)}
-                  onAdd={() => onChange(addWeapon(picks, r.code))}
                   onRemove={() => onChange(removeWeapon(picks, r.code))}
                   onSpecialize={(on) =>
                     onChange(
@@ -136,66 +165,140 @@ export function WeaponPicker({
                 />
               ))}
             </ul>
-          </section>
-        ))}
+          )}
+          <p className="px-2.5 text-label break-words text-ink-muted">
+            {t("weaponProficiencies.lead")}
+            {offersSpecialization &&
+              ` ${t("weaponProficiencies.leadSpecializes")}`}
+          </p>
+        </section>
+        <section
+          aria-labelledby="weapon-catalogue-title"
+          className="flex min-w-0 flex-col gap-2"
+          role="group"
+          data-testid="weapon-rows"
+        >
+          <h4
+            id="weapon-catalogue-title"
+            className="group-heading section-label px-2.5"
+          >
+            {t("weaponProficiencies.catalogue")}
+          </h4>
+          <div className="flex flex-col gap-1 px-2.5">
+            <label htmlFor="weapon-search" className={labelClass}>
+              {t("proficiencies.search")}
+            </label>
+            <input
+              id="weapon-search"
+              type="search"
+              className={fieldClass}
+              autoComplete="off"
+              placeholder={t("weaponProficiencies.searchPlaceholder")}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              data-testid="weapon-search"
+            />
+          </div>
+          {families.map((g, i) => {
+            const allowed = g.rows.filter((r) => r.allowed);
+            // The class's weapons first, then the others (stable within each, the catalogue's order).
+            const rows = [...allowed, ...g.rows.filter((r) => !r.allowed)];
+            return (
+              <Band
+                key={g.key || "other"}
+                title={g.label || t("weaponProficiencies.otherFamily")}
+                count={rows.length}
+                quiet={allowed.length === 0}
+                defaultOpen={i === firstOpen}
+                forceOpen={q !== ""}
+                testId={g.key ? `weapon-group-${g.key}` : undefined}
+              >
+                <ul className="flex flex-col gap-1">
+                  {rows.map((r) => (
+                    <CatalogueRowItem
+                      key={r.code}
+                      row={r}
+                      name={nameOf(r.code)}
+                      classes={classes}
+                      full={left !== undefined && left <= 0}
+                      onAdd={() => onChange(addWeapon(picks, r.code))}
+                    />
+                  ))}
+                </ul>
+              </Band>
+            );
+          })}
+          {families.length === 0 && (
+            <p className="px-2.5 text-body break-words text-ink-muted">
+              {t("weaponProficiencies.noMatch")}
+            </p>
+          )}
+        </section>
       </div>
     </div>
   );
 }
 
-/** The weapon pool as the server derives it (ADR 0037 step 3), with step 11's reminder or the
- * overspend's warning. */
-export function WeaponPoolSummary({ pool }: { pool: WeaponPool }) {
+/** The weapon pool as the server derives it (ADR 0037 step 3), in the bar that stays at the top,
+ * with the overspend's warning. */
+export function WeaponPoolSummary({
+  pool,
+  header,
+  stale = false,
+  className,
+}: {
+  pool: WeaponPool;
+  header?: ReactNode;
+  stale?: boolean;
+  className?: string;
+}) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-col gap-1" data-testid="weapon-pool">
-      <p
-        className="text-body break-words tabular-nums"
-        data-testid="weapon-pool-terms"
-      >
-        {t("weaponProficiencies.pool", {
-          initial: pool.initial,
-          levels: pool.levelGained,
-          perLevels: pool.perLevels,
-          available: pool.available,
-        })}
-      </p>
-      <p
-        className="text-body break-words text-ink-muted tabular-nums"
-        data-testid="weapon-pool-spent"
-      >
-        {t("proficiencies.spentLeft", { spent: pool.spent, left: pool.left })}
-      </p>
-      {pool.left > 0 && (
-        <Note kind="info" testId="weapon-to-spend">
-          {t("proficiencies.toSpend", { count: pool.left })}
-        </Note>
+    <PoolBar
+      testId="weapon-pool"
+      header={header}
+      left={pool.left}
+      available={pool.available}
+      stale={stale}
+      className={className}
+      terms={t("weaponProficiencies.pool", {
+        initial: pool.initial,
+        levels: pool.levelGained,
+        perLevels: pool.perLevels,
+        available: pool.available,
+      })}
+    >
+      {stale && (
+        <p className="px-2.5 text-label break-words text-ink-muted">
+          {t("proficiencies.previewStale")}
+        </p>
       )}
       {pool.left < 0 && (
-        <Note kind="warning" testId="weapon-over">
-          {t("proficiencies.over", {
-            spent: pool.spent,
-            available: pool.available,
-          })}
-        </Note>
+        <div className="px-2.5">
+          <Note kind="warning" testId="weapon-over">
+            {t("proficiencies.over", {
+              spent: pool.spent,
+              available: pool.available,
+            })}
+          </Note>
+        </div>
       )}
-    </div>
+    </PoolBar>
   );
 }
 
-/** One catalogue weapon: its name, what the pick spends, and its controls. */
-function WeaponRowItem({
+/** One weapon held: its name, what it spends, a fighter's Specialize (or the specialization held)
+ * and its own Remove. */
+function HeldRow({
   row,
   name,
   error,
-  onAdd,
   onRemove,
   onSpecialize,
 }: {
   row: WeaponRow;
   name: string;
   error: string | null;
-  onAdd: () => void;
   onRemove: () => void;
   onSpecialize: (on: boolean) => void;
 }) {
@@ -203,38 +306,15 @@ function WeaponRowItem({
   const { pick, option } = row;
   const specialized = isSpecialization(pick);
   const cost = option?.specializationSlots ?? 0;
-  const status = !pick
-    ? t("weaponProficiencies.unpicked")
-    : specialized
-      ? t("weaponProficiencies.specialization", { count: pick.slots })
-      : t("weaponProficiencies.plain", { count: pick.slots });
   return (
     <li
-      className={cn(
-        "flex min-w-0 flex-col gap-1 rounded-md px-2.5 py-1",
-        pick ? "bg-selected" : "bg-raised",
-      )}
-      data-testid={`weapon-row-${row.code}`}
-      data-picked={pick ? "true" : undefined}
+      className="flex min-w-0 flex-col gap-1 rounded-md bg-sub-band px-2.5 py-1"
+      data-testid={`weapon-held-${row.code}`}
       data-specialized={specialized ? "true" : undefined}
     >
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <span className="flex min-w-0 flex-col">
           <span className="text-body break-words">{name}</span>
-          <span
-            className={cn(
-              "text-label break-words",
-              pick ? "text-muted-foreground" : "text-ink-muted",
-            )}
-            data-testid="weapon-row-status"
-          >
-            {status}
-            {/* ADR 0037 step 21.5: the specialization's cost, the options' figure, beside a pick. */}
-            {pick &&
-              !specialized &&
-              cost > 0 &&
-              ` · ${t("weaponProficiencies.specializationCost", { count: cost })}`}
-          </span>
           {!row.allowed && (
             <span
               className="text-label break-words text-warning"
@@ -244,8 +324,7 @@ function WeaponRowItem({
             </span>
           )}
         </span>
-        <span className="flex flex-wrap items-center justify-end gap-1">
-          {/* Specialize a picked weapon: its cost shows beside the pick (ADR 0037 step 21.5). */}
+        <span className="flex flex-wrap items-center justify-end gap-2">
           {pick && cost > 0 && (
             <Button
               type="button"
@@ -265,39 +344,99 @@ function WeaponRowItem({
             >
               {specialized
                 ? t("weaponProficiencies.specialized")
-                : t("weaponProficiencies.specialize")}
+                : t("weaponProficiencies.specializeMore", {
+                    count: Math.max(cost - pick.slots, 0),
+                  })}
             </Button>
           )}
-          {pick ? (
-            <Button
-              type="button"
-              size="icon-xs"
-              aria-label={t("weaponProficiencies.remove", { name })}
-              title={t("weaponProficiencies.remove", { name })}
-              onClick={onRemove}
-              data-testid="weapon-remove"
-            >
-              <X aria-hidden />
-            </Button>
-          ) : (
-            <Button
-              type="button"
-              size="xs"
-              title={t("weaponProficiencies.addHint", { name })}
-              aria-label={t("weaponProficiencies.addHint", { name })}
-              onClick={onAdd}
-              data-testid="weapon-add"
-            >
-              <Plus aria-hidden />
-              {t("weaponProficiencies.add")}
-            </Button>
-          )}
+          <span
+            className="text-label whitespace-nowrap text-ink-muted tabular-nums"
+            data-testid="weapon-row-status"
+          >
+            {t("proficiencies.slotsShort", { count: pick?.slots ?? 0 })}
+          </span>
+          <Button
+            type="button"
+            size="icon-xs"
+            aria-label={t("weaponProficiencies.remove", { name })}
+            title={t("weaponProficiencies.remove", { name })}
+            onClick={onRemove}
+            data-testid="weapon-remove"
+          >
+            <X aria-hidden />
+          </Button>
         </span>
       </div>
       {error && (
         <p role="alert" className="text-label break-words text-danger">
           {error}
         </p>
+      )}
+    </li>
+  );
+}
+
+/** One catalogue weapon: its name and, for one the character may pick, its add; for the others, the
+ * reason it is not allowed. `full`: the pool has no slot left. */
+function CatalogueRowItem({
+  row,
+  name,
+  classes,
+  full,
+  onAdd,
+}: {
+  row: WeaponRow;
+  name: string;
+  classes: string;
+  full: boolean;
+  onAdd: () => void;
+}) {
+  const { t } = useTranslation();
+  const has = row.pick !== undefined;
+  const label = has
+    ? t("weaponProficiencies.alreadyHeld", { name })
+    : full
+      ? t("weaponProficiencies.noRoom", { name })
+      : t("weaponProficiencies.addHint", { name });
+  return (
+    <li
+      className={cn(
+        "flex min-w-0 items-center justify-between gap-3 rounded-md px-2.5 py-1 text-body",
+        row.allowed && !has ? "bg-raised" : "text-ink-muted",
+      )}
+      data-testid={`weapon-row-${row.code}`}
+      data-allowed={row.allowed ? "true" : "false"}
+    >
+      <span className="flex min-w-0 flex-col">
+        <span className="break-words">{name}</span>
+        {!row.allowed && !has && (
+          <span
+            className="text-label break-words"
+            data-testid="weapon-row-reason"
+          >
+            {classes
+              ? t("weaponProficiencies.outsideList", { classes })
+              : t("weaponProficiencies.outsideListAny")}
+          </span>
+        )}
+      </span>
+      {(row.allowed || has) && (
+        <span className="flex shrink-0 items-center gap-2">
+          <span className="text-label tabular-nums">
+            {t("proficiencies.slotsShort", { count: PLAIN_WEAPON_SLOTS })}
+          </span>
+          <Button
+            type="button"
+            size="icon-xs"
+            title={label}
+            aria-label={label}
+            disabled={has || full}
+            onClick={onAdd}
+            data-testid="weapon-add"
+          >
+            {has ? <Check aria-hidden /> : <Plus aria-hidden />}
+          </Button>
+        </span>
       )}
     </li>
   );

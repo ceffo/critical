@@ -749,3 +749,11 @@ export async function seedOtherUser(
     await anon.dispose();
   }
 }
+
+/** Opens a weapon family's band in the weapon editor (a band with a match under a search is open
+ * already). */
+export async function openFamily(editor: Locator, family: string) {
+  const band = editor.getByTestId(`weapon-group-${family}`);
+  const head = band.getByRole("button").first();
+  if ((await head.getAttribute("aria-expanded")) !== "true") await head.click();
+}

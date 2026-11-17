@@ -6,7 +6,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
 import type { ProficienciesInput, ProficiencySlots } from "@/types/character";
-import { optionsForCharacter } from "./catalogue";
+import { servedCatalogue } from "./catalogue";
 import { LanguagesPool } from "./LanguagesPool";
 import {
   offeredIds,
@@ -14,6 +14,7 @@ import {
   schedulePreview,
   type PickPool,
 } from "./pickEditor";
+import { useAbilityScores } from "./pickHooks";
 import { ProficiencyPicker } from "./ProficiencyPicker";
 import { usePickRefusal, type Refusal } from "./refusal";
 import { WeaponPicker } from "./WeaponPicker";
@@ -82,6 +83,7 @@ export function PickEditor({
   race,
   languages: stored,
   slots,
+  classes = "",
   onDone,
 }: {
   pool: PickPool;
@@ -91,6 +93,8 @@ export function PickEditor({
   languages: string[];
   /** The character's pools and picks as last read (`derived.proficiencySlots`). */
   slots: ProficiencySlots;
+  /** The names of the character's classes, for the weapons they may not use. */
+  classes?: string;
   onDone: () => void;
 }) {
   const { t } = useTranslation();
@@ -111,6 +115,7 @@ export function PickEditor({
   const [previewError, setPreviewError] = useState<Refusal | null>(null);
   const [error, setError] = useState<Refusal | null>(null);
   const wording = usePickRefusal();
+  const scores = useAbilityScores();
 
   // The live preview of the picks shown, asked after a short rest.
   const key = JSON.stringify(draft);
@@ -151,10 +156,6 @@ export function PickEditor({
     shown && shown.field === field ? wording(shown) : null;
   // The server says which weapons the character may pick (all its classes judged together).
   const weapons = figures.weapons ?? slots.weapons ?? [];
-  // ADR 0037 step 21.5, ADR 0042 step 12: a new specialization is offered when an active class
-  // gives a weapon its cost (`specializationSlots`); a dual-class's kept one gives none, so no lead.
-  const offersSpecialization = weapons.some((o) => o.specializationSlots > 0);
-
   // A refusal of a field the picker does not show (a pick no longer listed).
   const hidden =
     shown &&
@@ -168,6 +169,40 @@ export function PickEditor({
           (p) => `nonweapon.${p.id}` === shown.field,
         ));
 
+  const header = (
+    // Save and Cancel with the title, kept at the top with the pool bar: the catalogue below is
+    // long (ADR 0027 step 1).
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-2.5">
+      <div className="flex min-w-0 flex-1 basis-60 flex-col gap-0.5">
+        <h4 id={cfg.id} className="text-body font-semibold">
+          {t(`${cfg.section}.title`)}
+        </h4>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <Button
+          type="button"
+          size="sm"
+          disabled={saving}
+          onClick={onDone}
+          title={t("proficiencies.cancelHint")}
+          data-testid={cfg.ids.cancel}
+        >
+          {t("proficiencies.cancel")}
+        </Button>
+        <Button
+          type="submit"
+          variant="main"
+          size="sm"
+          disabled={saving || (pool === "nonWeapon" && !options)}
+          title={t(`${cfg.section}.saveHint`)}
+          data-testid={cfg.ids.save}
+        >
+          {t("proficiencies.save")}
+        </Button>
+      </div>
+    </div>
+  );
+
   return (
     <form
       className="flex min-w-0 flex-col gap-3 px-2.5"
@@ -175,72 +210,37 @@ export function PickEditor({
       data-testid={cfg.ids.form}
       onSubmit={(e) => void submit(e)}
     >
-      {/* Save and Cancel beside the title: the catalogue below is long (ADR 0027 step 1). */}
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2">
-        <div className="flex min-w-0 flex-1 basis-80 flex-col gap-1">
-          <h4 id={cfg.id} className="text-body font-semibold">
-            {t(`${cfg.section}.title`)}
-          </h4>
-          <p className="text-label break-words text-muted-foreground">
-            {t(`${cfg.section}.lead`)}
-            {pool === "weapon" &&
-              offersSpecialization &&
-              ` ${t("weaponProficiencies.leadSpecializes")}`}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
-          <Button
-            type="submit"
-            variant="main"
-            size="sm"
-            disabled={saving || !options}
-            title={t(`${cfg.section}.saveHint`)}
-            data-testid={cfg.ids.save}
-          >
-            {t("proficiencies.save")}
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={saving}
-            onClick={onDone}
-            title={t("proficiencies.cancelHint")}
-            data-testid={cfg.ids.cancel}
-          >
-            {t("proficiencies.cancel")}
-          </Button>
-        </div>
-      </div>
       {loadError && (
         <p role="alert" className="text-body text-danger">
           {t("details.optionsError")}
         </p>
       )}
       {options && pool === "nonWeapon" && (
-        <>
-          {/* ADR 0037 steps 6 and 18: the languages beyond the native one and Common spend the pool
-              the picks below spend; the slots they take are the server's preview. */}
-          <LanguagesPool
-            options={options}
-            race={race}
-            picked={draft.languages ?? []}
-            slots={figures.nonWeapon.languages}
-            error={errorFor("languages")}
-            onChange={(languages) => change({ languages })}
-          />
-          <ProficiencyPicker
-            options={optionsForCharacter(options, cls, figures)}
-            cls={cls}
-            picks={draft.nonweapon ?? []}
-            onChange={(nonweapon) => change({ nonweapon })}
-            figures={figures}
-            stale={stale}
-            errorFor={errorFor}
-            offered={offered}
-          />
-        </>
+        <ProficiencyPicker
+          catalogue={servedCatalogue(options, cls, figures)}
+          picks={draft.nonweapon ?? []}
+          onChange={(nonweapon) => change({ nonweapon })}
+          figures={figures}
+          stale={stale}
+          errorFor={errorFor}
+          offered={offered}
+          scores={scores}
+          header={header}
+          aside={
+            // ADR 0037 steps 6 and 18: the languages beyond the native one and Common spend the
+            // pool the picks spend; the slots they take are the server's preview.
+            <LanguagesPool
+              options={options}
+              race={race}
+              picked={draft.languages ?? []}
+              slots={figures.nonWeapon.languages}
+              error={errorFor("languages")}
+              onChange={(languages) => change({ languages })}
+            />
+          }
+        />
       )}
-      {options && pool === "weapon" && (
+      {pool === "weapon" && (
         <WeaponPicker
           weapons={weapons}
           picks={draft.weapon ?? []}
@@ -248,10 +248,15 @@ export function PickEditor({
           figures={figures}
           stale={stale}
           errorFor={errorFor}
+          classes={classes}
+          header={header}
         />
       )}
-      {!options && !loadError && (
-        <p className="text-body text-muted-foreground">{t("app.loading")}</p>
+      {!options && !loadError && pool === "nonWeapon" && (
+        <>
+          {header}
+          <p className="text-body text-muted-foreground">{t("app.loading")}</p>
+        </>
       )}
       {hidden && shown && (
         <p role="alert" className="text-label break-words text-danger">

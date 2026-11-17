@@ -158,6 +158,7 @@ test("create a bard through the creation route, switch to the first and back, re
   // half-elf's own language (Commun) is locked; ADR 0037 step 6, five more spend five of the level 3
   // bard's 7 non-weapon slots (Intelligence 14), as the server counts.
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
   await expect(step.getByTestId("language-native")).toContainText("Commun");
   const chips = step.getByTestId("language-chips");
   for (const name of ["Elfe", "Gnome", "Petites-gens", "Gobelin", "Orque"])

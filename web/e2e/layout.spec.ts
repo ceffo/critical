@@ -27,6 +27,7 @@ import {
   expectUndoOn,
   logEntry,
   openSortsPowers,
+  openFamily,
   openSpend,
   newCharacter,
   seedOtherUser,
@@ -932,8 +933,8 @@ async function frenchLongNamesStep(page: Page, size: Viewport, stack: Stack) {
       .getByTestId("proficiency-pick-tumbling")
       .getByTestId("proficiency-more")
       .click();
-    await expect(picksEditor.getByTestId("proficiency-pool-spent")).toHaveText(
-      "Dépensés 5, restants 5",
+    await expect(picksEditor.getByTestId("proficiency-pool-left")).toHaveText(
+      "5",
     );
     await expect(
       picksEditor
@@ -1482,9 +1483,7 @@ async function skillsEditorStep(page: Page, size: Viewport) {
   const tumbling = panel.getByTestId("proficiency-pick-tumbling");
   for (let i = 0; i < 4; i++)
     await tumbling.getByTestId("proficiency-more").click();
-  await expect(panel.getByTestId("proficiency-pool-spent")).toHaveText(
-    "Dépensés 8, restants 2",
-  );
+  await expect(panel.getByTestId("proficiency-pool-left")).toHaveText("2");
   for (const name of ["Elfe", "Gnome", "Orque"])
     await pool.getByRole("checkbox", { name, exact: true }).check();
   await expect(pool.getByRole("alert")).toContainText("Budget dépassé");
@@ -2692,16 +2691,20 @@ async function weaponProfEditorStep(page: Page, size: Viewport) {
     const editor = page.getByTestId("weapon-editor");
     if (lang === "fr") {
       // The specialization in a long bow (3 slots) and a plain short sword: 4 of 4 spent.
-      const bow = editor.getByTestId("weapon-row-long_bow");
-      await bow.getByTestId("weapon-add").click();
-      await bow.getByTestId("weapon-specialize").click();
+      await openFamily(editor, "missile");
+      await editor
+        .getByTestId("weapon-row-long_bow")
+        .getByTestId("weapon-add")
+        .click();
+      await editor
+        .getByTestId("weapon-held-long_bow")
+        .getByTestId("weapon-specialize")
+        .click();
       await editor
         .getByTestId("weapon-row-short_sword")
         .getByTestId("weapon-add")
         .click();
-      await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
-        "Dépensés 4, restants 0",
-      );
+      await expect(editor.getByTestId("weapon-pool-left")).toHaveText("0");
     }
     for (const vp of sizesAt(size, VIEWPORTS)) {
       await page.setViewportSize(vp);
@@ -4495,8 +4498,8 @@ async function creationStep(page: Page, size: Viewport) {
     await next.click();
     // ADR 0037 step 14: a pick of the bard's groups with an extra slot, and Healing outside them
     // (priest only: the server's cost of 3), within any rolled Intelligence's budget.
-    await expect(step.getByTestId("proficiency-pool-terms")).toBeVisible();
-    // ADR 0037 steps 7 and 14: a weapon pick on the same step, on the server's weapon pool.
+    // ADR 0037 steps 7 and 14: a weapon pick on the same step (its own tab), on the server's
+    // weapon pool.
     await expect(step.getByTestId("weapon-pool-terms")).toBeVisible();
     await step
       .getByTestId("weapon-row-long_sword")
@@ -4504,15 +4507,22 @@ async function creationStep(page: Page, size: Viewport) {
       .click();
     await expect(
       step
-        .getByTestId("weapon-row-long_sword")
+        .getByTestId("weapon-held-long_sword")
         .getByTestId("weapon-row-status"),
-    ).toHaveText(tr("Maîtrisée · 1 emplacement", "Proficient · 1 slot"));
-    for (const name of [tr("Acrobatie", "Tumbling"), tr("Soins", "Healing")])
+    ).toHaveText(tr("1 empl.", "1 slot"));
+    await audit("4b-weapons");
+    await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
+    await expect(step.getByTestId("proficiency-pool-terms")).toBeVisible();
+    for (const name of [tr("Acrobatie", "Tumbling"), tr("Soins", "Healing")]) {
+      // A search opens the bands with a match (Healing is outside the bard's groups).
+      await step.getByTestId("proficiency-search").fill(name);
       await step
         .getByRole("button", {
           name: new RegExp(`^${tr("Ajouter", "Add")} ${name}`),
         })
         .click();
+    }
+    await step.getByTestId("proficiency-search").fill("");
     await step
       .getByTestId("proficiency-pick-tumbling")
       .getByTestId("proficiency-more")
@@ -4580,6 +4590,7 @@ async function creationStep(page: Page, size: Viewport) {
       })
       .click();
     await expect(step).toHaveAttribute("data-step", "proficiencies");
+    await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
     const chips = step.getByTestId("language-chips").getByRole("checkbox");
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     const languagesError = step
@@ -4636,6 +4647,7 @@ async function creationStep(page: Page, size: Viewport) {
         ),
       })
       .click();
+    await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
     for (let i = 0; i < 8; i++) await chips.nth(i).click();
     await expect(languagesError).toHaveCount(0);
     await next.click();

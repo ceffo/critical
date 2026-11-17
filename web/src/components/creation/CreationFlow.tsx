@@ -51,6 +51,7 @@ import { ProficienciesStep } from "./proficiencies";
 import { SpellbookStep } from "./spellbook";
 import { PsionicsStep } from "./psionics";
 import { useSpellName } from "@/i18n/spellName";
+import { useAbilityFocus } from "@/stores/abilityFocus";
 import { useSpellNamesStore } from "@/stores/spellNames";
 import { useReviewWarnings, warnedFields } from "./warnings";
 
@@ -779,6 +780,7 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
   const languageName = useLanguageNames(options);
   const units = unitsFor(language);
   const dash = <span className="text-ink-muted">—</span>;
+  const inPlay = useAbilityFocus((s) => s.ability);
   const line = [
     draft.cls ? classLine(t, { ...draft, xp }) : null,
     draft.race ? t(`details.races.${draft.race}`) : null,
@@ -824,7 +826,11 @@ function Building({ options, draft, xp, answer, body, language }: StepProps) {
           {ABILITIES.map((a) => (
             <div
               key={a}
-              className="flex flex-col items-center rounded-md bg-raised py-1"
+              data-in-play={inPlay === a ? "true" : undefined}
+              className={cn(
+                "flex flex-col items-center rounded-md bg-raised py-1",
+                inPlay === a && "ring-2 ring-ring",
+              )}
             >
               <span className="text-label text-ink-muted">
                 {t(`attr.${a}`)}

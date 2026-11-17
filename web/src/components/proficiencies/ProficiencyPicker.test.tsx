@@ -4,7 +4,10 @@ import i18next from "i18next";
 import { I18nextProvider } from "react-i18next";
 import { resources } from "@/i18n";
 import type { ProficiencySlots } from "@/types/character";
-import { ProficiencyPicker, type PickerOptions } from "./ProficiencyPicker";
+import { servedCatalogue } from "./catalogue";
+import { ProficiencyPicker } from "./ProficiencyPicker";
+
+type PickerOptions = Parameters<typeof servedCatalogue>[0];
 
 // A mocked server answer whose figures follow no rule the web could recompute: every number on the
 // screen must be one of these (ADR 0037 steps 3 to 5; the web words them, computes none).
@@ -75,8 +78,7 @@ async function render(
   return renderToStaticMarkup(
     <I18nextProvider i18n={inst}>
       <ProficiencyPicker
-        options={more.opts ?? options}
-        cls="bard"
+        catalogue={servedCatalogue(more.opts ?? options, "bard", f)}
         picks={more.picks ?? [{ id: "tumbling", slots: 6 }]}
         onChange={() => {}}
         figures={f}
@@ -93,13 +95,16 @@ describe("ProficiencyPicker", () => {
     expect(html).toContain(
       "Slots: 3 initial + 11 for the levels (one every 4) + 13 for Intelligence = 41",
     );
-    expect(html).toContain("Spent 34, left 7");
-    expect(html).toContain("7 slots to spend");
-    expect(html).toContain("cost 5 · +2 to the check · target DEX 23");
-    // The catalogue: the class's groups first, the other's cost as the server sent it.
-    expect(html).toContain("Your class&#x27;s groups: rogue, general");
-    expect(html).toContain("Add Tracking (costs 8 slots)");
-    expect(html).toContain("8 slots");
+    expect(html).toContain("slots left of 41");
+    expect(html).toContain("cost 5 · +2 to the check");
+    expect(html).toContain('<b class="font-semibold">23</b>');
+    // The catalogue: the character's groups first and open, the cost as the server sent it, the
+    // other groups closed under their own rule.
+    expect(html).toContain("your class · normal cost");
+    expect(html).toContain("not your class · one slot more");
+    expect(html).toContain('data-testid="proficiency-own-rogue"');
+    expect(html).not.toContain('data-testid="proficiency-other-warrior"');
+    expect(html).toContain("5 slots");
     expect(html).toContain("Tumbling: already chosen");
   });
 
@@ -108,8 +113,7 @@ describe("ProficiencyPicker", () => {
     expect(html).toContain(
       "Budget dépassé : 43 emplacements pour 41 disponibles. Vous pouvez en retirer, pas en ajouter.",
     );
-    expect(html).not.toContain("à dépenser");
-    expect(html).toContain("coût 5 · +2 au jet · cible DEX 23");
+    expect(html).toContain("coût 5 · +2 au jet");
   });
 
   it("shows the languages' slots on their own line, as the server counts them (ADR 0037 step 6)", async () => {
@@ -128,7 +132,15 @@ describe("ProficiencyPicker", () => {
   });
 
   it("opens the description from the name and adds from its own button, in the catalogue and in the picks", async () => {
-    const html = await render(figures(1, 40));
+    const html = await render(figures(1, 40), "en", {
+      opts: {
+        ...options,
+        proficiencies: options.proficiencies!.map((p) => ({
+          ...p,
+          groups: ["rogue"],
+        })),
+      },
+    });
     const row =
       /<li[^>]*><button[^>]*data-testid="proficiency-name-tracking"[\s\S]*?<\/li>/.exec(
         html,
@@ -190,8 +202,9 @@ describe("ProficiencyPicker", () => {
       offered: ["local_history"],
     };
     const en = await render(free, "en", more);
-    expect(en).toContain("free (class) · +2 to the check · target CHA 18");
-    expect(en).toContain("cost 5 · +2 to the check · target DEX 23");
+    expect(en).toContain("free (class) · +2 to the check");
+    expect(en).toContain("cost 5 · +2 to the check");
+    expect(en).toContain(">18</b>");
     expect(en).toContain("Free from your class: take them at 0 slots");
     const offered = /data-testid="proficiency-offered"[\s\S]*?<\/ul>/.exec(
       en,
@@ -199,11 +212,11 @@ describe("ProficiencyPicker", () => {
     expect(offered).toContain("Take Local history free (your class grants it)");
     expect(offered).not.toContain("Tracking");
     expect(
-      /data-testid="proficiency-own"[\s\S]*?<\/ul>/.exec(en)?.[0] ?? "",
+      /data-testid="proficiency-own-rogue"[\s\S]*?<\/ul>/.exec(en)?.[0] ?? "",
     ).not.toContain("Local history");
 
     const fr = await render(free, "fr", more);
-    expect(fr).toContain("gratuite (classe) · +2 au jet · cible CHA 18");
+    expect(fr).toContain("gratuite (classe) · +2 au jet");
     expect(fr).toContain(
       "Offertes par votre classe : à prendre à 0 emplacement",
     );

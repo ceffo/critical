@@ -87,6 +87,7 @@ export function SkillsPanel() {
   const className = (code: string) =>
     t(`details.classes.${code}`, { defaultValue: code });
   const tag = classTag(entries, className, t);
+  const classNames = (entries ?? []).map((e) => className(e.class)).join(" / ");
 
   // A request names an editor; the points editor's names a set or, without one, the first set
   // with points left. It waits for the sets to arrive. Adjusted while rendering (React's way to
@@ -142,6 +143,7 @@ export function SkillsPanel() {
             race={race ?? ""}
             languages={languages ?? []}
             slots={slots}
+            classes={classNames}
             onDone={() => done(editing)}
           />
         </Block>

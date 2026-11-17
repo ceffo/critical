@@ -63,24 +63,25 @@ test("fighter: pick and specialize in the editor, Undo from the journal, tags fo
   await snap(page, "nonproficient-attack-dark");
 
   const { editor } = await openEditor(page);
-  const row = editor.getByTestId("weapon-row-long_sword");
-  await row.getByTestId("weapon-add").click();
-  await row.getByTestId("weapon-specialize").click();
+  await editor
+    .getByTestId("weapon-row-long_sword")
+    .getByTestId("weapon-add")
+    .click();
+  await editor
+    .getByTestId("weapon-held-long_sword")
+    .getByTestId("weapon-specialize")
+    .click();
   // Two picks, one specialized: a second weapon of the same family is its own plain pick.
   await editor
     .getByTestId("weapon-row-short_sword")
     .getByTestId("weapon-add")
     .click();
-  await expect(editor.getByTestId("weapon-group-melee")).toBeVisible();
-  await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
-    "Spent 3, left 1",
-  );
+  await expect(editor.getByTestId("weapon-held-short_sword")).toBeVisible();
+  await expect(editor.getByTestId("weapon-pool-left")).toHaveText("1");
   await snap(page, "weapon-editor-dark");
   await editor.getByTestId("weapon-save").click();
   // The editor stays open in the Skills activity, now on the stored picks.
-  await expect(editor.getByTestId("weapon-pool-spent")).toHaveText(
-    "Spent 3, left 1",
-  );
+  await expect(editor.getByTestId("weapon-pool-left")).toHaveText("1");
   // A pick is a catalogue weapon (ADR 0037 step 21.6), named from the equipment catalogue.
   const entry =
     "Weapon proficiency slots: Fixture long sword 0 → 2 (specialization)";

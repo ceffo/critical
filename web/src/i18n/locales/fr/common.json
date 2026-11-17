@@ -62,7 +62,7 @@
     },
     "classEntry": {
       "list": "Classes",
-      "summaryItem": "{{class}}\u00a0{{level}}",
+      "summaryItem": "{{class}} {{level}}",
       "summaryOpen": "Classes : {{summary}}. Afficher le détail de chaque classe",
       "xp": "{{xp}} / {{next}} XP",
       "xpMax": "{{xp}} XP (niveau maximum)",
@@ -3507,6 +3507,7 @@
       "weapons_one": "{{count}} arme",
       "weapons_other": "{{count}} armes",
       "weaponsName": "Armes",
+      "tabs": "Types de compétences",
       "weaponsNone": "Ce serveur n’a pas les types d’armes de la classe : vous les choisirez plus tard dans l’onglet Compétences."
     },
     "spellbook": {
@@ -3666,11 +3667,11 @@
     "otherGroups": "Autres groupes : un emplacement de plus",
     "offered": "Offertes par votre classe : à prendre à 0 emplacement",
     "groups": {
-      "general": "général",
-      "priest": "prêtre",
-      "rogue": "roublard",
-      "warrior": "combattant",
-      "wizard": "magicien"
+      "general": "Générales",
+      "priest": "Prêtre",
+      "rogue": "Roublard",
+      "warrior": "Combattant",
+      "wizard": "Magicien"
     },
     "cost_one": "coût {{count}}",
     "cost_other": "coût {{count}}",
@@ -3711,7 +3712,13 @@
       "not_allowed": "Cette compétence ne se choisit pas ici.",
       "empty": "Une compétence sans nom a été refusée.",
       "refused": "Ce choix a été refusé."
-    }
+    },
+    "leftOf_one": "emplacement restant sur {{available}}",
+    "leftOf_other": "emplacements restants sur {{available}}",
+    "groupOwn": "groupe de la classe · coût normal",
+    "groupOther": "hors classe · un emplacement de plus",
+    "noRoom_one": "{{name}} : plus assez d’emplacements pour son coût ({{count}} emplacement)",
+    "noRoom_other": "{{name}} : plus assez d’emplacements pour son coût ({{count}} emplacements)"
   },
   "weaponProficiencies": {
     "section": "Maîtrises d’armes",
@@ -3755,6 +3762,17 @@
       "weapon_not_allowed": "Votre classe ne peut pas maîtriser ce type d’arme.",
       "empty": "Un type d’arme vide a été refusé.",
       "refused": "Ce choix a été refusé."
-    }
+    },
+    "heldTitle": "Vos maîtrises",
+    "catalogue": "Catalogue",
+    "searchPlaceholder": "Nom de l’arme",
+    "noMatch": "Aucune arme ne correspond.",
+    "otherFamily": "Autres armes",
+    "outsideList": "Hors de la liste de : {{classes}}",
+    "outsideListAny": "Hors de la liste de vos classes",
+    "alreadyHeld": "{{name}} : déjà maîtrisée",
+    "noRoom": "{{name}} : plus d’emplacement",
+    "specializeMore_one": "Se spécialiser +{{count}} empl.",
+    "specializeMore_other": "Se spécialiser +{{count}} empl."
   }
 }

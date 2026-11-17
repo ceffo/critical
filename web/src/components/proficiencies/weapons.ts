@@ -23,18 +23,22 @@ export interface WeaponRow {
 
 /**
  * The editor's rows: every weapon the class may pick, in the options' order, then each kept pick
- * outside that list (ADR 0037 step 21.2: kept, never added), so it can be seen and removed. A row
- * is allowed as the server's figures say (`allowed`), else when the class's list has it.
+ * outside that list (ADR 0037 step 21.2: kept, never added), so it can be seen and removed, then
+ * the catalogue's other weapons (`others`, the codes), listed as not allowed. A row is allowed as
+ * the server's figures say (`allowed`), else when the class's list has it.
  */
 export function weaponRows(
   weapons: WeaponOption[],
   picks: WeaponPickInput[],
   figures: WeaponPickFigures[] | undefined,
+  others: string[] = [],
 ): WeaponRow[] {
   const pickOf = (code: string) => picks.find((p) => p.code === code);
   const allowedOf = (code: string, listed: boolean) =>
     figures?.find((f) => f.code === code)?.allowed ?? listed;
   const listed = new Set(weapons.map((o) => o.code));
+  const kept = picks.filter((p) => !listed.has(p.code));
+  const shown = new Set([...listed, ...kept.map((p) => p.code)]);
   return [
     ...weapons.map((o) => ({
       code: o.code,
@@ -42,13 +46,14 @@ export function weaponRows(
       pick: pickOf(o.code),
       allowed: allowedOf(o.code, true),
     })),
-    ...picks
-      .filter((p) => !listed.has(p.code))
-      .map((p) => ({
-        code: p.code,
-        pick: p,
-        allowed: allowedOf(p.code, false),
-      })),
+    ...kept.map((p) => ({
+      code: p.code,
+      pick: p,
+      allowed: allowedOf(p.code, false),
+    })),
+    ...others
+      .filter((code) => !shown.has(code))
+      .map((code) => ({ code, allowed: false })),
   ];
 }
 

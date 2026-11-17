@@ -62,7 +62,7 @@
     },
     "classEntry": {
       "list": "Classes",
-      "summaryItem": "{{class}}\u00a0{{level}}",
+      "summaryItem": "{{class}} {{level}}",
       "summaryOpen": "Classes: {{summary}}. Show the detail of each class",
       "xp": "{{xp}} / {{next}} XP",
       "xpMax": "{{xp}} XP (highest level)",
@@ -3507,6 +3507,7 @@
       "weapons_one": "{{count}} weapon",
       "weapons_other": "{{count}} weapons",
       "weaponsName": "Weapons",
+      "tabs": "Proficiency kinds",
       "weaponsNone": "This server has no weapon types for the class: you will choose them later in the Skills tab."
     },
     "spellbook": {
@@ -3666,11 +3667,11 @@
     "otherGroups": "Other groups: one slot more",
     "offered": "Free from your class: take them at 0 slots",
     "groups": {
-      "general": "general",
-      "priest": "priest",
-      "rogue": "rogue",
-      "warrior": "warrior",
-      "wizard": "wizard"
+      "general": "General",
+      "priest": "Priest",
+      "rogue": "Rogue",
+      "warrior": "Warrior",
+      "wizard": "Wizard"
     },
     "cost_one": "cost {{count}}",
     "cost_other": "cost {{count}}",
@@ -3711,7 +3712,13 @@
       "not_allowed": "This proficiency is not chosen here.",
       "empty": "A proficiency with no name was refused.",
       "refused": "This choice was refused."
-    }
+    },
+    "leftOf_one": "slot left of {{available}}",
+    "leftOf_other": "slots left of {{available}}",
+    "groupOwn": "your class · normal cost",
+    "groupOther": "not your class · one slot more",
+    "noRoom_one": "{{name}}: no slot left for its cost ({{count}} slot)",
+    "noRoom_other": "{{name}}: no slot left for its cost ({{count}} slots)"
   },
   "weaponProficiencies": {
     "section": "Weapon proficiencies",
@@ -3755,6 +3762,17 @@
       "weapon_not_allowed": "Your class cannot become proficient with this weapon type.",
       "empty": "An empty weapon type was refused.",
       "refused": "This choice was refused."
-    }
+    },
+    "heldTitle": "Your weapons",
+    "catalogue": "Catalogue",
+    "searchPlaceholder": "Weapon name",
+    "noMatch": "No weapon matches.",
+    "otherFamily": "Other weapons",
+    "outsideList": "Outside the weapons of {{classes}}",
+    "outsideListAny": "Outside your classes’ weapons",
+    "alreadyHeld": "{{name}}: already held",
+    "noRoom": "{{name}}: no slot left",
+    "specializeMore_one": "Specialize +{{count}} slot",
+    "specializeMore_other": "Specialize +{{count}} slots"
   }
 }

@@ -13,10 +13,10 @@ const free = [
   "musical_instrument",
 ];
 
-/** The check target the pick's terms read ("target CHA 16"). */
+/** The check target the pick shows ("CHA 16 → 16": the score, the modifier, the target). */
 async function target(pick: Locator): Promise<number> {
-  const terms = await pick.getByTestId("proficiency-pick-terms").textContent();
-  const m = /target \D*(\d+)/.exec(terms ?? "");
+  const terms = await pick.getByTestId("proficiency-pick-target").textContent();
+  const m = /→\s*(\d+)/.exec(terms ?? "");
   expect(m, terms ?? "").not.toBeNull();
   return Number(m![1]);
 }
@@ -55,6 +55,7 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   await step.getByLabel("Max HP").fill("6");
   await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
 
   const picks = step.getByTestId("proficiency-picks");
   const offered = step.getByTestId("proficiency-offered");
@@ -77,6 +78,7 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   await back.click();
   await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
   await expect(picks.getByTestId("proficiency-pick-singing")).toHaveCount(0);
   await expect(offered.getByTestId("proficiency-add-singing")).toBeVisible();
 
@@ -86,6 +88,7 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   await chooseClass(step, "Thief");
   for (let i = 0; i < 4; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
   await expect(offered).toHaveCount(0);
   for (const id of free)
     await expect(picks.getByTestId(`proficiency-pick-${id}`)).toHaveCount(0);
@@ -93,6 +96,7 @@ test("creation: the bard's four start at 0 once; a removed one is offered, not p
   await chooseClass(step, "Bard");
   for (let i = 0; i < 4; i++) await next.click();
   await expect(step).toHaveAttribute("data-step", "proficiencies");
+  await step.getByTestId("creation-proficiency-tab-nonWeapon").click();
   for (const id of free)
     await expect(
       picks
@@ -106,8 +110,8 @@ test("editor: a free pick raised to 2 slots is +2 on target; removed, it is offe
 }) => {
   await openDashboard(page);
   const editor = await openSpend(page, "nonWeapon");
-  const spent = editor.getByTestId("proficiency-pool-spent");
-  await expect(spent).toHaveText("Spent 4, left 6");
+  const spent = editor.getByTestId("proficiency-pool-left");
+  await expect(spent).toHaveText("6");
   const singing = editor.getByTestId("proficiency-pick-singing");
   await expect(singing.getByTestId("proficiency-slots")).toHaveText("0");
   const base = await target(singing);
@@ -115,14 +119,14 @@ test("editor: a free pick raised to 2 slots is +2 on target; removed, it is offe
   await singing.getByTestId("proficiency-more").click();
   await singing.getByTestId("proficiency-more").click();
   await expect(singing.getByTestId("proficiency-slots")).toHaveText("2");
-  await expect(spent).toHaveText("Spent 6, left 4");
+  await expect(spent).toHaveText("4");
   await expect
     .poll(() => target(singing), { message: "two extra slots" })
     .toBe(base + 2);
 
   await singing.getByTestId("proficiency-remove").click();
   await expect(singing).toHaveCount(0);
-  await expect(spent).toHaveText("Spent 4, left 6");
+  await expect(spent).toHaveText("6");
   const offer = editor
     .getByTestId("proficiency-offered")
     .getByTestId("proficiency-add-singing");
@@ -132,6 +136,6 @@ test("editor: a free pick raised to 2 slots is +2 on target; removed, it is offe
   await expect(singing.getByTestId("proficiency-pick-terms")).toContainText(
     "free (class)",
   );
-  await expect(spent).toHaveText("Spent 4, left 6");
+  await expect(spent).toHaveText("6");
   await expect(editor.getByTestId("proficiency-offered")).toHaveCount(0);
 });

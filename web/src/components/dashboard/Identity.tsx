@@ -11,6 +11,7 @@ import { formatStrength } from "@/lib/format";
 import { navigate } from "@/lib/navigation";
 import { ROSTER_PATH } from "@/lib/session";
 import { cn } from "@/lib/utils";
+import { useAbilityFocus } from "@/stores/abilityFocus";
 import { useBuffsStore } from "@/stores/buffs";
 import { useCharacterStore } from "@/stores/character";
 import { useRollStore } from "@/stores/roll";
@@ -83,6 +84,8 @@ export function Identity({
   const levelUpBusy = useTableStore((s) => s.busy);
   // ADR 0037 step 15's links: the editor, in the Skills activity.
   const askSkillsEditor = useSkillsEditor((s) => s.open);
+  // The ability of the proficiency row in play in an editor (hovered or focused).
+  const inPlay = useAbilityFocus((s) => s.ability);
   const openSkillsEditor = (editor: SkillsEditor, set?: string) => {
     askSkillsEditor(editor, set);
     onOpenSkills();
@@ -250,8 +253,13 @@ export function Identity({
                   score,
                 })}
                 data-testid={buffed ? "str-cell" : `ability-${k}`}
+                data-in-play={inPlay === k ? "true" : undefined}
                 onClick={() => void rollAbility(k)}
-                className={cn(CELL, "cursor-pointer hover:bg-input")}
+                className={cn(
+                  CELL,
+                  "cursor-pointer hover:bg-input",
+                  inPlay === k && "ring-2 ring-ring",
+                )}
               />
             );
             if (!buffed)

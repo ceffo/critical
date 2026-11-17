@@ -50,8 +50,14 @@ describe("WeaponPicker grouping", () => {
         />,
         { lng },
       );
-      const headings = screen.getAllByRole("heading").map((h) => h.textContent);
-      expect(headings).toEqual([melee, missile]);
+      // The families are bands; the first with a weapon to take is open.
+      const bands = screen
+        .getAllByRole("button", { expanded: undefined })
+        .filter((b) => b.hasAttribute("aria-expanded"))
+        .map((b) => b.textContent ?? "");
+      expect(bands).toHaveLength(2);
+      expect(bands[0]).toContain(melee);
+      expect(bands[1]).toContain(missile);
       const group = screen.getByTestId("weapon-group-melee");
       expect(within(group).getByText(staff)).toBeInTheDocument();
       expect(

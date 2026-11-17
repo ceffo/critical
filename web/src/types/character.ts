@@ -293,7 +293,37 @@ export interface ProficiencySlots {
   groups?: string[];
   /** Each pickable catalogue proficiency's cost for the character, what a preview and a save
    * charge (ADR 0042 step 15; 0 for one a class entry grants free). Absent from an older server. */
-  catalogue?: { id: string; cost: number }[];
+  catalogue?: CatalogueFigure[];
+  /** The class entries each pool is counted on (ADR 0037 step 23.1): the weapon pool's rate entry
+   * (several on a tie), the non-weapon pool's every active entry. Absent from an older server. */
+  weaponClasses?: ClassRef[];
+  nonWeaponClasses?: ClassRef[];
+  /** The to-hit penalty of a weapon without proficiency, 0 or negative (step 23.2); 0: no note. */
+  nonProficientPenalty?: number;
+  /** The held languages and the slots each costs (step 23.3): their sum is `nonWeapon.languages`. */
+  languageCosts?: LanguageCost[];
+}
+
+/** A class entry as the pools name it: the class code and its level. */
+export interface ClassRef {
+  class: string;
+  level: number;
+}
+
+/** One held language's slot cost (ADR 0037 step 23.3). */
+export interface LanguageCost {
+  code: string;
+  slots: number;
+}
+
+/** One catalogue proficiency's cost and, served, its check's ability, modifier and target for a
+ * new pick at 0 extra slots (ADR 0037 step 23.4); `target` null for no check. */
+export interface CatalogueFigure {
+  id: string;
+  cost: number;
+  ability: string;
+  modifier: number;
+  target: number | null;
 }
 
 /** One weapon pick as sent: the catalogue weapon code and its slots. */

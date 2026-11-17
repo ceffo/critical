@@ -60,6 +60,7 @@ function skillSet(
     set,
     name: NAMES[set] ?? {},
     skillArmor: "",
+    class: { class: "thief", level: 3 },
     budget: null,
     skills,
     ...over,

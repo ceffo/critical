@@ -7,7 +7,6 @@ import {
   SkillSetRead,
   WeaponsRead,
 } from "@/components/skills/SkillsRead";
-import { classTag } from "@/lib/classTag";
 import { localized } from "@/i18n/localized";
 import { primaryEntry } from "@/lib/classEntries";
 import { sectionPending } from "@/lib/skillsPending";
@@ -15,6 +14,7 @@ import { useCharacterStore } from "@/stores/character";
 import { useSkillsEditor } from "@/stores/skillsEditor";
 import { useSkillsStore } from "@/stores/skills";
 import { useTableStore } from "@/stores/table";
+import type { ClassRef } from "@/types/character";
 import type { SkillSet } from "@/types/skills";
 
 /** The section being edited: a pool of picks, or `set:<code>` for a skill set's points. */
@@ -86,7 +86,20 @@ export function SkillsPanel() {
   const entries = character?.classes;
   const className = (code: string) =>
     t(`details.classes.${code}`, { defaultValue: code });
-  const tag = classTag(entries, className, t);
+  // The tag names the entries the server counted each pool on; shown only for a multi-class
+  // character (a display choice, no rule: the server decides which entries).
+  const multi = (entries ?? []).filter((e) => e.state === "active").length >= 2;
+  const tagOf = (refs: ClassRef[] | undefined) =>
+    multi && refs && refs.length > 0
+      ? refs
+          .map((r) =>
+            t("skillsActivity.classTag", {
+              class: className(r.class),
+              level: r.level,
+            }),
+          )
+          .join(" + ")
+      : undefined;
   const classNames = (entries ?? []).map((e) => className(e.class)).join(" / ");
 
   // A request names an editor; the points editor's names a set or, without one, the first set
@@ -192,7 +205,7 @@ export function SkillsPanel() {
               proficiencies={skills?.proficiencies ?? []}
               languages={languages ?? []}
               race={race ?? ""}
-              tag={tag}
+              tag={tagOf(slots.nonWeaponClasses)}
               pending={sectionPending(character, "nonWeapon")}
               onModify={() => setEditing("nonWeapon")}
             />
@@ -200,7 +213,7 @@ export function SkillsPanel() {
           {slots?.weapon && (
             <WeaponsRead
               slots={slots}
-              tag={tag}
+              tag={tagOf(slots.weaponClasses)}
               pending={sectionPending(character, "weapon")}
               onModify={() => setEditing("weapon")}
             />
@@ -209,6 +222,7 @@ export function SkillsPanel() {
             <SkillSetRead
               key={set.set}
               set={set}
+              tag={tagOf([set.class])}
               pending={sectionPending(character, { set: set.set })}
               onModify={() => setEditing(`set:${set.set}`)}
             />

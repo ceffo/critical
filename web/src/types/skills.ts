@@ -74,6 +74,8 @@ export interface SkillSet {
   /** ADR 0033 step 14: the skill armour the set reads, from the body armour worn (none, leather,
    * padded_studded_leather, elven_chain, metal). */
   skillArmor: string;
+  /** The class entry the set comes from (ADR 0037 step 23.1). */
+  class: { class: string; level: number };
   /** The skill point budget with the terms of its formula; null before the level its points
    * start. */
   budget: SkillBudget | null;

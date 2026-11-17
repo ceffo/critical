@@ -134,10 +134,34 @@ describe("servedCatalogue", () => {
   it("reads the server's groups and costs directly", () => {
     const c = servedCatalogue(creation, "fighter", {
       groups: ["Warrior", "Wizard"],
-      catalogue: [{ id: "spellcraft", cost: 1 }],
+      catalogue: [
+        {
+          id: "spellcraft",
+          cost: 1,
+          ability: "int",
+          modifier: -2,
+          target: 14,
+        },
+      ],
     });
     expect(c.groups).toEqual(["Warrior", "Wizard"]);
     expect(c.costs).toEqual({ spellcraft: 1 });
+  });
+
+  it("carries the served target of a new pick to its row, with no arithmetic here", () => {
+    const c = servedCatalogue(creation, "fighter", {
+      groups: [],
+      catalogue: [
+        {
+          id: "spellcraft",
+          cost: 1,
+          ability: "int",
+          modifier: -2,
+          target: 14,
+        },
+      ],
+    });
+    expect(catalogueRows(c, (id) => id, "", "en")[0].target).toBe(14);
   });
 
   it("falls back to the creation options' figures when the server serves none", () => {

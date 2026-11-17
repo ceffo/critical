@@ -77,6 +77,51 @@ describe("SkillsPanel", () => {
     expect(screen.queryByTestId(/^pick-/)).toBeNull();
   });
 
+  it("tags each section with the classes the server counted it on, for a multi-class character only", async () => {
+    const c = owner(true);
+    c.classes = [
+      { class: "fighter", level: 4, state: "active" },
+      { class: "thief", level: 5, state: "active" },
+    ] as never;
+    Object.assign(c.derived!.proficiencySlots!, {
+      weaponClasses: [{ class: "fighter", level: 4 }],
+      nonWeaponClasses: [
+        { class: "fighter", level: 4 },
+        { class: "thief", level: 5 },
+      ],
+    });
+    useCharacterStore.setState({ character: c });
+    useSkillsStore.setState({
+      skills: {
+        proficiencies: [],
+        skillSets: [
+          { ...set("thief", 1), class: { class: "thief", level: 5 } },
+        ],
+      } as unknown as Skills,
+    });
+    await renderApp(<SkillsPanel />);
+    expect(screen.getByTestId("skills-weapon-tag")).toHaveTextContent(
+      /fighter 4$/i,
+    );
+    expect(screen.getByTestId("skills-nonWeapon-tag")).toHaveTextContent(
+      /fighter 4 \+ .*thief 5$/i,
+    );
+    expect(screen.getByTestId("skills-points-thief-tag")).toHaveTextContent(
+      /thief 5$/i,
+    );
+  });
+
+  it("leaves the tags out for a single class", async () => {
+    const c = owner(true);
+    Object.assign(c.derived!.proficiencySlots!, {
+      weaponClasses: [{ class: "thief", level: 3 }],
+    });
+    useCharacterStore.setState({ character: c });
+    useSkillsStore.setState({ skills: { proficiencies: [], skillSets: [] } });
+    await renderApp(<SkillsPanel />);
+    expect(screen.queryByTestId("skills-weapon-tag")).toBeNull();
+  });
+
   it("opens one section's editor from its Modify and leaves the reading", async () => {
     useCharacterStore.setState({ character: owner(true) });
     useSkillsStore.setState({ skills: { proficiencies: [], skillSets: [] } });

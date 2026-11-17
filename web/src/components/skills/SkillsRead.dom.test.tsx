@@ -4,7 +4,6 @@ import { renderApp } from "@/test/render";
 import type { ProficiencySlots } from "@/types/character";
 import type { Proficiency, SkillSet } from "@/types/skills";
 import { ProficienciesRead, SkillSetRead, WeaponsRead } from "./SkillsRead";
-import { classTag } from "@/lib/classTag";
 
 const slots = {
   nonWeapon: { available: 7, spent: 6, left: 1, languages: 0 },
@@ -141,30 +140,72 @@ describe("SkillSetRead", () => {
   });
 });
 
-describe("classTag", () => {
-  const t = ((_k: string, o: { class: string; level: number }) =>
-    `${o.class} ${o.level}`) as never;
-  const name = (c: string) => c.toUpperCase();
-  it("is a multi-class character's active classes, joined", () => {
-    expect(
-      classTag(
-        [
-          { class: "fighter", level: 4, state: "active" },
-          { class: "thief", level: 5, state: "active" },
-          { class: "mage", level: 2, state: "inactive" },
-        ] as never,
-        name,
-        t,
-      ),
-    ).toBe("FIGHTER 4 + THIEF 5");
+describe("served details (ADR 0037 step 23)", () => {
+  it("words the non-proficient penalty from the served figure and hides it at 0", async () => {
+    const { unmount } = await renderApp(
+      <WeaponsRead
+        slots={{ ...slots, nonProficientPenalty: -2 }}
+        tag="Guerrier 4"
+        pending={false}
+        onModify={noop}
+      />,
+    );
+    expect(screen.getByTestId("skills-weapon-penalty")).toHaveTextContent(/−2/);
+    expect(screen.getByTestId("skills-weapon-tag")).toHaveTextContent(
+      "Guerrier 4",
+    );
+    unmount();
+    await renderApp(
+      <WeaponsRead
+        slots={{ ...slots, nonProficientPenalty: 0 }}
+        pending={false}
+        onModify={noop}
+      />,
+    );
+    expect(screen.queryByTestId("skills-weapon-penalty")).toBeNull();
   });
-  it("is none for one class", () => {
-    expect(
-      classTag(
-        [{ class: "fighter", level: 4, state: "active" }] as never,
-        name,
-        t,
-      ),
-    ).toBeUndefined();
+  it("shows each language's served slot cost", async () => {
+    await renderApp(
+      <ProficienciesRead
+        slots={{
+          ...slots,
+          languageCosts: [
+            { code: "common", slots: 0 },
+            { code: "elvish", slots: 1 },
+          ],
+        }}
+        proficiencies={proficiencies}
+        languages={["common", "elvish"]}
+        race="human"
+        pending={false}
+        onModify={noop}
+      />,
+    );
+    expect(screen.getByTestId("language-cost-elvish")).toHaveTextContent(
+      "1 slot",
+    );
+    expect(screen.getByTestId("language-cost-common")).toHaveTextContent(
+      "0 slots",
+    );
+  });
+  it("tags a skill set with its class", async () => {
+    await renderApp(
+      <SkillSetRead
+        set={
+          {
+            set: "thief",
+            name: { en: "Thief" },
+            skills: [],
+            budget: null,
+          } as unknown as SkillSet
+        }
+        tag="Voleur 5"
+        pending={false}
+        onModify={noop}
+      />,
+    );
+    expect(screen.getByTestId("skills-points-thief-tag")).toHaveTextContent(
+      "Voleur 5",
+    );
   });
 });
